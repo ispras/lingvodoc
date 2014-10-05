@@ -13,13 +13,16 @@ class TestMyViewSuccessCondition(unittest.TestCase):
         engine = create_engine('sqlite://')
         from .models import (
             Base,
-            MyModel,
+            WordEntry,
+            MetaWord
             )
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
         with transaction.manager:
-            model = MyModel(name='one', value=55)
-            DBSession.add(model)
+            unexisting_test = MetaWord()
+            existing_key = MetaWord(id=1, client_id=1)
+            DBSession.add(unexisting_test)
+            DBSession.add(existing_key)
 
     def tearDown(self):
         DBSession.remove()
@@ -40,7 +43,6 @@ class TestMyViewFailureCondition(unittest.TestCase):
         engine = create_engine('sqlite://')
         from .models import (
             Base,
-            MyModel,
             )
         DBSession.configure(bind=engine)
 

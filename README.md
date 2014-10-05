@@ -32,3 +32,17 @@ Running the project for development
 
 API documentation
 ---------------
+
+/client_id
+/version
+/channel
+/sync
+/words
+/word
+/paradigms
+/paradigm
+/dictionaries
+/dictionary (contains words, paradigms, corpus set etc)
+/authors
+/sound
+/markup

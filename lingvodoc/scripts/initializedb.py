@@ -13,8 +13,9 @@ from pyramid.scripts.common import parse_vars
 
 from ..models import (
     DBSession,
-    MyModel,
     Base,
+    User,
+    Passhash,
     )
 
 
@@ -36,5 +37,13 @@ def main(argv=sys.argv):
     DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
     with transaction.manager:
-        model = MyModel(name='one', value=1)
-        DBSession.add(model)
+        test = DBSession.query(User).filter_by(login='admin').first()
+        print("Searching for admin record: ", test)
+        if not test:
+            print("Admin record not found, initializing", test)
+            admin_user = User(login='admin')
+            pwd = Passhash(hash='password')
+            admin_user.password = pwd
+            DBSession.add(admin_user)
+        else:
+            print("Admin found: ", test)
