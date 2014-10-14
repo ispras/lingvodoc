@@ -111,7 +111,7 @@ class User(Base):
     about = relationship("About")
 
     def check_password(self, passwd):
-        return self.password == passwd
+        return self.password.hash == passwd
 
 #    photos = relationship("UserBlob")
 #    organization = Column(Integer, ForeignKey('organization.id')

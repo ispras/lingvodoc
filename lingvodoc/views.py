@@ -42,15 +42,18 @@ def forbidden_view(request):
     return HTTPFound(location=loc)
 
 
+@view_config(route_name='login', renderer='json')
 def login_view(request):
     next = request.params.get('next') or request.route_url('home')
     login = ''
     did_fail = False
-    if 'submit' in request.POST:
+    user = ''
+    if request.method == 'POST':
         login = request.POST.get('login', '')
-        passwd = request.POST.get('passwd', '')
+        passwd = request.POST.get('password', '')
 
-        user = User.get(login, None)
+        #user = User.get(login, None)
+        user = DBSession.query(User).filter_by(login=login).first()
         if user and user.check_password(passwd):
             headers = remember(request, login)
             return HTTPFound(location=next, headers=headers)
@@ -60,7 +63,7 @@ def login_view(request):
         'login': login,
         'next': next,
         'failed_attempt': did_fail,
-        'users': User,
+        'users': user.login,
     }
 
 
