@@ -18,6 +18,8 @@ requires = [
     'zope.sqlalchemy',
     'waitress',
     'alembic',
+    'passlib',
+    'py-bcrypt'
     ]
 
 setup(name='lingvodoc',

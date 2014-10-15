@@ -9,8 +9,10 @@ from .models import (
 #    User
     )
 
-def groupfinder(userid, request):
-    return None
+from .acl import (
+    groupfinder
+)
+
 '''
     print("trying to find group for user")
     print(userid)
@@ -28,6 +30,7 @@ def groupfinder(userid, request):
 def configure_routes(config):
     config.add_route('home', '/')
     config.add_route('login', '/login')
+    config.add_route('register', '/register')
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.

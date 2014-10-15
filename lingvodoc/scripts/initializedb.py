@@ -42,7 +42,7 @@ def main(argv=sys.argv):
         if not test:
             print("Admin record not found, initializing")
             admin_user = User(login='admin')
-            pwd = Passhash(hash='password')
+            pwd = Passhash(password='password')
             admin_user.password = pwd
             DBSession.add(admin_user)
         else:

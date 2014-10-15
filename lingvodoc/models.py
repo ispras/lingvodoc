@@ -38,10 +38,15 @@ from sqlalchemy.types import (
     UnicodeText,
     Date,
     DateTime,
-    Boolean
+    Boolean,
     )
 
+
 from zope.sqlalchemy import ZopeTransactionExtension
+
+from passlib.hash import bcrypt
+
+import datetime
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
@@ -111,7 +116,7 @@ class User(Base):
     about = relationship("About")
 
     def check_password(self, passwd):
-        return self.password.hash == passwd
+        return bcrypt.verify(passwd, self.password.hash)
 
 #    photos = relationship("UserBlob")
 #    organization = Column(Integer, ForeignKey('organization.id')
@@ -133,6 +138,9 @@ class Passhash(Base):
     user_id = Column(Integer, ForeignKey('User.id'))
     hash = Column(Unicode(length=50))
 
+    def __init__(self, password):
+        self.hash = bcrypt.encrypt(password)
+
 
 class Email(Base):
     __tablename__ = "Email"
@@ -146,7 +154,7 @@ class Client(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('User.id'))
     dictionaries = relationship("Dictionary", backref="Client")
-    creation_time = Column(DateTime)
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class Dictionary(Base):

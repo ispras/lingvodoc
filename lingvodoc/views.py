@@ -8,7 +8,9 @@ from .models import (
     MetaWord,
     WordEntry,
     Dictionary,
-    User
+    User,
+    Client,
+    Email
     )
 
 from pyramid.security import (
@@ -27,6 +29,13 @@ from pyramid.security import remember
 from pyramid.view import forbidden_view_config
 
 
+class CommonException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
 @view_config(route_name='home', renderer='json')
 def demo(request):
     __acl__ = [(Deny, Everyone, 'view')]
@@ -42,27 +51,72 @@ def forbidden_view(request):
     return HTTPFound(location=loc)
 
 
-@view_config(route_name='login', renderer='json')
+@view_config(route_name='register', renderer='json', request_method='GET')
+def register_get(request):
+    return {'status': 200}
+
+@view_config(route_name='register', renderer='json', request_method='POST')
+def register_post(request):
+    did_fail = False
+    try:
+        login = request.POST.getone('login')
+        name = request.POST.getone('name')
+        email = request.POST.getone('email')
+        password = request.POST.getone('password')
+
+        if DBSession.query(User).filter_by(login=login).first():
+            raise CommonException("The user with this login is already registered")
+        if DBSession.query(Email).filter_by(email=email).first():
+            raise CommonException("The user with this email is already registered")
+
+    except CommonException as e:
+        return {'failed_attempt': True, 'reason': str(e)}
+
+    except KeyError as e:
+        return {'failed_attempt': True, 'reason': str(e)}
+
+'''
+    id = Column(Integer, primary_key=True)
+    login = Column(Unicode(length=30), unique=True)
+    name = Column(UnicodeText)
+    # this stands for name in English
+    intl_name = Column(UnicodeText)
+    default_locale_id = Column(ForeignKey("Locale.id"))
+    birthday = Column(Date)
+    signup_date = Column(DateTime)
+    # it's responsible for "deleted user state". True for active, False for deactivated.
+    is_active = Column(Boolean)
+    clients = relationship("Client", backref='User')
+    groups = relationship("Group", secondary=user_to_group_association, backref="Users")
+    password = relationship("Passhash", uselist=False)
+    email = relationship("Email")
+    about = relationship("About")
+
+    return {'failed_attempt': did_fail}
+'''
+
+@view_config(route_name='login', renderer='json', request_method='GET')
+def login_get(request):
+    return {'status': 200}
+
+
+@view_config(route_name='login', renderer='json', request_method='POST')
 def login_view(request):
     next = request.params.get('next') or request.route_url('home')
-    login = ''
-    did_fail = False
-    user = ''
-    if request.method == 'POST':
-        login = request.POST.get('login', '')
-        passwd = request.POST.get('password', '')
+    login = request.POST.get('login', '')
+    password = request.POST.get('password', '')
 
-        #user = User.get(login, None)
-        user = DBSession.query(User).filter_by(login=login).first()
-        if user and user.check_password(passwd):
-            headers = remember(request, login)
-            return HTTPFound(location=next, headers=headers)
-        did_fail = True
-
+    user = DBSession.query(User).filter_by(login=login).first()
+    if user and user.check_password(password):
+        client = Client(user_id=user.id)
+        DBSession.add(client)
+        DBSession.flush()
+        headers = remember(request, principal=client.id)
+        return HTTPFound(location=next, headers=headers)
+# TODO: delete debug info
     return {
         'login': login,
         'next': next,
-        'failed_attempt': did_fail,
         'users': user.login,
     }
 
