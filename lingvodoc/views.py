@@ -28,6 +28,8 @@ from pyramid.security import forget
 from pyramid.security import remember
 from pyramid.view import forbidden_view_config
 
+#from pyramid.chameleon_zpt import render_template_to_response
+from pyramid.renderers import render_to_response
 
 class CommonException(Exception):
     def __init__(self, value):
@@ -36,10 +38,10 @@ class CommonException(Exception):
     def __str__(self):
         return repr(self.value)
 
-@view_config(route_name='home', renderer='json')
+@view_config(route_name='home', renderer='templates/home.pt')
 def demo(request):
-    __acl__ = [(Deny, Everyone, 'view')]
-    return {'status': 200}
+    variables = {'bg_url': request.static_url('lingvodoc:static/tweed.png')}
+    return render_to_response('templates/home.pt', variables, request=request)
 
 
 def forbidden_view(request):

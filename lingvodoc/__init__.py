@@ -13,24 +13,12 @@ from .acl import (
     groupfinder
 )
 
-'''
-    print("trying to find group for user")
-    print(userid)
-    userobj = User.get(userid)
-    roles = userobj.groups
-    print(roles)
-    if roles is not None:
-        principals = []
-        for role in roles:
-            principals.append(role)
-        return principals
-    return None
-'''
 
 def configure_routes(config):
     config.add_route('home', '/')
     config.add_route('login', '/login')
     config.add_route('register', '/register')
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
@@ -46,7 +34,7 @@ def main(global_config, **settings):
     config.set_authentication_policy(authentication_policy)
     config.set_authorization_policy(authorization_policy)
     config.include('pyramid_chameleon')
-    config.add_static_view('static', 'static', cache_max_age=3600)
+    config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
 #    config.add_route('home', '/')
 #    config.add_route('login', 'login')
