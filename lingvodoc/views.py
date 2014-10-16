@@ -23,6 +23,7 @@ from pyramid.security import (
 from pyramid.httpexceptions import HTTPForbidden
 from pyramid.httpexceptions import HTTPFound
 from pyramid.httpexceptions import HTTPNotFound
+from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.security import authenticated_userid
 from pyramid.security import forget
 from pyramid.security import remember
@@ -38,11 +39,6 @@ class CommonException(Exception):
     def __str__(self):
         return repr(self.value)
 
-@view_config(route_name='home', renderer='templates/home.pt')
-def demo(request):
-    variables = {'bg_url': request.static_url('lingvodoc:static/tweed.png')}
-    return render_to_response('templates/home.pt', variables, request=request)
-
 
 def forbidden_view(request):
     # do not allow a user to login if they are already logged in
@@ -53,9 +49,17 @@ def forbidden_view(request):
     return HTTPFound(location=loc)
 
 
-@view_config(route_name='register', renderer='json', request_method='GET')
+@view_config(route_name='home', renderer='templates/home.pt')
+def main_page(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/home.pt', variables, request=request)
+
+
+@view_config(route_name='register', renderer='templates/register.pt', request_method='GET')
 def register_get(request):
-    return {'status': 200}
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/register.pt', variables, request=request)
+
 
 @view_config(route_name='register', renderer='json', request_method='POST')
 def register_post(request):
@@ -97,9 +101,10 @@ def register_post(request):
     return {'failed_attempt': did_fail}
 '''
 
-@view_config(route_name='login', renderer='json', request_method='GET')
+@view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
 def login_get(request):
-    return {'status': 200}
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/login.pt', variables, request=request)
 
 
 @view_config(route_name='login', renderer='json', request_method='POST')
@@ -116,14 +121,14 @@ def login_view(request):
         headers = remember(request, principal=client.id)
         return HTTPFound(location=next, headers=headers)
 # TODO: delete debug info
-    return {
-        'login': login,
-        'next': next,
-        'users': user.login,
-    }
+    return HTTPUnauthorized(location=request.route_url('login'))
 
 
-
+@view_config(route_name='logout', renderer='json')
+def logout_any(request):
+    next = request.params.get('next') or request.route_url('home')
+    headers = forget(request)
+    return HTTPFound(location=next, headers=headers)
 
 
 

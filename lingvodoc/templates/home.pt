@@ -1,66 +1,10 @@
 <html>
-<head>
-    <title>Lingvodoc future</title>
-
-    <link rel="stylesheet" href="${request.static_url('lingvodoc:static/css/bootstrap.min.css')}">
-    <link rel="stylesheet" href="${request.static_url('lingvodoc:static/css/bootstrap-theme.min.css')}">
-    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/360player.css')}" />
-    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/360player-visualization.css')}" />
-    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/flashblock.css')}" />
-
-    <script src="${request.static_url('lingvodoc:static/js/jquery-1.11.1.min.js')}"> </script>
-    <script src="${request.static_url('lingvodoc:static/js/bootstrap.min.js')}"> </script>
-
-    <!-- special IE-only canvas fix -->
-    <!--[if IE]><script type="text/javascript" src="${request.static_url('lingvodoc:static/js/excanvas.js')}"></script><![endif]-->
-    <script type="text/javascript" src="${request.static_url('lingvodoc:static/js/berniecode-animator.js')}"></script>
-
-    <script src="${request.static_url('lingvodoc:static/js/soundmanager2-nodebug-jsmin.js')}"></script>
-    <script type="text/javascript" src="${request.static_url('lingvodoc:static/js/360player.js')}"></script>
-
-    <script>
-        soundManager.setup({
-            url: '/swf/',
-            flashVersion: 8, // optional: shiny features (default = 8)
-            // optional: ignore Flash where possible, use 100% HTML5 mode
-            preferFlash: false
-
-        });
-        threeSixtyPlayer.config.scaleFont = (navigator.userAgent.match(/msie/i)?false:true);
-        threeSixtyPlayer.config.showHMSTime = true;
-    </script>
-    <style>
-        .col-md-1 {min-width: 200px;}
-        .container {
-            background-color: #ffffff;
-
-            padding-right:24px;
-            padding-left:24px;
-        }
-        body {
-            background-image: url(${request.static_url('lingvodoc:static/img/tweed.png')});
-        }
-        .dictionary {
-            font-family: Calibri, Arial;
-        }
-
-    </style>
-</head>
+<head metal:use-macro="load: head.pt"></head>
 <body>
-    <nav class="navbar navbar-inverse" role="navigation">
-
-        <ul class="nav nav-pills">
-            <li><a href="/">Главная страница</a></li>
-            <li class="disabled">О языках словарей</li>
-            <li class="disabled">Новости</li>
-            <li class="disabled">Форум</li>
-            <li class="disabled">Правила работы</li>
-            <li>Зарегистрироваться</li>
-        </ul>
-
-    </nav>
+    <div metal:use-macro="load: nav.pt"></div>
 
     <div class="container">
+
         <blockquote>Проект выполняется при финансовой поддержке грантов Президента РФ МД-6198.2013.6 (рук. Ю.В.Норманская) и Программы ОИФН Типологическое и историческое изучение языковых явлений в их соотношении с культурной эволюцией, реконструкция культуры по данным языка (рук. А.В.Дыбо)</blockquote>
 
          <h1>О проекте</h1>
