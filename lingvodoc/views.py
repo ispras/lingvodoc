@@ -22,7 +22,7 @@ from pyramid.security import (
 
 from pyramid.httpexceptions import HTTPForbidden
 from pyramid.httpexceptions import HTTPFound
-from pyramid.httpexceptions import HTTPNotFound
+from pyramid.httpexceptions import HTTPNotFound, HTTPOk, HTTPBadRequest, HTTPConflict
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.security import authenticated_userid
 from pyramid.security import forget
@@ -47,6 +47,35 @@ def forbidden_view(request):
 
     loc = request.route_url('login', _query=(('next', request.path),))
     return HTTPFound(location=loc)
+
+@view_config(route_name='register/validate', renderer='json', request_method='POST')
+def validate(request):
+    try:
+        param = request.matchdict.get('param')
+        print(param)
+        value = request.POST.getone(param)
+        if param == 'email':
+            dbentry = DBSession.query(Email).filter_by(email=value).first()
+            if dbentry:
+                raise CommonException("The user with this email is already registered")
+        elif param == 'login':
+            dbentry = DBSession.query(User).filter_by(login=value).first()
+            if dbentry:
+                raise CommonException("The user with this login is already registered")
+        else:
+            raise KeyError
+
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status}
+
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
 
 
 @view_config(route_name='home', renderer='templates/home.pt')

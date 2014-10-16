@@ -7,12 +7,12 @@
      <div class="col-lg-6 col-sm-6 col-md-6 col-lg-offset-3 col-sm-offset-3 col-sm-offset-3">
       <form role="form" action="" method="post" id="register_form">
         <h2>Зарегистрируйтесь в системе</h2>
-        <input name="login" type="text" class="form-control" placeholder="Выберите логин" required autofocus>
+        <input id="login" name="login" type="text" class="form-control" placeholder="Выберите логин" required autofocus>
         <input id="password" name="password" type="password" class="form-control" placeholder="Задайте пароль" required>
-        <input id="cpassword" type="password" class="form-control" placeholder="Напишите пароль еще раз, просто на всякий случай" required>
+        <input id="cpassword" name="cpassword" type="password" class="form-control" placeholder="Напишите пароль еще раз, просто на всякий случай" required>
         <input id="name" name="name" type="text" class="form-control" placeholder="Как Вас зовут?" required>
         <input id="email" name="email" type="email" class="form-control" placeholder="Ваш e-mail" required>
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Зарегистрироваться</button>
+        <button id="submit-button" class="btn btn-lg btn-primary btn-block" type="submit">Зарегистрироваться</button>
       </form>
      </div>
 
@@ -20,6 +20,10 @@
 </body>
 
 <script>
+    jQuery.validator.setDefaults({
+        success: "valid"
+    });
+
     $('#register_form').validate({
         rules: {
             password: {
@@ -28,8 +32,44 @@
             cpassword: {
                 minlength: 5,
                 equalTo: "#password"
+            },
+            login: {
+                remote:{
+                    url: "/register/validate/login",
+                    type: "post",
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        noty({text: jqXHR['responseJSON']['error'], timeout: 5000, type: "error"});
+                        $("#login").val('');
+                        return false;
+                    },
+                    success: function () {
+                        return true;
+                    }
+                }
+            },
+            email: {
+                remote:{
+                    url: "/register/validate/email",
+                    type: "post",
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert(jqXHR.status);
+                        alert(textStatus);
+                        alert(errorThrown);
+                    },
+                    success: function (data) {
+                        return true;
+                    }
+
+                }
             }
+        },
+        submitHandler: function(form) {
+            $(form).ajaxSubmit();
         }
+
+    });
+    $('#submit-button').click(function() {
+        console.log($('#register_form').valid());
     });
 </script>
 </html>

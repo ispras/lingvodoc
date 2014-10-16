@@ -11,6 +11,7 @@
     <script src="${request.static_url('lingvodoc:static/js/jquery-1.11.1.min.js')}"></script>
     <script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.13.0/jquery.validate.min.js"></script>
     <script src="${request.static_url('lingvodoc:static/js/bootstrap.min.js')}"> </script>
+    <script src="${request.static_url('lingvodoc:static/js/noty/packaged/jquery.noty.packaged.min.js')}"></script>
 
 
     <!-- special IE-only canvas fix -->
@@ -31,6 +32,12 @@
         threeSixtyPlayer.config.scaleFont = (navigator.userAgent.match(/msie/i)?false:true);
         threeSixtyPlayer.config.showHMSTime = true;
     </script>
+    <script>
+        $(document).ready(function() {
+            $.noty.defaults.layout = 'bottom';
+            $.noty.defaults.timeout = 5000;
+        });
+    </script>
     <style>
         .col-md-1 {min-width: 200px;}
         .container {
@@ -42,6 +49,5 @@
         .dictionary {
             font-family: Calibri, Arial;
         }
-
     </style>
 </head>
