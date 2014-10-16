@@ -4,7 +4,7 @@
 <body>
     <div metal:use-macro="load: nav.pt"></div>
 <!--    <div class="container"> -->
-     <div class="col-lg-6 col-sm-6 col-md-6 col-lg-offset-3 col-sm-offset-3 col-sm-offset-3">
+     <div class="col-lg-6 col-sm-12 col-md-10 col-lg-offset-3 col-md-offset-1">
       <form role="form" action="" method="post" id="register_form">
         <h2>Зарегистрируйтесь в системе</h2>
         <input id="login" name="login" type="text" class="form-control" placeholder="Выберите логин" required autofocus>
