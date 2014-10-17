@@ -92,6 +92,7 @@ def register_get(request):
 
 @view_config(route_name='register', renderer='json', request_method='POST')
 def register_post(request):
+    print ("TRYING TO REGISTER")
     did_fail = False
     try:
         login = request.POST.getone('login')
@@ -103,6 +104,8 @@ def register_post(request):
             raise CommonException("The user with this login is already registered")
         if DBSession.query(Email).filter_by(email=email).first():
             raise CommonException("The user with this email is already registered")
+        return login_post(request)
+
 
     except CommonException as e:
         return {'failed_attempt': True, 'reason': str(e)}
@@ -137,7 +140,7 @@ def login_get(request):
 
 
 @view_config(route_name='login', renderer='json', request_method='POST')
-def login_view(request):
+def login_post(request):
     next = request.params.get('next') or request.route_url('home')
     login = request.POST.get('login', '')
     password = request.POST.get('password', '')

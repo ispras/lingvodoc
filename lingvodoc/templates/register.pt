@@ -5,26 +5,25 @@
     <div metal:use-macro="load: nav.pt"></div>
 <!--    <div class="container"> -->
      <div class="col-lg-6 col-sm-12 col-md-10 col-lg-offset-3 col-md-offset-1">
-      <form role="form" action="" method="post" id="register_form">
+      <form id="register_form" role="form" action="${request.route_url('register')}" method="post">
         <h2>Зарегистрируйтесь в системе</h2>
         <input id="login" name="login" type="text" class="form-control" placeholder="Выберите логин" required autofocus>
         <input id="password" name="password" type="password" class="form-control" placeholder="Задайте пароль" required>
         <input id="cpassword" name="cpassword" type="password" class="form-control" placeholder="Напишите пароль еще раз, просто на всякий случай" required>
         <input id="name" name="name" type="text" class="form-control" placeholder="Как Вас зовут?" required>
         <input id="email" name="email" type="email" class="form-control" placeholder="Ваш e-mail" required>
-        <button id="submit-button" class="btn btn-lg btn-primary btn-block" type="submit">Зарегистрироваться</button>
+        <input class="btn btn-lg btn-primary btn-block" type="submit" value="Зарегистрироваться"></input>
       </form>
      </div>
 
+    <button id="test" class="btn">test</button>
 <!--    </div> -->
 </body>
 
 <script>
-    jQuery.validator.setDefaults({
-        success: "valid"
-    });
-
-    $('#register_form').validate({
+$(document).ready(function () {
+    var reg_form = $('#register_form');
+    reg_form.validate({
         rules: {
             password: {
                 minlength: 5
@@ -34,7 +33,7 @@
                 equalTo: "#password"
             },
             login: {
-                remote:{
+                remote: {
                     url: "/register/validate/login",
                     type: "post",
                     error: function (jqXHR, textStatus, errorThrown) {
@@ -48,7 +47,7 @@
                 }
             },
             email: {
-                remote:{
+                remote: {
                     url: "/register/validate/email",
                     type: "post",
                     error: function (jqXHR, textStatus, errorThrown) {
@@ -63,13 +62,20 @@
                 }
             }
         },
-        submitHandler: function(form) {
-            $(form).ajaxSubmit();
+        submitHandler: function (form) {
+            form.submit();
+            console.log("in submit handler");
         }
+//        submitHandler: function(form) {
+//            form.ajaxSubmit();
+        //       }
 
     });
-    $('#submit-button').click(function() {
-        console.log($('#register_form').valid());
-    });
+
+/*)    $('#submit').click(function () {
+        console.log(reg_form.valid());
+        reg_form.submit();
+    }); */
+});
 </script>
 </html>
