@@ -12,11 +12,10 @@
         <input id="cpassword" name="cpassword" type="password" class="form-control" placeholder="Напишите пароль еще раз, просто на всякий случай" required>
         <input id="name" name="name" type="text" class="form-control" placeholder="Как Вас зовут?" required>
         <input id="email" name="email" type="email" class="form-control" placeholder="Ваш e-mail" required>
-        <input class="btn btn-lg btn-primary btn-block" type="submit" value="Зарегистрироваться"></input>
+        <input id="sbmt" class="btn btn-lg btn-primary btn-block" type="submit" value="Зарегистрироваться">
       </form>
      </div>
 
-    <button id="test" class="btn">test</button>
 <!--    </div> -->
 </body>
 
@@ -59,23 +58,18 @@ $(document).ready(function () {
                         return true;
                     }
 
-                }
+                },
+                email: true
             }
-        },
-        submitHandler: function (form) {
-            form.submit();
-            console.log("in submit handler");
         }
-//        submitHandler: function(form) {
-//            form.ajaxSubmit();
-        //       }
-
     });
 
-/*)    $('#submit').click(function () {
+    $('#sbmt').click(function () {
         console.log(reg_form.valid());
-        reg_form.submit();
-    }); */
+        if (reg_form.valid()) {
+            reg_form[0].submit();
+        }
+    });
 });
 </script>
 </html>
