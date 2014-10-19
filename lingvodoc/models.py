@@ -91,6 +91,7 @@ class Group(Base):
     subject = Column(UnicodeText)
 
 
+
 class User(Base):
     __tablename__ = "User"
     id = Column(Integer, primary_key=True)
@@ -155,7 +156,7 @@ class Client(Base):
 class Language(Base):
     __tablename__ = "Language"
     id = Column(Integer, primary_key=True)
-    parent_id = Column(Integer)
+    parent_id = Column(Integer, default=0)
     names = relationship("LanguageName", backref=backref("Language"))
 
 

@@ -44,15 +44,13 @@ def main(argv=sys.argv):
     with transaction.manager:
 
         # creating administrator account
-        print(accounts.__dict__)
-        print(accounts['administrator_login'])
-        admin_account = DBSession.query(User).filter_by(login='admin').first()
+        admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
         if not admin_account:
             print("Admin record not found, initializing")
-            admin_user = User(login=accounts['administrator_login'])
+            admin_account = User(login=accounts['administrator_login'])
             pwd = Passhash(password=accounts['administrator_password'])
-            admin_user.password = pwd
-            DBSession.add(admin_user)
+            admin_account.password = pwd
+            DBSession.add(admin_account)
 
         # creating base locales
         ru_locale = Locale(id=1, shortcut="ru", name="Русский")
@@ -120,3 +118,17 @@ def main(argv=sys.argv):
         DBSession.add(adm_can_add_words)
         DBSession.add(adm_can_set_defaults)
         DBSession.add(adm_can_publish)
+        DBSession.flush()
+
+        admin_account.groups = [adm_can_create_dictionaries,
+                                adm_can_create_languages,
+                                adm_can_edit_languages,
+                                adm_can_delete_languages,
+                                adm_can_create_groups,
+                                adm_can_create_organizations,
+                                adm_can_edit_organizations,
+                                adm_can_edit_users,
+                                adm_can_change_dictionary_info,
+                                adm_can_add_words,
+                                adm_can_set_defaults,
+                                adm_can_publish]

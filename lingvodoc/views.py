@@ -46,6 +46,15 @@ class CommonException(Exception):
         return repr(self.value)
 
 
+def group_filter(session, base_group_name, subject):
+    group_limited = session.query(BaseGroup).filter(BaseGroup.name == base_group_name).first()
+    groups_fit = []
+    for group in group_limited.groups:
+        if group.subject == subject:
+            groups_fit.append(group)
+    return groups_fit
+
+
 def forbidden_view(request):
     # do not allow a user to login if they are already logged in
     if authenticated_userid(request):
@@ -111,25 +120,26 @@ def register_post(request):
         pwd = Passhash(password=password)
         email = Email(email=email)
         # TODO: remake it in the new concept
-        can_create_dictionaries = DBSession.query(BaseGroup)\
-            .filter_by(name='can_create_dictionaries')\
-            .join(BaseGroup.groups)\
-            .filter_by(subject="ANY")\
-            .first()
-        if not can_create_dictionaries:
-            raise CommonException("Database groups are inconsistent, emergency")
-        new_user.groups.append(can_create_dictionaries)
         new_user.password = pwd
         new_user.email.append(email)
         DBSession.add(new_user)
+        DBSession.flush()
+        # adding user to needed groups
+#        can_create_dictionaries = DBSession.query(BaseGroup)\
+#            .filter_by(name='can_create_dictionaries')\
+#            .join(BaseGroup.groups)\
+#            .filter(Group.subject == "ANY")\
+#            .first()
+
+        groups = group_filter(DBSession, 'can_create_dictionaries', 'ANY')
+#        print(can_create_dictionaries.id)
+#        print(can_create_dictionaries.base_group_id)
+#        print(can_create_dictionaries.subject)
+        for group in groups:
+            new_user.groups.append(group)
         return login_post(request)
-#        return HTTPFound(location=request.route_url('login'))
-
-    except CommonException as e:
-        return {'failed_attempt': True, 'reason': str(e)}
-
-    except KeyError as e:
-        return {'failed_attempt': True, 'reason': str(e)}
+    finally:
+        print("!!!")
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
