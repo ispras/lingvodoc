@@ -23,6 +23,7 @@
 $(document).ready(function () {
     var reg_form = $('#register_form');
     reg_form.validate({
+        onkeyup: false,
         rules: {
             password: {
                 minlength: 5

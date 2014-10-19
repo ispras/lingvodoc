@@ -10,7 +10,9 @@ from .models import (
     Dictionary,
     User,
     Client,
-    Email
+    Email,
+    Passhash,
+    Group
     )
 
 from pyramid.security import (
@@ -31,6 +33,9 @@ from pyramid.view import forbidden_view_config
 
 #from pyramid.chameleon_zpt import render_template_to_response
 from pyramid.renderers import render_to_response
+
+import datetime
+
 
 class CommonException(Exception):
     def __init__(self, value):
@@ -92,8 +97,6 @@ def register_get(request):
 
 @view_config(route_name='register', renderer='json', request_method='POST')
 def register_post(request):
-    print ("TRYING TO REGISTER")
-    did_fail = False
     try:
         login = request.POST.getone('login')
         name = request.POST.getone('name')
@@ -104,8 +107,18 @@ def register_post(request):
             raise CommonException("The user with this login is already registered")
         if DBSession.query(Email).filter_by(email=email).first():
             raise CommonException("The user with this email is already registered")
+        new_user = User(login=login, name=name, signup_date=datetime.datetime.utcnow(), is_active=True)
+        pwd = Passhash(password=password)
+        email = Email(email=email)
+        editor_group = DBSession.query(Group).filter_by(name='can_create_dictionaries').first()
+        if not editor_group:
+            editor_group = Group(name='can_create_dictionaries')
+        new_user.groups.append(editor_group)
+        new_user.password = pwd
+        new_user.email.append(email)
+        DBSession.add(new_user)
         return login_post(request)
-
+#        return HTTPFound(location=request.route_url('login'))
 
     except CommonException as e:
         return {'failed_attempt': True, 'reason': str(e)}
@@ -148,11 +161,11 @@ def login_post(request):
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.check_password(password):
         client = Client(user_id=user.id)
+        user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
         headers = remember(request, principal=client.id)
         return HTTPFound(location=next, headers=headers)
-# TODO: delete debug info
     return HTTPUnauthorized(location=request.route_url('login'))
 
 

@@ -40,6 +40,7 @@ def main(argv=sys.argv):
         test = DBSession.query(User).filter_by(login='admin').first()
         print("Searching for admin record: ", test)
         if not test:
+            #TODO: need to add basic groups
             print("Admin record not found, initializing")
             admin_user = User(login='admin')
             pwd = Passhash(password='password')
