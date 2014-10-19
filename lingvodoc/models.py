@@ -69,32 +69,26 @@ class Locale(Base):
     __tablename__ = 'Locale'
     id = Column(Integer, primary_key=True)
     shortcut = Column(Unicode(length=20))
-    names = relationship("LocaleName", backref="Locale")
+    name = Column(UnicodeText)
 
 
-class LocaleName(Base):
-    __tablename__ = 'LocaleName'
+# Base groups define available actions. Introduced for deduplication.
+# The real groups are in 'Group' table because the is object of permission specified
+class BaseGroup(Base):
+    __tablename__ = 'BaseGroup'
     id = Column(Integer, primary_key=True)
-    locale_id = Column(ForeignKey("Locale.id"))
-
+    name = Column(UnicodeText)
     readable_name = Column(UnicodeText)
-#    locale = Column(ForeignKey("Locale.id"))
+    groups = relationship('Group', backref=backref("BaseGroup"))
 
 
+# Subject indicates the subject of permissions. Keyword "ANY" indicates any resource. May be empty for global resources.
+# Used in ACL.
 class Group(Base):
     __tablename__ = 'Group'
     id = Column(Integer, primary_key=True)
-    name = Column(Text)
-    readable_names = relationship('GroupName', backref='Group')
-
-
-class GroupName(Base):
-    __tablename__ = 'GroupName'
-    id = Column(Integer, primary_key=True)
-    group_id = Column(Integer, ForeignKey('Group.id'))
-
-    content = Column(UnicodeText)
-    locale_id = Column(ForeignKey("Locale.id"))
+    base_group_id = Column(ForeignKey("BaseGroup.id"))
+    subject = Column(UnicodeText)
 
 
 class User(Base):
@@ -109,8 +103,8 @@ class User(Base):
     signup_date = Column(DateTime)
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean)
-    clients = relationship("Client", backref='User')
-    groups = relationship("Group", secondary=user_to_group_association, backref="Users")
+    clients = relationship("Client", backref=backref('User'))
+    groups = relationship("Group", secondary=user_to_group_association, backref=backref("Users"))
     password = relationship("Passhash", uselist=False)
     email = relationship("Email")
     about = relationship("About")
@@ -153,8 +147,25 @@ class Client(Base):
     __tablename__ = "Client"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('User.id'))
-    dictionaries = relationship("Dictionary", backref="Client")
+    dictionaries = relationship("Dictionary", backref=backref("Client"))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# languages can be deleted only by administrator for now (hard to maintain synchronization if locales not fixed)
+class Language(Base):
+    __tablename__ = "Language"
+    id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer)
+    names = relationship("LanguageName", backref=backref("Language"))
+
+
+class LanguageName(Base):
+    __tablename__ = "LanguageName"
+    id = Column(Integer, primary_key=True)
+    language_id = Column(ForeignKey("Language.id"))
+    locale_id = Column(ForeignKey("Locale.id"))
+
+    readable_name = Column(UnicodeText)
 
 
 class Dictionary(Base):
@@ -163,9 +174,10 @@ class Dictionary(Base):
     client_id = Column(Integer, ForeignKey('Client.id'), primary_key=True)
     client = relationship("Client")
     #TODO: check if I can use user login instead of id.
-    lang = Column(UnicodeText)
+    lang = Column(ForeignKey("Language.id"))
     # state is meant to be ENUM type (may change in future): hidden, published, WiP.
     state = Column(UnicodeText)
+    # name is meant to be used internally: it's some kind of ID that only editors will see
     name = Column(UnicodeText)
     # imported hash indicates source if dictionary is imported from external source.
     imported_hash = Column(Unicode(100))
@@ -187,11 +199,11 @@ class MetaWord(Base):
 
     marked_to_delete = Column(Boolean)
 
-    entries = relationship('WordEntry', backref='MetaWord')
-    transcriptions = relationship('WordTranscription', backref='MetaWord')
-    translations = relationship('WordTranslation', backref='MetaWord')
-    sounds = relationship('WordSound', backref='MetaWord')
-    paradigms = relationship('MetaParadigm', backref='MetaWord')
+    entries = relationship('WordEntry', backref=backref('MetaWord'))
+    transcriptions = relationship('WordTranscription', backref=backref('MetaWord'))
+    translations = relationship('WordTranslation', backref=backref('MetaWord'))
+    sounds = relationship('WordSound', backref=backref('MetaWord'))
+    paradigms = relationship('MetaParadigm', backref=backref('MetaWord'))
 
     #translations = relationship('MetaTranslation')
     #etymology_tags = relationship('EtymologyTag')
@@ -371,10 +383,10 @@ class MetaParadigm(Base):
     metaword_id = Column(Integer)
     metaword_client_id = Column(Integer)
 
-    entries = relationship('ParadigmEntry', backref='MetaParadigm')
-    transcriptions = relationship('ParadigmTranscription', backref='MetaParadigm')
-    translations = relationship('ParadigmTranslation', backref='MetaParadigm')
-    sounds = relationship('ParadigmSound', backref='MetaParadigm')
+    entries = relationship('ParadigmEntry', backref=backref('MetaParadigm'))
+    transcriptions = relationship('ParadigmTranscription', backref=backref('MetaParadigm'))
+    translations = relationship('ParadigmTranslation', backref=backref('MetaParadigm'))
+    sounds = relationship('ParadigmSound', backref=backref('MetaParadigm'))
 
     marked_to_delete = Column(Boolean)
 

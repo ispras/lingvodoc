@@ -12,7 +12,8 @@ from .models import (
     Client,
     Email,
     Passhash,
-    Group
+    Group,
+    BaseGroup
     )
 
 from pyramid.security import (
@@ -82,7 +83,6 @@ def validate(request):
         return {'status': request.response.status, 'error': str(e)}
 
 
-
 @view_config(route_name='home', renderer='templates/home.pt')
 def main_page(request):
     variables = {'auth': authenticated_userid(request)}
@@ -110,10 +110,15 @@ def register_post(request):
         new_user = User(login=login, name=name, signup_date=datetime.datetime.utcnow(), is_active=True)
         pwd = Passhash(password=password)
         email = Email(email=email)
-        editor_group = DBSession.query(Group).filter_by(name='can_create_dictionaries').first()
-        if not editor_group:
-            editor_group = Group(name='can_create_dictionaries')
-        new_user.groups.append(editor_group)
+        # TODO: remake it in the new concept
+        can_create_dictionaries = DBSession.query(BaseGroup)\
+            .filter_by(name='can_create_dictionaries')\
+            .join(BaseGroup.groups)\
+            .filter_by(subject="ANY")\
+            .first()
+        if not can_create_dictionaries:
+            raise CommonException("Database groups are inconsistent, emergency")
+        new_user.groups.append(can_create_dictionaries)
         new_user.password = pwd
         new_user.email.append(email)
         DBSession.add(new_user)
@@ -126,25 +131,6 @@ def register_post(request):
     except KeyError as e:
         return {'failed_attempt': True, 'reason': str(e)}
 
-'''
-    id = Column(Integer, primary_key=True)
-    login = Column(Unicode(length=30), unique=True)
-    name = Column(UnicodeText)
-    # this stands for name in English
-    intl_name = Column(UnicodeText)
-    default_locale_id = Column(ForeignKey("Locale.id"))
-    birthday = Column(Date)
-    signup_date = Column(DateTime)
-    # it's responsible for "deleted user state". True for active, False for deactivated.
-    is_active = Column(Boolean)
-    clients = relationship("Client", backref='User')
-    groups = relationship("Group", secondary=user_to_group_association, backref="Users")
-    password = relationship("Passhash", uselist=False)
-    email = relationship("Email")
-    about = relationship("About")
-
-    return {'failed_attempt': did_fail}
-'''
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
 def login_get(request):
@@ -154,7 +140,7 @@ def login_get(request):
 
 @view_config(route_name='login', renderer='json', request_method='POST')
 def login_post(request):
-    next = request.params.get('next') or request.route_url('home')
+    next = request.params.get('next') or request.route_url('dashboard')
     login = request.POST.get('login', '')
     password = request.POST.get('password', '')
 
@@ -176,6 +162,16 @@ def logout_any(request):
     return HTTPFound(location=next, headers=headers)
 
 
+@view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
+def dashboard(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/dashboard.pt', variables, request=request)
+
+
+@view_config(route_name='create_dictionary_page', renderer='templates/create_dictionary_page.pt', request_method='GET')
+def create_dictionary_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/create_dictionary_page.pt', variables, request=request)
 
 
 #@view_config(route_name='login', renderer='')

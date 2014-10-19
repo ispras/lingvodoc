@@ -6,7 +6,6 @@ from pyramid.authorization import ACLAuthorizationPolicy
 from .models import (
     DBSession,
     Base,
-#    User
     )
 
 from .acl import (
@@ -20,6 +19,8 @@ def configure_routes(config):
     config.add_route('register/validate', 'register/validate/{param}')
     config.add_route('login', 'login')
     config.add_route('logout', 'logout')
+    config.add_route('dashboard', 'dashboard')
+    config.add_route('create_dictionary_page', 'create_dictionary_page')
 
 
 def main(global_config, **settings):

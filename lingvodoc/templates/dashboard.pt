@@ -1,0 +1,10 @@
+<html>
+<head metal:use-macro="load: head.pt">
+</head>
+<body>
+<div metal:use-macro="load: nav.pt"></div>
+<div class="container">
+    <h3>Список словарей, к которым Вы имеете доступ</h3>
+    <a href="${request.route_url('create_dictionary_page')}"><button class="btn btn-primary">Создать новый словарь?</button></a>
+</div>
+</body>

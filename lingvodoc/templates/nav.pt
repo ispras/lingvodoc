@@ -16,6 +16,7 @@
             <ul class="nav navbar-nav navbar-right">
                 <li tal:condition="not auth"><a href="${request.route_url('register')}">Зарегистрироваться</a></li>
                 <li tal:condition="not auth"><a href="${request.route_url('login')}">Войти в систему</a></li>
+                <li tal:condition="auth"><a href="${request.route_url('dashboard')}">Личный кабинет</a></li>
                 <li tal:condition="auth"><a href="${request.route_url('logout')}">Выйти из системы</a></li>
             </ul>
         </div>
