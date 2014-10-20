@@ -119,27 +119,33 @@ def register_post(request):
         new_user = User(login=login, name=name, signup_date=datetime.datetime.utcnow(), is_active=True)
         pwd = Passhash(password=password)
         email = Email(email=email)
-        # TODO: remake it in the new concept
         new_user.password = pwd
         new_user.email.append(email)
         DBSession.add(new_user)
         DBSession.flush()
-        # adding user to needed groups
-#        can_create_dictionaries = DBSession.query(BaseGroup)\
-#            .filter_by(name='can_create_dictionaries')\
-#            .join(BaseGroup.groups)\
-#            .filter(Group.subject == "ANY")\
-#            .first()
 
-        groups = group_filter(DBSession, 'can_create_dictionaries', 'ANY')
-#        print(can_create_dictionaries.id)
-#        print(can_create_dictionaries.base_group_id)
-#        print(can_create_dictionaries.subject)
-        for group in groups:
+        # adding user to needed groups
+        for group in group_filter(DBSession, 'can_create_dictionaries', 'ANY'):
             new_user.groups.append(group)
+
+        for group in group_filter(DBSession, 'adm_can_create_languages', 'ANY'):
+            new_user.groups.append(group)
+
+        for group in group_filter(DBSession, 'adm_can_edit_languages', 'ANY'):
+            new_user.groups.append(group)
+
+        for group in group_filter(DBSession, 'adm_can_create_organizations', 'ANY'):
+            new_user.groups.append(group)
+
         return login_post(request)
-    finally:
-        print("!!!")
+
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
