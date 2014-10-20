@@ -2,7 +2,6 @@
 <head metal:use-macro="load: head.pt"></head>
 <body>
     <div metal:use-macro="load: nav.pt"></div>
-<!--    <div class="container"> -->
      <div class="col-lg-6 col-sm-6 col-md-6 col-lg-offset-3 col-sm-offset-3 col-sm-offset-3">
       <form role="form" action="${request.route_url('login')}" method="post">
         <h2>Войдите в систему</h2>
@@ -11,7 +10,5 @@
         <button class="btn btn-lg btn-primary btn-block" type="submit">Войти</button>
       </form>
      </div>
-
-<!--    </div> -->
 </body>
 </html>

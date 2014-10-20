@@ -3,17 +3,26 @@
 </head>
 <body>
     <div metal:use-macro="load: nav.pt"></div>
-<!--    <div class="container"> -->
      <div class="col-lg-6 col-sm-12 col-md-10 col-lg-offset-3 col-md-offset-1">
-      <form id="register_form" role="form" action="${request.route_url('register')}" method="post">
+      <form id="register_form" role="form" action="${request.route_url('create_dictionary')}" method="post">
         <h2>Создание словаря</h2>
-        <input id="dictionary_name" placeholder="Название словаря" type="text" class="form-control" required autofocus>
+          <div class="dropdown">
+              <button class="btn btn-lg btn-default btn-block dropdown-toggle" type="button" id="languageDropdown" data-toggle="dropdown">
+                Выберите язык создаваемого словаря
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu" role="menu" aria-labelledby="languageDropdown">
+                  <li role="presentation" class="dropdown-header">Доступные языки</li>
+                  <li role="presentation" class="divider"></li>
+                  <li role="presentation"><a href="${request.route_url('create_language_page')}">Создать новый язык/диалект?</a></li>
+                  <li role="presentation" class="divider"></li>
+              </ul>
+          </div>
+          <input id="dictionary_name" placeholder="Название словаря" type="text" class="form-control input-lg" required autofocus>
         <!-- селектор, строящийся в серверной части. Не забыть добавить сохранение полей в куки, чтобы при возврате все было ок -->
-        <input id="sbmt" class="btn btn-lg btn-primary btn-block" type="submit" value="Создать словарь">
+          <input id="sbmt" class="btn btn-lg btn-primary btn-block" type="submit" value="Создать словарь">
       </form>
      </div>
-
-<!--    </div> -->
 </body>
 
 </html>

@@ -21,6 +21,9 @@ def configure_routes(config):
     config.add_route('logout', 'logout')
     config.add_route('dashboard', 'dashboard')
     config.add_route('create_dictionary_page', 'create_dictionary_page')
+    config.add_route('create_dictionary', 'create_dictionary')
+    config.add_route('create_language_page', 'create_language_page')
+    config.add_route('create_language', 'create_language')
 
 
 def main(global_config, **settings):

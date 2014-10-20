@@ -189,6 +189,20 @@ def create_dictionary_get(request):
     variables = {'auth': authenticated_userid(request)}
     return render_to_response('templates/create_dictionary_page.pt', variables, request=request)
 
+@view_config(route_name='create_dictionary', renderer='json', request_method='POST')
+def create_dictionary_post(request):
+    variables = {'auth': authenticated_userid(request)}
+    return {'status': 200}
+
+
+@view_config(route_name="create_language_page", renderer='templates/create_language.pt', request_method='GET')
+def create_language_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/create_language.pt', variables, request=request)
+
+@view_config(route_name="create_language", renderer='json', request_method='POST')
+def create_language_post(request):
+    return {'status': 200}
 
 #@view_config(route_name='login', renderer='')
 def login(request):
