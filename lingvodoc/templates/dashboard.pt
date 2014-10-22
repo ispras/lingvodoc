@@ -5,6 +5,29 @@
 <div metal:use-macro="load: nav.pt"></div>
 <div class="container">
     <h3>Список словарей, к которым Вы имеете доступ</h3>
-    <a href="${request.route_url('create_dictionary_page')}"><button class="btn btn-primary">Создать новый словарь?</button></a>
+    <ul id="dictionaries_list">
+
+    </ul>
+    <a href="${request.route_url('create_dictionary_page')}">
+        <button class="btn btn-primary">Создать новый словарь?</button>
+    </a>
+    <button class="btn btn-primary disabled">Произвести слияние нескольких словарей?</button>
 </div>
+<script>
+$.ajax({
+  url: "${request.route_url('own_dictionaries_list')}",
+  success: function(data) {
+      console.log(data);
+      var dictionaries_list = data['dictionaries'];
+      $.each(dictionaries_list, function(key, value) {
+        $('#dictionaries_list').append("<li>" +
+                "<a href=dictionaries/" + value['client_id'] + "/" + value['id'] + "/ >"
+                + value['name']
+                + "</li>");
+      });
+
+  },
+  dataType: 'json'
+});
+</script>
 </body>

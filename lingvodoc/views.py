@@ -22,10 +22,11 @@ from pyramid.security import (
     Deny
     )
 
+from sqlalchemy.exc import IntegrityError
 
 from pyramid.httpexceptions import HTTPForbidden
 from pyramid.httpexceptions import HTTPFound
-from pyramid.httpexceptions import HTTPNotFound, HTTPOk, HTTPBadRequest, HTTPConflict
+from pyramid.httpexceptions import HTTPNotFound, HTTPOk, HTTPBadRequest, HTTPConflict, HTTPInternalServerError
 from pyramid.httpexceptions import HTTPUnauthorized
 from pyramid.security import authenticated_userid
 from pyramid.security import forget
@@ -53,6 +54,14 @@ def group_filter(session, base_group_name, subject):
         if group.subject == subject:
             groups_fit.append(group)
     return groups_fit
+
+
+def add_child_group(session, base_group_name, subject):
+    base_group = session.query(BaseGroup).filter(BaseGroup.name == base_group_name).first()
+    base_group.groups.append(Group(subject=str(subject)))
+    session.flush()
+
+    return base_group.groups[-1]
 
 
 def forbidden_view(request):
@@ -128,13 +137,13 @@ def register_post(request):
         for group in group_filter(DBSession, 'can_create_dictionaries', 'ANY'):
             new_user.groups.append(group)
 
-        for group in group_filter(DBSession, 'adm_can_create_languages', 'ANY'):
+        for group in group_filter(DBSession, 'can_create_languages', 'ANY'):
             new_user.groups.append(group)
 
-        for group in group_filter(DBSession, 'adm_can_edit_languages', 'ANY'):
+        for group in group_filter(DBSession, 'can_edit_languages', 'ANY'):
             new_user.groups.append(group)
 
-        for group in group_filter(DBSession, 'adm_can_create_organizations', 'ANY'):
+        for group in group_filter(DBSession, 'can_create_organizations', 'ANY'):
             new_user.groups.append(group)
 
         return login_post(request)
@@ -191,8 +200,59 @@ def create_dictionary_get(request):
 
 @view_config(route_name='create_dictionary', renderer='json', request_method='POST')
 def create_dictionary_post(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        name = request.POST.getone('dictionary_name')
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        dictionary = Dictionary(id=len(client.dictionaries)+1, client_id=request.authenticated_userid, name=name, state="WiP")
+        DBSession.add(dictionary)
+        DBSession.flush()
+        subject = str(dictionary.id)+":"+str(client.id)
+        user.groups.append(add_child_group(DBSession, 'can_change_dictionary_info', subject=subject))
+        user.groups.append(add_child_group(DBSession, 'can_invite_collaborators', subject=subject))
+        user.groups.append(add_child_group(DBSession, 'can_add_words', subject=subject))
+        user.groups.append(add_child_group(DBSession, 'can_delete_words', subject=subject))
+        user.groups.append(add_child_group(DBSession, 'can_set_defaults', subject=subject))
+        user.groups.append(add_child_group(DBSession, 'can_publish', subject=subject))
+
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status, 'dictionary_id': dictionary.id, 'dictionary_client_id': dictionary.client_id}
+
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': request.response.status, 'error': str(e)}
+
+@view_config(route_name="own_dictionaries_list", renderer='json', request_method='GET')
+def own_dictionaries_list(request):
     variables = {'auth': authenticated_userid(request)}
-    return {'status': 200}
+    try:
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        dictionaries_list = []
+        for client in user.clients:
+            for dictionary in client.dictionaries:
+                dictionaries_list.append({'id': dictionary.id,
+                                          'client_id': dictionary.client_id,
+                                          'name': dictionary.name})
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status, 'dictionaries': dictionaries_list}
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
 
 
 @view_config(route_name="create_language_page", renderer='templates/create_language.pt', request_method='GET')

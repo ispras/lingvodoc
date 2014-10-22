@@ -9,12 +9,17 @@ from .models import (
     BaseGroup
     )
 
+from pyramid.security import forget
 
 def groupfinder(client_id, request):
     if not client_id:
         return None
-    client = DBSession.query(Client).filter_by(id=client_id).first()
-    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    try:
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+    except AttributeError as e:
+        forget(request)
+        return None
     if not user:
         return None
     grouplist = []

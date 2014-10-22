@@ -171,9 +171,10 @@ class LanguageName(Base):
 
 class Dictionary(Base):
     __tablename__ = "Dictionary"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     client_id = Column(Integer, ForeignKey('Client.id'), primary_key=True)
-    client = relationship("Client")
+    #TODO: try to remember why have I done it like this, seems to be an error
+    #client = relationship("Client")
     #TODO: check if I can use user login instead of id.
     lang = Column(ForeignKey("Language.id"))
     # state is meant to be ENUM type (may change in future): hidden, published, WiP.

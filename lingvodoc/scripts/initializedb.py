@@ -73,7 +73,9 @@ def main(argv=sys.argv):
         can_edit_organizations = BaseGroup(name="can_edit_organizations", readable_name="Can edit organizations")
         can_edit_users = BaseGroup(name="can_edit_users", readable_name="Can edit users")
         can_change_dictionary_info = BaseGroup(name="can_change_dictionary_info", readable_name="Can change dictionary info")
+        can_invite_collaborators = BaseGroup(name="can_invite_collaborators", readable_name="Can invite collaborators")
         can_add_words = BaseGroup(name="can_add_words", readable_name="Can add words")
+        can_delete_words = BaseGroup(name="can_delete_words", readable_name="Can delete words")
         can_set_defaults = BaseGroup(name="can_set_defaults", readable_name="Can set default entries for publication")
         can_publish = BaseGroup(name="can_publish", readable_name="Can publish dictionaries")
 
@@ -86,7 +88,9 @@ def main(argv=sys.argv):
         DBSession.add(can_edit_organizations)
         DBSession.add(can_edit_users)
         DBSession.add(can_change_dictionary_info)
+        DBSession.add(can_invite_collaborators)
         DBSession.add(can_add_words)
+        DBSession.add(can_delete_words)
         DBSession.add(can_set_defaults)
         DBSession.add(can_publish)
         DBSession.flush()
@@ -102,7 +106,9 @@ def main(argv=sys.argv):
         adm_can_edit_organizations = Group(base_group_id=can_edit_organizations.id, subject="ANY")
         adm_can_edit_users = Group(base_group_id=can_edit_users.id, subject="ANY")
         adm_can_change_dictionary_info = Group(base_group_id=can_change_dictionary_info.id, subject="ANY")
+        adm_can_invite_collaborators = Group(base_group_id=can_invite_collaborators.id, subject="ANY")
         adm_can_add_words = Group(base_group_id=can_add_words.id, subject="ANY")
+        adm_can_delete_words = Group(base_group_id=can_delete_words.id, subject="ANY")
         adm_can_set_defaults = Group(base_group_id=can_set_defaults.id, subject="ANY")
         adm_can_publish = Group(base_group_id=can_publish.id, subject="ANY")
 
@@ -115,7 +121,9 @@ def main(argv=sys.argv):
         DBSession.add(adm_can_edit_organizations)
         DBSession.add(adm_can_edit_users)
         DBSession.add(adm_can_change_dictionary_info)
+        DBSession.add(adm_can_invite_collaborators)
         DBSession.add(adm_can_add_words)
+        DBSession.add(adm_can_delete_words)
         DBSession.add(adm_can_set_defaults)
         DBSession.add(adm_can_publish)
         DBSession.flush()
@@ -129,6 +137,8 @@ def main(argv=sys.argv):
                                 adm_can_edit_organizations,
                                 adm_can_edit_users,
                                 adm_can_change_dictionary_info,
+                                adm_can_invite_collaborators,
                                 adm_can_add_words,
+                                adm_can_delete_words,
                                 adm_can_set_defaults,
                                 adm_can_publish]

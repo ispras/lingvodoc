@@ -22,6 +22,7 @@ def configure_routes(config):
     config.add_route('dashboard', 'dashboard')
     config.add_route('create_dictionary_page', 'create_dictionary_page')
     config.add_route('create_dictionary', 'create_dictionary')
+    config.add_route('own_dictionaries_list', 'own_dictionaries_list')
     config.add_route('create_language_page', 'create_language_page')
     config.add_route('create_language', 'create_language')
 
