@@ -148,7 +148,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
         this.addValue = function(item, type) {
             if (!this.isInputEnabled(item, type)) {
                 console.log(item);
-                this.enabledInputs.push({ 'id': item.id, 'type': type });
+                this.enabledInputs.push({ 'metaword_id': item.metaword_id, 'type': type });
             }
         }.bind(this);
 
@@ -205,7 +205,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
         this.isInputEnabled = function(item, type) {
             for (var i = 0; i < this.enabledInputs().length; i++) {
                 var checkItem = this.enabledInputs()[i];
-                if (checkItem.id === item.id && type === checkItem.type) {
+                if (checkItem.metaword_id === item.metaword_id && type === checkItem.type) {
                     return true;
                 }
             }
@@ -214,7 +214,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
 
         this.disableInput = function(item, type) {
             this.enabledInputs.remove(function(i) {
-                return i.id === item.id && i.type === type;
+                return i.metaword_id === item.metaword_id && i.type === type;
             });
         }.bind(this);
     };
