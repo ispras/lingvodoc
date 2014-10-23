@@ -1,0 +1,92 @@
+<html>
+<head metal:use-macro="load: head.pt">
+</head>
+<body>
+
+<div metal:use-macro="load: nav.pt"></div>
+
+    <div class="col-lg-1">
+        <button type="button" class="btn btn-default btn-lg" data-bind="click: addNewMetaWord">
+            <span class="glyphicon glyphicon-plus"></span>
+        </button>
+    </div>
+    <div class="col-lg-6 col-sm-12 col-md-10 col-md-offset-1">
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <td class="col-lg-4">Транскрипция</td>
+                    <td class="col-lg-4">Перевод</td>
+                    <td class="col-lg-1"></td>
+                </tr>
+            </thead>
+
+
+            <tbody>
+
+            <!-- ko foreach: list -->
+            <tr>
+
+                <td>
+                    <div data-bind="foreach: transcriptions">
+                        <span data-bind="text: content"></span>
+                        <!-- ko if: $parent.addedByUser -->
+                        <button type="button" class="btn btn-default btn-xs" data-bind="">
+                            <span class="glyphicon glyphicon-remove-sign"></span>
+                        </button>
+                        <!-- /ko -->
+                        <br>
+                    </div>
+
+                    <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.addValue.bind($data, $data, 'transcriptions')">
+                        <span class="glyphicon glyphicon-plus"></span>
+                    </button>
+
+                    <br>
+                    <!-- ko if: $root.isInputEnabled($data, 'transcriptions') -->
+                        <input type="text" value="" placeholder="new value..." data-bind="event: { blur: $root.saveValue.bind($data, 'transcriptions') }">
+                    <!-- /ko  -->
+                </td>
+
+                <td style="display: inline-block">
+                    <div data-bind="foreach: translations" style="float:left">
+                        <span data-bind="text: content"></span>
+                        <!-- ko if: $parent.addedByUser -->
+                        <button type="button" class="btn btn-default btn-xs" data-bind="click: $root.removeValue.bind($data, 'translations')">
+                            <span class="glyphicon glyphicon-remove-sign"></span>
+                        </button>
+                        <!-- /ko -->
+                        <br>
+                    </div>
+<div>
+                    <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.addValue.bind($data, $data, 'translations')">
+                        <span class="glyphicon glyphicon-plus"></span>
+                    </button>
+</div>
+                    <div style="float:right">
+                    <!-- ko if: $root.isInputEnabled($data, 'translations') -->
+                        <input type="text" value="" placeholder="" data-bind="event: { blur: $root.saveValue.bind($data, 'translations') }">
+                    <!-- /ko  -->
+                    </div>
+                </td>
+
+
+                <td data-bind="if: $data.addedByUser">
+                    <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.removeWord">
+                        <span class="glyphicon glyphicon-remove-sign"></span>
+                    </button>
+                </td>
+
+            </tr>
+
+            <!-- /ko -->
+
+            </tbody>
+
+        </table>
+    </div>
+
+<script data-main="${request.static_url('lingvodoc:static/js/ravn.js')}" src="${request.static_url('lingvodoc:static/js/require.js')}"></script>
+
+</body>
+</html>

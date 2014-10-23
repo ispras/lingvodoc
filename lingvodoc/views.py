@@ -264,6 +264,64 @@ def create_language_get(request):
 def create_language_post(request):
     return {'status': 200}
 
+
+@view_config(route_name="edit_dictionary", renderer="templates/edit_dictionary.pt", request_method='GET')
+def edit_dictionary(request):
+    variables = {'auth': authenticated_userid(request)}
+    client_id = request.matchdict['client_id']
+    dictionary_id = request.matchdict['dictionary_id']
+    if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=client_id).first():
+        return render_to_response("templates/edit_dictionary.pt", variables, request=request)
+    else:
+        raise HTTPNotFound
+
+
+@view_config(route_name="get_metawords_for_edit", renderer="json", request_method='GET')
+def get_metawords(request):
+    client_id = request.matchdict['client_id']
+    dictionary_id = request.matchdict['dictionary_id']
+    dictionary = DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=client_id).first()
+    if dictionary:
+        metawords_list = []
+        for metaword in dictionary.metawords:
+            transcription_list = []
+            for item in metaword.transcriptions:
+                transcription_list.append({'metaword_id': item.metaword_id,
+                                           'metaword_client_id': item.metaword_client_id,
+                                           'id': item.id,
+                                           'client_id': item.client_id,
+                                           'content': item.content,
+                                           'marked_to_delete': item.marked_to_delete
+                                           })
+            translation_list = []
+            for item in metaword.translations:
+                translation_list.append({'metaword_id': item.metaword_id,
+                                         'metaword_client_id': item.metaword_client_id,
+                                         'id': item.id,
+                                         'client_id': item.client_id,
+                                         'content': item.content,
+                                         'marked_to_delete': item.marked_to_delete
+                                         })
+            item = {'id': metaword.id,
+                    'client_id': metaword.client_id,
+                    'transcriptions': transcription_list,
+                    'translations': translation_list
+                    }
+            metawords_list.append(item)
+        return metawords_list
+    else:
+        request.response.status = HTTPNotFound.code
+        raise {'status': request.response.status, 'error': str("Dictionary not found")}
+
+
+@view_config(route_name="test", renderer="json", request_method="POST")
+def test(request):
+    client_id = request.matchdict['client_id']
+    dictionary_id = request.matchdict['dictionary_id']
+    print(request.json_body)
+    return {'status': 200, 'id': 8, 'dict_id': dictionary_id, 'client_id': client_id}
+
+
 #@view_config(route_name='login', renderer='')
 def login(request):
     """

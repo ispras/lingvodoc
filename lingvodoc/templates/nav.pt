@@ -1,7 +1,7 @@
 <div class="navbar navbar-fixed-top navbar-default" role="navigation">
     <div class="container">
         <div class="navbar-header">
-            <a href="${request.route_url('home')}" class="navbar-brand">LingvoDoc</a>
+            <a href="${request.route_url('home')}" class="navbar-brand">LingvoDoc<sub>pre-αlpha</sub></a>
 
         </div>
         <div class="navbar-collapse collapse" id="navbar-main">

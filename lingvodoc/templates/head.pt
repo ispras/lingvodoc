@@ -14,25 +14,6 @@
     <script src="${request.static_url('lingvodoc:static/js/bootstrap.min.js')}"> </script>
     <script src="${request.static_url('lingvodoc:static/js/noty/packaged/jquery.noty.packaged.min.js')}"></script>
 
-
-    <!-- special IE-only canvas fix -->
-    <!--[if IE]><script type="text/javascript" src="${request.static_url('lingvodoc:static/js/excanvas.js')}"></script><![endif]-->
-    <script type="text/javascript" src="${request.static_url('lingvodoc:static/js/berniecode-animator.js')}"></script>
-
-    <script src="${request.static_url('lingvodoc:static/js/soundmanager2-nodebug-jsmin.js')}"></script>
-    <script type="text/javascript" src="${request.static_url('lingvodoc:static/js/360player.js')}"></script>
-
-    <script>
-        soundManager.setup({
-            url: '/swf/',
-            flashVersion: 8, // optional: shiny features (default = 8)
-            // optional: ignore Flash where possible, use 100% HTML5 mode
-            preferFlash: false
-
-        });
-        threeSixtyPlayer.config.scaleFont = (navigator.userAgent.match(/msie/i)?false:true);
-        threeSixtyPlayer.config.showHMSTime = true;
-    </script>
     <script>
         $(document).ready(function() {
             $.noty.defaults.layout = 'bottom';
