@@ -311,15 +311,27 @@ def get_metawords(request):
         return metawords_list
     else:
         request.response.status = HTTPNotFound.code
-        raise {'status': request.response.status, 'error': str("Dictionary not found")}
+        return {'status': request.response.status, 'error': str("Dictionary not found")}
 
 
 @view_config(route_name="test", renderer="json", request_method="POST")
 def test(request):
-    client_id = request.matchdict['client_id']
-    dictionary_id = request.matchdict['dictionary_id']
-    print(request.json_body)
-    return {'status': 200, 'id': 8, 'dict_id': dictionary_id, 'client_id': client_id}
+    print(request.matchdict)
+#    client_id = request.matchdict['client_id']
+#    dictionary_id = request.matchdict['dictionary_id']
+    try:
+        metaword = request.json_body
+        metaword_id = metaword.get('metaword_id')
+        metaword_client_id = metaword['metaword_client_id']
+        if bool(metaword_id) != bool(metaword_client_id):
+            raise CommonException("Bad request: missing one of metaword identifiers")
+        if not bool(metaword_id) and not bool(metaword_client_id):
+            client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+            #metaword_object = MetaWord(id=)
+        return {'status': 200, 'id': 8, 'dict_id': dictionary_id, 'client_id': client_id}
+    except CommonException as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str("Bad request")}
 
 
 #@view_config(route_name='login', renderer='')

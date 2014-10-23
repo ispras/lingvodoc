@@ -20,16 +20,4 @@
             $.noty.defaults.timeout = 5000;
         });
     </script>
-    <style>
-        .col-md-1 {min-width: 200px;}
-        .container {
-            background-color: #ffffff;
-
-            padding-right:24px;
-            padding-left:24px;
-        }
-        .dictionary {
-            font-family: Calibri, Arial;
-        }
-    </style>
 </head>
