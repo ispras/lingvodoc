@@ -51,6 +51,7 @@
                 <td style="display: inline-block">
                     <div data-bind="foreach: translations" style="float:left">
                         <span data-bind="text: content"></span>
+                        <a data-bind="text: marked-to-delete"></a>
                         <!-- ko if: $parent.addedByUser -->
                         <button type="button" class="btn btn-default btn-xs" data-bind="click: $root.removeValue.bind($data, 'translations')">
                             <span class="glyphicon glyphicon-remove-sign"></span>

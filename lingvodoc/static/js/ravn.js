@@ -43,7 +43,6 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
 
         this.start = ko.observable(15);
         this.batchSize = ko.observable(15);
-        this.dictId = ko.observable(1);
 
         // list of meta words loaded from ajax backends
         this.list = ko.observableArray([]);
@@ -105,13 +104,13 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
                 if (data.id !== 'new') {
                     obj['id'] = data.id;
                     obj['dict_id'] = data.dict_id;
+                    obj['client_id'] = data.client_id;
                 } else {
                     updateId = true; // update id after word is saved
-                    obj['dict_id'] = this.dictId();
                 }
 
                 obj[type] = [];
-                obj[type].push([{ 'content': newValue }]);
+                obj[type].push({ 'content': newValue });
 
                 $.ajax({
                     contentType: 'application/json',
@@ -120,7 +119,8 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
                     success: function(response) {
                         if (updateId) {
                             data.id = response.id;
-                            data.dict_id = response.dict_id
+                            data.dict_id = response.dict_id;
+                            data.client_id = response.client_id;
                         }
                         data[type].push({ 'content': newValue });
                         this.list.valueHasMutated();
@@ -186,7 +186,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
                     }.bind(this),
                     processData: false,
                     type: 'DELETE',
-                    url: backendBaseURL + '/save/' + this.dictId() + '/' + obj.id
+                    url: backendBaseURL + '/save/' +  obj.id
                 });
             } else {
                 this.list.remove(function(i) {
