@@ -39,7 +39,9 @@
                     type: 'post',
                     dataType: 'json',
                     success: function(data) {
-                        console.log(data['status'])
+                        console.log(data);
+                        window.location.href = data['edit_url'];
+
                     },
                     error: function (jqXHR, textStatus, errorThrown) {
                         noty({text: jqXHR['responseJSON']['error'], timeout: 5000, type: "error"});

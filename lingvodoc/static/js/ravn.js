@@ -34,7 +34,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
     };
 
     var newEmptyMetaWord = function() {
-        var newWord = {'id': 'new', 'transcriptions': [], 'translations': [], 'addedByUser': true};
+        var newWord = {'metaword_id': 'new', 'transcriptions': [], 'translations': [], 'addedByUser': true};
         wrapArrays(newWord);
         return newWord;
     };
@@ -60,10 +60,11 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
             });
 
             $.getJSON(url).done(function(response) {
-
+                console.log(response);
                 if (response instanceof Array) {
                     for (var i = 0; i < response.length; i++) {
                         wrapArrays(response[i]);
+
                     }
                     // set list
                     this.list(response);
@@ -79,7 +80,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
 
         this.getNewMetaWord = function() {
             for (var i = 0; i < this.list().length; i++) {
-                if (this.list()[i]['id'] === 'new') {
+                if (this.list()[i]['metaword_id'] === 'new') {
                     return this.list()[i];
                 }
             }
@@ -101,16 +102,20 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
             if (newValue) {
                 var obj = {};
                 // when edit existing word, copy id and dict_id
-                if (data.id !== 'new') {
-                    obj['id'] = data.id;
-                    obj['dict_id'] = data.dict_id;
+                if (data.metaword_id !== 'new') {
+//                    obj['id'] = data.id;
+//                    obj['dict_id'] = data.dict_id;
                     obj['client_id'] = data.client_id;
+                    obj['metaword_id'] = data.metaword_id;
+                    obj['metaword_client_id'] = data.metaword_client_id;
+
                 } else {
                     updateId = true; // update id after word is saved
                 }
 
                 obj[type] = [];
                 obj[type].push({ 'content': newValue });
+                console.log(obj);
 
                 $.ajax({
                     contentType: 'application/json',
@@ -118,9 +123,9 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
                     dataType: 'json',
                     success: function(response) {
                         if (updateId) {
-                            data.id = response.id;
-                            data.dict_id = response.dict_id;
                             data.client_id = response.client_id;
+                            data.metaword_id = response.metaword_id;
+                            data.metaword_client_id = response.metaword_client_id;
                         }
                         data[type].push({ 'content': newValue });
                         this.list.valueHasMutated();
@@ -142,6 +147,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
 
         this.addValue = function(item, type) {
             if (!this.isInputEnabled(item, type)) {
+                console.log(item);
                 this.enabledInputs.push({ 'id': item.id, 'type': type });
             }
         }.bind(this);
@@ -168,7 +174,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
 
         this.removeWord = function(obj, event) {
 
-            if (obj.id !== 'new') {
+            if (obj.metaword_id !== 'new') {
                 $.ajax({
                     contentType: 'application/json',
                     data: JSON.stringify(obj),
@@ -177,7 +183,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
 
                         // remove from list after server confirmed successful removal
                         this.list.remove(function(i) {
-                            return i.id === obj.id && obj.dict_id;
+                            return i.metaword_id === obj.metaword_id && obj.dict_id;
                         });
                     }.bind(this),
                     error: function() {
@@ -190,7 +196,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
                 });
             } else {
                 this.list.remove(function(i) {
-                    return i.id === 'new';
+                    return i.metaword_id === 'new';
                 });
             }
 

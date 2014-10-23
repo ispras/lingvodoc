@@ -13,7 +13,9 @@ from .models import (
     Email,
     Passhash,
     Group,
-    BaseGroup
+    BaseGroup,
+    WordTranscription,
+    WordTranslation
     )
 
 from pyramid.security import (
@@ -23,6 +25,7 @@ from pyramid.security import (
     )
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 
 from pyramid.httpexceptions import HTTPForbidden
 from pyramid.httpexceptions import HTTPFound
@@ -222,7 +225,10 @@ def create_dictionary_post(request):
         user.groups.append(add_child_group(DBSession, 'can_publish', subject=subject))
 
         request.response.status = HTTPOk.code
-        return {'status': request.response.status, 'dictionary_id': dictionary.id, 'dictionary_client_id': dictionary.client_id}
+        return {'status': request.response.status,
+                'dictionary_id': dictionary.id,
+                'dictionary_client_id': dictionary.client_id,
+                'edit_url': request.route_url('edit_dictionary', client_id=dictionary.client_id, dictionary_id=dictionary.id)}
 
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
@@ -302,12 +308,15 @@ def get_metawords(request):
                                          'content': item.content,
                                          'marked_to_delete': item.marked_to_delete
                                          })
-            item = {'id': metaword.id,
-                    'client_id': metaword.client_id,
+            item = {'metaword_id': metaword.id,
+                    'metaword_client_id': metaword.client_id,
                     'transcriptions': transcription_list,
                     'translations': translation_list
                     }
             metawords_list.append(item)
+        import pprint
+        pp = pprint.PrettyPrinter()
+        pp.pprint(metawords_list)
         return metawords_list
     else:
         request.response.status = HTTPNotFound.code
@@ -317,18 +326,54 @@ def get_metawords(request):
 @view_config(route_name="test", renderer="json", request_method="POST")
 def test(request):
     print(request.matchdict)
-#    client_id = request.matchdict['client_id']
+#    dictionary_client_id = request.matchdict['client_id']
 #    dictionary_id = request.matchdict['dictionary_id']
     try:
+        dictionary_object = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
+                                                                  client_id=request.matchdict['client_id']).first()
         metaword = request.json_body
         metaword_id = metaword.get('metaword_id')
-        metaword_client_id = metaword['metaword_client_id']
+        metaword_client_id = metaword.get('metaword_client_id')
         if bool(metaword_id) != bool(metaword_client_id):
             raise CommonException("Bad request: missing one of metaword identifiers")
+
+        client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
         if not bool(metaword_id) and not bool(metaword_client_id):
-            client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
-            #metaword_object = MetaWord(id=)
-        return {'status': 200, 'id': 8, 'dict_id': dictionary_id, 'client_id': client_id}
+            # we are getting all metawords for purpose -- for correct numeration in client applications
+            metaword_object = MetaWord(id=DBSession.query(MetaWord).count()+1,
+                                       client_id=client.id,
+                                       client=client,
+                                       marked_to_delete=False)
+        else:
+            metaword_object = DBSession.query(MetaWord).filter_by(id=metaword_id,
+                                                                  client_id=metaword_client_id).first()
+        transcriptions = metaword.get('transcriptions')
+        translations = metaword.get('translations')
+        if transcriptions:
+            for transcription in transcriptions:
+                metaword_object.transcriptions.append(
+                    WordTranscription(id=DBSession.query(WordTranscription).filter_by(client_id=client.id).count()+1,
+                                      client_id=client.id,
+                                      content=transcription.get('content'),
+                                      marked_to_delete=False))
+        if translations:
+            for translation in translations:
+                metaword_object.translations.append(
+                    WordTranslation(id=DBSession.query(WordTranslation).filter_by(client_id=client.id).count()+1,
+                                    client_id=client.id,
+                                    content=translation.get('content'),
+                                    marked_to_delete=False))
+        dictionary_object.metawords.append(metaword_object)
+        DBSession.add(dictionary_object)
+        DBSession.flush()
+
+        return {'status': 200,
+                'metaword_id': metaword_object.id,
+                'metaword_client_id': metaword_object.client_id,
+#                'id': metaword_object.id,
+#                'dict_id': metaword_object.dictionary_id,
+#                'client_id': metaword_object.client_id
+                }
     except CommonException as e:
         request.response.status = HTTPBadRequest.code
         return {'status': request.response.status, 'error': str("Bad request")}

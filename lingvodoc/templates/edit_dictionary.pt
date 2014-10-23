@@ -50,9 +50,8 @@
                 </td>
 
                 <td style="display: inline-block">
-                    <div data-bind="foreach: translations" style="float:left">
+                    <div data-bind="foreach: translations">
                         <span data-bind="text: content"></span>
-                        <a data-bind="text: marked-to-delete"></a>
                         <!-- ko if: $parent.addedByUser -->
                         <button type="button" class="btn btn-default btn-xs" data-bind="click: $root.removeValue.bind($data, 'translations')">
                             <span class="glyphicon glyphicon-remove-sign"></span>
@@ -65,7 +64,7 @@
                         <span class="glyphicon glyphicon-plus"></span>
                     </button>
 </div>
-                    <div style="float:right">
+                    <div>
                     <!-- ko if: $root.isInputEnabled($data, 'translations') -->
                         <input type="text" value="" placeholder="" data-bind="event: { blur: $root.saveValue.bind($data, 'translations') }">
                     <!-- /ko  -->

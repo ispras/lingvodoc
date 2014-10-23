@@ -21,7 +21,7 @@ $.ajax({
       var dictionaries_list = data['dictionaries'];
       $.each(dictionaries_list, function(key, value) {
         $('#dictionaries_list').append("<li>" +
-                "<a href=dictionaries/" + value['client_id'] + "/" + value['id'] + "/ >"
+                "<a href=dictionaries/" + value['client_id'] + "/" + value['id'] + "/edit >"
                 + value['name']
                 + "</li>");
       });
