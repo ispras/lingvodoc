@@ -323,8 +323,27 @@ def get_metawords(request):
         return {'status': request.response.status, 'error': str("Dictionary not found")}
 
 
-@view_config(route_name="test", renderer="json", request_method="POST")
-def test(request):
+def traverse_metaword_ids(metaword):
+    metaword_ids = dict()
+    metaword_ids['metaword_id'] = metaword.id
+    metaword_ids['metaword_client_id'] = metaword.client_id
+
+    for field in 'entries', 'transcriptions', 'translations', 'sounds', 'metaparadigms':
+        metaword_ids[field] = []
+        print(vars(metaword))
+        if field in vars(metaword):
+            for obj in vars(metaword)[field]:
+                obj_description = dict()
+                obj_description['id'] = obj.id
+                obj_description['client_id'] = obj.client_id
+                obj_description['creation_time'] = str(obj.creation_time)
+                obj_description['author'] = obj.client.User.name
+                metaword_ids[field].append(obj_description)
+    return metaword_ids
+
+
+@view_config(route_name="save_metaword_objects", renderer="json", request_method="POST")
+def save_metaword_objects(request):
     print(request.matchdict)
 #    dictionary_client_id = request.matchdict['client_id']
 #    dictionary_id = request.matchdict['dictionary_id']
@@ -367,72 +386,69 @@ def test(request):
         DBSession.add(dictionary_object)
         DBSession.flush()
 
-        return {'status': 200,
-                'metaword_id': metaword_object.id,
-                'metaword_client_id': metaword_object.client_id,
-#                'id': metaword_object.id,
-#                'dict_id': metaword_object.dictionary_id,
-#                'client_id': metaword_object.client_id
-                }
+        response = traverse_metaword_ids(metaword_object)
+        response['status'] = 200
+
+        return response
     except CommonException as e:
         request.response.status = HTTPBadRequest.code
         return {'status': request.response.status, 'error': str("Bad request")}
 
 
 #@view_config(route_name='login', renderer='')
-def login(request):
-    """
-    user authentication on-site ('user-to-project').
-    :param request:
-    :return:
-    """
-
-    return
-
-
-#@view_config(route_name='logout')
-def logout(request):
-    """
-    user logout button on-site ('api')
-    :param request:
-    :return:
-    """
-    return
-
-
-#@view_config(route_name='register')
-def register(request):
-    """
-    user registration page on-site ('user-to-project').
-    :param request:
-    :return:
-    """
-    return
-
-
-#@view_config(route_name='acquire_client_key')
-def acquire_client_key(request):
-    """
-    get key for client program ('client-to-server')
-    :param request:
-    :return:
-    """
-    return
-
-
-#@view_config(route_name='dictionaries.list', renderer='json', permission='view')
-def list_dictionaries(request):
-    """
-    list existing dictionaries ('user-to-project')
-    :param request: filter=all,approved,pending
-    :return:
-    """
-    return {'Dicts': [request.context.dictionaries.first()]}
-
-
-#@view_config(route_name='dictionary')
-def view_dictionary(request):
-    return
+# def login(request):
+#     """
+#     user authentication on-site ('user-to-project').
+#     :param request:
+#     :return:
+#     """
+#
+#     return
+#
+#
+# #@view_config(route_name='logout')
+# def logout(request):
+#     """
+#     user logout button on-site ('api')
+#     :param request:
+#     :return:
+#     """
+#     return
+#
+#
+# #@view_config(route_name='register')
+# def register(request):
+#     """
+#     user registration page on-site ('user-to-project').
+#     :param request:
+#     :return:
+#     """
+#     return
+#
+#
+# #@view_config(route_name='acquire_client_key')
+# def acquire_client_key(request):
+#     """
+#     get key for client program ('client-to-server')
+#     :param request:
+#     :return:
+#     """
+#     return
+#
+#
+# #@view_config(route_name='dictionaries.list', renderer='json', permission='view')
+# def list_dictionaries(request):
+#     """
+#     list existing dictionaries ('user-to-project')
+#     :param request: filter=all,approved,pending
+#     :return:
+#     """
+#     return {'Dicts': [request.context.dictionaries.first()]}
+#
+#
+# #@view_config(route_name='dictionary')
+# def view_dictionary(request):
+#     return
 
 
 conn_err_msg = """\

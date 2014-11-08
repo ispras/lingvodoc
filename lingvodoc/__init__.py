@@ -27,7 +27,7 @@ def configure_routes(config):
     config.add_route('create_language', 'create_language')
     config.add_route('edit_dictionary', 'dictionaries/{client_id}/{dictionary_id}/edit')
     config.add_route('get_metawords_for_edit', 'dictionaries/{client_id}/{dictionary_id}/edit/metawords/')
-    config.add_route('test', 'dictionaries/{client_id}/{dictionary_id}/edit/save/')
+    config.add_route('save_metaword_objects', 'dictionaries/{client_id}/{dictionary_id}/edit/save/')
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.

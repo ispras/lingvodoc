@@ -150,6 +150,7 @@ class Client(Base):
     user_id = Column(Integer, ForeignKey('User.id'))
     dictionaries = relationship("Dictionary", backref=backref("Client"))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+    is_browser_client = Column(Boolean, default=True)
 
 
 # languages can be deleted only by administrator for now (hard to maintain synchronization if locales not fixed)
@@ -207,6 +208,7 @@ class MetaWord(Base):
     sounds = relationship('WordSound', backref=backref('MetaWord'))
     paradigms = relationship('MetaParadigm', backref=backref('MetaWord'))
 
+# NOTE: markups are connected with sounds, not with metawords
     #translations = relationship('MetaTranslation')
     #etymology_tags = relationship('EtymologyTag')
 
@@ -232,6 +234,8 @@ class WordEntry(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 # This is one-to-one association. Represents words intended for publication. Can be edited on-site only.
 class WordEntryDefault(Base):
@@ -249,6 +253,8 @@ class WordEntryDefault(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class WordTranscription(Base):
     __tablename__ = 'WordTranscription'
@@ -265,6 +271,8 @@ class WordTranscription(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class WordTranscriptionDefault(Base):
     __tablename__ = 'WordTranscriptionDefault'
@@ -279,6 +287,8 @@ class WordTranscriptionDefault(Base):
     wordtranscription_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class WordTranslation(Base):
@@ -297,6 +307,8 @@ class WordTranslation(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class WordTranslationDefault(Base):
     __tablename__ = 'WordTranslationDefault'
@@ -311,6 +323,8 @@ class WordTranslationDefault(Base):
     wordtranslation_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 # path to the sound is determined by it's IDs.
@@ -327,6 +341,8 @@ class WordSound(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class WordSoundDefault(Base):
     __tablename__ = 'WordSoundDefault'
@@ -341,6 +357,8 @@ class WordSoundDefault(Base):
     wordsound_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class WordMarkup(Base):
@@ -358,6 +376,8 @@ class WordMarkup(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class WordMarkupDefault(Base):
     __tablename__ = 'WordMarkupDefault'
@@ -372,6 +392,8 @@ class WordMarkupDefault(Base):
     wordmarkup_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class MetaParadigm(Base):
@@ -408,6 +430,8 @@ class ParadigmEntry(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 # This is one-to-one association. Represents words intended for publication. Can be edited on-site only.
 class ParadigmEntryDefault(Base):
@@ -423,6 +447,8 @@ class ParadigmEntryDefault(Base):
     paradigmentry_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class ParadigmTranscription(Base):
@@ -440,6 +466,8 @@ class ParadigmTranscription(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class ParadigmTranscriptionDefault(Base):
     __tablename__ = 'ParadigmTranscriptionDefault'
@@ -454,6 +482,8 @@ class ParadigmTranscriptionDefault(Base):
     paradigmtranscription_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class ParadigmTranslation(Base):
@@ -472,6 +502,8 @@ class ParadigmTranslation(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class ParadigmTranslationDefault(Base):
     __tablename__ = 'ParadigmTranslationDefault'
@@ -487,6 +519,8 @@ class ParadigmTranslationDefault(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class ParadigmSound(Base):
     __tablename__ = 'ParadigmSound'
@@ -500,6 +534,8 @@ class ParadigmSound(Base):
     metaparadigm_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class ParadigmSoundDefault(Base):
@@ -515,6 +551,8 @@ class ParadigmSoundDefault(Base):
     paradigmsound_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class ParadigmMarkup(Base):
@@ -532,6 +570,8 @@ class ParadigmMarkup(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class ParadigmMarkupDefault(Base):
     __tablename__ = 'ParadigmMarkupDefault'
@@ -547,6 +587,8 @@ class ParadigmMarkupDefault(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class MetaStory(Base):
     __tablename__ = 'MetaStory'
@@ -558,6 +600,8 @@ class MetaStory(Base):
 
     dictionary_id = Column(Integer)
     dictionary_client_id = Column(Integer)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class StoryText(Base):
@@ -575,6 +619,8 @@ class StoryText(Base):
 
     marked_to_delete = Column(Boolean)
 
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 # Due to previous naming principles it should be the same as StoryDefault.
 class StoryLegend(Base):
@@ -590,6 +636,8 @@ class StoryLegend(Base):
     storytext_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 # this is for files (audio/video/other). No defaults are intended to be in use.
@@ -607,6 +655,8 @@ class StoryObject(Base):
     type = Column(UnicodeText)
 
     marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 #Index('my_index', MyModel.name, unique=True, mysql_length=255)
