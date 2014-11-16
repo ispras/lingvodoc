@@ -15,7 +15,8 @@ from .models import (
     Group,
     BaseGroup,
     WordTranscription,
-    WordTranslation
+    WordTranslation,
+    WordSound
     )
 
 from pyramid.security import (
@@ -40,7 +41,7 @@ from pyramid.view import forbidden_view_config
 from pyramid.renderers import render_to_response
 
 import datetime
-
+import base64
 
 class CommonException(Exception):
     def __init__(self, value):
@@ -65,6 +66,32 @@ def add_child_group(session, base_group_name, subject):
     session.flush()
 
     return base_group.groups[-1]
+
+
+def create_object(content, obj_type, client_id, id):
+    # here will be object storage write as an option. Fallback (default) is filesystem write
+    f = open("/tmp/" + str(obj_type) + "/" + str(client_id) + "/" + str(id))
+    f.write(base64.decodebytes(content))
+    f.close()
+    return
+
+
+def produce_metaword_subtypes(type, client, content):
+    if type != WordSound:
+        obj = type(id=DBSession.query(type).filter_by(client_id=client.id).count()+1,
+                   client=client,
+                   client_id=client.id,
+                   content=content,
+                   marked_to_delete=False)
+    else:
+        obj = type(id=DBSession.query(type).filter_by(client_id=client.id).count()+1,
+                   client=client,
+                   client_id=client.id,
+                   marked_to_delete=False)
+        DBSession.flush()
+        create_object(content, type, client.id, obj.id)
+    return obj
+
 
 
 def forbidden_view(request):
@@ -271,7 +298,7 @@ def create_language_post(request):
     return {'status': 200}
 
 
-@view_config(route_name="edit_dictionary", renderer="templates/edit_dictionary.pt", request_method='GET')
+@view_config(route_name="edit_dictionary", renderer="templates/edit_dictionary.pt", request_method='GET', permission='view')
 def edit_dictionary(request):
     variables = {'auth': authenticated_userid(request)}
     client_id = request.matchdict['client_id']
@@ -280,6 +307,7 @@ def edit_dictionary(request):
         return render_to_response("templates/edit_dictionary.pt", variables, request=request)
     else:
         raise HTTPNotFound
+
 
 
 @view_config(route_name="get_metawords_for_edit", renderer="json", request_method='GET')
@@ -357,6 +385,8 @@ def save_metaword_objects(request):
             raise CommonException("Bad request: missing one of metaword identifiers")
 
         client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+        if not client or client.id != authenticated_userid(request):
+            raise CommonException("It seems that you are trying to trick the system. Don't!")
         if not bool(metaword_id) and not bool(metaword_client_id):
             # we are getting all metawords for purpose -- for correct numeration in client applications
             metaword_object = MetaWord(id=DBSession.query(MetaWord).count()+1,
@@ -368,20 +398,33 @@ def save_metaword_objects(request):
                                                                   client_id=metaword_client_id).first()
         transcriptions = metaword.get('transcriptions')
         translations = metaword.get('translations')
+        entries = metaword.get('entries')
+        sounds = metaword.get('sounds')
         if transcriptions:
-            for transcription in transcriptions:
+            for item in transcriptions:
                 metaword_object.transcriptions.append(
-                    WordTranscription(id=DBSession.query(WordTranscription).filter_by(client_id=client.id).count()+1,
-                                      client_id=client.id,
-                                      content=transcription.get('content'),
-                                      marked_to_delete=False))
+                    produce_metaword_subtypes(WordTranscription, client, item.get('content'))
+                )
+
         if translations:
-            for translation in translations:
+            for item in translations:
                 metaword_object.translations.append(
-                    WordTranslation(id=DBSession.query(WordTranslation).filter_by(client_id=client.id).count()+1,
-                                    client_id=client.id,
-                                    content=translation.get('content'),
-                                    marked_to_delete=False))
+                    produce_metaword_subtypes(WordTranslation, client, item.get('content'))
+                )
+        if entries:
+            for item in entries:
+                metaword_object.entries.append(
+                    produce_metaword_subtypes(WordEntry, client, item.get('content'))
+                )
+        if sounds:
+            for item in entries:
+                if not item:
+                    raise CommonException('No sound is attached, retry')
+                metaword_object.sounds.append(
+                    produce_metaword_subtypes(WordSound, client, item.get('content'))
+                )
+
+
         dictionary_object.metawords.append(metaword_object)
         DBSession.add(dictionary_object)
         DBSession.flush()
