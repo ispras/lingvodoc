@@ -3,27 +3,65 @@
 require.config({
     baseUrl: '/static/js/',
     shim: {
-        'bootstrap' : ['jquery']
+        'bootstrap' : ['jquery'],
+        'wavesurfer': {
+            'exports': 'WaveSurfer'
+        }
     },
     paths: {
         'jquery': 'jquery-2.1.1.min',
         'bootstrap': 'bootstrap.min',
-        'knockout': 'knockout-3.2.0'
+        'knockout': 'knockout-3.2.0',
+        'wavesurfer': 'wavesurfer.min'
     }
 });
 
-require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
+require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, ko, bootstrap, upload, wavesurfer) {
 
     var jQuery = $;
     var backendBaseURL = document.URL;
 
-    function encodeGetParams(data) {
+    // define some custom bindings for KO
+    ko.bindingHandlers.dragndropUpload = {
+        init: function (element, valueAccessor, allBindingsAccessor,
+                        viewModel, bindingContext) {
+            var value = valueAccessor();
+            var valueUnwrapped = ko.unwrap(value);
+            var options = {
+                'onload': function(e) {
+                    console.log('upload complete!');
+                    if (e.target.result) {
+                        var b64file = btoa(e.target.result);
+                        if (typeof valueUnwrapped === 'function') {
+                            valueUnwrapped(b64file);
+                        }
+                    }
+                },
+                'onloadstart': function() {
+                    console.log('upload started!');
+                }
+            };
+            var reader = new upload(options);
+            reader.bindDragAndDrop(element);
+        }
+    };
+
+
+
+
+    var encodeGetParams = function(data) {
         return Object.keys(data).map(function(key) {
             return [key, data[key]].map(encodeURIComponent).join("=");
         }).join("&");
-    }
+    };
 
     var wrapArrays = function(word) {
+
+        // FIXME: just a placeholder!!!
+        if (!('sounds' in word)) {
+            word.sounds = [];
+        }
+
         for (var prop in word) {
             if (word.hasOwnProperty(prop)) {
                 if (word[prop] instanceof Array) {
@@ -34,7 +72,7 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
     };
 
     var newEmptyMetaWord = function() {
-        var newWord = {'metaword_id': 'new', 'transcriptions': [], 'translations': [], 'addedByUser': true};
+        var newWord = {'metaword_id': 'new', 'transcriptions': [], 'translations': [], 'sounds': [], 'addedByUser': true};
         wrapArrays(newWord);
         return newWord;
     };
@@ -64,7 +102,6 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
                 if (response instanceof Array) {
                     for (var i = 0; i < response.length; i++) {
                         wrapArrays(response[i]);
-
                     }
                     // set list
                     this.list(response);
@@ -92,6 +129,14 @@ require(['jquery', 'knockout','bootstrap'], function($, ko, bootstrap) {
             if (this.getNewMetaWord() === null) {
                 this.list.unshift(newEmptyMetaWord());
             }
+        }.bind(this);
+
+        this.saveSound = function(data, sound) {
+            // XXX: What a weird way to handle this
+            var event = {'target': {
+               'value': sound
+            }};
+            this.saveValue('sounds', data, event);
         }.bind(this);
 
         this.saveValue = function(type, data, event) {
