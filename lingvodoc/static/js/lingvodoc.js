@@ -27,12 +27,12 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
                         viewModel, bindingContext) {
             var value = valueAccessor();
             var valueUnwrapped = ko.unwrap(value);
+
             var options = {
                 'onload': function(e) {
-                    console.log('upload complete!');
                     if (e.target.result) {
                         var b64file = btoa(e.target.result);
-                        if (typeof valueUnwrapped === 'function') {
+                        if (typeof valueUnwrapped == 'function') {
                             valueUnwrapped(b64file);
                         }
                     }
@@ -46,8 +46,39 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
         }
     };
 
+    ko.bindingHandlers.wavesurfer = {
+        init: function(element, valueAccessor, allBindingsAccessor,
+                        viewModel, bindingContext) {
 
+            var value = valueAccessor();
+            var valueUnwrapped = ko.unwrap(value);
 
+            var wsurfer = Object.create(WaveSurfer);
+
+            wsurfer.init({
+                container: element,
+                waveColor: 'black',
+                progressColor: 'red'
+            });
+
+            wsurfer.on('ready', function () {
+                wsurfer.play();
+            });
+
+            ko.utils.domData.set(element, 'wsurfer', wsurfer);
+        },
+        update: function(element, valueAccessor, allBindingsAccessor,
+                         viewModel, bindingContext) {
+
+            var value = valueAccessor();
+            var valueUnwrapped = ko.unwrap(value);
+
+            var wsurfer = ko.utils.domData.get(element, 'wsurfer');
+            if (typeof wsurfer != 'undefined' && valueUnwrapped) {
+                wsurfer.load(valueUnwrapped);
+            }
+        }
+    };
 
     var encodeGetParams = function(data) {
         return Object.keys(data).map(function(key) {
@@ -87,6 +118,8 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
 
         // list of enabled text inputs in table
         this.enabledInputs = ko.observableArray([]);
+
+        this.lastSoundFileUrl = ko.observable();
 
         // this reloads list of meta words from server
         // once batchSize or/and start change
