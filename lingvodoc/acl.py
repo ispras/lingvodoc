@@ -43,10 +43,10 @@ class DummyDeny(object):
             dictionary_client_id = request.matchdict['client_id']
             dictionary_id = request.matchdict['dictionary_id']
             self.__acl__ = [
-                (Allow, 'can_add_words:' + str(dictionary_id) + ':' + str(dictionary_client_id), 'view'),
-                (Deny, Everyone, 'view')
+                (Allow, 'can_add_words:' + str(dictionary_id) + ':' + str(dictionary_client_id), 'edit'),
+                (Deny, Everyone, 'edit')
             ]
-        except KeyError:
+        except KeyError as e:
             print("Not authorized", str(e))
 
 

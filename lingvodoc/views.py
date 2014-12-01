@@ -280,7 +280,10 @@ def own_dictionaries_list(request):
             for dictionary in client.dictionaries:
                 dictionaries_list.append({'id': dictionary.id,
                                           'client_id': dictionary.client_id,
-                                          'name': dictionary.name})
+                                          'name': dictionary.name,
+                                          'url': request.route_url('edit_dictionary',
+                                                                   dictionary_client_id=dictionary.client_id,
+                                                                   dictionary_id=dictionary.id)})
         request.response.status = HTTPOk.code
         return {'status': request.response.status, 'dictionaries': dictionaries_list}
     except CommonException as e:
@@ -298,12 +301,12 @@ def create_language_post(request):
     return {'status': 200}
 
 
-@view_config(route_name="edit_dictionary", renderer="templates/edit_dictionary.pt", request_method='GET', permission='view')
+@view_config(route_name="edit_dictionary", renderer="templates/edit_dictionary.pt", request_method='GET')#, permission='edit')
 def edit_dictionary(request):
     variables = {'auth': authenticated_userid(request)}
-    client_id = request.matchdict['client_id']
+    dictionary_client_id = request.matchdict['dictionary_client_id']
     dictionary_id = request.matchdict['dictionary_id']
-    if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=client_id).first():
+    if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first():
         return render_to_response("templates/edit_dictionary.pt", variables, request=request)
     else:
         raise HTTPNotFound
@@ -312,9 +315,9 @@ def edit_dictionary(request):
 
 @view_config(route_name="get_metawords_for_edit", renderer="json", request_method='GET')
 def get_metawords(request):
-    client_id = request.matchdict['client_id']
+    dictionary_client_id = request.matchdict['dictionary_client_id']
     dictionary_id = request.matchdict['dictionary_id']
-    dictionary = DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=client_id).first()
+    dictionary = DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first()
     if dictionary:
         metawords_list = []
         for metaword in dictionary.metawords:
@@ -351,10 +354,17 @@ def get_metawords(request):
         return {'status': request.response.status, 'error': str("Dictionary not found")}
 
 
-def traverse_metaword_ids(metaword):
+def traverse_metaword_ids(metaword, request):
     metaword_ids = dict()
+    metaword_ids['dictionary_id'] = metaword.dictionary_id
+    metaword_ids['dictionary_client_id'] = metaword.dictionary_client_id
     metaword_ids['metaword_id'] = metaword.id
     metaword_ids['metaword_client_id'] = metaword.client_id
+    metaword_ids['url'] = request.route_url('api_metaword_get',
+                                            dictionary_client_id=metaword_ids['dictionary_client_id'],
+                                            dictionary_id=metaword_ids['dictionary_id'],
+                                            metaword_client_id=metaword_ids['metaword_client_id'],
+                                            metaword_ids=metaword_ids['metaword_id'])
 
     for field in 'entries', 'transcriptions', 'translations', 'sounds', 'metaparadigms':
         metaword_ids[field] = []
@@ -369,9 +379,26 @@ def traverse_metaword_ids(metaword):
                 metaword_ids[field].append(obj_description)
     return metaword_ids
 
+    # config.add_route('view_dictionary',
+    #                  'dictionaries/{client_id}/{dictionary_id}/view',
+    #                  factory=DummyDeny)
+    # config.add_route('view_metaword',
+    #                  'dictionaries/{client_id}/{dictionary_id}/metawords/{metaword_client_id}/{metaword_id}/view',
+    #                  factory=DummyDeny)
 
-@view_config(route_name="save_metaword_objects", renderer="json", request_method="POST")
-def save_metaword_objects(request):
+@view_config(route_name="view_dictionary", renderer="templates/view_dictionary.pt", request_method="GET")
+def view_dictionary(request):
+    variables = {'auth': authenticated_userid(request)}
+    dictionary_client_id = request.matchdict['dictionary_client_id']
+    dictionary_id = request.matchdict['dictionary_id']
+    if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first():
+        return render_to_response("templates/view_dictionary.pt", variables, request=request)
+    else:
+        raise HTTPNotFound
+
+
+@view_config(route_name="api_metaword_post_batch", renderer="json", request_method="POST")
+def api_metaword_post_batch(request):
     print(request.matchdict)
 #    dictionary_client_id = request.matchdict['client_id']
 #    dictionary_id = request.matchdict['dictionary_id']
@@ -429,7 +456,7 @@ def save_metaword_objects(request):
         DBSession.add(dictionary_object)
         DBSession.flush()
 
-        response = traverse_metaword_ids(metaword_object)
+        response = traverse_metaword_ids(metaword_object, request)
         response['status'] = 200
 
         return response
