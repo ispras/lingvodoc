@@ -40,6 +40,7 @@ from pyramid.view import forbidden_view_config
 #from pyramid.chameleon_zpt import render_template_to_response
 from pyramid.renderers import render_to_response
 
+import os
 import datetime
 import base64
 
@@ -70,8 +71,10 @@ def add_child_group(session, base_group_name, subject):
 
 def create_object(content, obj_type, client_id, id):
     # here will be object storage write as an option. Fallback (default) is filesystem write
-    f = open("/tmp/" + str(obj_type) + "/" + str(client_id) + "/" + str(id))
-    f.write(base64.decodebytes(content))
+    storage_path = "/tmp/" + obj_type.__tablename__ + "/" + str(client_id)
+    os.makedirs(storage_path,  exist_ok=True)
+    f = open(os.path.join(storage_path, str(id)), 'wb+')
+    f.write(base64.b64decode(content))
     f.close()
     return
 
@@ -336,10 +339,23 @@ def get_metawords(request):
                                          'content': item.content,
                                          'marked_to_delete': item.marked_to_delete
                                          })
+
+
+            sounds_list = []
+            for item in metaword.sounds:
+                sounds_list.append({'metaword_id': item.metaword_id,
+                                    'metaword_client_id': item.metaword_client_id,
+                                    'id': item.id,
+                                    'client_id': item.client_id,
+                                    'content': item.id,
+                                    'marked_to_delete': item.marked_to_delete
+                })
+
             item = {'metaword_id': metaword.id,
                     'metaword_client_id': metaword.client_id,
                     'transcriptions': transcription_list,
-                    'translations': translation_list
+                    'translations': translation_list,
+                    'sounds': sounds_list
                     }
             metawords_list.append(item)
         import pprint
@@ -417,7 +433,7 @@ def save_metaword_objects(request):
                     produce_metaword_subtypes(WordEntry, client, item.get('content'))
                 )
         if sounds:
-            for item in entries:
+            for item in sounds:
                 if not item:
                     raise CommonException('No sound is attached, retry')
                 metaword_object.sounds.append(

@@ -40,22 +40,23 @@ define(function () {
         this.bindDragAndDrop = function(holderElement) {
 
             holderElement.addEventListener('dragenter', function(event) {
+                event.preventDefault();
             });
 
             holderElement.addEventListener('dragover', function(event) {
                 event.preventDefault();
             });
 
-            holderElement.addEventListener("dragleave", function(event) {
+            holderElement.addEventListener('dragleave', function(event) {
+                event.preventDefault();
             });
 
             holderElement.addEventListener('drop', function(event) {
                 event.preventDefault();
-                this.readBinaryString(event.dataTransfer.files[0]);
+                for (var i = 0; i < event.dataTransfer.files.length; i++) {
+                    this.readBinaryString(event.dataTransfer.files[i]);
+                }
             }.bind(this));
-
-
-
 
         }.bind(this);
     };

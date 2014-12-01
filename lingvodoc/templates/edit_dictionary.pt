@@ -13,6 +13,9 @@
         </div>
         <div class="col-md-11 ">
 
+            <div data-bind="wavesurfer: lastSoundFileUrl"></div>
+
+
             <table class="table table-striped">
                 <thead>
                 <tr>
