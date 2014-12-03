@@ -8,14 +8,18 @@ define(function () {
         this.reader = null;
         this.binaryString = null;
 
-        this.readBinaryString = function (data) {
+        this.readBinaryString = function(file) {
+
+            var userOnload = this.options.onload || function(event, file) {};
             this.reader = new FileReader();
             this.reader.onerror = this.options.onerror || this.errorHandler;
             this.reader.onprogress = this.options.onprogress || function() {};
             this.reader.onabort = this.options.onabort || function() {};
             this.reader.onloadstart = this.options.onloadstart || function() {};
-            this.reader.onload = this.options.onload || function() {};
-            this.reader.readAsBinaryString(data);
+            this.reader.onload = function(event) {
+                return userOnload(event, file)
+            };
+            this.reader.readAsBinaryString(file);
         }.bind(this);
 
         this.abort = function () {
@@ -40,14 +44,17 @@ define(function () {
         this.bindDragAndDrop = function(holderElement) {
 
             holderElement.addEventListener('dragenter', function(event) {
-                event.preventDefault();
+                e.stopPropagation();
+                e.preventDefault();
             });
 
             holderElement.addEventListener('dragover', function(event) {
+                event.stopPropagation();
                 event.preventDefault();
             });
 
             holderElement.addEventListener('dragleave', function(event) {
+                event.stopPropagation();
                 event.preventDefault();
             });
 
@@ -55,6 +62,9 @@ define(function () {
                 event.preventDefault();
                 for (var i = 0; i < event.dataTransfer.files.length; i++) {
                     this.readBinaryString(event.dataTransfer.files[i]);
+
+
+
                 }
             }.bind(this));
 

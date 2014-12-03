@@ -71,16 +71,20 @@ def add_child_group(session, base_group_name, subject):
     return base_group.groups[-1]
 
 
-def object_file_path(obj):
+def object_file_path(obj, create_dir=False):
     base_path = '/tmp'
-    return os.path.join(base_path, obj.__tablename__, str(obj.client_id), str(obj.id))
+    storage_dir = os.path.join(base_path, obj.__tablename__, str(obj.client_id), str(obj.id))
+    if create_dir:
+        os.makedirs(storage_dir, exist_ok=True)
+    storage_path = os.path.join(storage_dir, "content.original")
+    return storage_path
 
 
 def create_object(content, obj):
     # here will be object storage write as an option. Fallback (default) is filesystem write
-    storage_path = object_file_path(obj)
-    os.makedirs(storage_path, exist_ok=True)
-    f = open(os.path.join(storage_path, 'content.original', 'wb+'))
+    storage_path = object_file_path(obj, True)
+
+    f = open(storage_path, 'wb+')
     f.write(base64.b64decode(content))
     f.close()
     return
@@ -358,9 +362,9 @@ def create_language_post(request):
 
 @view_config(route_name="edit_dictionary", renderer="templates/edit_dictionary.pt", request_method='GET')#, permission='edit')
 def edit_dictionary(request):
-    variables = {'auth': authenticated_userid(request)}
     dictionary_client_id = request.matchdict['dictionary_client_id']
     dictionary_id = request.matchdict['dictionary_id']
+    variables = {'auth': authenticated_userid(request), 'id': dictionary_id, 'client_id': dictionary_client_id}
     if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first():
         return render_to_response("templates/edit_dictionary.pt", variables, request=request)
     else:
@@ -446,7 +450,7 @@ def api_metaword_post_batch(request):
 #    dictionary_id = request.matchdict['dictionary_id']
     try:
         dictionary_object = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
-                                                                  client_id=request.matchdict['client_id']).first()
+                                                                  client_id=request.matchdict['dictionary_client_id']).first()
         metaword = request.json_body
         metaword_id = metaword.get('metaword_id')
         metaword_client_id = metaword.get('metaword_client_id')

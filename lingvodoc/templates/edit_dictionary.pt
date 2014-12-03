@@ -3,6 +3,12 @@
 </head>
 <body>
 
+<div id="currentId" data-lingvodoc="${auth}"></div>
+<div id="id" data-lingvodoc="${id}"></div>
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="getMetaWordsUrl" data-lingvodoc="${request.route_url('api_metaword_get_batch', dictionary_client_id=client_id, dictionary_id=id)}"></div>
+
+
 <div metal:use-macro="load: nav.pt"></div>
 <div class="container" style="padding-top: 20px">
     <div class="row">
@@ -19,9 +25,10 @@
             <table class="table table-striped">
                 <thead>
                 <tr>
-                    <td class="col-md-4">Транскрипция</td>
-                    <td class="col-md-4">Перевод</td>
-                    <td class="col-md-3">Звук</td>
+                    <td class="col-md-3">Запись слова</td>
+                    <td class="col-md-3">Транскрипция</td>
+                    <td class="col-md-3">Перевод</td>
+                    <td class="col-md-2">Звук</td>
                     <td class="col-md-1"></td>
                 </tr>
                 </thead>
@@ -29,8 +36,33 @@
 
                 <tbody>
 
-                <!-- ko foreach: list -->
+                <!-- ko foreach: metawords -->
                 <tr>
+
+                    <td>
+                        <div data-bind="foreach: entries">
+                            <span data-bind="text: content"></span>
+                            <!-- ko if: $parent.addedByUser -->
+                            <button type="button" class="btn btn-default btn-xs" data-bind="">
+                                <span class="glyphicon glyphicon-remove-sign"></span>
+                            </button>
+                            <!-- /ko -->
+                            <br>
+                        </div>
+
+                        <button type="button" class="btn btn-default btn-sm"
+                                data-bind="click: $root.addValue.bind($data, $data, 'entries')">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
+
+                        <br>
+                        <!-- ko if: $root.isInputEnabled($data, 'entries') -->
+                        <input type="text" value="" placeholder="new value..."
+                               data-bind="event: { blur: $root.saveTextValue.bind($data, 'entries') }">
+                        <!-- /ko  -->
+                    </td>
+
+
                     <td>
                         <div data-bind="foreach: transcriptions">
                             <span data-bind="text: content"></span>
@@ -50,7 +82,7 @@
                         <br>
                         <!-- ko if: $root.isInputEnabled($data, 'transcriptions') -->
                         <input type="text" value="" placeholder="new value..."
-                               data-bind="event: { blur: $root.saveValue.bind($data, 'transcriptions') }">
+                               data-bind="event: { blur: $root.saveTextValue.bind($data, 'transcriptions') }">
                         <!-- /ko  -->
                     </td>
 
@@ -74,14 +106,15 @@
                         <div>
                             <!-- ko if: $root.isInputEnabled($data, 'translations') -->
                             <input type="text" value="" placeholder=""
-                                   data-bind="event: { blur: $root.saveValue.bind($data, 'translations') }">
+                                   data-bind="event: { blur: $root.saveTextValue.bind($data, 'translations') }">
                             <!-- /ko  -->
                         </div>
                     </td>
 
                     <td style="display: inline-block">
                         <div data-bind="foreach: sounds">
-                            <span data-bind="text: content"></span>
+
+                            <a href="#" data-bind="click: $root.playSound">Play</a>
                             <!-- ko if: $parent.addedByUser -->
                             <button type="button" class="btn btn-default btn-xs"
                                     data-bind="click: $root.removeValue.bind($data, 'sounds')">
@@ -93,7 +126,7 @@
 
                         <!-- drag and drop area for upload -->
                         <div>
-                            <div class="drag-n-drop" style="border: 1px dashed #ccc; width: 100%; height: 80px;" data-bind="dragndropUpload: $root.saveSound.bind($data, $data)"></div>
+                            <div class="drag-n-drop" style="border: 1px dashed #ccc; width: 100%; height: 80px;" data-bind="dragndropUpload: $root.saveWordSoundValue.bind($data, $data)"></div>
                         </div>
                     </td>
 

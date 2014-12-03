@@ -19,7 +19,26 @@ require.config({
 require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, ko, bootstrap, upload, wavesurfer) {
 
     var jQuery = $;
-    var backendBaseURL = document.URL;
+
+
+    var Value = function() {
+        this.type = 'abstract';
+    };
+
+    var TextValue = function(type, content) {
+        this.type = type;
+        this.content = content;
+    };
+    TextValue.prototype = new Value();
+
+    var WordSoundValue = function(name, content, mime) {
+        this.type = 'sounds';
+        this.name = name;
+        this.mime = mime;
+        this.content = content;
+    };
+    WordSoundValue.prototype = new Value();
+
 
     // define some custom bindings for KO
     ko.bindingHandlers.dragndropUpload = {
@@ -29,16 +48,17 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
             var valueUnwrapped = ko.unwrap(value);
 
             var options = {
-                'onload': function(e) {
+                'onload': function(e, file) {
                     if (e.target.result) {
                         var b64file = btoa(e.target.result);
                         if (typeof valueUnwrapped == 'function') {
-                            valueUnwrapped(b64file);
+                            var wordSound = new WordSoundValue(file.name, b64file, file.type);
+                            valueUnwrapped(wordSound);
                         }
                     }
                 },
                 'onloadstart': function() {
-                    console.log('upload started!');
+
                 }
             };
             var reader = new upload(options);
@@ -80,19 +100,7 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
         }
     };
 
-    var encodeGetParams = function(data) {
-        return Object.keys(data).map(function(key) {
-            return [key, data[key]].map(encodeURIComponent).join("=");
-        }).join("&");
-    };
-
     var wrapArrays = function(word) {
-
-        // FIXME: just a placeholder!!!
-        if (!('sounds' in word)) {
-            word.sounds = [];
-        }
-
         for (var prop in word) {
             if (word.hasOwnProperty(prop)) {
                 if (word[prop] instanceof Array) {
@@ -103,18 +111,21 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
     };
 
     var newEmptyMetaWord = function() {
-        var newWord = {'metaword_id': 'new', 'transcriptions': [], 'translations': [], 'sounds': [], 'addedByUser': true};
+        var newWord = {'metaword_id': 'new', 'entries': [], 'transcriptions': [], 'translations': [], 'sounds': [], 'addedByUser': true};
         wrapArrays(newWord);
         return newWord;
     };
 
     var viewModel = function() {
 
-        this.start = ko.observable(15);
-        this.batchSize = ko.observable(15);
+        var currentId = $('#currentId').data('lingvodoc');
+        var baseUrl = $('#getMetaWordsUrl').data('lingvodoc');
+
+        //this.start = ko.observable(15);
+        //this.batchSize = ko.observable(15);
 
         // list of meta words loaded from ajax backends
-        this.list = ko.observableArray([]);
+        this.metawords = ko.observableArray([]);
 
         // list of enabled text inputs in table
         this.enabledInputs = ko.observableArray([]);
@@ -125,19 +136,13 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
         // once batchSize or/and start change
         ko.computed(function() {
 
-            var url = document.URL + '/metawords/?' + encodeGetParams({
-                'batch_size': this.batchSize(),
-                'start': this.start()
-            });
-
-            $.getJSON(url).done(function(response) {
-                console.log(response);
+            $.getJSON(baseUrl).done(function(response) {
                 if (response instanceof Array) {
                     for (var i = 0; i < response.length; i++) {
                         wrapArrays(response[i]);
                     }
-                    // set list
-                    this.list(response);
+                    // set metawords
+                    this.metawords(response);
                 } else {
                     // TODO: handle error
                     // response is not array?
@@ -149,9 +154,9 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
         }, this);
 
         this.getNewMetaWord = function() {
-            for (var i = 0; i < this.list().length; i++) {
-                if (this.list()[i]['metaword_id'] === 'new') {
-                    return this.list()[i];
+            for (var i = 0; i < this.metawords().length; i++) {
+                if (this.metawords()[i]['metaword_id'] === 'new') {
+                    return this.metawords()[i];
                 }
             }
             return null;
@@ -159,78 +164,91 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
 
         this.addNewMetaWord = function() {
             // only one new word is allowed
-            if (this.getNewMetaWord() === null) {
-                this.list.unshift(newEmptyMetaWord());
+            if (!this.getNewMetaWord()) {
+                this.metawords.unshift(newEmptyMetaWord());
             }
         }.bind(this);
 
-        this.saveSound = function(data, sound) {
+        this.saveSound = function(data, wordSound) {
             // XXX: What a weird way to handle this
             var event = {'target': {
-               'value': sound
+               'value': wordSound
             }};
             this.saveValue('sounds', data, event);
         }.bind(this);
 
-        this.saveValue = function(type, data, event) {
+
+        this.saveTextValue = function(type, metaword, event) {
+            if (event.target.value) {
+                var value = new TextValue(type, event.target.value);
+                this.saveValue(value, metaword);
+            }
+        }.bind(this);
+
+        this.saveWordSoundValue = function(metaword, value) {
+            this.saveValue(value, metaword);
+        }.bind(this);;
+
+
+
+        this.saveValue = function(value, metaword) {
 
             var updateId = false;
-            var newValue = event.target.value;
-
-            if (newValue) {
-                var obj = {};
-                // when edit existing word, copy id and dict_id
-                if (data.metaword_id !== 'new') {
-//                    obj['id'] = data.id;
-//                    obj['dict_id'] = data.dict_id;
-                    obj['client_id'] = data.client_id;
-                    obj['metaword_id'] = data.metaword_id;
-                    obj['metaword_client_id'] = data.metaword_client_id;
-
+            var obj = {};
+            // when edit existing word, copy id and dict_id
+            if (metaword.metaword_id !== 'new') {
+                obj['client_id'] = metaword.client_id;
+                obj['metaword_id'] = metaword.metaword_id;
+                obj['metaword_client_id'] = metaword.metaword_client_id;
+            } else {
+                updateId = true; // update id after word is saved
+            }
+                if(value instanceof WordSoundValue) {
+                    obj[value.type] = [];
+                    obj[value.type].push({'name': value.name, 'content': value.content, 'type': value.mime });
+                } else if (value instanceof TextValue) {
+                    obj[value.type] = [];
+                    obj[value.type].push({'content': value.content});
                 } else {
-                    updateId = true; // update id after word is saved
+                    console.error('Value type is not supported!');
+                    return;
                 }
 
-                obj[type] = [];
-                obj[type].push({ 'content': newValue });
-                console.log(obj);
+            $.ajax({
+                contentType: 'application/json',
+                data: JSON.stringify(obj),
+                dataType: 'json',
+                success: function(response) {
+                    if (updateId) {
+                        metaword.client_id = response.client_id;
+                        metaword.metaword_id = response.metaword_id;
+                        metaword.metaword_client_id = response.metaword_client_id;
+                    }
+                    metaword[value.type](response[value.type]);
+                    this.metawords.valueHasMutated();
+                }.bind(this),
+                error: function() {
+                    // TODO: Error handling
 
-                $.ajax({
-                    contentType: 'application/json',
-                    data: JSON.stringify(obj),
-                    dataType: 'json',
-                    success: function(response) {
-                        if (updateId) {
-                            data.client_id = response.client_id;
-                            data.metaword_id = response.metaword_id;
-                            data.metaword_client_id = response.metaword_client_id;
-                        }
-                        data[type].push({ 'content': newValue });
-                        this.list.valueHasMutated();
-                    }.bind(this),
-                    error: function() {
-                        console.log(obj);
-                        // TODO: Error handling
+                }.bind(this),
+                processData: false,
+                type: 'POST',
+                url: baseUrl
+            });
 
-                    }.bind(this),
-                    processData: false,
-                    type: 'POST',
-                    url: backendBaseURL + '/save/'
-                });
-            }
-
-            this.disableInput(data, type);
+            this.disableInput(metaword, value.type);
 
         }.bind(this);
 
         this.addValue = function(item, type) {
             if (!this.isInputEnabled(item, type)) {
-                console.log(item);
                 this.enabledInputs.push({ 'metaword_id': item.metaword_id, 'type': type });
             }
         }.bind(this);
 
         this.removeValue = function(type, obj, event) {
+
+            var url = baseUrl + encodeURIComponent(currentId) + '/' + encodeURIComponent(obj.id);
             $.ajax({
                 contentType: 'application/json',
                 data: {
@@ -246,21 +264,22 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
                 }.bind(this),
                 processData: false,
                 type: 'DELETE',
-                url: backendBaseURL + '/save/' + obj.id
+                url: url
             });
         }.bind(this);
 
         this.removeWord = function(obj, event) {
 
             if (obj.metaword_id !== 'new') {
+
+                var url = baseUrl + encodeURIComponent(currentId) + '/' + encodeURIComponent(obj.id);
                 $.ajax({
                     contentType: 'application/json',
                     data: JSON.stringify(obj),
                     dataType: 'json',
                     success: function(response) {
-
                         // remove from list after server confirmed successful removal
-                        this.list.remove(function(i) {
+                        this.metawords.remove(function(i) {
                             return i.metaword_id === obj.metaword_id && obj.dict_id;
                         });
                     }.bind(this),
@@ -270,10 +289,10 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
                     }.bind(this),
                     processData: false,
                     type: 'DELETE',
-                    url: backendBaseURL + '/save/' +  obj.id
+                    url: url
                 });
             } else {
-                this.list.remove(function(i) {
+                this.metawords.remove(function(i) {
                     return i.metaword_id === 'new';
                 });
             }
@@ -295,8 +314,18 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
                 return i.metaword_id === item.metaword_id && i.type === type;
             });
         }.bind(this);
+
+        this.playSound = function(entry, event) {
+            if (entry.url) {
+                this.lastSoundFileUrl(entry.url);
+            }
+        }.bind(this);
+
     };
 
-    ko.applyBindings(new viewModel());
 
+
+
+    window.viewModel = new viewModel();
+    ko.applyBindings(window.viewModel);
 });
