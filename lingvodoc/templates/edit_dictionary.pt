@@ -43,7 +43,7 @@
                         <div data-bind="foreach: entries">
                             <span data-bind="text: content"></span>
                             <!-- ko if: $parent.addedByUser -->
-                            <button type="button" class="btn btn-default btn-xs" data-bind="">
+                            <button type="button" class="btn btn-default btn-xs" data-bind="click: $root.removeValue.bind($data, $parent, 'entries')">
                                 <span class="glyphicon glyphicon-remove-sign"></span>
                             </button>
                             <!-- /ko -->
@@ -67,7 +67,7 @@
                         <div data-bind="foreach: transcriptions">
                             <span data-bind="text: content"></span>
                             <!-- ko if: $parent.addedByUser -->
-                            <button type="button" class="btn btn-default btn-xs" data-bind="">
+                            <button type="button" class="btn btn-default btn-xs" data-bind="click: $root.removeValue.bind($data, $parent, 'transcriptions')">
                                 <span class="glyphicon glyphicon-remove-sign"></span>
                             </button>
                             <!-- /ko -->
@@ -91,7 +91,7 @@
                             <span data-bind="text: content"></span>
                             <!-- ko if: $parent.addedByUser -->
                             <button type="button" class="btn btn-default btn-xs"
-                                    data-bind="click: $root.removeValue.bind($data, 'translations')">
+                                    data-bind="click: $root.removeValue.bind($data, $parent, 'translations')">
                                 <span class="glyphicon glyphicon-remove-sign"></span>
                             </button>
                             <!-- /ko -->
@@ -117,7 +117,7 @@
                             <a href="#" data-bind="click: $root.playSound">Play</a>
                             <!-- ko if: $parent.addedByUser -->
                             <button type="button" class="btn btn-default btn-xs"
-                                    data-bind="click: $root.removeValue.bind($data, 'sounds')">
+                                    data-bind="click: $root.removeValue.bind($data, $parent, 'sounds')">
                                 <span class="glyphicon glyphicon-remove-sign"></span>
                             </button>
                             <!-- /ko -->

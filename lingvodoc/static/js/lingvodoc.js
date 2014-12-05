@@ -121,9 +121,6 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
         var currentId = $('#currentId').data('lingvodoc');
         var baseUrl = $('#getMetaWordsUrl').data('lingvodoc');
 
-        //this.start = ko.observable(15);
-        //this.batchSize = ko.observable(15);
-
         // list of meta words loaded from ajax backends
         this.metawords = ko.observableArray([]);
 
@@ -190,7 +187,6 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
         }.bind(this);;
 
 
-
         this.saveValue = function(value, metaword) {
 
             var updateId = false;
@@ -246,17 +242,16 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
             }
         }.bind(this);
 
-        this.removeValue = function(type, obj, event) {
+        this.removeValue = function(metaword, type, obj, event) {
 
             var url = baseUrl + encodeURIComponent(currentId) + '/' + encodeURIComponent(obj.id);
+
             $.ajax({
                 contentType: 'application/json',
-                data: {
-                    'data': JSON.stringify(obj)
-                },
+                'data': JSON.stringify(obj),
                 dataType: 'json',
                 success: function(response) {
-
+                    this.metaWordsRemoveValue(metaword, type, obj);
                 }.bind(this),
                 error: function() {
                     // TODO: Error handling
@@ -321,10 +316,26 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
             }
         }.bind(this);
 
+        this.metaWordsRemoveValue = function(metaword, type, obj) {
+            this.metawords.remove(function(currentMetaword) {
+                if (currentMetaword.metaword_id === metaword.metaword_id) {
+                    if (type in currentMetaword) {
+                        var values = currentMetaword[type];
+                        for (var i = 0; i < values.length; i++) {
+                            var value = values[i];
+                            if (value.id === obj.id) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            });
+
+
+        }.bind(this);
+
     };
-
-
-
 
     window.viewModel = new viewModel();
     ko.applyBindings(window.viewModel);

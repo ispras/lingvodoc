@@ -62,9 +62,6 @@ define(function () {
                 event.preventDefault();
                 for (var i = 0; i < event.dataTransfer.files.length; i++) {
                     this.readBinaryString(event.dataTransfer.files[i]);
-
-
-
                 }
             }.bind(this));
 
