@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/360player.css')}" />
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/360player-visualization.css')}" />
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/flashblock.css')}" />
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}" />
 
     <script src="${request.static_url('lingvodoc:static/js/jquery-1.11.1.min.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/jquery.form.min.js')}"></script>

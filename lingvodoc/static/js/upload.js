@@ -66,6 +66,15 @@ define(function () {
             }.bind(this));
 
         }.bind(this);
+
+        this.bindInputFiles = function(element) {
+            element.addEventListener('change', function(event) {
+                event.preventDefault();
+                for (var i = 0; i < event.target.files.length; i++) {
+                    this.readBinaryString(event.target.files[i]);
+                }
+            }.bind(this));
+        }.bind(this);
     };
     return upload;
 });

@@ -56,15 +56,36 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
                             valueUnwrapped(wordSound);
                         }
                     }
-                },
-                'onloadstart': function() {
-
                 }
             };
             var reader = new upload(options);
             reader.bindDragAndDrop(element);
         }
     };
+
+    ko.bindingHandlers.inputFiles = {
+        init: function (element, valueAccessor, allBindingsAccessor,
+                        viewModel, bindingContext) {
+            var value = valueAccessor();
+            var valueUnwrapped = ko.unwrap(value);
+
+            var options = {
+                'onload': function(e, file) {
+                    if (e.target.result) {
+                        var b64file = btoa(e.target.result);
+                        if (typeof valueUnwrapped == 'function') {
+                            var wordSound = new WordSoundValue(file.name, b64file, file.type);
+                            valueUnwrapped(wordSound);
+                        }
+                    }
+                }
+            };
+            var reader = new upload(options);
+            reader.bindInputFiles(element);
+        }
+    };
+
+
 
     ko.bindingHandlers.wavesurfer = {
         init: function(element, valueAccessor, allBindingsAccessor,
@@ -267,7 +288,9 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
 
             if (obj.metaword_id !== 'new') {
 
-                var url = baseUrl + encodeURIComponent(currentId) + '/' + encodeURIComponent(obj.id);
+                var url = baseUrl + encodeURIComponent(currentId) + '/' + encodeURIComponent(obj.metaword_id);
+                console.log(obj);
+                console.log(url);
                 $.ajax({
                     contentType: 'application/json',
                     data: JSON.stringify(obj),
@@ -335,8 +358,16 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
 
         }.bind(this);
 
+
+        this.showParadigms = function(metaword, event) {
+
+        }.bind(this);
+
+        this.showEtymology = function(metaword, event) {
+
+        }.bind(this);
+
     };
 
-    window.viewModel = new viewModel();
-    ko.applyBindings(window.viewModel);
+    ko.applyBindings(new viewModel());
 });
