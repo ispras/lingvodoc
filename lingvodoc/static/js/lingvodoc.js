@@ -16,110 +16,9 @@ require.config({
     }
 });
 
-require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, ko, bootstrap, upload, wavesurfer) {
+require(['model', 'jquery', 'knockout','bootstrap', 'kobindings'], function(model, $, ko) {
 
     var jQuery = $;
-
-
-    var Value = function() {
-        this.type = 'abstract';
-    };
-
-    var TextValue = function(type, content) {
-        this.type = type;
-        this.content = content;
-    };
-    TextValue.prototype = new Value();
-
-    var WordSoundValue = function(name, content, mime) {
-        this.type = 'sounds';
-        this.name = name;
-        this.mime = mime;
-        this.content = content;
-    };
-    WordSoundValue.prototype = new Value();
-
-
-    // define some custom bindings for KO
-    ko.bindingHandlers.dragndropUpload = {
-        init: function (element, valueAccessor, allBindingsAccessor,
-                        viewModel, bindingContext) {
-            var value = valueAccessor();
-            var valueUnwrapped = ko.unwrap(value);
-
-            var options = {
-                'onload': function(e, file) {
-                    if (e.target.result) {
-                        var b64file = btoa(e.target.result);
-                        if (typeof valueUnwrapped == 'function') {
-                            var wordSound = new WordSoundValue(file.name, b64file, file.type);
-                            valueUnwrapped(wordSound);
-                        }
-                    }
-                }
-            };
-            var reader = new upload(options);
-            reader.bindDragAndDrop(element);
-        }
-    };
-
-    ko.bindingHandlers.inputFiles = {
-        init: function (element, valueAccessor, allBindingsAccessor,
-                        viewModel, bindingContext) {
-            var value = valueAccessor();
-            var valueUnwrapped = ko.unwrap(value);
-
-            var options = {
-                'onload': function(e, file) {
-                    if (e.target.result) {
-                        var b64file = btoa(e.target.result);
-                        if (typeof valueUnwrapped == 'function') {
-                            var wordSound = new WordSoundValue(file.name, b64file, file.type);
-                            valueUnwrapped(wordSound);
-                        }
-                    }
-                }
-            };
-            var reader = new upload(options);
-            reader.bindInputFiles(element);
-        }
-    };
-
-
-
-    ko.bindingHandlers.wavesurfer = {
-        init: function(element, valueAccessor, allBindingsAccessor,
-                        viewModel, bindingContext) {
-
-            var value = valueAccessor();
-            var valueUnwrapped = ko.unwrap(value);
-
-            var wsurfer = Object.create(WaveSurfer);
-
-            wsurfer.init({
-                container: element,
-                waveColor: 'black',
-                progressColor: 'red'
-            });
-
-            wsurfer.on('ready', function () {
-                wsurfer.play();
-            });
-
-            ko.utils.domData.set(element, 'wsurfer', wsurfer);
-        },
-        update: function(element, valueAccessor, allBindingsAccessor,
-                         viewModel, bindingContext) {
-
-            var value = valueAccessor();
-            var valueUnwrapped = ko.unwrap(value);
-
-            var wsurfer = ko.utils.domData.get(element, 'wsurfer');
-            if (typeof wsurfer != 'undefined' && valueUnwrapped) {
-                wsurfer.load(valueUnwrapped);
-            }
-        }
-    };
 
     var wrapArrays = function(word) {
         for (var prop in word) {
@@ -187,26 +86,16 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
             }
         }.bind(this);
 
-        this.saveSound = function(data, wordSound) {
-            // XXX: What a weird way to handle this
-            var event = {'target': {
-               'value': wordSound
-            }};
-            this.saveValue('sounds', data, event);
-        }.bind(this);
-
-
         this.saveTextValue = function(type, metaword, event) {
             if (event.target.value) {
-                var value = new TextValue(type, event.target.value);
+                var value = new model.TextValue(type, event.target.value);
                 this.saveValue(value, metaword);
             }
         }.bind(this);
 
         this.saveWordSoundValue = function(metaword, value) {
             this.saveValue(value, metaword);
-        }.bind(this);;
-
+        }.bind(this);
 
         this.saveValue = function(value, metaword) {
 
@@ -220,10 +109,10 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
             } else {
                 updateId = true; // update id after word is saved
             }
-                if(value instanceof WordSoundValue) {
+                if(value instanceof model.WordSoundValue) {
                     obj[value.type] = [];
                     obj[value.type].push({'name': value.name, 'content': value.content, 'type': value.mime });
-                } else if (value instanceof TextValue) {
+                } else if (value instanceof model.TextValue) {
                     obj[value.type] = [];
                     obj[value.type].push({'content': value.content});
                 } else {
@@ -287,10 +176,7 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
         this.removeWord = function(obj, event) {
 
             if (obj.metaword_id !== 'new') {
-
                 var url = baseUrl + encodeURIComponent(currentId) + '/' + encodeURIComponent(obj.metaword_id);
-                console.log(obj);
-                console.log(url);
                 $.ajax({
                     contentType: 'application/json',
                     data: JSON.stringify(obj),
@@ -357,7 +243,6 @@ require(['jquery', 'knockout','bootstrap', 'upload', 'wavesurfer'], function($, 
 
 
         }.bind(this);
-
 
         this.showParadigms = function(metaword, event) {
 
