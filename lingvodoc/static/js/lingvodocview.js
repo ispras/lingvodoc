@@ -1,24 +1,29 @@
 'use strict';
 
 require.config({
-    baseUrl: '/static/js/',
-    shim: {
+    'baseUrl': '/static/js/',
+    'shim': {
         'bootstrap' : ['jquery'],
         'wavesurfer': {
             'exports': 'WaveSurfer'
-        }
+        },
+        'knockstrap': ['jquery', 'bootstrap', 'knockout']
     },
-    paths: {
+    'paths': {
         'jquery': 'jquery-2.1.1.min',
         'bootstrap': 'bootstrap.min',
         'knockout': 'knockout-3.2.0',
+        'knockstrap': 'knockstrap.min',
         'wavesurfer': 'wavesurfer.min'
+    },
+    'map': {
+        '*': {
+            'jQuery': 'jquery'
+        }
     }
 });
 
-require(['model', 'jquery', 'knockout','bootstrap', 'kobindings'], function(model, $, ko) {
-
-    var jQuery = $;
+require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $, ko) {
 
     var wrapArrays = function(word) {
         for (var prop in word) {

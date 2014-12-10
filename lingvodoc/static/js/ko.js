@@ -79,4 +79,6 @@ define(['model', 'knockout', 'wavesurfer', 'upload'], function(model, ko, wavesu
             }
         }
     };
+
+    return ko;
 });

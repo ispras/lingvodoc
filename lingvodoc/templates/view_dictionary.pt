@@ -76,6 +76,14 @@
         </div>
     </div>
 </div>
+
+<script type="text/html" id="etymology_modal">
+    <div>
+        <h1>Placeholder</h1>
+    </div>
+</script>
+
+
 <script data-main="${request.static_url('lingvodoc:static/js/lingvodocview.js')}" src="${request.static_url('lingvodoc:static/js/require.js')}"></script>
 
 </body>
