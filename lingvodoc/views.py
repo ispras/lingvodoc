@@ -120,7 +120,7 @@ def produce_subtypes(obj_type, client, value):
                                          content=markup['content'],
                                          marked_to_delete=False)
                 obj.markups.append(markup_obj)
-            create_object(value['content'], obj)
+        create_object(value['content'], obj)
 
     else:
         obj = obj_type(id=DBSession.query(obj_type).filter_by(client_id=client.id).count()+1,
