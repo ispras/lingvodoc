@@ -722,18 +722,20 @@ def api_metaparadigm_sound_get(request):
         raise HTTPNotFound
 
 
-@view_config(route_name='api_etymology_get', request_method='GET')
+@view_config(route_name='api_etymology_get', renderer='json', request_method='GET')
 def api_etymology_get(request):
     word_object = DBSession.query(MetaWord).options(subqueryload('*')).filter_by(
         id=request.matchdict['metaword_client_id'],
         client_id=request.matchdict['metaword_id']).first()
     if word_object:
-        connected_words_objects = DBSession.query(MetaWord).options(subqueryload('*')).filter(
-            MetaWord.etymology_tags.in_(word_object.etymology_tags)
-            )
-        connected_words = [traverse_metaword(word_object, request)]
-        for word in connected_words_objects:
-            connected_words.append(traverse_metaword(word, request))
+        connected_words = []
+        for tag in word_object.etymology_tags:
+            connected_words_objects = DBSession.query(MetaWord).options(subqueryload('*')).filter(
+                MetaWord.etymology_tags.has(content=tag.content)
+                )
+            connected_words = [traverse_metaword(word_object, request)]
+            for word in connected_words_objects:
+                connected_words.append(traverse_metaword(word, request))
         return connected_words
     else:
         request.response.status = HTTPNotFound.code
