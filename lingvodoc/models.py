@@ -239,10 +239,6 @@ class WordEtymologyTag(Base):
 
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
-    @classmethod
-    def count(self):
-        return DBSession.query(WordEtymologyTag).filter_by(content=self.content).count()
-
 
 class WordEntry(Base):
     __tablename__ = 'WordEntry'

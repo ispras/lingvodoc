@@ -146,7 +146,7 @@ def traverse_paradigm(metaparadigm, dictionary_client_id, dictionary_id, request
 
     for field in 'entries', 'transcriptions', 'translations', 'sounds':
         metaparadigm_ids[field] = []
-        print(vars(metaparadigm))
+        #print(vars(metaparadigm))
         if field in vars(metaparadigm):
             for obj in vars(metaparadigm)[field]:
                 obj_description = dict()
@@ -187,7 +187,7 @@ def traverse_metaword(metaword, request):
 
     for field in 'entries', 'transcriptions', 'translations', 'sounds', 'paradigms', 'etymology_tags':
         metaword_ids[field] = []
-        print(vars(metaword))
+        #print(vars(metaword))
         if field in vars(metaword):
             for obj in vars(metaword)[field]:
                 obj_description = dict()
@@ -214,7 +214,7 @@ def traverse_metaword(metaword, request):
                                                                               request
                                                                               ))
                 elif field in ['etymology_tags']:
-                    obj_description['content'] = obj.count()
+                    obj_description['content'] = DBSession.query(WordEtymologyTag).filter_by(content=obj.content).count()
                     obj_description['url'] = request.route_url('api_etymology_get',
                                                                dictionary_client_id=metaword_ids['dictionary_client_id'],
                                                                dictionary_id=metaword_ids['dictionary_id'],
@@ -238,7 +238,7 @@ def forbidden_view(request):
 def validate(request):
     try:
         param = request.matchdict.get('param')
-        print(param)
+        #print(param)
         value = request.POST.getone(param)
         if param == 'email':
             dbentry = DBSession.query(Email).filter_by(email=value).first()
@@ -532,7 +532,7 @@ def view_dictionary(request):
 
 @view_config(route_name="api_metaparadigm_post_batch", renderer="json", request_method="POST")
 def api_metaparadigm_post_batch(request):
-    print(request.matchdict)
+    #print(request.matchdict)
     try:
         metaword_object = DBSession.query(Dictionary).filter_by(id=request.matchdict['metaword_id'],
                                                                 client_id=request.matchdict['metaword_client_id']).first()
@@ -604,7 +604,7 @@ def api_metaparadigm_post_batch(request):
 
 @view_config(route_name="api_metaword_post_batch", renderer="json", request_method="POST")
 def api_metaword_post_batch(request):
-    print(request.matchdict)
+    #print(request.matchdict)
 #    dictionary_client_id = request.matchdict['client_id']
 #    dictionary_id = request.matchdict['dictionary_id']
     try:
@@ -684,8 +684,9 @@ def api_metaword_post_batch(request):
 @view_config(route_name='api_metaword_get', renderer='json', request_method='GET')
 def api_metaword_get(request):
     word_object = DBSession.query(MetaWord).options(subqueryload('*')).filter_by(
-        id=request.matchdict['metaword_client_id'],
-        client_id=request.matchdict['metaword_id']).first()
+        id=request.matchdict['metaword_id'],
+        client_id=request.matchdict['metaword_client_id']).first()
+
     if word_object:
         return traverse_metaword(word_object, request)
     else:
@@ -729,13 +730,13 @@ def api_metaparadigm_sound_get(request):
 @view_config(route_name='api_etymology_get', renderer='json', request_method='GET')
 def api_etymology_get(request):
     word_object = DBSession.query(MetaWord).options(subqueryload('*')).filter_by(
-        id=request.matchdict['metaword_client_id'],
-        client_id=request.matchdict['metaword_id']).first()
+        id=request.matchdict['metaword_id'],
+        client_id=request.matchdict['metaword_client_id']).first()
     if word_object:
         connected_words = []
         for tag in word_object.etymology_tags:
             connected_words_objects = DBSession.query(MetaWord).options(subqueryload('*')).filter(
-                MetaWord.etymology_tags.has(content=tag.content)
+                MetaWord.etymology_tags.any(content=tag.content)
                 )
             connected_words = [traverse_metaword(word_object, request)]
             for word in connected_words_objects:
