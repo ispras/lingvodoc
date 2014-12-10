@@ -16,7 +16,15 @@ from .models import (
     BaseGroup,
     WordTranscription,
     WordTranslation,
-    WordSound
+    WordSound,
+    WordEtymologyTag,
+    WordMarkup,
+    MetaParadigm,
+    ParadigmEntry,
+    ParadigmMarkup,
+    ParadigmSound,
+    ParadigmTranscription,
+    ParadigmTranslation,
     )
 
 from pyramid.security import (
@@ -45,6 +53,7 @@ from pyramid.response import FileResponse
 import os
 import datetime
 import base64
+
 
 class CommonException(Exception):
     def __init__(self, value):
@@ -90,32 +99,84 @@ def create_object(content, obj):
     return
 
 
-def produce_metaword_subtypes(type, client, content):
-    if type != WordSound:
-        obj = type(id=DBSession.query(type).filter_by(client_id=client.id).count()+1,
-                   client=client,
-                   client_id=client.id,
-                   content=content,
-                   marked_to_delete=False)
-    else:
-        obj = type(id=DBSession.query(type).filter_by(client_id=client.id).count()+1,
-                   client=client,
-                   client_id=client.id,
-                   marked_to_delete=False)
+def produce_subtypes(obj_type, client, value):
+    if obj_type == WordSound or obj_type == ParadigmSound:
+        obj = obj_type(id=DBSession.query(obj_type).filter_by(client_id=client.id).count()+1,
+                       client=client,
+                       client_id=client.id,
+                       mime=value['mime'],
+                       name=value['name'],
+                       marked_to_delete=False)
         DBSession.flush()
-        create_object(content, obj)
+
+        if obj_type == WordSound:
+            markup_type = WordMarkup
+        else:
+            markup_type = ParadigmMarkup
+        if value['markups']:
+            for markup in value['markups']:
+                markup_obj = markup_type(id=DBSession.query(markup_type).filter_by(client.id).count()+1,
+                                         client=client,
+                                         content=markup['content'],
+                                         marked_to_delete=False)
+                obj.markups.append(markup_obj)
+            create_object(value['content'], obj)
+
+    else:
+        obj = obj_type(id=DBSession.query(obj_type).filter_by(client_id=client.id).count()+1,
+                       client=client,
+                       client_id=client.id,
+                       content=value['content'],
+                       marked_to_delete=False)
     return obj
 
 
-def traverse_paradigm(metaparadigm, request):
-    # TODO
-    return {}
+# NOTE: TODO: very fucked up code, rewrite completely later.
+def traverse_paradigm(metaparadigm, dictionary_client_id, dictionary_id, request):
+    metaparadigm_ids = dict()
+    metaparadigm_ids['metaword_id'] = metaparadigm.metaword_id
+    metaparadigm_ids['metaword_client_id'] = metaparadigm.metaword_client_id
+    metaparadigm_ids['metaparadigm_id'] = metaparadigm.id
+    metaparadigm_ids['metaparadigm_client_id'] = metaparadigm.client_id
+    metaparadigm_ids['url'] = request.route_url('api_metaword_get',
+                                                dictionary_client_id=metaparadigm_ids['dictionary_client_id'],
+                                                dictionary_id=metaparadigm_ids['dictionary_id'],
+                                                metaword_client_id=metaparadigm_ids['metaword_client_id'],
+                                                metaword_id=metaparadigm_ids['metaword_id'])
+
+    for field in 'entries', 'transcriptions', 'translations', 'sounds':
+        metaparadigm_ids[field] = []
+        print(vars(metaparadigm))
+        if field in vars(metaparadigm):
+            for obj in vars(metaparadigm)[field]:
+                obj_description = dict()
+                obj_description['id'] = obj.id
+                obj_description['client_id'] = obj.client_id
+                obj_description['creation_time'] = str(obj.creation_time)
+                obj_description['author'] = str(obj.client.User.name)
+                if field in ['entries', 'transcriptions', 'translations']:
+                    obj_description['content'] = obj.content
+                elif field in ['sounds']:
+                    obj_description['url'] = request.route_url('api_metaparadigm_sound_get',
+                                                               dictionary_client_id=dictionary_client_id,
+                                                               dictionary_id=dictionary_id,
+                                                               metaword_client_id=obj.metaword_client_id,
+                                                               metaword_id=obj.metaword_id,
+                                                               metaparadigm_client_id=obj.metaparadigm_client_id,
+                                                               metaparadigm_id=obj.metaparadigm_id,
+                                                               sound_client_id=obj.client_id,
+                                                               sound_id=obj.id)
+
+                metaparadigm_ids[field].append(obj_description)
+    return metaparadigm_ids
 
 
 def traverse_metaword(metaword, request):
     metaword_ids = dict()
     metaword_ids['dictionary_id'] = metaword.dictionary_id
     metaword_ids['dictionary_client_id'] = metaword.dictionary_client_id
+    metaword_ids['dictionary_name'] = DBSession.query(Dictionary).filter_by(id=metaword.dictionary_id,
+                                                                            client_id=metaword.dictionary_client_id).first().name
     metaword_ids['metaword_id'] = metaword.id
     metaword_ids['metaword_client_id'] = metaword.client_id
     metaword_ids['url'] = request.route_url('api_metaword_get',
@@ -124,7 +185,7 @@ def traverse_metaword(metaword, request):
                                             metaword_client_id=metaword_ids['metaword_client_id'],
                                             metaword_id=metaword_ids['metaword_id'])
 
-    for field in 'entries', 'transcriptions', 'translations', 'sounds', 'paradigms':
+    for field in 'entries', 'transcriptions', 'translations', 'sounds', 'paradigms', 'etymology_tags':
         metaword_ids[field] = []
         print(vars(metaword))
         if field in vars(metaword):
@@ -142,12 +203,20 @@ def traverse_metaword(metaword, request):
                                                                dictionary_id=metaword_ids['dictionary_id'],
                                                                metaword_client_id=obj.metaword_client_id,
                                                                metaword_id=obj.metaword_id,
-                                                               wordsound_client_id=obj.client_id,
-                                                               wordsound_id=obj.id)
+                                                               sound_client_id=obj.client_id,
+                                                               sound_id=obj.id)
                 elif field in ['paradigms']:
                     obj_description['paradigms'] = []
                     for paradigm in obj.paradigms:
-                        obj_description['paradigms'].append(traverse_paradigm(paradigm, request))
+                        obj_description['paradigms'].append(traverse_paradigm(paradigm,
+                                                                              metaword.dictionary_client_id,
+                                                                              metaword.dictionary_id,
+                                                                              request
+                                                                              ))
+                elif field in ['etymology_tags']:
+                    obj_description['content'] = obj.count()
+                    obj_description['url'] = request.route_url('')
+
                 metaword_ids[field].append(obj_description)
     return metaword_ids
 
@@ -287,7 +356,7 @@ def create_dictionary_get(request):
     variables = {'auth': authenticated_userid(request)}
     return render_to_response('templates/create_dictionary_page.pt', variables, request=request)
 
-@view_config(route_name='create_dictionary', renderer='json', request_method='POST')
+@view_config(route_name='create_dictionary_post', renderer='json', request_method='POST')
 def create_dictionary_post(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -314,7 +383,7 @@ def create_dictionary_post(request):
         return {'status': request.response.status,
                 'dictionary_id': dictionary.id,
                 'dictionary_client_id': dictionary.client_id,
-                'edit_url': request.route_url('edit_dictionary', client_id=dictionary.client_id, dictionary_id=dictionary.id)}
+                'edit_url': request.route_url('edit_dictionary', dictionary_client_id=dictionary.client_id, dictionary_id=dictionary.id)}
 
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
@@ -372,58 +441,59 @@ def edit_dictionary(request):
 
 
 
-@view_config(route_name="get_metawords_for_edit", renderer="json", request_method='GET')
-def get_metawords(request):
-    dictionary_client_id = request.matchdict['dictionary_client_id']
-    dictionary_id = request.matchdict['dictionary_id']
-    dictionary = DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first()
-    if dictionary:
-        metawords_list = []
-        for metaword in dictionary.metawords:
-            transcription_list = []
-            for item in metaword.transcriptions:
-                transcription_list.append({'metaword_id': item.metaword_id,
-                                           'metaword_client_id': item.metaword_client_id,
-                                           'id': item.id,
-                                           'client_id': item.client_id,
-                                           'content': item.content,
-                                           'marked_to_delete': item.marked_to_delete
-                                           })
-            translation_list = []
-            for item in metaword.translations:
-                translation_list.append({'metaword_id': item.metaword_id,
-                                         'metaword_client_id': item.metaword_client_id,
-                                         'id': item.id,
-                                         'client_id': item.client_id,
-                                         'content': item.content,
-                                         'marked_to_delete': item.marked_to_delete
-                                         })
 
-
-            sounds_list = []
-            for item in metaword.sounds:
-                sounds_list.append({'metaword_id': item.metaword_id,
-                                    'metaword_client_id': item.metaword_client_id,
-                                    'id': item.id,
-                                    'client_id': item.client_id,
-                                    'content': item.id,
-                                    'marked_to_delete': item.marked_to_delete
-                })
-
-            item = {'metaword_id': metaword.id,
-                    'metaword_client_id': metaword.client_id,
-                    'transcriptions': transcription_list,
-                    'translations': translation_list,
-                    'sounds': sounds_list
-                    }
-            metawords_list.append(item)
-        import pprint
-        pp = pprint.PrettyPrinter()
-        pp.pprint(metawords_list)
-        return metawords_list
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': request.response.status, 'error': str("Dictionary not found")}
+# @view_config(route_name="get_metawords_for_edit", renderer="json", request_method='GET')
+# def get_metawords(request):
+#     dictionary_client_id = request.matchdict['dictionary_client_id']
+#     dictionary_id = request.matchdict['dictionary_id']
+#     dictionary = DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first()
+#     if dictionary:
+#         metawords_list = []
+#         for metaword in dictionary.metawords:
+#             transcription_list = []
+#             for item in metaword.transcriptions:
+#                 transcription_list.append({'metaword_id': item.metaword_id,
+#                                            'metaword_client_id': item.metaword_client_id,
+#                                            'id': item.id,
+#                                            'client_id': item.client_id,
+#                                            'content': item.content,
+#                                            'marked_to_delete': item.marked_to_delete
+#                                            })
+#             translation_list = []
+#             for item in metaword.translations:
+#                 translation_list.append({'metaword_id': item.metaword_id,
+#                                          'metaword_client_id': item.metaword_client_id,
+#                                          'id': item.id,
+#                                          'client_id': item.client_id,
+#                                          'content': item.content,
+#                                          'marked_to_delete': item.marked_to_delete
+#                                          })
+#
+#
+#             sounds_list = []
+#             for item in metaword.sounds:
+#                 sounds_list.append({'metaword_id': item.metaword_id,
+#                                     'metaword_client_id': item.metaword_client_id,
+#                                     'id': item.id,
+#                                     'client_id': item.client_id,
+#                                     'content': item.id,
+#                                     'marked_to_delete': item.marked_to_delete
+#                 })
+#
+#             item = {'metaword_id': metaword.id,
+#                     'metaword_client_id': metaword.client_id,
+#                     'transcriptions': transcription_list,
+#                     'translations': translation_list,
+#                     'sounds': sounds_list
+#                     }
+#             metawords_list.append(item)
+#         import pprint
+#         pp = pprint.PrettyPrinter()
+#         pp.pprint(metawords_list)
+#         return metawords_list
+#     else:
+#         request.response.status = HTTPNotFound.code
+#         return {'status': request.response.status, 'error': str("Dictionary not found")}
 
     # config.add_route('view_dictionary',
     #                  'dictionaries/{client_id}/{dictionary_id}/view',
@@ -441,6 +511,78 @@ def view_dictionary(request):
         return render_to_response("templates/view_dictionary.pt", variables, request=request)
     else:
         raise HTTPNotFound
+
+
+@view_config(route_name="api_metaparadigm_post_batch", renderer="json", request_method="POST")
+def api_metaparadigm_post_batch(request):
+    print(request.matchdict)
+    try:
+        metaword_object = DBSession.query(Dictionary).filter_by(id=request.matchdict['metaword_id'],
+                                                                client_id=request.matchdict['metaword_client_id']).first()
+
+        metaparadigm = request.json_body
+        metaparadigm_id = metaparadigm.get('metaparadigm_id')
+        metaparadigm_client_id = metaparadigm.get('metaparadigm_client_id')
+        if bool(metaparadigm_id) != bool(metaparadigm_client_id):
+            raise CommonException("Bad request: missing one of metaparadigm identifiers")
+
+        client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+
+        if not client or client.id != authenticated_userid(request):
+            raise CommonException("It seems that you are trying to trick the system. Don't!")
+
+        if not bool(metaparadigm_id) and not bool(metaparadigm_client_id):
+            metaparadigm_object = MetaParadigm(id=DBSession.query(MetaParadigm).count()+1,
+                                       client_id=client.id,
+                                       client=client,
+                                       marked_to_delete=False)
+        else:
+            metaparadigm_object = DBSession.query(MetaWord).filter_by(id=metaparadigm_id,
+                                                                  client_id=metaparadigm_client_id).first()
+
+        transcriptions = metaparadigm.get('transcriptions')
+        translations = metaparadigm.get('translations')
+        entries = metaparadigm.get('entries')
+        sounds = metaparadigm.get('sounds')
+
+        if transcriptions:
+            for item in transcriptions:
+                metaparadigm_object.transcriptions.append(
+                    produce_subtypes(WordTranscription, client, {'content': item.get('content')})
+                )
+
+        if translations:
+            for item in translations:
+                metaparadigm_object.translations.append(
+                    produce_subtypes(WordTranslation, client, {'content': item.get('content')})
+                )
+        if entries:
+            for item in entries:
+                metaparadigm_object.entries.append(
+                    produce_subtypes(WordEntry, client, {'content': item.get('content')})
+                )
+        if sounds:
+            for item in sounds:
+                if not item:
+                    raise CommonException('No sound is attached, retry')
+                metaparadigm_object.sounds.append(
+                    produce_subtypes(WordSound, client, {'content': item.get('content'),
+                                                                  'mime': item.get('mime'),
+                                                                  'name': item.get('name'),
+                                                                  'markups': item.get('markups')})
+                )
+
+        metaword_object.metawords.append(metaparadigm_object)
+        DBSession.add(metaword_object)
+        DBSession.flush()
+
+        response = traverse_metaword(metaword_object, request)
+        response['status'] = 200
+        return response
+
+    except CommonException as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str("Bad request")}
 
 
 @view_config(route_name="api_metaword_post_batch", renderer="json", request_method="POST")
@@ -473,28 +615,40 @@ def api_metaword_post_batch(request):
         translations = metaword.get('translations')
         entries = metaword.get('entries')
         sounds = metaword.get('sounds')
+        etymology_tags = metaword.get('etymology_tags')
+
         if transcriptions:
             for item in transcriptions:
                 metaword_object.transcriptions.append(
-                    produce_metaword_subtypes(WordTranscription, client, item.get('content'))
+                    produce_subtypes(WordTranscription, client, {'content': item.get('content')})
                 )
 
         if translations:
             for item in translations:
                 metaword_object.translations.append(
-                    produce_metaword_subtypes(WordTranslation, client, item.get('content'))
+                    produce_subtypes(WordTranslation, client, {'content': item.get('content')})
                 )
         if entries:
             for item in entries:
                 metaword_object.entries.append(
-                    produce_metaword_subtypes(WordEntry, client, item.get('content'))
+                    produce_subtypes(WordEntry, client, {'content': item.get('content')})
                 )
         if sounds:
             for item in sounds:
                 if not item:
                     raise CommonException('No sound is attached, retry')
                 metaword_object.sounds.append(
-                    produce_metaword_subtypes(WordSound, client, item.get('content'))
+                    produce_subtypes(WordSound, client, {'content': item.get('content'),
+                                                                  'mime': item.get('mime'),
+                                                                  'name': item.get('name'),
+                                                                  'markups': item.get('markups')})
+                )
+        if etymology_tags:
+            for item in etymology_tags:
+                if not item:
+                    raise CommonException('No tag is supplied, retry')
+                metaword_object.etymology_tags.append(
+                    produce_subtypes(WordEtymologyTag, client, {'content': item.get('content')})
                 )
 
         dictionary_object.metawords.append(metaword_object)
@@ -536,21 +690,41 @@ def api_metaword_get_batch(request):
 def api_metaword_sound_get(request):
 
     sound_object = DBSession.query(WordSound).options(subqueryload('*')).filter_by(
-        id=request.matchdict['wordsound_id'],
-        client_id=request.matchdict['wordsound_client_id']).first()
+        id=request.matchdict['sound_id'],
+        client_id=request.matchdict['sound_client_id']).first()
     if sound_object:
         return FileResponse(object_file_path(sound_object))
     else:
         raise HTTPNotFound
-    # except HTTPNotFound as e:
-    #     request.response.status = HTTPNotFound.code
-    #     return {'status': request.response.status, 'error': str(e)}
-    # except KeyError as e:
-    #     request.response.status = HTTPBadRequest.code
-    #     return {'status': request.response.status, 'error': str("Bad request")+str(e)}
 
 
-# NOTE: mime type for wav is audio/vnd.wave
+@view_config(route_name='api_metaparadigm_sound_get', request_method='GET')
+def api_metaparadigm_sound_get(request):
+    sound_object = DBSession.query(ParadigmSound).options(subqueryload('*')).filter_by(
+        id=request.matchdict['sound_id'],
+        client_id=request.matchdict['sound_client_id']).first()
+    if sound_object:
+        return FileResponse(object_file_path(sound_object))
+    else:
+        raise HTTPNotFound
+
+
+@view_config(route_name='api_etymology_get', request_method='GET')
+def api_etymology_get(request):
+    word_object = DBSession.query(MetaWord).options(subqueryload('*')).filter_by(
+        id=request.matchdict['metaword_client_id'],
+        client_id=request.matchdict['metaword_id']).first()
+    if word_object:
+        connected_words_objects = DBSession.query(MetaWord).options(subqueryload('*')).filter(
+            MetaWord.etymology_tags.in_(word_object.etymology_tags)
+            )
+        connected_words = [traverse_metaword(word_object, request)]
+        for word in connected_words_objects:
+            connected_words.append(traverse_metaword(word, request))
+        return connected_words
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'status': request.response.status, 'error': str("No such word in the system")}
 
 
 #@view_config(route_name='login', renderer='')
