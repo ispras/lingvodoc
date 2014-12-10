@@ -214,7 +214,10 @@ def traverse_metaword(metaword, request):
                                                                               request
                                                                               ))
                 elif field in ['etymology_tags']:
-                    obj_description['content'] = DBSession.query(WordEtymologyTag).filter_by(content=obj.content).count()
+                    if obj.content:
+                        obj_description['content'] = DBSession.query(WordEtymologyTag).filter_by(content=obj.content).count()
+                    else:
+                        obj_description['content'] = 0
                     obj_description['url'] = request.route_url('api_etymology_get',
                                                                dictionary_client_id=metaword_ids['dictionary_client_id'],
                                                                dictionary_id=metaword_ids['dictionary_id'],
@@ -735,10 +738,11 @@ def api_etymology_get(request):
     if word_object:
         connected_words = []
         for tag in word_object.etymology_tags:
+            print(tag)
             connected_words_objects = DBSession.query(MetaWord).options(subqueryload('*')).filter(
                 MetaWord.etymology_tags.any(content=tag.content)
                 )
-            connected_words = [traverse_metaword(word_object, request)]
+#            connected_words = [traverse_metaword(word_object, request)]
             for word in connected_words_objects:
                 connected_words.append(traverse_metaword(word, request))
         return connected_words
