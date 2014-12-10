@@ -361,6 +361,12 @@ def create_dictionary_post(request):
     try:
         variables = {'auth': authenticated_userid(request)}
         name = request.POST.getone('dictionary_name')
+        dialeqt_id = None
+        try:
+            dialeqt_id = request.POST.getone('dialeqt_id')
+        except KeyError:
+            pass
+
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -368,7 +374,14 @@ def create_dictionary_post(request):
 
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        dictionary = Dictionary(id=len(client.dictionaries)+1, client_id=request.authenticated_userid, name=name, state="WiP")
+
+        if dialeqt_id:
+            dictionary = DBSession.query(Dictionary).filter_by(imported_hash=dialeqt_id).first()
+
+#        if dictionary:
+#            raise CommonException("This dictionary is already present in the system. You can not import it twice for now.")
+
+        dictionary = Dictionary(id=len(client.dictionaries)+1, client_id=request.authenticated_userid, name=name, state="WiP", imported_hash=dialeqt_id)
         DBSession.add(dictionary)
         DBSession.flush()
         subject = str(dictionary.id)+":"+str(client.id)
