@@ -434,9 +434,9 @@ def get_metawords(request):
 
 @view_config(route_name="view_dictionary", renderer="templates/view_dictionary.pt", request_method="GET")
 def view_dictionary(request):
-    variables = {'auth': authenticated_userid(request)}
     dictionary_client_id = request.matchdict['dictionary_client_id']
     dictionary_id = request.matchdict['dictionary_id']
+    variables = {'auth': authenticated_userid(request), 'id': dictionary_id, 'client_id': dictionary_client_id}
     if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first():
         return render_to_response("templates/view_dictionary.pt", variables, request=request)
     else:

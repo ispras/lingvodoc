@@ -114,7 +114,9 @@
                     <td>
                         <div data-bind="foreach: sounds">
 
-                            <a href="#" data-bind="click: $root.playSound, text: id"></a>
+                            <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.playSound">
+                                <span class="glyphicon glyphicon-play">Воспроизвести</span>
+                            </button>
                             <!-- ko if: $parent.addedByUser -->
                             <button type="button" class="btn btn-default btn-xs"
                                     data-bind="click: $root.removeValue.bind($data, $parent, 'sounds')">
@@ -165,7 +167,7 @@
         </div>
     </div>
 </div>
-<script data-main="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"
+<script data-main="${request.static_url('lingvodoc:static/js/lingvodocedit.js')}"
         src="${request.static_url('lingvodoc:static/js/require.js')}"></script>
 
 </body>
