@@ -44,6 +44,8 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
 
         this.lastSoundFileUrl = ko.observable();
 
+        this.etymologyModalVisible = ko.observable(false);
+
         // this reloads list of meta words from server
         // once batchSize or/and start change
         ko.computed(function() {
@@ -76,7 +78,13 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
         }.bind(this);
 
         this.showEtymology = function(metaword, event) {
+            this.etymologyModalVisible(false);
+            var url = baseUrl + encodeURIComponent(metaword.metaword_client_id) + '/' + encodeURIComponent(metaword.metaword_id) + '/etymology';
+            $.getJSON(url).done(function(response) {
+                this.etymologyModalVisible(true);
+            }.bind(this)).fail(function(response) {
 
+            }.bind(this));
         }.bind(this);
 
     };
