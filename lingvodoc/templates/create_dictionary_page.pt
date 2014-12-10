@@ -35,7 +35,7 @@
         console.log($("#create_dictionary_form"));
         $("#create_dictionary_form").ajaxForm(
                 {
-                    url: '${request.route_url('create_dictionary')}',
+                    url: '${request.route_url('create_dictionary_post')}',
                     type: 'post',
                     dataType: 'json',
                     success: function(data) {

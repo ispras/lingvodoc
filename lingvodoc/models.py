@@ -207,6 +207,8 @@ class MetaWord(Base):
     translations = relationship('WordTranslation', backref=backref('MetaWord'))
     sounds = relationship('WordSound', backref=backref('MetaWord'))
     paradigms = relationship('MetaParadigm', backref=backref('MetaWord'))
+    # TODO: it's temporary workaround
+    etymology_tags = relationship('WordEtymologyTag', backref=backref('MetaWord'))
 
 # NOTE: markups are connected with sounds, not with metawords
     #translations = relationship('MetaTranslation')
@@ -217,6 +219,29 @@ class MetaWord(Base):
 #        assert request.matched_route.name == 'dictionaries.list'
 #        self.__acl__ = [(Allow, Everyone, 'view')]
 #        self.dictionaries = DBSession.query(Dictionary)
+
+
+# NOTE: TODO: it's temporary object for demo-version; it should be done in other way.
+class WordEtymologyTag(Base):
+    __tablename__ = 'WordEtymologyTag'
+    __table_args__ = (ForeignKeyConstraint(['metaword_id', 'metaword_client_id'],
+                                           ['MetaWord.id', 'MetaWord.client_id']),)
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey('Client.id'), primary_key=True)
+    client = relationship("Client")
+
+    metaword_id = Column(Integer)
+    metaword_client_id = Column(Integer)
+
+    content = Column(UnicodeText)
+
+    marked_to_delete = Column(Boolean)
+
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+
+    @classmethod
+    def count(self):
+        return DBSession.query(WordEtymologyTag).filter_by(content=self.content).count()
 
 
 class WordEntry(Base):
@@ -340,6 +365,11 @@ class WordSound(Base):
     metaword_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    mime = Column(UnicodeText)
+    name = Column(UnicodeText)
+
+    markups = relationship('WordMarkup', backref=backref('WordSound'))
 
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -534,6 +564,11 @@ class ParadigmSound(Base):
     metaparadigm_client_id = Column(Integer)
 
     marked_to_delete = Column(Boolean)
+
+    mime = Column(UnicodeText)
+    name = Column(UnicodeText)
+
+    markups = relationship('ParadigmMarkup', backref=backref('ParadigmSound'))
 
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
 
