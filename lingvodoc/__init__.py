@@ -27,6 +27,7 @@ def configure_routes(config):
     config.add_route('create_language', 'create_language')
     config.add_route('edit_dictionary',
                      'dictionaries/{dictionary_client_id}/{dictionary_id}/edit')
+    config.add_route('view_page', 'view')
 
     # NOTE: TODO: it's a workaround for demo -- we are showing the contents of the page as for edit (with the same data)
     config.add_route('view_dictionary',
@@ -108,6 +109,10 @@ def configure_routes(config):
                      'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/'
                      '{metaword_client_id}/{metaword_id}/etymology',
                      request_method='GET')
+
+    # : get corpus
+    config.add_route('api_corpora_get', 'corpora/{corpus_client_id}/{corpus_id}', request_method='GET')
+
 
     # : default words for publishing
 

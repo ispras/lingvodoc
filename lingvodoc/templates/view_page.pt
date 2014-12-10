@@ -1,0 +1,74 @@
+<html>
+<head metal:use-macro="load: head.pt">
+</head>
+<body>
+
+<div id="getCorpusUrl" data-lingvodoc="${request.route_url('api_corpora_get', corpus_client_id=1, corpus_id=1)}"></div>
+
+<div metal:use-macro="load: nav.pt"></div>
+
+<div class="container-fluid" style="padding-top: 20px">
+
+    <!-- ko foreach: texts -->
+
+    <div class="lingodoc-text">
+        <!-- ko foreach: text_titles -->
+            <span class="lingodoc-text-title">
+                <!-- ko text: content --><!-- /ko --><sup class="lingodoc-text-title-lang" data-bind="text: lang"></sup>
+            </span>
+
+        <!-- /ko -->
+
+        <div class="lingodoc-paragraphs" data-bind="foreach: paragraphs">
+            <div class="lingodoc-paragraph">
+                <div class="lingodoc-phrases" data-bind="foreach: phrases">
+                    <div class="lingodoc-phrase">
+
+                        <table>
+
+                            <tr>
+                                <!-- ko foreach: words -->
+                                    <td data-bind="text: $data.getTextEntry().content"></td>
+                                <!-- /ko -->
+                            </tr>
+
+                            <tr>
+                                <!-- ko foreach: words -->
+                                    <td>
+                                        <!-- ko if: $data.hasDictionaryEntry() -->
+                                            <!-- ko with: $data.getDictionaryEntry() -->
+                                                <a href="#" data-bind="attr: {'href' : url}, text: type"></a>
+                                            <!-- /ko -->
+                                        <!-- /ko -->
+
+                                        <!-- ko ifnot: $data.hasDictionaryEntry() -->
+                                            <!-- ko with: $data.getTextEntry() -->
+                                            <span data-bind="text: Array(content.length).join('*')"></span>
+                                            <!-- /ko -->
+                                        <!-- /ko -->
+                                    </td>
+                                <!-- /ko -->
+                            </tr>
+
+                        </table>
+                    </div>
+
+                    <div class="lingodoc-translations" data-bind="foreach: translations">
+                        <div class="lingvodoc-translation">
+                            <span class="lingodoc-text-translation">
+                                <!-- ko text: content --><!-- /ko --><sup class="lingodoc-text-translation-lang" data-bind="text: lang"></sup>
+                            </span>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /ko -->
+</div>
+
+<script data-main="${request.static_url('lingvodoc:static/js/lingvodemo.js')}"
+        src="${request.static_url('lingvodoc:static/js/require.js')}"></script>
+</body>
+</html>

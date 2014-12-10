@@ -14,3 +14,11 @@
     font: 16pt bold 'Vollkorn';
     color: #bbb;
 }
+
+.lingodoc-text-title {
+    font-size: 3em;
+}
+
+.lingvodoc-translation {
+    font-size: 1.2em;
+}

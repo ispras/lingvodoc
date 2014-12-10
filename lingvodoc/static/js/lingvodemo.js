@@ -49,6 +49,38 @@ require(['jquery', 'knockout','bootstrap'], function($, ko) {
 
     var Word = function(items) {
         this.items = items;
+
+        // returns true if word is linked to some
+        // metaword in dictionary. otherwise it
+        // return false
+        this.hasDictionaryEntry = function() {
+            for (var i = 0; i < this.items.length; i++) {
+                if (this.items[i].type == 'lingvodoc_metaword') {
+                    return true;
+                }
+            }
+            return false;
+        }.bind(this);
+
+        this.getDictionaryEntry = function() {
+            for (var i = 0; i < this.items.length; i++) {
+                var item = this.items[i];
+                if (item.type == 'lingvodoc_metaword') {
+                    return item;
+                }
+            }
+            return null;
+        }.bind(this);
+
+        this.getTextEntry = function() {
+            for (var i = 0; i < this.items.length; i++) {
+                var item = this.items[i];
+                if (item.type == 'txt') {
+                    return item;
+                }
+            }
+            return null;
+        }.bind(this);
     };
     Word.fromJS = function(word) {
         var items = [];
@@ -86,8 +118,8 @@ require(['jquery', 'knockout','bootstrap'], function($, ko) {
     };
     Paragraph.fromJS = function(paragraph) {
         var phrases = [];
-        for (j = 0; j < paragraph.phrases.length; j++) {
-            var phrase = paragraph.phrases[j];
+        for (var i = 0; i < paragraph.phrases.length; i++) {
+            var phrase = paragraph.phrases[i];
             phrases.push(Phrase.fromJS(phrase));
         }
         return new Paragraph(phrases);
@@ -103,7 +135,8 @@ require(['jquery', 'knockout','bootstrap'], function($, ko) {
         var i = 0, j = 0, k = 0, l = 0;
         var text_titles = [], paragraphs = [];
         for (i = 0; i < text.text_titles.length; i++) {
-            text_titles.push(new TextTitle(text.lang, text.content));
+            var title = text.text_titles[i];
+            text_titles.push(new TextTitle(title.lang, title.content));
         }
 
         for (i = 0; i < text.paragraphs.length; i++) {
@@ -116,12 +149,12 @@ require(['jquery', 'knockout','bootstrap'], function($, ko) {
     var viewModel = function() {
         var baseUrl = $('#getCorpusUrl').data('lingvodoc');
         this.texts = ko.observableArray([]);
-
         ko.computed(function() {
+
             $.getJSON(baseUrl).done(function(response) {
                 if (response.corpus_id && response.corpus_client_id) {
                     for (var i = 0; i < response.texts.length; i++) {
-                        this.texts().push(Text.fromJS(response.texts[i]));
+                        this.texts.push(Text.fromJS(response.texts[i]));
                     }
                 }
             }.bind(this)).fail(function(respones) {
@@ -129,6 +162,6 @@ require(['jquery', 'knockout','bootstrap'], function($, ko) {
             });
         }, this);
     };
-
-    ko.applyBindings(new viewModel());
+    window.viewModel = new viewModel();
+    ko.applyBindings(window.viewModel);
 });
