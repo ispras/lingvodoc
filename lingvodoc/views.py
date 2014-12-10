@@ -215,7 +215,11 @@ def traverse_metaword(metaword, request):
                                                                               ))
                 elif field in ['etymology_tags']:
                     obj_description['content'] = obj.count()
-                    obj_description['url'] = request.route_url('')
+                    obj_description['url'] = request.route_url('api_etymology_get',
+                                                               dictionary_client_id=metaword_ids['dictionary_client_id'],
+                                                               dictionary_id=metaword_ids['dictionary_id'],
+                                                               metaword_client_id=obj.metaword_client_id,
+                                                               metaword_id=obj.metaword_id)
 
                 metaword_ids[field].append(obj_description)
     return metaword_ids

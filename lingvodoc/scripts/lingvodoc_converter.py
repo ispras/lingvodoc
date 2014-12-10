@@ -66,11 +66,14 @@ def convert_db(sqconn, session, args):
                             dictionary
                             WHERE
                             is_a_regular_form=1;""")
+    add_word_route = args.server_url + 'dictionaries/' + str(dictionary_client_id) + '/' + str(dictionary_id) + '/metawords/'
+    print(add_word_route)
+
     for sqword in word_traversal:
         original_word_id, req = construct_basic_metaword(sqword)
-        create_basic_metaword = session.post(args.server_url+'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/', req)
-        print(req)
-        #print(create_basic_metaword.text)
+        create_basic_metaword = session.post(add_word_route, json=req)
+        #print(req)
+        print(create_basic_metaword.text)
 
     return
 
