@@ -69,10 +69,15 @@ def configure_routes(config):
                      'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/',
                      #factory=DummyDeny,
                      request_method='GET')
+    config.add_route('dictionary_stats',
+                     'dictionaries/{dictionary_client_id}/{dictionary_id}/stats/',
+                     #factory=DummyDeny,
+                     request_method='GET')
     config.add_route('api_metaword_post_batch',
                      'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/',
                      #factory=DummyDeny,
                      request_method='POST')
+
     # : metaword sounds
     config.add_route('api_metaword_sound_get',
                      'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/'

@@ -708,6 +708,13 @@ def api_metaword_get(request):
 
 @view_config(route_name='api_metaword_get_batch', renderer='json', request_method='GET')
 def api_metaword_get_batch(request):
+    offset = 0
+    limit = 10000
+    if 'offset' in request.params:
+        offset = int(request.params['offset'])
+    if 'size' in request.params:
+        limit = int(request.params['size'])
+
     dictionary = DBSession.query(MetaWord).filter_by(
         dictionary_id=request.matchdict['dictionary_id'],
         dictionary_client_id=request.matchdict['dictionary_client_id']).options(joinedload(MetaWord.transcriptions),
@@ -715,7 +722,7 @@ def api_metaword_get_batch(request):
                                                                                 joinedload(MetaWord.etymology_tags),
                                                                                 joinedload(MetaWord.entries),
                                                                                 joinedload(MetaWord.sounds),
-                                                                                joinedload(MetaWord.paradigms))
+                                                                                joinedload(MetaWord.paradigms)).slice(offset, offset+limit)
 
     word_list = []
     for word in dictionary:
@@ -771,6 +778,24 @@ def api_etymology_get(request):
 def api_corpora_get(request):
     response = {"corpus_id":1,"corpus_client_id":1,"texts":[{"text_id":1,"client_id":1,"text_titles":[{"lang":"ru","content":"Ансамбль"}],"text_comments":[{"lang":"ru","content":"Текст записан С.Ю. Толдовой и Д.А. Паперно в июне 2004г. от К.А. Невоструевой (д. Жувам), расшифрован Д. Залмановым и А.А. Глуховой с С.С. Сабрековой (д. Шамардан), отглоссирован О.Л. Бирюк"}],"paragraphs":[{"phrases":[{"words":[{"items":[{"type":"txt","content":"beš’ermanskoj","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"},{"type":"lingvodoc_metaword","url":"http://192.168.23.130:6543/dictionaries/1/1/metawords/1/1"}]},{"items":[{"type":"txt","content":"beš’ermanskoj2222","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"}]}],"translations":[{"lang":"ru","content":"Появилось бесермянское общество, его создал Сабреков Валерьян Фёдорович."}]}]}]}]}
     return response
+
+
+@view_config(route_name='dictionary_stats', renderer='json', request_method='GET')
+def dictionary_stats(request):
+    quantity = dict()
+    quantity['metawords'] = DBSession.query(MetaWord)\
+        .options(noload("*"))\
+        .filter_by(dictionary_id=request.matchdict['dictionary_id'],
+                   dictionary_client_id=request.matchdict['dictionary_client_id'])\
+        .count()
+
+    quantity['metaparadigm'] = DBSession.query(MetaParadigm) \
+        .options(noload("*")) \
+        .filter(MetaParadigm.MetaWord.has(dictionary_id=request.matchdict['dictionary_id']),
+                MetaParadigm.MetaWord.has(dictionary_client_id=request.matchdict['dictionary_client_id']))\
+        .count()
+#   quantity['metaparadigms'] = DBSession.query(MetaWord).options(noload("*")).count()
+    return quantity
 
 
 
