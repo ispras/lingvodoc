@@ -400,7 +400,7 @@ def create_dictionary_post(request):
 #        if dictionary:
 #            raise CommonException("This dictionary is already present in the system. You can not import it twice for now.")
 
-        dictionary = Dictionary(id=len(client.dictionaries)+1, client_id=request.authenticated_userid, name=name, state="WiP", imported_hash=dialeqt_id)
+        dictionary = Dictionary(id=len(client.dictionaries)+1, client_id=request.authenticated_userid, name=name, state="WiP")
         DBSession.add(dictionary)
         DBSession.flush()
         subject = str(dictionary.id)+":"+str(client.id)
