@@ -124,7 +124,7 @@ def convert_db(sqconn, session, args):
 #    print(add_word_route)
 
     for sqword in word_traversal:
-        try:
+#        try:
             original_word_id, req = construct_basic_metaword(sqconn, sqword)
             result = session.post(add_word_route, json=req)
             #print(req)
@@ -152,9 +152,10 @@ def convert_db(sqconn, session, args):
                 print ("par")
                 original_paradigm_id, preq = construct_basic_paradigm(sqconn, sqparadigm)
                 result = session.post(add_paradigm_route, json=req)
+                print (result.text)
 
-        except:
-            continue
+#        except:
+#            continue
 
 def get_args():
     parser = argparse.ArgumentParser(description='Dictionary converter for lingvodoc 2.0')

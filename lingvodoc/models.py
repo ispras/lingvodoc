@@ -52,14 +52,14 @@ DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
 
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-    except:
-        print("It's not an sqlalchemy")
+#@event.listens_for(Engine, "connect")
+#def set_sqlite_pragma(dbapi_connection, connection_record):
+#    cursor = dbapi_connection.cursor()
+#    try:
+#        cursor.execute("PRAGMA foreign_keys=ON")
+#        cursor.close()
+#    except:
+#        print("It's not an sqlalchemy")
 
 # Many to many users to groups association table
 user_to_group_association = Table('user_to_group_association', Base.metadata,
@@ -134,7 +134,7 @@ class Passhash(Base):
     __tablename__ = "Passhash"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('User.id'))
-    hash = Column(Unicode(length=50))
+    hash = Column(Unicode(length=61))
 
     def __init__(self, password):
         self.hash = bcrypt.encrypt(password)
