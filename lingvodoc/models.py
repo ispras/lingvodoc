@@ -55,8 +55,11 @@ Base = declarative_base()
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+    except:
+        print("It's not an sqlalchemy")
 
 # Many to many users to groups association table
 user_to_group_association = Table('user_to_group_association', Base.metadata,
