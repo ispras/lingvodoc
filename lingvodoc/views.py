@@ -196,7 +196,8 @@ def traverse_metaword(metaword, request):
                 obj_description = dict()
                 obj_description['id'] = obj.id
                 obj_description['client_id'] = obj.client_id
-                obj_description['creation_time'] = str(obj.creation_time)
+                if 'creation_time' in obj_description:
+                    obj_description['creation_time'] = str(obj.creation_time)
                 obj_description['author'] = str(obj.client.User.name)
                 if field in ['entries', 'transcriptions', 'translations']:
                     obj_description['content'] = obj.content
