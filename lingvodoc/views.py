@@ -610,7 +610,7 @@ def api_metaparadigm_post_batch(request):
                                                                   'markups': item.get('markups')})
                 )
 
-        metaword_object.metawords.append(metaparadigm_object)
+        metaword_object.paradigms.append(metaparadigm_object)
         DBSession.add(metaword_object)
         DBSession.flush()
 
