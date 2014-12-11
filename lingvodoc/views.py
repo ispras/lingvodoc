@@ -550,8 +550,8 @@ def view_dictionary(request):
 def api_metaparadigm_post_batch(request):
     #print(request.matchdict)
     try:
-        metaword_object = DBSession.query(Dictionary).filter_by(id=request.matchdict['metaword_id'],
-                                                                client_id=request.matchdict['metaword_client_id']).first()
+        metaword_object = DBSession.query(MetaWord).filter_by(id=request.matchdict['metaword_id'],
+                                                              client_id=request.matchdict['metaword_client_id']).first()
         if not metaword_object:
             raise CommonException("No metaword object with such ids: metaword_id" +
                                   str(request.matchdict['metaword_id']) +
