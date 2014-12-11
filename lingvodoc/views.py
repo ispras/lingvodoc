@@ -100,6 +100,7 @@ def create_object(content, obj):
 
 
 def produce_subtypes(obj_type, client, value):
+    DBSession.flush()
     if obj_type == WordSound or obj_type == ParadigmSound:
         obj = obj_type(id=DBSession.query(obj_type).filter_by(client_id=client.id).count()+1,
                        client=client,
@@ -109,17 +110,19 @@ def produce_subtypes(obj_type, client, value):
                        marked_to_delete=False)
         DBSession.flush()
 
-        if obj_type == WordSound:
-            markup_type = WordMarkup
-        else:
-            markup_type = ParadigmMarkup
-        if value['markups']:
-            for markup in value['markups']:
-                markup_obj = markup_type(id=DBSession.query(markup_type).filter_by(client.id).count()+1,
-                                         client=client,
-                                         content=markup['content'],
-                                         marked_to_delete=False)
-                obj.markups.append(markup_obj)
+        # if obj_type == WordSound:
+        #     markup_type = WordMarkup
+        # else:
+        #     markup_type = ParadigmMarkup
+        # if value['markups']:
+        # # TODO: there is a bug here, but i can't find where and which.
+        #     for markup in value['markups']:
+        #         markup_obj = markup_type(id=DBSession.query(markup_type).filter_by(client_id=client.id).count()+1,
+        #                                  client=client,
+        #                                  content=markup['content'],
+        #                                  marked_to_delete=False)
+        #         DBSession.flush()
+        #         obj.markups.append(markup_obj)
         create_object(value['content'], obj)
 
     else:
@@ -574,25 +577,25 @@ def api_metaparadigm_post_batch(request):
         if transcriptions:
             for item in transcriptions:
                 metaparadigm_object.transcriptions.append(
-                    produce_subtypes(WordTranscription, client, {'content': item.get('content')})
+                    produce_subtypes(ParadigmTranscription, client, {'content': item.get('content')})
                 )
 
         if translations:
             for item in translations:
                 metaparadigm_object.translations.append(
-                    produce_subtypes(WordTranslation, client, {'content': item.get('content')})
+                    produce_subtypes(ParadigmTranslation, client, {'content': item.get('content')})
                 )
         if entries:
             for item in entries:
                 metaparadigm_object.entries.append(
-                    produce_subtypes(WordEntry, client, {'content': item.get('content')})
+                    produce_subtypes(ParadigmEntry, client, {'content': item.get('content')})
                 )
         if sounds:
             for item in sounds:
                 if not item:
                     raise CommonException('No sound is attached, retry')
                 metaparadigm_object.sounds.append(
-                    produce_subtypes(WordSound, client, {'content': item.get('content'),
+                    produce_subtypes(ParadigmSound, client, {'content': item.get('content'),
                                                                   'mime': item.get('mime'),
                                                                   'name': item.get('name'),
                                                                   'markups': item.get('markups')})
@@ -669,6 +672,7 @@ def api_metaword_post_batch(request):
                                                                   'name': item.get('name'),
                                                                   'markups': item.get('markups')})
                 )
+                DBSession.flush()
         if etymology_tags:
             for item in etymology_tags:
                 if not item:

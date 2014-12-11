@@ -19,7 +19,9 @@ requires = [
     'waitress',
     'alembic',
     'passlib',
-    'py-bcrypt'
+    'py-bcrypt',
+    'requests',
+    'simplejson'
     ]
 
 setup(name='lingvodoc',
