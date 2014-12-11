@@ -59,10 +59,12 @@
 
 
                     <td>
-                        <!-- ko if: etymology_tags.length == 0 -->
-                        <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.showEtymology">
-                            Этимология (<!-- ko text: etymology_tags.length --><!-- /ko -->)
-                        </button>
+                        <!-- ko if: etymology_tags.length > 0 -->
+                            <!-- ko if: etymology_tags[0].content > 0 -->
+                                <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.showEtymology">
+                                    Этимология (<!-- ko text: etymology_tags[0].content --><!-- /ko -->)
+                                </button>
+                            <!-- /ko -->
                         <!-- /ko -->
 
                         <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.showParadigms">
@@ -95,61 +97,59 @@
 <div data-bind="modal: {
     visible: etymologyModalVisible,
     header: { data: { label: '' } },
-    body: { name: 'etymology_modal', data: {} },
+    body: { name: 'etymology_modal', data: {'words': etymologyWords, 'soundUrl': etymologySoundUrl, 'playSound': playEtymologySound} },
     footer: { data: { closeLabel: 'Закрыть' } }
 }"></div>
 
 <script type="text/html" id="etymology_modal">
-    <div data-bind="with: $root">
-        <div class="row">
-            <div class="col-md-12 ">
-                <div data-bind="wavesurfer: etymologySoundUrl"></div>
+    <div class="row">
+        <div class="col-md-12 ">
+            <div data-bind="wavesurfer: soundUrl"></div>
 
-                <table class="table table-striped table-bordered">
-                    <thead>
-                    <tr>
-                        <td>Запись слова</td>
-                        <td>Транскрипция</td>
-                        <td>Перевод</td>
-                        <td>Звук</td>
-                    </tr>
-                    </thead>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <td>Запись слова</td>
+                    <td>Транскрипция</td>
+                    <td>Перевод</td>
+                    <td>Звук</td>
+                </tr>
+                </thead>
 
-                    <tbody>
-                    <!-- ko foreach: metawords -->
-                    <tr>
-                        <td>
-                            <div data-bind="foreach: entries">
-                                <div data-bind="text: content"></div>
+                <tbody>
+                <!-- ko foreach: words -->
+                <tr>
+                    <td>
+                        <div data-bind="foreach: entries">
+                            <div data-bind="text: content"></div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div data-bind="foreach: transcriptions">
+                            <div data-bind="text: content"></div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div data-bind="foreach: translations">
+                            <div data-bind="text: content"></div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div data-bind="foreach: sounds">
+                            <div>
+                                <button type="button" class="btn btn-default btn-sm" data-bind="click: $parent.playSound">
+                                    <span class="glyphicon glyphicon-play">Воспроизвести</span>
+                                </button>
                             </div>
-                        </td>
-
-                        <td>
-                            <div data-bind="foreach: transcriptions">
-                                <div data-bind="text: content"></div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div data-bind="foreach: translations">
-                                <div data-bind="text: content"></div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div data-bind="foreach: sounds">
-                                <div>
-                                    <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.playEtymologySound">
-                                        <span class="glyphicon glyphicon-play">Воспроизвести</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    <!-- /ko -->
-                    </tbody>
-                </table>
-            </div>
+                        </div>
+                    </td>
+                </tr>
+                <!-- /ko -->
+                </tbody>
+            </table>
         </div>
 
     </div>

@@ -10,6 +10,7 @@ require.config({
         'knockstrap': ['jquery', 'bootstrap', 'knockout']
     },
     'paths': {
+        'URIjs': 'lib/URIjs',
         'jquery': 'jquery-2.1.1.min',
         'bootstrap': 'bootstrap.min',
         'knockout': 'knockout-3.2.0',
@@ -23,8 +24,7 @@ require.config({
     }
 });
 
-require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $, ko) {
-
+require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], function(model, $, ko, uri) {
     var wrapArrays = function(word) {
         for (var prop in word) {
             if (word.hasOwnProperty(prop)) {
@@ -54,11 +54,15 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
 
         this.lastSoundFileUrl = ko.observable();
 
-        // this reloads list of meta words from server
-        // once batchSize or/and start change
-        ko.computed(function() {
+        this.pageIndex = ko.observable(1);
+        this.pageSize = ko.observable(20);
+        this.pageCount = ko.observable(10);
 
-            $.getJSON(baseUrl).done(function(response) {
+        ko.computed(function() {
+            var url = new uri(baseUrl);
+            url.addQuery('offset', (this.pageIndex() - 1) * this.pageSize());
+            url.addQuery('size', this.pageSize());
+            $.getJSON(url.toString()).done(function(response) {
                 if (response instanceof Array) {
                     for (var i = 0; i < response.length; i++) {
                         wrapArrays(response[i]);
@@ -74,6 +78,23 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
                 // TODO: handle error
             });
         }, this);
+
+        this.getPage = function(pageIndex) {
+            this.pageIndex(parseInt(pageIndex))
+        }.bind(this);
+
+        ko.computed(function() {
+            var url = $('#getDictionaryStatUrl').data('lingvodoc');
+            $.getJSON(url).done(function(response) {
+                if (response.metawords) {
+                    var pageCount = Math.ceil(parseInt(response.metawords) / this.pageSize());
+                    this.pageCount(pageCount);
+                }
+            }.bind(this)).fail(function(respones) {
+                // TODO: handle error
+            });
+        }, this);
+
 
         this.getNewMetaWord = function() {
             for (var i = 0; i < this.metawords().length; i++) {
