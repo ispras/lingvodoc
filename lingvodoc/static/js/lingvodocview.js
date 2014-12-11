@@ -24,13 +24,6 @@ require.config({
     }
 });
 
-var encodeGetParams = function(data) {
-    return Object.keys(data).map(function(key) {
-        return [key, data[key]].map(encodeURIComponent).join('=');
-    }).join('&');
-};
-
-
 require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], function(model, $, ko, uri) {
 
     var wrapArrays = function(word) {
@@ -61,8 +54,10 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
         // this reloads list of meta words from server
         // once batchSize or/and start change
         ko.computed(function() {
-            var url = baseUrl + '?' + encodeGetParams({'offset': (this.pageIndex() - 1) * this.pageSize(), 'size': this.pageSize()});
-            $.getJSON(url).done(function(response) {
+            var url = new uri(baseUrl);
+            url.addQuery('offset', (this.pageIndex() - 1) * this.pageSize());
+            url.addQuery('size', this.pageSize());
+            $.getJSON(url.toString()).done(function(response) {
                 if (response instanceof Array) {
                     for (var i = 0; i < response.length; i++) {
                         wrapArrays(response[i]);
@@ -90,12 +85,10 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
                     var pageCount = Math.ceil(parseInt(response.metawords) / this.pageSize());
                     this.pageCount(pageCount);
                 }
-
             }.bind(this)).fail(function(respones) {
                 // TODO: handle error
             });
         }, this);
-
 
         this.playSound = function(entry, event) {
             if (entry.url) {
@@ -107,12 +100,17 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
 
         }.bind(this);
 
+        // etymology modal window
+        this.etymologyWords = ko.observableArray([]);
         this.etymologySoundUrl = ko.observable();
-
         this.showEtymology = function(metaword, event) {
             this.etymologyModalVisible(false);
-            var url = baseUrl + encodeURIComponent(metaword.metaword_client_id) + '/' + encodeURIComponent(metaword.metaword_id) + '/etymology';
-            $.getJSON(url).done(function(response) {
+            var url = new uri(baseUrl);
+            url.directory(metaword.metaword_client_id + '/' + metaword.metaword_id)
+            url.filename('etymology');
+
+            $.getJSON(url.toString()).done(function(response) {
+                this.etymologyWords(response);
                 this.etymologyModalVisible(true);
             }.bind(this)).fail(function(response) {
 
@@ -126,7 +124,4 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
         }.bind(this);
     };
     ko.applyBindings(new viewModel());
-
-    window.URI = uri;
-
 });
