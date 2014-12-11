@@ -35,7 +35,7 @@ from pyramid.security import (
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload, subqueryload, noload
+from sqlalchemy.orm import joinedload, subqueryload, noload, join, joinedload_all
 
 from pyramid.httpexceptions import HTTPForbidden
 from pyramid.httpexceptions import HTTPFound
@@ -708,11 +708,17 @@ def api_metaword_get(request):
 
 @view_config(route_name='api_metaword_get_batch', renderer='json', request_method='GET')
 def api_metaword_get_batch(request):
-    dictionary = DBSession.query(Dictionary).options(subqueryload('*')).filter_by(
-        id=request.matchdict['dictionary_id'],
-        client_id=request.matchdict['dictionary_client_id']).first()
+    dictionary = DBSession.query(MetaWord).filter_by(
+        dictionary_id=request.matchdict['dictionary_id'],
+        dictionary_client_id=request.matchdict['dictionary_client_id']).options(joinedload(MetaWord.transcriptions),
+                                                                                joinedload(MetaWord.translations),
+                                                                                joinedload(MetaWord.etymology_tags),
+                                                                                joinedload(MetaWord.entries),
+                                                                                joinedload(MetaWord.sounds),
+                                                                                joinedload(MetaWord.paradigms))
+
     word_list = []
-    for word in dictionary.metawords:
+    for word in dictionary:
         word_list.append(traverse_metaword(word, request))
     return word_list
 
