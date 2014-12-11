@@ -35,7 +35,7 @@ from pyramid.security import (
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import joinedload, subqueryload, noload
 
 from pyramid.httpexceptions import HTTPForbidden
 from pyramid.httpexceptions import HTTPFound
@@ -94,7 +94,7 @@ def create_object(content, obj):
     storage_path = object_file_path(obj, True)
 
     f = open(storage_path, 'wb+')
-    f.write(base64.b64decode(content))
+    f.write(base64.urlsafe_b64decode(content))
     f.close()
     return
 

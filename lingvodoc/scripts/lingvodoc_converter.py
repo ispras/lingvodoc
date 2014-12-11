@@ -7,7 +7,7 @@ import glob
 import json
 
 import argparse
-
+import base64
 
 def get_dict_attributes(sqconn):
     dict_trav = sqconn.cursor()
@@ -26,7 +26,47 @@ def get_dict_attributes(sqconn):
     return req
 
 
-def construct_basic_metaword(cursor):
+def construct_sound(sqconn, word_id):
+    attachments_find = sqconn.cursor()
+    attachments_find.execute("""SELECT
+                                blobid,
+                                type,
+                                name,
+                                description
+                                FROM dict_blobs_description
+                                WHERE
+                                wordid = (?)
+                                """, [word_id])
+    sounds = []
+    for attach_description in attachments_find:
+        sound = dict()
+        blobid = attach_description[0]
+        blobtype = attach_description[1]
+        sound['name'] = attach_description[2]
+        sound['mime'] = 'wav'
+
+        if not any([blobid, blobtype, sound['name']]):
+            print("Inconsistent blob description, skipping")
+            continue
+
+        # blobtype sound - 1 ; praat - 2
+        get_blobs = sqconn.cursor()
+        get_blobs.execute("""SELECT
+                                mainblob,
+                                secblob
+                                FROM blobs
+                                WHERE id = (?);
+                                """, [blobid])
+        for blobs in get_blobs:
+            sound['content'] = base64.urlsafe_b64encode(blobs[0])
+            if blobs[1] and blobs[1] != 'None':
+                sound['markups'] = [{'content': blobs[1]}]
+
+        sounds.append(sound)
+    return sounds
+
+
+def construct_basic_metaword(sqconn, cursor):
     original_word_id = cursor[0]
 
     req = dict()
@@ -35,9 +75,11 @@ def construct_basic_metaword(cursor):
     req['translations'] = [{'content': cursor[4]}]
     if cursor[5] != "None":
         req['etymology_tags'] = [{'content': cursor[5]}]
+    req['sounds'] = construct_sound(sqconn, original_word_id)
+
     return original_word_id, req
 
-
+import simplejson
 
 def convert_db(sqconn, session, args):
 
@@ -67,13 +109,17 @@ def convert_db(sqconn, session, args):
                             WHERE
                             is_a_regular_form=1;""")
     add_word_route = args.server_url + 'dictionaries/' + str(dictionary_client_id) + '/' + str(dictionary_id) + '/metawords/'
-    print(add_word_route)
+#    print(add_word_route)
 
     for sqword in word_traversal:
-        original_word_id, req = construct_basic_metaword(sqword)
-        create_basic_metaword = session.post(add_word_route, json=req)
+        original_word_id, req = construct_basic_metaword(sqconn, sqword)
+        result = session.post(add_word_route, json=req)
         #print(req)
-        print(create_basic_metaword.text)
+#        print(create_basic_metaword.text)
+        metaword = json.loads(result.text)
+
+
+
 
     return
 
