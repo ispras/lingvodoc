@@ -45,8 +45,6 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
 
         this.lastSoundFileUrl = ko.observable();
 
-        this.etymologyModalVisible = ko.observable(false);
-
         this.pageIndex = ko.observable(1);
         this.pageSize = ko.observable(20);
         this.pageCount = ko.observable(10);
@@ -96,17 +94,14 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
             }
         }.bind(this);
 
-        this.showParadigms = function(metaword, event) {
-
-        }.bind(this);
-
         // etymology modal window
+        this.etymologyModalVisible = ko.observable(false);
         this.etymologyWords = ko.observableArray([]);
         this.etymologySoundUrl = ko.observable();
         this.showEtymology = function(metaword, event) {
             this.etymologyModalVisible(false);
             var url = new uri(baseUrl);
-            url.directory(metaword.metaword_client_id + '/' + metaword.metaword_id)
+            url.directory(url.directory() + '/' + metaword.metaword_client_id + '/' + metaword.metaword_id)
             url.filename('etymology');
 
             $.getJSON(url.toString()).done(function(response) {
@@ -122,6 +117,40 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
                 this.etymologySoundUrl(entry.url);
             }
         }.bind(this);
+
+        this.paradigmsModalVisible = ko.observable(false);
+        this.paradigms = ko.observableArray([]);
+        this.paradigmSoundUrl = ko.observable();
+        this.showParadigms = function(metaword, event) {
+            this.paradigmsModalVisible(false);
+            var url = new uri(baseUrl);
+
+            console.log(baseUrl);
+            console.log(url.directory());
+
+            url.directory(url.directory() + '/' + metaword.metaword_client_id + '/' + metaword.metaword_id)
+            url.filename('metaparadigms');
+
+
+
+            console.log(url.toString());
+
+            $.getJSON(url.toString()).done(function(response) {
+                this.paradigms(response);
+                this.paradigmsModalVisible(true);
+            }.bind(this)).fail(function(response) {
+
+            }.bind(this));
+        }.bind(this);
+
+        this.playParadigmSound = function(entry, event) {
+            if (entry.url) {
+                this.paradigmSoundUrl(entry.url);
+            }
+        }.bind(this);
     };
     ko.applyBindings(new viewModel());
+
+
+    //body: { name: 'etymology_modal', data: {'words': paradigms, 'soundUrl': paradigmSoundUrl, 'playSound': playParadigmSound} },
 });

@@ -59,17 +59,19 @@
 
 
                     <td>
-                        <!-- ko if: etymology_tags.length > 0 -->
-                            <!-- ko if: etymology_tags[0].content > 0 -->
+                        <!-- ko if: etymology_tags().length > 0 -->
+                            <!-- ko if: etymology_tags()[0].content > 0 -->
                                 <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.showEtymology">
-                                    Этимология (<!-- ko text: etymology_tags[0].content --><!-- /ko -->)
+                                    Этимология (<!-- ko text: etymology_tags()[0].content --><!-- /ko -->)
                                 </button>
                             <!-- /ko -->
                         <!-- /ko -->
 
+                        <!-- ko if: paradigms().length > 0 -->
                         <button type="button" class="btn btn-default btn-sm" data-bind="click: $root.showParadigms">
                             Парадигмы
                         </button>
+                        <!-- /ko -->
                     </td>
 
                 </tr>
@@ -98,6 +100,13 @@
     visible: etymologyModalVisible,
     header: { data: { label: '' } },
     body: { name: 'etymology_modal', data: {'words': etymologyWords, 'soundUrl': etymologySoundUrl, 'playSound': playEtymologySound} },
+    footer: { data: { closeLabel: 'Закрыть' } }
+}"></div>
+
+<div data-bind="modal: {
+    visible: paradigmsModalVisible,
+    header: { data: { label: '' } },
+    body: { name: 'etymology_modal', data: {'words': paradigms, 'soundUrl': paradigmSoundUrl, 'playSound': playParadigmSound} },
     footer: { data: { closeLabel: 'Закрыть' } }
 }"></div>
 
