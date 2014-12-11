@@ -15,10 +15,16 @@
     color: #bbb;
 }
 
-.lingodoc-text-title {
+.lingvodoc-text-title {
     font-size: 3em;
 }
 
 .lingvodoc-translation {
     font-size: 1.2em;
+}
+
+.lingvodoc-word {
+    font-size: 1.1em;
+    text-decoration: underline;
+    cursor:pointer;
 }

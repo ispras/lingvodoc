@@ -1,18 +1,29 @@
 'use strict';
 
 require.config({
-    baseUrl: '/static/js/',
-    shim: {
-        'bootstrap' : ['jquery']
+    'baseUrl': '/static/js/',
+    'shim': {
+        'bootstrap' : ['jquery'],
+        'wavesurfer': {
+            'exports': 'WaveSurfer'
+        },
+        'knockstrap': ['jquery', 'bootstrap', 'knockout']
     },
-    paths: {
+    'paths': {
         'jquery': 'jquery-2.1.1.min',
         'bootstrap': 'bootstrap.min',
-        'knockout': 'knockout-3.2.0'
+        'knockout': 'knockout-3.2.0',
+        'knockstrap': 'knockstrap.min',
+        'wavesurfer': 'wavesurfer.min'
+    },
+    'map': {
+        '*': {
+            'jQuery': 'jquery'
+        }
     }
 });
 
-require(['jquery', 'knockout','bootstrap'], function($, ko) {
+require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
 
     var jQuery = $;
 
@@ -148,7 +159,9 @@ require(['jquery', 'knockout','bootstrap'], function($, ko) {
 
     var viewModel = function() {
         var baseUrl = $('#getCorpusUrl').data('lingvodoc');
+
         this.texts = ko.observableArray([]);
+
         ko.computed(function() {
 
             $.getJSON(baseUrl).done(function(response) {
@@ -161,7 +174,33 @@ require(['jquery', 'knockout','bootstrap'], function($, ko) {
                 // TODO: Handle error
             });
         }, this);
+
+        this.showItems = function(item, event) {
+
+        }.bind(this);
+
+        this.showMetaword = function(item, event) {
+            if (item.url) {
+                // fetch metaword info
+                $.getJSON(item.url).done(function(response) {
+
+                }.bind(this)).fail(function(response) {
+
+                }.bind(this));
+            }
+        }.bind(this);
+
+
+        this.getWordInfo = function() {
+            console.log(arguments);
+            return 'test';
+        }.bind(this);
+
     };
+
+
+
+
     window.viewModel = new viewModel();
     ko.applyBindings(window.viewModel);
 });

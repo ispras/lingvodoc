@@ -11,52 +11,37 @@
 
     <!-- ko foreach: texts -->
 
-    <div class="lingodoc-text">
+    <div class="lingvodoc-text">
         <!-- ko foreach: text_titles -->
-            <span class="lingodoc-text-title">
-                <!-- ko text: content --><!-- /ko --><sup class="lingodoc-text-title-lang" data-bind="text: lang"></sup>
+            <span class="lingvodoc-text-title">
+                <!-- ko text: content --><!-- /ko --><sup class="lingvodoc-text-title-lang" data-bind="text: lang"></sup>
             </span>
 
         <!-- /ko -->
 
-        <div class="lingodoc-paragraphs" data-bind="foreach: paragraphs">
-            <div class="lingodoc-paragraph">
-                <div class="lingodoc-phrases" data-bind="foreach: phrases">
-                    <div class="lingodoc-phrase">
-
-                        <table>
-
-                            <tr>
-                                <!-- ko foreach: words -->
-                                    <td data-bind="text: $data.getTextEntry().content"></td>
+        <div class="lingvodoc-paragraphs" data-bind="foreach: paragraphs">
+            <div class="lingvodoc-paragraph">
+                <div class="lingvodoc-phrases" data-bind="foreach: phrases">
+                    <div class="lingvodoc-phrase">
+                        <!-- ko foreach: words -->
+                                <!-- ko if: $data.hasDictionaryEntry() -->
+                                    <!-- ko with: $data.getDictionaryEntry() -->
+                                        <span class="lingvodoc-word" data-bind="popover: { options: { title: 'metaword', placement: 'top' }, template: 'word-metaword-template', data: {metaword: {id: 'placeholder'}} }, text: $parent.getTextEntry().content"></span>
+                                    <!-- /ko -->
                                 <!-- /ko -->
-                            </tr>
 
-                            <tr>
-                                <!-- ko foreach: words -->
-                                    <td>
-                                        <!-- ko if: $data.hasDictionaryEntry() -->
-                                            <!-- ko with: $data.getDictionaryEntry() -->
-                                                <a href="#" data-bind="attr: {'href' : url}, text: type"></a>
-                                            <!-- /ko -->
-                                        <!-- /ko -->
-
-                                        <!-- ko ifnot: $data.hasDictionaryEntry() -->
-                                            <!-- ko with: $data.getTextEntry() -->
-                                            <span data-bind="text: Array(content.length).join('*')"></span>
-                                            <!-- /ko -->
-                                        <!-- /ko -->
-                                    </td>
+                                <!-- ko ifnot: $data.hasDictionaryEntry() -->
+                                    <!-- ko with: $data.getTextEntry() -->
+                                    <span class="lingvodoc-word" data-bind="popover: { options: { title: content, placement: 'top' }, template: 'word-items-template', data: { items: $parent.items } }, text: $parent.getTextEntry().content"></span>
+                                    <!-- /ko -->
                                 <!-- /ko -->
-                            </tr>
-
-                        </table>
+                        <!-- /ko -->
                     </div>
 
-                    <div class="lingodoc-translations" data-bind="foreach: translations">
+                    <div class="lingvodoc-translations" data-bind="foreach: translations">
                         <div class="lingvodoc-translation">
-                            <span class="lingodoc-text-translation">
-                                <!-- ko text: content --><!-- /ko --><sup class="lingodoc-text-translation-lang" data-bind="text: lang"></sup>
+                            <span class="lingvodoc-text-translation">
+                                <!-- ko text: content --><!-- /ko --><sup class="lingvodoc-text-translation-lang" data-bind="text: lang"></sup>
                             </span>
 
                         </div>
@@ -67,6 +52,28 @@
     </div>
     <!-- /ko -->
 </div>
+
+<script type="text/html" id="word-items-template">
+        <ul>
+            <!-- ko foreach: items -->
+            <li>
+                <span class="lingvodoc-item">
+                    <!-- ko text: content --><!-- /ko --><sup class="lingvodoc-item-lang" data-bind="text: lang"></sup>
+                </span>
+            </li>
+            <!-- /ko -->
+        </ul>
+</script>
+
+<script type="text/html" id="word-metaword-template">
+    <ul>
+        <!-- ko with: metaword -->
+        <span data-bind="text: id"></span>
+        <!-- /ko -->
+    </ul>
+</script>
+
+
 
 <script data-main="${request.static_url('lingvodoc:static/js/lingvodemo.js')}"
         src="${request.static_url('lingvodoc:static/js/require.js')}"></script>
