@@ -142,8 +142,8 @@ def traverse_paradigm(metaparadigm, dictionary_client_id, dictionary_id, request
     metaparadigm_ids['metaparadigm_id'] = metaparadigm.id
     metaparadigm_ids['metaparadigm_client_id'] = metaparadigm.client_id
     metaparadigm_ids['url'] = request.route_url('api_metaword_get',
-                                                dictionary_client_id=metaparadigm_ids['dictionary_client_id'],
-                                                dictionary_id=metaparadigm_ids['dictionary_id'],
+                                                dictionary_client_id=dictionary_client_id,
+                                                dictionary_id=dictionary_id,
                                                 metaword_client_id=metaparadigm_ids['metaword_client_id'],
                                                 metaword_id=metaparadigm_ids['metaword_id'])
 
@@ -163,8 +163,8 @@ def traverse_paradigm(metaparadigm, dictionary_client_id, dictionary_id, request
                     obj_description['url'] = request.route_url('api_metaparadigm_sound_get',
                                                                dictionary_client_id=dictionary_client_id,
                                                                dictionary_id=dictionary_id,
-                                                               metaword_client_id=obj.metaword_client_id,
-                                                               metaword_id=obj.metaword_id,
+                                                               metaword_client_id=metaparadigm_ids['metaword_client_id'],
+                                                               metaword_id=metaparadigm_ids['metaword_id'],
                                                                metaparadigm_client_id=obj.metaparadigm_client_id,
                                                                metaparadigm_id=obj.metaparadigm_id,
                                                                sound_client_id=obj.client_id,
@@ -211,12 +211,12 @@ def traverse_metaword(metaword, request):
                                                                sound_id=obj.id)
                 elif field in ['paradigms']:
                     obj_description['paradigms'] = []
-                    for paradigm in obj.paradigms:
-                        obj_description['paradigms'].append(traverse_paradigm(paradigm,
-                                                                              metaword.dictionary_client_id,
-                                                                              metaword.dictionary_id,
-                                                                              request
-                                                                              ))
+                    #for paradigm in obj.paradigms:
+                    obj_description['paradigms'].append(traverse_paradigm(obj,
+                                                                          metaword.dictionary_client_id,
+                                                                          metaword.dictionary_id,
+                                                                          request
+                                                                          ))
                 elif field in ['etymology_tags']:
                     if obj.content:
                         obj_description['content'] = DBSession.query(WordEtymologyTag).filter_by(content=obj.content).count()
@@ -576,8 +576,8 @@ def api_metaparadigm_post_batch(request):
                                        client=client,
                                        marked_to_delete=False)
         else:
-            metaparadigm_object = DBSession.query(MetaWord).filter_by(id=metaparadigm_id,
-                                                                  client_id=metaparadigm_client_id).first()
+            metaparadigm_object = DBSession.query(MetaParadigm).filter_by(id=metaparadigm_id,
+                                                                          client_id=metaparadigm_client_id).first()
 
         transcriptions = metaparadigm.get('transcriptions')
         translations = metaparadigm.get('translations')
