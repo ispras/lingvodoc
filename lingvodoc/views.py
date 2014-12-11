@@ -364,7 +364,7 @@ def create_dictionary_get(request):
     return render_to_response('templates/create_dictionary_page.pt', variables, request=request)
 
 @view_config(route_name='view_page', renderer='templates/view_page.pt', request_method='GET')
-def create_dictionary_get(request):
+def view_page_get(request):
     variables = {'auth': authenticated_userid(request)}
     return render_to_response('templates/view_page.pt', variables, request=request)
 
@@ -759,7 +759,7 @@ def api_etymology_get(request):
 
 @view_config(route_name='api_corpora_get', renderer='json', request_method='GET')
 def api_corpora_get(request):
-    response = {"corpus_id":1,"corpus_client_id":1,"texts":[{"text_id":1,"client_id":1,"text_titles":[{"lang":"ru","content":"Ансамбль"}],"text_comments":[{"lang":"ru","content":"Текст записан С.Ю. Толдовой и Д.А. Паперно в июне 2004г. от К.А. Невоструевой (д. Жувам), расшифрован Д. Залмановым и А.А. Глуховой с С.С. Сабрековой (д. Шамардан), отглоссирован О.Л. Бирюк"}],"paragraphs":[{"phrases":[{"words":[{"items":[{"type":"txt","content":"beš’ermanskoj","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"},{"type":"lingvodoc_metaword","url":"<relative_url>"}]},{"items":[{"type":"txt","content":"beš’ermanskoj2222","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"}]}],"translations":[{"lang":"ru","content":"Появилось бесермянское общество, его создал Сабреков Валерьян Фёдорович."}]}]}]}]}
+    response = {"corpus_id":1,"corpus_client_id":1,"texts":[{"text_id":1,"client_id":1,"text_titles":[{"lang":"ru","content":"Ансамбль"}],"text_comments":[{"lang":"ru","content":"Текст записан С.Ю. Толдовой и Д.А. Паперно в июне 2004г. от К.А. Невоструевой (д. Жувам), расшифрован Д. Залмановым и А.А. Глуховой с С.С. Сабрековой (д. Шамардан), отглоссирован О.Л. Бирюк"}],"paragraphs":[{"phrases":[{"words":[{"items":[{"type":"txt","content":"beš’ermanskoj","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"},{"type":"lingvodoc_metaword","url":"http://192.168.23.130:6543/dictionaries/1/1/metawords/1/1"}]},{"items":[{"type":"txt","content":"beš’ermanskoj2222","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"}]}],"translations":[{"lang":"ru","content":"Появилось бесермянское общество, его создал Сабреков Валерьян Фёдорович."}]}]}]}]}
     return response
 
 
