@@ -10,6 +10,7 @@ require.config({
         'knockstrap': ['jquery', 'bootstrap', 'knockout']
     },
     'paths': {
+        'URIjs': 'lib/URIjs',
         'jquery': 'jquery-2.1.1.min',
         'bootstrap': 'bootstrap.min',
         'knockout': 'knockout-3.2.0',
@@ -23,7 +24,14 @@ require.config({
     }
 });
 
-require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $, ko) {
+var encodeGetParams = function(data) {
+    return Object.keys(data).map(function(key) {
+        return [key, data[key]].map(encodeURIComponent).join('=');
+    }).join('&');
+};
+
+
+require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], function(model, $, ko, uri) {
 
     var wrapArrays = function(word) {
         for (var prop in word) {
@@ -46,11 +54,15 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
 
         this.etymologyModalVisible = ko.observable(false);
 
+        this.pageIndex = ko.observable(1);
+        this.pageSize = ko.observable(20);
+        this.pageCount = ko.observable(10);
+
         // this reloads list of meta words from server
         // once batchSize or/and start change
         ko.computed(function() {
-
-            $.getJSON(baseUrl).done(function(response) {
+            var url = baseUrl + '?' + encodeGetParams({'offset': (this.pageIndex() - 1) * this.pageSize(), 'size': this.pageSize()});
+            $.getJSON(url).done(function(response) {
                 if (response instanceof Array) {
                     for (var i = 0; i < response.length; i++) {
                         wrapArrays(response[i]);
@@ -67,6 +79,24 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
             });
         }, this);
 
+        this.getPage = function(pageIndex) {
+            this.pageIndex(parseInt(pageIndex))
+        }.bind(this);
+
+        ko.computed(function() {
+            var url = $('#getDictionaryStatUrl').data('lingvodoc');
+            $.getJSON(url).done(function(response) {
+                if (response.metawords) {
+                    var pageCount = Math.ceil(parseInt(response.metawords) / this.pageSize());
+                    this.pageCount(pageCount);
+                }
+
+            }.bind(this)).fail(function(respones) {
+                // TODO: handle error
+            });
+        }, this);
+
+
         this.playSound = function(entry, event) {
             if (entry.url) {
                 this.lastSoundFileUrl(entry.url);
@@ -76,7 +106,6 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
         this.showParadigms = function(metaword, event) {
 
         }.bind(this);
-
 
         this.etymologySoundUrl = ko.observable();
 
@@ -97,4 +126,7 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
         }.bind(this);
     };
     ko.applyBindings(new viewModel());
+
+    window.URI = uri;
+
 });

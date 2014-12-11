@@ -4,6 +4,7 @@
 <body>
 
 <div id="getMetaWordsUrl" data-lingvodoc="${request.route_url('api_metaword_get_batch', dictionary_client_id=client_id, dictionary_id=id)}"></div>
+<div id="getDictionaryStatUrl" data-lingvodoc="${request.route_url('dictionary_stats', dictionary_client_id=client_id, dictionary_id=id)}"></div>
 
 
 <div metal:use-macro="load: nav.pt"></div>
@@ -75,6 +76,20 @@
             </table>
         </div>
     </div>
+
+    <div class="text-center">
+        <nav>
+            <ul class="pagination" data-bind="foreach: new Array(pageCount())">
+                <!-- ko if: $index()+1 == $root.pageIndex() -->
+                    <li class="active"><a href="#" data-bind="click: $root.getPage.bind($root, $index()+1), text: $index()+1"></a></li>
+                <!-- /ko -->
+                <!-- ko ifnot: $index()+1 == $root.pageIndex() -->
+                    <li><a href="#" data-bind="click: $root.getPage.bind($root, $index()+1), text: $index()+1"></a></li>
+                <!-- /ko -->
+            </ul>
+        </nav>
+    </div>
+
 </div>
 
 <div data-bind="modal: {
