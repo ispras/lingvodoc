@@ -438,9 +438,13 @@ def own_dictionaries_list(request):
                 dictionaries_list.append({'id': dictionary.id,
                                           'client_id': dictionary.client_id,
                                           'name': dictionary.name,
-                                          'url': request.route_url('edit_dictionary',
-                                                                   dictionary_client_id=dictionary.client_id,
-                                                                   dictionary_id=dictionary.id)})
+                                          'edit_url': request.route_url('edit_dictionary',
+                                                                        dictionary_client_id=dictionary.client_id,
+                                                                        dictionary_id=dictionary.id),
+                                          'view_url': request.route_url('view_dictionary',
+                                                                        dictionary_client_id=dictionary.client_id,
+                                                                        dictionary_id=dictionary.id),
+                                          'stats': form_dictionary_stats(dictionary.id, dictionary.client_id)})
         request.response.status = HTTPOk.code
         return {'status': request.response.status, 'dictionaries': dictionaries_list}
     except CommonException as e:
@@ -780,22 +784,25 @@ def api_corpora_get(request):
     return response
 
 
-@view_config(route_name='dictionary_stats', renderer='json', request_method='GET')
-def dictionary_stats(request):
+def form_dictionary_stats(dictionary_id, dictionary_client_id):
     quantity = dict()
-    quantity['metawords'] = DBSession.query(MetaWord)\
-        .options(noload("*"))\
-        .filter_by(dictionary_id=request.matchdict['dictionary_id'],
-                   dictionary_client_id=request.matchdict['dictionary_client_id'])\
+    quantity['metawords'] = DBSession.query(MetaWord) \
+        .options(noload("*")) \
+        .filter_by(dictionary_id=dictionary_id,
+                   dictionary_client_id=dictionary_client_id) \
         .count()
 
-    quantity['metaparadigm'] = DBSession.query(MetaParadigm) \
+    quantity['metaparadigms'] = DBSession.query(MetaParadigm) \
         .options(noload("*")) \
-        .filter(MetaParadigm.MetaWord.has(dictionary_id=request.matchdict['dictionary_id']),
-                MetaParadigm.MetaWord.has(dictionary_client_id=request.matchdict['dictionary_client_id']))\
+        .filter(MetaParadigm.MetaWord.has(dictionary_id=dictionary_id),
+                MetaParadigm.MetaWord.has(dictionary_client_id=dictionary_client_id)) \
         .count()
-#   quantity['metaparadigms'] = DBSession.query(MetaWord).options(noload("*")).count()
     return quantity
+
+
+@view_config(route_name='dictionary_stats', renderer='json', request_method='GET')
+def dictionary_stats(request):
+    return form_dictionary_stats(request.matchdict['dictionary_id'], request.matchdict['dictionary_client_id'])
 
 
 

@@ -19,11 +19,19 @@ $.ajax({
   success: function(data) {
       console.log(data);
       var dictionaries_list = data['dictionaries'];
+      console.log(dictionaries_list);
       $.each(dictionaries_list, function(key, value) {
-        $('#dictionaries_list').append("<li>" +
-                "<a href=" + value['url'] + ">"
+          console.log(value['name']);
+        $('#dictionaries_list').append("<li>"
+                + "<a href=" + value['edit_url'] + "> Редактировать  </a>"
+                + "<a href=" + value['view_url'] + "> Показать  </a>"
                 + value['name']
-                + "</a></li>");
+                + ' &mdash; слов: '
+                + value['stats']['metawords']
+                + ', парадигм: '
+                + value['stats']['metaparadigms']
+                + "</li>"
+                );
       });
 
   },
