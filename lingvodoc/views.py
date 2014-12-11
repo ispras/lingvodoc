@@ -620,7 +620,7 @@ def api_metaparadigm_post_batch(request):
 
     except CommonException as e:
         request.response.status = HTTPBadRequest.code
-        return {'status': request.response.status, 'error': str("Bad request")}
+        return {'status': request.response.status, 'error': "Bad request: " + str(e)}
 
 
 @view_config(route_name="api_metaword_post_batch", renderer="json", request_method="POST")
