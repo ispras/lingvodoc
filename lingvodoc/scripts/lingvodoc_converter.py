@@ -148,11 +148,12 @@ def convert_db(sqconn, session, args):
                                     dictionary
                                     WHERE
                                     regular_form = (?);""", [original_word_id])
+
             for sqparadigm in paradigm_traversal:
                 print ("par")
                 original_paradigm_id, preq = construct_basic_paradigm(sqconn, sqparadigm)
-                result = session.post(add_paradigm_route, json=req)
-                print (result.text)
+                result = session.post(add_paradigm_route, json=preq)
+#                print (result.text)
 
 #        except:
 #            continue
