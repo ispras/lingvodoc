@@ -131,8 +131,6 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
             url.directory(url.directory() + '/' + metaword.metaword_client_id + '/' + metaword.metaword_id)
             url.filename('metaparadigms');
 
-
-
             console.log(url.toString());
 
             $.getJSON(url.toString()).done(function(response) {
