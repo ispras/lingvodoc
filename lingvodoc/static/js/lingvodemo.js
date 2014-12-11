@@ -162,6 +162,8 @@ require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
 
         this.texts = ko.observableArray([]);
 
+        this.lastSoundFileUrl = ko.observable();
+
         ko.computed(function() {
 
             $.getJSON(baseUrl).done(function(response) {
@@ -175,31 +177,36 @@ require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
             });
         }, this);
 
-        this.showItems = function(item, event) {
 
-        }.bind(this);
-
-        this.showMetaword = function(item, event) {
-            if (item.url) {
+        this.showMetawordInfo = ko.observable(false);
+        this.metaword = ko.observable();
+        this.metawordUrl = ko.observable();
+        ko.computed(function() {
+            var url = this.metawordUrl();
+            if (url) {
                 // fetch metaword info
-                $.getJSON(item.url).done(function(response) {
-
+                this.metaword(undefined);
+                $.getJSON(url).done(function(response) {
+                    this.metaword(response);
                 }.bind(this)).fail(function(response) {
 
                 }.bind(this));
             }
+        }, this);
+
+        this.loadMetaword = function(item, event) {
+            if (item.url) {
+                this.metawordUrl(item.url);
+                this.showMetawordInfo(true);
+            }
         }.bind(this);
 
-
-        this.getWordInfo = function() {
-            console.log(arguments);
-            return 'test';
+        this.playSound = function(entry, event) {
+            if (entry.url) {
+                this.lastSoundFileUrl(entry.url);
+            }
         }.bind(this);
-
     };
-
-
-
 
     window.viewModel = new viewModel();
     ko.applyBindings(window.viewModel);

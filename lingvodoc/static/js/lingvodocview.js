@@ -77,6 +77,9 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
 
         }.bind(this);
 
+
+        this.etymologySoundUrl = ko.observable();
+
         this.showEtymology = function(metaword, event) {
             this.etymologyModalVisible(false);
             var url = baseUrl + encodeURIComponent(metaword.metaword_client_id) + '/' + encodeURIComponent(metaword.metaword_id) + '/etymology';
@@ -87,6 +90,11 @@ require(['model', 'jquery', 'ko', 'knockstrap', 'bootstrap'], function(model, $,
             }.bind(this));
         }.bind(this);
 
+        this.playEtymologySound = function(entry, event) {
+            if (entry.url) {
+                this.etymologySoundUrl(entry.url);
+            }
+        }.bind(this);
     };
     ko.applyBindings(new viewModel());
 });
