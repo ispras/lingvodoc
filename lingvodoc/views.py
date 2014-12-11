@@ -141,11 +141,13 @@ def traverse_paradigm(metaparadigm, dictionary_client_id, dictionary_id, request
     metaparadigm_ids['metaword_client_id'] = metaparadigm.metaword_client_id
     metaparadigm_ids['metaparadigm_id'] = metaparadigm.id
     metaparadigm_ids['metaparadigm_client_id'] = metaparadigm.client_id
-    metaparadigm_ids['url'] = request.route_url('api_metaword_get',
+    metaparadigm_ids['url'] = request.route_url('api_metaparadigm_get',
                                                 dictionary_client_id=dictionary_client_id,
                                                 dictionary_id=dictionary_id,
                                                 metaword_client_id=metaparadigm_ids['metaword_client_id'],
-                                                metaword_id=metaparadigm_ids['metaword_id'])
+                                                metaword_id=metaparadigm_ids['metaword_id'],
+                                                metaparadigm_id=metaparadigm_ids['metaparadigm_id'],
+                                                metaparadigm_client_id=metaparadigm_ids['metaparadigm_client_id'])
 
     for field in 'entries', 'transcriptions', 'translations', 'sounds':
         metaparadigm_ids[field] = []
@@ -811,6 +813,44 @@ def dictionary_stats(request):
     return form_dictionary_stats(request.matchdict['dictionary_id'], request.matchdict['dictionary_client_id'])
 
 
+@view_config(route_name='api_metaparadigm_get', renderer='json', request_method='GET')
+def api_metaparadigm_get(request):
+    'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/'
+    '{metaword_client_id}/{metaword_id}/metaparadigm/'
+    '{metaparadigm_client_id}/{metaparadigm_id}'
+    metaparadigm = DBSession.query(MetaParadigm)\
+        .filter_by(id=request.matchdict['metaparadigm_id'],
+                   client_id=request.matchdict['metaparadigm_client_id']).options(joinedload(MetaParadigm.transcriptions),
+                                                                                  joinedload(MetaParadigm.translations),
+                                                                                  joinedload(MetaParadigm.entries),
+                                                                                  joinedload(MetaParadigm.sounds)).first()
+    return traverse_paradigm(metaparadigm, request.matchdict['dictionary_client_id'], request.matchdict['dictionary_id'], request)
+
+
+@view_config(route_name='api_metaparadigm_get_batch', renderer='json', request_method='GET')
+def api_metaparadigms_get_batch(request):
+    offset = 0
+    limit = 10000
+    if 'offset' in request.params:
+        offset = int(request.params['offset'])
+    if 'size' in request.params:
+        limit = int(request.params['size'])
+
+    dictionary = DBSession.query(MetaWord).filter_by(
+        id=request.matchdict['metaword_id'],
+        client_id=request.matchdict['metaword_client_id'])
+
+    paradigms_list = []
+    for word in dictionary:
+        for metaparadigm in word.paradigms:
+            # it's a hack
+            metaparadigm.transcriptions
+            metaparadigm.sounds
+            metaparadigm.translations
+            metaparadigm.entries
+            paradigms_list.append(traverse_paradigm(metaparadigm, request.matchdict['dictionary_client_id'], request.matchdict['dictionary_id'], request))
+
+    return paradigms_list
 
 #@view_config(route_name='login', renderer='')
 # def login(request):

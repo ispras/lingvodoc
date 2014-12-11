@@ -87,8 +87,7 @@ def configure_routes(config):
     # : metaword paradigms
     # : : single operations
     config.add_route('api_metaparadigm_get',
-                     'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/'
-                     '{metaword_client_id}/{metaword_id}/metaparadigm/'
+                     'dictionaries/{dictionary_client_id}/{dictionary_id}/metaparadigms/'
                      '{metaparadigm_client_id}/{metaparadigm_id}',
                      #factory=DummyDeny,
                      request_method='GET')
