@@ -848,8 +848,11 @@ def delete_dictionary(request):
 # TODO: find one now. For demo exclusively
 @view_config(route_name='api_find_by_translation', renderer='json', request_method='GET')
 def api_find_by_translation(request):
-    metaword = DBSession.query(MetaWord).filter_by(translations.any(content=request.params['translation'])).first()
-    return traverse_metaword(metaword, request)
+    metaword = DBSession.query(MetaWord).filter(MetaWord.translations.any(content=request.params['translation'])).first()
+    if metaword:
+        return traverse_metaword(metaword, request)
+    else:
+        raise HTTPNotFound
 
 
 #@view_config(route_name='login', renderer='')
