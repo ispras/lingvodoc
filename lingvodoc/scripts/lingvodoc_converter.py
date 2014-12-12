@@ -146,40 +146,55 @@ def convert_db(sqconn, session, args):
     #        print(create_basic_metaword.tex
     metawords = json.loads(result.text)
 
-    zipped_metaword = zip(original_word_ids, metawords['metawords'])
-    # import pdb
-    # pdb.set_trace()
+    check_paradigms_existance = sqconn.cursor()
+    check_paradigms_existance.execute("""SELECT
+                            id,
+                            word,
+                            regular_form,
+                            transcription,
+                            translation,
+                            etimology_tag,
+                            is_a_regular_form
+                            FROM
+                            dictionary
+                            WHERE
+                            is_a_regular_form=1;""")
 
-    for word in zipped_metaword:
-        original_word_id = word[0]
+    if len(check_paradigms_existance) > 0:
+        zipped_metaword = zip(original_word_ids, metawords['metawords'])
+        # import pdb
+        # pdb.set_trace()
 
-        metaword = word[1]
+        for word in zipped_metaword:
+            original_word_id = word[0]
 
-        add_paradigm_route = add_word_route + \
-                             str(metaword['metaword_client_id']) + '/' + \
-                             str(metaword['metaword_id']) + '/' + 'metaparadigms'
+            metaword = word[1]
 
-        paradigm_traversal = sqconn.cursor()
-        paradigm_traversal.execute("""SELECT
-                                id,
-                                word,
-                                regular_form,
-                                transcription,
-                                translation,
-                                etimology_tag,
-                                is_a_regular_form
-                                FROM
-                                dictionary
-                                WHERE
-                                regular_form = (?);""", [original_word_id])
+            add_paradigm_route = add_word_route + \
+                                 str(metaword['metaword_client_id']) + '/' + \
+                                 str(metaword['metaword_id']) + '/' + 'metaparadigms'
 
-        par_list = []
-        for sqparadigm in paradigm_traversal:
-            print ("par")
-            original_paradigm_id, paradigm_request = construct_basic_paradigm(sqconn, sqparadigm)
-            par_list.append(paradigm_request)
+            paradigm_traversal = sqconn.cursor()
+            paradigm_traversal.execute("""SELECT
+                                    id,
+                                    word,
+                                    regular_form,
+                                    transcription,
+                                    translation,
+                                    etimology_tag,
+                                    is_a_regular_form
+                                    FROM
+                                    dictionary
+                                    WHERE
+                                    regular_form = (?);""", [original_word_id])
 
-        result = session.post(add_paradigm_route, json={"metaparadigms": par_list})
+            par_list = []
+            for sqparadigm in paradigm_traversal:
+                print ("par")
+                original_paradigm_id, paradigm_request = construct_basic_paradigm(sqconn, sqparadigm)
+                par_list.append(paradigm_request)
+
+            result = session.post(add_paradigm_route, json={"metaparadigms": par_list})
 
 
 def get_args():
