@@ -830,7 +830,7 @@ def api_metaparadigms_get_batch(request):
     return paradigms_list
 
 
-### TODO: ITS VERY DANGEROUS STUFF, USE WISELY
+### TODO: ITS VERY DANGEROUS STUFF, USE WISELY (DOESN'T WORK NOW)
 @view_config(route_name='delete_dictionary', renderer='json', request_method='DELETE')
 def delete_dictionary(request):
     dictionary = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
@@ -844,6 +844,13 @@ def delete_dictionary(request):
     # DBSession.delete(dictionary.metawords.transcriptions)
     DBSession.delete(dictionary)
     return 200
+
+# TODO: find one now. For demo exclusively
+@view_config(route_name='api_find_by_translation', renderer='json', request_method='GET')
+def api_find_by_translation(request):
+    metaword = DBSession.query(MetaWord).filter_by(translations.any(content=request.params['translation'])).first()
+    return traverse_metaword(metaword, request)
+
 
 #@view_config(route_name='login', renderer='')
 # def login(request):
