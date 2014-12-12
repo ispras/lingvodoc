@@ -712,7 +712,7 @@ def api_metaword_get_batch(request):
 @view_config(route_name='api_metaword_sound_get', request_method='GET')
 def api_metaword_sound_get(request):
 
-    sound_object = DBSession.query(WordSound).options(subqueryload(MetaWord.sounds)).filter_by(
+    sound_object = DBSession.query(WordSound).filter_by(
         id=request.matchdict['sound_id'],
         client_id=request.matchdict['sound_client_id']).first()
     if sound_object:
@@ -723,7 +723,7 @@ def api_metaword_sound_get(request):
 
 @view_config(route_name='api_metaparadigm_sound_get', request_method='GET')
 def api_metaparadigm_sound_get(request):
-    sound_object = DBSession.query(ParadigmSound).options(subqueryload(MetaParadigm.sounds)).filter_by(
+    sound_object = DBSession.query(ParadigmSound).filter_by(
         id=request.matchdict['sound_id'],
         client_id=request.matchdict['sound_client_id']).first()
     if sound_object:
