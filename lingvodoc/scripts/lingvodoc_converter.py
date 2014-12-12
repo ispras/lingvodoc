@@ -160,7 +160,11 @@ def convert_db(sqconn, session, args):
                             WHERE
                             is_a_regular_form=1;""")
 
-    if len(check_paradigms_existance) > 0:
+    pars_total = 0
+    for par in check_paradigms_existance:
+        pars_total += 1
+
+    if pars_total > 0:
         zipped_metaword = zip(original_word_ids, metawords['metawords'])
         # import pdb
         # pdb.set_trace()

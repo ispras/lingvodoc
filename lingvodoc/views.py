@@ -829,6 +829,22 @@ def api_metaparadigms_get_batch(request):
 
     return paradigms_list
 
+
+### TODO: ITS VERY DANGEROUS STUFF, USE WISELY
+@view_config(route_name='delete_dictionary', renderer='json', request_method='DELETE')
+def delete_dictionary(request):
+    dictionary = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
+                                                       client_id=request.matchdict['dictionary_client_id']).options(subqueryload('*')).first()
+    dictionary.metawords.paradigms
+    dictionary.metawords.paradigms.delete()
+    dictionary.metawords.etymology_tags.delete()
+    DBSession.delete(dictionary.metawords.paradigms)
+    DBSession.delete(dictionary.metawords.entries)
+    DBSession.delete(dictionary.metawords.translations)
+    DBSession.delete(dictionary.metawords.transcriptions)
+    DBSession.delete(dictionary)
+    return 200
+
 #@view_config(route_name='login', renderer='')
 # def login(request):
 #     """

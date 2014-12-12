@@ -120,6 +120,9 @@ def configure_routes(config):
 
     # : default words for publishing
 
+    # Dangerous stuff (for admin only)
+    config.add_route('delete_dictionary', 'dictionaries/{dictionary_client_id}/{dictionary_id}', request_method='DELETE')
+
 
 
 def main(global_config, **settings):
