@@ -835,13 +835,13 @@ def api_metaparadigms_get_batch(request):
 def delete_dictionary(request):
     dictionary = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
                                                        client_id=request.matchdict['dictionary_client_id']).options(subqueryload('*')).first()
-    dictionary.metawords.paradigms
-    dictionary.metawords.paradigms.delete()
-    dictionary.metawords.etymology_tags.delete()
-    DBSession.delete(dictionary.metawords.paradigms)
-    DBSession.delete(dictionary.metawords.entries)
-    DBSession.delete(dictionary.metawords.translations)
-    DBSession.delete(dictionary.metawords.transcriptions)
+    # dictionary.metawords.paradigms
+    # dictionary.metawords.paradigms.delete()
+    # dictionary.metawords.etymology_tags.delete()
+    # DBSession.delete(dictionary.metawords.paradigms)
+    # DBSession.delete(dictionary.metawords.entries)
+    # DBSession.delete(dictionary.metawords.translations)
+    # DBSession.delete(dictionary.metawords.transcriptions)
     DBSession.delete(dictionary)
     return 200
 

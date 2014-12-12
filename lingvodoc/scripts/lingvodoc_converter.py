@@ -158,7 +158,7 @@ def convert_db(sqconn, session, args):
                             FROM
                             dictionary
                             WHERE
-                            is_a_regular_form=1;""")
+                            is_a_regular_form=0;""")
 
     pars_total = 0
     for par in check_paradigms_existance:
