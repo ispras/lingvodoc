@@ -143,8 +143,9 @@ require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
         this.paragraphs = paragraphs;
     };
     Text.fromJS = function(text) {
-        var i = 0, j = 0, k = 0, l = 0;
+        var i;
         var text_titles = [], paragraphs = [];
+
         for (i = 0; i < text.text_titles.length; i++) {
             var title = text.text_titles[i];
             text_titles.push(new TextTitle(title.lang, title.content));
@@ -160,16 +161,19 @@ require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
     var viewModel = function() {
         var baseUrl = $('#getCorpusUrl').data('lingvodoc');
 
-        this.texts = ko.observableArray([]);
+        this.allTexts = ko.observable([]);
 
         this.lastSoundFileUrl = ko.observable();
 
         ko.computed(function() {
 
             $.getJSON(baseUrl).done(function(response) {
+                var texts = [];
                 if (response.corpus_id && response.corpus_client_id) {
                     for (var i = 0; i < response.texts.length; i++) {
-                        this.texts.push(Text.fromJS(response.texts[i]));
+                        texts.push(Text.fromJS(response.texts[i]));
+                        this.allTexts(texts.slice());
+                        this.getPage(1);
                     }
                 }
             }.bind(this)).fail(function(respones) {
@@ -194,9 +198,43 @@ require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
             }
         }, this);
 
+
+        this.etymology = ko.observable();
+        this.etymologyUrl = ko.observable();
+        ko.computed(function() {
+            var url = this.etymologyUrl();
+            if (url) {
+                // fetch metaword info
+                this.etymology(undefined);
+                $.getJSON(url).done(function(response) {
+                    this.etymology(response);
+                }.bind(this)).fail(function(response) {
+
+                }.bind(this));
+            }
+        }, this);
+
+        this.paradigm = ko.observable();
+        this.paradigmUrl = ko.observable();
+        ko.computed(function() {
+            var url = this.paradigmUrl();
+            if (url) {
+                // fetch metaword info
+                this.paradigm(undefined);
+                $.getJSON(url).done(function(response) {
+                    this.paradigm(response);
+                }.bind(this)).fail(function(response) {
+
+                }.bind(this));
+            }
+        }, this);
+
+
         this.loadMetaword = function(item, event) {
-            if (item.url) {
+            if (item.url && item.paradigm_url && item.etymology_url) {
                 this.metawordUrl(item.url);
+                this.paradigmUrl(item.paradigm_url);
+                this.etymologyUrl(item.etymology_url);
                 this.showMetawordInfo(true);
             }
         }.bind(this);
@@ -205,6 +243,21 @@ require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
             if (entry.url) {
                 this.lastSoundFileUrl(entry.url);
             }
+        }.bind(this);
+
+        this.pageIndex = ko.observable(1);
+        this.pageSize = ko.observable(2);
+        this.pageCount = ko.computed(function() {
+            return Math.ceil(this.allTexts().length / this.pageSize());
+        }, this);
+
+        this.texts = ko.computed(function() {
+            var offset = (this.pageIndex() - 1) * this.pageSize();
+            return this.allTexts().slice(offset, offset + this.pageSize());
+        }, this);
+
+        this.getPage = function(pageIndex) {
+            this.pageIndex(parseInt(pageIndex))
         }.bind(this);
     };
 

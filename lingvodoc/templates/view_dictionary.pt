@@ -157,7 +157,7 @@
                             </div>
                         </div>
                     </td>
-                    
+
                     <td>
                         <div data-bind="text: dictionary_name"></div>
                     </td>

@@ -21,9 +21,15 @@
 
 .lingvodoc-translation {
     font-size: 1.2em;
+    font-style: italic;
 }
 
 .lingvodoc-word {
+    font-size: 1.1em;
+    cursor:pointer;
+}
+
+.lingvodoc-metaword {
     font-size: 1.1em;
     text-decoration: underline;
     cursor:pointer;
