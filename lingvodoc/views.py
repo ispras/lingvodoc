@@ -158,7 +158,7 @@ def traverse_paradigm(metaparadigm, dictionary_client_id, dictionary_id, request
                 obj_description['id'] = obj.id
                 obj_description['client_id'] = obj.client_id
                 obj_description['creation_time'] = str(obj.creation_time)
-                obj_description['author'] = str(obj.client.User.name)
+#                obj_description['author'] = str(obj.client.User.name)
                 if field in ['entries', 'transcriptions', 'translations']:
                     obj_description['content'] = obj.content
                 elif field in ['sounds']:
@@ -200,7 +200,7 @@ def traverse_metaword(metaword, request):
                 obj_description['client_id'] = obj.client_id
                 if 'creation_time' in obj_description:
                     obj_description['creation_time'] = str(obj.creation_time)
-                obj_description['author'] = str(obj.client.User.name)
+#                obj_description['author'] = str(obj.client.User.name)
                 if field in ['entries', 'transcriptions', 'translations']:
                     obj_description['content'] = obj.content
                 elif field in ['sounds']:
@@ -626,78 +626,90 @@ def api_metaparadigm_post_batch(request):
         return {'status': request.response.status, 'error': "Bad request: " + str(e)}
 
 
+def create_metaword_from_request(dictionary_object, metaword, client, request):
+    metaword_id = metaword.get('metaword_id')
+    metaword_client_id = metaword.get('metaword_client_id')
+    if bool(metaword_id) != bool(metaword_client_id):
+        raise CommonException("Bad request: missing one of metaword identifiers")
+
+    if not bool(metaword_id) and not bool(metaword_client_id):
+        # we are getting all metawords for purpose -- for correct numeration in client applications
+        metaword_object = MetaWord(id=DBSession.query(MetaWord).count()+1,
+                                   client_id=client.id,
+                                   client=client,
+                                   marked_to_delete=False)
+    else:
+        metaword_object = DBSession.query(MetaWord).filter_by(id=metaword_id,
+                                                              client_id=metaword_client_id).first()
+    transcriptions = metaword.get('transcriptions')
+    translations = metaword.get('translations')
+    entries = metaword.get('entries')
+    sounds = metaword.get('sounds')
+    etymology_tags = metaword.get('etymology_tags')
+
+    if transcriptions:
+        for item in transcriptions:
+            metaword_object.transcriptions.append(
+                produce_subtypes(WordTranscription, client, {'content': item.get('content')})
+            )
+
+    if translations:
+        for item in translations:
+            metaword_object.translations.append(
+                produce_subtypes(WordTranslation, client, {'content': item.get('content')})
+            )
+    if entries:
+        for item in entries:
+            metaword_object.entries.append(
+                produce_subtypes(WordEntry, client, {'content': item.get('content')})
+            )
+    if sounds:
+        for item in sounds:
+            if not item:
+                raise CommonException('No sound is attached, retry')
+            metaword_object.sounds.append(
+                produce_subtypes(WordSound, client, {'content': item.get('content'),
+                                                     'mime': item.get('mime'),
+                                                     'name': item.get('name'),
+                                                     'markups': item.get('markups')})
+            )
+            DBSession.flush()
+    if etymology_tags:
+        for item in etymology_tags:
+            if not item:
+                raise CommonException('No tag is supplied, retry')
+            metaword_object.etymology_tags.append(
+                produce_subtypes(WordEtymologyTag, client, {'content': item.get('content')})
+            )
+
+    dictionary_object.metawords.append(metaword_object)
+    DBSession.add(dictionary_object)
+    DBSession.flush()
+    return metaword_object
+
+
+
 @view_config(route_name="api_metaword_post_batch", renderer="json", request_method="POST")
 def api_metaword_post_batch(request):
-    #print(request.matchdict)
-#    dictionary_client_id = request.matchdict['client_id']
-#    dictionary_id = request.matchdict['dictionary_id']
     try:
         dictionary_object = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
                                                                   client_id=request.matchdict['dictionary_client_id']).first()
-        metaword = request.json_body
-        metaword_id = metaword.get('metaword_id')
-        metaword_client_id = metaword.get('metaword_client_id')
-        if bool(metaword_id) != bool(metaword_client_id):
-            raise CommonException("Bad request: missing one of metaword identifiers")
-
         client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
         if not client or client.id != authenticated_userid(request):
             raise CommonException("It seems that you are trying to trick the system. Don't!")
-        if not bool(metaword_id) and not bool(metaword_client_id):
-            # we are getting all metawords for purpose -- for correct numeration in client applications
-            metaword_object = MetaWord(id=DBSession.query(MetaWord).count()+1,
-                                       client_id=client.id,
-                                       client=client,
-                                       marked_to_delete=False)
+
+        batch = request.json_body
+
+        if 'metawords' in batch:
+            metaword_objects = []
+            for metaword in batch['metawords']:
+                metaword_objects.append(create_metaword_from_request(dictionary_object, metaword, client, request))
+            metawords_list = [traverse_metaword(word, request) for word in metaword_objects]
+            response = {"metawords": metawords_list}
         else:
-            metaword_object = DBSession.query(MetaWord).filter_by(id=metaword_id,
-                                                                  client_id=metaword_client_id).first()
-        transcriptions = metaword.get('transcriptions')
-        translations = metaword.get('translations')
-        entries = metaword.get('entries')
-        sounds = metaword.get('sounds')
-        etymology_tags = metaword.get('etymology_tags')
+            metaword_object = create_metaword_from_request(dictionary_object, batch, client, request)
+            response = traverse_metaword(metaword_object, request)
 
-        if transcriptions:
-            for item in transcriptions:
-                metaword_object.transcriptions.append(
-                    produce_subtypes(WordTranscription, client, {'content': item.get('content')})
-                )
-
-        if translations:
-            for item in translations:
-                metaword_object.translations.append(
-                    produce_subtypes(WordTranslation, client, {'content': item.get('content')})
-                )
-        if entries:
-            for item in entries:
-                metaword_object.entries.append(
-                    produce_subtypes(WordEntry, client, {'content': item.get('content')})
-                )
-        if sounds:
-            for item in sounds:
-                if not item:
-                    raise CommonException('No sound is attached, retry')
-                metaword_object.sounds.append(
-                    produce_subtypes(WordSound, client, {'content': item.get('content'),
-                                                                  'mime': item.get('mime'),
-                                                                  'name': item.get('name'),
-                                                                  'markups': item.get('markups')})
-                )
-                DBSession.flush()
-        if etymology_tags:
-            for item in etymology_tags:
-                if not item:
-                    raise CommonException('No tag is supplied, retry')
-                metaword_object.etymology_tags.append(
-                    produce_subtypes(WordEtymologyTag, client, {'content': item.get('content')})
-                )
-
-        dictionary_object.metawords.append(metaword_object)
-        DBSession.add(dictionary_object)
-        DBSession.flush()
-
-        response = traverse_metaword(metaword_object, request)
         response['status'] = 200
 
         return response
@@ -708,7 +720,12 @@ def api_metaword_post_batch(request):
 
 @view_config(route_name='api_metaword_get', renderer='json', request_method='GET')
 def api_metaword_get(request):
-    word_object = DBSession.query(MetaWord).options(subqueryload('*')).filter_by(
+    word_object = DBSession.query(MetaWord).options(joinedload(MetaWord.transcriptions),
+                                                    joinedload(MetaWord.translations),
+                                                    joinedload(MetaWord.etymology_tags),
+                                                    joinedload(MetaWord.entries),
+                                                    joinedload(MetaWord.sounds),
+                                                    joinedload(MetaWord.paradigms)).filter_by(
         id=request.matchdict['metaword_id'],
         client_id=request.matchdict['metaword_client_id']).first()
 
@@ -767,14 +784,24 @@ def api_metaparadigm_sound_get(request):
 
 @view_config(route_name='api_etymology_get', renderer='json', request_method='GET')
 def api_etymology_get(request):
-    word_object = DBSession.query(MetaWord).options(subqueryload('*')).filter_by(
+    word_object = DBSession.query(MetaWord).options(joinedload(MetaWord.transcriptions),
+                                                    joinedload(MetaWord.translations),
+                                                    joinedload(MetaWord.etymology_tags),
+                                                    joinedload(MetaWord.entries),
+                                                    joinedload(MetaWord.sounds),
+                                                    joinedload(MetaWord.paradigms)).filter_by(
         id=request.matchdict['metaword_id'],
         client_id=request.matchdict['metaword_client_id']).first()
     if word_object:
         connected_words = []
         for tag in word_object.etymology_tags:
             print(tag)
-            connected_words_objects = DBSession.query(MetaWord).options(subqueryload('*')).filter(
+            connected_words_objects = DBSession.query(MetaWord).options(joinedload(MetaWord.transcriptions),
+                                                                        joinedload(MetaWord.translations),
+                                                                        joinedload(MetaWord.etymology_tags),
+                                                                        joinedload(MetaWord.entries),
+                                                                        joinedload(MetaWord.sounds),
+                                                                        joinedload(MetaWord.paradigms)).filter(
                 MetaWord.etymology_tags.any(content=tag.content)
                 )
 #            connected_words = [traverse_metaword(word_object, request)]

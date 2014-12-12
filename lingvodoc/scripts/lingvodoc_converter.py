@@ -123,40 +123,44 @@ def convert_db(sqconn, session, args):
     add_word_route = args.server_url + 'dictionaries/' + str(dictionary_client_id) + '/' + str(dictionary_id) + '/metawords/'
 #    print(add_word_route)
 
+    words_list = []
     for sqword in word_traversal:
-#        try:
             original_word_id, req = construct_basic_metaword(sqconn, sqword)
-            result = session.post(add_word_route, json=req)
+            words_list.append(req)
+    print (len(words_list))
+    result = session.post(add_word_route, json={"metawords": words_list})
+
+
             #print(req)
     #        print(create_basic_metaword.tex
-            metaword = json.loads(result.text)
+    metaword = json.loads(result.text)
+    import pprint
+    p = pprint.PrettyPrinter()
+    p.pprint(metaword)
 
-            add_paradigm_route = add_word_route + \
-                                 str(metaword['metaword_client_id']) + '/' + \
-                                 str(metaword['metaword_id']) + '/' + 'metaparadigms'
+            # add_paradigm_route = add_word_route + \
+            #                      str(metaword['metaword_client_id']) + '/' + \
+            #                      str(metaword['metaword_id']) + '/' + 'metaparadigms'
+            #
+            # paradigm_traversal = sqconn.cursor()
+            # paradigm_traversal.execute("""SELECT
+            #                         id,
+            #                         word,
+            #                         regular_form,
+            #                         transcription,
+            #                         translation,
+            #                         etimology_tag,
+            #                         is_a_regular_form
+            #                         FROM
+            #                         dictionary
+            #                         WHERE
+            #                         regular_form = (?);""", [original_word_id])
+            #
+            # for sqparadigm in paradigm_traversal:
+            #     print ("par")
+            #     original_paradigm_id, preq = construct_basic_paradigm(sqconn, sqparadigm)
+            #     result = session.post(add_paradigm_route, json=preq)
 
-            paradigm_traversal = sqconn.cursor()
-            paradigm_traversal.execute("""SELECT
-                                    id,
-                                    word,
-                                    regular_form,
-                                    transcription,
-                                    translation,
-                                    etimology_tag,
-                                    is_a_regular_form
-                                    FROM
-                                    dictionary
-                                    WHERE
-                                    regular_form = (?);""", [original_word_id])
-
-            for sqparadigm in paradigm_traversal:
-                print ("par")
-                original_paradigm_id, preq = construct_basic_paradigm(sqconn, sqparadigm)
-                result = session.post(add_paradigm_route, json=preq)
-#                print (result.text)
-
-#        except:
-#            continue
 
 def get_args():
     parser = argparse.ArgumentParser(description='Dictionary converter for lingvodoc 2.0')
