@@ -22,7 +22,7 @@
         <div class="lingvodoc-paragraphs" data-bind="foreach: paragraphs">
             <div class="lingvodoc-paragraph">
                 <div class="lingvodoc-phrases" data-bind="foreach: phrases">
-                    <div class="lingvodoc-phrase text-primary" style="font-size: large" >
+                    <div class="lingvodoc-phrase" style="font-size: large" >
                         <!-- ko foreach: words -->
                                 <!-- ko if: $data.hasDictionaryEntry() -->
                                     <!-- ko with: $data.getDictionaryEntry() -->
