@@ -231,10 +231,10 @@ require(['jquery', 'ko', 'knockstrap', 'bootstrap'], function($, ko) {
 
 
         this.loadMetaword = function(item, event) {
-            if (item.url && item.paradigm_url && item.etymology_url) {
+            if (item.url) {
                 this.metawordUrl(item.url);
-                this.paradigmUrl(item.paradigm_url);
-                this.etymologyUrl(item.etymology_url);
+                this.paradigmUrl(item.url + '/paradigms');
+                this.etymologyUrl(item.url + '/etymology');
                 this.showMetawordInfo(true);
             }
         }.bind(this);
