@@ -7,14 +7,14 @@ require.config({
         'wavesurfer': {
             'exports': 'WaveSurfer'
         },
-        'knockstrap': ['jquery', 'bootstrap', 'knockout']
+        'knockstrap': ['jquery', 'bootstrap', 'knockout'],
     },
     'paths': {
         'jquery': 'jquery-2.1.1.min',
         'bootstrap': 'bootstrap.min',
         'knockout': 'knockout-3.2.0',
         'knockstrap': 'knockstrap.min',
-        'wavesurfer': 'wavesurfer.min'
+        'wavesurfer': 'wavesurfer'
     },
     'map': {
         '*': {

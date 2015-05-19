@@ -15,7 +15,7 @@ require.config({
         'bootstrap': 'bootstrap.min',
         'knockout': 'knockout-3.2.0',
         'knockstrap': 'knockstrap.min',
-        'wavesurfer': 'wavesurfer.min'
+        'wavesurfer': 'wavesurfer'
     },
     'map': {
         '*': {

@@ -5,7 +5,7 @@ require.config({
     'shim': {
         'bootstrap' : ['jquery'],
         'wavesurfer': {
-            'exports': 'WaveSurfer'
+            'exports': 'WveSurfer'
         },
         'knockstrap': ['jquery', 'bootstrap', 'knockout']
     },
@@ -15,7 +15,8 @@ require.config({
         'bootstrap': 'bootstrap.min',
         'knockout': 'knockout-3.2.0',
         'knockstrap': 'knockstrap.min',
-        'wavesurfer': 'wavesurfer.min'
+        'wavesurfer': 'wavesurfer',
+        'elan': 'elan'
     },
     'map': {
         '*': {
@@ -24,7 +25,7 @@ require.config({
     }
 });
 
-require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], function(model, $, ko, uri) {
+require(['model', 'jquery', 'ko', 'URIjs/URI', 'elan', 'knockstrap', 'bootstrap'], function(model, $, ko, uri, elan) {
     var wrapArrays = function(word) {
         for (var prop in word) {
             if (word.hasOwnProperty(prop)) {
@@ -57,6 +58,15 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
         this.pageIndex = ko.observable(1);
         this.pageSize = ko.observable(20);
         this.pageCount = ko.observable(10);
+
+        this.annotation = {
+            isVisible: ko.observable(false),
+            from: ko.observable(),
+            to: ko.observable(),
+            value: ko.observable()
+        };
+
+        this.elanDocument = new elan.Document();
 
         ko.computed(function() {
             var url = new uri(baseUrl);
@@ -278,7 +288,27 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], funct
 
         }.bind(this);
 
+        this.selectRegion = function(region) {
+            this.annotation.from(region.start);
+            this.annotation.to(region.end);
+            this.annotation.value('');
+            this.annotation.isVisible(true);
+        }.bind(this);
+
+        this.saveAnnotation = function(obj, event) {
+            if (this.elanDocument == null) {
+                this.elanDocument = new elan.Document();
+            }
+
+            var tierId = this.elanDocument.createTier('default-lt', 'default-locale');
+            var from = parseInt(this.annotation.from()) * 1000;
+            var to = parseInt(this.annotation.to()) * 1000;
+            this.elanDocument.createAnnotation(tierId, this.annotation.value(), from, to);
+            console.log(this.elanDocument.exportXML());
+        }.bind(this);
+
     };
 
-    ko.applyBindings(new viewModel());
+    window.viewModel =new viewModel();
+    ko.applyBindings(window.viewModel);
 });

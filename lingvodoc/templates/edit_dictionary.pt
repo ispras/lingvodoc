@@ -19,7 +19,43 @@
         </div>
         <div class="col-md-11 ">
 
-            <div data-bind="wavesurfer: lastSoundFileUrl"></div>
+            <div data-bind="wavesurfer: {url: lastSoundFileUrl, selectRegion: selectRegion}"></div>
+
+
+            <div class="row">
+                <div class="col-md-6 col-md-offset-3">
+                <!-- ko with: annotation -->
+                <div class="panel panel-primary" data-bind="visible: isVisible">
+
+                    <div class="panel-heading">Добавить/Изменить аннотацию</div>
+
+                    <div class="panel-body">
+
+                        <div class="input-group">
+                            <span class="input-group-addon">От</span>
+                            <input type="text" class="form-control" aria-label="" data-bind="value: from">
+                            <span class="input-group-addon">секунд</span>
+                        </div>
+
+                        <div class="input-group">
+                            <span class="input-group-addon">До</span>
+                            <input type="text" class="form-control" aria-label="" data-bind="value: to">
+                            <span class="input-group-addon">секунд</span>
+                        </div>
+
+                        <div class="input-group">
+                            <span class="input-group-addon">Значение</span>
+                            <input type="text" class="form-control" aria-label="Значение" data-bind="value: value">
+                            <span class="input-group-btn">
+                                <button class="btn btn-primary" type="button" data-bind="click: $root.saveAnnotation">Сохранить</button>
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+                <!-- /ko -->
+                </div>
+            </div>
 
             <table class="table table-striped table-bordered">
                 <thead>

@@ -53,7 +53,7 @@ define(['model', 'knockout', 'wavesurfer', 'upload'], function(model, ko, wavesu
             var value = valueAccessor();
             var valueUnwrapped = ko.unwrap(value);
 
-            var wsurfer = Object.create(WaveSurfer);
+            var wsurfer = Object.create(wavesurfer);
 
             wsurfer.init({
                 container: element,
@@ -61,8 +61,26 @@ define(['model', 'knockout', 'wavesurfer', 'upload'], function(model, ko, wavesu
                 progressColor: 'red'
             });
 
+
+            // Regions
+            if (wsurfer.enableDragSelection) {
+                wsurfer.enableDragSelection({
+                    color: 'rgba(0, 255, 0, 0.1)'
+                });
+            }
+
             wsurfer.on('ready', function () {
                 wsurfer.play();
+            });
+
+            wsurfer.on('region-click', function(region, event) {
+                if (typeof valueUnwrapped.selectRegion == 'function') {
+                    valueUnwrapped.selectRegion(region);
+                }
+            });
+
+            wsurfer.on('region-dblclick', function(region, event) {
+                region.remove(region);
             });
 
             ko.utils.domData.set(element, 'wsurfer', wsurfer);
@@ -75,7 +93,7 @@ define(['model', 'knockout', 'wavesurfer', 'upload'], function(model, ko, wavesu
 
             var wsurfer = ko.utils.domData.get(element, 'wsurfer');
             if (typeof wsurfer != 'undefined' && valueUnwrapped) {
-                wsurfer.load(valueUnwrapped);
+                wsurfer.load(valueUnwrapped.url());
             }
         }
     };
