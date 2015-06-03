@@ -45,18 +45,24 @@ define(['model', 'knockout', 'wavesurfer', 'upload'], function(model, ko, wavesu
             reader.bindInputFiles(element);
         }
     };
-
-    ko.bindingHandlers.wavesurfer = {
-        init: function(element, valueAccessor, allBindingsAccessor,
-                       viewModel, bindingContext) {
+    
+    ko.bindingHandlers.markup = {
+        init: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
 
             var value = valueAccessor();
             var valueUnwrapped = ko.unwrap(value);
-
             var wsurfer = Object.create(wavesurfer);
 
+
+            console.log(element);
+
+            var waveformElements = element.getElementsByClassName('markup-waveform');
+            if (waveformElements.length < 1) {
+                throw 'Container for waveform not found';
+            }
+
             wsurfer.init({
-                container: element,
+                container: waveformElements[0],
                 waveColor: 'black',
                 progressColor: 'red'
             });
@@ -69,10 +75,12 @@ define(['model', 'knockout', 'wavesurfer', 'upload'], function(model, ko, wavesu
                 });
             }
 
+            // play file on load
             wsurfer.on('ready', function () {
-                wsurfer.play();
+                //wsurfer.play();
             });
 
+            // regions events
             wsurfer.on('region-click', function(region, event) {
                 if (typeof valueUnwrapped.selectRegion == 'function') {
                     valueUnwrapped.selectRegion(region);
@@ -81,6 +89,28 @@ define(['model', 'knockout', 'wavesurfer', 'upload'], function(model, ko, wavesu
 
             wsurfer.on('region-dblclick', function(region, event) {
                 region.remove(region);
+            });
+
+            // bind controls
+            [].forEach.call(element.querySelectorAll('[data-action]'), function (el) {
+                el.addEventListener('click', function (e) {
+                    var action = e.currentTarget.dataset.action;
+
+                    switch (action) {
+                        case 'play':
+                            wsurfer.play();
+                            break;
+                        case 'pause':
+                            wsurfer.pause();
+                            break;
+                        case 'backward':
+                            wsurfer.skipBackward();
+                            break;
+                        case 'forward':
+                            wsurfer.skipForward();
+                            break;
+                    }
+                });
             });
 
             ko.utils.domData.set(element, 'wsurfer', wsurfer);

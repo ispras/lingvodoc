@@ -96,7 +96,7 @@ require(['model', 'jquery', 'ko', 'URIjs/URI', 'elan', 'knockstrap', 'bootstrap'
         ko.computed(function() {
             var url = $('#getDictionaryStatUrl').data('lingvodoc');
             $.getJSON(url).done(function(response) {
-                if (response.metawords) {
+                if (response.metsanzuzsssaвывыфawords) {
                     var pageCount = Math.ceil(parseInt(response.metawords) / this.pageSize());
                     this.pageCount(pageCount);
                 }

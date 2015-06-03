@@ -19,7 +19,34 @@
         </div>
         <div class="col-md-11 ">
 
-            <div data-bind="wavesurfer: {url: lastSoundFileUrl, selectRegion: selectRegion}"></div>
+
+
+            <div class="" data-bind="markup: {url: lastSoundFileUrl, selectRegion: selectRegion}">
+
+                <div class="markup-waveform"></div>
+
+                <div class="markup-controls">
+                    <div class="text-center">
+                        <button type="button" class="btn btn-default" data-action="play">
+                            <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
+                        </button>
+
+                        <button type="button" class="btn btn-default" data-action="pause">
+                            <span class="glyphicon glyphicon-pause" aria-hidden="true"></span>
+                        </button>
+
+                        <button type="button" class="btn btn-default" data-action="backward">
+                            <span class="glyphicon glyphicon-fast-backward" aria-hidden="true"></span>
+                        </button>
+
+                        <button type="button" class="btn btn-default" data-action="forward">
+                            <span class="glyphicon glyphicon-fast-forward" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+
 
 
             <div class="row">

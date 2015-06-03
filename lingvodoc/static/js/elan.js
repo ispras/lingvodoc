@@ -26,6 +26,7 @@ define([], function() {
     };
 
     elan.Document = function() {
+
         this.mediaFile = '';
         this.mediaUrl = '';
         this.mediaType = '';
@@ -121,6 +122,15 @@ define([], function() {
             this.mediaUrl = media.getAttribute('MEDIA_URL');
             this.mediaType = media.getAttribute('MIME_TYPE');
 
+            var properties = xml.querySelectorAll('PROPERTY');
+            _forEach.call(properties, function (prop) {
+                var name = prop.getAttribute('NAME');
+                if (name === 'lastUsedAnnotationId') {
+                    var c = prop.textContent.trim();
+                    this.lastUsedAnnoationId = parseInt(c);
+                }
+            }.bind(this));
+
             var timeSlots = xml.querySelectorAll('TIME_ORDER TIME_SLOT');
             _forEach.call(timeSlots, function (slot) {
                 var slotId = slot.getAttribute('TIME_SLOT_ID');
@@ -177,7 +187,7 @@ define([], function() {
 
             var prop2Element = doc.createElement('PROPERTY');
             prop2Element.setAttribute('NAME', 'lastUsedAnnotationId');
-            prop2Element.textContent = this.lastUsedAnnoationId;
+            prop2Element.textContent = this.lastUsedAnnoationId.toString();
             headerElement.appendChild(prop2Element);
 
             doc.documentElement.appendChild(headerElement);
@@ -200,6 +210,7 @@ define([], function() {
                 var tierElement = doc.createElement('TIER');
                 tierElement.setAttribute('TIER_ID', tier.id);
                 tierElement.setAttribute('LINGUISTIC_TYPE_REF', tier.linguisticTypeRef);
+                tierElement.setAttribute('DEFAULT_LOCALE', tier.defaultLocale);
 
                 for (var j = 0; j < tier.annotations.length; j++) {
                     var an = tier.annotations[j];
