@@ -4,16 +4,19 @@
     <link rel="stylesheet" href="${request.static_url('lingvodoc:static/css/bootstrap.min.css')}">
     <link rel="stylesheet" href="${request.static_url('lingvodoc:static/css/bootswatch.min.css')}">
 <!--    <link rel="stylesheet" href="${request.static_url('lingvodoc:static/css/bootstrap-theme.min.css')}"> -->
-    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/360player.css')}" />
-    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/360player-visualization.css')}" />
-    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/flashblock.css')}" />
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}" />
 
     <script src="${request.static_url('lingvodoc:static/js/jquery-1.11.1.min.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/jquery.form.min.js')}"></script>
     <script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.13.0/jquery.validate.min.js"></script>
-    <script src="${request.static_url('lingvodoc:static/js/bootstrap.min.js')}"> </script>
+    <script src="${request.static_url('lingvodoc:static/js/bootstrap.min.js')}"></script>
+
     <script src="${request.static_url('lingvodoc:static/js/noty/packaged/jquery.noty.packaged.min.js')}"></script>
+
+    <script src="${request.static_url('lingvodoc:static/js/angular.min.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/ui-bootstrap-tpls-0.13.0.min.js')}"></script>
+
+    <script src="${request.static_url('lingvodoc:static/js/wavesurfer.js')}"></script>
 
     <script>
         $(document).ready(function() {

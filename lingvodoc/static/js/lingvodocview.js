@@ -1,154 +1,295 @@
-'use strict';
+var app = angular.module('viewDictionaryModule', ['ui.bootstrap']);
 
-require.config({
-    'baseUrl': '/static/js/',
-    'shim': {
-        'bootstrap' : ['jquery'],
-        'wavesurfer': {
-            'exports': 'WaveSurfer'
-        },
-        'knockstrap': ['jquery', 'bootstrap', 'knockout']
-    },
-    'paths': {
-        'URIjs': 'lib/URIjs',
-        'jquery': 'jquery-2.1.1.min',
-        'bootstrap': 'bootstrap.min',
-        'knockout': 'knockout-3.2.0',
-        'knockstrap': 'knockstrap.min',
-        'wavesurfer': 'wavesurfer'
-    },
-    'map': {
-        '*': {
-            'jQuery': 'jquery'
-        }
-    }
-});
+app.directive('wavesurfer', function() {
+    return {
+        restrict: 'E',
 
-require(['model', 'jquery', 'ko', 'URIjs/URI', 'knockstrap', 'bootstrap'], function(model, $, ko, uri) {
+        link: function($scope, $element, $attrs) {
+            $element.css('display', 'block');
 
-    var wrapArrays = function(word) {
-        for (var prop in word) {
-            if (word.hasOwnProperty(prop)) {
-                if (word[prop] instanceof Array) {
-                    word[prop] = ko.observableArray(word[prop]);
-                }
+            var options = angular.extend({container: $element[0]}, $attrs);
+            var wavesurfer = WaveSurfer.create(options);
+
+            if($attrs.url) {
+                wavesurfer.load($attrs.url, $attrs.data || null);
             }
+
+            $scope.$emit('wavesurferInit', wavesurfer);
         }
     };
+});
 
-    var viewModel = function() {
 
-        var baseUrl = $('#getMetaWordsUrl').data('lingvodoc');
+app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', function($scope, $http, $modal) {
 
-        // list of meta words loaded from ajax backends
-        this.metawords = ko.observableArray([]);
+    $scope.metawords = [];
 
-        this.lastSoundFileUrl = ko.observable();
+    $scope.pageIndex = 1;
+    $scope.pageSize = 10;
+    $scope.pageCount = 1;
 
-        this.pageIndex = ko.observable(1);
-        this.pageSize = ko.observable(20);
-        this.pageCount = ko.observable(10);
+    $scope.paused = true;
 
-        // this reloads list of meta words from server
-        // once batchSize or/and start change
-        ko.computed(function() {
-            var url = new uri(baseUrl);
-            url.addQuery('offset', (this.pageIndex() - 1) * this.pageSize());
-            url.addQuery('size', this.pageSize());
-            $.getJSON(url.toString()).done(function(response) {
-                if (response instanceof Array) {
-                    for (var i = 0; i < response.length; i++) {
-                        wrapArrays(response[i]);
+
+    var activeUrl = null;
+
+    $scope.showEtymology = function(metaword) {
+
+        var url = $('#getMetaWordsUrl').data('lingvodoc') + encodeURIComponent(metaword.metaword_client_id) +
+            '/' + encodeURIComponent(metaword.metaword_id) + '/etymology';
+
+        $http.get(url).success(function(data, status, headers, config) {
+
+            var modalInstance = $modal.open({
+                animation  : true,
+                templateUrl: 'etymologyModal.html',
+                controller : 'ShowEtymologyController',
+                size       : 'lg',
+                resolve    : {
+                    words: function () {
+                        return data;
                     }
-                    // set metawords
-                    this.metawords(response);
-                } else {
-                    // TODO: handle error
-                    // response is not array?
                 }
-
-            }.bind(this)).fail(function(respones) {
-                // TODO: handle error
             });
-        }, this);
 
-        this.getPage = function(pageIndex) {
-            this.pageIndex(parseInt(pageIndex))
-        }.bind(this);
-
-        ko.computed(function() {
-            var url = $('#getDictionaryStatUrl').data('lingvodoc');
-            $.getJSON(url).done(function(response) {
-                if (response.metawords) {
-                    var pageCount = Math.ceil(parseInt(response.metawords) / this.pageSize());
-                    this.pageCount(pageCount);
-                }
-            }.bind(this)).fail(function(respones) {
-                // TODO: handle error
-            });
-        }, this);
-
-        this.playSound = function(entry, event) {
-            if (entry.url) {
-                this.lastSoundFileUrl(entry.url);
-            }
-        }.bind(this);
-
-        // etymology modal window
-        this.etymologyModalVisible = ko.observable(false);
-        this.etymologyWords = ko.observableArray([]);
-        this.etymologySoundUrl = ko.observable();
-        this.showEtymology = function(metaword, event) {
-            this.etymologyModalVisible(false);
-            var url = new uri(baseUrl);
-            url.directory(url.directory() + '/' + metaword.metaword_client_id + '/' + metaword.metaword_id)
-            url.filename('etymology');
-
-            $.getJSON(url.toString()).done(function(response) {
-                this.etymologyWords(response);
-                this.etymologyModalVisible(true);
-            }.bind(this)).fail(function(response) {
-
-            }.bind(this));
-        }.bind(this);
-
-        this.playEtymologySound = function(entry, event) {
-            if (entry.url) {
-                this.etymologySoundUrl(entry.url);
-            }
-        }.bind(this);
-
-        this.paradigmsModalVisible = ko.observable(false);
-        this.paradigms = ko.observableArray([]);
-        this.paradigmSoundUrl = ko.observable();
-        this.showParadigms = function(metaword, event) {
-            this.paradigmsModalVisible(false);
-            var url = new uri(baseUrl);
-
-            console.log(baseUrl);
-            console.log(url.directory());
-
-            url.directory(url.directory() + '/' + metaword.metaword_client_id + '/' + metaword.metaword_id)
-            url.filename('metaparadigms');
-
-            console.log(url.toString());
-
-            $.getJSON(url.toString()).done(function(response) {
-                this.paradigms(response);
-                this.paradigmsModalVisible(true);
-            }.bind(this)).fail(function(response) {
-
-            }.bind(this));
-        }.bind(this);
-
-        this.playParadigmSound = function(entry, event) {
-            if (entry.url) {
-                this.paradigmSoundUrl(entry.url);
-            }
-        }.bind(this);
+        }).error(function(data, status, headers, config) {
+        });
     };
-    ko.applyBindings(new viewModel());
 
 
-    //body: { name: 'etymology_modal', data: {'words': paradigms, 'soundUrl': paradigmSoundUrl, 'playSound': playParadigmSound} },
-});
+    $scope.showParadigms = function(metaword) {
+        var url = $('#getMetaWordsUrl').data('lingvodoc') + encodeURIComponent(metaword.metaword_client_id) +
+            '/' + encodeURIComponent(metaword.metaword_id) + '/metaparadigms';
+
+        $http.get(url).success(function(data, status, headers, config) {
+
+            var modalInstance = $modal.open({
+                animation  : true,
+                templateUrl: 'paradigmModal.html',
+                controller : 'ShowParadigmsController',
+                size       : 'lg',
+                resolve    : {
+                    words: function () {
+                        return data;
+                    }
+                }
+            });
+
+        }).error(function(data, status, headers, config) {
+        });
+    };
+
+
+    $scope.play = function(url) {
+        if(!$scope.wavesurfer) {
+            return;
+        }
+
+        activeUrl = url;
+
+        $scope.wavesurfer.once('ready', function() {
+            $scope.wavesurfer.play();
+            $scope.$apply();
+        });
+
+        $scope.wavesurfer.load(activeUrl);
+    };
+
+    $scope.playPause = function() {
+        $scope.wavesurfer.playPause();
+    };
+
+    $scope.isPlaying = function(url) {
+        return url == activeUrl;
+    };
+
+    $scope.isMediaFileAvailable = function() {
+        return activeUrl != null;
+    };
+
+
+    $scope.getPage = function(pageNumber) {
+        if(pageNumber > 0 && pageNumber <= $scope.pageCount) {
+            $scope.pageIndex = pageNumber;
+            getMetawords();
+        }
+    };
+
+
+    $scope.range = function(min, max, step) {
+        step = step || 1;
+        var input = [];
+        for(var i = min; i <= max; i += step) {
+            input.push(i);
+        }
+        return input;
+    };
+
+
+    var addUrlParameter = function(url, key, value) {
+        return url + (url.indexOf('?') >= 0 ? "&" : '?') + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+    };
+
+
+    var getDictStats = function() {
+        var getDictStatsUrl = $('#getDictionaryStatUrl').data('lingvodoc');
+        $http.get(getDictStatsUrl).success(function(data, status, headers, config) {
+            if(data.metawords) {
+                $scope.pageCount = Math.ceil(parseInt(data.metawords) / $scope.pageSize);
+            }
+        }).error(function(data, status, headers, config) {
+        });
+    };
+
+
+    var getMetawords = function() {
+
+        var getMetawordsUrl = $('#getMetaWordsUrl').data('lingvodoc');
+        getMetawordsUrl = addUrlParameter(getMetawordsUrl, 'offset', ($scope.pageIndex - 1) * $scope.pageSize);
+        getMetawordsUrl = addUrlParameter(getMetawordsUrl, 'size', $scope.pageSize);
+
+        $http.get(getMetawordsUrl).success(function(data, status, headers, config) {
+            $scope.metawords = data;
+        }).error(function(data, status, headers, config) {
+        });
+    };
+
+
+    // signal handlers
+    $scope.$on('wavesurferInit', function(e, wavesurfer) {
+
+        $scope.wavesurfer = wavesurfer;
+
+        $scope.wavesurfer.on('play', function() {
+            $scope.paused = false;
+        });
+
+        $scope.wavesurfer.on('pause', function() {
+            $scope.paused = true;
+        });
+
+        $scope.wavesurfer.on('finish', function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+    });
+
+
+    // load data
+    getDictStats();
+    getMetawords();
+
+}]);
+
+
+app.controller('ShowEtymologyController', ['$scope', '$http', 'words', function($scope, $http, words) {
+
+    var activeUrl = null;
+
+    $scope.words = words;
+
+    $scope.play = function(url) {
+        if(!$scope.wavesurfer) {
+            return;
+        }
+
+        activeUrl = url;
+
+        $scope.wavesurfer.once('ready', function() {
+            $scope.wavesurfer.play();
+            $scope.$apply();
+        });
+
+        $scope.wavesurfer.load(activeUrl);
+    };
+
+    $scope.playPause = function() {
+        $scope.wavesurfer.playPause();
+    };
+
+    $scope.isPlaying = function(url) {
+        return url == activeUrl;
+    };
+
+    $scope.isMediaFileAvailable = function() {
+        return activeUrl != null;
+    };
+
+    // signal handlers
+    $scope.$on('wavesurferInit', function(e, wavesurfer) {
+
+        $scope.wavesurfer = wavesurfer;
+
+        $scope.wavesurfer.on('play', function() {
+            $scope.paused = false;
+        });
+
+        $scope.wavesurfer.on('pause', function() {
+            $scope.paused = true;
+        });
+
+        $scope.wavesurfer.on('finish', function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+    });
+
+}]);
+
+app.controller('ShowParadigmsController', ['$scope', '$http', 'words', function($scope, $http, words) {
+
+    var activeUrl = null;
+
+    $scope.words = words;
+
+    $scope.play = function(url) {
+        if(!$scope.wavesurfer) {
+            return;
+        }
+
+        activeUrl = url;
+
+        $scope.wavesurfer.once('ready', function() {
+            $scope.wavesurfer.play();
+            $scope.$apply();
+        });
+
+        $scope.wavesurfer.load(activeUrl);
+    };
+
+    $scope.playPause = function() {
+        $scope.wavesurfer.playPause();
+    };
+
+    $scope.isPlaying = function(url) {
+        return url == activeUrl;
+    };
+
+    $scope.isMediaFileAvailable = function() {
+        return activeUrl != null;
+    };
+
+    // signal handlers
+    $scope.$on('wavesurferInit', function(e, wavesurfer) {
+
+        $scope.wavesurfer = wavesurfer;
+
+        $scope.wavesurfer.on('play', function() {
+            $scope.paused = false;
+        });
+
+        $scope.wavesurfer.on('pause', function() {
+            $scope.paused = true;
+        });
+
+        $scope.wavesurfer.on('finish', function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+    });
+
+}]);
+
