@@ -1,18 +1,21 @@
-.drop_zone {
-    padding: 10px;
-    border: 1px solid #ccc;
-    width: 200px;
+.btn-file {
+    position: relative;
+    overflow: hidden;
 }
-
-.drop_zone .drop_zone_container {
-    border: 2px dashed #bbb;
-    -moz-border-radius: 5px;
-    -webkit-border-radius: 5px;
-    border-radius: 5px;
-    padding: 16px;
-    text-align: center;
-    font: 16pt bold 'Vollkorn';
-    color: #bbb;
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
 }
 
 .lingvodoc-text-title {

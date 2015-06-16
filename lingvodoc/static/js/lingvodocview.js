@@ -30,7 +30,6 @@ app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', functio
 
     $scope.paused = true;
 
-
     var activeUrl = null;
 
     $scope.showEtymology = function(metaword) {
@@ -175,6 +174,10 @@ app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', functio
         });
     });
 
+    $scope.$on('modal.closing', function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
 
     // load data
     getDictStats();
@@ -236,6 +239,11 @@ app.controller('ShowEtymologyController', ['$scope', '$http', 'words', function(
         });
     });
 
+    $scope.$on('modal.closing', function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
+
 }]);
 
 app.controller('ShowParadigmsController', ['$scope', '$http', 'words', function($scope, $http, words) {
@@ -289,6 +297,11 @@ app.controller('ShowParadigmsController', ['$scope', '$http', 'words', function(
             $scope.wavesurfer.seekTo(0);
             $scope.$apply();
         });
+    });
+
+    $scope.$on('modal.closing', function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
     });
 
 }]);

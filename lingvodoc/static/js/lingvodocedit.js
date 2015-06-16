@@ -42,6 +42,7 @@ app.directive('wavesurfer', function() {
     };
 });
 
+
 app.directive('onReadFile', function ($parse) {
     return {
         restrict: 'A',
@@ -146,6 +147,23 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
 
         $scope.wavesurfer.load(activeUrl);
     };
+
+
+    $scope.markup = function(sound) {
+        var modalInstance = $modal.open({
+            animation  : true,
+            templateUrl: 'markupModal.html',
+            controller : 'MarkupController',
+            size       : 'lg',
+            resolve    : {
+                soundUrl: function () {
+                    return sound.url;
+                }
+            }
+        });
+    };
+
+
 
     $scope.playPause = function() {
         $scope.wavesurfer.playPause();
@@ -398,6 +416,10 @@ app.controller('ShowEtymologyController', ['$scope', '$http', 'words', function(
         });
     });
 
+    $scope.$on('modal.closing', function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
 }]);
 
 app.controller('ShowParadigmsController', ['$scope', '$http', 'words', function($scope, $http, words) {
@@ -453,5 +475,85 @@ app.controller('ShowParadigmsController', ['$scope', '$http', 'words', function(
         });
     });
 
+    $scope.$on('modal.closing', function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
 }]);
 
+app.controller('MarkupController', ['$scope', '$http', 'soundUrl', function($scope, $http, soundUrl) {
+
+    var activeUrl = null;
+
+    $scope.play = function(url) {
+
+        if(!$scope.wavesurfer) {
+            return;
+        }
+
+        activeUrl = url;
+
+        $scope.wavesurfer.once('ready', function() {
+            $scope.wavesurfer.play();
+            $scope.$apply();
+        });
+
+        $scope.wavesurfer.load(activeUrl);
+    };
+
+    $scope.playPause = function() {
+        $scope.wavesurfer.playPause();
+    };
+
+    $scope.isPlaying = function(url) {
+        return $scope.wavesurfer.isPlaying();
+    };
+
+    $scope.isMediaFileAvailable = function() {
+        return activeUrl != null;
+    };
+
+    // signal handlers
+    $scope.$on('wavesurferInit', function(e, wavesurfer) {
+
+        $scope.wavesurfer = wavesurfer;
+
+
+        if ($scope.wavesurfer.enableDragSelection) {
+            $scope.wavesurfer.enableDragSelection({
+                color: 'rgba(0, 255, 0, 0.1)'
+            });
+        }
+
+        $scope.wavesurfer.on('play', function() {
+            $scope.paused = false;
+        });
+
+        $scope.wavesurfer.on('pause', function() {
+            $scope.paused = true;
+        });
+
+        $scope.wavesurfer.on('finish', function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+
+        // regions events
+        $scope.wavesurfer.on('region-click', function(region, event) {
+
+        });
+
+        $scope.wavesurfer.on('region-dblclick', function(region, event) {
+            region.remove(region);
+        });
+
+        $scope.play(soundUrl);
+    });
+
+    $scope.$on('modal.closing', function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
+
+}]);

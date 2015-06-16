@@ -153,8 +153,13 @@
                 <div ng-repeat="sound in metaword.sounds">
 
                     <button type="button" class="btn btn-default btn-sm" ng-click="play(sound.url)">
-                        <span class="glyphicon glyphicon-play">Воспроизвести</span>
+                        <span class="glyphicon glyphicon-play"></span>
                     </button>
+
+                    <button type="button" class="btn btn-default btn-sm" ng-click="markup(sound)">
+                        <span class="glyphicon glyphicon-pencil"></span>
+                    </button>
+
                     <span ng-if="addedByUser(metaword)">
                          <button type="button" class="btn btn-default btn-xs"
                                  ng-click="removeValue(metaword, sound, 'sound')">
@@ -164,7 +169,12 @@
                     <br>
                 </div>
 
-                <input type="file" on-read-file="saveSoundValue(metaword, $fileName, $fileType, $fileContent)"/>
+                <br>
+
+                <span class="btn btn-default btn-file">
+                    Загрузить <input type="file" on-read-file="saveSoundValue(metaword, $fileName, $fileType, $fileContent)">
+                </span>
+
             </td>
 
 
@@ -368,6 +378,58 @@
                             </div>
                         </td>
                     </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/ng-template" id="markupModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">ELAN</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <div class="row" style="margin: 30px 0">
+            <div class="col-sm-10">
+                <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
+            </div>
+
+            <div class="col-sm-2">
+                <button ng-class="{disabled: !isMediaFileAvailable()}" class="btn btn-success btn-block"
+                        ng-click="playPause()">
+                    <span id="play" ng-show="paused">
+                        <i class="glyphicon glyphicon-play"></i>
+                        Play
+                    </span>
+
+                    <span id="pause" ng-show="!paused">
+                        <i class="glyphicon glyphicon-pause"></i>
+                        Pause
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 ">
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <td>id</td>
+                        <td>Начало</td>
+                        <td>Конец</td>
+                        <td>Значение</td>
+                    </tr>
+                    </thead>
+
+                    <tbody>
 
                     </tbody>
                 </table>
