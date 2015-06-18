@@ -156,7 +156,7 @@
                         <span class="glyphicon glyphicon-play"></span>
                     </button>
 
-                    <button type="button" class="btn btn-default btn-sm" ng-click="markup(sound)">
+                    <button type="button" class="btn btn-default btn-sm" ng-click="annotate(sound)">
                         <span class="glyphicon glyphicon-pencil"></span>
                     </button>
 
@@ -387,13 +387,13 @@
 </script>
 
 
-<script type="text/ng-template" id="markupModal.html">
+<script type="text/ng-template" id="annotationModal.html">
 
     <div class="modal-header">
         <h3 class="modal-title">ELAN</h3>
     </div>
 
-    <div class="modal-body">
+    <div class="modal-body" ng-cloak>
 
         <div class="row" style="margin: 30px 0">
             <div class="col-sm-10">
@@ -401,7 +401,7 @@
             </div>
 
             <div class="col-sm-2">
-                <button ng-class="{disabled: !isMediaFileAvailable()}" class="btn btn-success btn-block"
+                <button class="btn btn-success btn-block"
                         ng-click="playPause()">
                     <span id="play" ng-show="paused">
                         <i class="glyphicon glyphicon-play"></i>
@@ -418,16 +418,36 @@
 
         <div class="row">
             <div class="col-md-12 ">
-
-                <table class="table table-striped table-bordered">
+                <table class="table table-striped table-bordered" ng-repeat="tier in annotation.tiers">
                     <thead>
+
+                    <tr>
+                        <td colspan="4">
+                            <h3>{{ tier.linguisticTypeRef }}</h3>
+                        </td>
+                    </tr>
+
                     <tr>
                         <td>id</td>
                         <td>Начало</td>
                         <td>Конец</td>
                         <td>Значение</td>
+                        <td></td>
                     </tr>
+
                     </thead>
+
+                    <tr ng-repeat="a in tier.annotations">
+                        <td>{{ a.id }}</td>
+                        <td>{{ annotation.timeSlotRefToSeconds(a.timeslotRef1) }}</td>
+                        <td>{{ annotation.timeSlotRefToSeconds(a.timeslotRef2) }}</td>
+                        <td>{{ a.value }}</td>
+                        <td>
+                            <button type="button" class="btn btn-default" ng-click="playAnnotation(a)">
+                                <span class="glyphicon glyphicon-play"></span>
+                            </button>
+                        </td>
+                    </tr>
 
                     <tbody>
 
