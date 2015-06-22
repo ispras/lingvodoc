@@ -22,15 +22,14 @@ app.directive('wavesurfer', function() {
 
 app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', function($scope, $http, $modal) {
 
+    WaveSurferController.call(this, $scope);
+
     $scope.metawords = [];
 
     $scope.pageIndex = 1;
     $scope.pageSize = 10;
     $scope.pageCount = 1;
 
-    $scope.paused = true;
-
-    var activeUrl = null;
 
     $scope.showEtymology = function(metaword) {
 
@@ -78,42 +77,12 @@ app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', functio
         });
     };
 
-
-    $scope.play = function(url) {
-        if(!$scope.wavesurfer) {
-            return;
-        }
-
-        activeUrl = url;
-
-        $scope.wavesurfer.once('ready', function() {
-            $scope.wavesurfer.play();
-            $scope.$apply();
-        });
-
-        $scope.wavesurfer.load(activeUrl);
-    };
-
-    $scope.playPause = function() {
-        $scope.wavesurfer.playPause();
-    };
-
-    $scope.isPlaying = function(url) {
-        return url == activeUrl;
-    };
-
-    $scope.isMediaFileAvailable = function() {
-        return activeUrl != null;
-    };
-
-
     $scope.getPage = function(pageNumber) {
         if(pageNumber > 0 && pageNumber <= $scope.pageCount) {
             $scope.pageIndex = pageNumber;
             getMetawords();
         }
     };
-
 
     $scope.range = function(min, max, step) {
         step = step || 1;
@@ -154,31 +123,6 @@ app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', functio
     };
 
 
-    // signal handlers
-    $scope.$on('wavesurferInit', function(e, wavesurfer) {
-
-        $scope.wavesurfer = wavesurfer;
-
-        $scope.wavesurfer.on('play', function() {
-            $scope.paused = false;
-        });
-
-        $scope.wavesurfer.on('pause', function() {
-            $scope.paused = true;
-        });
-
-        $scope.wavesurfer.on('finish', function() {
-            $scope.paused = true;
-            $scope.wavesurfer.seekTo(0);
-            $scope.$apply();
-        });
-    });
-
-    $scope.$on('modal.closing', function(e) {
-        $scope.wavesurfer.stop();
-        $scope.wavesurfer.destroy();
-    });
-
     // load data
     getDictStats();
     getMetawords();
@@ -187,122 +131,13 @@ app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', functio
 
 
 app.controller('ShowEtymologyController', ['$scope', '$http', 'words', function($scope, $http, words) {
-
-    var activeUrl = null;
-
+    WaveSurferController.call(this, $scope);
     $scope.words = words;
-
-    $scope.play = function(url) {
-        if(!$scope.wavesurfer) {
-            return;
-        }
-
-        activeUrl = url;
-
-        $scope.wavesurfer.once('ready', function() {
-            $scope.wavesurfer.play();
-            $scope.$apply();
-        });
-
-        $scope.wavesurfer.load(activeUrl);
-    };
-
-    $scope.playPause = function() {
-        $scope.wavesurfer.playPause();
-    };
-
-    $scope.isPlaying = function(url) {
-        return url == activeUrl;
-    };
-
-    $scope.isMediaFileAvailable = function() {
-        return activeUrl != null;
-    };
-
-    // signal handlers
-    $scope.$on('wavesurferInit', function(e, wavesurfer) {
-
-        $scope.wavesurfer = wavesurfer;
-
-        $scope.wavesurfer.on('play', function() {
-            $scope.paused = false;
-        });
-
-        $scope.wavesurfer.on('pause', function() {
-            $scope.paused = true;
-        });
-
-        $scope.wavesurfer.on('finish', function() {
-            $scope.paused = true;
-            $scope.wavesurfer.seekTo(0);
-            $scope.$apply();
-        });
-    });
-
-    $scope.$on('modal.closing', function(e) {
-        $scope.wavesurfer.stop();
-        $scope.wavesurfer.destroy();
-    });
-
 }]);
 
 app.controller('ShowParadigmsController', ['$scope', '$http', 'words', function($scope, $http, words) {
 
-    var activeUrl = null;
-
+    WaveSurferController.call(this, $scope);
     $scope.words = words;
-
-    $scope.play = function(url) {
-        if(!$scope.wavesurfer) {
-            return;
-        }
-
-        activeUrl = url;
-
-        $scope.wavesurfer.once('ready', function() {
-            $scope.wavesurfer.play();
-            $scope.$apply();
-        });
-
-        $scope.wavesurfer.load(activeUrl);
-    };
-
-    $scope.playPause = function() {
-        $scope.wavesurfer.playPause();
-    };
-
-    $scope.isPlaying = function(url) {
-        return url == activeUrl;
-    };
-
-    $scope.isMediaFileAvailable = function() {
-        return activeUrl != null;
-    };
-
-    // signal handlers
-    $scope.$on('wavesurferInit', function(e, wavesurfer) {
-
-        $scope.wavesurfer = wavesurfer;
-
-        $scope.wavesurfer.on('play', function() {
-            $scope.paused = false;
-        });
-
-        $scope.wavesurfer.on('pause', function() {
-            $scope.paused = true;
-        });
-
-        $scope.wavesurfer.on('finish', function() {
-            $scope.paused = true;
-            $scope.wavesurfer.seekTo(0);
-            $scope.$apply();
-        });
-    });
-
-    $scope.$on('modal.closing', function(e) {
-        $scope.wavesurfer.stop();
-        $scope.wavesurfer.destroy();
-    });
-
 }]);
 

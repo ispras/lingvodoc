@@ -16,6 +16,7 @@
     <script src="${request.static_url('lingvodoc:static/js/ui-bootstrap-tpls-0.13.0.min.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/wavesurfer.js')}"></script>
 
+    <script src="${request.static_url('lingvodoc:static/js/lingvowave.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/lingvodocedit.js')}"></script>
 
 </head>
@@ -186,11 +187,11 @@
                     </button>
                 </div>
 
-                <button type="button" class="btn btn-default btn-sm" ng-click="showParadigms(metaword)">
+                <button type="button" class="btn btn-default btn-sm" ng-class="{disabled: metaword.paradigms.length < 1}" ng-click="showParadigms(metaword)">
                     Парадигмы
                 </button>
 
-                <button type="button" class="btn btn-default btn-sm" ng-click="showEtymology(metaword)">
+                <button type="button" class="btn btn-default btn-sm" ng-class="{disabled: metaword.etymology_tags.length < 1}" ng-click="showEtymology(metaword)">
                     Этимология
                 </button>
 

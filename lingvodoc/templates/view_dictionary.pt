@@ -16,6 +16,7 @@
     <script src="${request.static_url('lingvodoc:static/js/ui-bootstrap-tpls-0.13.0.min.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/wavesurfer.js')}"></script>
 
+    <script src="${request.static_url('lingvodoc:static/js/lingvowave.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/lingvodocview.js')}"></script>
 
 
@@ -90,7 +91,7 @@
                         <div ng-repeat="sound in metaword.sounds">
                             <div>
                                 <button type="button" class="btn btn-default btn-sm" ng-click="play(sound.url)">
-                                    <span class="glyphicon glyphicon-play">Воспроизвести</span>
+                                    <span class="glyphicon glyphicon-play"></span>
                                 </button>
                             </div>
                         </div>
@@ -98,17 +99,12 @@
 
 
                     <td>
-                        <div ng-if="metaword.etymology_tags.length > 0">
-                            <div ng-if="metaword.etymology_tags[0].content > 0">
-                                <button type="button" class="btn btn-default btn-sm" ng-click="showEtymology(metaword)">
-                                    Этимология ({{ metaword.etymology_tags[0].content }})
-                                </button>
-                            </div>
-                        </div>
-
-                        <div ng-if="metaword.paradigms.length > 0">
-                        <button type="button" class="btn btn-default btn-sm" ng-click="showParadigms()">
+                        <button type="button" class="btn btn-default btn-sm" ng-class="{disabled: metaword.paradigms.length < 1}" ng-click="showParadigms(metaword)">
                             Парадигмы
+                        </button>
+
+                        <button type="button" class="btn btn-default btn-sm" ng-class="{disabled: metaword.etymology_tags.length < 1}" ng-click="showEtymology(metaword)">
+                            Этимология
                         </button>
                     </td>
 
