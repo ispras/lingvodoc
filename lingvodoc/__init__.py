@@ -69,6 +69,10 @@ def configure_routes(config):
                      'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/',
                      #factory=DummyDeny,
                      request_method='GET')
+    # TODO: it's temporary method
+    config.add_route('api_find_by_translation',
+                     'dictionaries/find_by_translation',
+                     request_method='GET')
     config.add_route('dictionary_stats',
                      'dictionaries/{dictionary_client_id}/{dictionary_id}/stats/',
                      #factory=DummyDeny,
@@ -119,6 +123,9 @@ def configure_routes(config):
 
 
     # : default words for publishing
+
+    # Dangerous stuff (for admin only)
+    config.add_route('delete_dictionary', 'dictionaries/{dictionary_client_id}/{dictionary_id}', request_method='DELETE')
 
 
 

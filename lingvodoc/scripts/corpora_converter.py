@@ -7,6 +7,8 @@ import itertools
 import json
 import pdb
 import xml.etree.ElementTree as ElementTree
+import simplejson
+import requests
 
 #-----------------------------------------------------------------------
 
@@ -14,6 +16,9 @@ class Corpus(object):
 
     def __init__(self):
         self.text_count = 0
+        session = requests.Session()
+        r = session.post('http://ldbeta.at.ispras.ru/login', data={'login': 'demo', 'password': 'demopass'})
+        self.session = session
 
     def parse_document(self, document):
         text_list = []
@@ -103,13 +108,23 @@ class Corpus(object):
 
             type = element.get('type')
 
+            url = None
             if type == 'gls':
                 type = 'lingvodoc_metaword'
+                url = self.session.get('http://ldbeta.at.ispras.ru/dictionaries/find_by_translation',
+                                       params={'translation': element.text})
 
-            item_list.append({
-                'type': type,
-                'lang': element.get('lang'),
-                'content': element.text.encode('utf8')})
+            if url:
+                item_list.append({
+                    'type': type,
+                    'lang': element.get('lang'),
+                    'content': element.text.encode('utf8'),
+                    'url': simplejson.loads(url.text)['url']})
+            else:
+                item_list.append({
+                    'type': type,
+                    'lang': element.get('lang'),
+                    'content': element.text.encode('utf8')})
 
         return {'items': item_list}
 
@@ -117,10 +132,10 @@ class Corpus(object):
 
 element_tree = ElementTree.parse('corpus.xml')
 
-with open('corpus.json', 'wb') as corpus_file:
-    json.dump(
+with open('corpus.json', 'w') as corpus_file:
+    simplejson.dump(
         Corpus().parse_document(element_tree.getroot()),
         corpus_file,
-        ensure_ascii = False, indent = 2, sort_keys = True)
+        ensure_ascii=False, separators=(',', ':'), sort_keys = False)
 
 #-----------------------------------------------------------------------

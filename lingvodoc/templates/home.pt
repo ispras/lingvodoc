@@ -31,10 +31,24 @@
         </div>
         <div>
             <a href="http://www.ispras.ru/ru/modis/staff.php">
-                Олег Дмитриевич Борисенко
+                Олег Борисенко
             </a>
             <p class="text-info">
-                – создатель программы LingvoDoc
+                – создатель программы LingvoDoc (API, backend)
+            </p>
+        </div>
+        <div>
+            <a href="http://www.ispras.ru/ru/modis/staff.php">
+                Степан Ипатов
+            </a>
+            <p class="text-info">
+                – разработчки программы LingvoDoc (frontend)
+            </p>
+        </div>
+        <div>
+            Руслан Идрисов
+            <p class="text-info">
+                - составитель корпуса бесермянского диалекта
             </p>
         </div>
         <div>

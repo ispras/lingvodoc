@@ -188,8 +188,8 @@ class Dictionary(Base):
     # imported hash indicates source if dictionary is imported from external source.
     imported_hash = Column(Unicode(100))
 
-    metawords = relationship("MetaWord")
-    metastories = relationship("MetaStory")
+    metawords = relationship("MetaWord", backref=backref('Dictionary', cascade="all"), single_parent=True)
+    metastories = relationship("MetaStory", backref=backref('Dictionary', cascade="all"), single_parent=True)
 
 
 class MetaWord(Base):
@@ -205,13 +205,13 @@ class MetaWord(Base):
 
     marked_to_delete = Column(Boolean)
 
-    entries = relationship('WordEntry', backref=backref('MetaWord'))
-    transcriptions = relationship('WordTranscription', backref=backref('MetaWord'))
-    translations = relationship('WordTranslation', backref=backref('MetaWord'))
-    sounds = relationship('WordSound', backref=backref('MetaWord'))
-    paradigms = relationship('MetaParadigm', backref=backref('MetaWord'))
+    entries = relationship('WordEntry', backref=backref('MetaWord', cascade="all"), single_parent=True)
+    transcriptions = relationship('WordTranscription', backref=backref('MetaWord', cascade="all"), single_parent=True)
+    translations = relationship('WordTranslation', backref=backref('MetaWord', cascade="all"), single_parent=True)
+    sounds = relationship('WordSound', backref=backref('MetaWord', cascade="all"), single_parent=True)
+    paradigms = relationship('MetaParadigm', backref=backref('MetaWord', cascade="all"), single_parent=True)
     # TODO: it's temporary workaround
-    etymology_tags = relationship('WordEtymologyTag', backref=backref('MetaWord'))
+    etymology_tags = relationship('WordEtymologyTag', backref=backref('MetaWord', cascade="all"), single_parent=True)
 
 # NOTE: markups are connected with sounds, not with metawords
     #translations = relationship('MetaTranslation')

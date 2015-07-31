@@ -1,13 +1,14 @@
 <html>
 <head metal:use-macro="load: head.pt">
+
 </head>
 <body>
 <div metal:use-macro="load: nav.pt"></div>
 <div class="container">
     <h3>Список словарей, к которым Вы имеете доступ</h3>
-    <ul id="dictionaries_list">
+    <dl id="dictionaries_list" class="dl-horizontal">
 
-    </ul>
+    </dl>
     <a href="${request.route_url('create_dictionary_page')}">
         <button class="btn btn-primary">Создать новый словарь?</button>
     </a>
@@ -22,15 +23,17 @@ $.ajax({
       console.log(dictionaries_list);
       $.each(dictionaries_list, function(key, value) {
           console.log(value['name']);
-        $('#dictionaries_list').append("<li>"
+        $('#dictionaries_list').append("<dt>"
+                + value['name']
+                + "</dt>"
+                + "<dd>"
                 + "<a href=" + value['edit_url'] + "> Редактировать  </a>"
                 + "<a href=" + value['view_url'] + "> Показать  </a>"
-                + value['name']
                 + ' &mdash; слов: '
                 + value['stats']['metawords']
                 + ', парадигм: '
                 + value['stats']['metaparadigms']
-                + "</li>"
+                + "</dd>"
                 );
       });
 
@@ -38,4 +41,11 @@ $.ajax({
   dataType: 'json'
 });
 </script>
+<style>
+    #dictionaries_list dt{
+        overflow: visible;
+        width: 565px !important;
+        margin-right: 8px;
+    }
+</style>
 </body>
