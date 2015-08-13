@@ -32,6 +32,7 @@ import datetime
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
+
 class TableNameMixin(object):
     """
     Look forward to:
@@ -67,8 +68,6 @@ class CompositeKeysHelper(object):
                 ForeignKeyConstraint(['entity_object_id', 'entity_client_id'],
                                      [entity_name.lower()+'.object_id', entity_name.lower()+'.client_id']))
 
-
-
 class Language(Base, TableNameMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
@@ -78,20 +77,20 @@ class Language(Base, TableNameMixin):
     translation_string = Column(UnicodeText(length=2**31))
 
     
-class Locale(Base):
+class Locale(Base):  # TableNameMixin?
     """
     This entity specifies list of available translations (for words in dictionaries and for UI).
     Should be added as admin only.
     """
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     id = Column(BigInteger, primary_key=True)
-    language_object_id = Column(BigInteger)
-    language_client_id = Column(BigInteger)
+    parent_object_id = Column(BigInteger)
+    parent_client_id = Column(BigInteger)
     shortcut = Column(UnicodeText)
     intl_name = Column(UnicodeText(length=2**31))
 
 
-class UITranslationString(Base):
+class UITranslationString(Base):  # TableNameMixin?
     """
     This table holds translation strings for UI. If couldn't be found by pair, should be searched by translation string.
     Should be used as admin only.
@@ -102,7 +101,7 @@ class UITranslationString(Base):
     translation = Column(UnicodeText(length=2**31))
 
 
-class UserEntitiesTranslationString(Base):
+class UserEntitiesTranslationString(Base):  # TableNameMixin?
     """
     This table holds translation strings for user-created entities such as dictionaries names, column names etc.
     Separate classes are needed not to allow users to interfere UI directly.
@@ -116,7 +115,7 @@ class UserEntitiesTranslationString(Base):
     translation = Column(UnicodeText(length=2**31))
 
 
-class Dictionary(Base):
+class Dictionary(Base):  # TableNameMixin?
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -130,7 +129,7 @@ class Dictionary(Base):
     parent_client_id = Column(BigInteger)
 
 
-class DictionaryPerspective(Base):
+class DictionaryPerspective(Base):  # TableNameMixin?
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -148,7 +147,7 @@ class DictionaryPerspective(Base):
     state = Column(UnicodeText)
 
 
-class DictionaryPerspectiveField(Base):
+class DictionaryPerspectiveField(Base):  # TableNameMixin?
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -169,8 +168,7 @@ class DictionaryPerspectiveField(Base):
     parent_entity = Column(UnicodeText(length=2**31))
     group = Column(UnicodeText(length=2**31))
 
-
-class LexicalEntry(Base):
+class LexicalEntry(Base):  # TableNameMixin?
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
