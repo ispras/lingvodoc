@@ -1,3 +1,6 @@
+from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS
+
+
 from sqlalchemy.orm import (
     scoped_session,
     sessionmaker,
@@ -9,6 +12,9 @@ from sqlalchemy.orm import (
 from sqlalchemy import (
     Column,
     ForeignKeyConstraint,
+    event,
+    ForeignKey,
+    Table,
 )
 
 from sqlalchemy.types import (
@@ -16,11 +22,16 @@ from sqlalchemy.types import (
     BigInteger,
     DateTime,
     Boolean,
+    Date,
 )
 
 from sqlalchemy.ext.declarative import (
     declarative_base,
     declared_attr
+)
+
+from sqlalchemy.engine import (
+    Engine
 )
 
 from zope.sqlalchemy import ZopeTransactionExtension
@@ -29,8 +40,41 @@ from passlib.hash import bcrypt
 
 import datetime
 
+from sqlalchemy.inspection import inspect
+
+import time
+
+import redis
+
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
+
+
+def recursive_content(self):
+    vec = []
+    for entry in dir(self):
+        if entry in inspect(type(self)).relationships:
+            i = inspect(self.__class__).relationships[entry]
+            if i.direction.name == "ONETOMANY":
+                x = getattr(self, str(entry))
+                for xx in x:
+                    vec += [xx.__tablename__, xx.content]
+                    vec += recursive_content(xx)
+    return vec
+
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+    except:
+        print("It's not an sqlalchemy")
+
+
+def set_relationship(self, parent_name):
+    return relationship(parent_name, backref = self.__tablename__)
 
 
 class TableNameMixin(object):
@@ -45,6 +89,21 @@ class TableNameMixin(object):
         return cls.__name__.lower()
 
 
+class IdMixin(object):
+    """
+    It's used for automatically set id as primary key.
+    """
+    id = Column(BigInteger, primary_key=True)
+
+
+class CompositeIdMixin(object):
+    """
+    It's used for automatically set client_id and object_id as composite primary key.
+    """
+    object_id = Column(BigInteger, primary_key=True)
+    client_id = Column(BigInteger, primary_key=True)
+
+
 class CompositeKeysHelper(object):
     """
     This class with one method is used to declare composite keys connections with composite primary and foreign keys.
@@ -54,13 +113,14 @@ class CompositeKeysHelper(object):
 
     TODO: check if it even works (not sure)
     """
-
+    # Seems to be working
     @classmethod
     def set_table_args_for_simple_fk_composite_key(cls, parent_name):
         return (ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
                                      [parent_name.lower()+'.object_id', parent_name.lower()+'.client_id']),)
 
     # This is used for classes that correspond to publishing words. Need to check if it even works.
+    # Seems to be working
     @classmethod
     def set_table_args_for_publishing_fk_composite_key(cls, parent_name, entity_name):
         return (ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
@@ -68,54 +128,48 @@ class CompositeKeysHelper(object):
                 ForeignKeyConstraint(['entity_object_id', 'entity_client_id'],
                                      [entity_name.lower()+'.object_id', entity_name.lower()+'.client_id']))
 
-class Language(Base, TableNameMixin):
+
+class Language(Base, TableNameMixin, CompositeIdMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
-    object_id = Column(BigInteger, primary_key=True)
-    client_id = Column(BigInteger, primary_key=True)
     translation_string = Column(UnicodeText(length=2**31))
 
     
-class Locale(Base):  # TableNameMixin?
+class Locale(Base, TableNameMixin, IdMixin):
     """
     This entity specifies list of available translations (for words in dictionaries and for UI).
     Should be added as admin only.
     """
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    id = Column(BigInteger, primary_key=True)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     shortcut = Column(UnicodeText)
     intl_name = Column(UnicodeText(length=2**31))
 
 
-class UITranslationString(Base):  # TableNameMixin?
+class UITranslationString(Base, TableNameMixin, IdMixin):
     """
     This table holds translation strings for UI. If couldn't be found by pair, should be searched by translation string.
     Should be used as admin only.
     """
-    id = Column(BigInteger, primary_key=True)
     locale_id = Column(BigInteger)
     translation_string = Column(UnicodeText(length=2**31))
     translation = Column(UnicodeText(length=2**31))
 
 
-class UserEntitiesTranslationString(Base):  # TableNameMixin?
+class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     """
     This table holds translation strings for user-created entities such as dictionaries names, column names etc.
     Separate classes are needed not to allow users to interfere UI directly.
     Not intended to use for translations inside the dictionaries (these translations are hold inside entities tables).
     """
-    object_id = Column(BigInteger, primary_key=True)
-    client_id = Column(BigInteger, primary_key=True)
-
     locale_id = Column(BigInteger)
     translation_string = Column(UnicodeText(length=2**31))
     translation = Column(UnicodeText(length=2**31))
 
 
-class Dictionary(Base):  # TableNameMixin?
+class Dictionary(Base, TableNameMixin, CompositeIdMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -123,13 +177,11 @@ class Dictionary(Base):  # TableNameMixin?
     for the same language so we use some grouping. This grouping is provided via Language objects.
     """
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    object_id = Column(BigInteger, primary_key=True)
-    client_id = Column(BigInteger, primary_key=True)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
 
 
-class DictionaryPerspective(Base):  # TableNameMixin?
+class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -140,14 +192,12 @@ class DictionaryPerspective(Base):  # TableNameMixin?
     """
 
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Dictionary")
-    object_id = Column(BigInteger, primary_key=True)
-    client_id = Column(BigInteger, primary_key=True)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
 
 
-class DictionaryPerspectiveField(Base):  # TableNameMixin?
+class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin):  # client_id and object_id is primary?
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -159,8 +209,6 @@ class DictionaryPerspectiveField(Base):  # TableNameMixin?
     Parent: DictionaryPerspective.
     """
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
-    object_id = Column(BigInteger)
-    client_id = Column(BigInteger)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     entity_type = Column(UnicodeText(length=2**31))
@@ -168,20 +216,23 @@ class DictionaryPerspectiveField(Base):  # TableNameMixin?
     parent_entity = Column(UnicodeText(length=2**31))
     group = Column(UnicodeText(length=2**31))
 
-class LexicalEntry(Base):  # TableNameMixin?
+
+class LexicalEntry(Base, TableNameMixin, CompositeIdMixin):  # TableNameMixin?
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
     any viable data, it's used as a 'virtual' word. Also it contains redirects that occur after dicts merge.
     Parent: DictionaryPerspective.
     """
-    __table_attrs__ = CompositeKeyConstraint.set_table_args(parent_name="DictionaryPerspective")
-    object_id = Column(BigInteger, primary_key=True)
-    client_id = Column(BigInteger, primary_key=True)
+    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
+    parent = relationship()
 
-
+    def track(self):
+        vec = []
+        vec += recursive_content(self)
+        return vec
 
 
 class EntityMixin(object):
@@ -192,7 +243,23 @@ class EntityMixin(object):
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
-
+    # @property
+    # def __acl__(self):  # This kind of acl requires RootFactory and
+    #     acls = [(Allow, 'admin', ALL_PERMISSIONS)]
+    #     obj = self
+    #     while obj.__tablename__ != 'dictionary':
+    #         try:
+    #             obj = obj.parent
+    #         except:
+    #             return acls
+    #     groups = DBSession.query(Group)
+    #     object_id = obj.object_id
+    #     client_id = obj.client_id
+    #     for ent in groups:
+    #         name = str(object_id) + '_' + str(client_id)
+    #         if name in ent.name:
+    #             acls += [(Allow, ent.name, ent.name.replace(name, ''))]
+    #     return acls
     object_id = Column(BigInteger, primary_key=True)
     client_id = Column(BigInteger, primary_key=True)
     parent_object_id = Column(BigInteger)
@@ -206,7 +273,6 @@ class EntityMixin(object):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-
 class LevelOneEntity(Base, TableNameMixin, EntityMixin):
     """
     This type of entity is used for level-one word entries (e.g. transcription, translation, sounds,
@@ -218,7 +284,6 @@ class LevelOneEntity(Base, TableNameMixin, EntityMixin):
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
 
 
-
 class LevelTwoEntity(Base, TableNameMixin, EntityMixin):
     """
     This type of entity is used as level-two entity: logically it has as parent a level-one entity object. For
@@ -228,7 +293,6 @@ class LevelTwoEntity(Base, TableNameMixin, EntityMixin):
     Parent: LevelOneEntity.
     """
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LevelOneEntity")
-
 
 
 class GroupingEntity(Base, TableNameMixin, EntityMixin):
@@ -256,7 +320,6 @@ class GroupingEntity(Base, TableNameMixin, EntityMixin):
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
 
 
-
 class PublishLevelOneEntity(Base, TableNameMixin):
     """
     This type is needed for publisher view: publisher should be able to mark word variants for each of datatypes
@@ -266,12 +329,14 @@ class PublishLevelOneEntity(Base, TableNameMixin):
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
                                                                                          entity_name="LevelOneEntity")
 
+
 class PublishLevelTwoEntity(Base, TableNameMixin):
     """
     The same for markups.
     """
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
                                                                                          entity_name="LevelTwoEntity")
+
 
 class PublishGroupingEntity(Base, TableNameMixin):
     """
@@ -280,3 +345,136 @@ class PublishGroupingEntity(Base, TableNameMixin):
     __table_attrs__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
                                                                                          entity_name="GroupingEntity")
 
+
+user_to_group_association = Table('user_to_group_association', Base.metadata,
+                                  Column('user_id', BigInteger, ForeignKey('user.id')),
+                                  Column('group_id', BigInteger, ForeignKey('group.id'))
+)
+
+
+class User(Base, TableNameMixin, IdMixin):
+    login = Column(UnicodeText(length=30), unique=True)
+    name = Column(UnicodeText)
+    # this stands for name in English
+    intl_name = Column(UnicodeText)
+    default_locale_id = Column(ForeignKey("locale.id"))
+    birthday = Column(Date)
+    signup_date = Column(DateTime)
+    # it's responsible for "deleted user state". True for active, False for deactivated.
+    is_active = Column(Boolean)
+    password = relationship("Passhash", uselist=False)
+    # clients = relationship("Client", backref=backref('User'))
+    # groups = relationship("Group", secondary=user_to_group_association, backref=backref("Users"))
+    # email = relationship("Email")
+    # about = relationship("About")
+    # organization = Column(Integer, ForeignKey('organization.id')
+
+    def check_password(self, passwd):
+        return bcrypt.verify(passwd, self.password.hash)
+
+    def last_sync_datetime(self):  # maybe bad
+        clients = DBSession.query(Client).filter_by(user_id = self.id).all()
+        time = clients.first().creation_time
+
+        for client in clients:
+            if time > client.creation_time:
+                time = client.creation_time
+        return time
+
+
+class BaseGroup(Base, TableNameMixin, IdMixin):
+    name = Column(UnicodeText)
+    readable_name = Column(UnicodeText)
+    groups = relationship('Group', backref=backref("BaseGroup"))
+
+
+class Group(Base, TableNameMixin, IdMixin):
+    base_group_id = Column(ForeignKey("basegroup.id"))
+    subject = Column(UnicodeText)
+    users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
+
+
+class About(Base, TableNameMixin, IdMixin):
+    user_id = Column(BigInteger, ForeignKey("User.id"), primary_key=True)
+    user = relationship("User", backref='about')
+    content = Column(UnicodeText)
+    locale_id = Column(ForeignKey("Locale.id"))
+
+
+class Passhash(Base, TableNameMixin, IdMixin):
+    user_id = Column(BigInteger, ForeignKey('User.id'))
+    hash = Column(UnicodeText(length=61))
+
+    def __init__(self, password):
+        self.hash = bcrypt.encrypt(password)
+
+
+class Email(Base, TableNameMixin, IdMixin):
+    user_id = Column(BigInteger, ForeignKey('User.id'))
+    email = Column(UnicodeText(length=50), unique=True)
+    user = relationship("User", backref='email')
+
+
+class Client(Base, TableNameMixin, IdMixin):
+    user_id = Column(BigInteger, ForeignKey('User.id'))
+    dictionaries = relationship("Dictionary", backref=backref("Client"))
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
+    is_browser_client = Column(Boolean, default=True)
+    user = relationship("User", backref='clients')
+
+
+# class RootFactory(object):
+#     def __init__(self,request):
+#         self.request = request
+#     # TODO: do it, if we go this way
+#     # also do many containers for many objects
+
+
+class DictAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
+        obj_id = int(self.request.matchdict['object_id'])
+        cli_id = int(self.request.matchdict['client_id'])
+        persp = DBSession.query(DictionaryPerspective).filter_by(object_id=obj_id, client_id=cli_id).first()
+        object_id = persp.parent_object_id
+        client_id = persp.parent_client_id
+        groups = DBSession.query(Group)
+        for group in groups:
+            name = 'dict' + str(object_id) + '_' + str(client_id)
+            if name in group.subject:
+                perm = group.BaseGroup.name
+                acls += [(Allow, group.subject, perm)]
+            name = 'persp' + str(obj_id) + '_' + str(cli_id)
+            if name in group.subject:
+                perm = group.BaseGroup.name
+                acls += [(Allow, group.subject, perm)]
+
+
+def searchname(*words):
+    start_time = time.time()
+    #words = DBSession.query(Meta).order_by(Meta.name)
+    vec = dict()
+    #temp = dict()
+    rtemp = redis.StrictRedis(host='localhost', port=6379, db=0)
+    for word in words:
+        client_id = word.client_id
+        if client_id in rtemp:
+            vec[word.name] = str(rtemp.get(client_id))[1:]
+        else:
+            user_id = DBSession.query(Client).filter_by(id = client_id) .first().user_id
+            name = DBSession.query(User).filter_by(id = user_id) .first().name
+            vec[word.name] = name
+            rtemp.set(client_id, name)
+    vec['time'] = str(time.time() - start_time)
+    """
+    vec = dict()
+    for user in DBSession.query(User):
+        for client in DBSession.query(Client).filter_by(user_id = user.id):
+            for word in DBSession.query(Meta).filter_by(client_id = client.id):
+                vec[word.name] = user.name
+    vec['time'] = str(time.time() - start_time)
+    """
+    return vec
