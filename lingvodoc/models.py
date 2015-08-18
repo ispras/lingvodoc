@@ -126,17 +126,18 @@ class RelationshipMixin(object):
     It's used for automatically set parent attribute as relationship.
     Each class using this mixin should have __parentname__ attribute
     """
-    @declared_attr.cascading
+    @declared_attr
     def parent(cls):
         return relationship(cls.__parentname__,
-                           backref=cls.__tablename__.lower())
+                            backref= backref(cls.__tablename__.lower())
+                            )
 
 
 class RelationshipPublishingMixin(RelationshipMixin):
     @declared_attr
     def entity(cls):
         return relationship(cls.__entityname__,
-                           backref=cls.__tablename__.lower())
+                            backref=backref(cls.__tablename__.lower()))
 
 
 class Language(Base, TableNameMixin, CompositeIdMixin):
@@ -151,7 +152,7 @@ class Locale(Base, TableNameMixin, IdMixin):
     This entity specifies list of available translations (for words in dictionaries and for UI).
     Should be added as admin only.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     shortcut = Column(UnicodeText)
@@ -186,7 +187,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin):
     indicates separate language (dialect) we want to provide our users an opportunity to have their own dictionaries
     for the same language so we use some grouping. This grouping is provided via Language objects.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
 
@@ -201,7 +202,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin):
     Parent: Dictionary.
     """
 
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Dictionary")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Dictionary")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
@@ -218,7 +219,7 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin):  # cli
         3. With it we can restrict to use any entity types except listed here (security concerns).
     Parent: DictionaryPerspective.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     entity_type = Column(UnicodeText(length=2**31))
@@ -234,10 +235,9 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin):  # TableNameMixin?
     any viable data, it's used as a 'virtual' word. Also it contains redirects that occur after dicts merge.
     Parent: DictionaryPerspective.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
-    parent = relationship()
 
     def track(self):
         vec = []
@@ -266,7 +266,27 @@ class EntityMixin(object):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-class LevelOneEntity(Base, TableNameMixin, EntityMixin):
+class PublishingEntityMixin(object):
+    """
+    Look forward to:
+    http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
+
+    This mixin groups common fields and operations for *Entity classes.
+    It makes sense to include __acl__ rules right here for code deduplication.
+    """
+    object_id = Column(BigInteger, primary_key=True)
+    client_id = Column(BigInteger, primary_key=True)
+    parent_object_id = Column(BigInteger)
+    parent_client_id = Column(BigInteger)
+    entity_object_id = Column(BigInteger)
+    entity_client_id = Column(BigInteger)
+    entity_type = Column(UnicodeText)
+    content = Column(UnicodeText(length=2**31))
+    marked_for_deletion = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class LevelOneEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
     """
     This type of entity is used for level-one word entries (e.g. transcription, translation, sounds,
     paradigm transcription, etc). The main convention for this type is to have word entry as a logical parent.
@@ -274,10 +294,11 @@ class LevelOneEntity(Base, TableNameMixin, EntityMixin):
     for the stored object (not the sound file itself). One more special type: translation should point locale_id.
     Parent: LexicalEntry.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
+    __parentname__ = 'LexicalEntry'
 
 
-class LevelTwoEntity(Base, TableNameMixin, EntityMixin):
+class LevelTwoEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
     """
     This type of entity is used as level-two entity: logically it has as parent a level-one entity object. For
     now there is the only type of such entities - it's praat markup because it can not be separated from sound
@@ -285,10 +306,11 @@ class LevelTwoEntity(Base, TableNameMixin, EntityMixin):
     be stored separately and as content it should store path to the object.
     Parent: LevelOneEntity.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LevelOneEntity")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LevelOneEntity")
+    __parentname__ = 'LevelOneEntity'
 
 
-class GroupingEntity(Base, TableNameMixin, EntityMixin):
+class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
     """
     This type of entity is used for grouping word entries (e.g. etymology tags). With it we can group bunch of
     LexicalEntries as connected with each other.
@@ -310,33 +332,40 @@ class GroupingEntity(Base, TableNameMixin, EntityMixin):
 
     Parent: LexicalEntry.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
+    __parentname__ = 'LexicalEntry'
 
 
-class PublishLevelOneEntity(Base, TableNameMixin):
+class PublishLevelOneEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
     """
     This type is needed for publisher view: publisher should be able to mark word variants for each of datatypes
     as 'correct' ones. For example, a word can have 5 correct translations, two sounds and one.
     Also publisher should be able to change perspective status: WIP, published.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
+    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
                                                                                          entity_name="LevelOneEntity")
+    __parentname__ = 'LexicalEntry'
+    __entityname__ = 'LevelOneEntity'
 
 
-class PublishLevelTwoEntity(Base, TableNameMixin):
+class PublishLevelTwoEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
     """
     The same for markups.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
+    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
                                                                                          entity_name="LevelTwoEntity")
+    __parentname__ = 'LexicalEntry'
+    __entityname__ = 'LevelTwoEntity'
 
 
-class PublishGroupingEntity(Base, TableNameMixin):
+class PublishGroupingEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
     """
     The same for etymology tags.
     """
-    __table_attrs__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
+    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
                                                                                          entity_name="GroupingEntity")
+    __parentname__ = 'LexicalEntry'
+    __entityname__ = 'GroupingEntity'
 
 
 user_to_group_association = Table('user_to_group_association', Base.metadata,
@@ -376,14 +405,14 @@ class Group(Base, TableNameMixin, IdMixin):
 
 
 class About(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey("User.id"), primary_key=True)
+    user_id = Column(BigInteger, ForeignKey("user.id"), primary_key=True)
     user = relationship("User", backref='about')
     content = Column(UnicodeText)
-    locale_id = Column(ForeignKey("Locale.id"))
+    locale_id = Column(ForeignKey("locale.id"))
 
 
 class Passhash(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey('User.id'))
+    user_id = Column(BigInteger, ForeignKey('user.id'))
     hash = Column(UnicodeText(length=61))
 
     def __init__(self, password):
@@ -391,14 +420,14 @@ class Passhash(Base, TableNameMixin, IdMixin):
 
 
 class Email(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey('User.id'))
+    user_id = Column(BigInteger, ForeignKey('user.id'))
     email = Column(UnicodeText(length=50), unique=True)
     user = relationship("User", backref='email')
 
 
 class Client(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey('User.id'))
-    dictionaries = relationship("Dictionary", backref=backref("Client"))
+    user_id = Column(BigInteger, ForeignKey('user.id'))
+    #dictionaries = relationship("Dictionary", backref=backref("Client"))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')

@@ -14,6 +14,8 @@ from .acl import (
 
 from .acl import DummyDeny
 
+from configparser import ConfigParser
+
 def configure_routes(config):
     config.add_route('home', '/')
 
@@ -28,13 +30,22 @@ def main(global_config, **settings):
     authentication_policy = AuthTktAuthenticationPolicy('secret_string_that_you_should_change',
                                                         hashalg='sha512', callback=groupfinder)
     authorization_policy = ACLAuthorizationPolicy()
+
+    parser = ConfigParser()
+    parser.read('development.ini')
+    storage = dict()
+    for k, v in parser.items('backend:storage'):
+        storage[k] = v
+    settings['storage'] = storage
+
     config = Configurator(settings=settings)
     config.set_authentication_policy(authentication_policy)
     config.set_authorization_policy(authorization_policy)
     config.include('pyramid_chameleon')
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
-
+    config.add_route('testing', '/testing')
+    config.add_route('upload', '/upload')
 #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
 
 
