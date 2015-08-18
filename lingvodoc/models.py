@@ -42,10 +42,6 @@ import datetime
 
 from sqlalchemy.inspection import inspect
 
-import time
-
-import redis
-
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
@@ -71,10 +67,6 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
     except:
         print("It's not an sqlalchemy")
-
-
-def set_relationship(self, parent_name):
-    return relationship(parent_name, backref = self.__tablename__)
 
 
 class TableNameMixin(object):
@@ -127,6 +119,24 @@ class CompositeKeysHelper(object):
                                      [parent_name.lower()+'.object_id', parent_name.lower()+'.client_id']),
                 ForeignKeyConstraint(['entity_object_id', 'entity_client_id'],
                                      [entity_name.lower()+'.object_id', entity_name.lower()+'.client_id']))
+
+
+class RelationshipMixin(object):
+    """
+    It's used for automatically set parent attribute as relationship.
+    Each class using this mixin should have __parentname__ attribute
+    """
+    @declared_attr.cascading
+    def parent(cls):
+        return relationship(cls.__parentname__,
+                           backref=cls.__tablename__.lower())
+
+
+class RelationshipPublishingMixin(RelationshipMixin):
+    @declared_attr
+    def entity(cls):
+        return relationship(cls.__entityname__,
+                           backref=cls.__tablename__.lower())
 
 
 class Language(Base, TableNameMixin, CompositeIdMixin):
@@ -243,23 +253,6 @@ class EntityMixin(object):
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
-    # @property
-    # def __acl__(self):  # This kind of acl requires RootFactory and
-    #     acls = [(Allow, 'admin', ALL_PERMISSIONS)]
-    #     obj = self
-    #     while obj.__tablename__ != 'dictionary':
-    #         try:
-    #             obj = obj.parent
-    #         except:
-    #             return acls
-    #     groups = DBSession.query(Group)
-    #     object_id = obj.object_id
-    #     client_id = obj.client_id
-    #     for ent in groups:
-    #         name = str(object_id) + '_' + str(client_id)
-    #         if name in ent.name:
-    #             acls += [(Allow, ent.name, ent.name.replace(name, ''))]
-    #     return acls
     object_id = Column(BigInteger, primary_key=True)
     client_id = Column(BigInteger, primary_key=True)
     parent_object_id = Column(BigInteger)
@@ -363,23 +356,11 @@ class User(Base, TableNameMixin, IdMixin):
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean)
     password = relationship("Passhash", uselist=False)
-    # clients = relationship("Client", backref=backref('User'))
-    # groups = relationship("Group", secondary=user_to_group_association, backref=backref("Users"))
-    # email = relationship("Email")
-    # about = relationship("About")
-    # organization = Column(Integer, ForeignKey('organization.id')
 
     def check_password(self, passwd):
         return bcrypt.verify(passwd, self.password.hash)
 
-    def last_sync_datetime(self):  # maybe bad
-        clients = DBSession.query(Client).filter_by(user_id = self.id).all()
-        time = clients.first().creation_time
-
-        for client in clients:
-            if time > client.creation_time:
-                time = client.creation_time
-        return time
+    # TODO: last_sync_datetime
 
 
 class BaseGroup(Base, TableNameMixin, IdMixin):
@@ -451,30 +432,3 @@ class DictAcl(object):
             if name in group.subject:
                 perm = group.BaseGroup.name
                 acls += [(Allow, group.subject, perm)]
-
-
-def searchname(*words):
-    start_time = time.time()
-    #words = DBSession.query(Meta).order_by(Meta.name)
-    vec = dict()
-    #temp = dict()
-    rtemp = redis.StrictRedis(host='localhost', port=6379, db=0)
-    for word in words:
-        client_id = word.client_id
-        if client_id in rtemp:
-            vec[word.name] = str(rtemp.get(client_id))[1:]
-        else:
-            user_id = DBSession.query(Client).filter_by(id = client_id) .first().user_id
-            name = DBSession.query(User).filter_by(id = user_id) .first().name
-            vec[word.name] = name
-            rtemp.set(client_id, name)
-    vec['time'] = str(time.time() - start_time)
-    """
-    vec = dict()
-    for user in DBSession.query(User):
-        for client in DBSession.query(Client).filter_by(user_id = user.id):
-            for word in DBSession.query(Meta).filter_by(client_id = client.id):
-                vec[word.name] = user.name
-    vec['time'] = str(time.time() - start_time)
-    """
-    return vec
