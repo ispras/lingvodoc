@@ -5,7 +5,6 @@ from pyramid import testing
 
 from .models import DBSession
 
-
 class TestMyViewSuccessCondition(unittest.TestCase):
     def setUp(self):
         self.config = testing.setUp()

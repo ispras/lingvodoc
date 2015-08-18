@@ -34,7 +34,7 @@ def main(global_config, **settings):
     config.include('pyramid_chameleon')
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
-
+    config.add_route('testing','/testing')
 #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
 
 

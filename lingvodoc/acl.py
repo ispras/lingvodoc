@@ -2,8 +2,6 @@ from pyramid.security import Allow, Deny, Authenticated, Everyone
 
 from .models import (
     DBSession,
-    MetaWord,
-    WordEntry,
     Dictionary,
     User,
     Client,
