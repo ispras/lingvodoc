@@ -34,6 +34,10 @@ def main(global_config, **settings):
     config.include('pyramid_chameleon')
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
+
+#    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
+
+
 #    config.add_route('home', '/')
 #    config.add_route('login', 'login')
 #    config.add_route('logout', 'logout')
@@ -43,5 +47,8 @@ def main(global_config, **settings):
 #    config.add_route('dictionary', 'dictionary')
 
 #    config.add_route('metaword', 'dictionary/{dictionary_id}/etymology/metaword')
+
+
+
     config.scan('.views')
     return config.make_wsgi_app()

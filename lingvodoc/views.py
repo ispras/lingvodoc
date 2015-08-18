@@ -5,8 +5,6 @@ from sqlalchemy.exc import DBAPIError
 
 from .models import (
     DBSession,
-    MetaWord,
-    WordEntry,
     Dictionary,
     User,
     Client,
@@ -14,17 +12,20 @@ from .models import (
     Passhash,
     Group,
     BaseGroup,
-    WordTranscription,
-    WordTranslation,
-    WordSound,
-    WordEtymologyTag,
-    WordMarkup,
-    MetaParadigm,
-    ParadigmEntry,
-    ParadigmMarkup,
-    ParadigmSound,
-    ParadigmTranscription,
-    ParadigmTranslation,
+    Language,
+    Locale,
+    UITranslationString,
+    UserEntitiesTranslationString,
+    Dictionary,
+    DictionaryPerspective,
+    DictionaryPerspectiveField,
+    LexicalEntry,
+    LevelOneEntity,
+    LevelTwoEntity,
+    GroupingEntity,
+    PublishLevelOneEntity,
+    PublishGroupingEntity,
+    PublishLevelTwoEntity,
     )
 
 from pyramid.security import (
@@ -54,6 +55,10 @@ import os
 import datetime
 import base64
 
+import time
+
+import redis
+
 
 class CommonException(Exception):
     def __init__(self, value):
@@ -61,6 +66,36 @@ class CommonException(Exception):
 
     def __str__(self):
         return repr(self.value)
+
+
+def searchname(*words):
+    """
+    Search user for object using client id
+    """
+    start_time = time.time()
+    #words = DBSession.query(Meta).order_by(Meta.name)
+    vec = dict()
+    #temp = dict()
+    rtemp = redis.StrictRedis(host='localhost', port=6379, db=0)
+    for word in words:
+        client_id = word.client_id
+        if client_id in rtemp:
+            vec[word.name] = str(rtemp.get(client_id))[1:]
+        else:
+            user_id = DBSession.query(Client).filter_by(id = client_id) .first().user_id
+            name = DBSession.query(User).filter_by(id = user_id) .first().name
+            vec[word.name] = name
+            rtemp.set(client_id, name)
+    vec['time'] = str(time.time() - start_time)
+    """
+    vec = dict()
+    for user in DBSession.query(User):
+        for client in DBSession.query(Client).filter_by(user_id = user.id):
+            for word in DBSession.query(Meta).filter_by(client_id = client.id):
+                vec[word.name] = user.name
+    vec['time'] = str(time.time() - start_time)
+    """
+    return vec
 
 
 def group_filter(session, base_group_name, subject):
