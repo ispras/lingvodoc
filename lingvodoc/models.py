@@ -129,7 +129,7 @@ class RelationshipMixin(object):
     @declared_attr
     def parent(cls):
         return relationship(cls.__parentname__,
-                            backref= backref(cls.__tablename__.lower(),cascade = 'delete,all')
+                            backref= backref(cls.__tablename__.lower())
                             )
 
 
@@ -137,8 +137,7 @@ class RelationshipPublishingMixin(RelationshipMixin):
     @declared_attr
     def entity(cls):
         return relationship(cls.__entityname__,
-                            backref=backref(cls.__tablename__.lower(),
-                            cascade='delete,all'))
+                            backref=backref(cls.__tablename__.lower()))
 
 
 class Language(Base, TableNameMixin, CompositeIdMixin):

@@ -969,35 +969,6 @@ After you fix the problem, please restart the Pyramid application to
 try it again.
 """
 
-@view_config(route_name='testing', renderer = 'string')
-def testing(request):
-
-    from sqlalchemy import create_engine
-    engine = create_engine('sqlite:///sqlalchemy_example.db')
-    Base.metadata.bind = engine
-    Base.metadata.create_all(engine)
-    DBSession = sessionmaker()
-    DBSession.bind = engine
-    session = DBSession()
-    new_lex = LexicalEntry(object_id = 1, client_id = 1)
-    session.add(new_lex)
-    new_lev_one = LevelOneEntity(object_id = 1, client_id = 1, parent = new_lex, entity_type='first', content = 'lev_one', additional_metadata = 'no', locale_id = 1)
-    session.add(new_lev_one)
-    new_publ_lev_one = PublishLevelOneEntity(object_id = 1, client_id = 1, parent = new_lex, entity = new_lev_one, content = 'lev_one_publish')
-    session.add(new_publ_lev_one)
-    lexes = session.query(LexicalEntry).all()
-    for lex in lexes:
-        session.delete(lex)
-    session.commit()
-    lev_one = session.query(LevelOneEntity).all()
-    publ_lev_one = session.query(PublishLevelOneEntity).all()
-    vec = []
-    for ent in lev_one:
-        vec += [ent.content]
-    for ent in publ_lev_one:
-        vec += [ent.content]
-    return ''.join(vec)
-
 
 def openstack_upload(settings, file, file_name, content_type,  container_name):
     storage = settings['storage']
