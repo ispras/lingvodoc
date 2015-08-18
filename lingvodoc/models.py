@@ -129,14 +129,16 @@ class RelationshipMixin(object):
     @declared_attr
     def parent(cls):
         return relationship(cls.__parentname__,
-                           backref=cls.__tablename__.lower())
+                            backref= backref(cls.__tablename__.lower(),cascade = 'delete,all')
+                            )
 
 
 class RelationshipPublishingMixin(RelationshipMixin):
     @declared_attr
     def entity(cls):
         return relationship(cls.__entityname__,
-                           backref=cls.__tablename__.lower())
+                            backref=backref(cls.__tablename__.lower(),
+                            cascade='delete,all'))
 
 
 class Language(Base, TableNameMixin, CompositeIdMixin):
@@ -404,14 +406,14 @@ class Group(Base, TableNameMixin, IdMixin):
 
 
 class About(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey("User.id"), primary_key=True)
+    user_id = Column(BigInteger, ForeignKey("user.id"), primary_key=True)
     user = relationship("User", backref='about')
     content = Column(UnicodeText)
-    locale_id = Column(ForeignKey("Locale.id"))
+    locale_id = Column(ForeignKey("locale.id"))
 
 
 class Passhash(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey('User.id'))
+    user_id = Column(BigInteger, ForeignKey('user.id'))
     hash = Column(UnicodeText(length=61))
 
     def __init__(self, password):
@@ -419,13 +421,13 @@ class Passhash(Base, TableNameMixin, IdMixin):
 
 
 class Email(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey('User.id'))
+    user_id = Column(BigInteger, ForeignKey('user.id'))
     email = Column(UnicodeText(length=50), unique=True)
     user = relationship("User", backref='email')
 
 
 class Client(Base, TableNameMixin, IdMixin):
-    user_id = Column(BigInteger, ForeignKey('User.id'))
+    user_id = Column(BigInteger, ForeignKey('user.id'))
     #dictionaries = relationship("Dictionary", backref=backref("Client"))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)

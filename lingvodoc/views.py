@@ -59,6 +59,9 @@ import base64
 
 import time
 
+import keystoneclient.v3 as keystoneclient
+import swiftclient.client as swiftclient
+
 #import redis
 
 
@@ -892,6 +895,8 @@ import time
 #         raise HTTPNotFound
 #
 #
+#
+#
 # #@view_config(route_name='login', renderer='')
 # # def login(request):
 # #     """
@@ -946,57 +951,80 @@ import time
 # # #@view_config(route_name='dictionary')
 # # def view_dictionary(request):
 # #     return
-#
-#
-# conn_err_msg = """\
-# Pyramid is having a problem using your SQL database.  The problem
-# might be caused by one of the following things:
-#
-# 1.  You may need to run the "initialize_lingvodoc_db" script
-#     to initialize your database tables.  Check your virtual
-#     environment's "bin" directory for this script and try to run it.
-#
-# 2.  Your database server may not be running.  Check that the
-#     database server referred to by the "sqlalchemy.url" setting in
-#     your "development.ini" file is running.
-#
-# After you fix the problem, please restart the Pyramid application to
-# try it again.
-# """
-#
+
+
+conn_err_msg = """\
+Pyramid is having a problem using your SQL database.  The problem
+might be caused by one of the following things:
+
+1.  You may need to run the "initialize_lingvodoc_db" script
+    to initialize your database tables.  Check your virtual
+    environment's "bin" directory for this script and try to run it.
+
+2.  Your database server may not be running.  Check that the
+    database server referred to by the "sqlalchemy.url" setting in
+    your "development.ini" file is running.
+
+After you fix the problem, please restart the Pyramid application to
+try it again.
+"""
 
 @view_config(route_name='testing', renderer = 'string')
 def testing(request):
+
     from sqlalchemy import create_engine
     engine = create_engine('sqlite:///sqlalchemy_example.db')
     Base.metadata.bind = engine
+    Base.metadata.create_all(engine)
     DBSession = sessionmaker()
     DBSession.bind = engine
     session = DBSession()
-
-    #     object_id = Column(BigInteger, primary_key=True)
-    #     client_id = Column(BigInteger, primary_key=True)
-    #     parent_object_id = Column(BigInteger)
-    #     parent_client_id = Column(BigInteger)
-    #     entity_type = Column(UnicodeText)
-    #     content = Column(UnicodeText(length=2**31))
-    #     additional_metadata = Column(UnicodeText(length=2**31))
-    #     is_translatable = Column(Boolean, default=False)
-    #     locale_id = Column(BigInteger)
-    #     marked_for_deletion = Column(Boolean, default=False)
-    #     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     new_lex = LexicalEntry(object_id = 1, client_id = 1)
     session.add(new_lex)
-    new_lev_one = LevelOneEntity(parent = new_lex, entity_type='first', content = 'lev_one')
+    new_lev_one = LevelOneEntity(object_id = 1, client_id = 1, parent = new_lex, entity_type='first', content = 'lev_one', additional_metadata = 'no', locale_id = 1)
     session.add(new_lev_one)
-    new_publ_lev_one = PublishLevelOneEntity(parent = new_lex, entity = new_lev_one, content = 'lev_one_publish')
+    new_publ_lev_one = PublishLevelOneEntity(object_id = 1, client_id = 1, parent = new_lex, entity = new_lev_one, content = 'lev_one_publish')
     session.add(new_publ_lev_one)
     lexes = session.query(LexicalEntry).all()
-    vec = ['before commit: ']
     for lex in lexes:
-        vec += str (lex.track())
-    vec += [' after commit: ']
+        session.delete(lex)
     session.commit()
-    for lex in lexes:
-        vec += str (lex.track())
+    lev_one = session.query(LevelOneEntity).all()
+    publ_lev_one = session.query(PublishLevelOneEntity).all()
+    vec = []
+    for ent in lev_one:
+        vec += [ent.content]
+    for ent in publ_lev_one:
+        vec += [ent.content]
     return ''.join(vec)
+
+
+def openstack_upload(settings, file, file_name, content_type,  container_name):
+    storage = settings['storage']
+    authurl = storage['authurl']
+    user = storage['user']
+    key = storage['key']
+    auth_version = storage['auth_version']
+    tenant_name = storage['tenant_name']
+    conn = swiftclient.Connection(authurl=authurl, user=user, key=key,  auth_version=auth_version,
+                                  tenant_name=tenant_name)
+    #storageurl = conn.get_auth()[0]
+    conn.put_container(container_name)
+    obje = conn.put_object(container_name, file_name,
+                    contents = file,
+                    content_type = content_type)
+    #obje = conn.get_object(container_name, file_name)
+    return str(obje)
+
+
+@view_config(route_name='upload', renderer='templates/upload.pt')
+def openstack_conn(request):
+
+    if request.method == "POST":
+        fil = request.params['file']
+        file = fil.file
+        file_name = 'acl_improved/' + fil.filename
+        openstack_upload(request.registry.settings, file, file_name, 'text/plain', 'testing_python_script')
+        url = request.route_url('home')
+        return HTTPFound(location=url)
+    return dict()
