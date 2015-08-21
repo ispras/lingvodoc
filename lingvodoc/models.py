@@ -140,13 +140,18 @@ class RelationshipPublishingMixin(RelationshipMixin):
                             backref=backref(cls.__tablename__.lower()))
 
 
-class Language(Base, TableNameMixin, CompositeIdMixin):
+class Language(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):  # is there need for relationship?
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
+    __parentname__ = 'Language'
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     translation_string = Column(UnicodeText(length=2**31))
+    parent_object_id = Column(BigInteger)
+    parent_client_id = Column(BigInteger)
+    marked_for_deletion = Column(Boolean, default=False)
 
-    
+
 class Locale(Base, TableNameMixin, IdMixin):
     """
     This entity specifies list of available translations (for words in dictionaries and for UI).
@@ -190,6 +195,9 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin):
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
+    state = Column(UnicodeText)
+    name = Column(UnicodeText)
+    marked_for_deletion = Column(Boolean, default=False)
 
 
 class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin):
@@ -206,6 +214,8 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
+    marked_for_deletion = Column(Boolean, default=False)
+    name = Column(UnicodeText)  # ?
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin):  # client_id and object_id is primary?
@@ -238,6 +248,7 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin):  # TableNameMixin?
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
+    moved_to = Column(UnicodeText)
 
     def track(self):
         vec = []
@@ -395,10 +406,11 @@ class User(Base, TableNameMixin, IdMixin):
 class BaseGroup(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
     readable_name = Column(UnicodeText)
-    groups = relationship('Group', backref=backref("BaseGroup"))
+    # groups = relationship('Group', backref=backref("BaseGroup"))
 
 
-class Group(Base, TableNameMixin, IdMixin):
+class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
+    __parentname__ = 'BaseGroup'
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject = Column(UnicodeText)
     users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
@@ -427,7 +439,9 @@ class Email(Base, TableNameMixin, IdMixin):
 
 class Client(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
-    #dictionaries = relationship("Dictionary", backref=backref("Client"))
+    dictionaries = relationship("Dictionary", backref=backref("client"))
+    languages = relationship("Language", backref=backref("client"))
+    perspectives = relationship("Perspective", backref=backref("client"))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
@@ -440,6 +454,29 @@ class Client(Base, TableNameMixin, IdMixin):
 #     # also do many containers for many objects
 
 
+class PerspAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
+        obj_id = int(self.request.matchdict['perspective_object_id'])
+        cli_id = int(self.request.matchdict['perspective_client_id'])
+        persp = DBSession.query(DictionaryPerspective).filter_by(object_id=obj_id, client_id=cli_id).first()
+        object_id = persp.parent_object_id
+        client_id = persp.parent_client_id
+        groups = DBSession.query(Group)
+        for group in groups:  # add different strategies
+            name = 'dictionary' + str(object_id) + '_' + str(client_id)
+            if name in group.subject:
+                perm = group.BaseGroup.name
+                acls += [(Allow, group.subject, perm)]
+            name = 'perspective' + str(obj_id) + '_' + str(cli_id)
+            if name in group.subject:
+                perm = group.parent.name
+                acls += [(Allow, group.subject, perm)]
+
+
 class DictAcl(object):
     def __init__(self, request):
         self.request = request
@@ -448,16 +485,9 @@ class DictAcl(object):
         acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
         obj_id = int(self.request.matchdict['object_id'])
         cli_id = int(self.request.matchdict['client_id'])
-        persp = DBSession.query(DictionaryPerspective).filter_by(object_id=obj_id, client_id=cli_id).first()
-        object_id = persp.parent_object_id
-        client_id = persp.parent_client_id
         groups = DBSession.query(Group)
         for group in groups:
-            name = 'dict' + str(object_id) + '_' + str(client_id)
+            name = 'dictionary' + str(obj_id) + '_' + str(cli_id)
             if name in group.subject:
-                perm = group.BaseGroup.name
-                acls += [(Allow, group.subject, perm)]
-            name = 'persp' + str(obj_id) + '_' + str(cli_id)
-            if name in group.subject:
-                perm = group.BaseGroup.name
+                perm = group.parent.name
                 acls += [(Allow, group.subject, perm)]
