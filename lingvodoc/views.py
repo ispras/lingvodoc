@@ -1,4 +1,4 @@
-from pyramid.response import Response
+from pyramid.responce import responce
 from pyramid.view import view_config
 
 from sqlalchemy.exc import DBAPIError
@@ -49,9 +49,9 @@ from pyramid.security import forget
 from pyramid.security import remember
 from pyramid.view import forbidden_view_config
 
-#from pyramid.chameleon_zpt import render_template_to_response
-from pyramid.renderers import render_to_response
-from pyramid.response import FileResponse
+# from pyramid.chameleon_zpt import render_template_to_responce
+from pyramid.renderers import render_to_responce
+from pyramid.responce import Fileresponce
 
 import os
 import datetime
@@ -61,896 +61,427 @@ import time
 
 import keystoneclient.v3 as keystoneclient
 import swiftclient.client as swiftclient
+import random
+import sqlalchemy
+from sqlalchemy import create_engine
+# import redis
 
-#import redis
+
+class CommonException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
 
 
-# class CommonException(Exception):
-#     def __init__(self, value):
-#         self.value = value
-#
-#     def __str__(self):
-#         return repr(self.value)
-#
-#
-# def searchname(*words):
-#     """
-#     Search user for object using client id
-#     """
-#     start_time = time.time()
-#     #words = DBSession.query(Meta).order_by(Meta.name)
-#     vec = dict()
-#     #temp = dict()
-#     rtemp = redis.StrictRedis(host='localhost', port=6379, db=0)
-#     for word in words:
-#         client_id = word.client_id
-#         if client_id in rtemp:
-#             vec[word.name] = str(rtemp.get(client_id))[1:]
-#         else:
-#             user_id = DBSession.query(Client).filter_by(id = client_id) .first().user_id
-#             name = DBSession.query(User).filter_by(id = user_id) .first().name
-#             vec[word.name] = name
-#             rtemp.set(client_id, name)
-#     vec['time'] = str(time.time() - start_time)
-#     """
-#     vec = dict()
-#     for user in DBSession.query(User):
-#         for client in DBSession.query(Client).filter_by(user_id = user.id):
-#             for word in DBSession.query(Meta).filter_by(client_id = client.id):
-#                 vec[word.name] = user.name
-#     vec['time'] = str(time.time() - start_time)
-#     """
-#     return vec
-#
-#
-# def group_filter(session, base_group_name, subject):
-#     group_limited = session.query(BaseGroup).filter(BaseGroup.name == base_group_name).first()
-#     groups_fit = []
-#     for group in group_limited.groups:
-#         if group.subject == subject:
-#             groups_fit.append(group)
-#     return groups_fit
-#
-#
-# def add_child_group(session, base_group_name, subject):
-#     base_group = session.query(BaseGroup).filter(BaseGroup.name == base_group_name).first()
-#     base_group.groups.append(Group(subject=str(subject)))
-#     session.flush()
-#
-#     return base_group.groups[-1]
-#
-#
-# def object_file_path(obj, create_dir=False):
-#     base_path = '/tmp'
-#     storage_dir = os.path.join(base_path, obj.__tablename__, str(obj.client_id), str(obj.id))
-#     if create_dir:
-#         os.makedirs(storage_dir, exist_ok=True)
-#     storage_path = os.path.join(storage_dir, "content.original")
-#     return storage_path
-#
-#
-# def create_object(content, obj):
-#     # here will be object storage write as an option. Fallback (default) is filesystem write
-#     storage_path = object_file_path(obj, True)
-#
-#     f = open(storage_path, 'wb+')
-#     f.write(base64.urlsafe_b64decode(content))
-#     f.close()
-#     return
-#
-#
-# def produce_subtypes(obj_type, client, value):
-#     DBSession.flush()
-#     if obj_type == WordSound or obj_type == ParadigmSound:
-#         obj = obj_type(id=DBSession.query(obj_type).filter_by(client_id=client.id).count()+1,
-#                        client=client,
-#                        client_id=client.id,
-#                        mime=value['mime'],
-#                        name=value['name'],
-#                        marked_to_delete=False)
-#         DBSession.flush()
-#
-#         # if obj_type == WordSound:
-#         #     markup_type = WordMarkup
-#         # else:
-#         #     markup_type = ParadigmMarkup
-#         # if value['markups']:
-#         # # TODO: there is a bug here, but i can't find where and which.
-#         #     for markup in value['markups']:
-#         #         markup_obj = markup_type(id=DBSession.query(markup_type).filter_by(client_id=client.id).count()+1,
-#         #                                  client=client,
-#         #                                  content=markup['content'],
-#         #                                  marked_to_delete=False)
-#         #         DBSession.flush()
-#         #         obj.markups.append(markup_obj)
-#         create_object(value['content'], obj)
-#
-#     else:
-#         obj = obj_type(id=DBSession.query(obj_type).filter_by(client_id=client.id).count()+1,
-#                        client=client,
-#                        client_id=client.id,
-#                        content=value['content'],
-#                        marked_to_delete=False)
-#     return obj
-#
-#
-# # NOTE: TODO: very fucked up code, rewrite completely later.
-# def traverse_paradigm(metaparadigm, dictionary_client_id, dictionary_id, request):
-#     metaparadigm_ids = dict()
-#     metaparadigm_ids['metaword_id'] = metaparadigm.metaword_id
-#     metaparadigm_ids['metaword_client_id'] = metaparadigm.metaword_client_id
-#     metaparadigm_ids['metaparadigm_id'] = metaparadigm.id
-#     metaparadigm_ids['metaparadigm_client_id'] = metaparadigm.client_id
-#     metaparadigm_ids['url'] = request.route_url('api_metaparadigm_get',
-#                                                 dictionary_client_id=dictionary_client_id,
-#                                                 dictionary_id=dictionary_id,
-#                                                 metaword_client_id=metaparadigm_ids['metaword_client_id'],
-#                                                 metaword_id=metaparadigm_ids['metaword_id'],
-#                                                 metaparadigm_id=metaparadigm_ids['metaparadigm_id'],
-#                                                 metaparadigm_client_id=metaparadigm_ids['metaparadigm_client_id'])
-#
-#     for field in 'entries', 'transcriptions', 'translations', 'sounds':
-#         metaparadigm_ids[field] = []
-#         #print(vars(metaparadigm))
-#         if field in vars(metaparadigm):
-#             for obj in vars(metaparadigm)[field]:
-#                 obj_description = dict()
-#                 obj_description['id'] = obj.id
-#                 obj_description['client_id'] = obj.client_id
-#                 obj_description['creation_time'] = str(obj.creation_time)
-# #                obj_description['author'] = str(obj.client.User.name)
-#                 if field in ['entries', 'transcriptions', 'translations']:
-#                     obj_description['content'] = obj.content
-#                 elif field in ['sounds']:
-#                     obj_description['url'] = request.route_url('api_metaparadigm_sound_get',
-#                                                                dictionary_client_id=dictionary_client_id,
-#                                                                dictionary_id=dictionary_id,
-#                                                                metaword_client_id=metaparadigm_ids['metaword_client_id'],
-#                                                                metaword_id=metaparadigm_ids['metaword_id'],
-#                                                                metaparadigm_client_id=obj.metaparadigm_client_id,
-#                                                                metaparadigm_id=obj.metaparadigm_id,
-#                                                                sound_client_id=obj.client_id,
-#                                                                sound_id=obj.id)
-#
-#                 metaparadigm_ids[field].append(obj_description)
-#     return metaparadigm_ids
-#
-#
-# def traverse_metaword(metaword, request):
-#     metaword_ids = dict()
-#     metaword_ids['dictionary_id'] = metaword.dictionary_id
-#     metaword_ids['dictionary_client_id'] = metaword.dictionary_client_id
-#     metaword_ids['dictionary_name'] = DBSession.query(Dictionary).filter_by(id=metaword.dictionary_id,
-#                                                                             client_id=metaword.dictionary_client_id).first().name
-#     metaword_ids['metaword_id'] = metaword.id
-#     metaword_ids['metaword_client_id'] = metaword.client_id
-#     metaword_ids['url'] = request.route_url('api_metaword_get',
-#                                             dictionary_client_id=metaword_ids['dictionary_client_id'],
-#                                             dictionary_id=metaword_ids['dictionary_id'],
-#                                             metaword_client_id=metaword_ids['metaword_client_id'],
-#                                             metaword_id=metaword_ids['metaword_id'])
-#
-#     for field in 'entries', 'transcriptions', 'translations', 'sounds', 'paradigms', 'etymology_tags':
-#         metaword_ids[field] = []
-#         #print(vars(metaword))
-#         if field in vars(metaword):
-#             for obj in vars(metaword)[field]:
-#                 obj_description = dict()
-#                 obj_description['id'] = obj.id
-#                 obj_description['client_id'] = obj.client_id
-#                 if 'creation_time' in obj_description:
-#                     obj_description['creation_time'] = str(obj.creation_time)
-# #                obj_description['author'] = str(obj.client.User.name)
-#                 if field in ['entries', 'transcriptions', 'translations']:
-#                     obj_description['content'] = obj.content
-#                 elif field in ['sounds']:
-#                     obj_description['url'] = request.route_url('api_metaword_sound_get',
-#                                                                dictionary_client_id=metaword_ids['dictionary_client_id'],
-#                                                                dictionary_id=metaword_ids['dictionary_id'],
-#                                                                metaword_client_id=obj.metaword_client_id,
-#                                                                metaword_id=obj.metaword_id,
-#                                                                sound_client_id=obj.client_id,
-#                                                                sound_id=obj.id)
-#                 elif field in ['paradigms']:
-#                     obj_description['paradigms'] = []
-#                     #for paradigm in obj.paradigms:
-#                     obj_description['paradigms'].append(traverse_paradigm(obj,
-#                                                                           metaword.dictionary_client_id,
-#                                                                           metaword.dictionary_id,
-#                                                                           request
-#                                                                           ))
-#                 elif field in ['etymology_tags']:
-#                     if obj.content:
-#                         obj_description['content'] = DBSession.query(WordEtymologyTag).filter_by(content=obj.content).count()
-#                     else:
-#                         obj_description['content'] = 0
-#                     obj_description['url'] = request.route_url('api_etymology_get',
-#                                                                dictionary_client_id=metaword_ids['dictionary_client_id'],
-#                                                                dictionary_id=metaword_ids['dictionary_id'],
-#                                                                metaword_client_id=obj.metaword_client_id,
-#                                                                metaword_id=obj.metaword_id)
-#
-#                 metaword_ids[field].append(obj_description)
-#     return metaword_ids
-#
-#
-# def forbidden_view(request):
-#     # do not allow a user to login if they are already logged in
-#     if authenticated_userid(request):
-#         return HTTPForbidden()
-#
-#     loc = request.route_url('login', _query=(('next', request.path),))
-#     return HTTPFound(location=loc)
-#
-#
-# @view_config(route_name='register/validate', renderer='json', request_method='POST')
-# def validate(request):
-#     try:
-#         param = request.matchdict.get('param')
-#         #print(param)
-#         value = request.POST.getone(param)
-#         if param == 'email':
-#             dbentry = DBSession.query(Email).filter_by(email=value).first()
-#             if dbentry:
-#                 raise CommonException("The user with this email is already registered")
-#         elif param == 'login':
-#             dbentry = DBSession.query(User).filter_by(login=value).first()
-#             if dbentry:
-#                 raise CommonException("The user with this login is already registered")
-#         else:
-#             raise KeyError
-#
-#         request.response.status = HTTPOk.code
-#         return {'status': request.response.status}
-#
-#     except KeyError as e:
-#         request.response.status = HTTPBadRequest.code
-#         return {'status': request.response.status, 'error': str(e)}
-#
-#     except CommonException as e:
-#         request.response.status = HTTPConflict.code
-#         return {'status': request.response.status, 'error': str(e)}
-#
-#
-# @view_config(route_name='home', renderer='templates/home.pt')
-# def main_page(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     return render_to_response('templates/home.pt', variables, request=request)
-#
-#
-# @view_config(route_name='register', renderer='templates/register.pt', request_method='GET')
-# def register_get(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     return render_to_response('templates/register.pt', variables, request=request)
-#
-#
-# @view_config(route_name='register', renderer='json', request_method='POST')
-# def register_post(request):
-#     try:
-#         login = request.POST.getone('login')
-#         name = request.POST.getone('name')
-#         email = request.POST.getone('email')
-#         password = request.POST.getone('password')
-#
-#         if DBSession.query(User).filter_by(login=login).first():
-#             raise CommonException("The user with this login is already registered")
-#         if DBSession.query(Email).filter_by(email=email).first():
-#             raise CommonException("The user with this email is already registered")
-#         new_user = User(login=login, name=name, signup_date=datetime.datetime.utcnow(), is_active=True)
-#         pwd = Passhash(password=password)
-#         email = Email(email=email)
-#         new_user.password = pwd
-#         new_user.email.append(email)
-#         DBSession.add(new_user)
-#         DBSession.flush()
-#
-#         # adding user to needed groups
-#         for group in group_filter(DBSession, 'can_create_dictionaries', 'ANY'):
-#             new_user.groups.append(group)
-#
-#         for group in group_filter(DBSession, 'can_create_languages', 'ANY'):
-#             new_user.groups.append(group)
-#
-#         for group in group_filter(DBSession, 'can_edit_languages', 'ANY'):
-#             new_user.groups.append(group)
-#
-#         for group in group_filter(DBSession, 'can_create_organizations', 'ANY'):
-#             new_user.groups.append(group)
-#
-#         return login_post(request)
-#
-#     except KeyError as e:
-#         request.response.status = HTTPBadRequest.code
-#         return {'status': request.response.status, 'error': str(e)}
-#
-#     except CommonException as e:
-#         request.response.status = HTTPConflict.code
-#         return {'status': request.response.status, 'error': str(e)}
-#
-#
-# @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
-# def login_get(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     return render_to_response('templates/login.pt', variables, request=request)
-#
-#
-# @view_config(route_name='login', renderer='json', request_method='POST')
-# def login_post(request):
-#     next = request.params.get('next') or request.route_url('dashboard')
-#     login = request.POST.get('login', '')
-#     password = request.POST.get('password', '')
-#
-#     user = DBSession.query(User).filter_by(login=login).first()
-#     if user and user.check_password(password):
-#         client = Client(user_id=user.id)
-#         user.clients.append(client)
-#         DBSession.add(client)
-#         DBSession.flush()
-#         headers = remember(request, principal=client.id)
-#         return HTTPFound(location=next, headers=headers)
-#     return HTTPUnauthorized(location=request.route_url('login'))
-#
-#
-# @view_config(route_name='logout', renderer='json')
-# def logout_any(request):
-#     next = request.params.get('next') or request.route_url('home')
-#     headers = forget(request)
-#     return HTTPFound(location=next, headers=headers)
-#
-#
-# @view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
-# def dashboard(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     return render_to_response('templates/dashboard.pt', variables, request=request)
-#
-#
-# @view_config(route_name='create_dictionary_page', renderer='templates/create_dictionary_page.pt', request_method='GET')
-# def create_dictionary_get(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     return render_to_response('templates/create_dictionary_page.pt', variables, request=request)
-#
-# @view_config(route_name='view_page', renderer='templates/view_page.pt', request_method='GET')
-# def view_page_get(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     return render_to_response('templates/view_page.pt', variables, request=request)
-#
-#
-# @view_config(route_name='create_dictionary_post', renderer='json', request_method='POST')
-# def create_dictionary_post(request):
+@view_config(route_name='language', renderer='json', request_method='GET')
+def view_language(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    language = DBSession.query(Language).filer_by(client_id=client_id, object_id=object_id).one()
+    if language:
+        responce['parent_client_id'] = language.parent_client_id
+        responce['parent_object_id'] = language.parent_object_id
+        responce['client_id'] = language.client_id
+        responce['object_id'] = language.object_id
+        responce['translation_string']=language.translation_string
+        responce['marked_for_deletion']=language.marked_for_deletion
+        if language.locale:
+            responce['locale_exist'] = True
+        else:
+            responce['locale_exist'] = False
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such language in the system")}
+
+
+@view_config(route_name='language', renderer='json', request_method='PUT')
+def edit_language(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    parent_client_id = request.matchdict.get('parent_client_id')
+    parent_object_id = request.matchdict.get('parent_object_id')
+    translation_string = request.matchdict.get('translation_string')
+    language = DBSession.query(Language).filer_by(client_id=client_id, object_id=object_id).one()
+    if language:
+        language.parent_client_id = parent_client_id
+        language.parent_object_id = parent_object_id
+        language.translation_string = translation_string
+        DBSession.commit()
+        responce['status'] = 200
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such language in the system")}
+
+
+@view_config(route_name='language', renderer='json', request_method='DELETE')
+def delete_language(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    language = DBSession.query(Language).filer_by(client_id=client_id, object_id=object_id).one()
+    if language:
+        language.marked_for_deletion = True
+        DBSession.commit()
+
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such language in the system")}
+
+
+@view_config(route_name = 'language', renderer = 'json', request_method = 'POST')
+def create_language(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        try:
+            parent_client_id = request.POST.getone('parent_client_id')
+            parent_object_id = request.POST.getone('parent_object_id')
+        except:
+            parent_client_id = None
+            parent_object_id = None
+        translation_string = request.POST.getone('translation_string')
+
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        parent = None
+        if parent_client_id and parent_object_id:
+            parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id)
+
+        language = Language(object_id=len(client.languages)+1, client_id=variables['auth'], translation_string = translation_string)
+        DBSession.add(language)
+        if parent:
+            language.parent = parent
+        DBSession.commit()
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status,
+                'object_id': language.object_id,
+                'client_id': language.client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
+
+@view_config(route_name='dictionary', renderer='json', request_method='GET') # Authors  -- names of users, who can edit?
+def view_dictionary(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    dictionary = DBSession.query(Dictionary).filer_by(client_id=client_id, object_id=object_id).one()
+    if dictionary:
+        responce['parent_client_id'] = dictionary.parent_client_id
+        responce['parent_object_id'] = dictionary.parent_object_id
+        responce['client_id'] = dictionary.client_id
+        responce['object_id'] = dictionary.object_id
+        responce['name'] = dictionary.name
+        responce['state'] = dictionary.state
+        responce['marked_for_deletion'] = dictionary.marked_for_deletion
+        # responce['authors']
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name='dictionary', renderer='json', request_method='PUT')
+def edit_dictionary(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    parent_client_id = request.matchdict.get('parent_client_id')
+    parent_object_id = request.matchdict.get('parent_object_id')
+    name = request.matchdict.get('name')
+    dictionary = DBSession.query(Dictionary).filer_by(client_id=client_id, object_id=object_id).one()
+    if dictionary:
+        dictionary.parent_client_id = parent_client_id
+        dictionary.parent_object_id = parent_object_id
+        dictionary.name = name
+        DBSession.commit()
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name='dictionary', renderer='json', request_method='DELETE')
+def delete_dictionary(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    dictionary = DBSession.query(Dictionary).filer_by(client_id=client_id, object_id=object_id).one()
+    if dictionary:
+        dictionary.marked_for_deletion = True
+        DBSession.commit()
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name = 'dictionary', renderer = 'json', request_method = 'POST')
+def create_dictionary(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        parent_client_id = request.POST.getone('parent_client_id')
+        parent_object_id = request.POST.getone('parent_object_id')
+        name = request.POST.getone('name')
+
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id)
+        dictionary = Dictionary(object_id=len(client.dictionaries)+1,
+                                client_id=variables['auth'],
+                                name=name,
+                                state='WiP',
+                                parent = parent)
+        DBSession.add(dictionary)
+        editbase = DBSession.query(BaseGroup).filter_by(name='edit')
+        viewbase = DBSession.query(BaseGroup).filter_by(name='view')
+        edit = Group(parent = editbase,
+                     subject = 'dictionary' + str(dictionary.object_id) + '_' + str(dictionary.client_id)
+                     )
+        edit.users.append(user)
+        DBSession.add(edit)
+        view = Group(parent = viewbase,
+                     subject = 'dictionary' + str(dictionary.object_id) + '_' + str(dictionary.client_id)
+                     )
+        view.users.append(user)
+        DBSession.add(view)
+        DBSession.commit()
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status,
+                'object_id': dictionary.object_id,
+                'client_id': dictionary.client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
+
+@view_config(route_name = 'dictionary_status', renderer = 'json', request_method = 'GET')
+def view_dictionary_status(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    dictionary = DBSession.query(Dictionary).filer_by(client_id=client_id, object_id=object_id).one()
+    if dictionary:
+        responce['client_id'] = dictionary.client_id
+        responce['object_id'] = dictionary.object_id
+        responce['state'] = dictionary.state
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name = 'dictionary_status', renderer = 'json', request_method = 'PUT')
+def edit_dictionary_status(request):
+    responce = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    state = request.matchdict.get('state')
+    dictionary = DBSession.query(Dictionary).filer_by(client_id=client_id, object_id=object_id).one()
+    if dictionary:
+        responce['client_id'] = dictionary.client_id
+        responce['object_id'] = dictionary.object_id
+        responce['state'] = dictionary.state
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name='perspective', renderer='json', request_method='GET') # Authors  -- names of users, who can edit?
+def view_perspective(request):
+    responce = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    perspective = DBSession.query(DictionaryPerspective).filer_by(client_id=client_id, object_id=object_id).one()
+    if perspective:
+        responce['parent_client_id'] = perspective.parent_client_id
+        responce['parent_object_id'] = perspective.parent_object_id
+        responce['client_id'] = perspective.client_id
+        responce['object_id'] = perspective.object_id
+        responce['name'] = perspective.name  # ?
+        responce['state'] = perspective.state
+        responce['marked_for_deletion'] = perspective.marked_for_deletion
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name='perspective', renderer='json', request_method='PUT')
+def edit_perspective(request):
+    responce = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    parent_client_id = request.matchdict.get('dictionary_parent_client_id')
+    parent_object_id = request.matchdict.get('dictionary_parent_object_id')
+    name = request.matchdict.get('name')
+    dictionary = DBSession.query(DictionaryPerspective).filer_by(client_id=client_id, object_id=object_id).one()
+    if dictionary:
+        dictionary.parent_client_id = parent_client_id
+        dictionary.parent_object_id = parent_object_id
+        dictionary.name = name
+        DBSession.commit()
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name='perspective', renderer='json', request_method='DELETE')
+def delete_perspective(request):
+    responce = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    dictionary = DBSession.query(DictionaryPerspective).filer_by(client_id=client_id, object_id=object_id).one()
+    if dictionary:
+        dictionary.marked_for_deletion = True
+        DBSession.commit()
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+# @view_config(route_name = 'perspective', renderer = 'json', request_method = 'POST')
+# def create_perspective(request):
 #     try:
 #         variables = {'auth': authenticated_userid(request)}
-#         name = request.POST.getone('dictionary_name')
-#         dialeqt_id = None
-#         try:
-#             dialeqt_id = request.POST.getone('dialeqt_id')
-#         except KeyError:
-#             pass
+#         parent_client_id = request.matchdict.get('client_id')
+#         parent_object_id = request.matchdict.get('object_id')
+#         name = request.POST.getone('name')
 #
 #         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
 #         if not client:
 #             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
 #         user = DBSession.query(User).filter_by(id=client.user_id).first()
-#
 #         if not user:
 #             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 #
-#         if dialeqt_id:
-#             dictionary = DBSession.query(Dictionary).filter_by(imported_hash=dialeqt_id).first()
+#         parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id)
 #
-# #        if dictionary:
-# #            raise CommonException("This dictionary is already present in the system. You can not import it twice for now.")
-#
-#         dictionary = Dictionary(id=len(client.dictionaries)+1, client_id=request.authenticated_userid, name=name, state="WiP")
-#         DBSession.add(dictionary)
-#         DBSession.flush()
-#         subject = str(dictionary.id)+":"+str(client.id)
-#         user.groups.append(add_child_group(DBSession, 'can_change_dictionary_info', subject=subject))
-#         user.groups.append(add_child_group(DBSession, 'can_invite_collaborators', subject=subject))
-#         user.groups.append(add_child_group(DBSession, 'can_add_words', subject=subject))
-#         user.groups.append(add_child_group(DBSession, 'can_delete_words', subject=subject))
-#         user.groups.append(add_child_group(DBSession, 'can_set_defaults', subject=subject))
-#         user.groups.append(add_child_group(DBSession, 'can_publish', subject=subject))
-#
+#         perspective = DictionaryPerspective(object_id=len(client.perspectives)+1,
+#                                 client_id=variables['auth'],
+#                                 name=name,
+#                                 state='WiP',
+#                                 parent = parent)
+#         DBSession.add(perspective)
+#         editbase = DBSession.query(BaseGroup).filter_by(name='edit')
+#         viewbase = DBSession.query(BaseGroup).filter_by(name='view')
+#         edit = Group(parent = editbase,
+#                      subject = 'perspective' + str(dictionary.object_id) + '_' + str(dictionary.client_id)
+#                      )
+#         edit.users.append(user)
+#         DBSession.add(edit)
+#         view = Group(parent = viewbase,
+#                      subject = 'perspective' + str(dictionary.object_id) + '_' + str(dictionary.client_id)
+#                      )
+#         view.users.append(user)
+#         DBSession.add(view)
+#         DBSession.commit()
 #         request.response.status = HTTPOk.code
 #         return {'status': request.response.status,
-#                 'dictionary_id': dictionary.id,
-#                 'dictionary_client_id': dictionary.client_id,
-#                 'edit_url': request.route_url('edit_dictionary', dictionary_client_id=dictionary.client_id, dictionary_id=dictionary.id)}
-#
+#                 'object_id': perspective.object_id,
+#                 'client_id': perspective.client_id}
 #     except KeyError as e:
 #         request.response.status = HTTPBadRequest.code
-#         return {'status': request.response.status, 'error': str(e)}
-#
-#     except CommonException as e:
-#         request.response.status = HTTPConflict.code
 #         return {'status': request.response.status, 'error': str(e)}
 #
 #     except IntegrityError as e:
 #         request.response.status = HTTPInternalServerError.code
 #         return {'status': request.response.status, 'error': str(e)}
 #
-# @view_config(route_name="own_dictionaries_list", renderer='json', request_method='GET')
-# def own_dictionaries_list(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     try:
-#         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-#         user = DBSession.query(User).filter_by(id=client.user_id).first()
-#         dictionaries_list = []
-#         for client in user.clients:
-#             for dictionary in client.dictionaries:
-#                 dictionaries_list.append({'id': dictionary.id,
-#                                           'client_id': dictionary.client_id,
-#                                           'name': dictionary.name,
-#                                           'edit_url': request.route_url('edit_dictionary',
-#                                                                         dictionary_client_id=dictionary.client_id,
-#                                                                         dictionary_id=dictionary.id),
-#                                           'view_url': request.route_url('view_dictionary',
-#                                                                         dictionary_client_id=dictionary.client_id,
-#                                                                         dictionary_id=dictionary.id),
-#                                           'stats': form_dictionary_stats(dictionary.id, dictionary.client_id)})
-#         request.response.status = HTTPOk.code
-#         return {'status': request.response.status, 'dictionaries': dictionaries_list}
 #     except CommonException as e:
 #         request.response.status = HTTPConflict.code
 #         return {'status': request.response.status, 'error': str(e)}
-#
-#
-# @view_config(route_name="create_language_page", renderer='templates/create_language.pt', request_method='GET')
-# def create_language_get(request):
-#     variables = {'auth': authenticated_userid(request)}
-#     return render_to_response('templates/create_language.pt', variables, request=request)
-#
-# @view_config(route_name="create_language", renderer='json', request_method='POST')
-# def create_language_post(request):
-#     return {'status': 200}
-#
-#
-# @view_config(route_name="edit_dictionary", renderer="templates/edit_dictionary.pt", request_method='GET')#, permission='edit')
-# def edit_dictionary(request):
-#     dictionary_client_id = request.matchdict['dictionary_client_id']
-#     dictionary_id = request.matchdict['dictionary_id']
-#     variables = {'auth': authenticated_userid(request), 'id': dictionary_id, 'client_id': dictionary_client_id}
-#     if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first():
-#         return render_to_response("templates/edit_dictionary.pt", variables, request=request)
-#     else:
-#         raise HTTPNotFound
-#
-#
-# @view_config(route_name="view_dictionary", renderer="templates/view_dictionary.pt", request_method="GET")
-# def view_dictionary(request):
-#     dictionary_client_id = request.matchdict['dictionary_client_id']
-#     dictionary_id = request.matchdict['dictionary_id']
-#     variables = {'auth': authenticated_userid(request), 'id': dictionary_id, 'client_id': dictionary_client_id}
-#     if DBSession.query(Dictionary).filter_by(id=dictionary_id, client_id=dictionary_client_id).first():
-#         return render_to_response("templates/view_dictionary.pt", variables, request=request)
-#     else:
-#         raise HTTPNotFound
-#
-#
-# def create_metaparadigm_from_request(metaword_object, metaparadigm, client, request):
-#     metaparadigm_id = metaparadigm.get('metaparadigm_id')
-#     metaparadigm_client_id = metaparadigm.get('metaparadigm_client_id')
-#     if bool(metaparadigm_id) != bool(metaparadigm_client_id):
-#         raise CommonException("Bad request: missing one of metaparadigm identifiers")
-#
-#     if not bool(metaparadigm_id) and not bool(metaparadigm_client_id):
-#         metaparadigm_object = MetaParadigm(id=DBSession.query(MetaParadigm).count()+1,
-#                                            client_id=client.id,
-#                                            client=client,
-#                                            marked_to_delete=False)
-#     else:
-#         metaparadigm_object = DBSession.query(MetaParadigm).filter_by(id=metaparadigm_id,
-#                                                                       client_id=metaparadigm_client_id).first()
-#
-#     transcriptions = metaparadigm.get('transcriptions')
-#     translations = metaparadigm.get('translations')
-#     entries = metaparadigm.get('entries')
-#     sounds = metaparadigm.get('sounds')
-#
-#     if transcriptions:
-#         for item in transcriptions:
-#             metaparadigm_object.transcriptions.append(
-#                 produce_subtypes(ParadigmTranscription, client, {'content': item.get('content')})
-#             )
-#
-#     if translations:
-#         for item in translations:
-#             metaparadigm_object.translations.append(
-#                 produce_subtypes(ParadigmTranslation, client, {'content': item.get('content')})
-#             )
-#     if entries:
-#         for item in entries:
-#             metaparadigm_object.entries.append(
-#                 produce_subtypes(ParadigmEntry, client, {'content': item.get('content')})
-#             )
-#     if sounds:
-#         for item in sounds:
-#             if not item:
-#                 raise CommonException('No sound is attached, retry')
-#             metaparadigm_object.sounds.append(
-#                 produce_subtypes(ParadigmSound, client, {'content': item.get('content'),
-#                                                          'mime': item.get('mime'),
-#                                                          'name': item.get('name'),
-#                                                          'markups': item.get('markups')})
-#             )
-#     metaword_object.paradigms.append(metaparadigm_object)
-#     DBSession.add(metaword_object)
-#     DBSession.flush()
-#     # it's not an error, it's intended to be here:
-#     return metaword_object
-#
-#
-#
-#
-#
-# @view_config(route_name="api_metaparadigm_post_batch", renderer="json", request_method="POST")
-# def api_metaparadigm_post_batch(request):
-#     #print(request.matchdict)
-#     try:
-#         client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
-#         if not client or client.id != authenticated_userid(request):
-#             raise CommonException("It seems that you are trying to trick the system. Don't!")
-#
-#         metaword_object = DBSession.query(MetaWord).filter_by(id=request.matchdict['metaword_id'],
-#                                                               client_id=request.matchdict['metaword_client_id']).first()
-#         if not metaword_object:
-#             raise CommonException("No metaword object with such ids: metaword_id" +
-#                                   str(request.matchdict['metaword_id']) +
-#                                   ", metaword_client_id: " +
-#                                   str(request.matchdict['metaword_client_id']))
-#
-#         batch = request.json_body
-#
-#         if 'metaparadigms' in batch:
-#             for metaparadigm in batch['metaparadigms']:
-#                 metaword_object = create_metaparadigm_from_request(metaword_object, metaparadigm, client, request)
-#         else:
-#             metaword_object = create_metaparadigm_from_request(metaword_object, batch, client, request)
-#
-#         response = traverse_metaword(metaword_object, request)
-#         response['status'] = 200
-#         return response
-#
-#     except CommonException as e:
-#         request.response.status = HTTPBadRequest.code
-#         return {'status': request.response.status, 'error': "Bad request: " + str(e)}
-#
-#
-# def create_metaword_from_request(dictionary_object, metaword, client, request):
-#     metaword_id = metaword.get('metaword_id')
-#     metaword_client_id = metaword.get('metaword_client_id')
-#     if bool(metaword_id) != bool(metaword_client_id):
-#         raise CommonException("Bad request: missing one of metaword identifiers")
-#
-#     if not bool(metaword_id) and not bool(metaword_client_id):
-#         # we are getting all metawords for purpose -- for correct numeration in client applications
-#         metaword_object = MetaWord(id=DBSession.query(MetaWord).count()+1,
-#                                    client_id=client.id,
-#                                    client=client,
-#                                    marked_to_delete=False)
-#     else:
-#         metaword_object = DBSession.query(MetaWord).filter_by(id=metaword_id,
-#                                                               client_id=metaword_client_id).first()
-#     transcriptions = metaword.get('transcriptions')
-#     translations = metaword.get('translations')
-#     entries = metaword.get('entries')
-#     sounds = metaword.get('sounds')
-#     etymology_tags = metaword.get('etymology_tags')
-#
-#     if transcriptions:
-#         for item in transcriptions:
-#             metaword_object.transcriptions.append(
-#                 produce_subtypes(WordTranscription, client, {'content': item.get('content')})
-#             )
-#
-#     if translations:
-#         for item in translations:
-#             metaword_object.translations.append(
-#                 produce_subtypes(WordTranslation, client, {'content': item.get('content')})
-#             )
-#     if entries:
-#         for item in entries:
-#             metaword_object.entries.append(
-#                 produce_subtypes(WordEntry, client, {'content': item.get('content')})
-#             )
-#     if sounds:
-#         for item in sounds:
-#             if not item:
-#                 raise CommonException('No sound is attached, retry')
-#             metaword_object.sounds.append(
-#                 produce_subtypes(WordSound, client, {'content': item.get('content'),
-#                                                      'mime': item.get('mime'),
-#                                                      'name': item.get('name'),
-#                                                      'markups': item.get('markups')})
-#             )
-#             DBSession.flush()
-#     if etymology_tags:
-#         for item in etymology_tags:
-#             if not item:
-#                 raise CommonException('No tag is supplied, retry')
-#             metaword_object.etymology_tags.append(
-#                 produce_subtypes(WordEtymologyTag, client, {'content': item.get('content')})
-#             )
-#
-#     dictionary_object.metawords.append(metaword_object)
-#     DBSession.add(dictionary_object)
-#     DBSession.flush()
-#     return metaword_object
-#
-#
-#
-# @view_config(route_name="api_metaword_post_batch", renderer="json", request_method="POST")
-# def api_metaword_post_batch(request):
-#     try:
-#         dictionary_object = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
-#                                                                   client_id=request.matchdict['dictionary_client_id']).first()
-#         client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
-#         if not client or client.id != authenticated_userid(request):
-#             raise CommonException("It seems that you are trying to trick the system. Don't!")
-#
-#         batch = request.json_body
-#
-#         if 'metawords' in batch:
-#             metaword_objects = []
-#             for metaword in batch['metawords']:
-#                 metaword_objects.append(create_metaword_from_request(dictionary_object, metaword, client, request))
-#             metawords_list = [traverse_metaword(word, request) for word in metaword_objects]
-#             response = {"metawords": metawords_list}
-#         else:
-#             metaword_object = create_metaword_from_request(dictionary_object, batch, client, request)
-#             response = traverse_metaword(metaword_object, request)
-#
-#         response['status'] = 200
-#
-#         return response
-#     except CommonException as e:
-#         request.response.status = HTTPBadRequest.code
-#         return {'status': request.response.status, 'error': str("Bad request")}
-#
-#
-# @view_config(route_name='api_metaword_get', renderer='json', request_method='GET')
-# def api_metaword_get(request):
-#     word_object = DBSession.query(MetaWord).options(joinedload(MetaWord.transcriptions),
-#                                                     joinedload(MetaWord.translations),
-#                                                     joinedload(MetaWord.etymology_tags),
-#                                                     joinedload(MetaWord.entries),
-#                                                     joinedload(MetaWord.sounds),
-#                                                     joinedload(MetaWord.paradigms)).filter_by(
-#         id=request.matchdict['metaword_id'],
-#         client_id=request.matchdict['metaword_client_id']).first()
-#
-#     if word_object:
-#         return traverse_metaword(word_object, request)
-#     else:
-#         request.response.status = HTTPNotFound.code
-#         return {'status': request.response.status, 'error': str("No such word in the system")}
-#
-# @view_config(route_name='api_metaword_get_batch', renderer='json', request_method='GET')
-# def api_metaword_get_batch(request):
-#     offset = 0
-#     limit = 10000
-#     if 'offset' in request.params:
-#         offset = int(request.params['offset'])
-#     if 'size' in request.params:
-#         limit = int(request.params['size'])
-#
-#     dictionary = DBSession.query(MetaWord).filter_by(
-#         dictionary_id=request.matchdict['dictionary_id'],
-#         dictionary_client_id=request.matchdict['dictionary_client_id']).options(joinedload(MetaWord.transcriptions),
-#                                                                                 joinedload(MetaWord.translations),
-#                                                                                 joinedload(MetaWord.etymology_tags),
-#                                                                                 joinedload(MetaWord.entries),
-#                                                                                 joinedload(MetaWord.sounds),
-#                                                                                 joinedload(MetaWord.paradigms)).slice(offset, offset+limit)
-#
-#     word_list = []
-#     for word in dictionary:
-#         word_list.append(traverse_metaword(word, request))
-#     return word_list
-#
-#
-# @view_config(route_name='api_metaword_sound_get', request_method='GET')
-# def api_metaword_sound_get(request):
-#
-#     sound_object = DBSession.query(WordSound).filter_by(
-#         id=request.matchdict['sound_id'],
-#         client_id=request.matchdict['sound_client_id']).first()
-#     if sound_object:
-#         return FileResponse(object_file_path(sound_object))
-#     else:
-#         raise HTTPNotFound
-#
-#
-# @view_config(route_name='api_metaparadigm_sound_get', request_method='GET')
-# def api_metaparadigm_sound_get(request):
-#     sound_object = DBSession.query(ParadigmSound).filter_by(
-#         id=request.matchdict['sound_id'],
-#         client_id=request.matchdict['sound_client_id']).first()
-#     if sound_object:
-#         return FileResponse(object_file_path(sound_object))
-#     else:
-#         raise HTTPNotFound
-#
-#
-# @view_config(route_name='api_etymology_get', renderer='json', request_method='GET')
-# def api_etymology_get(request):
-#     word_object = DBSession.query(MetaWord).options(joinedload(MetaWord.transcriptions),
-#                                                     joinedload(MetaWord.translations),
-#                                                     joinedload(MetaWord.etymology_tags),
-#                                                     joinedload(MetaWord.entries),
-#                                                     joinedload(MetaWord.sounds),
-#                                                     joinedload(MetaWord.paradigms)).filter_by(
-#         id=request.matchdict['metaword_id'],
-#         client_id=request.matchdict['metaword_client_id']).first()
-#     if word_object:
-#         connected_words = []
-#         for tag in word_object.etymology_tags:
-#             print(tag)
-#             connected_words_objects = DBSession.query(MetaWord).options(joinedload(MetaWord.transcriptions),
-#                                                                         joinedload(MetaWord.translations),
-#                                                                         joinedload(MetaWord.etymology_tags),
-#                                                                         joinedload(MetaWord.entries),
-#                                                                         joinedload(MetaWord.sounds),
-#                                                                         joinedload(MetaWord.paradigms)).filter(
-#                 MetaWord.etymology_tags.any(content=tag.content)
-#                 )
-# #            connected_words = [traverse_metaword(word_object, request)]
-#             for word in connected_words_objects:
-#                 connected_words.append(traverse_metaword(word, request))
-#         return connected_words
-#     else:
-#         request.response.status = HTTPNotFound.code
-#         return {'status': request.response.status, 'error': str("No such word in the system")}
-#
-#
-# @view_config(route_name='api_corpora_get', renderer='json', request_method='GET')
-# def api_corpora_get(request):
-#     response = {"corpus_id":1,"corpus_client_id":1,"texts":[{"text_id":1,"client_id":1,"text_titles":[{"lang":"ru","content":"Ансамбль"}],"text_comments":[{"lang":"ru","content":"Текст записан С.Ю. Толдовой и Д.А. Паперно в июне 2004г. от К.А. Невоструевой (д. Жувам), расшифрован Д. Залмановым и А.А. Глуховой с С.С. Сабрековой (д. Шамардан), отглоссирован О.Л. Бирюк"}],"paragraphs":[{"phrases":[{"words":[{"items":[{"type":"txt","content":"beš’ermanskoj","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"},{"type":"lingvodoc_metaword","url":"http://192.168.23.130:6543/dictionaries/1/1/metawords/1/1"}]},{"items":[{"type":"txt","content":"beš’ermanskoj2222","lang":"udm-Latn-RU-fonipa-x-emic"},{"type":"pos","lang":"ru","content":"прил"}]}],"translations":[{"lang":"ru","content":"Появилось бесермянское общество, его создал Сабреков Валерьян Фёдорович."}]}]}]}]}
-#     return response
-#
-#
-# def form_dictionary_stats(dictionary_id, dictionary_client_id):
-#     quantity = dict()
-#     quantity['metawords'] = DBSession.query(MetaWord) \
-#         .options(noload("*")) \
-#         .filter_by(dictionary_id=dictionary_id,
-#                    dictionary_client_id=dictionary_client_id) \
-#         .count()
-#
-#     quantity['metaparadigms'] = DBSession.query(MetaParadigm) \
-#         .options(noload("*")) \
-#         .filter(MetaParadigm.MetaWord.has(dictionary_id=dictionary_id),
-#                 MetaParadigm.MetaWord.has(dictionary_client_id=dictionary_client_id)) \
-#         .count()
-#     return quantity
-#
-#
-# @view_config(route_name='dictionary_stats', renderer='json', request_method='GET')
-# def dictionary_stats(request):
-#     return form_dictionary_stats(request.matchdict['dictionary_id'], request.matchdict['dictionary_client_id'])
-#
-#
-# @view_config(route_name='api_metaparadigm_get', renderer='json', request_method='GET')
-# def api_metaparadigm_get(request):
-#     'dictionaries/{dictionary_client_id}/{dictionary_id}/metawords/'
-#     '{metaword_client_id}/{metaword_id}/metaparadigm/'
-#     '{metaparadigm_client_id}/{metaparadigm_id}'
-#     metaparadigm = DBSession.query(MetaParadigm)\
-#         .filter_by(id=request.matchdict['metaparadigm_id'],
-#                    client_id=request.matchdict['metaparadigm_client_id']).options(joinedload(MetaParadigm.transcriptions),
-#                                                                                   joinedload(MetaParadigm.translations),
-#                                                                                   joinedload(MetaParadigm.entries),
-#                                                                                   joinedload(MetaParadigm.sounds)).first()
-#     return traverse_paradigm(metaparadigm, request.matchdict['dictionary_client_id'], request.matchdict['dictionary_id'], request)
-#
-#
-# @view_config(route_name='api_metaparadigm_get_batch', renderer='json', request_method='GET')
-# def api_metaparadigms_get_batch(request):
-#     offset = 0
-#     limit = 10000
-#     if 'offset' in request.params:
-#         offset = int(request.params['offset'])
-#     if 'size' in request.params:
-#         limit = int(request.params['size'])
-#
-#     dictionary = DBSession.query(MetaWord).filter_by(
-#         id=request.matchdict['metaword_id'],
-#         client_id=request.matchdict['metaword_client_id'])
-#
-#     paradigms_list = []
-#     for word in dictionary:
-#         for metaparadigm in word.paradigms:
-#             # it's a hack
-#             metaparadigm.transcriptions
-#             metaparadigm.sounds
-#             metaparadigm.translations
-#             metaparadigm.entries
-#             paradigms_list.append(traverse_paradigm(metaparadigm, request.matchdict['dictionary_client_id'], request.matchdict['dictionary_id'], request))
-#
-#     return paradigms_list
-#
-#
-# ### TODO: ITS VERY DANGEROUS STUFF, USE WISELY (DOESN'T WORK NOW)
-# @view_config(route_name='delete_dictionary', renderer='json', request_method='DELETE')
-# def delete_dictionary(request):
-#     dictionary = DBSession.query(Dictionary).filter_by(id=request.matchdict['dictionary_id'],
-#                                                        client_id=request.matchdict['dictionary_client_id']).options(subqueryload('*')).first()
-#     # dictionary.metawords.paradigms
-#     # dictionary.metawords.paradigms.delete()
-#     # dictionary.metawords.etymology_tags.delete()
-#     # DBSession.delete(dictionary.metawords.paradigms)
-#     # DBSession.delete(dictionary.metawords.entries)
-#     # DBSession.delete(dictionary.metawords.translations)
-#     # DBSession.delete(dictionary.metawords.transcriptions)
-#     DBSession.delete(dictionary)
-#     return 200
-#
-# # TODO: find one now. For demo exclusively
-# @view_config(route_name='api_find_by_translation', renderer='json', request_method='GET')
-# def api_find_by_translation(request):
-#     metaword = DBSession.query(MetaWord).filter(MetaWord.translations.any(content=request.params['translation'])).first()
-#     if metaword:
-#         return traverse_metaword(metaword, request)
-#     else:
-#         raise HTTPNotFound
-#
-#
-#
-#
-# #@view_config(route_name='login', renderer='')
-# # def login(request):
-# #     """
-# #     user authentication on-site ('user-to-project').
-# #     :param request:
-# #     :return:
-# #     """
-# #
-# #     return
-# #
-# #
-# # #@view_config(route_name='logout')
-# # def logout(request):
-# #     """
-# #     user logout button on-site ('api')
-# #     :param request:
-# #     :return:
-# #     """
-# #     return
-# #
-# #
-# # #@view_config(route_name='register')
-# # def register(request):
-# #     """
-# #     user registration page on-site ('user-to-project').
-# #     :param request:
-# #     :return:
-# #     """
-# #     return
-# #
-# #
-# # #@view_config(route_name='acquire_client_key')
-# # def acquire_client_key(request):
-# #     """
-# #     get key for client program ('client-to-server')
-# #     :param request:
-# #     :return:
-# #     """
-# #     return
-# #
-# #
-# # #@view_config(route_name='dictionaries.list', renderer='json', permission='view')
-# # def list_dictionaries(request):
-# #     """
-# #     list existing dictionaries ('user-to-project')
-# #     :param request: filter=all,approved,pending
-# #     :return:
-# #     """
-# #     return {'Dicts': [request.context.dictionaries.first()]}
-# #
-# #
-# # #@view_config(route_name='dictionary')
-# # def view_dictionary(request):
-# #     return
+
+
+@view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'GET')
+def view_perspective_status(request):
+    responce = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    perspective = DBSession.query(Dictionary).filer_by(client_id=client_id, object_id=object_id).one()
+    if perspective:
+        responce['client_id'] = perspective.client_id
+        responce['object_id'] = perspective.object_id
+        responce['state'] = perspective.state
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'PUT')
+def edit_perspective_status(request):
+    responce = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    state = request.matchdict.get('state')
+    perspective = DBSession.query(Dictionary).filer_by(client_id=client_id, object_id=object_id).one()
+    if perspective:
+        responce['client_id'] = perspective.client_id
+        responce['object_id'] = perspective.object_id
+        responce['state'] = perspective.state
+        request.response.status = HTTPOk.code
+        responce['status'] = request.response.status
+        return responce
+    else:
+        request.responce.status = HTTPNotFound.code
+        return {'status': request.responce.status, 'error': str("No such dictionary in the system")}
+
 
 
 conn_err_msg = """\
@@ -999,3 +530,56 @@ def openstack_conn(request):
         url = request.route_url('home')
         return HTTPFound(location=url)
     return dict()
+
+
+def searchby(reqtype):
+    res = []
+    engine = create_engine('sqlite:///sqlalchemy_example.db')
+    Base.metadata.bind = engine
+    DBSession = sessionmaker()
+    DBSession.bind = engine
+    session = DBSession()
+    levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
+    levone = sqlalchemy.orm.aliased(LevelOneEntity, name="levone")
+    # some = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
+    #     join(levonefirst).\
+    #     filter(levonefirst.entity_type == reqtype).\
+    #     order_by(my_order('obj_id')).\
+    #     group_by(LexicalEntry.object_id)
+    # subq = some.subquery()
+    # something = session.query(subq.c.object_id, subq.c.obj_id, levone.entity_type, levone.content).\
+    #     join(levone).filter(levone.entity_type=='2').\
+    #     order_by(my_order('obj_id'))
+        # add_column(levone.content).\
+        # add_column(levone.entity_type).\
+    something = session.query(LexicalEntry.object_id).order_by()
+    for ent in something:
+        res += [ent]
+    return res
+
+
+@view_config(route_name='testing', renderer = 'string')
+def testing(request):
+    res = dict()
+    engine = create_engine('sqlite:///sqlalchemy_example.db')
+    Base.metadata.bind = engine
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(engine)
+    DBSession = sessionmaker()
+    DBSession.bind = engine
+    session = DBSession()
+    types = ['1','2','3','4']
+    entries = []
+    for i in range(100):
+        lex_entr = LexicalEntry(object_id=i, client_id=1)
+        entries += [lex_entr]
+        session.add(lex_entr)
+    # for i in range(100000):
+    #     entity = LevelOneEntity(object_id=i, client_id=1, parent=random.choice(entries), entity_type=random.choice(types), content=str(i))
+    #     session.add(entity)
+    session.commit()
+    start = time.time()
+    res['result'] = searchby('1')
+    end = time.time()
+    res['time'] = end-start
+    return res
