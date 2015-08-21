@@ -490,14 +490,18 @@ def view_dictionary_roles(request):
     object_id = request.matchdict.get('object_id')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).one()
     if dictionary:
+        users = []
         groups = DBSession.query(Group)
         for group in groups:
             perm = group.BaseGroup.name
             name = 'dictionary' + str(object_id) + '_' + str(client_id)
             if name in group.subject:
-                users = []
                 for user in group.users:
                     users += [(user.id, perm)]
+        response['users'] = users
+        request.response.status = HTTPOk.code
+        response['status'] = request.response.status
+        return response
     else:
         request.response.status = HTTPNotFound.code
         return {'status': request.response.status, 'error': str("No such dictionary in the system")}
@@ -525,6 +529,8 @@ def edit_dictionary_roles(request):
                 name = 'dictionary' + str(object_id) + '_' + str(client_id)
                 if name in group.subject:
                     group.users.append(user)
+                    request.response.status = HTTPOk.code
+                    response['status'] = request.response.status
         else:
             request.response.status = HTTPNotFound.code
             return {'status': request.response.status, 'error': str("No such user in the system")}
@@ -555,6 +561,8 @@ def delete_dictionary_roles(request):
                 name = 'dictionary' + str(object_id) + '_' + str(client_id)
                 if name in group.subject:
                     group.users.remove(user)
+                    request.response.status = HTTPOk.code
+                    response['status'] = request.response.status
         else:
             request.response.status = HTTPNotFound.code
             return {'status': request.response.status, 'error': str("No such user in the system")}
@@ -570,14 +578,17 @@ def view_perspective_roles(request):
     object_id = request.matchdict.get('perspective_object_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).one()
     if perspective:
+        users = []
         groups = DBSession.query(Group)
         for group in groups:
             perm = group.BaseGroup.name
             name = 'perspective' + str(object_id) + '_' + str(client_id)
             if name in group.subject:
-                users = []
                 for user in group.users:
                     users += [(user.id, perm)]
+        response['users'] = users
+        request.response.status = HTTPOk.code
+        response['status'] = request.response.status
     else:
         request.response.status = HTTPNotFound.code
         return {'status': request.response.status, 'error': str("No such perspective in the system")}
@@ -605,6 +616,8 @@ def edit_perspective_roles(request):
                 name = 'perspective' + str(object_id) + '_' + str(client_id)
                 if name in group.subject:
                     group.users.append(user)
+                    request.response.status = HTTPOk.code
+                    response['status'] = request.response.status
         else:
             request.response.status = HTTPNotFound.code
             return {'status': request.response.status, 'error': str("No such user in the system")}
@@ -635,12 +648,44 @@ def delete_perspective_roles(request):
                 name = 'perspective' + str(object_id) + '_' + str(client_id)
                 if name in group.subject:
                     group.users.remove(user)
+                    request.response.status = HTTPOk.code
+                    response['status'] = request.response.status
         else:
             request.response.status = HTTPNotFound.code
             return {'status': request.response.status, 'error': str("No such user in the system")}
     else:
         request.response.status = HTTPNotFound.code
         return {'status': request.response.status, 'error': str("No such perspective in the system")}
+
+
+@view_config(route_name = 'dictionaries', renderer = 'json')
+def dictionaries_list(request):  # TODO: TODO, also login and perspective fields
+    user_created = None
+    try:
+        user_created = request.matchdict.get('user_created')
+    except:
+        pass
+    user_participated = None
+    try:
+        user_participated = request.matchdict.get('user_participated')
+    except:
+        pass
+    organization_participated = None
+    try:
+        organization_participated = request.matchdict.get('organization_participated')
+    except:
+        pass
+    language = None
+    try:
+        language = request.matchdict.get('language')
+    except:
+        pass
+    # geo coordinates
+    response = dict()
+    return response
+
+
+
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
