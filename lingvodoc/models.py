@@ -466,7 +466,7 @@ class PerspAcl(object):
         object_id = persp.parent_object_id
         client_id = persp.parent_client_id
         groups = DBSession.query(Group)
-        for group in groups:
+        for group in groups:  # add different strategies
             name = 'dictionary' + str(object_id) + '_' + str(client_id)
             if name in group.subject:
                 perm = group.BaseGroup.name
