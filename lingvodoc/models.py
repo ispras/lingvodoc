@@ -269,13 +269,13 @@ class EntityMixin(object):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     entity_type = Column(UnicodeText)
+    data_type = Column(UnicodeText)
     content = Column(UnicodeText(length=2**31))
     additional_metadata = Column(UnicodeText(length=2**31))
     is_translatable = Column(Boolean, default=False)
     locale_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
 
 class PublishingEntityMixin(object):
     """
@@ -385,6 +385,12 @@ user_to_group_association = Table('user_to_group_association', Base.metadata,
 )
 
 
+user_to_organization_association = Table('user_to_organization_association', Base.metadata,
+                                  Column('user_id', BigInteger, ForeignKey('user.id')),
+                                  Column('organization_id', BigInteger, ForeignKey('organization.id'))
+)
+
+
 class User(Base, TableNameMixin, IdMixin):
     login = Column(UnicodeText(length=30), unique=True)
     name = Column(UnicodeText)
@@ -414,6 +420,13 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject = Column(UnicodeText)
     users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
+
+
+class Organization(Base, TableNameMixin, IdMixin, RelationshipMixin):
+    name = Column(UnicodeText)
+    users = relationship("User", secondary=user_to_organization_association, backref=backref("organizations"))
+    about = Column(UnicodeText)
+    # locale_id = Column(ForeignKey("locale.id"))
 
 
 class About(Base, TableNameMixin, IdMixin):
