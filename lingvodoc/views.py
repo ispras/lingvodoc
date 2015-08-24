@@ -159,6 +159,7 @@ def create_language(request):
         language = Language(object_id=len(client.languages)+1, client_id=variables['auth'], translation_string = translation_string)
         DBSession.add(language)
         DBSession.flush()
+        client.languages.add(language)
         if parent:
             language.parent = parent
         request.response.status = HTTPOk.code
@@ -262,6 +263,7 @@ def create_dictionary(request):
                                 parent = parent)
         DBSession.add(dictionary)
         DBSession.flush()
+        client.dictionaries.add(dictionary)
         editbase = DBSession.query(BaseGroup).filter_by(name='edit')  # TODO: add roles for dictionary instead
         viewbase = DBSession.query(BaseGroup).filter_by(name='view')
         edit = Group(parent = editbase,
@@ -414,6 +416,7 @@ def create_perspective(request):
                                 parent = parent)
         DBSession.add(perspective)
         DBSession.flush()
+        client.perspectives.add(perspective)
         editbase = DBSession.query(BaseGroup).filter_by(name='edit')
         viewbase = DBSession.query(BaseGroup).filter_by(name='view')
         edit = Group(parent = editbase,
@@ -683,7 +686,7 @@ def all_languages(language):
 
 
 @view_config(route_name = 'dictionaries', renderer = 'json')
-def dictionaries_list(request):  # TODO: TODO
+def dictionaries_list(request):
     user_created = None
     try:
         user_created = request.matchdict.get('user_created')
@@ -720,9 +723,23 @@ def dictionaries_list(request):  # TODO: TODO
         lang = DBSession.query(Language).filter_by(id=language).first()
         langs = all_languages(lang)
         dicts = dicts.filter(Dictionary.parent.in_(langs))
-    
-    # geo coordinates
+    # add geo coordinates
+    if user_participated:
+        clients = DBSession.query(Client.id).filter_by(user_id=user_created).all()
+        # bad way, not sure if even works
+        dicts = dicts.join(DictionaryPerspective).filter_by(DictionaryPerspective.client_id.in_(clients)).\
+                    join(DictionaryPerspectiveField).filter_by(DictionaryPerspectiveField.client_id.in_(clients)).\
+                    join(DictionaryPerspective).filter_by(DictionaryPerspective.client_id.in_(clients)).\
+                    join(LexicalEntry).filter_by(LexicalEntry.client_id.in_(clients)).\
+                    join(LevelOneEntity).filter_by(LevelOneEntity.client_id.in_(clients)).\
+                    join(LevelTwoEntity).filter_by(LevelTwoEntity.client_id.in_(clients)).\
+                    join(GroupingEntity).filter_by(GroupingEntity.client_id.in_(clients))
+    dictionaries = []
+    for dicti in dicts:
+        dictionaries += [{'object_id': dicti.object_id, 'client_id': dicti.client_id}]
     response = dict()
+    response['dictionaries'] = dictionaries
+
     return response
 
 
@@ -734,32 +751,23 @@ def view_perspective_fields(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).one()
     if perspective:
         fields = []
-        levone = DBSession.query(LevelOneEntity).filter_by(parent = perspective).all()
-        for entity in levone:
+        for field in perspective.dictionaryperspectivefield:
             data = dict()
-            data['entity_type'] = entity.entity_type
-            data['client_id'] = entity.client_id
-            data['object_id'] = entity.object_id
-            data['data_type'] = entity.data_type
-            if entity.marked_for_deletion:
-                data['status'] = 'disabled'
-            else:
-                data['status'] = 'enabled'
-            if entity.leveltwoentity:
-                fields2 = []
-                for ent in entity.leveltwoentity:
-                    data2 = dict()
-                    data2['entity_type'] = entity.entity_type
-                    data2['client_id'] = entity.client_id
-                    data2['object_id'] = entity.object_id
-                    data2['data_type'] = entity.data_type
-                    if entity.marked_for_deletion:
-                        data2['status'] = 'disabled'
-                    else:
-                        data2['status'] = 'enabled'
-                    fields2 += [data2]
-                data['contains'] = fields2
-
+            if field.level == 'L1E' or field.level == 'GE':
+                data['entity_type'] = field.entity_type
+                data['data_type'] = field.data_type
+                data['state'] = field.state
+                if field.dictionaryperspectivefield:
+                    contains = []
+                    for field2 in field.dictionaryperspectivefield:
+                        data2 = dict()
+                        data2['entity_type'] = field2.entity_type
+                        data2['data_type'] = field2.data_type
+                        data2['state'] = field2.state
+                        contains += [data2]
+                    data['contains'] = contains
+                if field.group:
+                    data['group'] = field.group
             fields += [data]
         response['fields'] = fields
         request.response.status = HTTPOk.code
@@ -768,6 +776,85 @@ def view_perspective_fields(request):
     else:
         request.response.status = HTTPNotFound.code
         return {'status': request.response.status, 'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE')
+def delete_perspective_fields(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    cli_id = request.DELETE.get('field_client_id')
+    obj_id = request.DELETE.get('field_object_id')
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).one()
+    if perspective:
+        field = DBSession.query(DictionaryPerspectiveField).filter_by(client_id=cli_id, object_id=obj_id).one()
+        if field:
+            field.marked_for_deletion = True
+        else:
+            request.response.status = HTTPNotFound.code
+            return {'status': request.response.status, 'error': str("No such field in the system")}
+        request.response.status = HTTPOk.code
+        response['status'] = request.response.status
+        return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'status': request.response.status, 'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='POST')
+def create_perspective_fields(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        parent_client_id = request.matchdict.get('client_id')
+        parent_object_id = request.matchdict.get('object_id')
+        fields = request.POST.getone('fields')
+
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id, object_id=parent_object_id)
+        for entry in fields:
+
+            field = DictionaryPerspectiveField(object_id=len(client.fields)+1,
+                                    client_id=variables['auth'], entity_type=entry['entity_type'], data_type=entry['data_type'])
+            DBSession.add(field)
+            DBSession.flush()
+            if 'group' in entry:
+                field.group = entry['group']
+            if 'level'in entry:
+                field.level = entry['level']
+            else:
+                field.level = 'L1E'
+            if 'contains' in entry:
+                for ent in entry['contains']:
+                    field2 = DictionaryPerspectiveField(object_id=len(client.fields)+1,
+                                                        client_id=variables['auth'],
+                                                        entity_type=entry['entity_type'],
+                                                        data_type=entry['data_type'],
+                                                        level = 'L2E')
+                    DBSession.add(field2)
+                    DBSession.flush()
+                    if 'group' in entry:
+                        field.group = entry['group']  # is there need for group on second level?
+            request.response.status = HTTPOk.code
+            return {'status': request.response.status,
+                    'object_id': perspective.object_id,
+                    'client_id': perspective.client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
