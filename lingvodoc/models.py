@@ -174,7 +174,7 @@ class UITranslationString(Base, TableNameMixin, IdMixin):
     translation = Column(UnicodeText(length=2**31))
 
 
-class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
+class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     This table holds translation strings for user-created entities such as dictionaries names, column names etc.
     Separate classes are needed not to allow users to interfere UI directly.
@@ -185,7 +185,7 @@ class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     translation = Column(UnicodeText(length=2**31))
 
 
-class Dictionary(Base, TableNameMixin, CompositeIdMixin):
+class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -200,7 +200,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin):
     marked_for_deletion = Column(Boolean, default=False)
 
 
-class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin):
+class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -218,7 +218,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin):
     name = Column(UnicodeText)  # ?
 
 
-class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin):  # client_id and object_id is primary?
+class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipPublishingMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -229,16 +229,20 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin):  # cli
         3. With it we can restrict to use any entity types except listed here (security concerns).
     Parent: DictionaryPerspective.
     """
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="DictionaryPerspective",
+                                                                                        entity_name="DictionaryPerspectiveField")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
+    entity_object_id = Column(BigInteger)
+    entity_client_id = Column(BigInteger)
     entity_type = Column(UnicodeText(length=2**31))
-    level = Column(BigInteger)
-    parent_entity = Column(UnicodeText(length=2**31))
+    data_type = Column(UnicodeText)
+    level = Column(UnicodeText)
     group = Column(UnicodeText(length=2**31))
+    marked_for_deletion = Column(Boolean, default=False)
 
 
-class LexicalEntry(Base, TableNameMixin, CompositeIdMixin):  # TableNameMixin?
+class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -275,7 +279,6 @@ class EntityMixin(object):
     locale_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
 
 class PublishingEntityMixin(object):
     """
@@ -385,6 +388,12 @@ user_to_group_association = Table('user_to_group_association', Base.metadata,
 )
 
 
+user_to_organization_association = Table('user_to_organization_association', Base.metadata,
+                                  Column('user_id', BigInteger, ForeignKey('user.id')),
+                                  Column('organization_id', BigInteger, ForeignKey('organization.id'))
+)
+
+
 class User(Base, TableNameMixin, IdMixin):
     login = Column(UnicodeText(length=30), unique=True)
     name = Column(UnicodeText)
@@ -416,6 +425,13 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
 
 
+class Organization(Base, TableNameMixin, IdMixin, RelationshipMixin):
+    name = Column(UnicodeText)
+    users = relationship("User", secondary=user_to_organization_association, backref=backref("organizations"))
+    about = Column(UnicodeText)
+    # locale_id = Column(ForeignKey("locale.id"))
+
+
 class About(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey("user.id"), primary_key=True)
     user = relationship("User", backref='about')
@@ -441,6 +457,7 @@ class Client(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
     dictionaries = relationship("Dictionary", backref=backref("client"))
     languages = relationship("Language", backref=backref("client"))
+    fields = relationship("Fields", backref=backref("client"))
     perspectives = relationship("Perspective", backref=backref("client"))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)

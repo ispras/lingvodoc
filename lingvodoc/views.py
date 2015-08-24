@@ -26,7 +26,8 @@ from .models import (
     PublishLevelOneEntity,
     PublishGroupingEntity,
     PublishLevelTwoEntity,
-    Base
+    Base,
+    Organization
     )
 
 from sqlalchemy.orm import sessionmaker
@@ -111,7 +112,6 @@ def edit_language(request):
         language.parent_client_id = parent_client_id
         language.parent_object_id = parent_object_id
         language.translation_string = translation_string
-        DBSession.commit()
         response['status'] = 200
         return response
     else:
@@ -127,7 +127,6 @@ def delete_language(request):
     language = DBSession.query(Language).filter_by(client_id=client_id, object_id=object_id).one()
     if language:
         language.marked_for_deletion = True
-        DBSession.commit()
 
     else:
         request.response.status = HTTPNotFound.code
@@ -159,9 +158,10 @@ def create_language(request):
 
         language = Language(object_id=len(client.languages)+1, client_id=variables['auth'], translation_string = translation_string)
         DBSession.add(language)
+        DBSession.flush()
+        client.languages.add(language)
         if parent:
             language.parent = parent
-        DBSession.commit()
         request.response.status = HTTPOk.code
         return {'status': request.response.status,
                 'object_id': language.object_id,
@@ -215,7 +215,6 @@ def edit_dictionary(request):
         dictionary.parent_client_id = parent_client_id
         dictionary.parent_object_id = parent_object_id
         dictionary.name = name
-        DBSession.commit()
         request.response.status = HTTPOk.code
         response['status'] = request.response.status
         return response
@@ -232,7 +231,6 @@ def delete_dictionary(request):
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).one()
     if dictionary:
         dictionary.marked_for_deletion = True
-        DBSession.commit()
         request.response.status = HTTPOk.code
         response['status'] = request.response.status
         return response
@@ -264,6 +262,8 @@ def create_dictionary(request):
                                 state='WiP',
                                 parent = parent)
         DBSession.add(dictionary)
+        DBSession.flush()
+        client.dictionaries.add(dictionary)
         editbase = DBSession.query(BaseGroup).filter_by(name='edit')  # TODO: add roles for dictionary instead
         viewbase = DBSession.query(BaseGroup).filter_by(name='view')
         edit = Group(parent = editbase,
@@ -271,12 +271,13 @@ def create_dictionary(request):
                      )
         edit.users.append(user)
         DBSession.add(edit)
+        DBSession.flush()
         view = Group(parent = viewbase,
                      subject = 'dictionary' + str(dictionary.object_id) + '_' + str(dictionary.client_id)
                      )
         view.users.append(user)
         DBSession.add(view)
-        DBSession.commit()
+        DBSession.flush()
         request.response.status = HTTPOk.code
         return {'status': request.response.status,
                 'object_id': dictionary.object_id,
@@ -366,7 +367,6 @@ def edit_perspective(request):
         dictionary.parent_client_id = parent_client_id
         dictionary.parent_object_id = parent_object_id
         dictionary.name = name
-        DBSession.commit()
         request.response.status = HTTPOk.code
         response['status'] = request.response.status
         return response
@@ -383,7 +383,6 @@ def delete_perspective(request):
     dictionary = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).one()
     if dictionary:
         dictionary.marked_for_deletion = True
-        DBSession.commit()
         request.response.status = HTTPOk.code
         response['status'] = request.response.status
         return response
@@ -416,6 +415,8 @@ def create_perspective(request):
                                 state='WiP',
                                 parent = parent)
         DBSession.add(perspective)
+        DBSession.flush()
+        client.perspectives.add(perspective)
         editbase = DBSession.query(BaseGroup).filter_by(name='edit')
         viewbase = DBSession.query(BaseGroup).filter_by(name='view')
         edit = Group(parent = editbase,
@@ -423,12 +424,13 @@ def create_perspective(request):
                      )
         edit.users.append(user)
         DBSession.add(edit)
+        DBSession.flush()
         view = Group(parent = viewbase,
                      subject = 'perspective' + str(perspective.object_id) + '_' + str(perspective.client_id)
                      )
         view.users.append(user)
         DBSession.add(view)
-        DBSession.commit()
+        DBSession.flush()
         request.response.status = HTTPOk.code
         return {'status': request.response.status,
                 'object_id': perspective.object_id,
@@ -658,8 +660,33 @@ def delete_perspective_roles(request):
         return {'status': request.response.status, 'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='signin', renderer='json', request_method='POST')
+def signin(request):
+    next = request.params.get('next') or request.route_url('home')
+    login = request.POST.get('login', '')
+    password = request.POST.get('password', '')
+
+    user = DBSession.query(User).filter_by(login=login).first()
+    if user and user.check_password(password):
+        client = Client(user_id=user.id)
+        user.clients.append(client)
+        DBSession.add(client)
+        DBSession.flush()
+        headers = remember(request, principal=client.id)
+        return HTTPFound(location=next, headers=headers)
+    return HTTPUnauthorized(location=request.route_url('login'))
+
+
+def all_languages(language):
+    languages = []
+    for lang in language.language:
+        languages += [lang]
+        languages += all_languages(lang)
+    return languages
+
+
 @view_config(route_name = 'dictionaries', renderer = 'json')
-def dictionaries_list(request):  # TODO: TODO, also login and perspective fields
+def dictionaries_list(request):
     user_created = None
     try:
         user_created = request.matchdict.get('user_created')
@@ -680,12 +707,154 @@ def dictionaries_list(request):  # TODO: TODO, also login and perspective fields
         language = request.matchdict.get('language')
     except:
         pass
-    # geo coordinates
+    dicts = DBSession.query(Dictionary)
+    if user_created:
+        clients = DBSession.query(Client.id).filter_by(user_id=user_created).all()
+        dicts = dicts.filter(Dictionary.client_id.in_(clients))
+    if organization_participated:
+        organization = DBSession.query(Organization).filter_by(id=organization_participated).first()
+        users = organization.users
+        users_id = []
+        for user in users:
+            users_id += [user.id]
+        clients = DBSession.query(Client.id).filter(Client.user_id.in_(users_id)).all()
+        dicts = dicts.filter(Dictionary.client_id.in_(clients))
+    if language:
+        lang = DBSession.query(Language).filter_by(id=language).first()
+        langs = all_languages(lang)
+        dicts = dicts.filter(Dictionary.parent.in_(langs))
+    # add geo coordinates
+    if user_participated:
+        clients = DBSession.query(Client.id).filter_by(user_id=user_created).all()
+        # bad way, not sure if even works
+        dicts = dicts.join(DictionaryPerspective).filter_by(DictionaryPerspective.client_id.in_(clients)).\
+                    join(DictionaryPerspectiveField).filter_by(DictionaryPerspectiveField.client_id.in_(clients)).\
+                    join(DictionaryPerspective).filter_by(DictionaryPerspective.client_id.in_(clients)).\
+                    join(LexicalEntry).filter_by(LexicalEntry.client_id.in_(clients)).\
+                    join(LevelOneEntity).filter_by(LevelOneEntity.client_id.in_(clients)).\
+                    join(LevelTwoEntity).filter_by(LevelTwoEntity.client_id.in_(clients)).\
+                    join(GroupingEntity).filter_by(GroupingEntity.client_id.in_(clients))
+    dictionaries = []
+    for dicti in dicts:
+        dictionaries += [{'object_id': dicti.object_id, 'client_id': dicti.client_id}]
     response = dict()
+    response['dictionaries'] = dictionaries
+
     return response
 
 
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='GET')
+def view_perspective_fields(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).one()
+    if perspective:
+        fields = []
+        for field in perspective.dictionaryperspectivefield:
+            data = dict()
+            if field.level == 'L1E' or field.level == 'GE':
+                data['entity_type'] = field.entity_type
+                data['data_type'] = field.data_type
+                data['state'] = field.state
+                if field.dictionaryperspectivefield:
+                    contains = []
+                    for field2 in field.dictionaryperspectivefield:
+                        data2 = dict()
+                        data2['entity_type'] = field2.entity_type
+                        data2['data_type'] = field2.data_type
+                        data2['state'] = field2.state
+                        contains += [data2]
+                    data['contains'] = contains
+                if field.group:
+                    data['group'] = field.group
+            fields += [data]
+        response['fields'] = fields
+        request.response.status = HTTPOk.code
+        response['status'] = request.response.status
+        return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'status': request.response.status, 'error': str("No such perspective in the system")}
 
+
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE')
+def delete_perspective_fields(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+    cli_id = request.DELETE.get('field_client_id')
+    obj_id = request.DELETE.get('field_object_id')
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).one()
+    if perspective:
+        field = DBSession.query(DictionaryPerspectiveField).filter_by(client_id=cli_id, object_id=obj_id).one()
+        if field:
+            field.marked_for_deletion = True
+        else:
+            request.response.status = HTTPNotFound.code
+            return {'status': request.response.status, 'error': str("No such field in the system")}
+        request.response.status = HTTPOk.code
+        response['status'] = request.response.status
+        return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'status': request.response.status, 'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='POST')
+def create_perspective_fields(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        parent_client_id = request.matchdict.get('client_id')
+        parent_object_id = request.matchdict.get('object_id')
+        fields = request.POST.getone('fields')
+
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id, object_id=parent_object_id)
+        for entry in fields:
+
+            field = DictionaryPerspectiveField(object_id=len(client.fields)+1,
+                                    client_id=variables['auth'], entity_type=entry['entity_type'], data_type=entry['data_type'])
+            DBSession.add(field)
+            DBSession.flush()
+            if 'group' in entry:
+                field.group = entry['group']
+            if 'level'in entry:
+                field.level = entry['level']
+            else:
+                field.level = 'L1E'
+            if 'contains' in entry:
+                for ent in entry['contains']:
+                    field2 = DictionaryPerspectiveField(object_id=len(client.fields)+1,
+                                                        client_id=variables['auth'],
+                                                        entity_type=entry['entity_type'],
+                                                        data_type=entry['data_type'],
+                                                        level = 'L2E')
+                    DBSession.add(field2)
+                    DBSession.flush()
+                    if 'group' in entry:
+                        field.group = entry['group']  # is there need for group on second level?
+            request.response.status = HTTPOk.code
+            return {'status': request.response.status,
+                    'object_id': perspective.object_id,
+                    'client_id': perspective.client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
