@@ -60,7 +60,7 @@ def configure_routes(config):
 
     # API #POST
     # Create language
-    config.add_route('language', 'language')
+    config.add_route('create_language', 'language')
 
     # API #GET
     # Dictionaries list. The following filters should be supported:
@@ -74,7 +74,7 @@ def configure_routes(config):
 
     # API #POST
     # Creating dictionary
-    config.add_route('dictionary', 'dictionary')
+    config.add_route('create_dictionary', 'dictionary')
 
     # API #GET && PUT && DELETE
     # Gets/puts info about dictionary (name/additional authors/etc)

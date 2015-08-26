@@ -81,11 +81,26 @@ class TableNameMixin(object):
         return cls.__name__.lower()
 
 
+def get_class_by_tablename(tablename):
+    """Return class reference mapped to table.
+
+    :param tablename: String with name of table.
+    :return: Class reference or None.
+    """
+    for c in Base._decl_class_registry.values():
+        if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
+            return c
+def auto_increase_bigint(tablename):
+    obj = get_class_by_tablename(tablename)
+    return DBSession.query(obj).count()+1
+
+
 class IdMixin(object):
     """
     It's used for automatically set id as primary key.
     """
     id = Column(BigInteger, primary_key=True)
+
 
 
 class CompositeIdMixin(object):
@@ -140,17 +155,19 @@ class RelationshipPublishingMixin(RelationshipMixin):
                             backref=backref(cls.__tablename__.lower()))
 
 
-class Language(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):  # is there need for relationship?
+class Language(Base, TableNameMixin):  # is there need for relationship?
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
     __parentname__ = 'Language'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
+    object_id = Column(BigInteger, primary_key=True)
+    client_id = Column(BigInteger, primary_key=True)
     translation_string = Column(UnicodeText(length=2**31))
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
-
+    parent = relationship('Language', remote_side=[client_id, object_id], backref=backref('language'))
 
 class Locale(Base, TableNameMixin, IdMixin):
     """
@@ -174,7 +191,7 @@ class UITranslationString(Base, TableNameMixin, IdMixin):
     translation = Column(UnicodeText(length=2**31))
 
 
-class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
+class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     """
     This table holds translation strings for user-created entities such as dictionaries names, column names etc.
     Separate classes are needed not to allow users to interfere UI directly.
@@ -192,6 +209,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     indicates separate language (dialect) we want to provide our users an opportunity to have their own dictionaries
     for the same language so we use some grouping. This grouping is provided via Language objects.
     """
+    __parentname__ = 'Language'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
@@ -209,6 +227,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     Each user that creates a language
     Parent: Dictionary.
     """
+    __parentname__ = 'Dictionary'
 
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Dictionary")
     parent_object_id = Column(BigInteger)
@@ -218,7 +237,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     name = Column(UnicodeText)  # ?
 
 
-class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipPublishingMixin):
+class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -229,6 +248,8 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
         3. With it we can restrict to use any entity types except listed here (security concerns).
     Parent: DictionaryPerspective.
     """
+    __parentname__ = 'DictionaryPerspective'
+    __entityname__ = 'DictionaryPerspectiveField'
     __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="DictionaryPerspective",
                                                                                         entity_name="DictionaryPerspectiveField")
     parent_object_id = Column(BigInteger)
@@ -240,6 +261,10 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     level = Column(UnicodeText)
     group = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
+DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
+                                                        remote_side=[DictionaryPerspectiveField.client_id,
+                                                                     DictionaryPerspectiveField.object_id],
+                                                        backref=backref('dictionaryperspectivefield'))
 
 
 class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -249,6 +274,7 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     any viable data, it's used as a 'virtual' word. Also it contains redirects that occur after dicts merge.
     Parent: DictionaryPerspective.
     """
+    __parentname__ = 'DictionaryPerspective'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
@@ -409,13 +435,31 @@ class User(Base, TableNameMixin, IdMixin):
     def check_password(self, passwd):
         return bcrypt.verify(passwd, self.password.hash)
 
+
+    def __init__(cls):
+        obj = get_class_by_tablename(cls.__tablename__)
+        if obj:
+            cls.id = DBSession.query(obj).count()+1
+        else:
+            print('UNACCEPTABLE')
+            cls.id = 1
+
     # TODO: last_sync_datetime
 
 
 class BaseGroup(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
     readable_name = Column(UnicodeText)
-    # groups = relationship('Group', backref=backref("BaseGroup"))
+    groups = relationship('Group', backref=backref("BaseGroup"))
+
+
+    def __init__(cls):
+        obj = get_class_by_tablename(cls.__tablename__)
+        if obj:
+            cls.id = DBSession.query(obj).count()+1
+        else:
+            print('UNACCEPTABLE')
+            cls.id = 1
 
 
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -425,7 +469,16 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
 
 
-class Organization(Base, TableNameMixin, IdMixin, RelationshipMixin):
+    def __init__(cls):
+        obj = get_class_by_tablename(cls.__tablename__)
+        if obj:
+            cls.id = DBSession.query(obj).count()+1
+        else:
+            print('UNACCEPTABLE')
+            cls.id = 1
+
+
+class Organization(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
     users = relationship("User", secondary=user_to_organization_association, backref=backref("organizations"))
     about = Column(UnicodeText)
@@ -439,11 +492,18 @@ class About(Base, TableNameMixin, IdMixin):
     locale_id = Column(ForeignKey("locale.id"))
 
 
-class Passhash(Base, TableNameMixin, IdMixin):
+class Passhash(Base, TableNameMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
     hash = Column(UnicodeText(length=61))
+    id = Column(BigInteger, primary_key=True)
 
     def __init__(self, password):
+        obj = get_class_by_tablename(self.__tablename__)
+        if obj:
+            self.id = DBSession.query(obj).count()+1
+        else:
+            print('UNACCEPTABLE')
+            self.id = 1
         self.hash = bcrypt.encrypt(password)
 
 
@@ -453,12 +513,13 @@ class Email(Base, TableNameMixin, IdMixin):
     user = relationship("User", backref='email')
 
 
+# id=DBSession.query(MetaWord).count()+1
 class Client(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
-    dictionaries = relationship("Dictionary", backref=backref("client"))
-    languages = relationship("Language", backref=backref("client"))
-    fields = relationship("Fields", backref=backref("client"))
-    perspectives = relationship("Perspective", backref=backref("client"))
+    dictionaries = Column(BigInteger)
+    languages = Column(BigInteger)
+    fields = Column(BigInteger)
+    perspectives = Column(BigInteger)
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
