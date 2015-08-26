@@ -1,4 +1,4 @@
-from pyramid.response import response
+from pyramid.response import Response
 from pyramid.view import view_config
 
 from sqlalchemy.exc import DBAPIError
@@ -52,7 +52,7 @@ from pyramid.view import forbidden_view_config
 
 # from pyramid.chameleon_zpt import render_template_to_response
 from pyramid.renderers import render_to_response
-from pyramid.response import Fileresponse
+from pyramid.response import FileResponse
 
 import os
 import datetime
@@ -65,6 +65,8 @@ import swiftclient.client as swiftclient
 import random
 import sqlalchemy
 from sqlalchemy import create_engine
+
+from sqlalchemy.inspection import inspect
 # import redis
 
 
@@ -156,10 +158,10 @@ def create_language(request):
         if parent_client_id and parent_object_id:
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id)
 
-        language = Language(object_id=len(client.languages)+1, client_id=variables['auth'], translation_string = translation_string)
+        client.languages += 1
+        language = Language(object_id=client.languages, client_id=variables['auth'], translation_string = translation_string)
         DBSession.add(language)
         DBSession.flush()
-        client.languages.add(language)
         if parent:
             language.parent = parent
         request.response.status = HTTPOk.code
@@ -256,14 +258,14 @@ def create_dictionary(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id)
-        dictionary = Dictionary(object_id=len(client.dictionaries)+1,
+        client.dictionaries += 1
+        dictionary = Dictionary(object_id=client.dictionaries,
                                 client_id=variables['auth'],
                                 name=name,
                                 state='WiP',
                                 parent = parent)
         DBSession.add(dictionary)
         DBSession.flush()
-        client.dictionaries.add(dictionary)
         editbase = DBSession.query(BaseGroup).filter_by(name='edit')  # TODO: add roles for dictionary instead
         viewbase = DBSession.query(BaseGroup).filter_by(name='view')
         edit = Group(parent = editbase,
@@ -408,15 +410,14 @@ def create_perspective(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id)
-
-        perspective = DictionaryPerspective(object_id=len(client.perspectives)+1,
+        client.perspectives += 1
+        perspective = DictionaryPerspective(object_id=client.perspectives,
                                 client_id=variables['auth'],
                                 name=name,
                                 state='WiP',
                                 parent = parent)
         DBSession.add(perspective)
         DBSession.flush()
-        client.perspectives.add(perspective)
         editbase = DBSession.query(BaseGroup).filter_by(name='edit')
         viewbase = DBSession.query(BaseGroup).filter_by(name='view')
         edit = Group(parent = editbase,
@@ -685,6 +686,26 @@ def all_languages(language):
     return languages
 
 
+def check_for_client(obj, clients):
+    try:
+        if obj.client_id in clients:
+            return True
+    except:
+        return False
+    for entry in dir(obj):
+        if entry in inspect(type(obj)).relationships:
+            i = inspect(obj.__class__).relationships[entry]
+            if i.direction.name == "ONETOMANY":
+                x = getattr(obj, str(entry))
+                answer = False
+                for xx in x:
+                    answer = answer or check_for_client(xx, clients)
+                    if answer:
+                        break
+                return answer
+    return False
+
+
 @view_config(route_name = 'dictionaries', renderer = 'json')
 def dictionaries_list(request):
     user_created = None
@@ -725,15 +746,14 @@ def dictionaries_list(request):
         dicts = dicts.filter(Dictionary.parent.in_(langs))
     # add geo coordinates
     if user_participated:
-        clients = DBSession.query(Client.id).filter_by(user_id=user_created).all()
-        # bad way, not sure if even works
-        dicts = dicts.join(DictionaryPerspective).filter_by(DictionaryPerspective.client_id.in_(clients)).\
-                    join(DictionaryPerspectiveField).filter_by(DictionaryPerspectiveField.client_id.in_(clients)).\
-                    join(DictionaryPerspective).filter_by(DictionaryPerspective.client_id.in_(clients)).\
-                    join(LexicalEntry).filter_by(LexicalEntry.client_id.in_(clients)).\
-                    join(LevelOneEntity).filter_by(LevelOneEntity.client_id.in_(clients)).\
-                    join(LevelTwoEntity).filter_by(LevelTwoEntity.client_id.in_(clients)).\
-                    join(GroupingEntity).filter_by(GroupingEntity.client_id.in_(clients))
+        clients = DBSession.query(Client.id).filter_by(user_id=user_participated).all()
+
+        dictstemp = []
+        for dicti in dicts:
+            if check_for_client(dicti, clients):
+                dictstemp += [dicti]
+        dicts = dictstemp
+
     dictionaries = []
     for dicti in dicts:
         dictionaries += [{'object_id': dicti.object_id, 'client_id': dicti.client_id}]
@@ -818,8 +838,8 @@ def create_perspective_fields(request):
 
         perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id, object_id=parent_object_id)
         for entry in fields:
-
-            field = DictionaryPerspectiveField(object_id=len(client.fields)+1,
+            client.fields += 1
+            field = DictionaryPerspectiveField(object_id=client.fields,
                                     client_id=variables['auth'], entity_type=entry['entity_type'], data_type=entry['data_type'])
             DBSession.add(field)
             DBSession.flush()
@@ -831,7 +851,8 @@ def create_perspective_fields(request):
                 field.level = 'L1E'
             if 'contains' in entry:
                 for ent in entry['contains']:
-                    field2 = DictionaryPerspectiveField(object_id=len(client.fields)+1,
+                    client.fields += 1
+                    field2 = DictionaryPerspectiveField(object_id=client.fields,
                                                         client_id=variables['auth'],
                                                         entity_type=entry['entity_type'],
                                                         data_type=entry['data_type'],
