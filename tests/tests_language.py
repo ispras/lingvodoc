@@ -237,12 +237,63 @@ class TestCreateLanguageSuccessCondition(unittest.TestCase):
         # request.method = 'POST'
         # request.POST.add(key='translation_string', value='something')
         response = self.app.post('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.post('/language', params={'testing_string': 'imastring'})
-        self.assertEqual(response['status'], HTTPOk.code)
-        language = DBSession.query(Language).filter_by(testing_string='imastring').first()
-        self.assertNotEqual(language, None)
-        print ('CLIENT ID HERE:',language.client_id)
-        self.assertNotEqual(language.testing_string, 'imastring')
+        response = self.app.post('/language', params={'translation_string': 'imastring'})
+        self.assertEqual(response.status_int , HTTPOk.code)
 
+        language = DBSession.query(Language).filter_by(translation_string='imastring').first()
+        self.assertNotEqual(language, None)
+        self.assertEqual(language.object_id, 1)
+        self.assertEqual(language.client_id, 2)
+
+
+class TestCreateLanguageFailureCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        self.config.testing_securitypolicy(userid='1',
+                                           permissive=True)
+        import webtest
+        from pyramid import  paster
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        myapp = paster.get_app('testing.ini')
+        self.app = webtest.TestApp(myapp)
+        from lingvodoc.models import (
+            Base,
+            User,
+            Client,
+            Passhash
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+        with transaction.manager:
+            new_user = User(id=1, login='test')
+            new_pass = Passhash(password='pass')
+            DBSession.add(new_pass)
+            new_user.password = new_pass
+            DBSession.add(new_user)
+            new_client = Client(id=1, user=new_user)
+            DBSession.add(new_client)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_create_language(self):
+        from lingvodoc.views import create_language
+        from lingvodoc.models import (
+            Base,
+            Dictionary,
+            Language
+             )
+        # from webob.multidict import MultiDict
+        # from pyramid.request import Request
+        # request = testing.DummyRequest()
+        # request.registry = self.config.registry
+        # request.POST = MultiDict()
+        # request.method = 'POST'
+        # request.POST.add(key='translation_string', value='something')
+        response = self.app.post('/language', params={'translation_string': 'imastring'}, status = HTTPBadRequest.code)
+        self.assertEqual(response.status_int, HTTPBadRequest.code)
 
 

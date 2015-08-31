@@ -139,10 +139,10 @@ def delete_language(request):
         return {'status': HTTPNotFound.code, 'error': str("No such language in the system")}
 
 
-@view_config(route_name = 'language', renderer = 'json', request_method = 'POST')
+@view_config(route_name = 'create_language', renderer = 'json', request_method = 'POST')
 def create_language(request):
     try:
-        variables = {'auth': authenticated_userid[request]}
+        variables = {'auth': request.authenticated_userid}
         try:
             parent_client_id = request.POST.getone('parent_client_id')
             parent_object_id = request.POST.getone('parent_object_id')
