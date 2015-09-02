@@ -189,3 +189,59 @@ class TestDeleteDictionaryFailureCondition(unittest.TestCase):
         request.matchdict['perspective_object_id'] = 42
         response = delete_perspective(request)
         self.assertEqual(response['status'], HTTPNotFound.code)
+
+
+class TestViewPerspectiveStatusSuccessCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        from lingvodoc.models import (
+            Base,
+            DictionaryPerspective
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+        with transaction.manager:
+            new_dict = DictionaryPerspective(client_id=1, object_id=1, name='test', state='WiP')
+            DBSession.add(new_dict)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_view_perspective_status(self):
+        from lingvodoc.views import view_perspective_status
+        request = testing.DummyRequest()
+        request.matchdict['perspective_client_id'] = 1
+        request.matchdict['perspective_object_id'] = 1
+        response = view_perspective_status(request)
+        self.assertEqual(response['status'], HTTPOk.code)
+        self.assertEqual(response['state'], 'WiP')
+
+
+class TestViewPerspectiveFailureSuccessCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        from lingvodoc.models import (
+            Base,
+            Dictionary
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_view_perspective_status(self):
+        from lingvodoc.views import view_perspective_status
+        request = testing.DummyRequest()
+        request.matchdict['perspective_client_id'] = 42
+        request.matchdict['perspective_object_id'] = 42
+        response = view_perspective_status(request)
+        self.assertEqual(response['status'], HTTPNotFound.code)

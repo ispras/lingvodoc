@@ -302,8 +302,6 @@ def view_dictionary_status(request):
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            response['client_id'] = dictionary.client_id
-            response['object_id'] = dictionary.object_id
             response['state'] = dictionary.state
             request.response.status = HTTPOk.code
             response['status'] = HTTPOk.code
@@ -321,9 +319,7 @@ def edit_dictionary_status(request):
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            response['client_id'] = dictionary.client_id
-            response['object_id'] = dictionary.object_id
-            response['state'] = dictionary.state
+            dictionary.state = state
             request.response.status = HTTPOk.code
             response['status'] = HTTPOk.code
             return response
@@ -388,52 +384,52 @@ def delete_perspective(request):
         return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
 
 
-# @view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST')
-# def create_perspective(request):
-#     try:
-#         variables = {'auth': authenticated_userid(request)}
-#         parent_client_id = request.matchdict.get('client_id')
-#         parent_object_id = request.matchdict.get('object_id')
-#         name = request.POST.getone('name')
-#
-#         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-#         if not client:
-#             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-#         user = DBSession.query(User).filter_by(id=client.user_id).first()
-#         if not user:
-#             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-#
-#         parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id)
-#         client.perspectives += 1
-#         perspective = DictionaryPerspective(object_id=client.perspectives,
-#                                 client_id=variables['auth'],
-#                                 name=name,
-#                                 state='WiP',
-#                                 parent = parent)
-#         DBSession.add(perspective)
-#         DBSession.flush()
-#         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-#             new_group = Group(parent = base,
-#                      subject = 'perspective' + str(perspective.object_id) + '_' + str(perspective.client_id)
-#                      )
-#             new_group.users.append(user)
-#             DBSession.add(new_group)
-#             DBSession.flush()
-#         request.response.status = HTTPOk.code
-#         return {'status': request.response.status,
-#                 'object_id': perspective.object_id,
-#                 'client_id': perspective.client_id}
-#     except KeyError as e:
-#         request.response.status = HTTPBadRequest.code
-#         return {'status': request.response.status, 'error': str(e)}
-#
-#     except IntegrityError as e:
-#         request.response.status = HTTPInternalServerError.code
-#         return {'status': request.response.status, 'error': str(e)}
-#
-#     except CommonException as e:
-#         request.response.status = HTTPConflict.code
-#         return {'status': request.response.status, 'error': str(e)}
+@view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST')
+def create_perspective(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        parent_client_id = request.matchdict.get('client_id')
+        parent_object_id = request.matchdict.get('object_id')
+        name = request.POST.getone('name')
+
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id)
+        client.perspectives += 1
+        perspective = DictionaryPerspective(object_id=client.perspectives,
+                                client_id=variables['auth'],
+                                name=name,
+                                state='WiP',
+                                parent = parent)
+        DBSession.add(perspective)
+        DBSession.flush()
+        for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+            new_group = Group(parent = base,
+                     subject = 'perspective' + str(perspective.object_id) + '_' + str(perspective.client_id)
+                     )
+            new_group.users.append(user)
+            DBSession.add(new_group)
+            DBSession.flush()
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status,
+                'object_id': perspective.object_id,
+                'client_id': perspective.client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
 
 
 @view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'GET')
@@ -441,10 +437,8 @@ def view_perspective_status(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
-    perspective = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        response['client_id'] = perspective.client_id
-        response['object_id'] = perspective.object_id
         response['state'] = perspective.state
         request.response.status = HTTPOk.code
         response['status'] = HTTPOk.code
@@ -460,11 +454,9 @@ def edit_perspective_status(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     state = request.matchdict.get('state')
-    perspective = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        response['client_id'] = perspective.client_id
-        response['object_id'] = perspective.object_id
-        response['state'] = perspective.state
+        perspective.state = state
         request.response.status = HTTPOk.code
         response['status'] = HTTPOk.code
         return response

@@ -19,9 +19,9 @@ class TestDictionariesListSuccessCondition(unittest.TestCase):
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
         with transaction.manager:
-            new_dict=Dictionary(client_id=1,object_id=1,name='test')
+            new_dict=Dictionary(client_id=1, object_id=1, name='test')
             DBSession.add(new_dict)
-            new_dict=Dictionary(client_id=1,object_id=2,name='test2')
+            new_dict=Dictionary(client_id=1, object_id=2, name='test2')
             DBSession.add(new_dict)
 
     def tearDown(self):
