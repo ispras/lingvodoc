@@ -42,8 +42,24 @@ import datetime
 
 from sqlalchemy.inspection import inspect
 
+from sqlalchemy.ext.compiler import compiles
+
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
+
+
+class SLBigInteger(BigInteger):
+    pass
+
+
+@compiles(SLBigInteger, 'sqlite')
+def bi_c(element, compiler, **kw):
+    return "INTEGER"
+
+
+@compiles(SLBigInteger)
+def bi_c(element, compiler, **kw):
+    return compiler.visit_BIGINT(element, **kw)
 
 
 def recursive_content(self):
@@ -81,26 +97,11 @@ class TableNameMixin(object):
         return cls.__name__.lower()
 
 
-def get_class_by_tablename(tablename):
-    """Return class reference mapped to table.
-
-    :param tablename: String with name of table.
-    :return: Class reference or None.
-    """
-    for c in Base._decl_class_registry.values():
-        if hasattr(c, '__tablename__') and c.__tablename__ == tablename:
-            return c
-def auto_increase_bigint(tablename):
-    obj = get_class_by_tablename(tablename)
-    return DBSession.query(obj).count()+1
-
-
 class IdMixin(object):
     """
     It's used for automatically set id as primary key.
     """
-    id = Column(BigInteger, primary_key=True)
-
+    id = Column(SLBigInteger(), primary_key=True)
 
 
 class CompositeIdMixin(object):
@@ -167,13 +168,15 @@ class Language(Base, TableNameMixin):  # is there need for relationship?
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
-    parent = relationship('Language', remote_side=[client_id, object_id], backref=backref('language'))
+    parent = relationship('Language', remote_side=[client_id,  object_id], backref=backref('language'))
 
-class Locale(Base, TableNameMixin, IdMixin):
+
+class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
     """
     This entity specifies list of available translations (for words in dictionaries and for UI).
     Should be added as admin only.
     """
+    __parentname__ = 'Language'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
@@ -261,6 +264,7 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     level = Column(UnicodeText)
     group = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
+    state = Column(UnicodeText)
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
                                                                      DictionaryPerspectiveField.object_id],
@@ -305,6 +309,7 @@ class EntityMixin(object):
     locale_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class PublishingEntityMixin(object):
     """
@@ -420,6 +425,9 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 )
 
 
+
+
+
 class User(Base, TableNameMixin, IdMixin):
     login = Column(UnicodeText(length=30), unique=True)
     name = Column(UnicodeText)
@@ -435,15 +443,6 @@ class User(Base, TableNameMixin, IdMixin):
     def check_password(self, passwd):
         return bcrypt.verify(passwd, self.password.hash)
 
-
-    def __init__(cls):
-        obj = get_class_by_tablename(cls.__tablename__)
-        if obj:
-            cls.id = DBSession.query(obj).count()+1
-        else:
-            print('UNACCEPTABLE')
-            cls.id = 1
-
     # TODO: last_sync_datetime
 
 
@@ -451,15 +450,8 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
     readable_name = Column(UnicodeText)
     groups = relationship('Group', backref=backref("BaseGroup"))
-
-
-    def __init__(cls):
-        obj = get_class_by_tablename(cls.__tablename__)
-        if obj:
-            cls.id = DBSession.query(obj).count()+1
-        else:
-            print('UNACCEPTABLE')
-            cls.id = 1
+    dictionary_default = Column(Boolean, default=False)
+    perspective_default = Column(Boolean, default=False)
 
 
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -467,15 +459,6 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject = Column(UnicodeText)
     users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
-
-
-    def __init__(cls):
-        obj = get_class_by_tablename(cls.__tablename__)
-        if obj:
-            cls.id = DBSession.query(obj).count()+1
-        else:
-            print('UNACCEPTABLE')
-            cls.id = 1
 
 
 class Organization(Base, TableNameMixin, IdMixin):
@@ -492,18 +475,11 @@ class About(Base, TableNameMixin, IdMixin):
     locale_id = Column(ForeignKey("locale.id"))
 
 
-class Passhash(Base, TableNameMixin):
+class Passhash(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
     hash = Column(UnicodeText(length=61))
-    id = Column(BigInteger, primary_key=True)
 
     def __init__(self, password):
-        obj = get_class_by_tablename(self.__tablename__)
-        if obj:
-            self.id = DBSession.query(obj).count()+1
-        else:
-            print('UNACCEPTABLE')
-            self.id = 1
         self.hash = bcrypt.encrypt(password)
 
 
@@ -513,13 +489,12 @@ class Email(Base, TableNameMixin, IdMixin):
     user = relationship("User", backref='email')
 
 
-# id=DBSession.query(MetaWord).count()+1
 class Client(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
-    dictionaries = Column(BigInteger)
-    languages = Column(BigInteger)
-    fields = Column(BigInteger)
-    perspectives = Column(BigInteger)
+    dictionaries = Column(BigInteger, default=0)
+    languages = Column(BigInteger, default=0)
+    fields = Column(BigInteger, default=0)
+    perspectives = Column(BigInteger, default=0)
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')

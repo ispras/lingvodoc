@@ -1,0 +1,680 @@
+GLOB sdist-make: /home/student/projects/lingvodoc/setup.py
+py34 inst-nodeps: /home/student/projects/lingvodoc/.tox/dist/lingvodoc-0.0.zip
+py34 installed: alembic==0.8.2,Chameleon==2.22,lingvodoc==0.0,Mako==1.0.2,MarkupSafe==0.23,passlib==1.6.5,PasteDeploy==1.5.2,py==1.4.30,py-bcrypt==0.4,Pygments==2.0.2,pyramid==1.5.7,pyramid-chameleon==0.3,pyramid-debugtoolbar==2.4.1,pyramid-mako==1.0.2,pyramid-tm==0.12,pytest==2.7.2,python-editor==0.4,repoze.lru==0.6,requests==2.7.0,simplejson==3.8.0,SQLAlchemy==1.0.8,transaction==1.4.4,translationstring==1.3,venusian==1.0,waitress==0.8.9,WebOb==1.4.1,wheel==0.24.0,zope.deprecation==4.1.2,zope.interface==4.1.2,zope.sqlalchemy==0.7.6
+py34 runtests: PYTHONHASHSEED='2908423488'
+py34 runtests: commands[0] | py.test
+============================= test session starts ==============================
+platform linux -- Python 3.4.0 -- py-1.4.30 -- pytest-2.7.2
+rootdir: /home/student/projects/lingvodoc, inifile: 
+collected 161 items / 121 errors
+
+virtualenv/lib/python3.4/site-packages/iso8601/test_iso8601.py ............................................
+virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_iniparser.py .................
+virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_types.py ...................................................................................................
+virtualenv/lib/python3.4/site-packages/pbr/tests/testpackage/test-requirements.txt .
+
+==================================== ERRORS ====================================
+ ERROR collecting virtualenv/lib/python3.4/site-packages/debtcollector/tests/test_deprecation.py 
+virtualenv/lib/python3.4/site-packages/debtcollector/tests/test_deprecation.py:21: in <module>
+    from debtcollector.tests import base as test_base
+virtualenv/lib/python3.4/site-packages/debtcollector/tests/base.py:18: in <module>
+    from oslotest import base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/functional/test_access.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/functional/test_access.py:17: in <module>
+    from tempest_lib import base
+E   ImportError: No module named 'tempest_lib'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/functional/test_cli.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/functional/test_cli.py:20: in <module>
+    from tempest_lib.cli import base
+E   ImportError: No module named 'tempest_lib'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_auth_token_middleware.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_auth_token_middleware.py:25: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_base.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_base.py:14: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_cms.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_cms.py:17: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_discovery.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_discovery.py:18: in <module>
+    from testtools import matchers
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_ec2utils.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_ec2utils.py:17: in <module>
+    import testtools
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_fixtures.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_fixtures.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_hacking_checks.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_hacking_checks.py:15: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_http.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_http.py:18: in <module>
+    from testtools import matchers
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_https.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_https.py:13: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_keyring.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_keyring.py:15: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_memcache_crypt.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_memcache_crypt.py:14: in <module>
+    import testtools
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_s3_token_middleware.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_s3_token_middleware.py:15: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_session.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_session.py:18: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_shell.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_shell.py:20: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_utils.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/test_utils.py:17: in <module>
+    import testresources
+E   ImportError: No module named 'testresources'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/apiclient/test_exceptions.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/apiclient/test_exceptions.py:19: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_access.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_access.py:20: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_auth.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_auth.py:15: in <module>
+    from keystoneclient.tests.unit.auth import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/utils.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_cli.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_cli.py:16: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_conf.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_conf.py:15: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_default_cli.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_default_cli.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_common.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_common.py:25: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_v2.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_v2.py:17: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_v3.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_v3.py:17: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_v3_federated.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_identity_v3_federated.py:20: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_loading.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_loading.py:17: in <module>
+    from keystoneclient.tests.unit.auth import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/utils.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_password.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_password.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_token.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_token.py:19: in <module>
+    from keystoneclient.tests.unit.auth import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/utils.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_token_endpoint.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/auth/test_token_endpoint.py:13: in <module>
+    from testtools import matchers
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/generic/test_client.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/generic/test_client.py:19: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/generic/test_shell.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/generic/test_shell.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_access.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_access.py:17: in <module>
+    import testresources
+E   ImportError: No module named 'testresources'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_auth.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_auth.py:20: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_certificates.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_certificates.py:14: in <module>
+    import testresources
+E   ImportError: No module named 'testresources'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_client.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_client.py:23: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_discovery.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_discovery.py:15: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_ec2.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_ec2.py:13: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_endpoints.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_endpoints.py:15: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_extensions.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_extensions.py:13: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_roles.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_roles.py:15: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_service_catalog.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_service_catalog.py:17: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_services.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_services.py:15: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_shell.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_shell.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_tenants.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_tenants.py:17: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_tokens.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_tokens.py:18: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_users.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/test_users.py:15: in <module>
+    from keystoneclient.tests.unit.v2_0 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v2_0/utils.py:13: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_access.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_access.py:21: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_auth.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_auth.py:16: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_auth_saml2.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_auth_saml2.py:16: in <module>
+    from lxml import etree
+E   ImportError: No module named 'lxml'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_client.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_client.py:23: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_credentials.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_credentials.py:15: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_discover.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_discover.py:14: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_domains.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_domains.py:15: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_ec2.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_ec2.py:13: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_endpoint_filter.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_endpoint_filter.py:17: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_endpoint_policy.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_endpoint_policy.py:17: in <module>
+    from keystoneclient.tests.unit.v3 import test_endpoint_filter
+.tox/py34/lib/python3.4/site-packages/_pytest/assertion/rewrite.py:165: in load_module
+    py.builtin.exec_(co, mod.__dict__)
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_endpoint_filter.py:17: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_endpoints.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_endpoints.py:16: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_federation.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_federation.py:19: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_groups.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_groups.py:17: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_oauth1.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_oauth1.py:16: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_policies.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_policies.py:15: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_projects.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_projects.py:16: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_regions.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_regions.py:17: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_role_assignments.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_role_assignments.py:14: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_roles.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_roles.py:18: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_service_catalog.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_service_catalog.py:17: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_services.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_services.py:15: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_simple_cert.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_simple_cert.py:14: in <module>
+    import testresources
+E   ImportError: No module named 'testresources'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_tokens.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_tokens.py:15: in <module>
+    import testresources
+E   ImportError: No module named 'testresources'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_trusts.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_trusts.py:19: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_users.py 
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/test_users.py:18: in <module>
+    from keystoneclient.tests.unit.v3 import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/v3/utils.py:18: in <module>
+    from keystoneclient.tests.unit import utils
+virtualenv/lib/python3.4/site-packages/keystoneclient/tests/unit/utils.py:18: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_cfg.py 
+virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_cfg.py:23: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_cfgfilter.py 
+virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_cfgfilter.py:15: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_fixture.py 
+virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_fixture.py:18: in <module>
+    from oslotest import base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_generator.py 
+virtualenv/lib/python3.4/site-packages/oslo_config/tests/test_generator.py:17: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_factory.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_factory.py:17: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_fixture.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_fixture.py:15: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_gettextutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_gettextutils.py:21: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_handler.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_handler.py:19: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_lazy.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_lazy.py:17: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_locale_dir_variable.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_locale_dir_variable.py:15: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_logging.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_logging.py:17: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_message.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_message.py:21: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_public_api.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_public_api.py:17: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_translate.py 
+virtualenv/lib/python3.4/site-packages/oslo_i18n/tests/test_translate.py:19: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_serialization/tests/test_jsonutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_serialization/tests/test_jsonutils.py:20: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_eventletutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_eventletutils.py:17: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_excutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_excutils.py:18: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_fileutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_fileutils.py:22: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_fixture.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_fixture.py:19: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_importutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_importutils.py:19: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_netutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_netutils.py:19: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_reflection.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_reflection.py:17: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_strutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_strutils.py:20: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_timeutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_timeutils.py:21: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_uuidutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_uuidutils.py:18: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_versionutils.py 
+virtualenv/lib/python3.4/site-packages/oslo_utils/tests/test_versionutils.py:16: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_commands.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_commands.py:41: in <module>
+    from testtools import content
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_core.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_core.py:45: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_files.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_files.py:20: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_hooks.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_hooks.py:44: in <module>
+    from testtools.content import text_content
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_integration.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_integration.py:17: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_packaging.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_packaging.py:47: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_setup.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_setup.py:30: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_util.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_util.py:20: in <module>
+    import testscenarios
+E   ImportError: No module named 'testscenarios'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_version.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_version.py:18: in <module>
+    from testtools import matchers
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/pbr/tests/test_wsgi.py 
+virtualenv/lib/python3.4/site-packages/pbr/tests/test_wsgi.py:28: in <module>
+    import fixtures
+E   ImportError: No module named 'fixtures'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_callback.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_callback.py:3: in <module>
+    from testtools.matchers import GreaterThan
+E   ImportError: No module named 'testtools'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_dispatch.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_dispatch.py:1: in <module>
+    from stevedore.tests import utils
+virtualenv/lib/python3.4/site-packages/stevedore/tests/utils.py:1: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_driver.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_driver.py:8: in <module>
+    from stevedore.tests import test_extension
+.tox/py34/lib/python3.4/site-packages/_pytest/assertion/rewrite.py:165: in load_module
+    py.builtin.exec_(co, mod.__dict__)
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_extension.py:4: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_enabled.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_enabled.py:2: in <module>
+    from stevedore.tests import utils
+virtualenv/lib/python3.4/site-packages/stevedore/tests/utils.py:1: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_example_fields.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_example_fields.py:5: in <module>
+    from stevedore.tests import utils
+virtualenv/lib/python3.4/site-packages/stevedore/tests/utils.py:1: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_example_simple.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_example_simple.py:5: in <module>
+    from stevedore.tests import utils
+virtualenv/lib/python3.4/site-packages/stevedore/tests/utils.py:1: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_extension.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_extension.py:4: in <module>
+    import mock
+E   ImportError: No module named 'mock'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_hook.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_hook.py:2: in <module>
+    from stevedore.tests import utils
+virtualenv/lib/python3.4/site-packages/stevedore/tests/utils.py:1: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_named.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_named.py:2: in <module>
+    from stevedore.tests import utils
+virtualenv/lib/python3.4/site-packages/stevedore/tests/utils.py:1: in <module>
+    from oslotest import base as test_base
+E   ImportError: No module named 'oslotest'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_sphinxext.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_sphinxext.py:18: in <module>
+    from stevedore import sphinxext
+virtualenv/lib/python3.4/site-packages/stevedore/sphinxext.py:17: in <module>
+    from docutils import nodes
+E   ImportError: No module named 'docutils'
+ ERROR collecting virtualenv/lib/python3.4/site-packages/stevedore/tests/test_test_manager.py 
+virtualenv/lib/python3.4/site-packages/stevedore/tests/test_test_manager.py:1: in <module>
+    from mock import Mock, sentinel
+E   ImportError: No module named 'mock'
+============== 161 passed, 1 warnings, 121 error in 3.47 seconds ===============
+ERROR: InvocationError: '/home/student/projects/lingvodoc/.tox/py34/bin/py.test'
+___________________________________ summary ____________________________________
+ERROR:   py34: commands failed
