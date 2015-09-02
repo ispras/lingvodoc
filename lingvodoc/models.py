@@ -168,7 +168,7 @@ class Language(Base, TableNameMixin):  # is there need for relationship?
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
-    parent = relationship('Language', remote_side=[client_id, object_id], backref=backref('language'))
+    parent = relationship('Language', remote_side=[client_id,  object_id], backref=backref('language'))
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -183,8 +183,6 @@ class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
     shortcut = Column(UnicodeText)
     intl_name = Column(UnicodeText(length=2**31))
 
-    # def __init__(cls,):
-    #     id_autoincrease(cls)
 
 class UITranslationString(Base, TableNameMixin, IdMixin):
     """
@@ -452,6 +450,8 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
     readable_name = Column(UnicodeText)
     groups = relationship('Group', backref=backref("BaseGroup"))
+    dictionary_default = Column(Boolean, default=False)
+    perspective_default = Column(Boolean, default=False)
 
 
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):

@@ -116,7 +116,7 @@ class TestEditLanguageFailureCondition(unittest.TestCase):
         DBSession.remove()
         testing.tearDown()
 
-    def test_view_language(self):
+    def test_edit_language(self):
         from lingvodoc.views import edit_language
         request = testing.DummyRequest()
         request.matchdict['client_id'] = 42
@@ -147,7 +147,7 @@ class TestDeleteLanguageSuccessCondition(unittest.TestCase):
         testing.tearDown()
 
     def test_delete_language(self):
-        from lingvodoc.views import edit_language
+        from lingvodoc.views import delete_language
         from lingvodoc.models import (
             Base,
             Dictionary,
@@ -156,12 +156,12 @@ class TestDeleteLanguageSuccessCondition(unittest.TestCase):
         request = testing.DummyRequest()
         request.matchdict['client_id'] = 1
         request.matchdict['object_id'] = 1
-        response = edit_language(request)
+        response = delete_language(request)
 
         self.assertEqual(response['status'], HTTPOk.code)
         language = DBSession.query(Language).filter_by(client_id=1, object_id=1).first()
         self.assertNotEqual(language, None)
-        self.assertNotEqual(language.marked_for_deletion, True)
+        self.assertEqual(language.marked_for_deletion, True)
 
 
 class TestDeleteLanguageFailureCondition(unittest.TestCase):
