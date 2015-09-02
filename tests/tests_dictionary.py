@@ -285,3 +285,121 @@ class TestCreateDictionaryFailureCondition(unittest.TestCase):
         self.assertEqual(response.status_int, HTTPBadRequest.code)
 
 
+class TestViewDictionaryStatusSuccessCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        from lingvodoc.models import (
+            Base,
+            Dictionary
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+        with transaction.manager:
+            new_dict = Dictionary(client_id=1, object_id=1, name='test', state='WiP')
+            DBSession.add(new_dict)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_view_dictionary_status(self):
+        from lingvodoc.views import view_dictionary_status
+        request = testing.DummyRequest()
+        request.matchdict['client_id'] = 1
+        request.matchdict['object_id'] = 1
+        response = view_dictionary_status(request)
+        self.assertEqual(response['status'], HTTPOk.code)
+        self.assertEqual(response['state'], 'WiP')
+
+
+class TestViewDictionaryFailureSuccessCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        from lingvodoc.models import (
+            Base,
+            Dictionary
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_view_dictionary_status(self):
+        from lingvodoc.views import view_dictionary_status
+        request = testing.DummyRequest()
+        request.matchdict['client_id'] = 42
+        request.matchdict['object_id'] = 42
+        response = view_dictionary_status(request)
+        self.assertEqual(response['status'], HTTPNotFound.code)
+
+
+class TestEditDictionaryStatusSuccessCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        from lingvodoc.models import (
+            Base,
+            Dictionary
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+        with transaction.manager:
+            new_dict = Dictionary(client_id=1, object_id=1, name='test', state='WiP')
+            DBSession.add(new_dict)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_view_dictionary_status(self):
+        from lingvodoc.views import edit_dictionary_status
+        from lingvodoc.models import Dictionary
+        request = testing.DummyRequest()
+        request.matchdict['client_id'] = 1
+        request.matchdict['object_id'] = 1
+        request.matchdict['state'] = 'testing'
+        response = edit_dictionary_status(request)
+        self.assertEqual(response['status'], HTTPOk.code)
+        dictionary = DBSession.query(Dictionary).filter_by(client_id=1, object_id=1).first()
+        self.assertNotEqual(dictionary, None)
+        self.assertEqual(dictionary.state, 'testing')
+
+
+class TestEditDictionaryStatusFailureCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        from lingvodoc.models import (
+            Base,
+            Dictionary
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_view_dictionary_status(self):
+        from lingvodoc.views import edit_dictionary_status
+        from lingvodoc.models import Dictionary
+        request = testing.DummyRequest()
+        request.matchdict['client_id'] = 42
+        request.matchdict['object_id'] = 42
+        request.matchdict['state'] = 'testing'
+        response = edit_dictionary_status(request)
+        self.assertEqual(response['status'], HTTPNotFound.code)
+
+

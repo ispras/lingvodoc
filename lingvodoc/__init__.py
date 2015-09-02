@@ -98,6 +98,12 @@ def configure_routes(config):
                      pattern='dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}')
 
+    # API #POST
+    # Creating perspective
+    config.add_route(name='create_perspective',
+                     pattern='dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'perspective')
+
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create entities, view entities, create
     # publisher-entities)
@@ -162,14 +168,13 @@ def main(global_config, **settings):
     authentication_policy = AuthTktAuthenticationPolicy('secret_string_that_you_should_change',
                                                         hashalg='sha512', callback=groupfinder)
     authorization_policy = ACLAuthorizationPolicy()
-
+    config_file = global_config['__file__']
     parser = ConfigParser()
-    parser.read('development.ini')
+    parser.read(config_file)
     storage = dict()
     for k, v in parser.items('backend:storage'):
         storage[k] = v
     settings['storage'] = storage
-
     config = Configurator(settings=settings)
     config.set_authentication_policy(authentication_policy)
     config.set_authorization_policy(authorization_policy)
