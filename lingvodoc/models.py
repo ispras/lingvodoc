@@ -156,7 +156,7 @@ class RelationshipPublishingMixin(RelationshipMixin):
                             backref=backref(cls.__tablename__.lower()))
 
 
-class Language(Base, TableNameMixin):  # is there need for relationship?
+class Language(Base, TableNameMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -165,6 +165,7 @@ class Language(Base, TableNameMixin):  # is there need for relationship?
     object_id = Column(BigInteger, primary_key=True)
     client_id = Column(BigInteger, primary_key=True)
     translation_string = Column(UnicodeText(length=2**31))
+    # name = Column(UnicodeText(length=2**31))  # ?
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
@@ -217,7 +218,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
-    name = Column(UnicodeText)
+    name = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
 
 
@@ -237,7 +238,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    name = Column(UnicodeText)  # ?
+    name = Column(UnicodeText(length=2**31))
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -425,9 +426,6 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 )
 
 
-
-
-
 class User(Base, TableNameMixin, IdMixin):
     login = Column(UnicodeText(length=30), unique=True)
     name = Column(UnicodeText)
@@ -495,6 +493,7 @@ class Client(Base, TableNameMixin, IdMixin):
     languages = Column(BigInteger, default=0)
     fields = Column(BigInteger, default=0)
     perspectives = Column(BigInteger, default=0)
+    uets = Column(BigInteger, default=0)
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')

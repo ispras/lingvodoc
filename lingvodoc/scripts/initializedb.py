@@ -44,17 +44,6 @@ def main(argv=sys.argv):
     Base.metadata.create_all(engine)
     with transaction.manager:
 
-        # creating administrator account
-        admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
-        if not admin_account:
-            print("Admin record not found, initializing")
-            admin_account = User(login = accounts['administrator_login'])
-            pwd = Passhash(password=accounts['administrator_password'])
-            admin_account.password = pwd
-            DBSession.add(pwd)
-            DBSession.add(admin_account)
-            DBSession.flush()
-
         # creating base locales
         ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
         en_locale = Locale(id=2, shortcut="en", intl_name="English")
@@ -69,6 +58,17 @@ def main(argv=sys.argv):
         DBSession.flush()
         DBSession.add(fr_locale)
         DBSession.flush()
+
+        # creating administrator account
+        admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
+        if not admin_account:
+            print("Admin record not found, initializing")
+            admin_account = User(login = accounts['administrator_login'])
+            pwd = Passhash(password=accounts['administrator_password'])
+            admin_account.password = pwd
+            DBSession.add(pwd)
+            DBSession.add(admin_account)
+            DBSession.flush()
 
         # creating base groups
         can_create_dictionaries = BaseGroup(name = "can_create_dictionaries", readable_name="Can create dictionaries")
