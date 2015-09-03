@@ -12,7 +12,7 @@ module.exports = function(grunt) {
             dist: {
                 options: {
                     style: 'compressed',
-                    loadPath: 'bower_components/bootstrap-sass/assets/stylesheets/bootstrap'
+                    loadPath: 'bower_components/bootstrap-sass/assets/stylesheets'
                 },
                 files: {
                     '../lingvodoc/static/css/lingvodoc.css': 'src/sass/lingvodoc.scss'
@@ -30,7 +30,8 @@ module.exports = function(grunt) {
         copy: {
             main: {
                 files: [
-                    {expand: true, flatten: true, src: ['bower_components/bootstrap-sass/assets/fonts/bootstrap/*'], dest: '../lingvodoc/static/fonts/', filter: 'isFile'},
+                    {expand: true, flatten: true, src: ['bower_components/bootstrap-sass/assets/fonts/bootstrap/*'], dest: '../lingvodoc/static/fonts/bootstrap/', filter: 'isFile'},
+                    {expand: true, flatten: true, src: ['src/templates/*'], dest: '../lingvodoc/templates/', filter: 'isFile'}
                 ],
             },
         },

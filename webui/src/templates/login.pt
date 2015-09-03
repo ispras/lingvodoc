@@ -1,14 +1,41 @@
-<html>
-<head metal:use-macro="load: head.pt"></head>
-<body>
-    <div metal:use-macro="load: nav.pt"></div>
-     <div class="col-lg-6 col-sm-6 col-md-6 col-lg-offset-3 col-sm-offset-3 col-sm-offset-3">
-      <form role="form" action="${request.route_url('login')}" method="post">
-        <h2>Войдите в систему</h2>
-        <input name="login" type="text" class="form-control" placeholder="Ваш логин" required autofocus>
-        <input name="password" type="password" class="form-control" placeholder="Пароль" required>
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Войти</button>
-      </form>
-     </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}" />
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+
+</head>
+
+<body class="body-signin">
+
+<div class="container">
+
+    <form class="form-signin" action="${request.route_url('login')}" method="post">
+        <h2 class="form-signin-heading">Please sign in | <a href="${request.route_url('signup')}">Sign up</a></h2>
+        <label for="inputEmail" class="sr-only">Email address</label>
+        <input type="email" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>
+        <label for="inputPassword" class="sr-only">Password</label>
+        <input type="password" id="inputPassword" class="form-control" placeholder="Password" required>
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" value="remember-me"> Remember me
+            </label>
+        </div>
+
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+
+</div>
+
 </body>
 </html>

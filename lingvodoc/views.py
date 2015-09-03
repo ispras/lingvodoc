@@ -938,3 +938,39 @@ def searchby(reqtype):
 def testing(request):
     from pyramid.request import Request
     return Request({})
+
+
+@view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
+def login_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/login.pt', variables, request=request)
+
+
+@view_config(route_name='login', request_method='POST')
+def login_post(request):
+    next = request.params.get('next') or request.route_url('dashboard')
+    login = request.POST.get('login', '')
+    password = request.POST.get('password', '')
+
+    user = DBSession.query(User).filter_by(login=login).first()
+    if user and user.check_password(password):
+        client = Client(user_id=user.id)
+        user.clients.append(client)
+        DBSession.add(client)
+        DBSession.flush()
+        headers = remember(request, principal=client.id)
+        return HTTPFound(location=next, headers=headers)
+    return HTTPUnauthorized(location=request.route_url('login'))
+
+
+@view_config(route_name='signup', renderer='templates/signup.pt', request_method='GET')
+def signup_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/signup.pt', variables, request=request)
+
+
+@view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
+def dashboard(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/dashboard.pt', variables, request=request)
+
