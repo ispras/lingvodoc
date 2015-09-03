@@ -36,21 +36,29 @@ class TestViewLanguageSuccessCondition(unittest.TestCase):
 
     def setUp(self):
         self.config = testing.setUp()
-        from sqlalchemy import create_engine
-        engine = create_engine('sqlite://')
         from lingvodoc.models import (
             Base,
-            Language
+            Language,
+            UserEntitiesTranslationString,
+            Locale
             )
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
         with transaction.manager:
-            new_dict=Language(client_id=1, object_id=1, translation_string = 'test')
-            DBSession.add(new_dict)
+            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+            DBSession.add(ru_locale)
+            DBSession.flush()
+            new_uets = UserEntitiesTranslationString(object_id = 1, client_id = 1, locale_id=1, translation_string = 'test', translation = 'working')
+            DBSession.add(new_uets)
+            new_lang=Language(client_id=1, object_id=1, translation_string = 'test')
+            DBSession.add(new_lang)
 
     def tearDown(self):
         DBSession.remove()
         testing.tearDown()
+
 
     def test_view_language(self):
         from lingvodoc.views import view_language
@@ -59,7 +67,7 @@ class TestViewLanguageSuccessCondition(unittest.TestCase):
         request.matchdict['object_id'] = 1
         response = view_language(request)
         self.assertEqual(response['status'], HTTPOk.code)
-        self.assertEqual(response['translation_string'], 'test')  # bad test
+        self.assertEqual(response['translation_string'], 'working')
 
 
 class TestEditLanguageSuccessCondition(unittest.TestCase):
@@ -70,14 +78,21 @@ class TestEditLanguageSuccessCondition(unittest.TestCase):
         engine = create_engine('sqlite://')
         from lingvodoc.models import (
             Base,
-            Language
+            Language,
+            Locale,
+            UserEntitiesTranslationString
             )
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
         with transaction.manager:
+            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+            DBSession.add(ru_locale)
+            DBSession.flush()
+            new_uets = UserEntitiesTranslationString(object_id = 1, client_id = 1, locale_id=1, translation_string = 'test', translation = 'working')
+            DBSession.add(new_uets)
             new_lang = Language(client_id=1, object_id=1, translation_string='test')
             DBSession.add(new_lang)
-            
+
     def tearDown(self):
         DBSession.remove()
         testing.tearDown()
@@ -87,7 +102,8 @@ class TestEditLanguageSuccessCondition(unittest.TestCase):
         from lingvodoc.models import (
             Base,
             Dictionary,
-            Language
+            Language,
+            UserEntitiesTranslationString
             )
         request = testing.DummyRequest()
         request.matchdict['client_id'] = 1
@@ -97,7 +113,9 @@ class TestEditLanguageSuccessCondition(unittest.TestCase):
         self.assertEqual(response['status'], HTTPOk.code)
         language = DBSession.query(Language).filter_by(client_id=1, object_id=1).first()
         self.assertNotEqual(language, None)
-        self.assertEqual(language.translation_string, 'new_translation_string')
+        uets = DBSession.query(UserEntitiesTranslationString).filter_by(translation_string=language.translation_string, locale_id=1).first()
+        self.assertNotEqual(uets, None)
+        self.assertEqual(uets.translation, 'new_translation_string')
 
 
 class TestEditLanguageFailureCondition(unittest.TestCase):
@@ -205,12 +223,16 @@ class TestCreateLanguageSuccessCondition(unittest.TestCase):
             Base,
             User,
             Client,
-            Passhash
+            Passhash,
+            Locale
             )
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
         with transaction.manager:
-            new_user = User(id=1, login='test')
+            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+            DBSession.add(ru_locale)
+            DBSession.flush()
+            new_user = User(id=1, login='test', default_locale_id = 1)
             new_pass = Passhash(password='pass')
             DBSession.add(new_pass)
             new_user.password = new_pass
@@ -266,14 +288,6 @@ class TestCreateLanguageFailureCondition(unittest.TestCase):
             )
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
-        with transaction.manager:
-            new_user = User(id=1, login='test')
-            new_pass = Passhash(password='pass')
-            DBSession.add(new_pass)
-            new_user.password = new_pass
-            DBSession.add(new_user)
-            new_client = Client(id=1, user=new_user)
-            DBSession.add(new_client)
 
     def tearDown(self):
         DBSession.remove()
