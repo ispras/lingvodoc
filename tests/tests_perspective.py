@@ -356,12 +356,12 @@ class TestViewPerspectiveRolesFailureCondition(unittest.TestCase):
         self.assertEqual(response['status'], HTTPNotFound.code)
 
 
-class TestEditDictionaryRolesSuccessCondition(unittest.TestCase):
+class TestEditPerspectiveRolesSuccessCondition(unittest.TestCase):
 
     def setUp(self):
         self.config = testing.setUp()
-        self.config.testing_securitypolicy(userid='1',
-                                           permissive=True)
+        # self.config.testing_securitypolicy(userid='1',
+        #                                    permissive=True)
         import webtest
         from pyramid import paster
         from sqlalchemy import create_engine
@@ -432,7 +432,6 @@ class TestEditDictionaryRolesSuccessCondition(unittest.TestCase):
         self.assertEqual(response.status_int , HTTPOk.code)
         groups = DBSession.query(Group).filter(Group.base_group_id.in_([1,2])).filter_by(subject='perspective1_1')
         for group in groups:
-            print(group.subject.upper(), group.parent.name.upper())
             users = []
             for user in group.users:
                 users += [user.id]
