@@ -532,7 +532,7 @@ def edit_dictionary_roles(request):
 
                 group = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'dictionary' + str(object_id) + '_' + str(client_id)).first()
                 client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                userlogged = DBSession.query(User).filter_by(id=client.user_id)
+                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
                 if userlogged in group.users:
                     group.users.append(user)
         else:
@@ -548,8 +548,8 @@ def delete_dictionary_roles(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    user_id = request.DELETE.getone('user_id')
-    role_names = request.DELETE.getone('role_names')
+    user_id = request.matchdict.get('user_id')
+    role_names = request.matchdict.get('role_names')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         user = DBSession.query(User).filter_by(id=user_id).first()
@@ -612,13 +612,11 @@ def edit_perspective_roles(request):
                     request.response.status = HTTPNotFound.code
                     return {'status': HTTPNotFound.code, 'error': str("No such role in the system")}
 
-                groups = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'perspective' + str(object_id) + '_' + str(client_id)).first()
+                group = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'perspective' + str(object_id) + '_' + str(client_id)).first()
                 client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                userlogged = DBSession.query(User).filter_by(id=client.user_id)
+                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
                 if userlogged in group.users:
                     group.users.append(user)
-                    for user in group.users:
-                        print(group.subject.upper(), user.name)
         else:
             request.response.status = HTTPNotFound.code
             return {'status': HTTPNotFound.code, 'error': str("No such user in the system")}
@@ -633,24 +631,19 @@ def delete_perspective_roles(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
     user_id = request.DELETE.getone('user_id')
-    role_name = request.DELETE.getone('role_name')
+    role_names = request.DELETE.getall('role_names')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         user = DBSession.query(User).filter_by(id=user_id).first()
         if user:
-            base = DBSession.query(BaseGroup).filter_by(name=role_name)
-            if not base:
-                request.response.status = HTTPNotFound.code
-                return {'status': request.response.status, 'error': str("No such role in the system")}
+            for role_name in role_names:
+                base = DBSession.query(BaseGroup).filter_by(name=role_name)
+                if not base:
+                    request.response.status = HTTPNotFound.code
+                    return {'status': request.response.status, 'error': str("No such role in the system")}
 
-            groups = base.groups
-            for group in groups:
-                perm = group.BaseGroup.name
-                name = 'perspective' + str(object_id) + '_' + str(client_id)
-                if name in group.subject:
-                    group.users.remove(user)
-                    request.response.status = HTTPOk.code
-                    response['status'] = HTTPOk.code
+                group = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'perspective' + str(object_id) + '_' + str(client_id))
+                group.users.remove(user)
         else:
             request.response.status = HTTPNotFound.code
             return {'status': request.response.status, 'error': str("No such user in the system")}
@@ -968,7 +961,22 @@ def searchby(reqtype):
     return res
 
 
-@view_config(route_name='testing', renderer = 'string')
+@view_config(route_name='testing', renderer='json')
 def testing(request):
-    from pyramid.request import Request
-    return Request({})
+    result = dict()
+    # get = dict()
+    # for entry in dir(request.GET):
+    #     get[str(entry)] = str(entry)
+    # result['GET'] = get
+    # get = dict()
+    # for entry in dir(request.params):
+    #     get[str(entry)] = str(entry)
+    # result['params'] = get
+    # result['POST'] = request.POST.get['id']
+
+    result['method'] = request.method
+    result['matchdict'] = request.matchdict.get('id')
+    result['get'] = request.GET.get('id')
+    result['post'] = request.POST.get('id')
+    print(request.json_body)
+    return result
