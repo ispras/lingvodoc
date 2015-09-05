@@ -15,6 +15,7 @@
   "dependencies": {
     "angular": "~1.4.5",
     "bootstrap-sass": "bootstrap-sass-official#~3.3.5",
-    "wavesurfer.js": "git://github.com/katspaugh/wavesurfer.js#~1.0.42"
+    "wavesurfer.js": "git://github.com/katspaugh/wavesurfer.js#~1.0.42",
+    "bootstrap-validator": "git://github.com/1000hz/bootstrap-validator"
   }
 }

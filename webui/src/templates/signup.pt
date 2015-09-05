@@ -22,26 +22,40 @@
     <div class="row">
         <div class="signup-panel">
             <legend><i class="glyphicon glyphicon-globe"></i> Sign up!</legend>
-            <form action="#" method="post" class="form form-signup" role="form">
-                <div class="row">
-                    <div class="col-xs-6 col-md-6">
-                        <input class="form-control" name="firstname" placeholder="First Name" type="text"
-                               required autofocus />
-                    </div>
-                    <div class="col-xs-6 col-md-6">
-                        <input class="form-control" name="lastname" placeholder="Last Name" type="text" required />
-                    </div>
+            <form action="${request.route_url('signup')}" method="post" class="form form-signup" data-toggle="validator" role="form">
+
+                <div class="form-group">
+                    <input class="form-control" name="login" placeholder="Login" type="text" pattern="^[_A-z0-9]{1,}$" maxlength="15" data-error="Invalid login format!" required />
+                    <span class="help-block with-errors"></span>
                 </div>
-                <input class="form-control" name="youremail" placeholder="Your Email" type="email" />
-                <input class="form-control" name="reenteremail" placeholder="Re-enter Email" type="email" />
-                <input class="form-control" name="password" placeholder="Password" type="password" />
-                <input class="form-control" name="reenterpassword" placeholder="Re-enter password" type="password" />
+
+                <div class="form-group">
+                    <input class="form-control" name="name" placeholder="Full name" type="text" maxlength="80" data-error="Invalid name format!" required />
+                    <span class="help-block with-errors"></span>
+                </div>
+
+                <div class="form-group">
+                    <input class="form-control" name="email" placeholder="Your Email" type="email" data-error="That email address is invalid" required />
+                    <div class="help-block with-errors"></div>
+                </div>
+
+                <div class="form-group">
+                    <input class="form-control" name="password" id="inputPassword" placeholder="Password" type="password" data-minlength="6" required />
+                    <span class="help-block">Minimum of 6 characters</span>
+                </div>
+
+                <div class="form-group">
+                    <input class="form-control" name="confirmpassword" placeholder="Re-enter password" type="password" data-match="#inputPassword" data-match-error="Passwords don't match" required />
+                    <div class="help-block with-errors"></div>
+                </div>
+
+                <div class="help-block with-errors"></div>
                 <label for="">
                     Birth Date</label>
                 <div class="row">
                     <div class="col-xs-4 col-md-4">
-                        <select class="form-control">
-                            <option selected value='0'>Month</option>
+                        <select name="month" class="form-control">
+                            <option disabled selected value='0'>Month</option>
                             <option value='1'>January</option>
                             <option value='2'>February</option>
                             <option value='3'>March</option>
@@ -57,8 +71,8 @@
                         </select>
                     </div>
                     <div class="col-xs-4 col-md-4">
-                        <select class="form-control">
-                            <option selected value="0">Day</option>
+                        <select name="day" class="form-control">
+                            <option disabled selected value="0">Day</option>
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>
@@ -93,8 +107,8 @@
                         </select>
                     </div>
                     <div class="col-xs-4 col-md-4">
-                        <select class="form-control">
-                            <option selected value="0">Year</option>
+                        <select name="year" class="form-control">
+                            <option disabled selected value="0">Year</option>
                             <option value="1900">1900</option>
                             <option value="1901">1901</option>
                             <option value="1902">1902</option>
@@ -214,14 +228,7 @@
                         </select>
                     </div>
                 </div>
-                <label class="radio-inline">
-                    <input type="radio" name="gender" id="inlineCheckbox1" value="Male" />
-                    Male
-                </label>
-                <label class="radio-inline">
-                    <input type="radio" name="gender" id="inlineCheckbox2" value="Female" />
-                    Female
-                </label>
+
                 <br />
                 <br />
                 <button class="btn btn-lg btn-primary btn-block" type="submit">

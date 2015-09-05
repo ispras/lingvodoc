@@ -995,6 +995,45 @@ def signup_get(request):
     variables = {'auth': authenticated_userid(request)}
     return render_to_response('templates/signup.pt', variables, request=request)
 
+@view_config(route_name='signup', renderer='json', request_method='POST')
+def signup_post(request):
+    try:
+        login = request.POST.getone('login')
+        name = request.POST.getone('name')
+        email = request.POST.getone('email')
+        password = request.POST.getone('password')
+
+        day = request.POST.getone('day')
+        month = request.POST.getone('month')
+        year = request.POST.getone('year')
+        birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
+
+        if DBSession.query(User).filter_by(login=login).first():
+            raise CommonException("The user with this login is already registered")
+        if DBSession.query(Email).filter_by(email=email).first():
+            raise CommonException("The user with this email is already registered")
+        new_user = User(login=login, name=name, signup_date=datetime.datetime.utcnow(), intl_name=login, birthday=birthday, is_active=True)
+        pwd = Passhash(password=password)
+        email = Email(email=email)
+        new_user.password = pwd
+        new_user.email.append(email)
+        DBSession.add(new_user)
+        DBSession.flush()
+        return login_post(request)
+
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except ValueError as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
+
 
 @view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
 def dashboard(request):

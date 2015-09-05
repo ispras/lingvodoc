@@ -105,6 +105,7 @@
   @include make-xs-column(12);
   @include make-sm-column(12);
   @include make-md-column(6);
+  @include make-md-column-offset(3);
   @extend .well;
   @extend .well-sm;
 }
