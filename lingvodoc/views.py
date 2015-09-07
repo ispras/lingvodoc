@@ -1034,10 +1034,14 @@ def signup_post(request):
         return {'status': request.response.status, 'error': str(e)}
 
 
-
 @view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
 def dashboard(request):
     variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/dashboard.pt', variables, request=request)
+
+
+@view_config(route_name='testing', renderer='json')
+def testing(request):
     result = dict()
     # get = dict()
     # for entry in dir(request.GET):
