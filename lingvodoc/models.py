@@ -456,7 +456,7 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     __parentname__ = 'BaseGroup'
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject = Column(UnicodeText)
-    users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
+    users = relationship("User",  secondary=user_to_group_association, backref=backref("groups"))
 
 
 class Organization(Base, TableNameMixin, IdMixin):
