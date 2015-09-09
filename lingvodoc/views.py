@@ -88,7 +88,7 @@ def find_by_translation_string(locale_id, translation_string):
 
 
 def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-        client = DBSession.query(Client).filter_by(id=client_id).first
+        client = DBSession.query(Client).filter_by(id=client_id).first()
         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
                                                                         translation_string=translation_string).first()
         if not uets:
@@ -139,29 +139,34 @@ def view_language(request):
 
 @view_config(route_name='language', renderer='json', request_method='PUT')
 def edit_language(request):
-    response = dict()
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
-    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-    if not client:
-        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-    language = DBSession.query(Language).filter_by(client_id=client_id, object_id=object_id).first()
-    if language:
-        if not language.marked_for_deletion:
-            req = request.json_body
-            if 'parent_client_id' in req:
-                language.parent_client_id = req['parent_client_id']
-            if 'parent_object_id' in req:
-                language.parent_client_id = req['parent_object_id']
-            if 'translation' in req:
-                add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                      translation_string=language.translation_string,
-                                                      translation=req['translation'], client_id=client.id)
-            request.response.status = HTTPOk.code
-            response['status'] = HTTPOk.code
-            return response
-    request.response.status = HTTPNotFound.code
-    return {'status': HTTPNotFound.code, 'error': str("No such language in the system")}
+    try:
+        response = dict()
+        client_id = request.matchdict.get('client_id')
+        object_id = request.matchdict.get('object_id')
+        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        language = DBSession.query(Language).filter_by(client_id=client_id, object_id=object_id).first()
+        if language:
+            if not language.marked_for_deletion:
+                req = request.json_body
+                if 'parent_client_id' in req:
+                    language.parent_client_id = req['parent_client_id']
+                if 'parent_object_id' in req:
+                    language.parent_object_id = req['parent_object_id']
+                if 'translation' in req:
+                    add_translation_to_translation_string(locale_id=find_locale_id(request),
+                                                          translation_string=language.translation_string,
+                                                          translation=req['translation'], client_id=client.id)
+                request.response.status = HTTPOk.code
+                response['status'] = HTTPOk.code
+                return response
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such language in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': HTTPBadRequest.code, 'error': str(e)}
+
 
 
 @view_config(route_name='language', renderer='json', request_method='DELETE')
@@ -256,31 +261,34 @@ def view_dictionary(request):
 
 @view_config(route_name='dictionary', renderer='json', request_method='PUT')
 def edit_dictionary(request):
-    response = dict()
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
-    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-    if not client:
-        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-    name = request.matchdict.get('name')
-    dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    if dictionary:
-        if not dictionary.marked_for_deletion:
-            req = request.json_body
-            if 'parent_client_id' in req:
-                dictionary.parent_client_id = req['parent_client_id']
-            if 'parent_object_id' in req:
-                dictionary.parent_client_id = req['parent_object_id']
-            if 'name' in req:
-                add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                      translation_string=dictionary.name,
-                                                      translation=req['name'], client_id=client.id)
-            request.response.status = HTTPOk.code
-            response['status'] = HTTPOk.code
-            return response
+    try:
+        response = dict()
+        client_id = request.matchdict.get('client_id')
+        object_id = request.matchdict.get('object_id')
+        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        if dictionary:
+            if not dictionary.marked_for_deletion:
+                req = request.json_body
+                if 'parent_client_id' in req:
+                    dictionary.parent_client_id = req['parent_client_id']
+                if 'parent_object_id' in req:
+                    dictionary.parent_object_id = req['parent_object_id']
+                if 'name_translation' in req:
+                    add_translation_to_translation_string(locale_id=find_locale_id(request),
+                                                          translation_string=dictionary.name,
+                                                          translation=req['name_translation'], client_id=client.id)
+                request.response.status = HTTPOk.code
+                response['status'] = HTTPOk.code
+                return response
 
-    request.response.status = HTTPNotFound.code
-    return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
 
 
 @view_config(route_name='dictionary', renderer='json', request_method='DELETE')
@@ -371,11 +379,11 @@ def edit_dictionary_status(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    req = request.json_body
-    state = req['state']
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
+            req = request.json_body
+            state = req['state']
             dictionary.state = state
             request.response.status = HTTPOk.code
             response['status'] = HTTPOk.code
@@ -389,9 +397,21 @@ def view_perspective(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
+
+
             response['parent_client_id'] = perspective.parent_client_id
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
@@ -409,26 +429,40 @@ def view_perspective(request):
 
 @view_config(route_name='perspective', renderer='json', request_method='PUT')
 def edit_perspective(request):
-    response = dict()
-    client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
-    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-    if not client:
-        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        if not perspective.marked_for_deletion:
-            req = request.json_body
-            if 'name' in req:
-                add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                      translation_string=perspective.name,
-                                                      translation=req['name'], client_id = client.id)
-            request.response.status = HTTPOk.code
-            response['status'] = HTTPOk.code
-            return response
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+    try:
+        response = dict()
+        client_id = request.matchdict.get('perspective_client_id')
+        object_id = request.matchdict.get('perspective_id')
+        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        parent_client_id = request.matchdict.get('dictionary_client_id')
+        parent_object_id = request.matchdict.get('dictionary_object_id')
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
+        perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if perspective:
+            if not perspective.marked_for_deletion:
+                if perspective.parent != parent:
+                    request.response.status = HTTPNotFound.code
+                    return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
+                req = request.json_body
+                if 'name_translation' in req:
+                    add_translation_to_translation_string(locale_id=find_locale_id(request),
+                                                          translation_string=perspective.name,
+                                                          translation=req['name_translation'], client_id = client.id)
+                request.response.status = HTTPOk.code
+                response['status'] = HTTPOk.code
+                return response
+        else:
+            request.response.status = HTTPNotFound.code
+            return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
 
 
 @view_config(route_name='perspective', renderer='json', request_method='DELETE')
@@ -436,24 +470,33 @@ def delete_perspective(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        perspective.marked_for_deletion = True
-        request.response.status = HTTPOk.code
-        response['status'] = HTTPOk.code
-        return response
-
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
+            perspective.marked_for_deletion = True
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
 @view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST')
 def create_perspective(request):
     try:
         variables = {'auth': authenticated_userid(request)}
-        parent_client_id = request.matchdict.get('client_id')
-        parent_object_id = request.matchdict.get('object_id')
+        parent_client_id = request.matchdict.get('dictionary_client_id')
+        parent_object_id = request.matchdict.get('dictionary_object_id')
         req = request.json_body
         name = req['name']
         translation = req['translation']
@@ -464,9 +507,14 @@ def create_perspective(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
-        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id)
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
         client.perspectives += 1
-        add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name, translation=translation, client_id=client.id)
+        add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name,
+                                              translation=translation, client_id=client.id)
         perspective = DictionaryPerspective(object_id=client.perspectives,
                                 client_id=variables['auth'],
                                 name=name,
@@ -503,15 +551,25 @@ def view_perspective_status(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        response['state'] = perspective.state
-        request.response.status = HTTPOk.code
-        response['status'] = HTTPOk.code
-        return response
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
+            response['state'] = perspective.state
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
 @view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'PUT')
@@ -519,17 +577,27 @@ def edit_perspective_status(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
-    req = request.json_body
-    state = req['state']
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        perspective.state = state
-        request.response.status = HTTPOk.code
-        response['status'] = HTTPOk.code
-        return response
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
+            req = request.json_body
+            state = req['state']
+            perspective.state = state
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'GET')
@@ -539,22 +607,22 @@ def view_dictionary_roles(request):
     object_id = request.matchdict.get('object_id')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
-        users = []
-        groups = DBSession.query(Group).filter_by(subject = 'dictionary' + str(object_id) + '_' + str(client_id))
-        roles = dict()
-        for group in groups:
-            perm = group.BaseGroup.readable_name
+        if not dictionary.marked_for_deletion:
             users = []
-            for user in group.users:
-                users += [user.id]
-            roles[perm] = users
-        response['roles'] = roles
-        request.response.status = HTTPOk.code
-        response['status'] = HTTPOk.code
-        return response
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+            groups = DBSession.query(Group).filter_by(subject = 'dictionary' + str(object_id) + '_' + str(client_id))
+            roles = dict()
+            for group in groups:
+                perm = group.BaseGroup.readable_name
+                users = []
+                for user in group.users:
+                    users += [user.id]
+                roles[perm] = users
+            response['roles'] = roles
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
 
 
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'POST')
@@ -567,25 +635,29 @@ def edit_dictionary_roles(request):
     role_names = req['role_names']
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
-        user = DBSession.query(User).filter_by(id=user_id).first()
-        if user:
-            for role_name in role_names:
-                base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
-                if not base:
-                    request.response.status = HTTPNotFound.code
-                    return {'status': HTTPNotFound.code, 'error': str("No such role in the system")}
+        if not dictionary.marked_for_deletion:
+            user = DBSession.query(User).filter_by(id=user_id).first()
+            if user:
+                for role_name in role_names:
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'status': HTTPNotFound.code, 'error': str("No such role in the system")}
 
-                group = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'dictionary' + str(object_id) + '_' + str(client_id)).first()
-                client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
-                if userlogged in group.users:
-                    group.users.append(user)
-        else:
-            request.response.status = HTTPNotFound.code
-            return {'status': request.response.status, 'error': str("No such user in the system")}
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
+                                                             subject = 'dictionary' + str(object_id) + '_' + str(client_id)).first()
+                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+                    if userlogged in group.users:
+                        group.users.append(user)
+                request.response.status = HTTPOk.code
+                response['status'] = HTTPOk.code
+                return response
+            else:
+                request.response.status = HTTPNotFound.code
+                return {'status': request.response.status, 'error': str("No such user in the system")}
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
 
 
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'DELETE')
@@ -598,22 +670,27 @@ def delete_dictionary_roles(request):
     role_names = req['role_names']
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
-        user = DBSession.query(User).filter_by(id=user_id).first()
-        if user:
-            for role_name in role_names:
-                base = DBSession.query(BaseGroup).filter_by(name=role_name)
-                if not base:
-                    request.response.status = HTTPNotFound.code
-                    return {'status': request.response.status, 'error': str("No such role in the system")}
+        if not dictionary.marked_for_deletion:
+            user = DBSession.query(User).filter_by(id=user_id).first()
+            if user:
+                for role_name in role_names:
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'status': HTTPNotFound.code, 'error': str("No such role in the system")}
 
-                group = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'dictionary' + str(object_id) + '_' + str(client_id))
-                group.users.remove(user)
-        else:
-            request.response.status = HTTPNotFound.code
-            return {'status': request.response.status, 'error': str("No such user in the system")}
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
+                                                             subject = 'dictionary' + str(object_id) + '_' + str(client_id)).first()
+                    if user in group.users:
+                        group.users.remove(user)
+                request.response.status = HTTPOk.code
+                response['status'] = HTTPOk.code
+                return response
+            else:
+                request.response.status = HTTPNotFound.code
+                return {'status': request.response.status, 'error': str("No such user in the system")}
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'GET')
@@ -621,24 +698,34 @@ def view_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('client_id')
+    parent_object_id = request.matchdict.get('object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        users = []
-        groups = DBSession.query(Group).filter_by(subject = 'perspective' + str(object_id) + '_' + str(client_id))
-        roles = dict()
-        for group in groups:
-            perm = group.BaseGroup.readable_name
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
             users = []
-            for user in group.users:
-                users += [user.id]
-            roles[perm] = users
-        response['roles'] = roles
-        request.response.status = HTTPOk.code
-        response['status'] = HTTPOk.code
-        return response
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+            groups = DBSession.query(Group).filter_by(subject = 'perspective' + str(object_id) + '_' + str(client_id))
+            roles = dict()
+            for group in groups:
+                perm = group.BaseGroup.readable_name
+                users = []
+                for user in group.users:
+                    users += [user.id]
+                roles[perm] = users
+            response['roles'] = roles
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'POST')
@@ -646,30 +733,44 @@ def edit_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
-    req = request.json_body
-    user_id = req['user_id']
-    role_names = req['role_names']
+    parent_client_id = request.matchdict.get('client_id')
+    parent_object_id = request.matchdict.get('object_id')
+
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        user = DBSession.query(User).filter_by(id=user_id).first()
-        if user:
-            for role_name in role_names:
-                base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
-                if not base:
-                    request.response.status = HTTPNotFound.code
-                    return {'status': HTTPNotFound.code, 'error': str("No such role in the system")}
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
+            req = request.json_body
+            user_id = req['user_id']
+            role_names = req['role_names']
+            user = DBSession.query(User).filter_by(id=user_id).first()
+            if user:
+                for role_name in role_names:
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'status': HTTPNotFound.code, 'error': str("No such role in the system")}
 
-                group = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'perspective' + str(object_id) + '_' + str(client_id)).first()
-                client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
-                if userlogged in group.users:
-                    group.users.append(user)
-        else:
-            request.response.status = HTTPNotFound.code
-            return {'status': HTTPNotFound.code, 'error': str("No such user in the system")}
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
+                                                             subject = 'perspective' + str(object_id) + '_' + str(client_id)).first()
+                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+                    if userlogged in group.users:
+                        group.users.append(user)
+                request.response.status = HTTPOk.code
+                response['status'] = HTTPOk.code
+                return response
+            else:
+                request.response.status = HTTPNotFound.code
+                return {'status': request.response.status, 'error': str("No such user in the system")}
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'DELETE')
@@ -680,24 +781,42 @@ def delete_perspective_roles(request):
     req = request.json_body
     user_id = req['user_id']
     role_names = req['role_names']
+    parent_client_id = request.matchdict.get('client_id')
+    parent_object_id = request.matchdict.get('object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
-        user = DBSession.query(User).filter_by(id=user_id).first()
-        if user:
-            for role_name in role_names:
-                base = DBSession.query(BaseGroup).filter_by(name=role_name)
-                if not base:
-                    request.response.status = HTTPNotFound.code
-                    return {'status': request.response.status, 'error': str("No such role in the system")}
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such pair of dictionary/perspective in the system")}
+            req = request.json_body
+            user_id = req['user_id']
+            role_names = req['role_names']
+            user = DBSession.query(User).filter_by(id=user_id).first()
+            if user:
+                for role_name in role_names:
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'status': HTTPNotFound.code, 'error': str("No such role in the system")}
 
-                group = DBSession.query(Group).filter_by(base_group_id = base.id, subject = 'perspective' + str(object_id) + '_' + str(client_id))
-                group.users.remove(user)
-        else:
-            request.response.status = HTTPNotFound.code
-            return {'status': request.response.status, 'error': str("No such user in the system")}
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
+                                                             subject = 'perspective' + str(object_id) + '_' + str(client_id)).first()
+                    if user in group.users:
+                        group.users.remove(user)
+                request.response.status = HTTPOk.code
+                response['status'] = HTTPOk.code
+                return response
+            else:
+                request.response.status = HTTPNotFound.code
+                return {'status': request.response.status, 'error': str("No such user in the system")}
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='signin', renderer='json', request_method='POST')
@@ -773,6 +892,11 @@ def dictionaries_list(request):
     if user_created:
         clients = DBSession.query(Client.id).filter_by(user_id=user_created).all()
         dicts = dicts.filter(Dictionary.client_id.in_(clients))
+    if language:
+        lang = DBSession.query(Language).filter_by(id=language).first()
+        langs = all_languages(lang)
+        dicts = dicts.filter(Dictionary.parent.in_(langs))
+    # add geo coordinates
     if organization_participated:
         organization = DBSession.query(Organization).filter_by(id=organization_participated).first()
         users = organization.users
@@ -781,11 +905,16 @@ def dictionaries_list(request):
             users_id += [user.id]
         clients = DBSession.query(Client.id).filter(Client.user_id.in_(users_id)).all()
         dicts = dicts.filter(Dictionary.client_id.in_(clients))
-    if language:
-        lang = DBSession.query(Language).filter_by(id=language).first()
-        langs = all_languages(lang)
-        dicts = dicts.filter(Dictionary.parent.in_(langs))
-    # add geo coordinates
+
+        dictstemp = []
+        for dicti in dicts:
+            if check_for_client(dicti, clients):
+                dictstemp += [dicti]
+        dict_obj = [o.object_id for o in dictstemp]
+        dict_cli = [o.client_id for o in dictstemp]
+        dicts = dicts.filter(Dictionary)
+        dicts = dicts.filter(Dictionary.client_id.in_(dict_cli), Dictionary.object_id.in_(dict_obj))
+
     if user_participated:
         clients = DBSession.query(Client.id).filter_by(user_id=user_participated).all()
 
@@ -793,11 +922,12 @@ def dictionaries_list(request):
         for dicti in dicts:
             if check_for_client(dicti, clients):
                 dictstemp += [dicti]
-        dicts = dictstemp
+        dict_obj = [o.object_id for o in dictstemp]
+        dict_cli = [o.client_id for o in dictstemp]
+        dicts = dicts.filter(Dictionary)
+        dicts = dicts.filter(Dictionary.client_id.in_(dict_cli), Dictionary.object_id.in_(dict_obj))
 
-    dictionaries = []
-    for dicti in dicts:
-        dictionaries += [{'object_id': dicti.object_id, 'client_id': dicti.client_id}]
+    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id} for o in dicts]
     response = dict()
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
@@ -897,11 +1027,13 @@ def create_perspective_fields(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
-        perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id, object_id=parent_object_id)
+        perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id,
+                                                                       object_id=parent_object_id)
         for entry in fields:
             client.fields += 1
             field = DictionaryPerspectiveField(object_id=client.fields,
-                                    client_id=variables['auth'], entity_type=entry['entity_type'], data_type=entry['data_type'])
+                                    client_id=variables['auth'], entity_type=entry['entity_type'],
+                                               data_type=entry['data_type'])
             add_translation_to_translation_string(locale_id=find_locale_id(request),
                                                   translation_string=entry['entity_type'],
                                                   translation=entry['entity_type_translation'], client_id=client.id)
@@ -923,7 +1055,8 @@ def create_perspective_fields(request):
                                                         level = 'L2E')
                     add_translation_to_translation_string(locale_id=find_locale_id(request),
                                                           translation_string=ent['entity_type'],
-                                                          translation=ent['entity_type_translation'], client_id=client.id)
+                                                          translation=ent['entity_type_translation'],
+                                                          client_id=client.id)
                     add_translation_to_translation_string(locale_id=find_locale_id(request),
                                                           translation_string=ent['data_type'],
                                                           translation=ent['data_type_translation'], client_id=client.id)
