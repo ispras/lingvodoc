@@ -81,9 +81,11 @@ class CommonException(Exception):
 def find_by_translation_string(locale_id, translation_string):
         trstr = DBSession.query(UserEntitiesTranslationString).\
             filter_by(locale_id=locale_id, translation_string=translation_string).first()
-        if not translation_string:
+        if not trstr:
             trstr = DBSession.query(UserEntitiesTranslationString).\
                 filter_by(locale_id=1, translation_string=translation_string).first()
+        if not trstr:
+            return translation_string
         return trstr.translation
 
 
