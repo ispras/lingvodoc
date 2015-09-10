@@ -149,8 +149,68 @@ def configure_routes(config):
                      pattern='dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_id}/fields')
 
+# TODO: LOCALES!
     # API #GET && POST && DELETE
+    # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,
+    # 'content': <'content'>, 'locale_id': <locale_id>}]
+    config.add_route(name='get_l1_entity', pattern='/level_one_entity/<object_id>/<parent_id>')
+    config.add_route(name='get_l2_entity', pattern='/level_two_entity/<object_id>/<parent_id>')
+
+    config.add_route(name='group_entity')
+    # {entity_type: <entity_type>, content: <tag>, connect: [{object_id: <obj_id>, client_id: <cl_id>}
+    config.add_route(name='get_group_entity', pattern='/group_entity/<object_id>/<parent_id>')
+
+    config.add_route(name='lexical_entry', pattern='/lexical_entry/<object_id>/<parent_id>')
+
+    # API #GET && POST
+    config.add_route(name='lexical_entries', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                     '/perspective/{perspective_client_id}/{perspective_id}/')
+
+    # web-view
+    config.add_route(name='edit_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                     '/perspective/{perspective_client_id}/{perspective_id}/edit')
+    # web-view
+    config.add_route(name='view_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                     '/perspective/{perspective_client_id}/{perspective_id}/view')
+    # web-view
+    config.add_route(name='publish_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                        '/perspective/{perspective_client_id}/{perspective_id}/publish')
+
+    # Merge can be two kinds:
+    #   1. Dictionaries merge
+    #   2. Perspectives merge
+    # To perform dictionaries merge one (or both) of the dictionaries owners should provide to the other a role
+    # "can merge".
+    # First kind of merge suggests to merge:
+    #   1. dictionaries language
+    #   2. dictionaries owners (both become owners)
+    #   3. roles for dictionaries: perspective owners, editors, viewers. Basically we suggest to unite existing.
     #
+    # After dictionaries merge, all the perspectives are moved to new dictionary.
+    #
+    # Second kind of merge suggests to perspectives. It's supposed to be in several stages:
+    #   1. Prepare stage:
+    #       1a. Select perspective fields to unite. After fields unification, for all the words
+    #           with selected field it's changed.
+    #       1b. All the rest can be marked as active or not.
+    #   2. New perspective is created; here will be merge actually done.
+    #   3. Function 'get merge suggestions' tries to merge lexical entries and returns list of tuples with merge
+    #      suggestions. Selected as correct suggestions are moved to new perspective with all the dependant objects.
+    #      *That means that ids for lexical entry are changed.
+
+    # API #POST
+    # {}
+    config.add_route(name='merge_dictionaries', pattern='/merge')
+
+    # API #POST
+    config.add_route(name='merge_suggestions', pattern='/merge')
+
+    # web-view
+    config.add_route(name='merge_master', pattern='/dashboard/merge')
+
+
+
+
 
 
     #creation date, author
