@@ -81,9 +81,11 @@ class CommonException(Exception):
 def find_by_translation_string(locale_id, translation_string):
         trstr = DBSession.query(UserEntitiesTranslationString).\
             filter_by(locale_id=locale_id, translation_string=translation_string).first()
-        if not translation_string:
+        if not trstr:
             trstr = DBSession.query(UserEntitiesTranslationString).\
                 filter_by(locale_id=1, translation_string=translation_string).first()
+        if not trstr:
+            return translation_string
         return trstr.translation
 
 
@@ -845,20 +847,16 @@ def signin(request):
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
-def all_languages(language):
-    languages = []
-    for lang in language.language:
-        languages += [lang]
-        languages += all_languages(lang)
-    return languages
+def all_languages(lang):
+    langs = [(lang.object_id, lang.client_id)]
+    for la in lang.language:
+        langs += all_languages(la)
+    return langs
 
 
 def check_for_client(obj, clients):
-    try:
-        if obj.client_id in clients:
-            return True
-    except:
-        return False
+    if obj.client_id in clients:
+        return True
     for entry in dir(obj):
         if entry in inspect(type(obj)).relationships:
             i = inspect(obj.__class__).relationships[entry]
@@ -873,7 +871,7 @@ def check_for_client(obj, clients):
     return False
 
 
-@view_config(route_name = 'dictionaries', renderer = 'json')
+@view_config(route_name = 'dictionaries', renderer = 'json', request_method='POST')
 def dictionaries_list(request):
     req = request.json_body
     user_created = None
@@ -885,46 +883,51 @@ def dictionaries_list(request):
     organization_participated = None
     if 'organization_participated' in req:
         organization_participated = req['organization_participated']
-    language = None
-    if 'language' in req:
-        language = req['language']
+    language_object_id = None
+    if 'language_object_id' in req:
+        language_object_id = req['language_object_id']
+        language_client_id = req['language_client_id']
     dicts = DBSession.query(Dictionary)
     if user_created:
-        clients = DBSession.query(Client.id).filter_by(user_id=user_created).all()
-        dicts = dicts.filter(Dictionary.client_id.in_(clients))
-    if language:
-        lang = DBSession.query(Language).filter_by(id=language).first()
+        clients = DBSession.query(Client).filter_by(user_id=user_created).all()
+        cli = [o.id for o in clients]
+        dicts = dicts.filter(Dictionary.client_id.in_(cli))
+    if language_object_id:
+        lang = DBSession.query(Language).filter_by(object_id=language_object_id, client_id=language_client_id).first()
         langs = all_languages(lang)
-        dicts = dicts.filter(Dictionary.parent.in_(langs))
+        lang_obj = [o[0] for o in langs]
+        lang_cli = [o[1] for o in langs]
+        dicts = dicts.filter(Dictionary.parent_client_id.in_(lang_cli), Dictionary.parent_object_id.in_(lang_obj))
     # add geo coordinates
     if organization_participated:
         organization = DBSession.query(Organization).filter_by(id=organization_participated).first()
+        print('ORGANIZATION', organization.name)
         users = organization.users
-        users_id = []
-        for user in users:
-            users_id += [user.id]
-        clients = DBSession.query(Client.id).filter(Client.user_id.in_(users_id)).all()
-        dicts = dicts.filter(Dictionary.client_id.in_(clients))
+        users_id = [o.id for o in users]
+        print('USERS', users_id)
+
+        clients = DBSession.query(Client).filter(Client.user_id.in_(users_id)).all()
+        cli = [o.id for o in clients]
+        print('CLIENTS', cli)
 
         dictstemp = []
         for dicti in dicts:
-            if check_for_client(dicti, clients):
+            if check_for_client(dicti, cli):
                 dictstemp += [dicti]
         dict_obj = [o.object_id for o in dictstemp]
         dict_cli = [o.client_id for o in dictstemp]
-        dicts = dicts.filter(Dictionary)
         dicts = dicts.filter(Dictionary.client_id.in_(dict_cli), Dictionary.object_id.in_(dict_obj))
 
     if user_participated:
-        clients = DBSession.query(Client.id).filter_by(user_id=user_participated).all()
+        clients = DBSession.query(Client).filter(Client.user_id.in_(user_participated)).all()
+        cli = [o.id for o in clients]
 
         dictstemp = []
         for dicti in dicts:
-            if check_for_client(dicti, clients):
+            if check_for_client(dicti, cli):
                 dictstemp += [dicti]
         dict_obj = [o.object_id for o in dictstemp]
         dict_cli = [o.client_id for o in dictstemp]
-        dicts = dicts.filter(Dictionary)
         dicts = dicts.filter(Dictionary.client_id.in_(dict_cli), Dictionary.object_id.in_(dict_obj))
 
     dictionaries = [{'object_id':o.object_id,'client_id':o.client_id} for o in dicts]
@@ -948,30 +951,31 @@ def view_perspective_fields(request):
     user = DBSession.query(User).filter_by(id=client.user_id).first()
     if not user:
         raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-    locale_id = user.default_locale_id
+    locale_id = find_locale_id(request)
     if perspective:
         fields = []
         for field in perspective.dictionaryperspectivefield:
+
             data = dict()
             if field.level == 'L1E' or field.level == 'GE':
-                data['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                data['entity_type'] = find_by_translation_string(locale_id=locale_id,
                                                                  translation_string=field.entity_type)
 
                 data['data_type'] = find_by_translation_string(locale_id=find_locale_id(request),
                                                                translation_string=field.data_type)
+                data['position'] = field.position
                 data['state'] = field.state
                 if field.dictionaryperspectivefield:
                     contains = []
                     for field2 in field.dictionaryperspectivefield:
                         data2 = dict()
-                        entity_type = DBSession.query(UserEntitiesTranslationString).\
-                            filter_by(translation_string=field.entity_type, locale_id=locale_id).first()
-                        data2['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                        data2['entity_type'] = find_by_translation_string(locale_id=locale_id,
                                                                           translation_string=field2.entity_type)
 
-                        data2['data_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                        data2['data_type'] = find_by_translation_string(locale_id=locale_id,
                                                                         translation_string=field2.data_type)
                         data2['state'] = field2.state
+                        data2['position'] = field2.position
                         contains += [data2]
                     data['contains'] = contains
                 if field.group:
@@ -988,15 +992,17 @@ def view_perspective_fields(request):
         return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_fields', renderer = 'jso', request_method='DELETE')  # Probably very wrong
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE')  # Probably very wrong
 def delete_perspective_fields(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
-    cli_id = request.DELETE.get('field_client_id')
-    obj_id = request.DELETE.get('field_object_id')
+
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
+        req = request.json_body
+        cli_id = req['field_client_id']
+        obj_id = req['field_object_id']
         field = DBSession.query(DictionaryPerspectiveField).filter_by(client_id=cli_id, object_id=obj_id).first()
         if field:
             field.marked_for_deletion = True
@@ -1011,14 +1017,15 @@ def delete_perspective_fields(request):
         return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
-# noinspection PyPackageRequirements
 @view_config(route_name='perspective_fields', renderer = 'json', request_method='POST')
 def create_perspective_fields(request):
     try:
         variables = {'auth': authenticated_userid(request)}
-        parent_client_id = request.matchdict.get('client_id')
-        parent_object_id = request.matchdict.get('object_id')
-        fields = request.json_body
+        parent_client_id = request.matchdict.get('perspective_client_id')
+        parent_object_id = request.matchdict.get('perspective_id')
+        dictionary_client_id = request.matchdict.get('dictionary_client_id')
+        dictionary_object_id = request.matchdict.get('dictionary_object_id')
+        fields = request.json_body['fields']
 
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -1028,23 +1035,28 @@ def create_perspective_fields(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id,
-                                                                       object_id=parent_object_id)
+                                                                       object_id=parent_object_id).first()
+        if not perspective:
+            request.response.status = HTTPNotFound.code
+            return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
+
+        locale_id = find_locale_id(request)
+
         for entry in fields:
             client.fields += 1
             field = DictionaryPerspectiveField(object_id=client.fields,
-                                    client_id=variables['auth'], entity_type=entry['entity_type'],
-                                               data_type=entry['data_type'])
-            add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                  translation_string=entry['entity_type'],
-                                                  translation=entry['entity_type_translation'], client_id=client.id)
-            add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                  translation_string=entry['data_type'],
-                                                  translation=entry['data_type_translation'], client_id=client.id)
-            DBSession.add(field)
-            DBSession.flush()
+                                               client_id=variables['auth'],
+                                               entity_type=entry['entity_type'],
+                                               data_type=entry['data_type'],
+                                               parent=perspective,
+                                               state=entry['state'])
             if 'group' in entry:
                 field.group = entry['group']
+                add_translation_to_translation_string(locale_id=locale_id,
+                                                      translation_string=entry['group'],
+                                                      translation=entry['group_translation'], client_id=client.id)
             field.level = entry['level']
+            field.position = entry['position']
             if 'contains' in entry:
                 for ent in entry['contains']:
                     client.fields += 1
@@ -1052,22 +1064,37 @@ def create_perspective_fields(request):
                                                         client_id=variables['auth'],
                                                         entity_type=ent['entity_type'],
                                                         data_type=ent['data_type'],
-                                                        level = 'L2E')
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
+                                                        level='L2E',
+                                                        parent=perspective,
+                                                        parent_entity=field,
+                                                        state=entry['state'])
+                    field2.position = ent['position']
+                    DBSession.add(field2)
+                    DBSession.flush()
+                    add_translation_to_translation_string(locale_id=locale_id,
                                                           translation_string=ent['entity_type'],
                                                           translation=ent['entity_type_translation'],
                                                           client_id=client.id)
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
+                    add_translation_to_translation_string(locale_id=locale_id,
                                                           translation_string=ent['data_type'],
                                                           translation=ent['data_type_translation'], client_id=client.id)
-                    DBSession.add(field2)
-                    DBSession.flush()
                     if 'group' in ent:
                         field.group = entry['group']  # is there need for group on second level?
-            request.response.status = HTTPOk.code
-            return {'status': request.response.status,
-                    'object_id': perspective.object_id,
-                    'client_id': perspective.client_id}
+                        add_translation_to_translation_string(locale_id=locale_id,
+                                                              translation_string=ent['group'],
+                                                              translation=ent['group_translation'], client_id=client.id)
+            DBSession.add(field)
+            DBSession.flush()
+            add_translation_to_translation_string(locale_id=locale_id,
+                                                  translation_string=entry['entity_type'],
+                                                  translation=entry['entity_type_translation'], client_id=client.id)
+            add_translation_to_translation_string(locale_id=locale_id,
+                                                  translation_string=entry['data_type'],
+                                                  translation=entry['data_type_translation'], client_id=client.id)
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status,
+                'object_id': perspective.object_id,
+                'client_id': perspective.client_id}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'status': HTTPNotFound.code, 'error': str(e)}

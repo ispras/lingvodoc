@@ -19,7 +19,9 @@ from ..models import (
     Locale,
     BaseGroup,
     Group,
-    Dictionary
+    Dictionary,
+    DictionaryPerspective,
+    Client
     )
 
 
@@ -151,4 +153,21 @@ def main(argv=sys.argv):
                                 adm_can_publish]
         dictionary = Dictionary(object_id=1,client_id=1, name = 'idk')
         DBSession.add(dictionary)
+        DBSession.flush()
+        persp = DictionaryPerspective(object_id=1,client_id=1, parent_object_id=1,parent_client_id=1, name='persp')
+        DBSession.add(persp)
+        DBSession.flush()
+        new_user = User(login='test', default_locale_id = 1)
+        new_pass = Passhash(password='pass')
+        DBSession.add(new_pass)
+        new_user.password = new_pass
+        DBSession.add(new_user)
+        new_user2 = User(login='test2', default_locale_id = 1)
+        new_pass = Passhash(password='pass')
+        DBSession.add(new_pass)
+        new_user2.password = new_pass
+        DBSession.add(new_user2)
+        DBSession.flush()
+        new_client = Client(id=1, user=new_user)
+        DBSession.add(new_client)
         DBSession.flush()
