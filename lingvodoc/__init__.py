@@ -72,6 +72,12 @@ def configure_routes(config):
     #    e) Maps location (coordinates) +- radius in kilometers
     config.add_route('dictionaries', 'dictionaries')
 
+    # web-view
+    config.add_route('new_dictionary', 'dashboard/create_dictionary')
+
+    # web-view
+    config.add_route('edit_dictionary_properties', 'dictionary/{client_id}/{object_id}/edit')
+
     # API #POST
     # Creating dictionary
     config.add_route('create_dictionary', 'dictionary')
@@ -150,21 +156,41 @@ def configure_routes(config):
                              '/perspective/{perspective_client_id}/{perspective_id}/fields')
 
 # TODO: LOCALES!
-    # API #GET && POST && DELETE
+    # API #GET && DELETE
     # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,
     # 'content': <'content'>, 'locale_id': <locale_id>}]
     config.add_route(name='get_l1_entity', pattern='/level_one_entity/<object_id>/<parent_id>')
     config.add_route(name='get_l2_entity', pattern='/level_two_entity/<object_id>/<parent_id>')
 
-    # config.add_route(name='group_entity')
-    # {entity_type: <entity_type>, content: <tag>, connect: [{object_id: <obj_id>, client_id: <cl_id>}
+    # API #GET && DELETE
+    # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
     config.add_route(name='get_group_entity', pattern='/group_entity/<object_id>/<parent_id>')
 
-    config.add_route(name='lexical_entry', pattern='/lexical_entry/<object_id>/<parent_id>')
+    # API #POST (TODO: change to PATCH method later)
+    # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
+    config.add_route(name='add_group_entity', pattern='/group_entity')
+
+    # API #POST
+    # no parameters needed.
+    # ids are returned.
+    config.add_route(name='create_lexical_entry', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                          '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                          'lexical_entry')
+
+    # API #POST
+    # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
+    # ids are returned
+    config.add_route(name='create_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                   'lexical_entry/<lexical_entry_client_id>/'
+                                                   '<lexical_entry_object_id>')
 
     # API #GET && POST
     config.add_route(name='lexical_entries', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                      '/perspective/{perspective_client_id}/{perspective_id}/')
+
+    # API #GET
+    config.add_route(name='lexical_entry', pattern='/lexical_entry/<object_id>/<parent_id>')
 
     # web-view
     config.add_route(name='edit_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
