@@ -254,8 +254,9 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     """
     __parentname__ = 'DictionaryPerspective'
     __entityname__ = 'DictionaryPerspectiveField'
-    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="DictionaryPerspective",
-                                                                                        entity_name="DictionaryPerspectiveField")
+    __table_args__ = CompositeKeysHelper.\
+        set_table_args_for_publishing_fk_composite_key(parent_name="DictionaryPerspective",
+                                                       entity_name="DictionaryPerspectiveField")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     entity_object_id = Column(BigInteger)
@@ -266,6 +267,7 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     group = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
     state = Column(UnicodeText)
+    position = Column(BigInteger)
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
                                                                      DictionaryPerspectiveField.object_id],
@@ -456,7 +458,7 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     __parentname__ = 'BaseGroup'
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject = Column(UnicodeText)
-    users = relationship("User", secondary=user_to_group_association, backref=backref("groups"))
+    users = relationship("User",  secondary=user_to_group_association, backref=backref("groups"))
 
 
 class Organization(Base, TableNameMixin, IdMixin):

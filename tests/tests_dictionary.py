@@ -7,6 +7,44 @@ from lingvodoc.models import DBSession
 from pyramid.httpexceptions import HTTPNotFound, HTTPOk, HTTPBadRequest, HTTPConflict, HTTPInternalServerError
 
 
+class TestViewDictionarySuccessCondition(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        from lingvodoc.models import (
+            Base,
+            Dictionary,
+            Locale,
+            UserEntitiesTranslationString
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+        with transaction.manager:
+            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+            DBSession.add(ru_locale)
+            DBSession.flush()
+            new_uets = UserEntitiesTranslationString(object_id = 1, client_id = 1, locale_id=1,
+                                                     translation_string = 'test', translation = 'working')
+            DBSession.add(new_uets)
+            new_dict=Dictionary(client_id=1, object_id=1, name='test')
+            DBSession.add(new_dict)
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_view_dictionary(self):
+        from lingvodoc.views import view_dictionary
+        request = testing.DummyRequest()
+        request.matchdict['client_id'] = 1
+        request.matchdict['object_id'] = 1
+        response = view_dictionary(request)
+        self.assertEqual(response['status'], HTTPOk.code)
+        self.assertEqual(response['name'], 'working')
+
+
 class TestViewDictionaryFailureCondition(unittest.TestCase):
 
     def setUp(self):
@@ -33,50 +71,46 @@ class TestViewDictionaryFailureCondition(unittest.TestCase):
         self.assertEqual(response['status'], HTTPNotFound.code)
 
 
-class TestViewDictionarySuccessCondition(unittest.TestCase):
-
-    def setUp(self):
-        self.config = testing.setUp()
-        from sqlalchemy import create_engine
-        engine = create_engine('sqlite://')
-        from lingvodoc.models import (
-            Base,
-            Dictionary
-            )
-        DBSession.configure(bind=engine)
-        Base.metadata.create_all(engine)
-        with transaction.manager:
-            new_dict=Dictionary(client_id=1, object_id=1, name='test')
-            DBSession.add(new_dict)
-
-    def tearDown(self):
-        DBSession.remove()
-        testing.tearDown()
-
-    def test_view_dictionary(self):
-        from lingvodoc.views import view_dictionary
-        request = testing.DummyRequest()
-        request.matchdict['client_id'] = 1
-        request.matchdict['object_id'] = 1
-        response = view_dictionary(request)
-        self.assertEqual(response['status'], HTTPOk.code)
-        self.assertEqual(response['name'], 'test')
-
-
 class TestEditDictionarySuccessCondition(unittest.TestCase):
 
     def setUp(self):
         self.config = testing.setUp()
+        import webtest
+        from pyramid import  paster
         from sqlalchemy import create_engine
         engine = create_engine('sqlite://')
+        myapp = paster.get_app('testing.ini')
+        self.app = webtest.TestApp(myapp)
         from lingvodoc.models import (
             Base,
             Dictionary,
-            Language
+            Language,
+            Locale,
+            User,
+            Client,
+            UserEntitiesTranslationString,
+            Passhash
             )
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
         with transaction.manager:
+            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+            DBSession.add(ru_locale)
+            en_locale = Locale(id=2, shortcut="en", intl_name="English")
+            DBSession.add(en_locale)
+            DBSession.flush()
+            new_user = User(id=1, login='test', default_locale_id=1)
+            new_pass = Passhash(password='pass')
+            DBSession.add(new_pass)
+            new_user.password = new_pass
+            DBSession.add(new_user)
+            new_client = Client(id=1, user=new_user)
+            DBSession.add(new_client)
+            DBSession.flush()
+            new_uets = UserEntitiesTranslationString(object_id=1, client_id=1,
+                                                     locale_id=1, translation_string='test',
+                                                     translation='not working')
+            DBSession.add(new_uets)
             new_lang = Language(client_id=1, object_id=1)
             DBSession.add(new_lang)
             new_dict = Dictionary(client_id=1, object_id=1, name='test')
@@ -86,50 +120,66 @@ class TestEditDictionarySuccessCondition(unittest.TestCase):
         DBSession.remove()
         testing.tearDown()
 
-    def test_edit_dictionary(self):
-        from lingvodoc.views import edit_dictionary
+    def test_edit_dictionary_name(self):
         from lingvodoc.models import (
             Base,
             Dictionary,
-            Language
+            Language,
+            UserEntitiesTranslationString
             )
-        request = testing.DummyRequest()
-        request.matchdict['client_id'] = 1
-        request.matchdict['object_id'] = 1
-        request.matchdict['parent_client_id'] = 1
-        request.matchdict['parent_object_id'] = 1
-        request.matchdict['name'] = 'new_name'
-        response = edit_dictionary(request)
-        self.assertEqual(response['status'], HTTPOk.code)
+        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
+        response = self.app.put_json('/dictionary/1/1', params={'name_translation': 'working'})
+        self.assertEqual(response.status_int, HTTPOk.code)
         dictionary = DBSession.query(Dictionary).filter_by(client_id=1, object_id=1).first()
         self.assertNotEqual(dictionary, None)
-        self.assertEqual(dictionary.name, 'new_name')
+        uets = DBSession.query(UserEntitiesTranslationString).\
+            filter_by(translation_string=dictionary.name, locale_id=1).first()
+        self.assertNotEqual(uets, None)
+        self.assertEqual(uets.translation, 'working')
 
 
 class TestEditDictionaryFailureCondition(unittest.TestCase):
 
     def setUp(self):
         self.config = testing.setUp()
+        import webtest
+        from pyramid import  paster
         from sqlalchemy import create_engine
         engine = create_engine('sqlite://')
+        myapp = paster.get_app('testing.ini')
+        self.app = webtest.TestApp(myapp)
         from lingvodoc.models import (
-            Base
+            Base,
+            Locale,
+            User,
+            Passhash,
+            Client
             )
         DBSession.configure(bind=engine)
         Base.metadata.create_all(engine)
+        with transaction.manager:
+            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+            DBSession.add(ru_locale)
+            en_locale = Locale(id=2, shortcut="en", intl_name="English")
+            DBSession.add(en_locale)
+            DBSession.flush()
+            new_user = User(id=1, login='test', default_locale_id = 1)
+            new_pass = Passhash(password='pass')
+            DBSession.add(new_pass)
+            new_user.password = new_pass
+            DBSession.add(new_user)
+            new_client = Client(id=1, user=new_user)
+            DBSession.add(new_client)
 
     def tearDown(self):
         DBSession.remove()
         testing.tearDown()
 
     def test_edit_dictionary(self):
-        from lingvodoc.views import edit_dictionary
-        request = testing.DummyRequest()
-        request.matchdict['client_id'] = 42
-        request.matchdict['object_id'] = 42
-        request.matchdict['name'] = 'new_name'
-        response = edit_dictionary(request)
-        self.assertEqual(response['status'], HTTPNotFound.code)
+        response = self.app.put_json('/dictionary/42/42',
+                                     params={'name': 'imastring', 'translation': 'imatranslation'},
+                                     status = HTTPBadRequest.code)
+        self.assertEqual(response.status_int, HTTPBadRequest.code)
 
 
 class TestDeleteDictionarySuccessCondition(unittest.TestCase):
@@ -243,8 +293,8 @@ class TestCreateDictionarySuccessCondition(unittest.TestCase):
             Dictionary,
             Group
              )
-        response = self.app.post('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.post('/dictionary', params={'name': 'imaname', 'parent_client_id': 1, 'parent_object_id': 1})
+        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
+        response = self.app.post_json('/dictionary', params={'name': 'imaname', 'translation':'imaname', 'parent_client_id': 1, 'parent_object_id': 1})
         self.assertEqual(response.status_int , HTTPOk.code)
 
         dictionary = DBSession.query(Dictionary).filter_by(name='imaname').first()
@@ -287,7 +337,7 @@ class TestCreateDictionaryFailureCondition(unittest.TestCase):
             Dictionary,
             Language
              )
-        response = self.app.post('/dictionary', params={'name': 'imastring'}, status = HTTPBadRequest.code)
+        response = self.app.post_json('/dictionary', params={'name': 'imastring'}, status = HTTPBadRequest.code)
         self.assertEqual(response.status_int, HTTPBadRequest.code)
 
 
@@ -321,7 +371,7 @@ class TestViewDictionaryStatusSuccessCondition(unittest.TestCase):
         self.assertEqual(response['state'], 'WiP')
 
 
-class TestViewDictionaryFailureSuccessCondition(unittest.TestCase):
+class TestViewDictionaryStatusFailureCondition(unittest.TestCase):
 
     def setUp(self):
         self.config = testing.setUp()
@@ -367,13 +417,13 @@ class TestEditDictionaryStatusSuccessCondition(unittest.TestCase):
         DBSession.remove()
         testing.tearDown()
 
-    def test_view_dictionary_status(self):
+    def test_edit_dictionary_status(self):
         from lingvodoc.views import edit_dictionary_status
         from lingvodoc.models import Dictionary
         request = testing.DummyRequest()
         request.matchdict['client_id'] = 1
         request.matchdict['object_id'] = 1
-        request.matchdict['state'] = 'testing'
+        request.json_body={'state':'testing'}
         response = edit_dictionary_status(request)
         self.assertEqual(response['status'], HTTPOk.code)
         dictionary = DBSession.query(Dictionary).filter_by(client_id=1, object_id=1).first()
@@ -398,13 +448,13 @@ class TestEditDictionaryStatusFailureCondition(unittest.TestCase):
         DBSession.remove()
         testing.tearDown()
 
-    def test_view_dictionary_status(self):
+    def test_edit_dictionary_status(self):
         from lingvodoc.views import edit_dictionary_status
         from lingvodoc.models import Dictionary
         request = testing.DummyRequest()
         request.matchdict['client_id'] = 42
         request.matchdict['object_id'] = 42
-        request.matchdict['state'] = 'testing'
+        request.json_body={'state':'testing'}
         response = edit_dictionary_status(request)
         self.assertEqual(response['status'], HTTPNotFound.code)
 
@@ -413,8 +463,12 @@ class TestViewDictionaryRolesSuccessCondition(unittest.TestCase):
 
     def setUp(self):
         self.config = testing.setUp()
+        import webtest
+        from pyramid import  paster
         from sqlalchemy import create_engine
         engine = create_engine('sqlite://')
+        myapp = paster.get_app('testing.ini')
+        self.app = webtest.TestApp(myapp)
         from lingvodoc.models import (
             Base,
             Dictionary,
@@ -587,10 +641,8 @@ class TestEditDictionaryRolesSuccessCondition(unittest.TestCase):
     def test_edit_dictionary_roles(self):
         from lingvodoc.models import Group
         request = testing.DummyRequest()
-        request.matchdict['client_id'] = 1
-        request.matchdict['object_id'] = 1
-        response = self.app.post('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.post('/dictionary/1/1/roles', params={'user_id': 2, 'role_names': ['for_testing','for_testing2']})
+        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
+        response = self.app.post_json('/dictionary/1/1/roles', params={'user_id': 2, 'role_names': ['for_testing','for_testing2']})
         self.assertEqual(response.status_int , HTTPOk.code)
         groups = DBSession.query(Group).filter(Group.base_group_id.in_([1,2])).filter_by(subject='dictionary1_1').all()
         self.assertNotEqual(groups, [])
@@ -658,21 +710,27 @@ class TestDeleteDictionaryRolesSuccessCondition(unittest.TestCase):
             DBSession.add(new_dict)
             new_group = Group(parent = new_base_group, subject = 'dictionary1_1')
             new_group.users.append(new_user)
+            DBSession.flush()
             new_group.users.append(new_user2)
+            DBSession.flush()
+            DBSession.add(new_group)
+            DBSession.flush()
             new_group2 = Group(parent = new_base_group2, subject = 'dictionary1_1')
             new_group2.users.append(new_user)
+            DBSession.flush()
             new_group.users.append(new_user2)
-            DBSession.add(new_group)
+            DBSession.flush()
             DBSession.add(new_group2)
+            DBSession.flush()
 
     def tearDown(self):
         DBSession.remove()
         testing.tearDown()
 
-    def test_edit_dictionary_roles(self):
+    def test_delete_dictionary_roles(self):
         from lingvodoc.models import Group
-        response = self.app.post('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.delete('/dictionary/1/1/roles', params={'user_id': 2, 'role_names': ['for_testing','for_testing2']})
+        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
+        response = self.app.delete_json('/dictionary/1/1/roles', params={'user_id': 2, 'role_names': ['for_testing','for_testing2']})
         self.assertEqual(response.status_int , HTTPOk.code)
         groups = DBSession.query(Group).filter(Group.base_group_id.in_([1,2])).filter_by(subject='dictionary1_1').all()
         self.assertNotEqual(groups, [])
@@ -681,7 +739,3 @@ class TestDeleteDictionaryRolesSuccessCondition(unittest.TestCase):
             for user in group.users:
                 users += [user.id]
             self.assertEqual(users, [1])
-
-
-
-
