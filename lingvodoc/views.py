@@ -1040,6 +1040,18 @@ def dashboard(request):
     return render_to_response('templates/dashboard.pt', variables, request=request)
 
 
+@view_config(route_name='edit_perspective', renderer='templates/create_perspective.pt', request_method='GET')
+def create_perspective(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/create_perspective.pt', variables, request=request)
+
+
+
+
+
+
+
+
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     result = dict()

@@ -109,3 +109,50 @@
   @extend .well;
   @extend .well-sm;
 }
+
+.body-dashboard {
+  padding-top: 70px;
+}
+
+.lingvodoc-navbar {
+  @extend .navbar;
+  @extend .navbar-default;
+  @extend .navbar-fixed-top;
+}
+
+.drag-object {
+  background: red;
+  width: 100px;
+  height: 100px;
+  position: relative;
+  top: 0;
+  left: 0;
+  padding: 0;
+  margin: 0;
+}
+
+
+.drop-area {
+  background: rgba(0,255,0, 0.5);
+  text-align: center;
+  width: 600px;
+  height: 200px;
+  padding-top: 90px;
+  display: block;
+  margin: 20px auto;
+  position: relative;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

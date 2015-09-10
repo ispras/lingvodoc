@@ -16,7 +16,7 @@
 
 </head>
 
-<body class="body-dashboard">
+<body class="body-dashboard ng-scope" ng-app="CreatePerspective">
 
 
 <nav class="lingvodoc-navbar">
@@ -53,9 +53,24 @@
 </nav>
 
 
-<div class="container">
+<div class="container" ng-controller="MainCtrl">
 
 
+    <div class="drag-object ng-binding ng-scope" ng-repeat="obj in draggableObjects">
+
+        <div ng-drag="true" ng-drag-data="obj" draggable="false" class="drag-object" style="">
+            {{ obj.name }}
+        </div>
+    </div>
+
+    <div ng-drop="true" ng-drop-success="onDropComplete($data,$event)" ng-drag-stop="onDragStop($data,$event)" class="drop-area">
+        <span class="title">Drop element here</span>
+
+        <div class="drag-object" ng-repeat="obj in droppedObjects" ng-drag="true" ng-drag-data="obj" ng-drag-success="onDragSuccess($data,$event)" >
+            {{obj.name}}
+        </div>
+
+    </div>
 
 </div>
 
