@@ -56,7 +56,7 @@ def configure_routes(config):
 
     # API #GET && PUT && DELETE
     # Gets/puts info about language
-    config.add_route('language', 'language/{language_id}')
+    config.add_route('language', 'language/{client_id}/{object_id}')
 
     # API #POST
     # Create language
@@ -156,7 +156,7 @@ def configure_routes(config):
     config.add_route(name='get_l1_entity', pattern='/level_one_entity/<object_id>/<parent_id>')
     config.add_route(name='get_l2_entity', pattern='/level_two_entity/<object_id>/<parent_id>')
 
-    config.add_route(name='group_entity')
+    # config.add_route(name='group_entity')
     # {entity_type: <entity_type>, content: <tag>, connect: [{object_id: <obj_id>, client_id: <cl_id>}
     config.add_route(name='get_group_entity', pattern='/group_entity/<object_id>/<parent_id>')
 

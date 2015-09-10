@@ -4,3 +4,4 @@
 virtual_env/
 venv/
 .tox/
+*.sqlite
