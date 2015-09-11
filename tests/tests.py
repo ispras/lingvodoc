@@ -170,20 +170,11 @@ class TestDictionariesListSuccessCondition(unittest.TestCase):
         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
         response = self.app.post_json('/dictionaries', params={'organization_participated': 1})
         self.assertEqual(response.status_int, HTTPOk.code)
-        print('LOOK HERE PLEASE', response.json['dictionaries'])
-        self.assertEqual([{'object_id': 1, 'client_id': 2},  # Something very strange happening
-                          {'object_id': 1, 'client_id': 4},
-                          {'object_id': 1, 'client_id': 1},
-                          {'object_id': 1, 'client_id': 3}],
-                         [{'object_id': 1, 'client_id': 2},
-                          {'object_id': 1, 'client_id': 1},
-                          {'object_id': 1, 'client_id': 4},
-                          {'object_id': 1, 'client_id': 3}])
-        # self.assertEqual(response.json['dictionaries'],
-        #                  [{'object_id': 1, 'client_id': 2},
-        #                   {'object_id': 1, 'client_id': 4},
-        #                   {'object_id': 1, 'client_id': 1},
-        #                   {'object_id': 1, 'client_id': 3}])
+        dicts = [{'object_id': 1, 'client_id': 2},
+                 {'object_id': 1, 'client_id': 1},
+                 {'object_id': 1, 'client_id': 4},
+                 {'object_id': 1, 'client_id': 3}]
+        self.assertCountEqual(response.json['dictionaries'], dicts)
 
 
 class TestViewPerspectiveFieldsSuccessCondition(unittest.TestCase):
@@ -246,6 +237,10 @@ class TestViewPerspectiveFieldsSuccessCondition(unittest.TestCase):
             grouping = DictionaryPerspectiveField(parent=persp, client_id=1, object_id=5, entity_type='etymology',
                                                   data_type='grouping_tag', level='GE', state='enabled', position=4)
             DBSession.add(grouping)
+            field3 = DictionaryPerspectiveField(parent_entity=field1, parent=persp, client_id=1,
+                                                object_id=6, entity_type='praat2', level='L2E',
+                                                data_type='markup', state='enabled', position=1)
+            DBSession.add(field3)
             new_uets = UserEntitiesTranslationString(object_id=1, client_id = 1,
                                                      locale_id=1, translation_string='protoform',
                                                      translation='protoform1')
@@ -278,6 +273,10 @@ class TestViewPerspectiveFieldsSuccessCondition(unittest.TestCase):
                                                      locale_id=1, translation_string='markup',
                                                      translation='markup1')
             DBSession.add(new_uets)
+            new_uets = UserEntitiesTranslationString(object_id=9, client_id = 1,
+                                                     locale_id=1, translation_string='praat2',
+                                                     translation='praat3')
+            DBSession.add(new_uets)
 
     def tearDown(self):
         DBSession.remove()
@@ -287,11 +286,15 @@ class TestViewPerspectiveFieldsSuccessCondition(unittest.TestCase):
         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
         response = self.app.get('/dictionary/1/1/perspective/1/1/fields')
         self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertEqual(response.json['fields'],
+        self.assertCountEqual(response.json['fields'],  # may be problems with checking in 'contains'
                          [
                              {'entity_type': 'protoform1', 'data_type': 'text1', 'state': 'enabled', 'position': 1},
                              {'entity_type': 'sound1', 'data_type': 'sound1', 'state': 'enabled', 'position': 2,
                               'contains': [{'entity_type': 'praat1',
+                                            'data_type': 'markup1',
+                                            'state': 'enabled',
+                                            'position': 1},
+                                           {'entity_type': 'praat3',
                                             'data_type': 'markup1',
                                             'state': 'enabled',
                                             'position': 1}]},
@@ -300,6 +303,8 @@ class TestViewPerspectiveFieldsSuccessCondition(unittest.TestCase):
                              {'entity_type': 'etymology1', 'data_type': 'grouping_tag1',
                               'state': 'enabled', 'position': 4}
                          ])
+
+
 class TestDeletePerspectiveFieldsSuccessCondition(unittest.TestCase):
 
     def setUp(self):

@@ -328,7 +328,7 @@ class PublishingEntityMixin(object):
     parent_client_id = Column(BigInteger)
     entity_object_id = Column(BigInteger)
     entity_client_id = Column(BigInteger)
-    entity_type = Column(UnicodeText)
+    entity_type = Column(UnicodeText(length=2**31))
     content = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -358,7 +358,7 @@ class LevelTwoEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
     __parentname__ = 'LevelOneEntity'
 
 
-class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
+class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):  # RelationshipMixin
     """
     This type of entity is used for grouping word entries (e.g. etymology tags). With it we can group bunch of
     LexicalEntries as connected with each other.
@@ -380,8 +380,19 @@ class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
 
     Parent: LexicalEntry.
     """
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
     __parentname__ = 'LexicalEntry'
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
+    # __table_args__ = (ForeignKeyConstraint(['cli_id', 'obj_id'],
+    #                                  [__parentname__.lower()+'.object_id', __parentname__.lower()+'.client_id']),
+    #                   ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
+    #                                  [__parentname__.lower()+'.object_id', __parentname__.lower()+'.client_id']),
+    #                   )
+    tag = Column(UnicodeText)
+    # cl_id = Column(BigInteger)
+    # obj_id = Column(BigInteger)
+    # parent = relationship(__parentname__,
+    #                         backref= backref('groupingentity')
+    #                         )
 
 
 class PublishLevelOneEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
@@ -496,6 +507,7 @@ class Client(Base, TableNameMixin, IdMixin):
     fields = Column(BigInteger, default=0)
     perspectives = Column(BigInteger, default=0)
     uets = Column(BigInteger, default=0)
+    lexentr = Column(BigInteger, default=0)
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
