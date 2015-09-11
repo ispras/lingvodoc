@@ -1250,14 +1250,14 @@ def create_lexical_entry(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         perspective = DBSession.query(DictionaryPerspective).\
-            filter_by(client_id = perspective_client_id, object_id = perspective_id).first
+            filter_by(client_id=perspective_client_id, object_id = perspective_id).first
         if not perspective:
             request.response.status = HTTPNotFound.code
             return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
         client.lexentr += 1
         lexentr = LexicalEntry(object_id=client.languages, client_id=variables['auth'],
-                                parent_object_id = perspective_id, parent = perspective)
+                               parent_object_id=perspective_id, parent=perspective)
         DBSession.add(lexentr)
         DBSession.flush()
 
