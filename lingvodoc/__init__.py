@@ -159,16 +159,16 @@ def configure_routes(config):
     # API #GET && DELETE
     # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,
     # 'content': <'content'>, 'locale_id': <locale_id>}]
-    config.add_route(name='get_l1_entity', pattern='/level_one_entity/<object_id>/<parent_id>')
-    config.add_route(name='get_l2_entity', pattern='/level_two_entity/<object_id>/<parent_id>')
+    config.add_route(name='get_l1_entity', pattern='/level_one_entity/<client_id>/<object_id>')
+    config.add_route(name='get_l2_entity', pattern='/level_two_entity/<client_id>/<object_id>')
 
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='get_group_entity', pattern='/group_entity/<object_id>/<parent_id>')
+    config.add_route(name='get_group_entity', pattern='/group_entity/<client_id>/<object_id>')
 
     # API #POST (TODO: change to PATCH method later)
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='add_group_entity', pattern='/group_entity')
+    config.add_route(name='add_group_entity', pattern='/group_entity')  # ?
 
     # API #POST
     # no parameters needed.
@@ -190,7 +190,7 @@ def configure_routes(config):
                                                      '/perspective/{perspective_client_id}/{perspective_id}/')
 
     # API #GET
-    config.add_route(name='lexical_entry', pattern='/lexical_entry/<object_id>/<parent_id>')
+    config.add_route(name='lexical_entry', pattern='/lexical_entry/<client_id>/<object_id>>')
 
     # web-view
     config.add_route(name='edit_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
