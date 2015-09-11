@@ -901,14 +901,11 @@ def dictionaries_list(request):
     # add geo coordinates
     if organization_participated:
         organization = DBSession.query(Organization).filter_by(id=organization_participated).first()
-        print('ORGANIZATION', organization.name)
         users = organization.users
         users_id = [o.id for o in users]
-        print('USERS', users_id)
 
         clients = DBSession.query(Client).filter(Client.user_id.in_(users_id)).all()
         cli = [o.id for o in clients]
-        print('CLIENTS', cli)
 
         dictstemp = []
         for dicti in dicts:
@@ -1106,6 +1103,179 @@ def create_perspective_fields(request):
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'status': HTTPNotFound.code, 'error': str(e)}
+
+
+@view_config(route_name='get_l1_entity', renderer='json', request_method='GET')
+def view_l1_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                                 translation_string=entity.entity_type)
+            response['parent_client_id'] = entity.parent_client_id
+            response['parent_object_id'] = entity.parent_object_id
+            response['content'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                             translation_string=entity.content)
+            response['locale_id'] = entity.locale_id
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='get_l1_entity', renderer='json', request_method='DELETE')
+def delete_l1_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            entity.marked_for_deletion = True
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='get_l2_entity', renderer='json', request_method='GET')
+def view_l2_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                                 translation_string=entity.entity_type)
+            response['parent_client_id'] = entity.parent_client_id
+            response['parent_object_id'] = entity.parent_object_id
+            response['content'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                             translation_string=entity.content)
+            response['locale_id'] = entity.locale_id
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='get_l2_entity', renderer='json', request_method='DELETE')
+def delete_l2_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            entity.marked_for_deletion = True
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='get_group_entity', renderer='json', request_method='GET')
+def view_group_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                                 translation_string=entity.entity_type)
+            response['content'] = entity.tag
+            entities = DBSession.query(GroupingEntity).filter_by(tag=entity.tag)
+            objs = []
+            for entry in entities:
+                obj = {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id}
+                objs += [obj]
+            response['connections'] = objs
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='get_group_entity', renderer='json', request_method='DELETE')
+def delete_group_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            entity.marked_for_deletion = True
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='create_lexical_entry', renderer='json', request_method='POST')
+def create_lexical_entry(request):
+    try:
+        dictionary_client_id = request.matchdict.get('dictionary_client_id')
+        dictionary_object_id = request.matchdict.get('dictionary_object_id')
+        perspective_client_id = request.matchdict.get('perspective_client_id')
+        perspective_id = request.matchdict.get('perspective_id')
+
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        perspective = DBSession.query(DictionaryPerspective).\
+            filter_by(client_id=perspective_client_id, object_id = perspective_id).first
+        if not perspective:
+            request.response.status = HTTPNotFound.code
+            return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+
+        client.lexentr += 1
+        lexentr = LexicalEntry(object_id=client.languages, client_id=variables['auth'],
+                               parent_object_id=perspective_id, parent=perspective)
+        DBSession.add(lexentr)
+        DBSession.flush()
+
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status,
+                'object_id': lexentr.object_id,
+                'client_id': lexentr.client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': HTTPBadRequest.code, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': HTTPInternalServerError.code, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': HTTPConflict.code, 'error': str(e)}
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
