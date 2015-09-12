@@ -63,6 +63,8 @@
         </div>
     </div>
 
+
+
     <div ng-drop="true" ng-drop-success="onDropComplete($data,$event)" ng-drag-stop="onDragStop($data,$event)" class="drop-area">
         <span class="title">Drop element here</span>
 
