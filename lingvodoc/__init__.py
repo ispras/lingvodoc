@@ -166,6 +166,11 @@ def configure_routes(config):
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
     config.add_route(name='get_group_entity', pattern='/group_entity/<client_id>/<object_id>')  # 20% ready, not tested
 
+    # API #GET
+    # GET parameter: entity_type = <type> (e.g: "etymology")
+    config.add_route(name='get_connected_words', pattern='/lexical_entry/<client_id>/<object_id>/connected')
+
+
     # API #POST (TODO: change to PATCH method later)
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
     config.add_route(name='add_group_entity', pattern='/group_entity')  # ready, not tested
@@ -194,9 +199,12 @@ def configure_routes(config):
                                                    '<lexical_entry_object_id>/<level_one_client_id>/'
                                                    '<level_one_object_id>')  # ready, not tested
 
-    # API #GET && POST
+    # API #GET
+    # params: start_from=M, count=N, sort_by=<entity_type>
     config.add_route(name='lexical_entries', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                     '/perspective/{perspective_client_id}/{perspective_id}/')  # 0% ready
+                                                     '/perspective/{perspective_client_id}/{perspective_id}/all')  # 0% ready
+    config.add_route(name='lexical_entries', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                     '/perspective/{perspective_client_id}/{perspective_id}/published')  # 0% ready
 
     # API #GET
     # all children
@@ -232,26 +240,76 @@ def configure_routes(config):
     #
     # Second kind of merge suggests to perspectives. It's supposed to be in several stages:
     #   1. Prepare stage:
-    #       1a. Select perspective fields to unite. After fields unification, for all the words
-    #           with selected field it's changed.
+    #       1a. All the perspective fields are united as is (by names). We literally get perspective fields
+    #           from first perspective and then from the second. If the names are equal, they are the same. If not,
+    #           they could be merged later, after all the steps.
     #       1b. All the rest can be marked as active or not.
     #   2. New perspective is created; here will be merge actually done.
     #   3. Function 'get merge suggestions' tries to merge lexical entries and returns list of tuples with merge
     #      suggestions. Selected as correct suggestions are moved to new perspective with all the dependant objects.
     #      *That means that ids for lexical entry are changed.
+    #   4. After all the steps are done and dictionary is marked as "merged" we provide an ability to rename
+    #      perspective fiels. This action can not be undone, so it must be done after dictionaries are totally
+    #      merged.
 
     # API #POST
-    # {}
-    config.add_route(name='merge_dictionaries', pattern='/merge')
+    # Gets a list of two elements exactly. All the checks should be done corresponding to previous comment.
+    # { "name": <new_dictionary_name>,
+    #   "language_client_id": <language_client_id>,
+    #   "language_object_id": <language_object_id>,
+    #   "dictionaries":
+    #   [
+    #     {"dictionary_client_id": <first_dictionary_client_id>, "dictionary_object_id": <first_dictionary_object_id>},
+    #     {"dictionary_client_id": <second_dictionary_client_id>, "dictionary_object_id": <second_dictionary_object_id>}
+    #   ]
+    # Returns new dictionary client and object ids.
+    config.add_route(name='merge_dictionaries', pattern='/merge/dictionaries')
 
     # API #POST
-    config.add_route(name='merge_suggestions', pattern='/merge')
+    # {
+    # "dictionary_client_id": <dictionary_client_id>,
+    # "dictionary_object_id": <dictionary_object_id>},
+    # "name": <new_name>,
+    # "perspectives":
+    # [
+    #  {"perspective_client_id": <first_perspective_client_id, "perspective_object_id": <first_perspective_object_id>},
+    #  {"perspective_client_id": <second_perspective_client_id, "perspective_object_id": <second_perspective_object_id>}
+    # ]
+    # }
+    # Returns new perspective object and client ids.
+    config.add_route(name='merge_dictionaries', pattern='/merge/perspectives')
+
+    # API #POST
+    # {
+    # "perspectives":
+    # [
+    #  {"perspective_client_id": <first_perspective_client_id, "perspective_object_id": <first_perspective_object_id>},
+    #  {"perspective_client_id": <second_perspective_client_id, "perspective_object_id": <second_perspective_object_id>}
+    # ]
+    # }
+    # As a response will be given a list of tuples of the following struct:
+    # [
+    #   {
+    #       "suggestion":
+    #       [
+    #           {"lexical_entry_client_id": <client_id>, "lexical_entry_object_id": <object_id>)},
+    #           {"lexical_entry_client_id": <client_id>, "lexical_entry_object_id": <object_id>)},
+    #       ],
+    #       "confidence": <float 0-1>
+    #   },
+    # ]
+
+    config.add_route(name='merge_suggestions', pattern='/merge/suggestions')
 
     # web-view
     config.add_route(name='merge_master', pattern='/dashboard/merge')
 
-
-
+    # API #GET
+    # Response example:
+    # [{"login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}, ]
+    config.add_route(name='dictionary_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}')
+    config.add_route(name='perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                         '/perspective/{perspective_client_id}/{perspective_id}')
 
 
 
