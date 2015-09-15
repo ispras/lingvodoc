@@ -202,9 +202,9 @@ def configure_routes(config):
     # API #GET
     # params: start_from=M, count=N, sort_by=<entity_type>
     config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                         '/perspective/{perspective_client_id}/{perspective_id}/all')  # 0% ready
+                                                         '/perspective/{perspective_client_id}/{perspective_id}/all')  # filter not ready
     config.add_route(name='lexical_entries_published', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                               '/perspective/{perspective_client_id}/{perspective_id}/published')  # 0% ready
+                                                               '/perspective/{perspective_client_id}/{perspective_id}/published')  # filter not ready
     # made only return list of ids, because another route fol full info exist
 
     # API #GET
@@ -215,7 +215,7 @@ def configure_routes(config):
     # Publishers view: this can approve word versions.
     # [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>, "enabled": <boolean>}, ]
     config.add_route(name='approve_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                    '/perspective/{perspective_client_id}/{perspective_id}/approve')  # 0% ready
+                                                    '/perspective/{perspective_client_id}/{perspective_id}/approve')  # ready, not tested
 
     # web-view
     config.add_route(name='edit_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'

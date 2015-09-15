@@ -881,6 +881,9 @@ def dictionaries_list(request):
     user_created = None
     if 'user_created' in req:
         user_created = req['user_created']
+    published = None
+    if published in req:
+        published = req['published']
     user_participated = None
     if 'user_participated' in req:
         user_participated = req['user_participated']
@@ -892,8 +895,13 @@ def dictionaries_list(request):
         language_object_id = req['language_object_id']
         language_client_id = req['language_client_id']
     dicts = DBSession.query(Dictionary)
+    if published:
+        if published == 'true':
+            dicts = dicts.filter(Dictionary).filter_by(state='published')
+        if published == 'false':
+            dicts = dicts.filter(Dictionary).filter(Dictionary.state!='published')
     if user_created:
-        clients = DBSession.query(Client).filter_by(user_id=user_created).all()
+        clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
     if language_object_id:
@@ -904,7 +912,7 @@ def dictionaries_list(request):
         dicts = dicts.filter(Dictionary.parent_client_id.in_(lang_cli), Dictionary.parent_object_id.in_(lang_obj))
     # add geo coordinates
     if organization_participated:
-        organization = DBSession.query(Organization).filter_by(id=organization_participated).first()
+        organization = DBSession.query(Organization).filter(Organization.id.in_(organization_participated)).first()
         users = organization.users
         users_id = [o.id for o in users]
 
@@ -931,14 +939,13 @@ def dictionaries_list(request):
         dict_cli = [o.client_id for o in dictstemp]
         dicts = dicts.filter(Dictionary.client_id.in_(dict_cli), Dictionary.object_id.in_(dict_obj))
 
-    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id} for o in dicts]
+    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'name':o.name, 'state':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
     response = dict()
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
     response['status'] = HTTPOk.code
 
     return response
-
 
 @view_config(route_name='perspective_fields', renderer='json', request_method='GET')
 def view_perspective_fields(request):
@@ -1534,6 +1541,34 @@ def view_lexical_entry(request):
     return {'status': HTTPNotFound.code, 'error': str("No such lexical entry in the system")}
 
 
+@view_config(route_name='get_user_info', renderer='json', request_method='GET')
+def get_user_info(request):
+    response = dict()
+    client_id = request.params.get('client_id')
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    if not client:
+
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such client in the system")}
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such user in the system")}
+    response['id']=user.id
+    response['login']=user.login
+    response['name']=user.name
+    response['intl_name']=user.intl_name
+    response['default_locale_id']=user.default_locale_id
+    response['birthday']=user.birthday
+    response['signup_date']=user.signup_date
+    response['is_active']=user.is_active
+    request.response.status = HTTPOk.code
+    response['status'] = HTTPOk.code
+    return response
+
+
+
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH')
 def approve_entity(request):
     try:
@@ -1557,16 +1592,23 @@ def approve_entity(request):
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'L2E':
-                client.publishlevoneentity = Client.publishlevoneentity + 1
+                client.publishlevtwoentity = Client.publishlevtwoentity + 1
                 DBSession.flush()
-                entity = DBSession.query_property(LevelOneEntity).\
+                entity = DBSession.query_property(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelOneEntity(client_id=client.id, object_id=client.publishlevoneentity,
-                                                   entity=entity, parent=entity.parent)
+                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=client.publishlevtwoentity,
+                                                   entity=entity, parent=entity.parent.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'GE':
-                pass
+                client.publishgroupentity = Client.publishgroupentity + 1
+                DBSession.flush()
+                entity = DBSession.query_property(GroupingEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                publishent = PublishGroupingEntity(client_id=client.id, object_id=client.publishgroupentity,
+                                                   entity=entity, parent=entity.parent)
+                DBSession.add(publishent)
+                DBSession.flush()
             else:
                 raise CommonException("Unacceptable type")
 
