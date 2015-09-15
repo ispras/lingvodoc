@@ -993,7 +993,7 @@ def view_perspective_fields(request):
         return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE')  # Probably very wrong
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE')
 def delete_perspective_fields(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
