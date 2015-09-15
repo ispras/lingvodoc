@@ -329,8 +329,6 @@ class PublishingEntityMixin(object):
     parent_client_id = Column(BigInteger)
     entity_object_id = Column(BigInteger)
     entity_client_id = Column(BigInteger)
-    entity_type = Column(UnicodeText(length=2**31))
-    content = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -512,6 +510,9 @@ class Client(Base, TableNameMixin, IdMixin):
     levoneentity = Column(BigInteger, default=0)
     levtwoentity = Column(BigInteger, default=0)
     groupentity = Column(BigInteger, default=0)
+    publishlevoneentity = Column(BigInteger, default=0)
+    publishlevtwoentity = Column(BigInteger, default=0)
+    publishgroupentity = Column(BigInteger, default=0)
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
