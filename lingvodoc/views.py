@@ -57,7 +57,7 @@ from pyramid.response import FileResponse
 import os
 import datetime
 import base64
-
+import string
 import time
 
 import keystoneclient.v3 as keystoneclient
@@ -1152,7 +1152,7 @@ def delete_l1_entity(request):
     return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
 
 
-@view_config(route_name='create_entity_level_one', renderer='json', request_method='GET')
+@view_config(route_name='create_entity_level_one', renderer='json', request_method='POST')
 def create_l1_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1238,7 +1238,7 @@ def delete_l2_entity(request):
     return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
 
 
-@view_config(route_name='create_entity_level_two', renderer='json', request_method='GET')
+@view_config(route_name='create_entity_level_two', renderer='json', request_method='POST')
 def create_l2_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1257,9 +1257,9 @@ def create_l2_entity(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'status': HTTPNotFound.code, 'error': str("No such level one entity in the system")}
-        client.levoneentity = Client.levoneentity + 1
+        client.levtwoentity = Client.levtwoentity + 1
         DBSession.flush()
-        entity = LevelOneEntity(client_id=client.id, object_id=client.levoneentity, entity_type=req['entity_type'],
+        entity = LevelTwoEntity(client_id=client.id, object_id=client.levtwoentity, entity_type=req['entity_type'],
                                 content=req['content'], locale_id=req['locale_id'], metadata=req['metadata'],
                                 parent=parent)
         DBSession.add(entity)
@@ -1326,7 +1326,7 @@ def delete_group_entity(request):
     return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
 
 
-@view_config(route_name='add_group_entity', renderer='json', request_method='GET')
+@view_config(route_name='add_group_entity', renderer='json', request_method='POST')
 def create_group_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1338,17 +1338,39 @@ def create_group_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        tags = []
+        if 'tag' in req:
+            tags += [req['tag']]
+
         for par in req['connections']:
-            parent = DBSession.query(LevelOneEntity).filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+            parent = DBSession.query(LevelOneEntity).\
+                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             if not parent:
                 request.response.status = HTTPNotFound.code
                 return {'status': HTTPNotFound.code, 'error': str("No such level one entity in the system")}
-            client.levoneentity = Client.levoneentity + 1
-            DBSession.flush()
-            entity = LevelOneEntity(client_id=client.id, object_id=client.levoneentity, entity_type=req['entity_type'],
-                                    content=req['tag'], parent=parent)
-            DBSession.add(entity)
-            DBSession.flush()
+            par_tags = DBSession.query(GroupingEntity).\
+                filter_by(entity_type=req['entity_type'], parent=parent).all()
+            tags += [o.content for o in par_tags]
+        if not tags:
+            n = 10  # better read from settings
+            tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                         for c in range(n))
+            tags += [tag]
+        for par in req['connections']:
+            parent = DBSession.query(LevelOneEntity).\
+                filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+            for tag in tags:
+                ent = DBSession.query(GroupingEntity).\
+                    filter_by(entity_type=req['entity_type'], content=tag, parent=parent).first()
+                if ent:
+                    continue
+                client.groupentity = Client.groupentity + 1
+                DBSession.flush()
+                entity = GroupingEntity(client_id=client.id, object_id=client.groupentity,
+                                        entity_type=req['entity_type'], content=tag, parent=parent)
+                DBSession.add(entity)
+                DBSession.flush()
         request.response.status = HTTPOk.code
         response['status'] = HTTPOk.code
     except KeyError as e:
@@ -1408,6 +1430,47 @@ def create_lexical_entry(request):
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'status': HTTPConflict.code, 'error': str(e)}
+
+
+@view_config(route_name='lexical_entries', renderer='json', request_method='GET')
+def view_lexical_entries(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            lexical_entries = parent.lexical_entry
+            lexes = []
+            for entry in lexical_entries:
+                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id}
+            response['lexical_entries'] = lexes
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='lexical_entry', renderer='json', request_method='GET')
+def view_lexical_entry(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entry = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if entry:
+        if not entry.marked_for_deletion:
+            if entry.moved_to:
+                response['moved_to'] = entry.moved_to
+            else:
+                response['content'] = entry.track()
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such lexical entry in the system")}
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
