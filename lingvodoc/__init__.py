@@ -27,40 +27,40 @@ def configure_routes(config):
     """
 
     # web-view #GET
-    config.add_route('home', '/')
+    config.add_route(name='home', pattern='/')
 
     # web-view #GET && POST
     # registration page
-    config.add_route('signup', 'signup')
+    config.add_route(name='signup', pattern='/signup')
 
     # internal #POST
     # validation for registration parameters: unique email, unique login
-    config.add_route('signup/validate', 'signup/validate/{param}')
+    config.add_route(name='signup/validate', pattern='/signup/validate/{param}')
 
     # web-view #GET
     # login page
-    config.add_route('login', 'login')
+    config.add_route(name='login', pattern='/login')
 
     # API #POST
     # this is the same operation as login - but params are sent via json
-    config.add_route('signin', 'signin')
+    config.add_route(name='signin', pattern='/signin')
 
     # web-view #POST
-    config.add_route('logout', 'logout')
+    config.add_route(name='logout', pattern='/logout')
 
     # web-view #GET
-    config.add_route('dashboard', 'dashboard')
+    config.add_route(name='dashboard', pattern='/dashboard')
 
     # web-view #GET
-    config.add_route('languages', 'languages')
+    config.add_route(name='languages', pattern='/languages')
 
     # API #GET && PUT && DELETE
     # Gets/puts info about language
-    config.add_route('language', 'language/{client_id}/{object_id}')
+    config.add_route(name='language', pattern='/language/{client_id}/{object_id}')
 
     # API #POST
     # Create language
-    config.add_route('create_language', 'language')
+    config.add_route(name='create_language', pattern='/language')
 
     # API #GET
     # Dictionaries list. The following filters should be supported:
@@ -73,41 +73,41 @@ def configure_routes(config):
     config.add_route('dictionaries', 'dictionaries')
 
     # web-view
-    config.add_route('new_dictionary', 'dashboard/create_dictionary')
+    config.add_route(name='new_dictionary', pattern='/dashboard/create_dictionary')
 
     # web-view
-    config.add_route('edit_dictionary_properties', 'dictionary/{client_id}/{object_id}/edit')
+    config.add_route(name='edit_dictionary_properties', pattern='/dictionary/{client_id}/{object_id}/edit')
 
     # API #POST
     # Creating dictionary
-    config.add_route('create_dictionary', 'dictionary')
+    config.add_route(name='create_dictionary', pattern='/dictionary')
 
     # API #GET && PUT && DELETE
     # Gets/puts info about dictionary (name/additional authors/etc)
-    config.add_route('dictionary', 'dictionary/{client_id}/{object_id}')
+    config.add_route(name='dictionary', pattern='/dictionary/{client_id}/{object_id}')
 
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create and modify perspectives)
     # Request format: {[user id: <user_id>, role_name: <role_name>]}. Get request is empty and returns list of roles.
     config.add_route(name='dictionary_roles',
-                     pattern='dictionary/{client_id}/{object_id}/roles')
+                     pattern='/dictionary/{client_id}/{object_id}/roles')
 
     # API #GET && PUT
     # Change visibility state for dictionary. States are: 'frozen', 'WiP', 'published', 'merging'
     config.add_route(name='dictionary_status',
-                     pattern='dictionary/{client_id}/{object_id}/state')
+                     pattern='/dictionary/{client_id}/{object_id}/state')
 
     # API #GET && PUT && DELETE
     # Gets/puts info about perspective.
     # Future note: PUT & DELETE should work on-server only.
     config.add_route(name='perspective',
-                     pattern='dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}')
 
     # API #POST
     # Creating perspective
     config.add_route(name='create_perspective',
-                     pattern='dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective')
 
     # API #GET && POST && DELETE
@@ -116,13 +116,13 @@ def configure_routes(config):
     # Request format: {[user id: <user_id>, role_name: <role_name>]}. Get request is empty and returns list of
     # roles and users that they are assigned.
     config.add_route(name='perspective_roles',
-                     pattern='dictionary/{client_id}/{object_id}/'
+                     pattern='/dictionary/{client_id}/{object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}/roles')
 
     # API #GET && PUT
     # Get or change visibility state for perspective. States are: 'frozen', 'WiP', 'published'
     config.add_route(name='perspective_status',
-                     pattern='dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                      '/perspective/{perspective_client_id}/{perspective_id}/status')
 
     # API #GET && POST && DELETE
@@ -152,7 +152,7 @@ def configure_routes(config):
     #  {fields: [{entity_type: <entity_type>, data_type:<text|img|sound|markup|grouping_tag>,
     #             status: <enabled|disabled>}, contains: [{}], group: <grouping_button_localization_str>]
     config.add_route(name='perspective_fields',
-                     pattern='dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_id}/fields')
 
 # TODO: LOCALES!
@@ -201,6 +201,12 @@ def configure_routes(config):
     # API #GET
     # all children
     config.add_route(name='lexical_entry', pattern='/lexical_entry/<client_id>/<object_id>')
+
+    # API #PATCH
+    # Publishers view: this can approve word versions.
+    # [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>, "enabled": <boolean>}, ]
+    config.add_route(name='approve_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                    '/perspective/{perspective_client_id}/{perspective_id}/approve')
 
     # web-view
     config.add_route(name='edit_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
