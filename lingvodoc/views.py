@@ -94,7 +94,8 @@ def add_translation_to_translation_string(locale_id, translation, translation_st
         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
                                                                         translation_string=translation_string).first()
         if not uets:
-            client.uets += 1
+            client.uets = Client.uets + 1
+            DBSession.flush()
             uets = UserEntitiesTranslationString(object_id=client.uets,
                                                  client_id=client.id,
                                                  locale_id=locale_id,
@@ -215,7 +216,8 @@ def create_language(request):
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation = translation,
                                               translation_string = translation_string, client_id = client.id)
-        client.languages += 1
+        client.languages = Client.languages + 1
+        DBSession.flush()
         language = Language(object_id=client.languages, client_id=variables['auth'],
                             translation_string = translation_string)
         DBSession.add(language)
@@ -329,7 +331,8 @@ def create_dictionary(request):
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation=translation,
                                               translation_string=name, client_id=client.id)
 
-        client.dictionaries += 1
+        client.dictionaries = Client.dictionaries + 1
+        DBSession.flush()
         dictionary = Dictionary(object_id=client.dictionaries,
                                 client_id=variables['auth'],
                                 name=name,
@@ -514,7 +517,8 @@ def create_perspective(request):
             request.response.status = HTTPNotFound.code
             return {'status': HTTPNotFound.code, 'error': str("No such dictionary in the system")}
 
-        client.perspectives += 1
+        client.perspectives = Client.perspectives + 1
+        DBSession.flush()
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name,
                                               translation=translation, client_id=client.id)
         perspective = DictionaryPerspective(object_id=client.perspectives,
@@ -1040,7 +1044,8 @@ def create_perspective_fields(request):
         locale_id = find_locale_id(request)
 
         for entry in fields:
-            client.fields += 1
+            client.fields = Client.fields + 1
+            DBSession.flush()
             field = DictionaryPerspectiveField(object_id=client.fields,
                                                client_id=variables['auth'],
                                                entity_type=entry['entity_type'],
@@ -1056,7 +1061,8 @@ def create_perspective_fields(request):
             field.position = entry['position']
             if 'contains' in entry:
                 for ent in entry['contains']:
-                    client.fields += 1
+                    client.fields = Client.fields + 1
+                    DBSession.flush()
                     field2 = DictionaryPerspectiveField(object_id=client.fields,
                                                         client_id=variables['auth'],
                                                         entity_type=ent['entity_type'],
@@ -1110,7 +1116,6 @@ def view_l1_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-
     entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
     if entity:
         if not entity.marked_for_deletion:
@@ -1145,6 +1150,50 @@ def delete_l1_entity(request):
             return response
     request.response.status = HTTPNotFound.code
     return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='create_entity_level_one', renderer='json', request_method='GET')
+def create_l1_entity(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        response = dict()
+        parent_client_id = request.matchdict.get('lexical_entry_client_id')
+        parent_object_id = request.matchdict.get('lexical_entry_object_id')
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        parent = DBSession.query(LexicalEntry).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'status': HTTPNotFound.code, 'error': str("No such lexical entry in the system")}
+        client.levoneentity = Client.levoneentity + 1
+        DBSession.flush()
+        entity = LevelOneEntity(client_id=client.id, object_id=client.levoneentity, entity_type=req['entity_type'],
+                                content=req['content'], locale_id=req['locale_id'], metadata=req['metadata'],
+                                parent=parent)
+        DBSession.add(entity)
+        DBSession.flush()
+        request.response.status = HTTPOk.code
+        response['status'] = HTTPOk.code
+        response['client_id'] = entity.client_id
+        response['object_id'] = entity.object_id
+        return response
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
 
 
 @view_config(route_name='get_l2_entity', renderer='json', request_method='GET')
@@ -1187,6 +1236,50 @@ def delete_l2_entity(request):
             return response
     request.response.status = HTTPNotFound.code
     return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
+
+
+@view_config(route_name='create_entity_level_two', renderer='json', request_method='GET')
+def create_l2_entity(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        response = dict()
+        parent_client_id = request.matchdict.get('level_one_client_id')
+        parent_object_id = request.matchdict.get('level_one_object_id')
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        parent = DBSession.query(LevelOneEntity).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'status': HTTPNotFound.code, 'error': str("No such level one entity in the system")}
+        client.levoneentity = Client.levoneentity + 1
+        DBSession.flush()
+        entity = LevelOneEntity(client_id=client.id, object_id=client.levoneentity, entity_type=req['entity_type'],
+                                content=req['content'], locale_id=req['locale_id'], metadata=req['metadata'],
+                                parent=parent)
+        DBSession.add(entity)
+        DBSession.flush()
+        request.response.status = HTTPOk.code
+        response['status'] = HTTPOk.code
+        response['client_id'] = entity.client_id
+        response['object_id'] = entity.object_id
+        return response
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
 
 
 @view_config(route_name='get_group_entity', renderer='json', request_method='GET')
@@ -1233,6 +1326,44 @@ def delete_group_entity(request):
     return {'status': HTTPNotFound.code, 'error': str("No such entity in the system")}
 
 
+@view_config(route_name='add_group_entity', renderer='json', request_method='GET')
+def create_group_entity(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        response = dict()
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        for par in req['connections']:
+            parent = DBSession.query(LevelOneEntity).filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+            if not parent:
+                request.response.status = HTTPNotFound.code
+                return {'status': HTTPNotFound.code, 'error': str("No such level one entity in the system")}
+            client.levoneentity = Client.levoneentity + 1
+            DBSession.flush()
+            entity = LevelOneEntity(client_id=client.id, object_id=client.levoneentity, entity_type=req['entity_type'],
+                                    content=req['tag'], parent=parent)
+            DBSession.add(entity)
+            DBSession.flush()
+        request.response.status = HTTPOk.code
+        response['status'] = HTTPOk.code
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': HTTPNotFound.code, 'error': str(e)}
+
+
 @view_config(route_name='create_lexical_entry', renderer='json', request_method='POST')
 def create_lexical_entry(request):
     try:
@@ -1255,7 +1386,8 @@ def create_lexical_entry(request):
             request.response.status = HTTPNotFound.code
             return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
 
-        client.lexentr += 1
+        client.lexentr = Client.lexentr + 1
+        DBSession.flush()
         lexentr = LexicalEntry(object_id=client.languages, client_id=variables['auth'],
                                parent_object_id=perspective_id, parent=perspective)
         DBSession.add(lexentr)
