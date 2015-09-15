@@ -201,10 +201,10 @@ def configure_routes(config):
 
     # API #GET
     # params: start_from=M, count=N, sort_by=<entity_type>
-    config.add_route(name='lexical_entries', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                     '/perspective/{perspective_client_id}/{perspective_id}/all')  # 0% ready
-    config.add_route(name='lexical_entries', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                     '/perspective/{perspective_client_id}/{perspective_id}/published')  # 0% ready
+    config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                         '/perspective/{perspective_client_id}/{perspective_id}/all')  # 0% ready
+    config.add_route(name='lexical_entries_published', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                               '/perspective/{perspective_client_id}/{perspective_id}/published')  # 0% ready
     # made only return list of ids, because another route fol full info exist
 
     # API #GET
@@ -278,7 +278,7 @@ def configure_routes(config):
     # ]
     # }
     # Returns new perspective object and client ids.
-    config.add_route(name='merge_dictionaries', pattern='/merge/perspectives')
+    config.add_route(name='merge_perspectives', pattern='/merge/perspectives')
 
     # API #POST
     # {
@@ -307,7 +307,7 @@ def configure_routes(config):
 
     # API #GET
     # Response example:
-    # [{"login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}, ]
+    # [{"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}, ]
     config.add_route(name='dictionary_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}')
     config.add_route(name='perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_id}')
@@ -322,6 +322,8 @@ def configure_routes(config):
     # API #GET
     # This methods gets info about user by his client_id
     # client_id = <client_id>
+    # Response example:
+    # {"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}
     config.add_route(name='get_user_info', pattern='/user')
 
     # API #GET
