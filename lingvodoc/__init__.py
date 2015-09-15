@@ -312,11 +312,22 @@ def configure_routes(config):
     config.add_route(name='perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_id}')
 
+    # API #GET
+    # params:
+    # object_type = <type>
+    # client_id = <client_id>
+    # object_id = <object_id>
+    config.add_route(name='get_object_info', pattern='/info')
 
+    # API #GET
+    # This methods gets info about user by his client_id
+    # client_id = <client_id>
+    config.add_route(name='get_user_info', pattern='/user')
 
-    #creation date, author
-    'get_object_info'
-    'get_author_info'
+    # API #GET
+    # Returns translations for a list of words for current or default or fallback locale
+    # ["translation_string", "translation_string2", ...]
+    config.add_route(name='get_translations', pattern='/translations')
 
 
 def main(global_config, **settings):
