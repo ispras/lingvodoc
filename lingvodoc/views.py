@@ -1534,6 +1534,34 @@ def view_lexical_entry(request):
     return {'status': HTTPNotFound.code, 'error': str("No such lexical entry in the system")}
 
 
+@view_config(route_name='get_user_info', renderer='json', request_method='GET')
+def get_user_info(request):
+    response = dict()
+    client_id = request.params.get('client_id')
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    if not client:
+
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such client in the system")}
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+
+        request.response.status = HTTPNotFound.code
+        return {'status': HTTPNotFound.code, 'error': str("No such user in the system")}
+    response['id']=user.id
+    response['login']=user.login
+    response['name']=user.name
+    response['intl_name']=user.intl_name
+    response['default_locale_id']=user.default_locale_id
+    response['birthday']=user.birthday
+    response['signup_date']=user.signup_date
+    response['is_active']=user.is_active
+    request.response.status = HTTPOk.code
+    response['status'] = HTTPOk.code
+    return response
+
+
+
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH')
 def approve_entity(request):
     try:
@@ -1557,16 +1585,23 @@ def approve_entity(request):
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'L2E':
-                client.publishlevoneentity = Client.publishlevoneentity + 1
+                client.publishlevtwoentity = Client.publishlevtwoentity + 1
                 DBSession.flush()
-                entity = DBSession.query_property(LevelOneEntity).\
+                entity = DBSession.query_property(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelOneEntity(client_id=client.id, object_id=client.publishlevoneentity,
-                                                   entity=entity, parent=entity.parent)
+                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=client.publishlevtwoentity,
+                                                   entity=entity, parent=entity.parent.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'GE':
-                pass
+                client.publishgroupentity = Client.publishgroupentity + 1
+                DBSession.flush()
+                entity = DBSession.query_property(GroupingEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                publishent = PublishGroupingEntity(client_id=client.id, object_id=client.publishgroupentity,
+                                                   entity=entity, parent=entity.parent)
+                DBSession.add(publishent)
+                DBSession.flush()
             else:
                 raise CommonException("Unacceptable type")
 
