@@ -1432,8 +1432,8 @@ def create_lexical_entry(request):
         return {'status': HTTPConflict.code, 'error': str(e)}
 
 
-@view_config(route_name='lexical_entries', renderer='json', request_method='GET')
-def view_lexical_entries(request):
+@view_config(route_name='lexical_entries_all', renderer='json', request_method='GET')
+def lexical_entries_all(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1444,7 +1444,55 @@ def view_lexical_entries(request):
             lexical_entries = parent.lexical_entry
             lexes = []
             for entry in lexical_entries:
-                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id}
+                content = []
+                lev_one = entry.publishleveloneentity
+                lev_two = entry.publishleveltwoentity
+                group = entry.publishgroupingentity
+                for ent in lev_two:
+                    enti = ent.entity
+                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                for ent in lev_one:
+                    enti = ent.entity
+                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                for ent in group:
+                    enti = ent.entity
+                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                response['content'] = content
+                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'content': content}
+
+            response['lexical_entries'] = lexes
+            request.response.status = HTTPOk.code
+            response['status'] = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'status': HTTPNotFound.code, 'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='lexical_entries_published', renderer='json', request_method='GET')
+def lexical_entries_published(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            lexical_entries = parent.lexical_entry
+            lexes = []
+            for entry in lexical_entries:
+                content = []
+                lev_one = entry.leveloneentity
+                lev_two = entry.leveltwoentity
+                group = entry.groupingentity
+                for ent in lev_two:
+                    content += [{'tablename': ent.__tablename__, 'content': ent.content}]
+                for ent in lev_one:
+                    content += [{'tablename': ent.__tablename__, 'content': ent.content}]
+                for ent in group:
+                    content += [{'tablename': ent.__tablename__, 'content': ent.content}]
+                response['content'] = content
+                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'content': content}
+
             response['lexical_entries'] = lexes
             request.response.status = HTTPOk.code
             response['status'] = HTTPOk.code
@@ -1465,12 +1513,76 @@ def view_lexical_entry(request):
             if entry.moved_to:
                 response['moved_to'] = entry.moved_to
             else:
-                response['content'] = entry.track()
+                content = []
+                lev_one = entry.publishleveloneentity
+                lev_two = entry.publishleveltwoentity
+                group = entry.publishgroupingentity
+                for ent in lev_two:
+                    enti = ent.entity
+                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                for ent in lev_one:
+                    enti = ent.entity
+                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                for ent in group:
+                    enti = ent.entity
+                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                response['content'] = content
             request.response.status = HTTPOk.code
             response['status'] = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
     return {'status': HTTPNotFound.code, 'error': str("No such lexical entry in the system")}
+
+
+@view_config(route_name='approve_entity', renderer='json', request_method='PATCH')
+def approve_entity(request):
+    try:
+        req = request.json_body
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        for entry in req:
+            if entry['type'] == 'L1E':
+                client.publishlevoneentity = Client.publishlevoneentity + 1
+                DBSession.flush()
+                entity = DBSession.query_property(LevelOneEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                publishent = PublishLevelOneEntity(client_id=client.id, object_id=client.publishlevoneentity,
+                                                   entity=entity, parent=entity.parent)
+                DBSession.add(publishent)
+                DBSession.flush()
+            elif entry['type'] == 'L2E':
+                client.publishlevoneentity = Client.publishlevoneentity + 1
+                DBSession.flush()
+                entity = DBSession.query_property(LevelOneEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                publishent = PublishLevelOneEntity(client_id=client.id, object_id=client.publishlevoneentity,
+                                                   entity=entity, parent=entity.parent)
+                DBSession.add(publishent)
+                DBSession.flush()
+            elif entry['type'] == 'GE':
+                pass
+            else:
+                raise CommonException("Unacceptable type")
+
+        request.response.status = HTTPOk.code
+        return {'status': request.response.status}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': HTTPBadRequest.code, 'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'status': HTTPInternalServerError.code, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': HTTPConflict.code, 'error': str(e)}
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
