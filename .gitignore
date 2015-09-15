@@ -1,2 +1,7 @@
 .DS_Store
 .idea/
+.virtual_env/
+virtual_env/
+venv/
+.tox/
+*.sqlite

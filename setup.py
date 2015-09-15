@@ -13,7 +13,7 @@ requires = [
     'pyramid_chameleon',
     'pyramid_debugtoolbar',
     'pyramid_tm',
-    'SQLAlchemy',
+    'sqlalchemy',
     'transaction',
     'zope.sqlalchemy',
     'waitress',

@@ -18,7 +18,10 @@ from ..models import (
     Passhash,
     Locale,
     BaseGroup,
-    Group
+    Group,
+    Dictionary,
+    DictionaryPerspective,
+    Client
     )
 
 
@@ -43,28 +46,34 @@ def main(argv=sys.argv):
     Base.metadata.create_all(engine)
     with transaction.manager:
 
+        # creating base locales
+        ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+        en_locale = Locale(id=2, shortcut="en", intl_name="English")
+        de_locale = Locale(id=3, shortcut="de", intl_name="Deutsch")
+        fr_locale = Locale(id=4, shortcut="fr", intl_name="Le français")
+
+        DBSession.add(ru_locale)
+        DBSession.flush()
+        DBSession.add(en_locale)
+        DBSession.flush()
+        DBSession.add(de_locale)
+        DBSession.flush()
+        DBSession.add(fr_locale)
+        DBSession.flush()
+
         # creating administrator account
         admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
         if not admin_account:
             print("Admin record not found, initializing")
-            admin_account = User(login=accounts['administrator_login'])
+            admin_account = User(login = accounts['administrator_login'])
             pwd = Passhash(password=accounts['administrator_password'])
             admin_account.password = pwd
+            DBSession.add(pwd)
             DBSession.add(admin_account)
-
-        # creating base locales
-        ru_locale = Locale(id=1, shortcut="ru", name="Русский")
-        en_locale = Locale(id=2, shortcut="en", name="English")
-        de_locale = Locale(id=3, shortcut="de", name="Deutsch")
-        fr_locale = Locale(id=4, shortcut="fr", name="Le français")
-
-        DBSession.add(ru_locale)
-        DBSession.add(en_locale)
-        DBSession.add(de_locale)
-        DBSession.add(fr_locale)
+            DBSession.flush()
 
         # creating base groups
-        can_create_dictionaries = BaseGroup(name="can_create_dictionaries", readable_name="Can create dictionaries")
+        can_create_dictionaries = BaseGroup(name = "can_create_dictionaries", readable_name="Can create dictionaries")
         can_create_languages = BaseGroup(name="can_create_languages", readable_name="Can create languages")
         can_edit_languages = BaseGroup(name="can_edit_languages", readable_name="Can edit languages")
         can_delete_languages = BaseGroup(name="can_delete_languages", readable_name="Can delete languages")
@@ -142,3 +151,23 @@ def main(argv=sys.argv):
                                 adm_can_delete_words,
                                 adm_can_set_defaults,
                                 adm_can_publish]
+        dictionary = Dictionary(object_id=1,client_id=1, name = 'idk')
+        DBSession.add(dictionary)
+        DBSession.flush()
+        persp = DictionaryPerspective(object_id=1,client_id=1, parent_object_id=1,parent_client_id=1, name='persp')
+        DBSession.add(persp)
+        DBSession.flush()
+        new_user = User(login='test', default_locale_id = 1)
+        new_pass = Passhash(password='pass')
+        DBSession.add(new_pass)
+        new_user.password = new_pass
+        DBSession.add(new_user)
+        new_user2 = User(login='test2', default_locale_id = 1)
+        new_pass = Passhash(password='pass')
+        DBSession.add(new_pass)
+        new_user2.password = new_pass
+        DBSession.add(new_user2)
+        DBSession.flush()
+        new_client = Client(id=1, user=new_user)
+        DBSession.add(new_client)
+        DBSession.flush()
