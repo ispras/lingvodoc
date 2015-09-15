@@ -164,7 +164,7 @@ def configure_routes(config):
 
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='get_group_entity', pattern='/group_entity/<client_id>/<object_id>')  # 20% ready, not tested
+    config.add_route(name='get_group_entity', pattern='/group_entity/<client_id>/<object_id>')  # ready, not tested
 
     # API #POST (TODO: change to PATCH method later)
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
@@ -196,11 +196,12 @@ def configure_routes(config):
 
     # API #GET && POST
     config.add_route(name='lexical_entries', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                     '/perspective/{perspective_client_id}/{perspective_id}/')  # 0% ready
+                                                     '/perspective/{perspective_client_id}/{perspective_id}/')  # ready, not tested
+    # made only return list of ids, because another route fol full info exist
 
     # API #GET
     # all children
-    config.add_route(name='lexical_entry', pattern='/lexical_entry/<client_id>/<object_id>')  # 0% ready
+    config.add_route(name='lexical_entry', pattern='/lexical_entry/<client_id>/<object_id>')  # ready, not tested
 
     # API #PATCH
     # Publishers view: this can approve word versions.
