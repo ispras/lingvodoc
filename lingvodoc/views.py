@@ -1557,16 +1557,23 @@ def approve_entity(request):
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'L2E':
-                client.publishlevoneentity = Client.publishlevoneentity + 1
+                client.publishlevtwoentity = Client.publishlevtwoentity + 1
                 DBSession.flush()
-                entity = DBSession.query_property(LevelOneEntity).\
+                entity = DBSession.query_property(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelOneEntity(client_id=client.id, object_id=client.publishlevoneentity,
-                                                   entity=entity, parent=entity.parent)
+                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=client.publishlevtwoentity,
+                                                   entity=entity, parent=entity.parent.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'GE':
-                pass
+                client.publishgroupentity = Client.publishgroupentity + 1
+                DBSession.flush()
+                entity = DBSession.query_property(GroupingEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                publishent = PublishGroupingEntity(client_id=client.id, object_id=client.publishgroupentity,
+                                                   entity=entity, parent=entity.parent)
+                DBSession.add(publishent)
+                DBSession.flush()
             else:
                 raise CommonException("Unacceptable type")
 
