@@ -127,11 +127,6 @@ def configure_routes(config):
 
     # API #GET && POST && DELETE
     # Configuring columns in perspective table.
-    # TODO: fix 'level' field in models: supposed to be a string indicating class for entity (L1E, L2E or GE)
-    # TODO: add 'position' field in models
-    # TODO: add 'data_type' field in models
-    # TODO: add localization strings (name for the field) for fields (each field should have name) (it's entity_type).
-    # TODO: group also indicates user localisation string
     # Example response:
     #   { 'fields: [ {'entity_type': 'protoform', 'data_type': 'text', 'status': 'enabled'},
     #                {'entity_type': 'transcription', 'data_type': 'text', 'status': 'enabled'},

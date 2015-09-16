@@ -217,7 +217,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
-    state = Column(UnicodeText)
+    status = Column(UnicodeText)
     name = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
 
@@ -236,7 +236,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Dictionary")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
-    state = Column(UnicodeText)
+    status = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     name = Column(UnicodeText(length=2**31))
 
@@ -266,7 +266,7 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     level = Column(UnicodeText)
     group = Column(UnicodeText(length=2**31))
     marked_for_deletion = Column(Boolean, default=False)
-    state = Column(UnicodeText)
+    status = Column(UnicodeText)
     position = Column(BigInteger)
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
