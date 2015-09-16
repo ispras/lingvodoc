@@ -5,3 +5,5 @@ virtual_env/
 venv/
 .tox/
 *.sqlite
+*/__pycache__/*
+*.pyc
