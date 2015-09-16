@@ -42,7 +42,7 @@
             <ul class="nav navbar-nav navbar-right">
 
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${user.login}<span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${auth}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="#">Profile</a></li>
                         <li><a href="#">Sign out</a></li>

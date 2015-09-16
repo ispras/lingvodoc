@@ -1758,3 +1758,84 @@ def testing(request):
     result = []
 
     return result
+
+
+
+
+@view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
+def login_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/login.pt', variables, request=request)
+
+
+@view_config(route_name='login', request_method='POST')
+def login_post(request):
+    next = request.params.get('next') or request.route_url('dashboard')
+    login = request.POST.get('login', '')
+    password = request.POST.get('password', '')
+
+    user = DBSession.query(User).filter_by(login=login).first()
+    if user and user.check_password(password):
+        client = Client(user_id=user.id)
+        user.clients.append(client)
+        DBSession.add(client)
+        DBSession.flush()
+        headers = remember(request, principal=client.id)
+        return HTTPFound(location=next, headers=headers)
+    return HTTPUnauthorized(location=request.route_url('login'))
+
+
+@view_config(route_name='signup', renderer='templates/signup.pt', request_method='GET')
+def signup_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/signup.pt', variables, request=request)
+
+@view_config(route_name='signup', renderer='json', request_method='POST')
+def signup_post(request):
+    try:
+        login = request.POST.getone('login')
+        name = request.POST.getone('name')
+        email = request.POST.getone('email')
+        password = request.POST.getone('password')
+
+        day = request.POST.getone('day')
+        month = request.POST.getone('month')
+        year = request.POST.getone('year')
+        birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
+
+        if DBSession.query(User).filter_by(login=login).first():
+            raise CommonException("The user with this login is already registered")
+        if DBSession.query(Email).filter_by(email=email).first():
+            raise CommonException("The user with this email is already registered")
+        new_user = User(login=login, name=name, signup_date=datetime.datetime.utcnow(), intl_name=login, birthday=birthday, is_active=True)
+        pwd = Passhash(password=password)
+        email = Email(email=email)
+        new_user.password = pwd
+        new_user.email.append(email)
+        DBSession.add(new_user)
+        DBSession.flush()
+        return login_post(request)
+
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
+    except ValueError as e:
+        request.response.status = HTTPConflict.code
+        return {'status': request.response.status, 'error': str(e)}
+
+
+@view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
+def dashboard_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/dashboard.pt', variables, request=request)
+
+
+@view_config(route_name='languages', renderer='templates/languages.pt', request_method='GET')
+def languages_get(request):
+    variables = {'auth': authenticated_userid(request)}
+    return render_to_response('templates/languages.pt', variables, request=request)

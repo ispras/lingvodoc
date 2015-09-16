@@ -46,6 +46,7 @@ module.exports = function(grunt) {
                     'bower_components/ngDraggable/ngDraggable.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
                     'bower_components/bootstrap-validator/dist/validator.js',
                     'src/js/lingvodemo.js',
@@ -53,7 +54,8 @@ module.exports = function(grunt) {
                     'src/js/lingvodocview.js',
                     'src/js/lingvowave.js',
                     'src/js/create_perspective.js',
-                    'src/js/dashboard.js'
+                    'src/js/dashboard.js',
+                    'src/js/languages.js'
 
                 ],
                 dest: '../lingvodoc/static/js/lingvodoc.js'

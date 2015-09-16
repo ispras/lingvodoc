@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}" />
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="LanguagesModule">
+
+
+<div id="userId" data-lingvodoc="${auth}"></div>
+<div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
+<div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
+
+
+
+<nav class="lingvodoc-navbar">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Lingvodoc</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="#">Home</a></li>
+                <li><a href="#about">Dictionaries</a></li>
+                <li class="active"><a href="#about">Languages</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${auth}<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Profile</a></li>
+                        <li><a href="#">Sign out</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+<div class="container" ng-controller="LanguagesController" ng-cloak>
+
+
+    <div ng-if="languages.length > 0">
+        <ul ng-repeat="language in languages">
+            <li>
+                {{ language.translation_string }}
+            </li>
+        </ul>
+    </div>
+
+
+    <div ng-if="languages.length == 0">
+        <span>No languages</span>
+    </div>
+    
+
+    <button class="btn btn-primary" ng-click="createLanguage();">Create language...</button>
+
+
+    <script type="text/ng-template" id="createLanguageModal.html">
+
+        <div class="modal-header">
+            <h3 class="modal-title">Create language</h3>
+        </div>
+
+        <div class="modal-body">
+
+            <!-- parent language -->
+            <label for="parentLanguage">Parent language</label>
+            <select id="parentLanguage" class="form-control" ng-model="parentLanguageId" ng-options="language.object_id as language.translation_string for language in languages track by language.object_id">
+
+            </select>
+
+            <label for="translation">Translation</label>
+            <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus ng-model="translation">
+            <!--?<label for="translationString">Translation string</label>-->
+            <!--?<input type="text" id="translationString" name="translationString" class="form-control" placeholder="" required ng-model="translationString">-->
+
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+            <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+        </div>
+
+    </script>
+
+
+</div>
+
+</body>
+</html>
