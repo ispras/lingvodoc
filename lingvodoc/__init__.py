@@ -52,7 +52,7 @@ def configure_routes(config):
     config.add_route(name='dashboard', pattern='/dashboard')
 
     # web-view #GET
-    config.add_route(name='languages', pattern='/languages')
+    config.add_route(name='languages', pattern='/languages/map')
 
     # API #GET && PUT && DELETE
     # Gets/puts info about language
@@ -61,6 +61,10 @@ def configure_routes(config):
     # API #POST
     # Create language
     config.add_route(name='create_language', pattern='/language')  # 100% ready
+
+    # API #GET
+    # view languages list
+    config.add_route(name='get_languages', pattern='/languages')
 
     # API #GET
     # Dictionaries list. The following filters should be supported:

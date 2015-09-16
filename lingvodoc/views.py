@@ -139,6 +139,44 @@ def view_language(request):
     return {'error': str("No such language in the system")}
 
 
+def language_info(lang, request):
+    result = dict()
+    result['client_id'] = lang.client_id
+    result['object_id'] = lang.object_id
+    result['translation_string'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                              translation_string=lang.translation_string)
+    if lang.locale:
+        result['locale_exist'] = True
+    else:
+        result['locale_exist'] = False
+
+    if lang.language:
+        contains = []
+        for childlang in lang.language:
+            contains += [language_info(childlang, request)]
+        result['contains'] = contains
+
+    return result
+
+
+@view_config(route_name='get_languages', renderer='json', request_method='GET')
+def view_languages_list(request):
+    response = dict()
+    langs = []
+    languages = DBSession.query(Language).filter_by(parent = None).all()
+    if languages:
+        for lang in languages:
+
+            langs += [language_info(lang, request)]
+
+        response['languages'] = langs
+
+        request.response.status = HTTPOk.code
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such language in the system")}
+
+
 @view_config(route_name='language', renderer='json', request_method='PUT')
 def edit_language(request):
     try:
@@ -939,6 +977,7 @@ def dictionaries_list(request):
     request.response.status = HTTPOk.code
 
     return response
+
 
 @view_config(route_name='perspective_fields', renderer='json', request_method='GET')
 def view_perspective_fields(request):

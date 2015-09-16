@@ -150,7 +150,12 @@ class TestDictionariesListSuccessCondition(unittest.TestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         # self.assertCountEqual(response.json['dictionaries'],
         #                  [{'object_id': 1, 'client_id': 1}, {'object_id': 1, 'client_id': 2}])
-        print("LOOK HERE", response.json['dictionaries'])
+        # print("LOOK HERE", response.json['dictionaries'])
+
+    def test_languages_list(self):
+        response = self.app.get('/languages')
+        self.assertEqual(response.status_int, HTTPOk.code)
+        print("ANSWER TO EVERYTHING", response.json['languages'])
 
     # def test_user_created_filter(self):
     #     response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
