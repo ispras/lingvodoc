@@ -18,7 +18,12 @@
 
 <body class="body-dashboard" ng-app="DashboardModule">
 
+<div id="userId" data-lingvodoc="${auth}"></div>
 <div id="dictionariesUrl" data-lingvodoc="${request.route_url('dictionaries')}"></div>
+<div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
+<div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
+
+
 
 <nav class="lingvodoc-navbar">
     <div class="container">
@@ -33,8 +38,9 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li class="active"><a href="#">Home</a></li>
-                <li><a href="#about">Dictionaries</a></li>
+                <li><a href="#">Home</a></li>
+                <li class="active"><a href="#about">Dictionaries</a></li>
+                <li><a href="#about">Languages</a></li>
                 <li><a href="#contact">Contact</a></li>
                 <li><a href="#about">About</a></li>
             </ul>
@@ -56,17 +62,51 @@
 
 <div class="container" ng-controller="DashboardController" ng-cloak>
 
-    <ul ng-repeat="dictionary in dictionaries">
-        <li>
-            {{ dictionary }}
+    <div ng-if="dictionaries.length > 0">
+        <ul ng-repeat="dictionary in dictionaries">
+            <li>
+                {{ dictionary }}
 
+            </li>
+        </ul>
+    </div>
 
-        </li>
+    <div ng-if="dictionaries.length == 0">
+        <span>No dictionaries</span>
+    </div>
 
-    </ul>
-
+    <button class="btn btn-primary" ng-click="createDictionary();">Create dictionary...</button>
 
 </div>
 
+
+<script type="text/ng-template" id="createDictionaryModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">Create dictionary</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <label for="language">Language</label>
+        <select id="language" class="form-control" ng-model="languageId" ng-options="language.object_id as language.translation_string for language in languages track by language.object_id">
+        </select>
+
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="" required autofocus ng-model="name">
+        <label for="translation">Translation</label>
+        <input type="text" id="translation" name="translation" class="form-control" placeholder="" required ng-model="translation">
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+</script>
+
+
 </body>
+
 </html>

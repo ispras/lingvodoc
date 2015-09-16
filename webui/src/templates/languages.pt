@@ -79,37 +79,35 @@
 
     <button class="btn btn-primary" ng-click="createLanguage();">Create language...</button>
 
-
-    <script type="text/ng-template" id="createLanguageModal.html">
-
-        <div class="modal-header">
-            <h3 class="modal-title">Create language</h3>
-        </div>
-
-        <div class="modal-body">
-
-            <!-- parent language -->
-            <label for="parentLanguage">Parent language</label>
-            <select id="parentLanguage" class="form-control" ng-model="parentLanguageId" ng-options="language.object_id as language.translation_string for language in languages track by language.object_id">
-
-            </select>
-
-            <label for="translation">Translation</label>
-            <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus ng-model="translation">
-            <!--?<label for="translationString">Translation string</label>-->
-            <!--?<input type="text" id="translationString" name="translationString" class="form-control" placeholder="" required ng-model="translationString">-->
-
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-            <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
-        </div>
-
-    </script>
-
-
 </div>
+
+<script type="text/ng-template" id="createLanguageModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">Create language</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <!-- parent language -->
+        <label for="parentLanguage">Parent language</label>
+        <select id="parentLanguage" class="form-control" ng-model="parentLanguageId" ng-options="language.object_id as language.translation_string for language in languages track by language.object_id">
+
+        </select>
+
+        <label for="translation">Translation</label>
+        <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus ng-model="translation">
+        <!--?<label for="translationString">Translation string</label>-->
+        <!--?<input type="text" id="translationString" name="translationString" class="form-control" placeholder="" required ng-model="translationString">-->
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+</script>
 
 </body>
 </html>

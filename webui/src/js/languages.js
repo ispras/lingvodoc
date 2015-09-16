@@ -2,7 +2,6 @@
 
 var app = angular.module('LanguagesModule', ['ui.bootstrap']);
 
-
 app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval', '$log', function($scope, $http, $modal, $interval, $log) {
 
     var userId = $('#userId').data('lingvodoc');
@@ -85,6 +84,10 @@ app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$mo
     });
 
     $scope.ok = function () {
+
+        if (!$scope.translation) {
+            return;
+        }
 
         var languageObj = {
             'translation': $scope.translation,
