@@ -307,28 +307,28 @@ def configure_routes(config):
     # API #GET
     # Response example:
     # [{"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}, ]
-    config.add_route(name='dictionary_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}')
+    config.add_route(name='dictionary_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}')  # 0% ready
     config.add_route(name='perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                         '/perspective/{perspective_client_id}/{perspective_id}')
+                                                         '/perspective/{perspective_client_id}/{perspective_id}')  # 0% ready
 
     # API #GET
     # params:
     # object_type = <type>
     # client_id = <client_id>
     # object_id = <object_id>
-    config.add_route(name='get_object_info', pattern='/info')
+    config.add_route(name='get_object_info', pattern='/info')  # 0% ready
 
     # API #GET
     # This methods gets info about user by his client_id
     # client_id = <client_id>
     # Response example:
     # {"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}
-    config.add_route(name='get_user_info', pattern='/user')
+    config.add_route(name='get_user_info', pattern='/user')  # ready, not tested
 
     # API #GET
     # Returns translations for a list of words for current or default or fallback locale
     # ["translation_string", "translation_string2", ...]
-    config.add_route(name='get_translations', pattern='/translations')
+    config.add_route(name='get_translations', pattern='/translations')  # ready, not tested
 
 
 def main(global_config, **settings):
@@ -344,6 +344,7 @@ def main(global_config, **settings):
     config_file = global_config['__file__']
     parser = ConfigParser()
     parser.read(config_file)
+    #TODO: DANGER
     storage = dict()
     for k, v in parser.items('backend:storage'):
         storage[k] = v

@@ -169,12 +169,10 @@ def view_languages_list(request):
 
             langs += [language_info(lang, request)]
 
-        response['languages'] = langs
+    response['languages'] = langs
 
-        request.response.status = HTTPOk.code
-        return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such language in the system")}
+    request.response.status = HTTPOk.code
+    return response
 
 
 @view_config(route_name='language', renderer='json', request_method='PUT')
@@ -205,7 +203,6 @@ def edit_language(request):
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
-
 
 
 @view_config(route_name='language', renderer='json', request_method='DELETE')
@@ -1148,6 +1145,63 @@ def create_perspective_fields(request):
         return {'error': str(e)}
 
 
+@view_config(route_name='upload', renderer='templates/upload.pt')
+def openstack_conn(request):
+
+    if request.method == "POST":
+        fil = request.params['file']
+        file = fil.file
+        file_name = 'acl_improved/' + fil.filename
+        openstack_upload(request.registry.settings, file, file_name, 'text/plain', 'testing_python_script')
+        url = request.route_url('home')
+        return HTTPFound(location=url)
+    return dict()
+
+
+def object_file_path(obj, settings, create_dir=False):
+    base_path = settings['storage']['path']
+    storage_dir = os.path.join(base_path, obj.data_type, str(obj.client_id), str(obj.id))
+    if create_dir:
+        os.makedirs(storage_dir, exist_ok=True)
+    storage_path = os.path.join(storage_dir, "content.original")
+    return storage_path
+
+def openstack_upload(settings, file, file_name, content_type,  container_name):
+    storage = settings['storage']
+    authurl = storage['authurl']
+    user = storage['user']
+    key = storage['key']
+    auth_version = storage['auth_version']
+    tenant_name = storage['tenant_name']
+    conn = swiftclient.Connection(authurl=authurl, user=user, key=key,  auth_version=auth_version,
+                                  tenant_name=tenant_name)
+    #storageurl = conn.get_auth()[0]
+    conn.put_container(container_name)
+    obje = conn.put_object(container_name, file_name,
+                    contents = file,
+                    content_type = content_type)
+    #obje = conn.get_object(container_name, file_name)
+    return str(obje)
+
+
+# def create_object(request, content, obj):
+#     # here will be object storage write as an option. Fallback (default) is filesystem write
+#     settings = request.registry.settings
+#     storage = settings['storage']
+#     storagetype = storage['type']
+#     if storagetype == 'disk':
+#         storage_path = object_file_path(obj, True, 'disk')
+#
+#         f = open(storage_path, 'wb+')
+#         f.write(base64.urlsafe_b64decode(content))
+#         f.close()
+#     if storagetype == 'openstack':
+#         file =  base64.urlsafe_b64decode(content)
+#         filename =
+#         openstack_upload(settings,, )
+#     return
+
+
 @view_config(route_name='get_l1_entity', renderer='json', request_method='GET')
 def view_l1_entity(request):
     response = dict()
@@ -1585,7 +1639,6 @@ def get_user_info(request):
     return response
 
 
-
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH')
 def approve_entity(request):
     try:
@@ -1643,6 +1696,18 @@ def approve_entity(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
+
+@view_config(route_name='get_translations', renderer='json', request_method='GET')
+def get_translations(request):
+    req = request.json_body
+    response = []
+    for entry in req:
+        response += [find_by_translation_string(find_locale_id(request), entry)]
+    request.response.status = HTTPOk.code
+    return response
+
+
+
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
 might be caused by one of the following things:
@@ -1660,35 +1725,6 @@ try it again.
 """
 
 
-def openstack_upload(settings, file, file_name, content_type,  container_name):
-    storage = settings['storage']
-    authurl = storage['authurl']
-    user = storage['user']
-    key = storage['key']
-    auth_version = storage['auth_version']
-    tenant_name = storage['tenant_name']
-    conn = swiftclient.Connection(authurl=authurl, user=user, key=key,  auth_version=auth_version,
-                                  tenant_name=tenant_name)
-    #storageurl = conn.get_auth()[0]
-    conn.put_container(container_name)
-    obje = conn.put_object(container_name, file_name,
-                    contents = file,
-                    content_type = content_type)
-    #obje = conn.get_object(container_name, file_name)
-    return str(obje)
-
-
-@view_config(route_name='upload', renderer='templates/upload.pt')
-def openstack_conn(request):
-
-    if request.method == "POST":
-        fil = request.params['file']
-        file = fil.file
-        file_name = 'acl_improved/' + fil.filename
-        openstack_upload(request.registry.settings, file, file_name, 'text/plain', 'testing_python_script')
-        url = request.route_url('home')
-        return HTTPFound(location=url)
-    return dict()
 
 
 def searchby(reqtype):
@@ -1719,23 +1755,6 @@ def searchby(reqtype):
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    result = dict()
-    # get = dict()
-    # for entry in dir(request.GET):
-    #     get[str(entry)] = str(entry)
-    # result['GET'] = get
-    # get = dict()
-    # for entry in dir(request.params):
-    #     get[str(entry)] = str(entry)
-    # result['params'] = get
-    # result['POST'] = request.POST.get['id']
+    result = []
 
-    result['method'] = request.method
-    result['matchdict'] = request.matchdict.get('id')
-    result['get'] = request.GET.get('id')
-    result['post'] = request.POST.get('id')
-
-    if 'id2' in request.json_body:
-        result['json_body'] = request.json_body['id2']
-    print(request.json_body)
     return result
