@@ -921,14 +921,17 @@ def dictionaries_list(request):
         for lan in languages:
             lang = DBSession.query(Language).filter_by(object_id=lan['object_id'], client_id=lan['client_id']).first()
             langs += all_languages(lang)
+        if langs:
+            prevdicts = dicts.filter_by(parent_client_id=langs[0]['client_id'], parent_object_id=langs[0]['object_id'])
+            langs.remove(langs[0])
+            for lan in langs:
+                prevdicts = prevdicts.subquery().select()
+                prevdicts = dicts.filter_by(parent_client_id=lan['client_id'], parent_object_id=lan['object_id']).union_all(prevdicts)
 
-        prevdicts = dicts.filter_by(parent_client_id=langs[0]['client_id'], parent_object_id=langs[0]['object_id'])
-        langs.remove(langs[0])
-        for lan in langs:
-            prevdicts = prevdicts.subquery().select()
-            prevdicts = dicts.filter_by(parent_client_id=lan['client_id'], parent_object_id=lan['object_id']).union_all(prevdicts)
+            dicts = prevdicts
+        else:
+            dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
 
-        dicts = prevdicts
     # add geo coordinates
     if organization_participated:
         organization = DBSession.query(Organization).filter(Organization.id.in_(organization_participated)).first()
@@ -942,14 +945,16 @@ def dictionaries_list(request):
         for dicti in dicts:
             if check_for_client(dicti, cli):
                 dictstemp += [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
+        if dictstemp:
+            prevdicts = dicts.filter_by(parent_client_id=dictstemp[0]['client_id'], parent_object_id=dictstemp[0]['object_id'])
+            dictstemp.remove(dictstemp[0])
+            for dicti in dictstemp:
+                prevdicts = prevdicts.subquery().select()
+                prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
 
-        prevdicts = dicts.filter_by(parent_client_id=dictstemp[0]['client_id'], parent_object_id=dictstemp[0]['object_id'])
-        dictstemp.remove(dictstemp[0])
-        for dicti in dictstemp:
-            prevdicts = prevdicts.subquery().select()
-            prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
-
-        dicts = prevdicts
+            dicts = prevdicts
+        else:
+            dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
 
     if user_participated:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_participated)).all()
@@ -959,14 +964,16 @@ def dictionaries_list(request):
         for dicti in dicts:
             if check_for_client(dicti, cli):
                 dictstemp += [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
+        if dictstemp:
+            prevdicts = dicts.filter_by(parent_client_id=dictstemp[0]['client_id'], parent_object_id=dictstemp[0]['object_id'])
+            dictstemp.remove(dictstemp[0])
+            for dicti in dictstemp:
+                prevdicts = prevdicts.subquery().select()
+                prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
 
-        prevdicts = dicts.filter_by(parent_client_id=dictstemp[0]['client_id'], parent_object_id=dictstemp[0]['object_id'])
-        dictstemp.remove(dictstemp[0])
-        for dicti in dictstemp:
-            prevdicts = prevdicts.subquery().select()
-            prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
-
-        dicts = prevdicts
+            dicts = prevdicts
+        else:
+            dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
 
     dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'name':o.name, 'status':o.status,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
     response = dict()
@@ -1166,6 +1173,7 @@ def object_file_path(obj, settings, create_dir=False):
     storage_path = os.path.join(storage_dir, "content.original")
     return storage_path
 
+
 def openstack_upload(settings, file, file_name, content_type,  container_name):
     storage = settings['storage']
     authurl = storage['authurl']
@@ -1184,22 +1192,22 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
     return str(obje)
 
 
-# def create_object(request, content, obj):
-#     # here will be object storage write as an option. Fallback (default) is filesystem write
-#     settings = request.registry.settings
-#     storage = settings['storage']
-#     storagetype = storage['type']
-#     if storagetype == 'disk':
-#         storage_path = object_file_path(obj, True, 'disk')
-#
-#         f = open(storage_path, 'wb+')
-#         f.write(base64.urlsafe_b64decode(content))
-#         f.close()
-#     if storagetype == 'openstack':
-#         file =  base64.urlsafe_b64decode(content)
-#         filename =
-#         openstack_upload(settings,, )
-#     return
+def create_object(request, content, obj):
+    # here will be object storage write as an option. Fallback (default) is filesystem write
+    settings = request.registry.settings
+    storage = settings['storage']
+    storagetype = storage['type']
+    if storagetype == 'disk':
+        storage_path = object_file_path(obj, True, 'disk')
+
+        f = open(storage_path, 'wb+')
+        f.write(base64.urlsafe_b64decode(content))
+        f.close()
+    if storagetype == 'openstack':
+        file = base64.urlsafe_b64decode(content)
+        filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
+        openstack_upload(settings, file, filename, obj.data_type, 'test')
+    return
 
 
 @view_config(route_name='get_l1_entity', renderer='json', request_method='GET')
@@ -1523,24 +1531,53 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries = parent.lexical_entry
+            req = request.json_body
+
+            session = DBSession()
+            reqtype = req['sort_by']
+            start_from = req['start_from']
+            count = req['count']
+            levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
+            lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
+                join(levonefirst).\
+                filter(levonefirst.entity_type == reqtype, levonefirst.parent_client_id == parent.client_id, levonefirst.parent_object_id == parent.object_id).\
+                order_by('obj_id').\
+                group_by(LexicalEntry.object_id).offset(start_from).limit(count)
             lexes = []
-            for entry in lexical_entries:
-                content = []
-                lev_one = entry.publishleveloneentity
-                lev_two = entry.publishleveltwoentity
-                group = entry.publishgroupingentity
-                for ent in lev_two:
-                    enti = ent.entity
-                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
-                for ent in lev_one:
-                    enti = ent.entity
-                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
-                for ent in group:
-                    enti = ent.entity
-                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
-                response['content'] = content
-                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'content': content}
+            for entry in lex_entries:
+                content = dict()
+                lev_one = entry.leveloneentity
+                group = entry.groupingentity
+                for enti in lev_one:
+                    content2 = dict()
+                    content2['level'] = enti.level
+                    content2['entity_type'] = enti.entity_type
+                    content2['data_type'] = enti.data_type
+                    content2['client_id'] = enti.client_id
+                    content2['object_id'] = enti.object_id
+                    lev_two = enti.leveltwoentity
+                    if lev_two:
+                        contains = []
+                        for ent in lev_two:
+                            content3 = dict()
+                            content3['level'] = ent.level
+                            content3['entity_type'] = ent.entity_type
+                            content3['data_type'] = ent.data_type
+                            content3['client_id'] = ent.client_id
+                            content3['object_id'] = ent.object_id
+                            contains += [content3]
+
+                        content2['contains'] = contains
+                    content += [content2]
+                for enti in group:
+                    content2 = dict()
+                    content2['level'] = enti.level
+                    content2['entity_type'] = enti.entity_type
+                    content2['data_type'] = enti.data_type
+                    content2['client_id'] = enti.client_id
+                    content2['object_id'] = enti.object_id
+                    content += [content2]
+                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
 
             response['lexical_entries'] = lexes
             request.response.status = HTTPOk.code
@@ -1558,21 +1595,57 @@ def lexical_entries_published(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries = parent.lexical_entry
+            req = request.json_body
+
+            session = DBSession()
+            reqtype = req['sort_by']
+            start_from = req['start_from']
+            count = req['count']
+            levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
+            lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
+                join(levonefirst).\
+                filter(levonefirst.entity_type == reqtype, levonefirst.parent_client_id == parent.client_id, levonefirst.parent_object_id == parent.object_id).\
+                order_by('obj_id').\
+                group_by(LexicalEntry.object_id).offset(start_from).limit(count)
             lexes = []
-            for entry in lexical_entries:
-                content = []
-                lev_one = entry.leveloneentity
-                lev_two = entry.leveltwoentity
-                group = entry.groupingentity
-                for ent in lev_two:
-                    content += [{'tablename': ent.__tablename__, 'content': ent.content}]
+            for entry in lex_entries:
+                content = dict()
+                lev_one = entry.publishleveloneentity
+                group = entry.publishgroupingentity
+                lev_two_publ = entry.publishleveltwoentity
                 for ent in lev_one:
-                    content += [{'tablename': ent.__tablename__, 'content': ent.content}]
+                    enti = ent.entry
+                    content2 = dict()
+                    content2['level'] = enti.level
+                    content2['entity_type'] = enti.entity_type
+                    content2['data_type'] = enti.data_type
+                    content2['client_id'] = enti.client_id
+                    content2['object_id'] = enti.object_id
+                    lev_two = enti.leveltwoentity
+                    if lev_two:
+                        contains = []
+                        for entit in lev_two:
+                            if entit in lev_two_publ:
+                                content3 = dict()
+                                content3['level'] = entit.level
+                                content3['entity_type'] = entit.entity_type
+                                content3['data_type'] = entit.data_type
+                                content3['client_id'] = entit.client_id
+                                content3['object_id'] = entit.object_id
+                                contains += [content3]
+                        if contains:
+                            content2['contains'] = contains
+                    content += [content2]
                 for ent in group:
-                    content += [{'tablename': ent.__tablename__, 'content': ent.content}]
-                response['content'] = content
-                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'content': content}
+                    enti = ent.entry
+                    content2 = dict()
+                    content2['level'] = enti.level
+                    content2['entity_type'] = enti.entity_type
+                    content2['data_type'] = enti.data_type
+                    content2['client_id'] = enti.client_id
+                    content2['object_id'] = enti.object_id
+                    content += [content2]
+                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
 
             response['lexical_entries'] = lexes
             request.response.status = HTTPOk.code
@@ -1593,19 +1666,42 @@ def view_lexical_entry(request):
             if entry.moved_to:
                 response['moved_to'] = entry.moved_to
             else:
-                content = []
+                content = dict()
                 lev_one = entry.publishleveloneentity
-                lev_two = entry.publishleveltwoentity
                 group = entry.publishgroupingentity
-                for ent in lev_two:
-                    enti = ent.entity
-                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                lev_two_publ = entry.publishleveltwoentity
                 for ent in lev_one:
-                    enti = ent.entity
-                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                    enti = ent.entry
+                    content2 = dict()
+                    content2['level'] = enti.level
+                    content2['entity_type'] = enti.entity_type
+                    content2['data_type'] = enti.data_type
+                    content2['client_id'] = enti.client_id
+                    content2['object_id'] = enti.object_id
+                    lev_two = enti.leveltwoentity
+                    if lev_two:
+                        contains = []
+                        for entit in lev_two:
+                            if entit in lev_two_publ:
+                                content3 = dict()
+                                content3['level'] = entit.level
+                                content3['entity_type'] = entit.entity_type
+                                content3['data_type'] = entit.data_type
+                                content3['client_id'] = entit.client_id
+                                content3['object_id'] = entit.object_id
+                                contains += [content3]
+                        if contains:
+                            content2['contains'] = contains
+                    content += [content2]
                 for ent in group:
-                    enti = ent.entity
-                    content += [{'tablename': enti.__tablename__, 'content': enti.content}]
+                    enti = ent.entry
+                    content2 = dict()
+                    content2['level'] = enti.level
+                    content2['entity_type'] = enti.entity_type
+                    content2['data_type'] = enti.data_type
+                    content2['client_id'] = enti.client_id
+                    content2['object_id'] = enti.object_id
+                    content += [content2]
                 response['content'] = content
             request.response.status = HTTPOk.code
             return response
@@ -1745,8 +1841,8 @@ def searchby(reqtype):
     # something = session.query(subq.c.object_id, subq.c.obj_id, levone.entity_type, levone.content).\
     #     join(levone).filter(levone.entity_type=='2').\
     #     order_by(my_order('obj_id'))
-        # add_column(levone.content).\
-        # add_column(levone.entity_type).\
+    #     add_column(levone.content).\
+    #     add_column(levone.entity_type).\
     something = session.query(LexicalEntry.object_id).order_by()
     for ent in something:
         res += [ent]
