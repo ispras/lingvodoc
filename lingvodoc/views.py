@@ -882,7 +882,7 @@ def dictionaries_list(request):
     if 'user_created' in req:
         user_created = req['user_created']
     published = None
-    if published in req:
+    if 'published' in req:
         published = req['published']
     user_participated = None
     if 'user_participated' in req:
@@ -890,10 +890,9 @@ def dictionaries_list(request):
     organization_participated = None
     if 'organization_participated' in req:
         organization_participated = req['organization_participated']
-    language_object_id = None
-    if 'language_object_id' in req:
-        language_object_id = req['language_object_id']
-        language_client_id = req['language_client_id']
+    languages = None
+    if 'languages' in req:
+        languages = req['languages']
     dicts = DBSession.query(Dictionary)
     if published:
         if published == 'true':
@@ -904,12 +903,19 @@ def dictionaries_list(request):
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
-    if language_object_id:
-        lang = DBSession.query(Language).filter_by(object_id=language_object_id, client_id=language_client_id).first()
-        langs = all_languages(lang)
-        lang_obj = [o[0] for o in langs]
-        lang_cli = [o[1] for o in langs]
-        dicts = dicts.filter(Dictionary.parent_client_id.in_(lang_cli), Dictionary.parent_object_id.in_(lang_obj))
+    if languages:
+        langs = []
+        for lan in languages:
+            lang = DBSession.query(Language).filter_by(object_id=lan['object_id'], client_id=lan['client_id']).first()
+            langs += all_languages(lang)
+
+        prevdicts = dicts.filter_by(parent_client_id=langs[0][1], parent_object_id=langs[0][0])
+        langs.remove(langs[0])
+        for lan in langs:
+            prevdicts = prevdicts.subquery().select()
+            prevdicts = dicts.filter_by(parent_client_id=lan[1], parent_object_id=lan[0]).union_all(prevdicts)
+
+        dicts = prevdicts
     # add geo coordinates
     if organization_participated:
         organization = DBSession.query(Organization).filter(Organization.id.in_(organization_participated)).first()
