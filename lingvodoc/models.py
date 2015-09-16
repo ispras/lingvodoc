@@ -441,15 +441,15 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 
 
 class User(Base, TableNameMixin, IdMixin):
-    login = Column(UnicodeText(length=30), unique=True)
-    name = Column(UnicodeText)
+    login = Column(UnicodeText(length=60), unique=True)
+    name = Column(UnicodeText(length=2**31))
     # this stands for name in English
-    intl_name = Column(UnicodeText)
+    intl_name = Column(UnicodeText(length=2**31))
     default_locale_id = Column(ForeignKey("locale.id"))
     birthday = Column(Date)
-    signup_date = Column(DateTime)
+    signup_date = Column(DateTime, default=datetime.datetime.utcnow)
     # it's responsible for "deleted user state". True for active, False for deactivated.
-    is_active = Column(Boolean)
+    is_active = Column(Boolean, default=True)
     password = relationship("Passhash", uselist=False)
 
     def check_password(self, passwd):

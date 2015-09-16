@@ -17,6 +17,7 @@ from ..models import (
     User,
     Passhash,
     Locale,
+    Language,
     BaseGroup,
     Group,
     Dictionary,
@@ -28,7 +29,7 @@ from ..models import (
 def usage(argv):
     cmd = os.path.basename(argv[0])
     print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+          '(example: "%s development.ini)' % (cmd, cmd))
     sys.exit(1)
 
 
@@ -45,7 +46,33 @@ def main(argv=sys.argv):
     DBSession.configure(bind=engine)
     Base.metadata.create_all(engine)
     with transaction.manager:
+        # Creating global administrator
+        admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
+        if not admin_account:
+            print("Admin record not found, initializing")
+            admin_account = User(id=1,
+                                 login=accounts['administrator_login'],
+                                 name="Администратор",
+                                 intl_name="System Administrator",
+                                 )
+            pwd = Passhash(password=accounts['administrator_password'])
+            admin_account.password = pwd
+            client = Client(id=1,
+                            user_id=admin_account.id)
+            DBSession.add(pwd)
+            DBSession.add(admin_account)
+            DBSession.add(client)
 
+            DBSession.flush()
+        # Initializing base locales and languages
+        russian_language = Language(object_id=1,
+                                    client_id=1,
+                                    translation_string="Russian language")
+        DBSession.add(russian_language)
+
+
+
+"""
         # creating base locales
         ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
         en_locale = Locale(id=2, shortcut="en", intl_name="English")
@@ -61,16 +88,6 @@ def main(argv=sys.argv):
         DBSession.add(fr_locale)
         DBSession.flush()
 
-        # creating administrator account
-        admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
-        if not admin_account:
-            print("Admin record not found, initializing")
-            admin_account = User(login = accounts['administrator_login'])
-            pwd = Passhash(password=accounts['administrator_password'])
-            admin_account.password = pwd
-            DBSession.add(pwd)
-            DBSession.add(admin_account)
-            DBSession.flush()
 
         # creating base groups
         can_create_dictionaries = BaseGroup(name = "can_create_dictionaries", readable_name="Can create dictionaries")
@@ -171,3 +188,5 @@ def main(argv=sys.argv):
         new_client = Client(id=1, user=new_user)
         DBSession.add(new_client)
         DBSession.flush()
+
+"""
