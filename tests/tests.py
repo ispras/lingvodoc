@@ -157,6 +157,41 @@ class TestDictionariesListSuccessCondition(unittest.TestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         print("ANSWER TO EVERYTHING", response.json['languages'])
 
+class TestEmptyListSuccessCondition(unittest.TestCase):
+    def setUp(self):
+        self.config = testing.setUp()
+        import webtest
+        from pyramid import paster
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        myapp = paster.get_app('testing.ini')
+        self.app = webtest.TestApp(myapp)
+        from lingvodoc.models import (
+            Base,
+            Dictionary,
+            Language,
+            Organization,
+            Locale,
+            User,
+            Passhash,
+            Client,
+            DictionaryPerspective
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+        with transaction.manager:
+            pass
+
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_languages_list(self):
+        response = self.app.get('/languages')
+        self.assertEqual(response.status_int, HTTPOk.code)
+        print("ANSWER TO EVERYTHING 2", response.json['languages'])
+
     # def test_user_created_filter(self):
     #     response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
     #     response = self.app.post_json('/dictionaries', params={'user_created': 1})
