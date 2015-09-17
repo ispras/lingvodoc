@@ -422,13 +422,17 @@ class PublishGroupingEntity(Base, TableNameMixin, PublishingEntityMixin, Relatio
 user_to_group_association = Table('user_to_group_association', Base.metadata,
                                   Column('user_id', BigInteger, ForeignKey('user.id')),
                                   Column('group_id', BigInteger, ForeignKey('group.id'))
-)
+                                  )
 
+organization_to_group_association = Table('organization_to_group_association', Base.metadata,
+                                          Column('organization_id', BigInteger, ForeignKey('organization.id')),
+                                          Column('group_id', BigInteger, ForeignKey('group.id'))
+                                          )
 
 user_to_organization_association = Table('user_to_organization_association', Base.metadata,
-                                  Column('user_id', BigInteger, ForeignKey('user.id')),
-                                  Column('organization_id', BigInteger, ForeignKey('organization.id'))
-)
+                                         Column('user_id', BigInteger, ForeignKey('user.id')),
+                                         Column('organization_id', BigInteger, ForeignKey('organization.id'))
+                                         )
 
 
 class User(Base, TableNameMixin, IdMixin):
@@ -451,8 +455,11 @@ class User(Base, TableNameMixin, IdMixin):
 
 class BaseGroup(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
-    readable_name = Column(UnicodeText)
+    # readable name
+    translation_string = Column(UnicodeText)
     groups = relationship('Group', backref=backref("BaseGroup"))
+    subject = Column(UnicodeText)
+    action = Column(UnicodeText)
     dictionary_default = Column(Boolean, default=False)
     perspective_default = Column(Boolean, default=False)
 
@@ -460,8 +467,11 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     __parentname__ = 'BaseGroup'
     base_group_id = Column(ForeignKey("basegroup.id"))
-    subject = Column(UnicodeText)
+    subject_client_id = Column(BigInteger)
+    subject_object_id = Column(BigInteger)
+    subject_override = Column(Boolean)
     users = relationship("User",  secondary=user_to_group_association, backref=backref("groups"))
+    organizations = relationship("Organization",  secondary=organization_to_group_association, backref=backref("groups"))
 
 
 class Organization(Base, TableNameMixin, IdMixin):
