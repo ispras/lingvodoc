@@ -75,14 +75,18 @@ def recursive_content(self):
     return vec
 
 
+# TODO: make this part detecting the engine automatically or from config (need to get after engine_from_config)
+# DANGER: This pragma should be turned off for all the bases except sqlite3: it produces unpredictable bugs
+# In this variant it leads to overhead on each connection establishment.
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-    except:
-        print("It's not an sqlalchemy")
+    if dbapi_connection.__class__.__module__ == "sqlite3":
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+        except:
+            print("It's not an sqlalchemy")
 
 
 class TableNameMixin(object):
@@ -164,8 +168,8 @@ class Language(Base, TableNameMixin):
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     object_id = Column(BigInteger, primary_key=True)
     client_id = Column(BigInteger, primary_key=True)
-    translation_string = Column(UnicodeText(length=2**31))
-    # name = Column(UnicodeText(length=2**31))  # ?
+    translation_string = Column(UnicodeText)
+    # name = Column(UnicodeText)  # ?
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
@@ -182,7 +186,7 @@ class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     shortcut = Column(UnicodeText)
-    intl_name = Column(UnicodeText(length=2**31))
+    intl_name = Column(UnicodeText)
 
 
 class UITranslationString(Base, TableNameMixin, IdMixin):
@@ -191,8 +195,8 @@ class UITranslationString(Base, TableNameMixin, IdMixin):
     Should be used as admin only.
     """
     locale_id = Column(BigInteger)
-    translation_string = Column(UnicodeText(length=2**31))
-    translation = Column(UnicodeText(length=2**31))
+    translation_string = Column(UnicodeText)
+    translation = Column(UnicodeText)
 
 
 class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
@@ -202,8 +206,8 @@ class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     Not intended to use for translations inside the dictionaries (these translations are hold inside entities tables).
     """
     locale_id = Column(BigInteger)
-    translation_string = Column(UnicodeText(length=2**31))
-    translation = Column(UnicodeText(length=2**31))
+    translation_string = Column(UnicodeText)
+    translation = Column(UnicodeText)
 
 
 class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -217,8 +221,8 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
-    status = Column(UnicodeText)
-    name = Column(UnicodeText(length=2**31))
+    state = Column(UnicodeText)
+    name = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
 
 
@@ -236,9 +240,9 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Dictionary")
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
-    status = Column(UnicodeText)
+    state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    name = Column(UnicodeText(length=2**31))
+    name = Column(UnicodeText)
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -261,12 +265,12 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     parent_client_id = Column(BigInteger)
     entity_object_id = Column(BigInteger)
     entity_client_id = Column(BigInteger)
-    entity_type = Column(UnicodeText(length=2**31))
+    entity_type = Column(UnicodeText)
     data_type = Column(UnicodeText)
     level = Column(UnicodeText)
-    group = Column(UnicodeText(length=2**31))
+    group = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    status = Column(UnicodeText)
+    state = Column(UnicodeText)
     position = Column(BigInteger)
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
@@ -307,8 +311,8 @@ class EntityMixin(object):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     entity_type = Column(UnicodeText)
-    content = Column(UnicodeText(length=2**31))
-    additional_metadata = Column(UnicodeText(length=2**31))
+    content = Column(UnicodeText)
+    additional_metadata = Column(UnicodeText)
     is_translatable = Column(Boolean, default=False)
     locale_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
@@ -329,6 +333,8 @@ class PublishingEntityMixin(object):
     parent_client_id = Column(BigInteger)
     entity_object_id = Column(BigInteger)
     entity_client_id = Column(BigInteger)
+    entity_type = Column(UnicodeText)
+    content = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -439,15 +445,15 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 
 
 class User(Base, TableNameMixin, IdMixin):
-    login = Column(UnicodeText(length=30), unique=True)
+    login = Column(UnicodeText, unique=True)
     name = Column(UnicodeText)
     # this stands for name in English
     intl_name = Column(UnicodeText)
     default_locale_id = Column(ForeignKey("locale.id"))
     birthday = Column(Date)
-    signup_date = Column(DateTime)
+    signup_date = Column(DateTime, default=datetime.datetime.utcnow)
     # it's responsible for "deleted user state". True for active, False for deactivated.
-    is_active = Column(Boolean)
+    is_active = Column(Boolean, default=True)
     password = relationship("Passhash", uselist=False)
 
     def check_password(self, passwd):
@@ -487,7 +493,7 @@ class About(Base, TableNameMixin, IdMixin):
 
 class Passhash(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
-    hash = Column(UnicodeText(length=61))
+    hash = Column(UnicodeText)
 
     def __init__(self, password):
         self.hash = bcrypt.encrypt(password)
@@ -495,7 +501,7 @@ class Passhash(Base, TableNameMixin, IdMixin):
 
 class Email(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
-    email = Column(UnicodeText(length=50), unique=True)
+    email = Column(UnicodeText, unique=True)
     user = relationship("User", backref='email')
 
 
@@ -510,9 +516,6 @@ class Client(Base, TableNameMixin, IdMixin):
     levoneentity = Column(BigInteger, default=0)
     levtwoentity = Column(BigInteger, default=0)
     groupentity = Column(BigInteger, default=0)
-    publishlevoneentity = Column(BigInteger, default=0)
-    publishlevtwoentity = Column(BigInteger, default=0)
-    publishgroupentity = Column(BigInteger, default=0)
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
