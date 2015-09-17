@@ -883,6 +883,7 @@ def check_for_client(obj, clients):
 @view_config(route_name = 'dictionaries', renderer = 'json', request_method='POST')
 def dictionaries_list(request):
     req = request.json_body
+    response = dict()
     user_created = None
     if 'user_created' in req:
         user_created = req['user_created']
@@ -907,6 +908,7 @@ def dictionaries_list(request):
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
+        response['clients'] = cli
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
     if languages:
         langs = []
@@ -968,7 +970,7 @@ def dictionaries_list(request):
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
 
     dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'name':o.name, 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
-    response = dict()
+
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
