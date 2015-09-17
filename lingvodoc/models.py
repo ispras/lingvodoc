@@ -122,8 +122,6 @@ class CompositeKeysHelper(object):
     It's very important to use the following naming convention: each class using this mixin should have
     object_id and client_id composite keys as primary and parent_object_id with parent_client_id as composite
     foreign key.
-
-    TODO: check if it even works (not sure)
     """
     # Seems to be working
     @classmethod
@@ -169,7 +167,6 @@ class Language(Base, TableNameMixin):
     object_id = Column(BigInteger, primary_key=True)
     client_id = Column(BigInteger, primary_key=True)
     translation_string = Column(UnicodeText)
-    # name = Column(UnicodeText)  # ?
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
@@ -387,17 +384,7 @@ class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):  # R
     """
     __parentname__ = 'LexicalEntry'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
-    # __table_args__ = (ForeignKeyConstraint(['cli_id', 'obj_id'],
-    #                                  [__parentname__.lower()+'.object_id', __parentname__.lower()+'.client_id']),
-    #                   ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
-    #                                  [__parentname__.lower()+'.object_id', __parentname__.lower()+'.client_id']),
-    #                   )
     tag = Column(UnicodeText)
-    # cl_id = Column(BigInteger)
-    # obj_id = Column(BigInteger)
-    # parent = relationship(__parentname__,
-    #                         backref= backref('groupingentity')
-    #                         )
 
 
 class PublishLevelOneEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
@@ -507,25 +494,9 @@ class Email(Base, TableNameMixin, IdMixin):
 
 class Client(Base, TableNameMixin, IdMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
-    dictionaries = Column(BigInteger, default=0)
-    languages = Column(BigInteger, default=0)
-    fields = Column(BigInteger, default=0)
-    perspectives = Column(BigInteger, default=0)
-    uets = Column(BigInteger, default=0)
-    lexentr = Column(BigInteger, default=0)
-    levoneentity = Column(BigInteger, default=0)
-    levtwoentity = Column(BigInteger, default=0)
-    groupentity = Column(BigInteger, default=0)
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
-
-
-# class RootFactory(object):
-#     def __init__(self,request):
-#         self.request = request
-#     # TODO: do it, if we go this way
-#     # also do many containers for many objects
 
 
 class PerspAcl(object):

@@ -255,6 +255,7 @@ def configure_routes(config):
     # API #POST
     # Gets a list of two elements exactly. All the checks should be done corresponding to previous comment.
     # { "name": <new_dictionary_name>,
+    #   "translation": <new_name_translation>,
     #   "language_client_id": <language_client_id>,
     #   "language_object_id": <language_object_id>,
     #   "dictionaries":
@@ -263,13 +264,14 @@ def configure_routes(config):
     #     {"dictionary_client_id": <second_dictionary_client_id>, "dictionary_object_id": <second_dictionary_object_id>}
     #   ]
     # Returns new dictionary client and object ids.
-    config.add_route(name='merge_dictionaries', pattern='/merge/dictionaries')
+    config.add_route(name='merge_dictionaries', pattern='/merge/dictionaries')  # not tested
 
     # API #POST
     # {
     # "dictionary_client_id": <dictionary_client_id>,
     # "dictionary_object_id": <dictionary_object_id>},
     # "name": <new_name>,
+    # "translation": <new_name_translation>,
     # "perspectives":
     # [
     #  {"perspective_client_id": <first_perspective_client_id, "perspective_object_id": <first_perspective_object_id>},
