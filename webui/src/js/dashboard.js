@@ -8,7 +8,7 @@ app.controller('DashboardController', ['$scope', '$http', '$modal', '$interval',
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
     var dictionariesUrl = $('#dictionariesUrl').data('lingvodoc');
     var createDictionaryUrl = $('#createDictionaryUrl').data('lingvodoc');
-
+    var getUserInfoUrl = $('#getUserInfoUrl').data('lingvodoc');
 
     $scope.dictionaries = [];
 
@@ -40,8 +40,6 @@ app.controller('DashboardController', ['$scope', '$http', '$modal', '$interval',
         'user_created': [userId],
         'user_participated': [userId]
     };
-
-    $log.info(dictionariesUrl);
 
     $http.post(dictionariesUrl, dictionaryQuery).success(function(data, status, headers, config) {
         $scope.dictionaries = data.dictionaries;

@@ -2007,6 +2007,12 @@ def login_post(request):
         return HTTPFound(location=next, headers=headers)
     return HTTPUnauthorized(location=request.route_url('login'))
 
+@view_config(route_name='logout', renderer='json')
+def logout_any(request):
+    next = request.params.get('next') or request.route_url('login')
+    headers = forget(request)
+    return HTTPFound(location=next, headers=headers)
+
 
 @view_config(route_name='signup', renderer='templates/signup.pt', request_method='GET')
 def signup_get(request):
@@ -2054,11 +2060,16 @@ def signup_post(request):
 
 @view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
 def dashboard_get(request):
-    variables = {'auth': authenticated_userid(request)}
+    client_id = authenticated_userid(request)
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/dashboard.pt', variables, request=request)
-
 
 @view_config(route_name='languages', renderer='templates/languages.pt', request_method='GET')
 def languages_get(request):
-    variables = {'auth': authenticated_userid(request)}
+    client_id = authenticated_userid(request)
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/languages.pt', variables, request=request)

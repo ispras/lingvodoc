@@ -4,6 +4,7 @@ var app = angular.module('LanguagesModule', ['ui.bootstrap']);
 
 app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval', '$log', function($scope, $http, $modal, $interval, $log) {
 
+    var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
     var createLanguageUrl = $('#createLanguageUrl').data('lingvodoc');
@@ -50,11 +51,12 @@ app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval',
 }]);
 
 
-
 app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$modalInstance', function($scope, $http, $interval, $modalInstance) {
 
+    var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
+    var createLanguageUrl = $('#createLanguageUrl').data('lingvodoc');
 
     $scope.languages = [];
     $scope.parentLanguageId = -1;

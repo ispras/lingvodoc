@@ -18,11 +18,12 @@
 
 <body class="body-dashboard" ng-app="DashboardModule">
 
-<div id="userId" data-lingvodoc="${auth}"></div>
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="userId" data-lingvodoc="${user.id}"></div>
+
 <div id="dictionariesUrl" data-lingvodoc="${request.route_url('dictionaries')}"></div>
 <div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
 <div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
-
 
 
 <nav class="lingvodoc-navbar">
@@ -39,8 +40,8 @@
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li><a href="#">Home</a></li>
-                <li class="active"><a href="#about">Dictionaries</a></li>
-                <li><a href="#about">Languages</a></li>
+                <li class="active"><a href="">Dictionaries</a></li>
+                <li><a href="${request.route_url('languages')}">Languages</a></li>
                 <li><a href="#contact">Contact</a></li>
                 <li><a href="#about">About</a></li>
             </ul>
@@ -48,10 +49,10 @@
             <ul class="nav navbar-nav navbar-right">
 
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${auth}<span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${user.name}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="#">Profile</a></li>
-                        <li><a href="#">Sign out</a></li>
+                        <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
+                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
                     </ul>
                 </li>
             </ul>
@@ -64,10 +65,7 @@
 
     <div ng-if="dictionaries.length > 0">
         <ul ng-repeat="dictionary in dictionaries">
-            <li>
-                {{ dictionary }}
-
-            </li>
+            <li>{{ dictionary.name }} (<a href="#">View</a> <a href="#">Edit</a>)</li>
         </ul>
     </div>
 
