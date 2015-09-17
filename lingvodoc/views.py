@@ -1854,7 +1854,7 @@ def merge_dictionaries(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
+@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')
 def merge_perspectives(request):
     try:
         req = request.json_body
