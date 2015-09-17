@@ -1829,7 +1829,7 @@ def merge_dictionaries(request):
                                                          subject_object_id=obj_id,
                                                          subject_client_id=cli_id).first()
                 groups += [group]
-            
+
             for group in groups:
                 existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
                 if existing:
