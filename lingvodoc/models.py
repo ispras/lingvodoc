@@ -460,8 +460,6 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
     groups = relationship('Group', backref=backref("BaseGroup"))
     subject = Column(UnicodeText)
     action = Column(UnicodeText)
-    dictionary_default = Column(Boolean, default=False)
-    perspective_default = Column(Boolean, default=False)
 
 
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
