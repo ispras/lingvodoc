@@ -1713,9 +1713,9 @@ def get_user_info(request):
     response['name']=user.name
     response['intl_name']=user.intl_name
     response['default_locale_id']=user.default_locale_id
-    response['birthday']=user.birthday
-    response['signup_date']=user.signup_date
-    response['is_active']=user.is_active
+    response['birthday']=str(user.birthday)
+    response['signup_date']=str(user.signup_date)
+    response['is_active']=str(user.is_active)
     request.response.status = HTTPOk.code
     return response
 
@@ -1800,7 +1800,8 @@ def merge_dictionaries(request):
         for dicti in dictionaries:
             if parent_client_id != dicti.parent_client_id or parent_object_id != dicti.parent_object_id:
                 raise KeyError("Both dictionaries should have same language.")
-        subreq = Request.blank('/create_dictionary')
+        subreq = Request.blank('/dictionary')
+        subreq.method = 'POST'
         subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
                             'name': name, 'translation': translation}
         response = request.invoke_subrequest(subreq)
@@ -1874,7 +1875,7 @@ def merge_perspectives(request):
         for persp in perspectives:
             if parent_client_id != persp.parent_client_id or parent_object_id != persp.parent_object_id:
                 raise KeyError("Both perspectives should be from same dictionary.")
-        subreq = Request.blank('/create_perspectives')
+        subreq = Request.blank('/dictionary/{0}/{1}/perspective')
         subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
                             'name': name, 'translation': translation}
         response = request.invoke_subrequest(subreq)
