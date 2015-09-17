@@ -632,12 +632,8 @@ class TestDictionariesList(unittest.TestCase):
 
     def test_no_filter(self):
         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.post_json('/dictionary',
-                                      params={'parent_client_id':1,
-                                              'parent_object_id':1,
-                                              'name':'dict',
-                                              'translation':'name_translation'})
-        response = self.app.post_json('/dictionaries', params={'user_created':[1]})
+        response = self.app.get('/user',
+                                      params={'client_id':1})
         self.assertEqual(response.status_int, HTTPOk.code)
         print()
         print("WHY", response.json)
