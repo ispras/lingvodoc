@@ -283,7 +283,7 @@ def view_dictionary(request):
             response['object_id'] = dictionary.object_id
             response['name'] = find_by_translation_string(locale_id=find_locale_id(request),
                                                           translation_string=dictionary.name)
-            response['status'] = dictionary.status
+            response['status'] = dictionary.state
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -393,7 +393,7 @@ def view_dictionary_status(request):
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            response['status'] = dictionary.status
+            response['status'] = dictionary.state
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -410,7 +410,7 @@ def edit_dictionary_status(request):
         if not dictionary.marked_for_deletion:
             req = request.json_body
             status = req['status']
-            dictionary.status = status
+            dictionary.state = status
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -584,7 +584,7 @@ def view_perspective_status(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            response['status'] = perspective.status
+            response['status'] = perspective.state
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -610,7 +610,7 @@ def edit_perspective_status(request):
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
             req = request.json_body
-            perspective.status = req['status']
+            perspective.state = req['status']
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -903,7 +903,7 @@ def dictionaries_list(request):
         if published == 'true':
             dicts = dicts.filter(Dictionary).filter_by(status='published')
         if published == 'false':
-            dicts = dicts.filter(Dictionary).filter(Dictionary.status != 'published')
+            dicts = dicts.filter(Dictionary).filter(Dictionary.state != 'published')
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
@@ -967,7 +967,7 @@ def dictionaries_list(request):
         else:
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
 
-    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'name':o.name, 'status':o.status,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
+    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'name':o.name, 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
     response = dict()
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
@@ -1000,7 +1000,7 @@ def view_perspective_fields(request):
                 data['data_type'] = find_by_translation_string(locale_id=find_locale_id(request),
                                                                translation_string=field.data_type)
                 data['position'] = field.position
-                data['status'] = field.status
+                data['status'] = field.state
                 if field.dictionaryperspectivefield:
                     contains = []
                     for field2 in field.dictionaryperspectivefield:
@@ -1010,7 +1010,7 @@ def view_perspective_fields(request):
 
                         data2['data_type'] = find_by_translation_string(locale_id=locale_id,
                                                                         translation_string=field2.data_type)
-                        data2['status'] = field2.status
+                        data2['status'] = field2.state
                         data2['position'] = field2.position
                         contains += [data2]
                     data['contains'] = contains
@@ -1486,8 +1486,7 @@ def create_lexical_entry(request):
         DBSession.flush()
 
         request.response.status = HTTPOk.code
-        return {
-                'object_id': lexentr.object_id,
+        return {'object_id': lexentr.object_id,
                 'client_id': lexentr.client_id}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
@@ -1658,6 +1657,7 @@ def view_lexical_entry(request):
                     content2['level'] = enti.level
                     content2['entity_type'] = enti.entity_type
                     content2['data_type'] = enti.data_type
+                    content2['content'] = enti.content
                     content2['client_id'] = enti.client_id
                     content2['object_id'] = enti.object_id
                     lev_two = enti.leveltwoentity
@@ -1671,19 +1671,20 @@ def view_lexical_entry(request):
                                 content3['data_type'] = entit.data_type
                                 content3['client_id'] = entit.client_id
                                 content3['object_id'] = entit.object_id
+                                content3['content'] = entit.content
                                 contains += [content3]
                         if contains:
                             content2['contains'] = contains
                     content += [content2]
-                # for ent in group:
-                #     enti = ent.entry
-                #     content2 = dict()
-                #     content2['level'] = enti.level
-                #     content2['entity_type'] = enti.entity_type
-                #     content2['data_type'] = enti.data_type
-                #     content2['client_id'] = enti.client_id
-                #     content2['object_id'] = enti.object_id
-                #     content += [content2]
+                for ent in group:
+                    enti = ent.entry
+                    content2 = dict()
+                    content2['level'] = enti.level
+                    content2['entity_type'] = enti.entity_type
+                    content2['data_type'] = enti.data_type
+                    content2['client_id'] = enti.client_id
+                    content2['object_id'] = enti.object_id
+                    content += [content2]
                 response['content'] = content
             request.response.status = HTTPOk.code
             return response
@@ -1785,9 +1786,18 @@ def merge_dictionaries(request):
         req = request.json_body
 
         variables = {'auth': request.authenticated_userid}
-        parent_object_id = req['parent_object_id']
-        parent_client_id = req['parent_client_id']
+        parent_object_id = req['language_object_id']
+        parent_client_id = req['language_client_id']
         name = req['name']
+
+        dictionaries = req['dictionaries']
+        if len(dictionaries) != 2:
+            raise KeyError("Wrong number of dictionaries to merge.",
+                           len(dictionaries))
+        for dicti in dictionaries:
+            if parent_client_id != dicti.parent_client_id or parent_object_id != dicti.parent_object_id:
+                raise KeyError("Both dictionaries should have same language.")
+
         translation = req['translation']
         subreq = Request.blank('/create_dictionary')
         subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
@@ -1796,15 +1806,39 @@ def merge_dictionaries(request):
         client_id = response.json['client_id']
         object_id = response.json['object_id']
         new_dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-        dictionaries = req['dictionaries']
-        if len(dictionaries) != 2:
-            raise KeyError("Wrong number of dictionaries to merge.",
-                           len(dictionaries))
+
+        perspectives = []
         for dicti in dictionaries:
             for entry in dicti.dictionaryperspective:
+                perspectives += entry
+            for entry in perspectives:
                 dicti.dictionaryperspective.remove(entry)
                 new_dict.dictionaryperspective.append(entry)
-
+            cli_id = dicti.client_id
+            obj_id = dicti.object_id
+            groups = DBSession.query(Group).filter_by(subject='dictionary'+str(cli_id)+'_'+str(obj_id))
+            for group in groups:
+                existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
+                if existing:
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        group.remove(user)
+                        if not user in existing.users:
+                            existing.users.append(user)
+                else:
+                    new_group = Group(base_group_id=group.base_group_id,
+                                      subject='dictionary'+str(client_id)+'_'+str(object_id))
+                    DBSession.add(new_group)
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        group.remove(user)
+                        new_group.users.append(user)
+                group.marked_for_deletion = True
+            dicti.marked_for_deletion = True
         request.response.status = HTTPOk.code
         return {'object_id': object_id,
                 'client_id': client_id}
