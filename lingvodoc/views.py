@@ -67,6 +67,7 @@ import sqlalchemy
 from sqlalchemy import create_engine
 
 from sqlalchemy.inspection import inspect
+from pyramid.request import Request
 # import redis
 
 
@@ -1526,7 +1527,7 @@ def lexical_entries_all(request):
             for entry in lex_entries:
                 content = dict()
                 lev_one = entry.leveloneentity
-                group = entry.groupingentity
+                # group = entry.groupingentity
                 for enti in lev_one:
                     content2 = dict()
                     content2['level'] = enti.level
@@ -1548,14 +1549,14 @@ def lexical_entries_all(request):
 
                         content2['contains'] = contains
                     content += [content2]
-                for enti in group:
-                    content2 = dict()
-                    content2['level'] = enti.level
-                    content2['entity_type'] = enti.entity_type
-                    content2['data_type'] = enti.data_type
-                    content2['client_id'] = enti.client_id
-                    content2['object_id'] = enti.object_id
-                    content += [content2]
+                # for enti in group:
+                #     content2 = dict()
+                #     content2['level'] = enti.level
+                #     content2['entity_type'] = enti.entity_type
+                #     content2['data_type'] = enti.data_type
+                #     content2['client_id'] = enti.client_id
+                #     content2['object_id'] = enti.object_id
+                #     content += [content2]
                 lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
 
             response['lexical_entries'] = lexes
@@ -1583,7 +1584,9 @@ def lexical_entries_published(request):
             levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
             lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
                 join(levonefirst).\
-                filter(levonefirst.entity_type == reqtype, levonefirst.parent_client_id == parent.client_id, levonefirst.parent_object_id == parent.object_id).\
+                filter(levonefirst.entity_type == reqtype,
+                       levonefirst.parent_client_id == parent.client_id,
+                       levonefirst.parent_object_id == parent.object_id).\
                 order_by('obj_id').\
                 group_by(LexicalEntry.object_id).offset(start_from).limit(count)
             lexes = []
@@ -1615,15 +1618,15 @@ def lexical_entries_published(request):
                         if contains:
                             content2['contains'] = contains
                     content += [content2]
-                for ent in group:
-                    enti = ent.entry
-                    content2 = dict()
-                    content2['level'] = enti.level
-                    content2['entity_type'] = enti.entity_type
-                    content2['data_type'] = enti.data_type
-                    content2['client_id'] = enti.client_id
-                    content2['object_id'] = enti.object_id
-                    content += [content2]
+                # for ent in group:
+                #     enti = ent.entry
+                #     content2 = dict()
+                #     content2['level'] = enti.level
+                #     content2['entity_type'] = enti.entity_type
+                #     content2['data_type'] = enti.data_type
+                #     content2['client_id'] = enti.client_id
+                #     content2['object_id'] = enti.object_id
+                #     content += [content2]
                 lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
 
             response['lexical_entries'] = lexes
@@ -1672,15 +1675,15 @@ def view_lexical_entry(request):
                         if contains:
                             content2['contains'] = contains
                     content += [content2]
-                for ent in group:
-                    enti = ent.entry
-                    content2 = dict()
-                    content2['level'] = enti.level
-                    content2['entity_type'] = enti.entity_type
-                    content2['data_type'] = enti.data_type
-                    content2['client_id'] = enti.client_id
-                    content2['object_id'] = enti.object_id
-                    content += [content2]
+                # for ent in group:
+                #     enti = ent.entry
+                #     content2 = dict()
+                #     content2['level'] = enti.level
+                #     content2['entity_type'] = enti.entity_type
+                #     content2['data_type'] = enti.data_type
+                #     content2['client_id'] = enti.client_id
+                #     content2['object_id'] = enti.object_id
+                #     content += [content2]
                 response['content'] = content
             request.response.status = HTTPOk.code
             return response
@@ -1775,6 +1778,47 @@ def get_translations(request):
     request.response.status = HTTPOk.code
     return response
 
+
+@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
+def merge_dictionaries(request):
+    try:
+        req = request.json_body
+
+        variables = {'auth': request.authenticated_userid}
+        parent_object_id = req['parent_object_id']
+        parent_client_id = req['parent_client_id']
+        name = req['name']
+        translation = req['translation']
+        subreq = Request.blank('/create_dictionary')
+        subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
+                            'name': name, 'translation': translation}
+        response = request.invoke_subrequest(subreq)
+        client_id = response.json['client_id']
+        object_id = response.json['object_id']
+        new_dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+        dictionaries = req['dictionaries']
+        if len(dictionaries) != 2:
+            raise KeyError("Wrong number of dictionaries to merge.",
+                           len(dictionaries))
+        for dicti in dictionaries:
+            for entry in dicti.dictionaryperspective:
+                dicti.dictionaryperspective.remove(entry)
+                new_dict.dictionaryperspective.append(entry)
+
+        request.response.status = HTTPOk.code
+        return {'object_id': object_id,
+                'client_id': client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
 
 
 conn_err_msg = """\
