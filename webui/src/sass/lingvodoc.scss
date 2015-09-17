@@ -120,28 +120,120 @@
   @extend .navbar-fixed-top;
 }
 
-.drag-object {
-  background: red;
-  width: 100px;
-  height: 100px;
-  position: relative;
-  top: 0;
-  left: 0;
-  padding: 0;
-  margin: 0;
+// Create dictionary styles
+.form-container {
+  margin-bottom: 20px;
+  border-radius: 5px;
+  .page-header {
+    margin: 0;
+    padding: 30px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+  }
+}
+
+.status-buttons {
+  a {
+    color: #FFF;
+    display: inline-block;
+    font-size: 12px;
+    margin-right: 10px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  a:hover {
+    text-decoration: none;
+  }
+  span {
+    background: #337ab7;
+    display: block;
+    height: 30px;
+    margin: 0 auto 10px;
+    padding-top: 5px;
+    width: 30px;
+    border-radius: 50%;
+  }
+
+  a.active {
+    span {
+      background: #0851a4;
+    }
+  }
+}
+
+[ng-drag] {
+  -moz-user-select: -moz-none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  width: 200px;
+  height: 80px;
+  background: rgba(255, 0, 0, 0.5);
+  color: white;
+  text-align: center;
+  padding-top: 40px;
+  display: inline-block;
+  margin: 0 10px;
+  cursor: move;
+
+  .drag-over {
+    border: solid 1px red;
+  }
+
+  .dragging {
+    opacity: 0.5;
+  }
+}
+
+ul.draggable-objects {
+    li {
+      display: inline;
+      width: 220px;
+      height: 100px;
+    }
 }
 
 
-.drop-area {
-  background: rgba(0,255,0, 0.5);
+[ng-drop] {
+  background: rgba(0, 255, 0, 0.5);
   text-align: center;
-  width: 600px;
-  height: 200px;
+  width: 800px;
+  height: 300px;
   padding-top: 90px;
   display: block;
   margin: 20px auto;
   position: relative;
+
+  .drag-enter {
+    border: solid 5px red;
+  }
+
+  span {
+    .title {
+      display: block;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 200px;
+      height: 20px;
+      margin-left: -100px;
+      margin-top: -10px;
+    }
+  }
+
+  div {
+    position: relative;
+    z-index: 2;
+  }
 }
+
+
+
+
+
+
 
 
 

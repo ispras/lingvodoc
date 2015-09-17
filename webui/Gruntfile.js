@@ -37,7 +37,8 @@ module.exports = function(grunt) {
         },
         uglify: {
             options: {
-                compress: false
+                compress: false,
+                mangle: false
             },
             lingvodoc: {
                 src: [
@@ -49,13 +50,17 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
                     'bower_components/bootstrap-validator/dist/validator.js',
+                    'bower_components/angular-route/angular-route.js',
+                    'bower_components/angular-ui-router/release/angular-ui-router.js',
+                    'bower_components/angular-animate/angular-animate.js',
                     'src/js/lingvodemo.js',
                     'src/js/lingvodocedit.js',
                     'src/js/lingvodocview.js',
                     'src/js/lingvowave.js',
-                    'src/js/create_perspective.js',
                     'src/js/dashboard.js',
-                    'src/js/languages.js'
+                    'src/js/languages.js',
+                    'src/js/create_dictionary.js'
+
 
                 ],
                 dest: '../lingvodoc/static/js/lingvodoc.js'

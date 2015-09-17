@@ -1,6 +1,6 @@
 'use strict';
 
-var app = angular.module('DashboardModule', ['ui.bootstrap']);
+var app = angular.module('DashboardModule', ['ui.router', 'ngAnimate', 'ui.bootstrap']);
 
 app.controller('DashboardController', ['$scope', '$http', '$modal', '$interval', '$log', function($scope, $http, $modal, $interval, $log) {
 
@@ -36,6 +36,14 @@ app.controller('DashboardController', ['$scope', '$http', '$modal', '$interval',
         });
     };
 
+    $scope.getEditDictionaryLink = function(dictionary) {
+        return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/{perspective_client_id}/{perspective_id}/edit';
+    };
+
+    $scope.getViewDictionaryLink = function(dictionary) {
+        return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/{perspective_client_id}/{perspective_id}/view';
+    };
+
     var dictionaryQuery = {
         'user_created': [userId],
         'user_participated': [userId]
@@ -58,7 +66,7 @@ app.controller('DashboardController', ['$scope', '$http', '$modal', '$interval',
 }]);
 
 
-app.controller('CreateDictionaryController', ['$scope', '$http', '$interval', '$modalInstance', function($scope, $http, $interval, $modalInstance) {
+app.controller('CreateDictionaryControllerOld', ['$scope', '$http', '$interval', '$modalInstance', function($scope, $http, $interval, $modalInstance) {
 
     var userId = $('#userId').data('lingvodoc');
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
@@ -83,6 +91,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$interval', '$
         $interval(function() {
             $http.get(languagesUrl).success(function(data, status, headers, config) {
                 $scope.languages = data.languages;
+
             }).error(function(data, status, headers, config) {
                 // error handling
             });
@@ -113,3 +122,4 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$interval', '$
     };
 
 }]);
+
