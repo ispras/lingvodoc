@@ -94,9 +94,7 @@ def add_translation_to_translation_string(locale_id, translation, translation_st
         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
                                                                         translation_string=translation_string).first()
         if not uets:
-            client.uets = Client.uets + 1
-            DBSession.flush()
-            uets = UserEntitiesTranslationString(object_id=client.uets,
+            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
                                                  client_id=client.id,
                                                  locale_id=locale_id,
                                                  translation_string=translation_string,
@@ -248,9 +246,7 @@ def create_language(request):
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation = translation,
                                               translation_string = translation_string, client_id = client.id)
-        client.languages = Client.languages + 1
-        DBSession.flush()
-        language = Language(object_id=client.languages, client_id=variables['auth'],
+        language = Language(object_id=DBSession.query(Language).filter_by(client_id=client.id).count()+1, client_id=variables['auth'],
                             translation_string = translation_string)
         DBSession.add(language)
         DBSession.flush()
@@ -359,9 +355,7 @@ def create_dictionary(request):
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation=translation,
                                               translation_string=name, client_id=client.id)
 
-        client.dictionaries = Client.dictionaries + 1
-        DBSession.flush()
-        dictionary = Dictionary(object_id=client.dictionaries,
+        dictionary = Dictionary(object_id=DBSession.query(Dictionary).filter_by(client_id=client.id).count(),
                                 client_id=variables['auth'],
                                 name=name,
                                 status='WiP',
@@ -538,12 +532,9 @@ def create_perspective(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such dictionary in the system")}
-
-        client.perspectives = Client.perspectives + 1
-        DBSession.flush()
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name,
                                               translation=translation, client_id=client.id)
-        perspective = DictionaryPerspective(object_id=client.perspectives,
+        perspective = DictionaryPerspective(object_id=DBSession.query(Client).filter_by(client_id=client.id).count(),
                                 client_id=variables['auth'],
                                 name=name,
                                 status='WiP',
@@ -1085,9 +1076,7 @@ def create_perspective_fields(request):
         locale_id = find_locale_id(request)
 
         for entry in fields:
-            client.fields = Client.fields + 1
-            DBSession.flush()
-            field = DictionaryPerspectiveField(object_id=client.fields,
+            field = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count(),
                                                client_id=variables['auth'],
                                                entity_type=entry['entity_type'],
                                                data_type=entry['data_type'],
@@ -1102,9 +1091,7 @@ def create_perspective_fields(request):
             field.position = entry['position']
             if 'contains' in entry:
                 for ent in entry['contains']:
-                    client.fields = Client.fields + 1
-                    DBSession.flush()
-                    field2 = DictionaryPerspectiveField(object_id=client.fields,
+                    field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count(),
                                                         client_id=variables['auth'],
                                                         entity_type=ent['entity_type'],
                                                         data_type=ent['data_type'],
@@ -1268,9 +1255,7 @@ def create_l1_entity(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
-        client.levoneentity = Client.levoneentity + 1
-        DBSession.flush()
-        entity = LevelOneEntity(client_id=client.id, object_id=client.levoneentity, entity_type=req['entity_type'],
+        entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count(), entity_type=req['entity_type'],
                                 content=req['content'], locale_id=req['locale_id'], metadata=req['metadata'],
                                 parent=parent)
         DBSession.add(entity)
@@ -1351,9 +1336,7 @@ def create_l2_entity(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such level one entity in the system")}
-        client.levtwoentity = Client.levtwoentity + 1
-        DBSession.flush()
-        entity = LevelTwoEntity(client_id=client.id, object_id=client.levtwoentity, entity_type=req['entity_type'],
+        entity = LevelTwoEntity(client_id=client.id, object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count(), entity_type=req['entity_type'],
                                 content=req['content'], locale_id=req['locale_id'], metadata=req['metadata'],
                                 parent=parent)
         DBSession.add(entity)
@@ -1456,9 +1439,7 @@ def create_group_entity(request):
                     filter_by(entity_type=req['entity_type'], content=tag, parent=parent).first()
                 if ent:
                     continue
-                client.groupentity = Client.groupentity + 1
-                DBSession.flush()
-                entity = GroupingEntity(client_id=client.id, object_id=client.groupentity,
+                entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count(),
                                         entity_type=req['entity_type'], content=tag, parent=parent)
                 DBSession.add(entity)
                 DBSession.flush()
@@ -1498,9 +1479,7 @@ def create_lexical_entry(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("No such perspective in the system")}
 
-        client.lexentr = Client.lexentr + 1
-        DBSession.flush()
-        lexentr = LexicalEntry(object_id=client.languages, client_id=variables['auth'],
+        lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count(), client_id=variables['auth'],
                                parent_object_id=perspective_id, parent=perspective)
         DBSession.add(lexentr)
         DBSession.flush()
@@ -1749,29 +1728,23 @@ def approve_entity(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
             if entry['type'] == 'L1E':
-                client.publishlevoneentity = Client.publishlevoneentity + 1
-                DBSession.flush()
                 entity = DBSession.query_property(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelOneEntity(client_id=client.id, object_id=client.publishlevoneentity,
+                publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count(),
                                                    entity=entity, parent=entity.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'L2E':
-                client.publishlevtwoentity = Client.publishlevtwoentity + 1
-                DBSession.flush()
                 entity = DBSession.query_property(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=client.publishlevtwoentity,
+                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count(),
                                                    entity=entity, parent=entity.parent.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
             elif entry['type'] == 'GE':
-                client.publishgroupentity = Client.publishgroupentity + 1
-                DBSession.flush()
                 entity = DBSession.query_property(GroupingEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishGroupingEntity(client_id=client.id, object_id=client.publishgroupentity,
+                publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count(),
                                                    entity=entity, parent=entity.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
