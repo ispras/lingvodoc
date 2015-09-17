@@ -513,6 +513,31 @@ def delete_perspective(request):
     return {'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='perspectives', renderer='json', request_method='GET')
+def view_perspectives(request):
+    response = dict()
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
+    perspectives = []
+    for perspective in parent.dictionaryperspective:
+
+        subreq = Request.blank(request.route_url('perspective', dictionary_client_id=parent_client_id,
+                                                 dictionary_object_id=parent_object_id,
+                                                 perspective_client_id=perspective.client_id,
+                                                 perspective_object_id=perspective.object_id))
+        subreq.method = 'GET'
+        subreq.json_body = {}
+        response = request.invoke_subrequest(subreq)
+        perspectives += [response]
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
 @view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST')
 def create_perspective(request):
     try:
@@ -1829,7 +1854,7 @@ def merge_dictionaries(request):
                                                          subject_object_id=obj_id,
                                                          subject_client_id=cli_id).first()
                 groups += [group]
-            
+
             for group in groups:
                 existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
                 if existing:

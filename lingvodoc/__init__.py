@@ -114,6 +114,12 @@ def configure_routes(config):
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective')  # 100% ready
 
+    # API #GET
+    # list perspectives
+    config.add_route(name='perspectives',
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'perspectives')
+
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create entities, view entities, create
     # publisher-entities)
