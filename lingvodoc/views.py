@@ -359,7 +359,7 @@ def create_dictionary(request):
         dictionary = Dictionary(object_id=DBSession.query(Dictionary).filter_by(client_id=client.id).count(),
                                 client_id=variables['auth'],
                                 name=name,
-                                status='WiP',
+                                state='WiP',
                                 parent=parent)
         DBSession.add(dictionary)
         DBSession.flush()
@@ -538,7 +538,7 @@ def create_perspective(request):
         perspective = DictionaryPerspective(object_id=DBSession.query(Client).filter_by(client_id=client.id).count(),
                                 client_id=variables['auth'],
                                 name=name,
-                                status='WiP',
+                                state='WiP',
                                 parent = parent)
         DBSession.add(perspective)
         DBSession.flush()
@@ -901,7 +901,7 @@ def dictionaries_list(request):
     dicts = DBSession.query(Dictionary)
     if published:
         if published == 'true':
-            dicts = dicts.filter(Dictionary).filter_by(status='published')
+            dicts = dicts.filter(Dictionary).filter_by(state='published')
         if published == 'false':
             dicts = dicts.filter(Dictionary).filter(Dictionary.state != 'published')
     if user_created:
@@ -1082,7 +1082,7 @@ def create_perspective_fields(request):
                                                entity_type=entry['entity_type'],
                                                data_type=entry['data_type'],
                                                parent=perspective,
-                                               status=entry['status'])
+                                               state=entry['status'])
             if 'group' in entry:
                 field.group = entry['group']
                 add_translation_to_translation_string(locale_id=locale_id,
@@ -1099,7 +1099,7 @@ def create_perspective_fields(request):
                                                         level='L2E',
                                                         parent=perspective,
                                                         parent_entity=field,
-                                                        status=entry['status'])
+                                                        state=entry['status'])
                     field2.position = ent['position']
                     DBSession.add(field2)
                     DBSession.flush()
@@ -1789,6 +1789,7 @@ def merge_dictionaries(request):
         parent_object_id = req['language_object_id']
         parent_client_id = req['language_client_id']
         name = req['name']
+        translation = req['translation']
 
         dictionaries = req['dictionaries']
         if len(dictionaries) != 2:
@@ -1797,8 +1798,80 @@ def merge_dictionaries(request):
         for dicti in dictionaries:
             if parent_client_id != dicti.parent_client_id or parent_object_id != dicti.parent_object_id:
                 raise KeyError("Both dictionaries should have same language.")
+        subreq = Request.blank('/create_dictionary')
+        subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
+                            'name': name, 'translation': translation}
+        response = request.invoke_subrequest(subreq)
+        client_id = response.json['client_id']
+        object_id = response.json['object_id']
+        new_dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
 
+        perspectives = []
+        for dicti in dictionaries:
+            for entry in dicti.dictionaryperspective:
+                perspectives += entry
+            for entry in perspectives:
+                dicti.dictionaryperspective.remove(entry)
+                new_dict.dictionaryperspective.append(entry)
+            cli_id = dicti.client_id
+            obj_id = dicti.object_id
+            groups = DBSession.query(Group).filter_by(subject='dictionary'+str(cli_id)+'_'+str(obj_id))
+            for group in groups:
+                existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
+                if existing:
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        group.remove(user)
+                        if not user in existing.users:
+                            existing.users.append(user)
+                else:
+                    new_group = Group(base_group_id=group.base_group_id,
+                                      subject='dictionary'+str(client_id)+'_'+str(object_id))
+                    DBSession.add(new_group)
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        group.remove(user)
+                        new_group.users.append(user)
+                group.marked_for_deletion = True
+            dicti.marked_for_deletion = True
+        request.response.status = HTTPOk.code
+        return {'object_id': object_id,
+                'client_id': client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
+def merge_perspectives(request):
+    try:
+        req = request.json_body
+
+        variables = {'auth': request.authenticated_userid}
+        parent_object_id = req['dictionary_object_id']
+        parent_client_id = req['dictionary_client_id']
+        name = req['name']
         translation = req['translation']
+
+        dictionaries = req['dictionaries']
+        if len(dictionaries) != 2:
+            raise KeyError("Wrong number of dictionaries to merge.",
+                           len(dictionaries))
+        for dicti in dictionaries:
+            if parent_client_id != dicti.parent_client_id or parent_object_id != dicti.parent_object_id:
+                raise KeyError("Both perspectives should be from same dictionary.")
         subreq = Request.blank('/create_dictionary')
         subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
                             'name': name, 'translation': translation}
