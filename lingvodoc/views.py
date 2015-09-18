@@ -1013,6 +1013,39 @@ def dictionaries_list(request):
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
+    return response\
+
+@view_config(route_name = 'perspectives', renderer = 'json', request_method='POST')
+def perspectives_list(request):
+    req = request.json_body
+    response = dict()
+    is_template = None
+    if 'is_template' in req:
+        is_template = req['is_template']
+    state = None
+    if 'state' in req:
+        state = req['state']
+    persps = DBSession.query(DictionaryPerspective)
+    if is_template:
+        persps = persps.filter(DictionaryPerspective).filter_by(is_template=is_template)
+    if state:
+        persps = persps.filter(DictionaryPerspective).filter_by(state=state)
+    perspectives = []
+    for perspective in persps:
+        path = request.route_url('perspective',
+                                 dictionary_client_id=perspective.parent_client_id,
+                                 dictionary_object_id=perspective.parent_object_id,
+                                 perspective_client_id=perspective.client_id,
+                                 perspective_id=perspective.object_id)
+        subreq = Request.blank(path)
+        # subreq = request.copy()
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        perspectives += [resp.json]
+    response['perspectives'] = perspectives
+    request.response.status = HTTPOk.code
+
     return response
 
 
