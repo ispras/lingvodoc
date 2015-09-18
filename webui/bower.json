@@ -1,0 +1,26 @@
+{
+  "name": "lingvodoc-ui",
+  "version": "0.0.1",
+  "description": "lingvodoc WebUI",
+  "moduleType": [
+    "es6"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "~1.4.6",
+    "ngDraggable": "git://github.com/fatlinesofcode/ngDraggable",
+    "bootstrap-sass": "bootstrap-sass-official#~3.3.5",
+    "bootstrap-validator": "git://github.com/1000hz/bootstrap-validator",
+    "angular-bootstrap": "0.13.4",
+    "angular-route": "~1.4.6",
+    "angular-ui-router": "0.2.15",
+    "angular-animate": "~1.4.6",
+    "wavesurfer.js": "git://github.com/katspaugh/wavesurfer.js#~1.0.42"
+  }
+}
