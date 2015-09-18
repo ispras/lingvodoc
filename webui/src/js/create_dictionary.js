@@ -34,6 +34,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     var userId = $('#userId').data('lingvodoc');
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
     var createLanguageUrl = $('#createLanguageUrl').data('lingvodoc');
+    var allPerspectivesUrl = $('#allPerspectivesUrl').data('lingvodoc');
 
     var examplePerspective = {
         'fields': [{'entity_type': 'protoform', 'data_type': 'text', 'status': 'enabled'},
@@ -64,6 +65,10 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     $scope.users = [];
 
     var wrapPerspective = function (perspective) {
+
+        if (typeof perspective.fields == 'undefined') {
+            return;
+        }
 
         for (var i = 0; i < perspective.fields.length; i++) {
             if (typeof perspective.fields[i].group !== 'undefined') {
@@ -102,7 +107,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 
     // Data loaded from backend
     $scope.languages = [];
-    $scope.perspectives = [wrapPerspective(examplePerspective)];
+    $scope.perspectives = [];
 
 
     $scope.dictionaryData = {
@@ -191,6 +196,19 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         });
     };
 
+    var loadPerspectives = function() {
+        $http.get(allPerspectivesUrl).success(function(data, status, headers, config) {
+            for (var i = 0; i < data.perspectives.length; i++) {
+                var wrappedPerspective = wrapPerspective(data.perspectives[i]);
+                if (wrappedPerspective) {
+                    $scope.perspectives.push(wrappedPerspective);
+                }
+            }
+        }).error(function(data, status, headers, config) {
+            $log.error('Failed to load perspectives!');
+        });
+    };
+
     $scope.$watch('dictionaryData.perspectiveId', function (id) {
         for (var i = 0; i < $scope.perspectives.length; i++) {
             if ($scope.perspectives[i].object_id == id) {
@@ -200,27 +218,8 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         }
     });
 
-
-    // Load list of perspectives
-    //$http.get(languagesUrl).success(function(data, status, headers, config) {
-    //
-    //    $scope.languages = data.languages;
-    //
-    //    // Reload list every 3 seconds
-    //    $interval(function() {
-    //        $http.get(languagesUrl).success(function(data, status, headers, config) {
-    //            $scope.languages = data.languages;
-    //        }).error(function(data, status, headers, config) {
-    //            // error handling
-    //        });
-    //
-    //    }, 3000);
-    //}).error(function(data, status, headers, config) {
-    //    // error handling
-    //});
-
     loadLanguages();
-
+    loadPerspectives();
 }]);
 
 

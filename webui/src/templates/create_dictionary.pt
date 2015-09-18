@@ -25,6 +25,8 @@
 <div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
 <div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
 <div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
+<div id="allPerspectivesUrl" data-lingvodoc="${request.route_url('all_perspectives')}"></div>
+
 
 
 <nav class="lingvodoc-navbar">
