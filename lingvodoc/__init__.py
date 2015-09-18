@@ -83,7 +83,8 @@ def configure_routes(config):
     # 1. Filter by:
     #    a) template
     #    b) state
-    config.add_route('perspectives', 'perspectives')
+    config.add_route('all_perspectives', '/perspectives')
+    config.add_route('users', '/users')
 
     # web-view
     config.add_route(name='new_dictionary', pattern='/dashboard/create_dictionary')

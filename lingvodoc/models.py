@@ -535,6 +535,7 @@ def acl_by_groups(object_id, client_id, subject):
             group_name = base_group.action + ":" + base_group.subject \
                      + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
+    print("ACLS", acls)
     return acls
 
 
@@ -684,7 +685,7 @@ class CreatePerspectiveAcl(object):
             client_id = self.request.matchdict['dictionary_perspective_client_id']
         except:
             pass
-        return acls + acl_by_groups(object_id, client_id, 'perspective')
+        return acls + acl_by_groups(object_id, client_id, 'dictionary')
 
 
 class PerspectiveRolesAcl(object):
