@@ -253,6 +253,15 @@ def create_language(request):
         if parent:
             language.parent = parent
         DBSession.flush()
+        basegroups = []
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can edit languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can delete languages").first()]
+        groups = []
+        for base in basegroups:
+            group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
+            groups += [group]
+        for group in groups:
+            user.groups.append(group)
         request.response.status = HTTPOk.code
         return {'object_id': language.object_id,
                 'client_id': language.client_id}
