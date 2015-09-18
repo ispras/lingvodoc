@@ -571,7 +571,7 @@ class LanguageAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        return acls + acl_by_groups(object_id, client_id, 'languages')
+        return acls + acl_by_groups(object_id, client_id, 'language')
 
 
 class PerspectiveAcl(object):

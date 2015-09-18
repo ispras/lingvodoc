@@ -124,11 +124,11 @@ def main(argv=sys.argv):
                                      action="create"))
 # owner
         base_groups.append(BaseGroup(translation_string="Can edit languages",
-                                     subject="languages",
+                                     subject="language",
                                      action="edit"))
         # only if orphaned
         base_groups.append(BaseGroup(translation_string="Can delete languages",
-                                     subject="languages",
+                                     subject="language",
                                      action="delete"))
         base_groups.append(BaseGroup(translation_string="Can edit user",
                                      subject="edit_user",
