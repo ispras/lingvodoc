@@ -435,20 +435,18 @@ def view_perspective(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-
-
             response['parent_client_id'] = perspective.parent_client_id
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
             response['object_id'] = perspective.object_id
             response['name'] = find_by_translation_string(locale_id=find_locale_id(request),
                                                           translation_string=perspective.name)
-            response['status'] = perspective.status
+            response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
-    return {'error': str("No such perspective in the system")}
+    return {'error': str("No such perspective in the system"), 'persp': str(perspective)}
 
 
 @view_config(route_name='perspective', renderer='json', request_method='PUT')
@@ -524,18 +522,20 @@ def view_perspectives(request):
         return {'error': str("No such dictionary in the system")}
     perspectives = []
     for perspective in parent.dictionaryperspective:
-
-        subreq = Request.blank(request.route_url('perspective', dictionary_client_id=parent_client_id,
-                                                 dictionary_object_id=parent_object_id,
-                                                 perspective_client_id=perspective.client_id,
-                                                 perspective_object_id=perspective.object_id))
+        path = request.route_url('perspective',
+                                 dictionary_client_id=parent_client_id,
+                                 dictionary_object_id=parent_object_id,
+                                 perspective_client_id=perspective.client_id,
+                                 perspective_id=perspective.object_id)
+        subreq = Request.blank(path)
+        # subreq = request.copy()
         subreq.method = 'GET'
-        subreq.json_body = {}
-        response = request.invoke_subrequest(subreq)
-        perspectives += [response]
-
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such perspective in the system")}
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        perspectives += [resp.json]
+    response['perspectives'] = perspectives
+    request.response.status = HTTPOk.code
+    return response
 
 
 @view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST')
@@ -561,10 +561,10 @@ def create_perspective(request):
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name,
                                               translation=translation, client_id=client.id)
         perspective = DictionaryPerspective(object_id=DBSession.query(Client).filter_by(client_id=client.id).count() + 1,
-                                client_id=variables['auth'],
-                                name=name,
-                                state='WiP',
-                                parent = parent)
+                                            client_id=variables['auth'],
+                                            name=name,
+                                            state='WiP',
+                                            parent = parent)
         DBSession.add(perspective)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(subject='perspective'):
