@@ -2035,26 +2035,46 @@ def signup_post(request):
         return {'status': request.response.status, 'error': str(e)}
 
 
+def get_user_by_client_id(client_id):
+    user = None
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    if client is not None:
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+    return user
+
+@view_config(route_name='home', renderer='templates/home.pt', request_method='GET')
+def home_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    variables = {'client_id': client_id, 'user': user}
+    return render_to_response('templates/home.pt', variables, request=request)
+
 @view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
 def dashboard_get(request):
     client_id = authenticated_userid(request)
-    client = DBSession.query(Client).filter_by(id=client_id).first()
-    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/dashboard.pt', variables, request=request)
 
 @view_config(route_name='languages', renderer='templates/languages.pt', request_method='GET')
 def languages_get(request):
     client_id = authenticated_userid(request)
-    client = DBSession.query(Client).filter_by(id=client_id).first()
-    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/languages.pt', variables, request=request)
 
 @view_config(route_name='new_dictionary', renderer='templates/create_dictionary.pt', request_method='GET')
 def new_dictionary_get(request):
     client_id = authenticated_userid(request)
-    client = DBSession.query(Client).filter_by(id=client_id).first()
-    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/create_dictionary.pt', variables, request=request)
