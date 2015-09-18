@@ -240,6 +240,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     name = Column(UnicodeText)
+    is_template = Column(Boolean, default=False)
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -469,7 +470,7 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject_client_id = Column(BigInteger)
     subject_object_id = Column(BigInteger)
-    subject_override = Column(Boolean)
+    subject_override = Column(Boolean, default=False)
     users = relationship("User",  secondary=user_to_group_association, backref=backref("groups"))
     organizations = relationship("Organization",  secondary=organization_to_group_association, backref=backref("groups"))
 
