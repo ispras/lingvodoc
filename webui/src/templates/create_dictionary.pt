@@ -112,36 +112,101 @@
         Next Section <span class="glyphicon glyphicon-circle-arrow-right"></span>
     </a>
 
-    <button type="button" class="btn btn-danger" ng-click="saveDictionary()">Save</button>
-
-
 </script>
 
 
 <script type="text/ng-template" id="createDictionaryStep2.html">
 
     <div>
+        <label for="perspective">Perspective</label>
+        <select id="perspective" class="form-control" ng-model="dictionaryData.perspectiveId" ng-options="p.object_id as p.name for p in perspectives track by p.object_id">
+        </select>
 
 
+        <div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </thead>
+
+                <tbody ng-repeat="field in perspective.fields">
+                    <tr>
+
+                        <td>
+                            <input type="checkbox" ng-checked="field.status == 'enabled'" ng-model="perspective.fields[$index]._statusEnabled">
+                        </td>
 
 
-        <ul class="draggable-objects">
-            <li ng-repeat="obj in fieldTypes" >
-                <div ng-drag="true" ng-drag-data="obj" data-allow-transform="true"> {{obj.description}} </div>
-            </li>
-        </ul>
+                        <td>
+                            <input type="text" class="form-control" ng-model="perspective.fields[$index].entity_type">
+                        </td>
 
 
+                        <td>
+                            <select class="form-control" ng-model="perspective.fields[$index].data_type">
+                                <option value="text" ng-if="field.data_type == 'text'" selected>Text</option>
+                                <option value="text" ng-if="field.data_type != 'text'">Text</option>
+                                <option value="image" ng-if="field.data_type == 'image'" selected>Image</option>
+                                <option value="image" ng-if="field.data_type != 'image'">Image</option>
+                                <option value="sound" ng-if="field.data_type == 'sound'" selected>Audio</option>
+                                <option value="sound" ng-if="field.data_type != 'sound'">Audio</option>
+                                <option value="grouping_tag" ng-if="field.data_type == 'grouping_tag'" selected>Groupping tag</option>
+                                <option value="grouping_tag" ng-if="field.data_type != 'grouping_tag'">Groupping tag</option>
+                            </select>
+
+                        </td>
+
+                        <td>
+                            <input type="checkbox" ng-checked="field.group || perspective.fields[$index]._groupEnabled" ng-model="perspective.fields[$index]._groupEnabled" ng-change="enableGroup($index)">
+                        </td>
 
 
+                        <td>
+                            <input type="text" ng-model="perspective.fields[$index].group" class="form-control" ng-if="field.group!==undefined">
+                        </td>
+
+                        <td>
+                            <input type="checkbox" ng-checked="field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled" ng-if="field.data_type == 'sound'" ng-model="perspective.fields[$index]._containsEnabled" ng-change="enableLinkedField($index)">
+                        </td>
+
+                        <td>
+                            <span class="glyphicon glyphicon-circle-arrow-right" ng-if="field.data_type == 'sound' && field.contains && field.contains.length > 0"></span>
+                        </td>
+
+                        <td>
+                            <input type="text" ng-value="field.contains[0].entity_type" class="form-control" ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)" ng-model="perspective.fields[$index].contains[0].entity_type">
+                        </td>
+
+                        <td>
+                            <select class="form-control" ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)" ng-model="perspective.fields[$index].contains[0].data_type">
+                                <option value="text" ng-if="field.contains[0].data_type == 'text'" selected>Text</option>
+                                <option value="text" ng-if="field.contains[0].data_type != 'text'">Text</option>
+                                <option value="image" ng-if="field.contains[0].data_type == 'image'" selected>Image</option>
+                                <option value="image" ng-if="field.contains[0].data_type != 'image'">Image</option>
+                                <option value="sound" ng-if="field.contains[0].data_type == 'sound'" selected>Audio</option>
+                                <option value="sound" ng-if="field.contains[0].data_type != 'sound'">Audio</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type == 'grouping_tag'" selected>Groupping tag</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type != 'grouping_tag'">Groupping tag</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type == 'markup'" selected>Markup</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'">Markup</option>
+                            </select>
+                        </td>
 
 
-        <div ng-drop="true" ng-drop-success="onDropComplete($data,$event)" ng-drag-stop="onDragStop($data,$event)" class="drop-area">
-            <span class="title">Drop element here</span>
-
-            <div class="drag-object" ng-repeat="obj in droppedObjects" ng-drag="true" ng-drag-data="obj" ng-drag-success="onDragSuccess($data,$event)" >
-                {{ obj.type }}
-            </div>
+                    </tr>
+                </tbody>
+            </table>
 
         </div>
 
@@ -151,8 +216,10 @@
         Next Section <span class="glyphicon glyphicon-circle-arrow-right"></span>
     </a>
 
-    <button type="button" class="btn btn-danger" ng-click="saveDictionary()">Save</button>
 
+    <a class="btn btn-block btn-warning">
+        Complete <span class="glyphicon glyphicon-circle-arrow-right" ng-click="saveDictionary();"></span>
+    </a>
 
 </script>
 
@@ -163,7 +230,10 @@
         Step3
     </div>
 
-    <button type="button" class="btn btn-danger" ng-click="saveDictionary()">Save</button>
+    <a class="btn btn-block btn-warning">
+        Complete <span class="glyphicon glyphicon-circle-arrow-right" ng-click="saveDictionary()"></span>
+    </a>
+
 
 
 </script>
