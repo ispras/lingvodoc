@@ -56,11 +56,13 @@ def configure_routes(config):
 
     # API #GET && PUT && DELETE
     # Gets/puts info about language
-    config.add_route(name='language', pattern='/language/{client_id}/{object_id}')  # 100% ready
+    config.add_route(name='language', pattern='/language/{client_id}/{object_id}',
+                     factory='lingvodoc.models.LanguageAcl')  # 100% ready
 
     # API #POST
     # Create language
-    config.add_route(name='create_language', pattern='/language')  # 100% ready
+    config.add_route(name='create_language', pattern='/language',
+                     factory='lingvodoc.models.LanguageAcl')  # 100% ready
 
     # API #GET
     # view languages list
@@ -106,13 +108,15 @@ def configure_routes(config):
     # Future note: PUT & DELETE should work on-server only.
     config.add_route(name='perspective',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspective/{perspective_client_id}/{perspective_id}')  # 100% ready
+                             'perspective/{perspective_client_id}/{perspective_id}',
+                     factory='lingvodoc.models.PerspectiveAcl')  # 100% ready
 
     # API #POST
     # Creating perspective
     config.add_route(name='create_perspective',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspective')  # 100% ready
+                             'perspective',
+                     factory='lingvodoc.models.PerspectiveAcl')  # 100% ready
 
     # API #GET
     # list perspectives

@@ -507,54 +507,91 @@ class Client(Base, TableNameMixin, IdMixin):
     user = relationship("User", backref='clients')
 
 
-class PerspAcl(object):
+def acl_by_groups(client_id, object_id, subject):
+    acls = []
+    groups = DBSession.query(Group).join(BaseGroup).filter_by(subject=subject, subject_override=True).all()
+    groups += DBSession.query(Group).join(BaseGroup).filter_by(subject=subject,
+                                                               subject_client_id=client_id,
+                                                               subject_object_id=object_id).all()
+    for group in groups:
+        base_group = group.parent
+        if group.subject_override:
+            group_name = base_group.action + ":" + base_group.subject + ":" + group.subject_override
+        else:
+            group_name = base_group.action + ":" + base_group.subject \
+                     + ":" + group.subject_client_id + ":" + group.subject_object_id
+        acls += [(Allow, group_name, base_group.action)]
+    return acls
+
+
+def acl_by_groups_single_id(object_id, subject):
+    acls = []
+    groups = DBSession.query(Group).join(BaseGroup).filter_by(subject=subject, subject_override=True).all()
+    groups += DBSession.query(Group).join(BaseGroup).filter_by(subject=subject,
+                                                               subject_client_id=None,
+                                                               subject_object_id=object_id).all()
+    for group in groups:
+        base_group = group.parent
+        if group.subject_override:
+            group_name = base_group.action + ":" + base_group.subject + ":" + group.subject_override
+        else:
+            group_name = base_group.action + ":" + base_group.subject \
+                     + ":" + group.subject_client_id + ":" + group.subject_object_id
+        acls += [(Allow, group_name, base_group.action)]
+    return acls
+
+
+class LanguageAcl(object):
     def __init__(self, request):
         self.request = request
 
     def __acl__(self):
-        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
-        obj_id = int(self.request.matchdict['perspective_object_id'])
-        cli_id = int(self.request.matchdict['perspective_client_id'])
-        persp = DBSession.query(DictionaryPerspective).filter_by(object_id=obj_id, client_id=cli_id).first()
-        object_id = persp.parent_object_id
-        client_id = persp.parent_client_id
-        groups = DBSession.query(Group)
-        for group in groups:  # add different strategies
-            name = 'dictionary' + str(object_id) + '_' + str(client_id)
-            if name in group.subject:
-                perm = group.BaseGroup.name
-                acls += [(Allow, group.subject, perm)]
-            name = 'perspective' + str(obj_id) + '_' + str(cli_id)
-            if name in group.subject:
-                perm = group.parent.name
-                acls += [(Allow, group.subject, perm)]
-        return acls
+        acls = []
+        object_id = self.request.matchdict['object_id']
+        client_id = self.request.matchdict['client_id']
+        return acl_by_groups(object_id, client_id, 'languages')
 
 
-class DictAcl(object):
+class PerspectiveAcl(object):
     def __init__(self, request):
         self.request = request
 
     def __acl__(self):
-        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
-        obj_id = int(self.request.matchdict['object_id'])
-        cli_id = int(self.request.matchdict['client_id'])
-        groups = DBSession.query(Group)
-        for group in groups:
-            name = 'dictionary' + str(obj_id) + '_' + str(cli_id)
-            if name in group.subject:
-                perm = group.parent.name
-                acls += [(Allow, group.subject, perm)]
-        return acls
+        acls = []
+        object_id = self.request.matchdict['perspective_id']
+        client_id = self.request.matchdict['perspective_client_id']
+        return acl_by_groups(object_id, client_id, 'perspective')
 
 
-class TESTAcl(object):
+class OrganizationAcl(object):
     def __init__(self, request):
         self.request = request
 
     def __acl__(self):
-        from .acl import groupfinder
-        print('ITSAME',groupfinder(self.request.authenticated_userid, self.request))
-        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
-        acls += [(Allow, 'test', 'view')]
-        return acls
+        acls = []
+        object_id = self.request.matchdict['perspective_id']
+        client_id = self.request.matchdict['perspective_client_id']
+        return acl_by_groups(object_id, client_id, 'organization')
+
+
+class DictionaryAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['object_id']
+        client_id = self.request.matchdict['client_id']
+        return acl_by_groups(object_id, client_id, 'dictionary')
+
+
+class DictionaryIdsWithPrefixAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['dictionary_object_id']
+        client_id = self.request.matchdict['dictionary_client_id']
+        return acl_by_groups(object_id, client_id, 'dictionary')
+
