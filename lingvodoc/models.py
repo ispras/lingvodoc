@@ -522,7 +522,8 @@ class Client(Base, TableNameMixin, IdMixin):
 
 
 def acl_by_groups(object_id, client_id, subject):
-    acls = []
+    acls = [] #TODO DANGER if acls do not work -- incomment string below
+    # acls += [(Allow, Authenticated, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
 
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
@@ -540,7 +541,8 @@ def acl_by_groups(object_id, client_id, subject):
 
 
 def acl_by_groups_single_id(object_id, subject):
-    acls = []
+    acls = [] #TODO DANGER if acls do not work -- incomment string below
+    # acls += [(Allow, Authenticated, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
