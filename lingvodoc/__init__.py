@@ -78,6 +78,14 @@ def configure_routes(config):
     #    e) Maps location (coordinates) +- radius in kilometers
     config.add_route('dictionaries', 'dictionaries')  # 100% ready
 
+    # API #GET
+    # Perspective list
+    # 1. Filter by:
+    #    a) template
+    #    b) state
+    config.add_route('all_perspectives', '/perspectives')
+    config.add_route('users', '/users')
+
     # web-view
     config.add_route(name='new_dictionary', pattern='/dashboard/create_dictionary')
 
