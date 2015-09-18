@@ -150,20 +150,15 @@ class TestDictionariesListSuccessCondition(unittest.TestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         # self.assertCountEqual(response.json['dictionaries'],
         #                  [{'object_id': 1, 'client_id': 1}, {'object_id': 1, 'client_id': 2}])
-        # print("LOOK HERE", response.json['dictionaries'])
 
     def test_no_filter(self):
         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
         response = self.app.post_json('/dictionaries', params={})
         self.assertEqual(response.status_int, HTTPOk.code)
-        # print()
-        # print("WTF", response.json)
-        # print()
 
     def test_languages_list(self):
         response = self.app.get('/languages')
         self.assertEqual(response.status_int, HTTPOk.code)
-        # print("ANSWER TO EVERYTHING", response.json['languages'])
 
 class TestEmptyListSuccessCondition(unittest.TestCase):
     def setUp(self):
@@ -198,7 +193,6 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
     def test_languages_list(self):
         response = self.app.get('/languages')
         self.assertEqual(response.status_int, HTTPOk.code)
-        # print("ANSWER TO EVERYTHING 2", response.json['languages'])
 
     # def test_user_created_filter(self):
     #     response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
@@ -635,6 +629,116 @@ class TestDictionariesList(unittest.TestCase):
         response = self.app.get('/user',
                                       params={'client_id':1})
         self.assertEqual(response.status_int, HTTPOk.code)
+
+
+class TestPerspectiveList(unittest.TestCase):
+    def setUp(self):
+        self.config = testing.setUp()
+        import webtest
+        from pyramid import paster
+        from sqlalchemy import create_engine
+        engine = create_engine('sqlite://')
+        myapp = paster.get_app('testing.ini')
+        self.app = webtest.TestApp(myapp)
+        from lingvodoc.models import (
+            Base,
+            Dictionary,
+            Language,
+            Organization,
+            Locale,
+            User,
+            Passhash,
+            Client,
+            DictionaryPerspective,
+            UserEntitiesTranslationString
+            )
+        DBSession.configure(bind=engine)
+        Base.metadata.create_all(engine)
+        with transaction.manager:
+            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
+            DBSession.add(ru_locale)
+            en_locale = Locale(id=2, shortcut="en", intl_name="English")
+            DBSession.add(en_locale)
+            DBSession.flush()
+            new_user = User(id=1, login='test', default_locale_id = 1)
+            new_pass = Passhash(password='pass')
+            DBSession.add(new_pass)
+            new_user.password = new_pass
+            DBSession.add(new_user)
+            new_client = Client(id=1, user=new_user)
+            DBSession.add(new_client)
+            new_user2 = User(id=2, login='test2', default_locale_id = 1)
+            new_pass2 = Passhash(password='pass')
+            DBSession.add(new_pass)
+            new_user2.password = new_pass2
+            DBSession.add(new_user2)
+            new_client = Client(id=2, user=new_user2)
+            DBSession.add(new_client)
+            new_client = Client(id=3, user=new_user)
+            DBSession.add(new_client)
+            DBSession.flush()
+            new_user3 = User(id=3, login='test3', default_locale_id = 1)
+            new_pass3 = Passhash(password='pass')
+            DBSession.add(new_pass3)
+            new_user3.password = new_pass3
+            DBSession.add(new_user3)
+            new_client = Client(id=4, user=new_user3)
+            DBSession.add(new_client)
+            new_user4 = User(id=4, login='test4', default_locale_id = 1)
+            new_pass4 = Passhash(password='pass')
+            DBSession.add(new_pass4)
+            new_user4.password = new_pass4
+            DBSession.add(new_user4)
+            new_client = Client(id=5, user=new_user4)
+            DBSession.add(new_client)
+            new_lang1 = Language(client_id=1, object_id=1, translation_string='head')
+            DBSession.add(new_lang1)
+            new_lang2 = Language(client_id=2, object_id=5, translation_string='left son', parent=new_lang1)
+            DBSession.add(new_lang2)
+            new_lang3 = Language(client_id=1, object_id=3, translation_string='right son', parent=new_lang1)
+            DBSession.add(new_lang3)
+            new_lang4 = Language(client_id=2, object_id=4, translation_string='first grand son', parent=new_lang3)
+            DBSession.add(new_lang4)
+            new_lang5 = Language(client_id=1, object_id=5, translation_string='second grand son', parent=new_lang3)
+            DBSession.add(new_lang5)
+            new_lang6 = Language(client_id=1, object_id=6, translation_string='third grand son', parent=new_lang3)
+            DBSession.add(new_lang6)
+            new_lang7 = Language(client_id=1, object_id=7, translation_string='grand grand son', parent=new_lang5)
+            DBSession.add(new_lang7)
+            new_lang8 = Language(client_id=1, object_id=8, translation_string='second head')
+            DBSession.add(new_lang8)
+            new_lang9 = Language(client_id=1, object_id=9, translation_string='second left son', parent=new_lang8)
+            DBSession.add(new_lang9)
+            new_lang10 = Language(client_id=1, object_id=10, translation_string='second right son', parent=new_lang8)
+            DBSession.add(new_lang10)
+            new_org1 = Organization(name='first')
+            new_org1.users.append(new_user)
+            new_org1.users.append(new_user3)
+            DBSession.add(new_org1)
+            new_org2 = Organization(name='second')
+            DBSession.add(new_org2)
+            new_dict = Dictionary(client_id=1, object_id=1, name='dict')
+            DBSession.add(new_dict)
+            DBSession.flush()
+            new_persp1 = DictionaryPerspective(client_id=1, object_id=1, name='persp', parent=new_dict)
+            DBSession.add(new_persp1)
+            new_persp2 = DictionaryPerspective(client_id=2, object_id=2, name='persp', parent=new_dict)
+            DBSession.add(new_persp2)
+            uets = UserEntitiesTranslationString(locale_id=1, translation_string='persp', translation='персп')
+
+
+    def tearDown(self):
+        DBSession.remove()
+        testing.tearDown()
+
+    def test_no_filter(self):
+        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
+        response = self.app.get('/dictionary/1/1/perspectives',
+                                      params={})
+
+        # response = self.app.get('/dictionary/1/1/perspective/1/1',
+        #                               params={})
+        self.assertEqual(response.status_int, HTTPOk.code)
         print()
-        print("WHY", response.json)
+        print("LIST:", response.json)
         print()

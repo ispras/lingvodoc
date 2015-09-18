@@ -240,6 +240,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     name = Column(UnicodeText)
+    is_template = Column(Boolean, default=False)
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -467,7 +468,7 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject_client_id = Column(BigInteger)
     subject_object_id = Column(BigInteger)
-    subject_override = Column(Boolean)
+    subject_override = Column(Boolean, default=False)
     users = relationship("User",  secondary=user_to_group_association, backref=backref("groups"))
     organizations = relationship("Organization",  secondary=organization_to_group_association, backref=backref("groups"))
 
@@ -528,6 +529,7 @@ class PerspAcl(object):
             if name in group.subject:
                 perm = group.parent.name
                 acls += [(Allow, group.subject, perm)]
+        return acls
 
 
 class DictAcl(object):
@@ -544,3 +546,16 @@ class DictAcl(object):
             if name in group.subject:
                 perm = group.parent.name
                 acls += [(Allow, group.subject, perm)]
+        return acls
+
+
+class TESTAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        from .acl import groupfinder
+        print('ITSAME',groupfinder(self.request.authenticated_userid, self.request))
+        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
+        acls += [(Allow, 'test', 'view')]
+        return acls
