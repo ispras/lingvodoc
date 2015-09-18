@@ -528,6 +528,7 @@ class PerspAcl(object):
             if name in group.subject:
                 perm = group.parent.name
                 acls += [(Allow, group.subject, perm)]
+        return acls
 
 
 class DictAcl(object):
@@ -544,3 +545,16 @@ class DictAcl(object):
             if name in group.subject:
                 perm = group.parent.name
                 acls += [(Allow, group.subject, perm)]
+        return acls
+
+
+class TESTAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        from .acl import groupfinder
+        print('ITSAME',groupfinder(self.request.authenticated_userid, self.request))
+        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
+        acls += [(Allow, 'test', 'view')]
+        return acls
