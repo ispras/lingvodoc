@@ -206,6 +206,11 @@ class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     translation_string = Column(UnicodeText)
     translation = Column(UnicodeText)
 
+user_to_dictionary_association = Table('user_to_dictionary_association', Base.metadata,
+                                       Column('user_id', BigInteger, ForeignKey('user.id')),
+                                       Column('dictionary_id', BigInteger, ForeignKey('dictionary.id'))
+                                       )
+
 
 class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
@@ -221,6 +226,8 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     state = Column(UnicodeText)
     name = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    participated = relationship("User",  secondary=user_to_dictionary_association, backref=backref("dictionaries"))
+
 
 
 class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -461,6 +468,8 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
     groups = relationship('Group', backref=backref("BaseGroup"))
     subject = Column(UnicodeText)
     action = Column(UnicodeText)
+    dictionary_default = Column(Boolean, default=False)
+    perspective_default = Column(Boolean, default=False)
 
 
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -550,7 +559,7 @@ class LanguageAcl(object):
         acls = []
         object_id = self.request.matchdict['object_id']
         client_id = self.request.matchdict['client_id']
-        return acl_by_groups(object_id, client_id, 'languages')
+        return acls + acl_by_groups(object_id, client_id, 'languages')
 
 
 class PerspectiveAcl(object):
@@ -561,7 +570,7 @@ class PerspectiveAcl(object):
         acls = []
         object_id = self.request.matchdict['perspective_id']
         client_id = self.request.matchdict['perspective_client_id']
-        return acl_by_groups(object_id, client_id, 'perspective')
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
 
 
 class OrganizationAcl(object):
@@ -572,7 +581,7 @@ class OrganizationAcl(object):
         acls = []
         object_id = self.request.matchdict['perspective_id']
         client_id = self.request.matchdict['perspective_client_id']
-        return acl_by_groups(object_id, client_id, 'organization')
+        return acls + acl_by_groups(object_id, client_id, 'organization')
 
 
 class DictionaryAcl(object):
@@ -583,7 +592,7 @@ class DictionaryAcl(object):
         acls = []
         object_id = self.request.matchdict['object_id']
         client_id = self.request.matchdict['client_id']
-        return acl_by_groups(object_id, client_id, 'dictionary')
+        return acls + acl_by_groups(object_id, client_id, 'dictionary')
 
 
 class DictionaryIdsWithPrefixAcl(object):
@@ -594,5 +603,110 @@ class DictionaryIdsWithPrefixAcl(object):
         acls = []
         object_id = self.request.matchdict['dictionary_object_id']
         client_id = self.request.matchdict['dictionary_client_id']
-        return acl_by_groups(object_id, client_id, 'dictionary')
+        return acls + acl_by_groups(object_id, client_id, 'dictionary')
+
+
+class DictionaryRolesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['object_id']
+        client_id = self.request.matchdict['client_id']
+        return acls + acl_by_groups(object_id, client_id, 'dictionary_role')
+
+
+class CreatePerspectiveAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['dictionary_object_id']
+        client_id = self.request.matchdict['dictionary_client_id']
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
+
+
+class PerspectiveRolesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['perspective_id']
+        client_id = self.request.matchdict['perspective_client_id']
+        return acls + acl_by_groups(object_id, client_id, 'perspective_role')
+
+
+class CreateLexicalEntriesEntitiesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['perspective_id']
+        client_id = self.request.matchdict['perspective_client_id']
+        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
+
+
+class LexicalEntriesEntitiesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['perspective_id']
+        client_id = self.request.matchdict['perspective_client_id']
+        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
+
+
+class PerspectiveEntityOneAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['object_id']
+        client_id = self.request.matchdict['client_id']
+        levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = levoneent.parent
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+
+
+class PerspectiveEntityTwoAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['object_id']
+        client_id = self.request.matchdict['client_id']
+        levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = levoneent.parent.parent
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+
+
+class PerspectiveEntityGroupAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['object_id']
+        client_id = self.request.matchdict['client_id']
+        levoneent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = levoneent.parent
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+
+
+class PerspectivePublishAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id = self.request.matchdict['perspective_id']
+        client_id = self.request.matchdict['perspective_client_id']
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
 
