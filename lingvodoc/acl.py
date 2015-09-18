@@ -27,10 +27,10 @@ def groupfinder(client_id, request):
     for group in user.groups:
         base_group = DBSession.query(BaseGroup).filter(BaseGroup.id == group.base_group_id).first()
         if group.subject_override:
-            group_name = base_group.action + ":" + base_group.subject + ":" + group.subject_override
+            group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \
-                         + ":" + group.subject_client_id + ":" + group.subject_object_id
+                         + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         grouplist.append(group_name)
     return grouplist
 

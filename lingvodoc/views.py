@@ -882,16 +882,6 @@ def signin(request):
     if user and user.check_password(password):
         client = Client(user_id=user.id)
         user.clients.append(client)
-        basegroups = []
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create dictionaries").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create languages").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create organizations").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create translation strings").first()]
-        groups = []
-        for base in basegroups:
-            groups += [DBSession.query(Group).filter_by(subject_override=True, base_id=base.id).first()]
-        for group in groups:
-            user.groups.append(group)
         DBSession.add(client)
         DBSession.flush()
         headers = remember(request, principal=client.id)
@@ -1974,7 +1964,14 @@ def login_post(request):
         DBSession.add(client)
         DBSession.flush()
         headers = remember(request, principal=client.id)
-        return HTTPFound(location=next, headers=headers)
+        response = Response()
+        response.headers = headers
+        locale_id = user.default_locale_id
+        if not locale_id:
+            locale_id = 1
+        response.set_cookie(key='locale_id', value=str(locale_id))
+        headers = remember(request, principal=client.id)
+        return HTTPFound(location=next, headers=response.headers)
     return HTTPUnauthorized(location=request.route_url('login'))
 
 @view_config(route_name='logout', renderer='json')
@@ -2012,6 +2009,16 @@ def signup_post(request):
         new_user.password = pwd
         new_user.email.append(email)
         DBSession.add(new_user)
+        basegroups = []
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create dictionaries").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create organizations").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create translation strings").first()]
+        groups = []
+        for base in basegroups:
+            groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]
+        for group in groups:
+            new_user.groups.append(group)
         DBSession.flush()
         return login_post(request)
 
