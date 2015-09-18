@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}" />
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="CreateDictionaryModule">
+
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="userId" data-lingvodoc="${user.id}"></div>
+
+<div id="dictionariesUrl" data-lingvodoc="${request.route_url('dictionaries')}"></div>
+<div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
+<div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
+
+
+<nav class="lingvodoc-navbar">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Lingvodoc</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="#">Home</a></li>
+                <li class="active"><a href="">Dictionaries</a></li>
+                <li><a href="${request.route_url('languages')}">Languages</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${user.name}<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
+                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+<div class="container" ng-cloak>
+
+    <div id="form-views" ui-view></div>
+
+</div>
+
+
+
+
+<script type="text/ng-template" id="createDictionary.html">
+
+    <div class="row">
+        <div class="col-sm-8 col-sm-offset-2">
+
+            <div class="form-container">
+
+                <div class="page-header text-center">
+                    <h2>Create dictionary</h2>
+
+                    <div class="text-center status-buttons">
+                        <a ui-sref-active="active" ui-sref=".step1"><span>1</span></a>
+                        <a ui-sref-active="active" ui-sref=".step2"><span>2</span></a>
+                        <a ui-sref-active="active" ui-sref=".step3"><span>3</span></a>
+                    </div>
+                </div>
+
+            </div>
+
+
+        <div id="form-views" ui-view></div>
+
+    </div>
+
+</script>
+
+
+<script type="text/ng-template" id="createDictionaryStep1.html">
+
+    <div>
+        <label for="language">Language</label>
+        <select id="language" class="form-control" ng-model="dictionaryData.languageId" ng-options="language.object_id as language.translation_string for language in languages track by language.object_id">
+        </select>
+
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="" required autofocus ng-model="dictionaryData.name">
+    </div>
+
+    <a ui-sref="create.step2" class="btn btn-block btn-info">
+        Next Section <span class="glyphicon glyphicon-circle-arrow-right"></span>
+    </a>
+
+</script>
+
+
+<script type="text/ng-template" id="createDictionaryStep2.html">
+
+    <div>
+        <label for="perspective">Perspective</label>
+        <select id="perspective" class="form-control" ng-model="dictionaryData.perspectiveId" ng-options="p.object_id as p.name for p in perspectives track by p.object_id">
+        </select>
+
+
+        <div>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </thead>
+
+                <tbody ng-repeat="field in perspective.fields">
+                    <tr>
+
+                        <td>
+                            <input type="checkbox" ng-checked="field.status == 'enabled'" ng-model="perspective.fields[$index]._statusEnabled">
+                        </td>
+
+
+                        <td>
+                            <input type="text" class="form-control" ng-model="perspective.fields[$index].entity_type">
+                        </td>
+
+
+                        <td>
+                            <select class="form-control" ng-model="perspective.fields[$index].data_type">
+                                <option value="text" ng-if="field.data_type == 'text'" selected>Text</option>
+                                <option value="text" ng-if="field.data_type != 'text'">Text</option>
+                                <option value="image" ng-if="field.data_type == 'image'" selected>Image</option>
+                                <option value="image" ng-if="field.data_type != 'image'">Image</option>
+                                <option value="sound" ng-if="field.data_type == 'sound'" selected>Audio</option>
+                                <option value="sound" ng-if="field.data_type != 'sound'">Audio</option>
+                                <option value="grouping_tag" ng-if="field.data_type == 'grouping_tag'" selected>Groupping tag</option>
+                                <option value="grouping_tag" ng-if="field.data_type != 'grouping_tag'">Groupping tag</option>
+                            </select>
+
+                        </td>
+
+                        <td>
+                            <input type="checkbox" ng-checked="field.group || perspective.fields[$index]._groupEnabled" ng-model="perspective.fields[$index]._groupEnabled" ng-change="enableGroup($index)">
+                        </td>
+
+
+                        <td>
+                            <input type="text" ng-model="perspective.fields[$index].group" class="form-control" ng-if="field.group!==undefined">
+                        </td>
+
+                        <td>
+                            <input type="checkbox" ng-checked="field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled" ng-if="field.data_type == 'sound'" ng-model="perspective.fields[$index]._containsEnabled" ng-change="enableLinkedField($index)">
+                        </td>
+
+                        <td>
+                            <span class="glyphicon glyphicon-circle-arrow-right" ng-if="field.data_type == 'sound' && field.contains && field.contains.length > 0"></span>
+                        </td>
+
+                        <td>
+                            <input type="text" ng-value="field.contains[0].entity_type" class="form-control" ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)" ng-model="perspective.fields[$index].contains[0].entity_type">
+                        </td>
+
+                        <td>
+                            <select class="form-control" ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)" ng-model="perspective.fields[$index].contains[0].data_type">
+                                <option value="text" ng-if="field.contains[0].data_type == 'text'" selected>Text</option>
+                                <option value="text" ng-if="field.contains[0].data_type != 'text'">Text</option>
+                                <option value="image" ng-if="field.contains[0].data_type == 'image'" selected>Image</option>
+                                <option value="image" ng-if="field.contains[0].data_type != 'image'">Image</option>
+                                <option value="sound" ng-if="field.contains[0].data_type == 'sound'" selected>Audio</option>
+                                <option value="sound" ng-if="field.contains[0].data_type != 'sound'">Audio</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type == 'grouping_tag'" selected>Groupping tag</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type != 'grouping_tag'">Groupping tag</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type == 'markup'" selected>Markup</option>
+                                <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'">Markup</option>
+                            </select>
+                        </td>
+
+
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+
+    </div>
+
+    <a ui-sref="create.step3" class="btn btn-block btn-info">
+        Next Section <span class="glyphicon glyphicon-circle-arrow-right"></span>
+    </a>
+
+
+    <a class="btn btn-block btn-warning">
+        Complete <span class="glyphicon glyphicon-circle-arrow-right" ng-click="saveDictionary();"></span>
+    </a>
+
+</script>
+
+
+<script type="text/ng-template" id="createDictionaryStep3.html">
+
+    <div>
+        Step3
+    </div>
+
+    <a class="btn btn-block btn-warning">
+        Complete <span class="glyphicon glyphicon-circle-arrow-right" ng-click="saveDictionary()"></span>
+    </a>
+
+
+
+</script>
+
+</body>
+
+</html>
