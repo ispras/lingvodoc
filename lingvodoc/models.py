@@ -223,6 +223,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     marked_for_deletion = Column(Boolean, default=False)
 
 
+
 class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
@@ -436,6 +437,14 @@ user_to_organization_association = Table('user_to_organization_association', Bas
                                          )
 
 
+user_to_dictionary_association = Table('user_to_dictionary_association', Base.metadata,
+                                       Column('user_id', BigInteger, ForeignKey('user.id')),
+                                       Column('dictionary_client_id', BigInteger),
+                                       Column('dictionary_object_id', BigInteger),
+                                       ForeignKeyConstraint(('dictionary_client_id', 'dictionary_object_id'),
+                                                            ('dictionary.object_id', 'dictionary.object_id'))
+                                       )
+
 class User(Base, TableNameMixin, IdMixin):
     login = Column(UnicodeText, unique=True)
     name = Column(UnicodeText)
@@ -447,6 +456,8 @@ class User(Base, TableNameMixin, IdMixin):
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean, default=True)
     password = relationship("Passhash", uselist=False)
+    dictionaries = relationship("Dictionary",
+                                secondary=user_to_dictionary_association, backref=backref("participated"))
 
     def check_password(self, passwd):
         return bcrypt.verify(passwd, self.password.hash)
@@ -461,6 +472,8 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
     groups = relationship('Group', backref=backref("BaseGroup"))
     subject = Column(UnicodeText)
     action = Column(UnicodeText)
+    dictionary_default = Column(Boolean, default=False)
+    perspective_default = Column(Boolean, default=False)
 
 
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -508,54 +521,307 @@ class Client(Base, TableNameMixin, IdMixin):
     user = relationship("User", backref='clients')
 
 
-class PerspAcl(object):
+def acl_by_groups(object_id, client_id, subject):
+    acls = []
+    groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
+
+    groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
+        join(BaseGroup).filter_by(subject=subject).all()
+    for group in groups:
+        base_group = group.parent
+        if group.subject_override:
+            group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
+        else:
+            group_name = base_group.action + ":" + base_group.subject \
+                     + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
+        acls += [(Allow, group_name, base_group.action)]
+    return acls
+
+
+def acl_by_groups_single_id(object_id, subject):
+    acls = []
+    groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
+    groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
+        join(BaseGroup).filter_by(subject=subject).all()
+    for group in groups:
+        base_group = group.parent
+        if group.subject_override:
+            group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
+        else:
+            group_name = base_group.action + ":" + base_group.subject \
+                     + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
+        acls += [(Allow, group_name, base_group.action)]
+    return acls
+
+
+class LanguageAcl(object):
     def __init__(self, request):
         self.request = request
 
     def __acl__(self):
-        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
-        obj_id = int(self.request.matchdict['perspective_object_id'])
-        cli_id = int(self.request.matchdict['perspective_client_id'])
-        persp = DBSession.query(DictionaryPerspective).filter_by(object_id=obj_id, client_id=cli_id).first()
-        object_id = persp.parent_object_id
-        client_id = persp.parent_client_id
-        groups = DBSession.query(Group)
-        for group in groups:  # add different strategies
-            name = 'dictionary' + str(object_id) + '_' + str(client_id)
-            if name in group.subject:
-                perm = group.BaseGroup.name
-                acls += [(Allow, group.subject, perm)]
-            name = 'perspective' + str(obj_id) + '_' + str(cli_id)
-            if name in group.subject:
-                perm = group.parent.name
-                acls += [(Allow, group.subject, perm)]
-        return acls
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'languages')
 
 
-class DictAcl(object):
+class PerspectiveAcl(object):
     def __init__(self, request):
         self.request = request
 
     def __acl__(self):
-        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
-        obj_id = int(self.request.matchdict['object_id'])
-        cli_id = int(self.request.matchdict['client_id'])
-        groups = DBSession.query(Group)
-        for group in groups:
-            name = 'dictionary' + str(obj_id) + '_' + str(cli_id)
-            if name in group.subject:
-                perm = group.parent.name
-                acls += [(Allow, group.subject, perm)]
-        return acls
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
 
 
-class TESTAcl(object):
+class OrganizationAcl(object):
     def __init__(self, request):
         self.request = request
 
     def __acl__(self):
-        from .acl import groupfinder
-        print('ITSAME',groupfinder(self.request.authenticated_userid, self.request))
-        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
-        acls += [(Allow, 'test', 'view')]
-        return acls
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'organization')
+
+
+class DictionaryAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'dictionary')
+
+
+class DictionaryIdsWithPrefixAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['dictionary_perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['dictionary_perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'dictionary')
+
+
+class DictionaryRolesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'dictionary_role')
+
+
+class CreatePerspectiveAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['dictionary_perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['dictionary_perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
+
+
+class PerspectiveRolesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'perspective_role')
+
+
+class CreateLexicalEntriesEntitiesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
+
+
+class LexicalEntriesEntitiesAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
+
+
+class PerspectiveEntityOneAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = levoneent.parent
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+
+
+class PerspectiveEntityTwoAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = levoneent.parent.parent
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+
+
+class PerspectiveEntityGroupAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        levoneent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = levoneent.parent
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+
+
+class PerspectivePublishAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+

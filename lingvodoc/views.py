@@ -174,7 +174,7 @@ def view_languages_list(request):
     return response
 
 
-@view_config(route_name='language', renderer='json', request_method='PUT')
+@view_config(route_name='language', renderer='json', request_method='PUT', permission='edit')
 def edit_language(request):
     try:
         response = dict()
@@ -204,7 +204,7 @@ def edit_language(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='language', renderer='json', request_method='DELETE')
+@view_config(route_name='language', renderer='json', request_method='DELETE', permission='delete')
 def delete_language(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -219,7 +219,7 @@ def delete_language(request):
     return {'error': str("No such language in the system")}
 
 
-@view_config(route_name='create_language', renderer='json', request_method='POST')
+@view_config(route_name='create_language', renderer='json', request_method='POST', permission='create')
 def create_language(request):
     try:
         variables = {'auth': request.authenticated_userid}
@@ -253,6 +253,15 @@ def create_language(request):
         if parent:
             language.parent = parent
         DBSession.flush()
+        basegroups = []
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can edit languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can delete languages").first()]
+        groups = []
+        for base in basegroups:
+            group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
+            groups += [group]
+        for group in groups:
+            user.groups.append(group)
         request.response.status = HTTPOk.code
         return {'object_id': language.object_id,
                 'client_id': language.client_id}
@@ -290,7 +299,7 @@ def view_dictionary(request):
     return {'error': str("No such dictionary in the system")}
 
 
-@view_config(route_name='dictionary', renderer='json', request_method='PUT')
+@view_config(route_name='dictionary', renderer='json', request_method='PUT', permission='edit')
 def edit_dictionary(request):
     try:
         response = dict()
@@ -321,7 +330,7 @@ def edit_dictionary(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='dictionary', renderer='json', request_method='DELETE')
+@view_config(route_name='dictionary', renderer='json', request_method='DELETE', permission='delete')
 def delete_dictionary(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -336,7 +345,7 @@ def delete_dictionary(request):
     return {'error': str("No such dictionary in the system")}
 
 
-@view_config(route_name='create_dictionary', renderer='json', request_method='POST')
+@view_config(route_name='create_dictionary', renderer='json', request_method='POST', permission='create')
 def create_dictionary(request):
     try:
 
@@ -363,7 +372,7 @@ def create_dictionary(request):
                                 parent=parent)
         DBSession.add(dictionary)
         DBSession.flush()
-        for base in DBSession.query(BaseGroup).filter_by(subject='dictionary'):
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
                               subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
             new_group.users.append(user)
@@ -400,7 +409,7 @@ def view_dictionary_status(request):
     return {'error': str("No such dictionary in the system")}
 
 
-@view_config(route_name='dictionary_status', renderer='json', request_method='PUT')
+@view_config(route_name='dictionary_status', renderer='json', request_method='PUT', permission='edit')
 def edit_dictionary_status(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -449,7 +458,7 @@ def view_perspective(request):
     return {'error': str("No such perspective in the system"), 'persp': str(perspective)}
 
 
-@view_config(route_name='perspective', renderer='json', request_method='PUT')
+@view_config(route_name='perspective', renderer='json', request_method='PUT', permission='edit')
 def edit_perspective(request):
     try:
         response = dict()
@@ -486,7 +495,7 @@ def edit_perspective(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='perspective', renderer='json', request_method='DELETE')
+@view_config(route_name='perspective', renderer='json', request_method='DELETE', permission='delete')
 def delete_perspective(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -538,7 +547,7 @@ def view_perspectives(request):
     return response
 
 
-@view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST')
+@view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST', permission='create')
 def create_perspective(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -567,15 +576,17 @@ def create_perspective(request):
                                             parent = parent)
         DBSession.add(perspective)
         DBSession.flush()
-        for base in DBSession.query(BaseGroup).filter_by(subject='perspective'):
+        owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
+        owner = owner_client.user
+        for base in DBSession.query(BaseGroup).filter_by(perspective_default='perspective'):
             new_group = Group(parent=base,
                               subject_object_id=perspective.object_id, subject_client_id=perspective.client_id)
             new_group.users.append(user)
+            new_group.users.append(owner)
             DBSession.add(new_group)
             DBSession.flush()
         request.response.status = HTTPOk.code
-        return {
-                'object_id': perspective.object_id,
+        return {'object_id': perspective.object_id,
                 'client_id': perspective.client_id}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
@@ -615,7 +626,7 @@ def view_perspective_status(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'PUT')
+@view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'PUT', permission='edit')
 def edit_perspective_status(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -641,7 +652,7 @@ def edit_perspective_status(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'GET')
+@view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'GET', permission='view')
 def view_dictionary_roles(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -649,7 +660,7 @@ def view_dictionary_roles(request):
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            bases = DBSession.query(BaseGroup).filter_by(subject='dictionary')
+            bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
             roles = []
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
@@ -668,7 +679,7 @@ def view_dictionary_roles(request):
     return {'error': str("No such dictionary in the system")}
 
 
-@view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'POST')
+@view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'POST', permission='create')
 def edit_dictionary_roles(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -682,7 +693,7 @@ def edit_dictionary_roles(request):
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='dictionary').first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -703,7 +714,7 @@ def edit_dictionary_roles(request):
     return {'error': str("No such dictionary in the system")}
 
 
-@view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'DELETE')
+@view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'DELETE', permission='delete')
 def delete_dictionary_roles(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -717,7 +728,7 @@ def delete_dictionary_roles(request):
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='dictionary').first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -736,7 +747,7 @@ def delete_dictionary_roles(request):
     return {'error': str("No such dictionary in the system")}
 
 
-@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'GET')
+@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'GET', permission='view')
 def view_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -751,7 +762,7 @@ def view_perspective_roles(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
-            bases = DBSession.query(BaseGroup).filter_by(subject='perspective')
+            bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
             roles = []
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
@@ -770,7 +781,7 @@ def view_perspective_roles(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'POST')
+@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'POST', permission='create')
 def edit_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -794,7 +805,7 @@ def edit_perspective_roles(request):
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='perspective').first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -815,7 +826,7 @@ def edit_perspective_roles(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'DELETE')
+@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'DELETE', permission='delete')
 def delete_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -839,7 +850,7 @@ def delete_perspective_roles(request):
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='perspective').first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -1057,7 +1068,7 @@ def view_perspective_fields(request):
         return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE')
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE', permission='edit')
 def delete_perspective_fields(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1081,7 +1092,7 @@ def delete_perspective_fields(request):
         return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_fields', renderer = 'json', request_method='POST')
+@view_config(route_name='perspective_fields', renderer = 'json', request_method='POST', permission='edit')
 def create_perspective_fields(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1170,19 +1181,6 @@ def create_perspective_fields(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='upload', renderer='templates/upload.pt')
-def openstack_conn(request):
-
-    if request.method == "POST":
-        fil = request.params['file']
-        file = fil.file
-        file_name = 'acl_improved/' + fil.filename
-        openstack_upload(request.registry.settings, file, file_name, 'text/plain', 'testing_python_script')
-        url = request.route_url('home')
-        return HTTPFound(location=url)
-    return dict()
-
-
 def object_file_path(obj, settings, create_dir=False):
     base_path = settings['storage']['path']
     storage_dir = os.path.join(base_path, obj.data_type, str(obj.client_id), str(obj.id))
@@ -1228,7 +1226,7 @@ def create_object(request, content, obj):
     return
 
 
-@view_config(route_name='get_l1_entity', renderer='json', request_method='GET')
+@view_config(route_name='get_l1_entity', renderer='json', request_method='GET', permission='view')
 def view_l1_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1250,7 +1248,7 @@ def view_l1_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='get_l1_entity', renderer='json', request_method='DELETE')
+@view_config(route_name='get_l1_entity', renderer='json', request_method='DELETE', permission='delete')
 def delete_l1_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1267,7 +1265,7 @@ def delete_l1_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='create_entity_level_one', renderer='json', request_method='POST')
+@view_config(route_name='create_entity_level_one', renderer='json', request_method='POST', permission='create')
 def create_l1_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1308,7 +1306,7 @@ def create_l1_entity(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='get_l2_entity', renderer='json', request_method='GET')
+@view_config(route_name='get_l2_entity', renderer='json', request_method='GET', permission='view')
 def view_l2_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1331,7 +1329,7 @@ def view_l2_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='get_l2_entity', renderer='json', request_method='DELETE')
+@view_config(route_name='get_l2_entity', renderer='json', request_method='DELETE', permission='delete')
 def delete_l2_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1348,7 +1346,7 @@ def delete_l2_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='create_entity_level_two', renderer='json', request_method='POST')
+@view_config(route_name='create_entity_level_two', renderer='json', request_method='POST', permission='create')
 def create_l2_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1389,7 +1387,7 @@ def create_l2_entity(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='get_group_entity', renderer='json', request_method='GET')
+@view_config(route_name='get_group_entity', renderer='json', request_method='GET', permission='view')
 def view_group_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1414,7 +1412,7 @@ def view_group_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='get_group_entity', renderer='json', request_method='DELETE')
+@view_config(route_name='get_group_entity', renderer='json', request_method='DELETE', permission='delete')
 def delete_group_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1431,7 +1429,7 @@ def delete_group_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='add_group_entity', renderer='json', request_method='POST')
+@view_config(route_name='add_group_entity', renderer='json', request_method='POST')  # TODO: check for permission
 def create_group_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1488,7 +1486,7 @@ def create_group_entity(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='create_lexical_entry', renderer='json', request_method='POST')
+@view_config(route_name='create_lexical_entry', renderer='json', request_method='POST', permission='create')
 def create_lexical_entry(request):
     try:
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
@@ -1531,7 +1529,7 @@ def create_lexical_entry(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='lexical_entries_all', renderer='json', request_method='GET')
+@view_config(route_name='lexical_entries_all', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1595,7 +1593,7 @@ def lexical_entries_all(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='lexical_entries_published', renderer='json', request_method='GET')
+@view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
 def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1665,7 +1663,7 @@ def lexical_entries_published(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='lexical_entry', renderer='json', request_method='GET')
+@view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1748,7 +1746,7 @@ def get_user_info(request):
     return response
 
 
-@view_config(route_name='approve_entity', renderer='json', request_method='PATCH')
+@view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
         req = request.json_body
@@ -1810,7 +1808,7 @@ def get_translations(request):
     return response
 
 
-@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
+@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')  # TODO: check for permission
 def merge_dictionaries(request):
     try:
         req = request.json_body
@@ -1966,7 +1964,14 @@ def login_post(request):
         DBSession.add(client)
         DBSession.flush()
         headers = remember(request, principal=client.id)
-        return HTTPFound(location=next, headers=headers)
+        response = Response()
+        response.headers = headers
+        locale_id = user.default_locale_id
+        if not locale_id:
+            locale_id = 1
+        response.set_cookie(key='locale_id', value=str(locale_id))
+        headers = remember(request, principal=client.id)
+        return HTTPFound(location=next, headers=response.headers)
     return HTTPUnauthorized(location=request.route_url('login'))
 
 @view_config(route_name='logout', renderer='json')
@@ -2004,6 +2009,16 @@ def signup_post(request):
         new_user.password = pwd
         new_user.email.append(email)
         DBSession.add(new_user)
+        basegroups = []
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create dictionaries").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create organizations").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create translation strings").first()]
+        groups = []
+        for base in basegroups:
+            groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]
+        for group in groups:
+            new_user.groups.append(group)
         DBSession.flush()
         return login_post(request)
 
