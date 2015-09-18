@@ -211,8 +211,14 @@ def main(argv=sys.argv):
                 admin_account.groups.append(adm_group)
         DBSession.flush()
 
+        fake_dictionary = Dictionary(client_id=1, object_id=1, name="Fake dictionary", state="Service")
+        DBSession.add(fake_dictionary)
+        DBSession.flush()
+
         dialeqt_template = DictionaryPerspective(client_id=1,
                                                  object_id=1,
+                                                 parent_client_id=1,
+                                                 parent_object_id=1,
                                                  is_template=True,
                                                  state="Service",
                                                  name="Lingvodoc desktop version")
