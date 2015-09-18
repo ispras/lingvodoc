@@ -11,6 +11,7 @@ from .models import (
 
 from pyramid.security import forget
 
+
 def groupfinder(client_id, request):
     if not client_id:
         return None
@@ -23,10 +24,14 @@ def groupfinder(client_id, request):
     if not user:
         return None
     grouplist = []
-    grouplist+= [user.login]
     for group in user.groups:
         base_group = DBSession.query(BaseGroup).filter(BaseGroup.id == group.base_group_id).first()
-        grouplist.append(base_group.translation_string + ":" + base_group.subject)
+        if group.subject_override:
+            group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
+        else:
+            group_name = base_group.action + ":" + base_group.subject \
+                         + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
+        grouplist.append(group_name)
     return grouplist
 
 
