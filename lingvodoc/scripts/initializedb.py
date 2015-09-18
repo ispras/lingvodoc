@@ -22,6 +22,7 @@ from ..models import (
     Group,
     Dictionary,
     DictionaryPerspective,
+    DictionaryPerspectiveField,
     Client
     )
 
@@ -209,3 +210,124 @@ def main(argv=sys.argv):
                 DBSession.add(adm_group)
                 admin_account.groups.append(adm_group)
         DBSession.flush()
+
+        dialeqt_template = DictionaryPerspective(client_id=1,
+                                                 object_id=1,
+                                                 is_template=True,
+                                                 state="Service",
+                                                 name="Lingvodoc desktop version")
+        DBSession.add(dialeqt_template)
+        DBSession.flush()
+
+        word_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                             object_id=1, client_id=1,
+                                             entity_type="Word", data_type="text", level="L1E", position=1,
+                                             state="enabled")
+        transcription_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                      object_id=2, client_id=1,
+                                                      entity_type="Transcription", data_type="text",
+                                                      level="L1E", position=2,
+                                                      state="enabled")
+        translation_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                    object_id=3, client_id=1,
+                                                    entity_type="Translation",
+                                                    data_type="text", level="L1E", position=3,
+                                                    state="enabled")
+        sound_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                              object_id=4, client_id=1,
+                                              entity_type="Sound", data_type="sound", level="L1E", position=4,
+                                              state="enabled")
+        for field in [word_ld, transcription_ld, translation_ld, sound_ld]:
+            DBSession.add(field)
+        DBSession.flush()
+        praat_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                              entity_object_id=4, entity_client_id=1,
+                                              object_id=5, client_id=1,
+                                              entity_type="Praat markup", data_type="markup", level="L2E", position=5,
+                                              state="enabled")
+        paradigm_word_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                      object_id=6, client_id=1,
+                                                      entity_type="Paradigm word", data_type="text", level="L1E",
+                                                      group="Paradigm", position=6,
+                                                      state="enabled")
+        paradigm_transcription_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                               object_id=7, client_id=1,
+                                                               entity_type="Paradigm transcription", data_type="text",
+                                                               level="L1E", position=7,
+                                                               state="enabled")
+        paradigm_translation_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                             object_id=8, client_id=1,
+                                                             entity_type="Paradigm translation", data_type="text",
+                                                             level="L1E", position=8,
+                                                             state="enabled")
+        paradigm_sound_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                       object_id=9, client_id=1,
+                                                       entity_type="Paradigm sound", data_type="sound", level="L1E",
+                                                       position=9,
+                                                       state="enabled")
+        for field in [praat_ld, paradigm_word_ld, paradigm_transcription_ld,
+                      paradigm_translation_ld, paradigm_sound_ld]:
+            DBSession.add(field)
+        DBSession.flush()
+        paradigm_praat_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                       object_id=10, client_id=1,
+                                                       entity_type="Paradigm Praat markup", data_type="markup",
+                                                       level="L2E", position=10,
+                                                       state="enabled")
+        etymology_ld = DictionaryPerspectiveField(parent_object_id=1, parent_client_id=1,
+                                                  object_id=11, client_id=1,
+                                                  entity_type="Etymology", data_type="grouping_tag", level="GE",
+                                                  position=11,
+                                                  state="enabled")
+        for field in [paradigm_praat_ld, etymology_ld]:
+            DBSession.add(field)
+
+
+        # protoform_ordinary = DictionaryPerspectiveField(parent_object_id=2, parent_client_id=1,
+        #                                                 object_id=, client_id=1,
+        #                                                 entity_type="", data_type=, level=, position=,
+        #                                                 state="enabled")
+        # word_ordinary
+        # transcription_ordinary
+        # duration_1_vowel_ordinary
+        # intensity_1_vowel_ordinary
+        # native_speaker_ordinary
+        # dialect_ordinary
+        # translation_ld_ordinary
+        # grammatical_form_ordinary
+        # it_is_formed_from_ordinary
+        # similarity_ordinary
+        # the_page_ordinary
+        # the_line_ordinary
+        # the_head_ordinary
+        # the_verse_ordinary
+        # notes_ordinary
+        # sound_ordinary
+        # DBSession.flush()
+        # praat_ordinary
+        # paradigm_word_ordinary
+        # paradigm_transcription_ordinary
+        # paradigm_translation_ordinary
+        # paradigm_sound_ordinary
+        # DBSession.flush()
+        # paradigm_praat_ordinary
+        # etymology_ordinary
+        #
+        # gram_cat_morph = DictionaryPerspectiveField(parent_object_id=3, parent_client_id=1,
+        #                                             object_id=, client_id=1,
+        #                                             entity_type=, data_type=, level=, position=)
+        # form_morph
+        # transcription_morph
+        # variants_morph
+        # native_speaker_morph
+        # text_morph
+        # dialect_morph
+        # in_combination_with_cat_morph
+        # frequency_morph
+        # number_of_an_affix_morph
+        # the_page_morph
+        # the_line_morph
+        # notes_morph
+
+
+
