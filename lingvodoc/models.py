@@ -105,7 +105,7 @@ class IdMixin(object):
     """
     It's used for automatically set id as primary key.
     """
-    id = Column(SLBigInteger(), primary_key=True)
+    id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
 
 
 class CompositeIdMixin(object):
