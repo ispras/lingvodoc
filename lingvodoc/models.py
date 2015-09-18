@@ -442,7 +442,7 @@ user_to_dictionary_association = Table('user_to_dictionary_association', Base.me
                                        Column('dictionary_client_id', BigInteger),
                                        Column('dictionary_object_id', BigInteger),
                                        ForeignKeyConstraint(('dictionary_client_id', 'dictionary_object_id'),
-                                                            ('dictionary.object_id', 'dictionary.object_id'))
+                                                            ('dictionary.client_id', 'dictionary.object_id'))
                                        )
 
 class User(Base, TableNameMixin, IdMixin):
