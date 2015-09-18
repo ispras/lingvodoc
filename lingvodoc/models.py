@@ -461,8 +461,6 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
     groups = relationship('Group', backref=backref("BaseGroup"))
     subject = Column(UnicodeText)
     action = Column(UnicodeText)
-    dictionary_default = Column(Boolean, default=False)
-    perspective_default = Column(Boolean, default=False)
 
 
 class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -531,6 +529,7 @@ class PerspAcl(object):
             if name in group.subject:
                 perm = group.parent.name
                 acls += [(Allow, group.subject, perm)]
+        return acls
 
 
 class DictAcl(object):
@@ -547,3 +546,16 @@ class DictAcl(object):
             if name in group.subject:
                 perm = group.parent.name
                 acls += [(Allow, group.subject, perm)]
+        return acls
+
+
+class TESTAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        from .acl import groupfinder
+        print('ITSAME',groupfinder(self.request.authenticated_userid, self.request))
+        acls = [(Allow, 'admin',  ALL_PERMISSIONS)]
+        acls += [(Allow, 'test', 'view')]
+        return acls

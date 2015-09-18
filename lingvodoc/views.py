@@ -363,9 +363,9 @@ def create_dictionary(request):
                                 parent=parent)
         DBSession.add(dictionary)
         DBSession.flush()
-        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+        for base in DBSession.query(BaseGroup).filter_by(subject='dictionary'):
             new_group = Group(parent=base,
-                              subject='dictionary' + str(dictionary.object_id) + '_' + str(dictionary.client_id))
+                              subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
             new_group.users.append(user)
             DBSession.add(new_group)
             DBSession.flush()
@@ -435,20 +435,18 @@ def view_perspective(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-
-
             response['parent_client_id'] = perspective.parent_client_id
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
             response['object_id'] = perspective.object_id
             response['name'] = find_by_translation_string(locale_id=find_locale_id(request),
                                                           translation_string=perspective.name)
-            response['status'] = perspective.status
+            response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
-    return {'error': str("No such perspective in the system")}
+    return {'error': str("No such perspective in the system"), 'persp': str(perspective)}
 
 
 @view_config(route_name='perspective', renderer='json', request_method='PUT')
@@ -513,6 +511,33 @@ def delete_perspective(request):
     return {'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='perspectives', renderer='json', request_method='GET')
+def view_perspectives(request):
+    response = dict()
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
+    perspectives = []
+    for perspective in parent.dictionaryperspective:
+        path = request.route_url('perspective',
+                                 dictionary_client_id=parent_client_id,
+                                 dictionary_object_id=parent_object_id,
+                                 perspective_client_id=perspective.client_id,
+                                 perspective_id=perspective.object_id)
+        subreq = Request.blank(path)
+        # subreq = request.copy()
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        perspectives += [resp.json]
+    response['perspectives'] = perspectives
+    request.response.status = HTTPOk.code
+    return response
+
+
 @view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST')
 def create_perspective(request):
     try:
@@ -536,16 +561,15 @@ def create_perspective(request):
         add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name,
                                               translation=translation, client_id=client.id)
         perspective = DictionaryPerspective(object_id=DBSession.query(Client).filter_by(client_id=client.id).count() + 1,
-                                client_id=variables['auth'],
-                                name=name,
-                                state='WiP',
-                                parent = parent)
+                                            client_id=variables['auth'],
+                                            name=name,
+                                            state='WiP',
+                                            parent = parent)
         DBSession.add(perspective)
         DBSession.flush()
-        for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-            new_group = Group(parent = base,
-                     subject = 'perspective' + str(perspective.object_id) + '_' + str(perspective.client_id)
-                     )
+        for base in DBSession.query(BaseGroup).filter_by(subject='perspective'):
+            new_group = Group(parent=base,
+                              subject_object_id=perspective.object_id, subject_client_id=perspective.client_id)
             new_group.users.append(user)
             DBSession.add(new_group)
             DBSession.flush()
@@ -625,14 +649,17 @@ def view_dictionary_roles(request):
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            users = []
-            groups = DBSession.query(Group).filter_by(subject = 'dictionary' + str(object_id) + '_' + str(client_id))
-            roles = dict()
-            for group in groups:
-                perm = group.BaseGroup.readable_name
+            bases = DBSession.query(BaseGroup).filter_by(subject='dictionary')
+            roles = []
+            for base in bases:
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=base.object_id,
+                                                             subject_client_id=base.client_id).first()
+                perm = base.translation_string
                 users = []
                 for user in group.users:
                     users += [user.id]
+                # TODO: add users from organizations. or view organizations separately
                 roles[perm] = users
             response['roles'] = roles
             request.response.status = HTTPOk.code
@@ -655,13 +682,14 @@ def edit_dictionary_roles(request):
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='dictionary').first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
-                                                             subject = 'dictionary' + str(object_id) + '_' + str(client_id)).first()
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
                     if userlogged in group.users:
@@ -689,13 +717,14 @@ def delete_dictionary_roles(request):
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='dictionary').first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
-                                                             subject = 'dictionary' + str(object_id) + '_' + str(client_id)).first()
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                     if user in group.users:
                         group.users.remove(user)
                 request.response.status = HTTPOk.code
@@ -722,17 +751,17 @@ def view_perspective_roles(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
-            users = []
-            groups = DBSession.query(Group).filter_by(subject = 'perspective' + str(object_id) + '_' + str(client_id))
-            roles = dict()
-            for group in groups:
-                perm = group.BaseGroup.readable_name
+            bases = DBSession.query(BaseGroup).filter_by(subject='perspective')
+            roles = []
+            for base in bases:
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=base.object_id,
+                                                             subject_client_id=base.client_id).first()
+                perm = base.translation_string
                 users = []
                 for user in group.users:
                     users += [user.id]
+                # TODO: add users from organizations. or view organizations separately
                 roles[perm] = users
             response['roles'] = roles
             request.response.status = HTTPOk.code
@@ -765,13 +794,14 @@ def edit_perspective_roles(request):
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='perspective').first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
-                                                             subject = 'perspective' + str(object_id) + '_' + str(client_id)).first()
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
                     if userlogged in group.users:
@@ -806,19 +836,17 @@ def delete_perspective_roles(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            req = request.json_body
-            user_id = req['user_id']
-            role_names = req['role_names']
             user = DBSession.query(User).filter_by(id=user_id).first()
             if user:
                 for role_name in role_names:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name).first()
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, subject='perspective').first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id = base.id,
-                                                             subject = 'perspective' + str(object_id) + '_' + str(client_id)).first()
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                     if user in group.users:
                         group.users.remove(user)
                 request.response.status = HTTPOk.code
@@ -1818,81 +1846,15 @@ def merge_dictionaries(request):
                 new_dict.dictionaryperspective.append(entry)
             cli_id = dicti.client_id
             obj_id = dicti.object_id
-            groups = DBSession.query(Group).filter_by(subject='dictionary'+str(cli_id)+'_'+str(obj_id))
-            for group in groups:
-                existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
-                if existing:
-                    users = []
-                    for user in group.users:
-                        users += [user]
-                    for user in users:
-                        group.remove(user)
-                        if not user in existing.users:
-                            existing.users.append(user)
-                else:
-                    new_group = Group(base_group_id=group.base_group_id,
-                                      subject='dictionary'+str(client_id)+'_'+str(object_id))
-                    DBSession.add(new_group)
-                    users = []
-                    for user in group.users:
-                        users += [user]
-                    for user in users:
-                        group.remove(user)
-                        new_group.users.append(user)
-                group.marked_for_deletion = True
-            dicti.marked_for_deletion = True
-        request.response.status = HTTPOk.code
-        return {'object_id': object_id,
-                'client_id': client_id}
-    except KeyError as e:
-        request.response.status = HTTPBadRequest.code
-        return {'error': str(e)}
+            bases = DBSession.query(BaseGroup).filter_by(subject='dictionary')
+            groups = []
+            for base in bases:
 
-    except IntegrityError as e:
-        request.response.status = HTTPInternalServerError.code
-        return {'error': str(e)}
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=obj_id,
+                                                         subject_client_id=cli_id).first()
+                groups += [group]
 
-    except CommonException as e:
-        request.response.status = HTTPConflict.code
-        return {'error': str(e)}
-
-
-@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')
-def merge_perspectives(request):
-    try:
-        req = request.json_body
-
-        variables = {'auth': request.authenticated_userid}
-        parent_object_id = req['dictionary_object_id']
-        parent_client_id = req['dictionary_client_id']
-        name = req['name']
-        translation = req['translation']
-
-        perspectives = req['perspectives']
-        if len(perspectives) != 2:
-            raise KeyError("Wrong number of perspectives to merge.",
-                           len(perspectives))
-        for persp in perspectives:
-            if parent_client_id != persp.parent_client_id or parent_object_id != persp.parent_object_id:
-                raise KeyError("Both perspectives should be from same dictionary.")
-        subreq = Request.blank('/dictionary/{0}/{1}/perspective')
-        subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
-                            'name': name, 'translation': translation}
-        response = request.invoke_subrequest(subreq)
-        client_id = response.json['client_id']
-        object_id = response.json['object_id']
-        new_dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-
-        perspectives = []
-        for dicti in dictionaries:
-            for entry in dicti.dictionaryperspective:
-                perspectives += entry
-            for entry in perspectives:
-                dicti.dictionaryperspective.remove(entry)
-                new_dict.dictionaryperspective.append(entry)
-            cli_id = dicti.client_id
-            obj_id = dicti.object_id
-            groups = DBSession.query(Group).filter_by(subject='dictionary'+str(cli_id)+'_'+str(obj_id))
             for group in groups:
                 existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
                 if existing:
