@@ -2035,3 +2035,11 @@ def languages_get(request):
     user = DBSession.query(User).filter_by(id=client.user_id).first()
     variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/languages.pt', variables, request=request)
+
+@view_config(route_name='new_dictionary', renderer='templates/create_dictionary.pt', request_method='GET')
+def new_dictionary_get(request):
+    client_id = authenticated_userid(request)
+    client = DBSession.query(Client).filter_by(id=client_id).first()
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    variables = {'client_id': client_id, 'user': user}
+    return render_to_response('templates/create_dictionary.pt', variables, request=request)
