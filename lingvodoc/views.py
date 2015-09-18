@@ -1099,10 +1099,11 @@ def users_list(request):
         users_temp1 = users_temp.filter(User.name.startswith(name)).all()
         users_temp2 = users_temp.filter(User.login.startswith(name)).all()
         users_temp3 = users_temp.filter(User.intl_name.startswith(name)).all()
-        emails = DBSession.query_property(Email).filter(Email.email.startswith(name)).all()
+#TODO: emails
+#        emails = DBSession.query_property(Email).filter(Email.email.startswith(name)).all()
         user_lst = []
-        for email in emails:
-            user_lst += [email.user_id]
+#        for email in emails:
+#            user_lst += [email.user_id]
         users_temp4 = users_temp.filter(User.id.in_(user_lst)).all()
         for user in users_temp1:
             users += [{'id':user.id, 'name':user.name, 'login': user.login, 'intl_name': user.intl_name}]

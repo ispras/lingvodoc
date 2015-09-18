@@ -26,7 +26,7 @@
 <div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
 <div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
 <div id="allPerspectivesUrl" data-lingvodoc="${request.route_url('all_perspectives')}"></div>
-
+<!--?<div id="perspectiveFieldsUrl" data-lingvodoc="${request.route_url('perspective_fields')}"></div>-->
 
 
 <nav class="lingvodoc-navbar">
@@ -116,8 +116,8 @@
                ng-model="dictionaryData.name">
     </div>
 
-    <a ui-sref="create.step2" class="btn btn-block btn-info">
-        Next Section <span class="glyphicon glyphicon-circle-arrow-right"></span>
+    <a href="#" class="btn btn-block btn-info" ng-click="createDictionary()">
+        Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
     </a>
 
 </script>
@@ -216,7 +216,7 @@
 
                     <td>
 
-                        <label class="checkbox-inline"  ng-if="field.data_type == 'text'">
+                        <label class="checkbox-inline" ng-if="field.data_type == 'text'">
                             <input type="checkbox"
                                    ng-checked="field.translatable"
                                    ng-model="perspective.fields[$index].translatable"> translatable</label>
@@ -254,13 +254,13 @@
     </div>
 
     <a ui-sref="create.step3" class="btn btn-block btn-info">
-        Next Section <span class="glyphicon glyphicon-circle-arrow-right"></span>
+        Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
     </a>
 
-
-    <a class="btn btn-block btn-warning">
-        Complete <span class="glyphicon glyphicon-circle-arrow-right" ng-click="saveDictionary();"></span>
+    <a ui-sref="create.step1" class="btn btn-block btn-info">
+        <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
     </a>
+
 
 </script>
 
@@ -269,7 +269,7 @@
 
     <div>
 
-        <autocomplete type="text" data="testUsers" on-type="searchUsers"></autocomplete>
+        <autocomplete type="text" data="userLogins" on-type="searchUsers" on-select="addUser"></autocomplete>
 
         <table class="table">
             <thead>
@@ -287,14 +287,14 @@
             </tr>
             </thead>
 
-            <tbody >
+            <tbody>
 
             </tbody>
         </table>
     </div>
 
     <a class="btn btn-block btn-warning" ng-click="saveDictionary()">
-        Complete <span class="glyphicon glyphicon-circle-arrow-right"></span>
+        Complete <span class="glyphicon glyphicon-ok-sign"></span>
     </a>
 
 

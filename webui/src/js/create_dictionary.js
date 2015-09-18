@@ -28,41 +28,20 @@ app.config(function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/create/step1');
 });
 
-app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$log', function ($scope, $http, $modal, $interval, $log) {
+app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$log', function ($scope, $http, $modal, $interval, $state, $log) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
     var createLanguageUrl = $('#createLanguageUrl').data('lingvodoc');
+    var createDictionaryUrl = $('#createDictionaryUrl').data('lingvodoc');
     var allPerspectivesUrl = $('#allPerspectivesUrl').data('lingvodoc');
+    var perspectiveFieldsUrl = '/dictionary';
 
-    var examplePerspective = {
-        'fields': [{'entity_type': 'protoform', 'data_type': 'text', 'status': 'enabled'},
-            {'entity_type': 'transcription', 'data_type': 'text', 'status': 'enabled'},
-            {'entity_type': 'translation', 'data_type': 'text', 'status': 'enabled'},
-            {
-                'entity_type': 'sound',
-                'data_type': 'sound',
-                'status': 'enabled',
-                'contains': [{'entity_type': 'praat', 'data_type': 'markup', 'status': 'enabled'}]
-            },
-            {'entity_type': 'paradigm_protoform', 'data_type': 'text', 'status': 'enabled', 'group': 'paradigm'},
-            {'entity_type': 'paradigm_transcription', 'data_type': 'text', 'status': 'enabled', 'group': 'paradigm'},
-            {'entity_type': 'paradigm_translation', 'data_type': 'text', 'status': 'enabled', 'group': 'paradigm'},
-            {
-                'entity_type': 'paradigm_sound',
-                'data_type': 'sound',
-                'status': 'enabled',
-                'contains': [{'entity_type': 'paradigm_praat', 'data_type': 'markup', 'status': 'enabled'}]
-            },
-            {'entity_type': 'etymology', 'data_type': 'grouping_tag', 'status': 'enabled'}
-        ],
-        'name': 'perspective_name',
-        'object_id': 'object_id',
-        'client_id': 'client_id'
-    };
+
 
     $scope.users = [];
+    $scope.userLogins = [];
 
     var wrapPerspective = function (perspective) {
 
@@ -97,10 +76,12 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     };
 
     var getLanguageById = function (id) {
-        var ids = id.split('_');
-        for (var i = 0; i < $scope.languages.length; i++) {
-            if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1])
-                return $scope.languages[i];
+        if (typeof id == 'string') {
+            var ids = id.split('_');
+            for (var i = 0; i < $scope.languages.length; i++) {
+                if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1])
+                    return $scope.languages[i];
+            }
         }
     };
 
@@ -170,18 +151,63 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     };
 
     // Save dictionary
-    $scope.saveDictionary = function () {
-        console.log($scope.perspective);
+    $scope.createDictionary = function() {
+
+        var language = getLanguageById($scope.dictionaryData.languageId);
+        if (!$scope.dictionaryData.name) {
+            return;
+        }
+
+        var dictionaryObj = {
+            'parent_client_id': language.client_id,
+            'parent_object_id': language.object_id,
+            'name': $scope.dictionaryData.name,
+            'translation': $scope.dictionaryData.name
+        };
+
+        $http.post(createDictionaryUrl, dictionaryObj).success(function(data, status, headers, config) {
+            $state.go('create.step2');
+        }).error(function(data, status, headers, config) {
+            alert('Failed to create dictionary!');
+        });
+    };
+
+
+    // Save perspective
+    $scope.createPerspective = function() {
+
+
+
+
+
+
     };
 
 
     $scope.searchUsers = function(query) {
-        var promise = $http.get('').then(function (response) {
+        var promise = $http.get('/users?search=' + encodeURIComponent(query)).then(function (response) {
             return response.data;
         });
         promise.then(function(data){
-            $scope.users = data;
+            var userLogins = [];
+            if (data.users) {
+                for (var i = 0; i < data.users.length; i++) {
+                    var user = data.users[i];
+                    userLogins.push(user.login);
+                }
+
+                $scope.userLogins = userLogins;
+                $scope.users = data.users;
+            }
         });
+    };
+
+
+    $scope.addUser = function(userLogin) {
+
+
+
+
     };
 
     // Load data from backend
@@ -197,12 +223,28 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     };
 
     var loadPerspectives = function() {
+        var perspectives = [];
         $http.get(allPerspectivesUrl).success(function(data, status, headers, config) {
             for (var i = 0; i < data.perspectives.length; i++) {
-                var wrappedPerspective = wrapPerspective(data.perspectives[i]);
-                if (wrappedPerspective) {
-                    $scope.perspectives.push(wrappedPerspective);
-                }
+
+                var perspective = data.perspectives[i];
+                var url = '/dictionary/' + perspective.parent_client_id + '/' + perspective.parent_object_id + '/perspective/' + perspective.client_id + '/' + perspective.object_id + '/fields';
+
+                $http.get(url).success(function(data, status, headers, config) {
+
+                    var p = {
+                        name: perspective.name,
+                        object_id: perspective.object_id,
+                        client_id: perspective.client_id,
+                        fields: data.fields
+                    };
+                    var wrappedPerspective = wrapPerspective(p);
+                    if (wrappedPerspective) {
+                        $scope.perspectives.push(wrappedPerspective);
+                    }
+                }).error(function(data, status, headers, config) {
+                    $log.error('Failed to load perspectives!');
+                });
             }
         }).error(function(data, status, headers, config) {
             $log.error('Failed to load perspectives!');

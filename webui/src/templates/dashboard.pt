@@ -11,7 +11,7 @@
     <link rel="icon" href="favicon.ico">
 
     <title>Lingvodoc future</title>
-    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}" />
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
     <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
 
 </head>
@@ -29,7 +29,8 @@
 <nav class="lingvodoc-navbar">
     <div class="container">
         <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
                 <span class="sr-only">Toggle navigation</span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
@@ -49,7 +50,8 @@
             <ul class="nav navbar-nav navbar-right">
 
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${user.name}<span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">${user.name}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
                         <li><a href="${request.route_url('logout')}">Sign out</a></li>
@@ -65,7 +67,9 @@
 
     <div ng-if="dictionaries.length > 0">
         <ul ng-repeat="dictionary in dictionaries">
-            <li>{{ dictionary.name }} (<a href="{{ getViewDictionaryLink(dictionary) }}">View</a> <a ng-href="{{ getEditDictionaryLink(dictionary); }}">Edit</a>)</li>
+            <li>{{ dictionary.name }} (<a href="{{ getViewDictionaryLink(dictionary) }}">View</a> <a
+                    ng-href="{{ getEditDictionaryLink(dictionary); }}">Edit</a>)
+            </li>
         </ul>
     </div>
 
@@ -75,14 +79,7 @@
 
     <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary...</a>
 
-
-    <div id="form-views" ui-view></div>
-
-
-
 </div>
-
-
 
 
 </body>
