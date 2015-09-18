@@ -1160,9 +1160,10 @@ def view_perspective_fields(request):
                         contains += [data2]
                     data['contains'] = contains
                 if field.group:
-                    group = DBSession.query(UserEntitiesTranslationString).\
-                        filter_by(translation_string=field.group, locale_id=locale_id).first()
-                    data['group'] = group.translation
+                    #group = DBSession.query(UserEntitiesTranslationString).\
+                    #    filter_by(translation_string=field.group, locale_id=locale_id).first()
+                    data['group'] = find_by_translation_string(locale_id=locale_id,
+                                                               translation_string=field.group)
                 fields += [data]
         response['fields'] = fields
         request.response.status = HTTPOk.code
