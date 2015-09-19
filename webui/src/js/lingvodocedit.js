@@ -289,11 +289,15 @@ model.Value = function() {
     this.type = 'abstract';
 };
 
-model.TextValue = function(type, content) {
-    this.type = type;
+model.TextValue = function(entityType, content) {
+    this.entityType = entityType;
     this.content = content;
 };
 model.TextValue.prototype = new model.Value();
+
+
+
+
 
 model.SoundValue = function(name, mime, content) {
     this.type = 'sounds';
@@ -372,6 +376,20 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
     $scope.pageCount = 1;
 
     var enabledInputs = [];
+
+
+    $scope.getFieldValues = function(entry, entityType) {
+
+        var values = [];
+        for (var i = 0; i < entry.length; i++) {
+            var value = entry[i];
+            if (value.entity_type == entityType) {
+                values.push(value);
+            }
+        }
+        return values;
+    };
+
 
     $scope.showEtymology = function(metaword) {
 
@@ -457,21 +475,33 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
         return !!metaword.addedByUser;
     };
 
-    $scope.isInputEnabled = function(metaword, type) {
+
+    $scope.enableInput = function(clientId, objectId, entityType) {
+        if (!$scope.isInputEnabled(clientId, objectId, entityType)) {
+            enabledInputs.push({
+                'clientId': clientId,
+                'objectId': objectId,
+                'entityType': entityType
+            });
+        }
+    };
+
+    $scope.isInputEnabled = function(clientId, objectId, entityType) {
         for (var i = 0; i < enabledInputs.length; i++) {
             var checkItem = enabledInputs[i];
-            if (checkItem.metaword_id === metaword.metaword_id && type === checkItem.type) {
+            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
                 return true;
             }
         }
         return false;
     };
 
-    $scope.disableInput = function(metaword, type) {
+    $scope.disableInput = function(clientId, objectId, entityType) {
 
         var removeIndex = -1;
         for (var i = 0; i < enabledInputs.length; i++) {
-            if (enabledInputs[i].metaword_id === metaword.metaword_id && enabledInputs[i].type === type) {
+            var checkItem = enabledInputs[i];
+            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
                 removeIndex = i;
                 break;
             }
@@ -483,34 +513,23 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
     };
 
 
-    $scope.addNewMetaWord = function() {
+    $scope.addNewLexicalEntry = function() {
         $scope.lexicalEntries.unshift({
-            'metaword_id': 'new',
-            'entries': [],
-            'transcriptions': [],
-            'translations': [],
-            'sounds': [],
-            'addedByUser': true
+            'client_id': -1,
+            'object_id': -1,
+            'contains': []
         });
     };
 
-    $scope.addValue = function(metaword, type) {
-        if (!$scope.isInputEnabled(metaword, type)) {
-            enabledInputs.push({
-                'metaword_id': metaword.metaword_id,
-                'type': type
-            });
-        }
-    };
 
-    $scope.removeValue = function(metaword, value, type) {
+
+    $scope.removeValue = function(clientId, objectId, entityType, value) {
         console.log(arguments);
     };
 
-    $scope.saveTextValue = function(metaword, type, event) {
-        if (['entries', 'translations', 'transcriptions'].indexOf(type) >= 0 && event.target.value) {
-            //$scope.saveValue(metaword, new model.TextValue(type, event.target.value));
-            $scope.saveValue(metaword, new model.TextValue(type, '<script>alert("XSS");</script>'));
+    $scope.saveTextValue = function(clientId, objectId, entityType, event) {
+        if (event.target.value) {
+            $scope.saveValue(clientId, objectId, new model.TextValue(entityType, event.target.value));
         }
     };
 
@@ -518,12 +537,12 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
         $scope.saveValue(metaword, new model.SoundValue(name, type, content));
     };
 
-    $scope.saveValue = function(metaword, value) {
+    $scope.saveValue = function(clientId, objectId, value) {
 
         var updateId = false;
         var obj = {};
         // when edit existing word, copy id and dict_id
-        if (metaword.metaword_id !== 'new') {
+        if (clientId !== -1 && objectId !== -1) {
             obj['client_id'] = metaword.client_id;
             obj['metaword_id'] = metaword.metaword_id;
             obj['metaword_client_id'] = metaword.metaword_client_id;
@@ -609,9 +628,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
         }).error(function(data, status, headers, config) {
             $log.error('Failed to load perspective!');
         });
-
-
-
     };
 
 
