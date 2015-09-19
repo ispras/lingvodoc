@@ -93,7 +93,7 @@
 
     <div class="row">
         <div class="col-md-1">
-            <button type="button" class="btn btn-default" ng-click="addNewMetaWord()">
+            <button type="button" class="btn btn-default" ng-click="addNewLexicalEntry()">
                 <span class="glyphicon glyphicon-plus"></span>
             </button>
         </div>
@@ -109,123 +109,74 @@
 
         <tbody>
 
-        <tr ng-repeat="metaword in metawords">
-            <td>
-                <div ng-repeat="entry in metaword.entries">
-                    <span>{{ entry.content }}</span>
-                    <span ng-if="addedByUser(metaword)">
-                        <button type="button" class="btn btn-default btn-xs"
-                                ng-click="removeValue(metaword, entry, 'entry')">
-                            <span class="glyphicon glyphicon-remove-sign"></span>
-                        </button>
-                    </span>
-                    <br>
-                </div>
-
-                <button type="button" class="btn btn-default btn-sm" ng-click="addValue(metaword, 'entries')">
-                    <span class="glyphicon glyphicon-plus"></span>
-                </button>
-
-                <br>
-
-                <div ng-if="isInputEnabled(metaword, 'entries')">
-                    <input type="text" value="" placeholder="" ng-blur="saveTextValue(metaword, 'entries', $event)">
-                </div>
-            </td>
+        <tr ng-repeat="lexicalEntry in lexicalEntries" ng-init="fieldValues=getFieldValues(lexicalEntry, field.entity_type)">
 
 
-            <td>
-                <div ng-repeat="transcription in metaword.transcriptions">
-                    <span>{{ transcription.content }}</span>
-                    <span ng-if="addedByUser(metaword)">
-                        <button type="button" class="btn btn-default btn-xs"
-                                ng-click="removeValue(metaword, transcription, 'transcription')">
-                            <span class="glyphicon glyphicon-remove-sign"></span>
-                        </button>
-                    </span>
-                    <br>
-                </div>
+            <td ng-repeat="field in perspective.fields">
 
-                <button type="button" class="btn btn-default btn-sm" ng-click="addValue(metaword, 'transcriptions')">
-                    <span class="glyphicon glyphicon-plus"></span>
-                </button>
+                <div ng-if="field.data_type == 'text'" >
+                    <ul>
+                        <li ng-repeat="fieldValue in fieldValues">
+                            {{ fieldValue.content }}
+                        </li>
+                    </ul>
 
-                <br>
 
-                <div ng-if="isInputEnabled(metaword, 'transcriptions')">
-                    <input type="text" value="" placeholder="" ng-blur="saveTextValue(metaword, 'transcriptions', $event)">
-                </div>
-
-            </td>
-
-            <td>
-                <div ng-repeat="translation in metaword.translations">
-                    <span>{{ translation.content }}</span>
-                    <span ng-if="addedByUser(metaword)">
-                        <button type="button" class="btn btn-default btn-xs"
-                                ng-click="removeValue(metaword, translation, 'translation')">
-                            <span class="glyphicon glyphicon-remove-sign"></span>
-                        </button>
-                    </span>
-                    <br>
-                </div>
-
-                <button type="button" class="btn btn-default btn-sm" ng-click="addValue(metaword, 'translations')">
-                    <span class="glyphicon glyphicon-plus"></span>
-                </button>
-
-                <br>
-
-                <div ng-if="isInputEnabled(metaword, 'translations')">
-                    <input type="text" value="" placeholder="" ng-blur="saveTextValue(metaword, 'translations', $event)">
-                </div>
-
-            </td>
-
-            <td>
-                <div ng-repeat="sound in metaword.sounds">
-
-                    <button type="button" class="btn btn-default btn-sm" ng-click="play(sound.url)">
-                        <span class="glyphicon glyphicon-play"></span>
+                    <button type="button" class="btn btn-default btn-sm" ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <span class="glyphicon glyphicon-plus"></span>
                     </button>
 
-                    <button type="button" class="btn btn-default btn-sm" ng-click="annotate(sound)">
-                        <span class="glyphicon glyphicon-pencil"></span>
-                    </button>
-
-                    <span ng-if="addedByUser(metaword)">
-                         <button type="button" class="btn btn-default btn-xs"
-                                 ng-click="removeValue(metaword, sound, 'sound')">
-                             <span class="glyphicon glyphicon-remove-sign"></span>
-                         </button>
-                    </span>
                     <br>
+
+                    <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <input type="text" value="" placeholder="" ng-blur="saveTextValue(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type, $event)">
+                    </div>
+
                 </div>
 
-                <br>
 
-                <span class="btn btn-default btn-file">
-                    Загрузить <input type="file" on-read-file="saveSoundValue(metaword, $fileName, $fileType, $fileContent)">
-                </span>
+                <div ng-if="field.data_type == 'image'">
+                    <ul>
+                        <li ng-repeat="fieldValue in fieldValues">
+                            {{ fieldValue.content }}
+                        </li>
+                    </ul>
 
-            </td>
-
-
-            <td>
-
-                <div ng-if="addedByUser(metaword)">
-                    <button type="button" class="btn btn-default btn-sm" ng-click="removeMetaWord(metaword)">
-                        Удалить
+                    <button type="button" class="btn btn-default btn-sm" ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <span class="glyphicon glyphicon-plus"></span>
                     </button>
+
+                    <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <span class="btn btn-default btn-file">
+                            Upload <input type="file" on-read-file="addImageValue(metaword, $fileName, $fileType, $fileContent)">
+                        </span>
+                    </div>
+
                 </div>
 
-                <button type="button" class="btn btn-default btn-sm" ng-class="{disabled: metaword.paradigms.length < 1}" ng-click="showParadigms(metaword)">
-                    Парадигмы
-                </button>
+                <div ng-if="field.data_type == 'sound'">
+                    <ul>
+                        <li ng-repeat="fieldValue in fieldValues">
+                            {{ fieldValue.content }}
+                        </li>
+                    </ul>
 
-                <button type="button" class="btn btn-default btn-sm" ng-class="{disabled: metaword.etymology_tags.length < 1}" ng-click="showEtymology(metaword)">
-                    Этимология
-                </button>
+
+                    <button type="button" class="btn btn-default btn-sm" ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <span class="glyphicon glyphicon-plus"></span>
+                    </button>
+
+                    <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <span class="btn btn-default btn-file">
+                            Upload <input type="file" on-read-file="addImageValue(metaword, $fileName, $fileType, $fileContent)">
+                        </span>
+                    </div>
+
+                </div>
+
+                <div ng-if="field.data_type == 'grouping_tag'">
+
+                </div>
 
             </td>
 
