@@ -1659,7 +1659,7 @@ def create_lexical_entry(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         perspective = DBSession.query(DictionaryPerspective).\
-            filter_by(client_id=perspective_client_id, object_id = perspective_id).first
+            filter_by(client_id=perspective_client_id, object_id = perspective_id).first()
         if not perspective:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such perspective in the system")}
@@ -1691,60 +1691,72 @@ def lexical_entries_all(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
 
+    sort_criterion = request.params.get('sort_by') or 'Translation'
+    start_from = request.params.get('start_from') or 0
+    count = request.params.get('count') or 10000
+
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            session = DBSession()
-            reqtype = request.params.get('sort_by')
-            start_from = request.params.get('start_from')
-            count = request.params.get('count')
-            levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
-            lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
-                join(levonefirst).\
-                filter(levonefirst.entity_type == reqtype, levonefirst.parent_client_id == parent.client_id, levonefirst.parent_object_id == parent.object_id).\
-                order_by('obj_id').\
-                group_by(LexicalEntry.object_id).offset(start_from).limit(count)
-            lexes = []
-            for entry in lex_entries:
-                content = dict()
-                lev_one = entry.leveloneentity
-                # group = entry.groupingentity
-                for enti in lev_one:
-                    content2 = dict()
-                    content2['level'] = enti.level
-                    content2['entity_type'] = enti.entity_type
-                    content2['data_type'] = enti.data_type
-                    content2['client_id'] = enti.client_id
-                    content2['object_id'] = enti.object_id
-                    lev_two = enti.leveltwoentity
-                    if lev_two:
-                        contains = []
-                        for ent in lev_two:
-                            content3 = dict()
-                            content3['level'] = ent.level
-                            content3['entity_type'] = ent.entity_type
-                            content3['data_type'] = ent.data_type
-                            content3['client_id'] = ent.client_id
-                            content3['object_id'] = ent.object_id
-                            contains += [content3]
+            #session = DBSession()
+            #reqtype = request.params.get('sort_by')
+            lexical_entries = DBSession.query(LexicalEntry)\
+                .join(LexicalEntry.leveloneentity)\
+                .filter_by(entity_type=sort_criterion)\
+                .order_by(LevelOneEntity.content).offset(start_from).limit(count)
+            result = []
+            for entry in lexical_entries:
+                result.append(entry.track())
+            response['lexical_entries'] = result
 
-                        content2['contains'] = contains
-                    content += [content2]
-                # for enti in group:
-                #     content2 = dict()
-                #     content2['level'] = enti.level
-                #     content2['entity_type'] = enti.entity_type
-                #     content2['data_type'] = enti.data_type
-                #     content2['client_id'] = enti.client_id
-                #     content2['object_id'] = enti.object_id
-                #     content += [content2]
-                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
-
-            response['lexical_entries'] = lexes
+            # levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
+            # lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
+            #     join(levonefirst).\
+            #     filter(levonefirst.entity_type == reqtype, levonefirst.parent_client_id == parent.client_id, levonefirst.parent_object_id == parent.object_id).\
+            #     order_by('obj_id').\
+            #     group_by(LexicalEntry.object_id).offset(start_from).limit(count)
+            # lexes = []
+            # for entry in lex_entries:
+            #     content = dict()
+            #     lev_one = entry.leveloneentity
+            #     # group = entry.groupingentity
+            #     for enti in lev_one:
+            #         content2 = dict()
+            #         content2['level'] = enti.level
+            #         content2['entity_type'] = enti.entity_type
+            #         content2['data_type'] = enti.data_type
+            #         content2['client_id'] = enti.client_id
+            #         content2['object_id'] = enti.object_id
+            #         lev_two = enti.leveltwoentity
+            #         if lev_two:
+            #             contains = []
+            #             for ent in lev_two:
+            #                 content3 = dict()
+            #                 content3['level'] = ent.level
+            #                 content3['entity_type'] = ent.entity_type
+            #                 content3['data_type'] = ent.data_type
+            #                 content3['client_id'] = ent.client_id
+            #                 content3['object_id'] = ent.object_id
+            #                 contains += [content3]
+            #
+            #             content2['contains'] = contains
+            #         content += [content2]
+            #     # for enti in group:
+            #     #     content2 = dict()
+            #     #     content2['level'] = enti.level
+            #     #     content2['entity_type'] = enti.entity_type
+            #     #     content2['data_type'] = enti.data_type
+            #     #     content2['client_id'] = enti.client_id
+            #     #     content2['object_id'] = enti.object_id
+            #     #     content += [content2]
+            #     lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
+            #
+            # response['lexical_entries'] = lexes
             request.response.status = HTTPOk.code
             return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such perspective in the system")}
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
@@ -1814,14 +1826,16 @@ def lexical_entries_published(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
-
+# TODO: fix ACL
+@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET')#, permission='view')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    entry = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    #entry = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if entry:
         if not entry.marked_for_deletion:
             if entry.moved_to:
