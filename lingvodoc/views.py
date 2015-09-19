@@ -1694,12 +1694,10 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            req = request.json_body
-
             session = DBSession()
-            reqtype = req['sort_by']
-            start_from = req['start_from']
-            count = req['count']
+            reqtype = request.params.get('sort_by')
+            start_from = request.params.get('start_from')
+            count = request.params.get('count')
             levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
             lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
                 join(levonefirst).\
@@ -1758,12 +1756,10 @@ def lexical_entries_published(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            req = request.json_body
-
             session = DBSession()
-            reqtype = req['sort_by']
-            start_from = req['start_from']
-            count = req['count']
+            reqtype = request.params.get('sort_by')
+            start_from = request.params.get('start_from')
+            count = request.params.get('count')
             levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
             lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
                 join(levonefirst).\
