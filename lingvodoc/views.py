@@ -1659,7 +1659,7 @@ def create_lexical_entry(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         perspective = DBSession.query(DictionaryPerspective).\
-            filter_by(client_id=perspective_client_id, object_id = perspective_id).first
+            filter_by(client_id=perspective_client_id, object_id = perspective_id).first()
         if not perspective:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such perspective in the system")}
@@ -1703,7 +1703,7 @@ def lexical_entries_all(request):
             lexical_entries = DBSession.query(LexicalEntry)\
                 .join(LexicalEntry.leveloneentity)\
                 .filter_by(entity_type=sort_criterion)\
-                .order_by(LexicalEntry.leveloneentity.content).offset(start_from).limit(count)
+                .order_by(LevelOneEntity.content).offset(start_from).limit(count)
             result = []
             for entry in lexical_entries:
                 result.append(entry.track())
@@ -1826,14 +1826,16 @@ def lexical_entries_published(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
-
+# TODO: fix ACL
+@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET')#, permission='view')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    entry = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    #entry = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if entry:
         if not entry.marked_for_deletion:
             if entry.moved_to:

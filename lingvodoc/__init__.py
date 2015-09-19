@@ -193,19 +193,19 @@ def configure_routes(config):
     # API #GET && DELETE
     # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,
     # 'content': <'content'>, 'locale_id': <locale_id>}]
-    config.add_route(name='get_l1_entity', pattern='/level_one_entity/<client_id>/<object_id>',
+    config.add_route(name='get_l1_entity', pattern='/level_one_entity/{client_id}/{object_id}',
                      factory='lingvodoc.models.PerspectiveEntityOneAcl')  # ready, not tested
-    config.add_route(name='get_l2_entity', pattern='/level_two_entity/<client_id>/<object_id>',
+    config.add_route(name='get_l2_entity', pattern='/level_two_entity/{client_id}/{object_id}',
                      factory='lingvodoc.models.PerspectiveEntityTwoAcl')  # ready, not tested
 
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='get_group_entity', pattern='/group_entity/<client_id>/<object_id>',
+    config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}',
                      factory='lingvodoc.models.PerspectiveEntityGroupAcl')  # ready, not tested
 
     # API #GET
     # GET parameter: entity_type = <type> (e.g: "etymology")
-    config.add_route(name='get_connected_words', pattern='/lexical_entry/<client_id>/<object_id>/connected')
+    config.add_route(name='get_connected_words', pattern='/lexical_entry/{client_id}/{object_id}/connected')
 
 
     # API #POST (TODO: change to PATCH method later)
@@ -225,8 +225,8 @@ def configure_routes(config):
     # ids are returned
     config.add_route(name='create_entity_level_one', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                    '/perspective/{perspective_client_id}/{perspective_id}/'
-                                                   'lexical_entry/<lexical_entry_client_id>/'
-                                                   '<lexical_entry_object_id>',
+                                                   'lexical_entry/{lexical_entry_client_id>}'
+                                                   '{lexical_entry_object_id}',
                      factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, not tested
 
     # API #POST
@@ -234,9 +234,9 @@ def configure_routes(config):
     # ids are returned
     config.add_route(name='create_entity_level_two', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                    '/perspective/{perspective_client_id}/{perspective_id}/'
-                                                   'lexical_entry/<lexical_entry_client_id>/'
-                                                   '<lexical_entry_object_id>/<level_one_client_id>/'
-                                                   '<level_one_object_id>',
+                                                   'lexical_entry/{lexical_entry_client_id}/'
+                                                   '{lexical_entry_object_id}/{level_one_client_id}/'
+                                                   '{level_one_object_id}',
                      factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, not tested
 
     # API #GET
@@ -251,8 +251,11 @@ def configure_routes(config):
 
     # API #GET
     # all children
-    config.add_route(name='lexical_entry', pattern='/lexical_entry/<client_id>/<object_id>')  # ready, not tested
-
+    config.add_route(name='lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}')  # ready, not tested
+    config.add_route(name='lexical_entry_in_perspective', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                                  '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                                  'lexical_entry/{lexical_entry_client_id}/'
+                                                                  '{lexical_entry_object_id}')
     # API #PATCH
     # Publishers view: this can approve word versions.
     # [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>, "enabled": <boolean>}, ]
