@@ -179,6 +179,16 @@ def configure_routes(config):
                              '/perspective/{perspective_client_id}/{perspective_id}/fields',
                      factory='lingvodoc.models.PerspectiveAcl')  # 100% ready
 
+    # API #POST
+    # should be done with standard form enctype="multipart/form-data"
+    config.add_route(name="upload_user_blob",
+                     pattern="/blob")
+
+    # API #GET
+    # no params, returns file
+    config.add_route(name="get_user_blob",
+                     pattern="/blobs/{client_id}/{object_id}")
+
 # TODO: LOCALES!
     # API #GET && DELETE
     # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,

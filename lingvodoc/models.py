@@ -522,6 +522,19 @@ class Client(Base, TableNameMixin, IdMixin):
     user = relationship("User", backref='clients')
 
 
+class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
+    name = Column(UnicodeText)
+    # content holds url for the object
+    content = Column(UnicodeText)
+    real_storage_path = Column(UnicodeText)
+    data_type = Column(UnicodeText)
+    additional_metadata = Column(UnicodeText)
+    marked_for_deletion = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    user_id = Column(BigInteger, ForeignKey('user.id'))
+    user = relationship("User", backref='userblobs')
+
+
 def acl_by_groups(object_id, client_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
     # acls += [(Allow, Authenticated, ALL_PERMISSIONS)]
