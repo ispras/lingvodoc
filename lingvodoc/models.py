@@ -112,7 +112,8 @@ class CompositeIdMixin(object):
     """
     It's used for automatically set client_id and object_id as composite primary key.
     """
-    object_id = Column(BigInteger, primary_key=True)
+    #object_id = Column(BigInteger, primary_key=True)
+    object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
     client_id = Column(BigInteger, primary_key=True)
 
 
@@ -164,7 +165,7 @@ class Language(Base, TableNameMixin):
     """
     __parentname__ = 'Language'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    object_id = Column(BigInteger, primary_key=True)
+    object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
     client_id = Column(BigInteger, primary_key=True)
     translation_string = Column(UnicodeText)
     parent_object_id = Column(BigInteger)

@@ -38,7 +38,10 @@ from pyramid.security import (
     )
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import (
+    func,
+    or_
+)
 from sqlalchemy.orm import joinedload, subqueryload, noload, join, joinedload_all
 
 from pyramid.httpexceptions import HTTPForbidden
@@ -1092,28 +1095,18 @@ def users_list(request):
         search = request.params.get('search')
     except:
         pass
-    users_temp = DBSession.query(User)
+    users_temp = DBSession.query(User).join(User.email)
     users = []
     if search:
         name = search + '%'
-        users_temp1 = users_temp.filter(User.name.startswith(name)).all()
-        users_temp2 = users_temp.filter(User.login.startswith(name)).all()
-        users_temp3 = users_temp.filter(User.intl_name.startswith(name)).all()
-#TODO: emails
-#        emails = DBSession.query_property(Email).filter(Email.email.startswith(name)).all()
-        user_lst = []
-#        for email in emails:
-#            user_lst += [email.user_id]
-        users_temp4 = users_temp.filter(User.id.in_(user_lst)).all()
-        for user in users_temp1:
-            users += [{'id':user.id, 'name':user.name, 'login': user.login, 'intl_name': user.intl_name}]
-        for user in users_temp2:
-            users += [{'id':user.id, 'name':user.name, 'login': user.login, 'intl_name': user.intl_name}]
-        for user in users_temp3:
-            users += [{'id':user.id, 'name':user.name, 'login': user.login, 'intl_name': user.intl_name}]
-    else:
-        for user in users_temp:
-            users += [{'id':user.id, 'name':user.name, 'login': user.login, 'intl_name': user.intl_name}]
+        users_temp = users_temp.filter(or_(
+            User.name.startswith(name),
+            User.login.startswith(name),
+            User.intl_name.startswith(name),
+            Email.email.startswith(name)
+        ))
+    for user in users_temp:
+        users += [{'id': user.id, 'name': user.name, 'login': user.login, 'intl_name': user.intl_name}]
 
     response['users'] = users
     request.response.status = HTTPOk.code
