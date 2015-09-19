@@ -58,9 +58,10 @@ def main(argv=sys.argv):
         pwd = Passhash(password=accounts['administrator_password'])
         email = Email(email="al@somestuff.ru")
         admin_account.password = pwd
-        client = Client(user_id=admin_account.id)
         DBSession.add(pwd)
         DBSession.add(admin_account)
+        DBSession.flush()
+        client = Client(user_id=admin_account.id, is_browser_client=False)
         email.user = admin_account
         DBSession.add(email)
         DBSession.add(client)

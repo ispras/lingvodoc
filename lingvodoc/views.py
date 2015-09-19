@@ -27,7 +27,8 @@ from .models import (
     PublishGroupingEntity,
     PublishLevelTwoEntity,
     Base,
-    Organization
+    Organization,
+    UserBlobs
     )
 
 from sqlalchemy.orm import sessionmaker
@@ -1291,7 +1292,10 @@ def object_file_path(obj, settings, create_dir=False):
     storage_dir = os.path.join(base_path, obj.data_type, str(obj.client_id), str(obj.id))
     if create_dir:
         os.makedirs(storage_dir, exist_ok=True)
-    storage_path = os.path.join(storage_dir, "content.original")
+    if 'extension' in obj:
+        storage_path = os.path.join(storage_dir, "content." + obj['extension'])
+    else:
+        storage_path = os.path.join(storage_dir, "content.noext")
     return storage_path
 
 
@@ -1313,22 +1317,69 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
     return str(obje)
 
 
-def create_object(request, content, obj):
+# Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
+# it's uploaded via multipart form, it's just saved as-is.
+def create_object(request, content, obj, json_input=True):
     # here will be object storage write as an option. Fallback (default) is filesystem write
     settings = request.registry.settings
     storage = settings['storage']
-    storagetype = storage['type']
-    if storagetype == 'disk':
-        storage_path = object_file_path(obj, True, 'disk')
+    if storage['type'] == 'openstack':
+        if json_input:
+            content = base64.urlsafe_b64decode(content)
+        # TODO: openstack objects correct naming
+        filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
+        real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
+    else:
+        storage_path = object_file_path(obj, settings, True)
 
         f = open(storage_path, 'wb+')
-        f.write(base64.urlsafe_b64decode(content))
+        if json_input:
+            f.write(base64.urlsafe_b64decode(content))
+        else:
+            f.write(content)
         f.close()
-    if storagetype == 'openstack':
-        file = base64.urlsafe_b64decode(content)
-        filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
-        openstack_upload(settings, file, filename, obj.data_type, 'test')
-    return
+        real_location = storage_path
+
+    url = request.route_path('get_user_blob', client_id=obj.client_id, object_id=obj.id)
+    return real_location, url
+
+
+@view_config(route_name='upload_user_blob', renderer='json', request_method='POST')
+def upload_user_blob(request):
+    variables = {'auth': authenticated_userid(request)}
+    response = dict()
+    filename = request.POST['blob'].filename
+    input_file = request.POST['blob'].file
+
+    blob = dict()
+    blob.filename = "".join([c for c in filename if c.isalpha() or c.isdigit() or c==' ']).rstrip()
+    blob.client_id = variables['auth']
+    blob.object_id = DBSession.query(UserBlobs).filter_by(client_id=client.id).count()+1
+    blob.data_type = request.POST['data_type']
+
+    current_user = DBSession.query(User).filter_by(id=client.user_id).first()
+
+    blob_object = UserBlobs(object_id=blob.object_id,
+                            client_id=blob.client_id,
+                            name=filename,
+                            data_type=data_type,
+                            user_id=current_user.id)
+
+    current_user.userblobs.append(blob_object)
+    blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob, json_input=False)
+    DBSession.add(blob_object)
+    DBSession.add(current_user)
+
+
+@view_config(route_name='get_user_blob', request_method='GET')
+def get_user_blob(request):
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+    if blob:
+        FileResponse(blob.real_storage_path)
+    else:
+        raise HTTPNotFound
 
 
 @view_config(route_name='get_l1_entity', renderer='json', request_method='GET', permission='view')
