@@ -304,7 +304,7 @@ model.SoundValue = function(name, mime, content) {
 model.SoundValue.prototype = new model.Value();
 
 
-var app = angular.module('editDictionaryModule', ['ui.bootstrap']);
+var app = angular.module('EditDictionaryModule', ['ui.bootstrap']);
 
 app.directive('wavesurfer', function() {
     return {

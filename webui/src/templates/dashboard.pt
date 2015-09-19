@@ -67,12 +67,13 @@
 
     <div ng-if="dictionaries.length > 0">
 
-        <table class="table">
+        <table class="table table-bordered">
             <thead>
             <tr>
-                <td></td>
-                <td></td>
-                <td></td>
+                <td>Name</td>
+                <td>Status</td>
+                <td>Perspective</td>
+                <td>Actions</td>
             </tr>
             </thead>
 
@@ -82,13 +83,24 @@
                 <td>{{ dictionary.name }}</td>
 
                 <td>
-                    <a class="btn btn-primary" href="{{ getViewDictionaryLink(dictionary) }}"><span class="glyphicon glyphicon-list"></span> View</a>
-                    <a class="btn btn-primary" ng-href="{{ getEditDictionaryLink(dictionary); }}"><span class="glyphicon glyphicon-edit"></span> Edit</a>
+                    {{ dictionary.status }}
                 </td>
 
                 <td>
-                    {{ dictionary.status }}
+                    <select class="form-control" ng-model="dictionaries[$index].selectedPerspectiveId"
+                            ng-options="getCompositeKey(p) as p.name for p in dictionary.perspectives track by getCompositeKey(p)">
+
+                    </select>
+
                 </td>
+
+                <td>
+                    <a class="btn btn-primary" href="{{ getActionDictionaryLink(dictionary, 'view') }}"><span class="glyphicon glyphicon-list"></span> View</a>
+                    <a class="btn btn-primary" ng-href="{{ getActionDictionaryLink(dictionary, 'edit'); }}"><span class="glyphicon glyphicon-edit"></span> Edit</a>
+                    <a class="btn btn-primary" ng-href="{{ getActionDictionaryLink(dictionary, 'publish'); }}"><span class="glyphicon glyphicon-print"></span> Publish</a>
+                </td>
+
+
             </tr>
 
 
@@ -109,7 +121,13 @@
 
     <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary...</a>
 
+
+    <a href="#" ng-click="test()">dump</a>
+
 </div>
+
+
+
 
 
 </body>

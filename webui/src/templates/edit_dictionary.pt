@@ -1,38 +1,73 @@
-<html ng-app="editDictionaryModule" ng-controller="EditDictionaryController">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
 
     <title>Lingvodoc future</title>
-
-    <link rel="stylesheet" href="${request.static_url('lingvodoc:static/css/bootstrap.min.css')}">
-    <link rel="stylesheet" href="${request.static_url('lingvodoc:static/css/bootswatch.min.css')}">
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
-
-    <script src="${request.static_url('lingvodoc:static/js/jquery-2.1.1.min.js')}"></script>
-    <script src="${request.static_url('lingvodoc:static/js/bootstrap.min.js')}"></script>
-    <script src="${request.static_url('lingvodoc:static/js/angular.min.js')}"></script>
-    <script src="${request.static_url('lingvodoc:static/js/ui-bootstrap-tpls-0.13.0.min.js')}"></script>
-    <script src="${request.static_url('lingvodoc:static/js/wavesurfer.js')}"></script>
-
-    <script src="${request.static_url('lingvodoc:static/js/lingvowave.js')}"></script>
-    <script src="${request.static_url('lingvodoc:static/js/lingvodocedit.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
 
 </head>
-<body>
 
-<div id="currentId" data-lingvodoc="${auth}"></div>
-<div id="id" data-lingvodoc="${id}"></div>
+<body ng-app="EditDictionaryModule">
+
 <div id="clientId" data-lingvodoc="${client_id}"></div>
-<div id="getMetaWordsUrl"
-     data-lingvodoc="${request.route_url('api_metaword_get_batch', dictionary_client_id=client_id, dictionary_id=id)}"></div>
-<div id="getDictionaryStatUrl"
-     data-lingvodoc="${request.route_url('dictionary_stats', dictionary_client_id=client_id, dictionary_id=id)}"></div>
+<div id="userId" data-lingvodoc="${user.id}"></div>
 
-<div metal:use-macro="load: nav.pt"></div>
+<div id="dictionaryClientId" data-lingvodoc="${dictionary_client_id}"></div>
+<div id="dictionaryObjectId" data-lingvodoc="${dictionary_object_id}"></div>
+<div id="perspectiveClientId" data-lingvodoc="${perspective_client_id}"></div>
+<div id="perspectiveId" data-lingvodoc="${perspective_id}"></div>
 
-<div class="container-fluid" style="padding-top: 20px" ng-cloak>
+
+<div id="allLexicalEntriesUrl" data-lingvodoc="${request.route_url('lexical_entries_all', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
+
+
+
+<nav class="lingvodoc-navbar">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Lingvodoc</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="${request.route_url('home')}">Home</a></li>
+                <li class="active"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
+                <li><a href="${request.route_url('languages')}">Languages</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">${user.name}<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
+                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid" style="padding-top: 20px" ng-controller="EditDictionaryController" ng-cloak>
 
     <div class="row" style="margin: 30px 0">
         <div class="col-sm-10">
