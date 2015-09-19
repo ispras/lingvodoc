@@ -66,10 +66,52 @@
 <div class="container" ng-controller="DashboardController" ng-cloak>
 
     <div ng-if="dictionaries.length > 0">
+
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <td>Name</td>
+                <td>Status</td>
+                <td>Perspective</td>
+                <td>Actions</td>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr ng-repeat="dictionary in dictionaries">
+                <td>{{ dictionary.name }}</td>
+
+                <td>
+                    {{ dictionary.status }}
+                </td>
+
+                <td>
+                    <select class="form-control" ng-model="dictionaries[$index].selectedPerspectiveId"
+                            ng-options="getCompositeKey(p) as p.name for p in dictionary.perspectives track by getCompositeKey(p)">
+
+                    </select>
+
+                </td>
+
+                <td>
+                    <a class="btn btn-primary" href="{{ getActionDictionaryLink(dictionary, 'view') }}"><span class="glyphicon glyphicon-list"></span> View</a>
+                    <a class="btn btn-primary" ng-href="{{ getActionDictionaryLink(dictionary, 'edit'); }}"><span class="glyphicon glyphicon-edit"></span> Edit</a>
+                    <a class="btn btn-primary" ng-href="{{ getActionDictionaryLink(dictionary, 'publish'); }}"><span class="glyphicon glyphicon-print"></span> Publish</a>
+                </td>
+
+
+            </tr>
+
+
+            </tbody>
+
+
+        </table>
+
+
         <ul ng-repeat="dictionary in dictionaries">
-            <li>{{ dictionary.name }} (<a href="{{ getViewDictionaryLink(dictionary) }}">View</a> <a
-                    ng-href="{{ getEditDictionaryLink(dictionary); }}">Edit</a>)
-            </li>
+
         </ul>
     </div>
 
@@ -79,7 +121,13 @@
 
     <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary...</a>
 
+
+    <a href="#" ng-click="test()">dump</a>
+
 </div>
+
+
+
 
 
 </body>
