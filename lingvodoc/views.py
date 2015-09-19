@@ -2249,7 +2249,7 @@ def new_dictionary_get(request):
     return render_to_response('templates/create_dictionary.pt', variables, request=request)
 
 @view_config(route_name='edit_dictionary', renderer='templates/edit_dictionary.pt', request_method='GET')
-def new_dictionary_get(request):
+def edit_dictionary_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
     if user is None:
