@@ -248,7 +248,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                 var setFieldsUrl = '/dictionary/' + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + '/' + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + '/perspective/' + encodeURIComponent($scope.dictionaryData.perspective_client_id) + '/' + encodeURIComponent($scope.dictionaryData.perspective_object_id) + '/fields';
 
                 $http.post(setFieldsUrl, exportPerpective($scope.perspective)).success(function(data, status, headers, config) {
-                    $state.go('create.step2');
+                    $state.go('create.step3');
                 }).error(function(data, status, headers, config) {
                     alert('Failed to create perspective!');
                 });

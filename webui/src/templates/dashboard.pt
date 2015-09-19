@@ -66,10 +66,40 @@
 <div class="container" ng-controller="DashboardController" ng-cloak>
 
     <div ng-if="dictionaries.length > 0">
+
+        <table class="table">
+            <thead>
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr ng-repeat="dictionary in dictionaries">
+                <td>{{ dictionary.name }}</td>
+
+                <td>
+                    <a class="btn btn-primary" href="{{ getViewDictionaryLink(dictionary) }}"><span class="glyphicon glyphicon-list"></span> View</a>
+                    <a class="btn btn-primary" ng-href="{{ getEditDictionaryLink(dictionary); }}"><span class="glyphicon glyphicon-edit"></span> Edit</a>
+                </td>
+
+                <td>
+                    {{ dictionary.status }}
+                </td>
+            </tr>
+
+
+            </tbody>
+
+
+        </table>
+
+
         <ul ng-repeat="dictionary in dictionaries">
-            <li>{{ dictionary.name }} (<a href="{{ getViewDictionaryLink(dictionary) }}">View</a> <a
-                    ng-href="{{ getEditDictionaryLink(dictionary); }}">Edit</a>)
-            </li>
+
         </ul>
     </div>
 

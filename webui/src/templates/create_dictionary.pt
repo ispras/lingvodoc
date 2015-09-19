@@ -274,19 +274,42 @@
 
         <autocomplete type="text" data="userLogins" on-type="searchUsers" on-select="addUser"></autocomplete>
 
+
+        <!--
+        Can get dictionary role list
+        Can get perspective role list
+        Can view published lexical entries
+        Can create dictionary roles and assign collaborators
+        Can create perspective roles and assign collaborators
+        Can resign users from dictionary editors
+        Can resign users from perspective editors
+        Can edit organization
+        Can create perspectives
+        Can edit perspective
+        Can create lexical entries
+        Can approve lexical entries and publish
+        Can deactivate lexical entries
+        Can merge dictionaries and perspectives
+        -->
+
+
         <table class="table">
             <thead>
             <tr>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
+                <td>Can get dictionary role list</td>
+                <td>Can get perspective role list</td>
+                <td>Can view published lexical entries</td>
+                <td>Can create dictionary roles and assign collaborators</td>
+                <td>Can create perspective roles and assign collaborators</td>
+                <td>Can resign users from dictionary editors</td>
+                <td>Can resign users from perspective editors</td>
+                <td>Can edit organization</td>
+                <td>Can create perspectives</td>
+                <td>Can edit perspective</td>
+                <td>Can create lexical entries</td>
+                <td>Can approve lexical entries and publish</td>
+                <td>Can deactivate lexical entries</td>
+                <td>Can merge dictionaries and perspectives</td>
             </tr>
             </thead>
 

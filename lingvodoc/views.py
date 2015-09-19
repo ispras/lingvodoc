@@ -667,11 +667,12 @@ def view_dictionary_roles(request):
     if dictionary:
         if not dictionary.marked_for_deletion:
             bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
-            roles_users = []
+            roles_users = dict()
+            roles_organizations = dict()
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=base.object_id,
-                                                             subject_client_id=base.client_id).first()
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                 perm = base.translation_string
                 users = []
                 for user in group.users:
@@ -680,8 +681,9 @@ def view_dictionary_roles(request):
                 for org in group.organizations:
                     organizations += [org.id]
                 roles_users[perm] = users
-                roles_users[perm] = organizations
+                roles_organizations[perm] = organizations
             response['roles_users'] = roles_users
+            response['roles_organizations'] = roles_organizations
 
             request.response.status = HTTPOk.code
             return response
