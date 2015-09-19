@@ -62,6 +62,49 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         return perspective;
     };
 
+    var exportPerpective = function(perspective) {
+      var jsPerspective = {
+          'fields': []
+      };
+
+        var positionCount = 1;
+        for (var i = 0; i < perspective.fields.length; i++) {
+
+            var field = JSON.parse(JSON.stringify(perspective.fields[i]));
+
+            field['position'] = positionCount;
+            positionCount += 1;
+
+            if (field.data_type !== 'grouping_tag') {
+                field['level'] = 'L1E';
+            } else {
+                field['level'] = 'GE';
+            }
+
+            if (field._groupEnabled) {
+                delete field._groupEnabled;
+            }
+
+
+            if (field._containsEnabled) {
+                delete field._containsEnabled;
+            }
+
+            if (field.contains) {
+                for (var j = 0; j < field.contains.length; j++) {
+                    field.contains[j].level = 'L2E';
+                    field.contains[j].position = positionCount;
+                    positionCount += 1;
+                }
+            }
+            jsPerspective.fields.push(field);
+        }
+
+        console.log(jsPerspective);
+        return jsPerspective;
+    };
+
+
     var flatLanguages = function (languages) {
         var flat = [];
         for (var i = 0; i < languages.length; i++) {
@@ -92,7 +135,10 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 
 
     $scope.dictionaryData = {
-        'languageId': -1
+        'languageId': -1,
+        'perspectiveName': '',
+        'perspectiveId': -1
+
     };
     // current perspective
     $scope.perspective = {
@@ -166,7 +212,15 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         };
 
         $http.post(createDictionaryUrl, dictionaryObj).success(function(data, status, headers, config) {
-            $state.go('create.step2');
+
+            if (data.object_id && data.client_id) {
+                $scope.dictionaryData.dictionary_client_id = data.client_id;
+                $scope.dictionaryData.dictionary_object_id = data.object_id;
+                $state.go('create.step2');
+            } else {
+                alert('Failed to create dictionary!');
+            }
+
         }).error(function(data, status, headers, config) {
             alert('Failed to create dictionary!');
         });
@@ -176,10 +230,36 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     // Save perspective
     $scope.createPerspective = function() {
 
+        if (!$scope.dictionaryData.perspectiveName) {
+            return;
+        }
 
+        var createPerspectiveUrl = '/dictionary/' + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + '/' + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + '/' + 'perspective';
+        var perspectiveObj = {
+            'name': $scope.dictionaryData.perspectiveName,
+            'translation': $scope.dictionaryData.perspectiveName
+        };
 
+        $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
 
+            if (data.object_id && data.client_id) {
+                $scope.dictionaryData.perspective_client_id = data.client_id;
+                $scope.dictionaryData.perspective_object_id = data.object_id;
+                var setFieldsUrl = '/dictionary/' + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + '/' + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + '/perspective/' + encodeURIComponent($scope.dictionaryData.perspective_client_id) + '/' + encodeURIComponent($scope.dictionaryData.perspective_object_id) + '/fields';
 
+                $http.post(setFieldsUrl, exportPerpective($scope.perspective)).success(function(data, status, headers, config) {
+                    $state.go('create.step2');
+                }).error(function(data, status, headers, config) {
+                    alert('Failed to create perspective!');
+                });
+
+            } else {
+                alert('Failed to create perspective!');
+            }
+
+        }).error(function(data, status, headers, config) {
+            alert('Failed to create perspective!');
+        });
 
     };
 
@@ -230,19 +310,21 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                 var perspective = data.perspectives[i];
                 var url = '/dictionary/' + perspective.parent_client_id + '/' + perspective.parent_object_id + '/perspective/' + perspective.client_id + '/' + perspective.object_id + '/fields';
 
-                $http.get(url).success(function(data, status, headers, config) {
+                $http.get(url).success((function (perspective) {
+                    return function(data, status, headers, config) {
+                        var p = { };
+                        p.name = perspective.name;
+                        p.object_id = perspective.object_id;
+                        p.client_id = perspective.client_id;
+                        p.fields = data.fields;
 
-                    var p = {
-                        name: perspective.name,
-                        object_id: perspective.object_id,
-                        client_id: perspective.client_id,
-                        fields: data.fields
-                    };
-                    var wrappedPerspective = wrapPerspective(p);
-                    if (wrappedPerspective) {
-                        $scope.perspectives.push(wrappedPerspective);
+                        var wrappedPerspective = wrapPerspective(p);
+                        if (wrappedPerspective) {
+                            $scope.perspectives.push(wrappedPerspective);
+                        }
+                        console.log(wrappedPerspective);
                     }
-                }).error(function(data, status, headers, config) {
+                })(perspective)).error(function(data, status, headers, config) {
                     $log.error('Failed to load perspectives!');
                 });
             }
@@ -252,11 +334,21 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     };
 
     $scope.$watch('dictionaryData.perspectiveId', function (id) {
-        for (var i = 0; i < $scope.perspectives.length; i++) {
-            if ($scope.perspectives[i].object_id == id) {
-                $scope.perspective = $scope.perspectives[i];
-                break;
+
+        console.log("Change!");
+        console.log($scope.dictionaryData);
+
+        if (typeof id == 'string') {
+            var ids = id.split('_');
+            for (var i = 0; i < $scope.perspectives.length; i++) {
+                if ($scope.perspectives[i].client_id == ids[0] && $scope.perspectives[i].object_id == ids[1]) {
+                    $scope.perspective = $scope.perspectives[i];
+                    console.log('Found!');
+                    break;
+                }
             }
+
+            console.log($scope.perspective);
         }
     });
 

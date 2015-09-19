@@ -20,8 +20,8 @@ app.controller('DashboardController', ['$scope', '$http', '$interval', '$log', f
     };
 
     var dictionaryQuery = {
-        'user_created': [userId],
-        'user_participated': [userId]
+        'user_created': [userId]
+        //'user_participated': [userId]
     };
 
     $http.post(dictionariesUrl, dictionaryQuery).success(function(data, status, headers, config) {

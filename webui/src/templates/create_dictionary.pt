@@ -128,13 +128,17 @@
     <div>
         <label for="perspective">Import perspective</label>
         <select id="perspective" class="form-control" ng-model="dictionaryData.perspectiveId"
-                ng-options="p.object_id as p.name for p in perspectives track by p.object_id">
+                ng-options="getLanguageId(p) as p.name for p in perspectives track by getLanguageId(p)">
         </select>
 
         <hr>
 
 
         <div>
+
+            <label for="perspectiveName">Perspective name</label>
+            <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
+                   ng-model="dictionaryData.perspectiveName">
 
             <span class="glyphicon glyphicon-plus-sign" ng-click="addField()"></span>
 
@@ -160,7 +164,6 @@
                         <input type="checkbox" ng-checked="field.status == 'enabled'"
                                ng-model="perspective.fields[$index]._statusEnabled">
                     </td>
-
 
                     <td>
                         <input type="text" class="form-control" ng-model="perspective.fields[$index].entity_type">
@@ -253,7 +256,7 @@
 
     </div>
 
-    <a ui-sref="create.step3" class="btn btn-block btn-info">
+    <a ng-click="createPerspective()" class="btn btn-block btn-info">
         Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
     </a>
 
