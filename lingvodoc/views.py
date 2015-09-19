@@ -2251,3 +2251,25 @@ def new_dictionary_get(request):
         return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user}
     return render_to_response('templates/create_dictionary.pt', variables, request=request)
+
+@view_config(route_name='edit_dictionary', renderer='templates/edit_dictionary.pt', request_method='GET')
+def new_dictionary_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+
+    dictionary_client_id = request.matchdict.get('dictionary_client_id')
+    dictionary_object_id = request.matchdict.get('dictionary_object_id')
+    perspective_client_id = request.matchdict.get('perspective_client_id')
+    perspective_id = request.matchdict.get('perspective_id')
+
+    variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
+                 'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
+                 'perspective_id': perspective_id}
+
+    return render_to_response('templates/edit_dictionary.pt', variables, request=request)
+
+
+
