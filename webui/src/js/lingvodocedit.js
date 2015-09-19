@@ -359,7 +359,13 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
 
     WaveSurferController.call(this, $scope);
 
-    $scope.metawords = [];
+
+
+    $scope.perspective = {
+        'fields': []
+    };
+
+    $scope.lexicalEntries = [];
 
     $scope.pageIndex = 1;
     $scope.pageSize = 10;
@@ -478,7 +484,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
 
 
     $scope.addNewMetaWord = function() {
-        $scope.metawords.unshift({
+        $scope.lexicalEntries.unshift({
             'metaword_id': 'new',
             'entries': [],
             'transcriptions': [],
@@ -576,15 +582,46 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
         getMetawordsUrl = addUrlParameter(getMetawordsUrl, 'size', $scope.pageSize);
 
         $http.get(getMetawordsUrl).success(function(data, status, headers, config) {
-            $scope.metawords = data;
+            $scope.lexicalEntries = data;
         }).error(function(data, status, headers, config) {
         });
     };
 
 
+    var getPerspective = function() {
+        var getFieldsUrl = $('#getPerspectiveFieldsUrl').data('lingvodoc');
+        $http.get(getFieldsUrl).success(function(data, status, headers, config) {
+
+            $scope.perspective['fields'] = data.fields;
+
+            }).error(function(data, status, headers, config) {
+            $log.error('Failed to load perspective!');
+        });
+    };
+
+
+    var getAllLexicalEntries = function() {
+        var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
+        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
+
+            $scope.lexicalEntries = data.fields;
+
+        }).error(function(data, status, headers, config) {
+            $log.error('Failed to load perspective!');
+        });
+
+
+
+    };
+
+
+
+
     // load data
-    getDictStats();
-    getMetawords();
+    //getDictStats();
+    //getMetawords();
+
+    getPerspective();
 
 }]);
 
