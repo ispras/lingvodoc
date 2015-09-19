@@ -1,81 +1,160 @@
-<html>
-<head metal:use-macro="load: head.pt"></head>
-<body>
-    <div metal:use-macro="load: nav.pt"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="DashboardModule">
+
+<nav class="lingvodoc-navbar">
     <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Lingvodoc</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="${request.route_url('home')}">Home</a></li>
+                <li tal:condition="user"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
+                <li tal:condition="user"><a href="${request.route_url('languages')}">Languages</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
 
-        <blockquote>Проект выполняется при финансовой поддержке грантов Президента РФ МД-6198.2013.6 (рук. Ю.В.Норманская) и Программы ОИФН Типологическое и историческое изучение языковых явлений в их соотношении с культурной эволюцией, реконструкция культуры по данным языка (рук. А.В.Дыбо)</blockquote>
+            <ul class="nav navbar-nav navbar-right">
 
-         <h1>О проекте</h1>
-        <div>
-            <p>Данный проект посвящен представлению среды совместной обработки языковых данных. На данный момент проект находится в активной разработке и будет представлен для публичного использования позднее.</p>
-            <p>Все данные предоставлены исключительно для демонстрации, <b>все новые данные будут гарантированно потеряны в момент окончательного релиза</b>.</p>
-        </div>
-        <h1>Участники проекта</h1>
-        <div>
-            <a href="http://iling-ran.ru/beta/scholars/normanskaya">
-                Юлия Викторовна Норманская
-            </a>
-            <p class="text-info">
-                – руководитель проекта
-            </p>
-        </div>
-        <div>
-            <a href="http://iling-ran.ru/beta/scholars/dybo">
-                Анна Владимировна Дыбо
-            </a>
-            <p class="text-info">
-                – научный консультант проекта
-            </p>
-        </div>
-        <div>
-            <a href="http://www.ispras.ru/ru/modis/staff.php">
-                Олег Борисенко
-            </a>
-            <p class="text-info">
-                – создатель программы LingvoDoc (API, backend)
-            </p>
-        </div>
-        <div>
-            <a href="http://www.ispras.ru/ru/modis/staff.php">
-                Степан Ипатов
-            </a>
-            <p class="text-info">
-                – разработчки программы LingvoDoc (frontend)
-            </p>
-        </div>
-        <div>
-            Руслан Идрисов
-            <p class="text-info">
-                - составитель корпуса бесермянского диалекта
-            </p>
-        </div>
-        <div>
-            <a href="http://iling-ran.ru/beta/scholars/amelina">
-                Мария Константиновна Амелина
-            </a>
-            <p class="text-info">
-            </p>
-        </div>
-        <div>
-            <a href="http://iling-ran.ru/beta/scholars/sheshenin">
-                Семен Евгеньевич Шешенин
-            </a>
-            <p class="text-info">
-            </p>
-        </div>
-        <div>
-            <p class="text-info">
-                Мария Петровна Кайсина
-            </p>
-        </div>
-        <h1>Контакты</h1>
-        <div>
-            <p>Вопросы по поводу работы программы LingvoDoc задавайте по адресу
-                <a href="mailto:al@somestuff.ru">al@somestuff.ru</a>         </p>
-            <p>
+                <li class="dropdown" tal:condition="user">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">${user.name}<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
+                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
+                    </ul>
+                </li>
+
+                <li class="dropdown" tal:condition="not: user">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Guest<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="${request.route_url('login')}">Sign in</a></li>
+                        <li><a href="${request.route_url('signup')}">Sign up</a></li>
+                    </ul>
+                </li>
+            </ul>
         </div>
     </div>
+</nav>
+
+
+<div class="container">
+
+    <blockquote>Проект выполняется при финансовой поддержке грантов Президента РФ МД-6198.2013.6 (рук. Ю.В.Норманская) и
+        Программы ОИФН Типологическое и историческое изучение языковых явлений в их соотношении с культурной эволюцией,
+        реконструкция культуры по данным языка (рук. А.В.Дыбо)
+    </blockquote>
+
+    <h1>О проекте</h1>
+
+    <div>
+        <p>Данный проект посвящен представлению среды совместной обработки языковых данных. На данный момент проект
+            находится в активной разработке и будет представлен для публичного использования позднее.</p>
+
+        <p>Все данные предоставлены исключительно для демонстрации, <b>все новые данные будут гарантированно потеряны в
+            момент окончательного релиза</b>.</p>
+    </div>
+    <h1>Участники проекта</h1>
+
+    <div>
+        <a href="http://iling-ran.ru/beta/scholars/normanskaya">
+            Юлия Викторовна Норманская
+        </a>
+
+        <p class="text-info">
+            – руководитель проекта
+        </p>
+    </div>
+    <div>
+        <a href="http://iling-ran.ru/beta/scholars/dybo">
+            Анна Владимировна Дыбо
+        </a>
+
+        <p class="text-info">
+            – научный консультант проекта
+        </p>
+    </div>
+    <div>
+        <a href="http://www.ispras.ru/ru/modis/staff.php">
+            Олег Борисенко
+        </a>
+
+        <p class="text-info">
+            – создатель программы LingvoDoc (API, backend)
+        </p>
+    </div>
+    <div>
+        <a href="http://www.ispras.ru/ru/modis/staff.php">
+            Степан Ипатов
+        </a>
+
+        <p class="text-info">
+            – разработчки программы LingvoDoc (frontend)
+        </p>
+    </div>
+    <div>
+        Руслан Идрисов
+        <p class="text-info">
+            - составитель корпуса бесермянского диалекта
+        </p>
+    </div>
+    <div>
+        <a href="http://iling-ran.ru/beta/scholars/amelina">
+            Мария Константиновна Амелина
+        </a>
+
+        <p class="text-info">
+        </p>
+    </div>
+    <div>
+        <a href="http://iling-ran.ru/beta/scholars/sheshenin">
+            Семен Евгеньевич Шешенин
+        </a>
+
+        <p class="text-info">
+        </p>
+    </div>
+    <div>
+        <p class="text-info">
+            Мария Петровна Кайсина
+        </p>
+    </div>
+    <h1>Контакты</h1>
+
+    <div>
+        <p>Вопросы по поводу работы программы LingvoDoc задавайте по адресу
+            <a href="mailto:al@somestuff.ru">al@somestuff.ru</a></p>
+
+        <p>
+    </div>
+</div>
+
 </body>
+
 </html>

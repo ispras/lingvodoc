@@ -44,7 +44,6 @@ module.exports = function(grunt) {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
                     'bower_components/angular/angular.js',
-                    'bower_components/ngDraggable/ngDraggable.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
@@ -53,6 +52,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-route/angular-route.js',
                     'bower_components/angular-ui-router/release/angular-ui-router.js',
                     'bower_components/angular-animate/angular-animate.js',
+                    'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/lingvodemo.js',
                     'src/js/lingvodocedit.js',
                     'src/js/lingvodocview.js',

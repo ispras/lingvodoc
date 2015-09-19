@@ -235,6 +235,53 @@ ul.draggable-objects {
 
 
 
+/* AUTOCOMPLETE */
+
+.autocomplete {
+  width: 100%;
+  position: relative;
+
+  input{
+    font-size: 1.2em;
+    width: 100%;
+    padding:0.4em;
+  }
+
+  ul{
+    position: absolute;
+    left: 0;
+    width: 100%;
+    border-left: 1px solid #888;
+    border-right: 1px solid #888;
+    border-bottom: 1px solid #888;
+    z-index: 1;
+  }
+
+  li{
+    text-align: left;
+    list-style:none;
+    width: 100%;
+    padding:0.4em;
+    background-color: #fff;
+  }
+
+  li.active{
+    width: 100%;
+    background-color: #4bf;
+  }
+
+  .highlight {
+    background-color: #E2E2E2;
+  }
+
+  li.active .highlight {
+    background: #666;
+    color: #fff;
+  }
+}
+
+
+
 
 
 
