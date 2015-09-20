@@ -286,23 +286,52 @@ var elan = (function() {
 var model = {};
 
 model.Value = function() {
+    this.export = function() {
+        return {};
+    }
 };
 
 model.TextValue = function(content) {
     this.content = content;
+    this.export = function() {
+        return {
+            'content': content,
+            'data_type': 'text'
+        }
+    };
 };
 model.TextValue.prototype = new model.Value();
-
-
-
-
 
 model.SoundValue = function(name, mime, content) {
     this.name = name;
     this.mime = mime;
     this.content = content;
+
+    this.export = function() {
+        return {
+            'content': content,
+            'filename': name,
+            'data_type': 'sound'
+        }
+    };
 };
 model.SoundValue.prototype = new model.Value();
+
+model.ImageValue = function(name, mime, content) {
+    this.name = name;
+    this.mime = mime;
+    this.content = content;
+
+    this.export = function() {
+        return {
+            'content': content,
+            'filename': name,
+            'data_type': 'image'
+        }
+    };
+};
+model.ImageValue.prototype = new model.Value();
+
 
 
 var app = angular.module('EditDictionaryModule', ['ui.bootstrap']);
@@ -348,7 +377,6 @@ app.directive('onReadFile', function($parse) {
                         });
                     });
                 };
-
                 reader.readAsBinaryString(file);
             });
         }
@@ -547,20 +575,14 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
     };
 
-    $scope.saveSoundValue = function(clientId, objectId, field, event) {
-        $scope.saveValue(metaword, new model.SoundValue(name, type, content));
+    $scope.saveSoundValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+        var value = new model.SoundValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
     };
 
-
-    $scope.safeApply = function(fn) {
-        var phase = this.$root.$$phase;
-        if(phase == '$apply' || phase == '$digest') {
-            if(fn && (typeof(fn) === 'function')) {
-                fn();
-            }
-        } else {
-            this.$apply(fn);
-        }
+    $scope.saveImageValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+        var value = new model.ImageValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
     };
 
 
@@ -585,13 +607,13 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                     break;
             }
 
+            var entryObject = value.export();
+
             // TODO: get locale_id from cookies
-            var entryObject = {
-                'entity_type': field.entity_type,
-                'content': value.content,
-                'locale_id': 1,
-                'metadata': {}
-            };
+            entryObject['entity_type'] = field.entity_type;
+            entryObject['locale_id'] = 1;
+            entryObject['metadata'] = {};
+
 
             $http.post(url, entryObject).success(function(data, status, headers, config) {
 
@@ -600,52 +622,40 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                     entryObject.client_id = data.client_id;
                     entryObject.object_id = data.object_id;
 
-                    // add to parent lexical entry
-                    for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                        if ($scope.lexicalEntries[i].object_id == objectId &&
-                            $scope.lexicalEntries[i].client_id == clientId) {
-                            $scope.lexicalEntries[i].contains.push(entryObject);
+                    var getSavedEntityUrl = '/leveloneentity/' + data.client_id + '/' + data.object_id;
+                    $http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
+                        // add to parent lexical entry
+                        for (var i = 0; i < $scope.lexicalEntries.length; i++) {
+                            if ($scope.lexicalEntries[i].object_id == objectId &&
+                                $scope.lexicalEntries[i].client_id == clientId) {
+                                $scope.lexicalEntries[i].contains.push(data);
 
-                            // FIXME: This hack forces angularjs to re-render view
-                            var copy = $scope.lexicalEntries[i];
-                            $scope.lexicalEntries[i] = {
-                                object_id: -1,
-                                client_id: -1,
-                                contains: []
-                            };
+                                // FIXME: This hack forces angularjs to re-render view
+                                var copy = $scope.lexicalEntries[i];
+                                $scope.lexicalEntries[i] = {
+                                    object_id: -1,
+                                    client_id: -1,
+                                    contains: []
+                                };
 
-                            // FIXME: uses private angularjs method $$postDigest
-                            $scope.$$postDigest((function(index, originalEntry) {
-                                return function(){
-                                    // restore original entry
-                                    $scope.lexicalEntries[index] = originalEntry;
-                                    $scope.$apply();
-                                }
-                            })(i, copy));
+                                // FIXME: uses private angularjs method $$postDigest
+                                $scope.$$postDigest((function(index, originalEntry) {
+                                    return function(){
+                                        // restore original entry
+                                        $scope.lexicalEntries[index] = originalEntry;
+                                        $scope.$apply();
+                                    }
+                                })(i, copy));
 
-                            break;
+                                break;
+                            }
+
+                            // and finally close input
+                            $scope.disableInput(clientId, objectId, field.entity_type);
                         }
-                    }
+                    }).error(function(data, status, headers, config) {
 
-                    //var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
-                    //$http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
-                    //
-                    //    $scope.lexicalEntries = data.lexical_entries;
-                    //
-                    //}).error(function(data, status, headers, config) {
-                    //    $log.error('Failed to load perspective!');
-                    //});
-
-
-                    //var getSavedEntityUrl = '/leveloneentity/' + data.client_id + '/' + data.object_id;
-                    //$http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
-                    //
-                    //
-                    //
-                    //}).error(function(data, status, headers, config) {
-                    //
-                    //});
-
+                    });
                 }
 
             }).error(function(data, status, headers, config) {
@@ -711,8 +721,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             }
         }
 
-        console.log(fields);
-
         return fields;
     };
 
@@ -739,21 +747,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         });
     };
 
-
-
-
-
-
-
-    // load data
-    //getDictStats();
-    //getMetawords();
-
     loadDictionary();
-
-
-
-
 }]);
 
 app.controller('ShowEtymologyController', ['$scope', '$http', 'words', function($scope, $http, words) {

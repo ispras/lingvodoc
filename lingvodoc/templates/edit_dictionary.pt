@@ -117,7 +117,7 @@
             <td ng-repeat="field in dictionaryView.dictionaryFields" ng-init="fieldValues=getFieldValues(lexicalEntry, field)">
 
                 <div ng-if="field.data_type == 'text'" >
-                    <ul>
+                    <ul class="entries_list">
                         <li ng-repeat="fieldValue in fieldValues">
                             {{ fieldValue.content }}
                         </li>
@@ -138,7 +138,7 @@
 
 
                 <div ng-if="field.data_type == 'image'">
-                    <ul>
+                    <ul class="entries_list">
                         <li ng-repeat="fieldValue in fieldValues">
                             {{ fieldValue.content }}
                         </li>
@@ -150,16 +150,18 @@
 
                     <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
                         <span class="btn btn-default btn-file">
-                            Upload <input type="file" on-read-file="addImageValue(metaword, $fileName, $fileType, $fileContent)">
+                            Upload <input type="file" on-read-file="saveImageValue(lexicalEntry.client_id, lexicalEntry.object_id, field, $fileName, $fileType, $fileContent)">
                         </span>
                     </div>
 
                 </div>
 
                 <div ng-if="field.data_type == 'sound'">
-                    <ul>
+                    <ul class="entries_list">
                         <li ng-repeat="fieldValue in fieldValues">
-                            {{ fieldValue.content }}
+                            <button type="button" class="btn btn-default btn-sm" ng-click="play(fieldValue.content)">
+                                <span class="glyphicon glyphicon-play">Play</span>
+                            </button>
                         </li>
                     </ul>
 
@@ -170,7 +172,7 @@
 
                     <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
                         <span class="btn btn-default btn-file">
-                            Upload <input type="file" on-read-file="addImageValue(metaword, $fileName, $fileType, $fileContent)">
+                            Upload <input type="file" on-read-file="saveSoundValue(lexicalEntry.client_id, lexicalEntry.object_id, field, $fileName, $fileType, $fileContent)">
                         </span>
                     </div>
 
