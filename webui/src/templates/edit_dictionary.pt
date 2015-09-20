@@ -111,10 +111,10 @@
 
         <tbody>
 
-        <tr ng-repeat="lexicalEntry in lexicalEntries" ng-init="fieldValues=getFieldValues(lexicalEntry, field.entity_type)">
 
+        <tr ng-repeat="lexicalEntry in lexicalEntries">
 
-            <td ng-repeat="field in dictionaryView.dictionaryFields">
+            <td ng-repeat="field in dictionaryView.dictionaryFields" ng-init="fieldValues=getFieldValues(lexicalEntry, field)">
 
                 <div ng-if="field.data_type == 'text'" >
                     <ul>

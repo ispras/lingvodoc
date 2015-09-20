@@ -356,11 +356,15 @@ app.directive('onReadFile', function($parse) {
 });
 
 
-app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log', function($scope, $http, $modal, $log) {
+app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log', '$timeout', function($scope, $http, $modal, $log, $timeout) {
+
+
+    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
+    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
+    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
+    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
 
     WaveSurferController.call(this, $scope);
-
-
 
     $scope.dictionaryView = {
         'perspective': {
@@ -368,9 +372,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         },
         'dictionaryFields': []
     };
-
-
-
 
     $scope.lexicalEntries = [];
 
@@ -381,16 +382,19 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     var enabledInputs = [];
 
 
-    $scope.getFieldValues = function(entry, entityType) {
-
+    $scope.getFieldValues = function(entry, field) {
         var values = [];
-        for (var i = 0; i < entry.length; i++) {
-            var value = entry[i];
-            if (value.entity_type == entityType) {
-                values.push(value);
+        if (entry && entry.contains) {
+
+            for (var i = 0; i < entry.contains.length; i++) {
+                var value = entry.contains[i];
+                if (value.entity_type == field.entity_type) {
+                    values.push(value);
+                }
             }
         }
         return values;
+
     };
 
 
@@ -547,12 +551,22 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         $scope.saveValue(metaword, new model.SoundValue(name, type, content));
     };
 
+
+    $scope.safeApply = function(fn) {
+        var phase = this.$root.$$phase;
+        if(phase == '$apply' || phase == '$digest') {
+            if(fn && (typeof(fn) === 'function')) {
+                fn();
+            }
+        } else {
+            this.$apply(fn);
+        }
+    };
+
+
     $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
 
         var url;
-
-        $log.info(field);
-
         if (field.level) {
             switch (field.level) {
                 case  'leveloneentity':
@@ -580,6 +594,59 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             };
 
             $http.post(url, entryObject).success(function(data, status, headers, config) {
+
+                if (data.client_id && data.object_id) {
+
+                    entryObject.client_id = data.client_id;
+                    entryObject.object_id = data.object_id;
+
+                    // add to parent lexical entry
+                    for (var i = 0; i < $scope.lexicalEntries.length; i++) {
+                        if ($scope.lexicalEntries[i].object_id == objectId &&
+                            $scope.lexicalEntries[i].client_id == clientId) {
+                            $scope.lexicalEntries[i].contains.push(entryObject);
+
+                            // FIXME: This hack forces angularjs to re-render view
+                            var copy = $scope.lexicalEntries[i];
+                            $scope.lexicalEntries[i] = {
+                                object_id: -1,
+                                client_id: -1,
+                                contains: []
+                            };
+
+                            // FIXME: uses private angularjs method $$postDigest
+                            $scope.$$postDigest((function(index, originalEntry) {
+                                return function(){
+                                    // restore original entry
+                                    $scope.lexicalEntries[index] = originalEntry;
+                                    $scope.$apply();
+                                }
+                            })(i, copy));
+
+                            break;
+                        }
+                    }
+                    
+                    //var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
+                    //$http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
+                    //
+                    //    $scope.lexicalEntries = data.lexical_entries;
+                    //
+                    //}).error(function(data, status, headers, config) {
+                    //    $log.error('Failed to load perspective!');
+                    //});
+
+
+                    //var getSavedEntityUrl = '/leveloneentity/' + data.client_id + '/' + data.object_id;
+                    //$http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
+                    //
+                    //
+                    //
+                    //}).error(function(data, status, headers, config) {
+                    //
+                    //});
+
+                }
 
             }).error(function(data, status, headers, config) {
 
@@ -650,17 +717,22 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
 
-    var getPerspective = function() {
+    var loadDictionary = function() {
         var getFieldsUrl = $('#getPerspectiveFieldsUrl').data('lingvodoc');
         $http.get(getFieldsUrl).success(function(data, status, headers, config) {
 
             $scope.dictionaryView.perspective['fields'] = data.fields;
-
             $scope.dictionaryView.dictionaryFields = perspectiveToDictionaryFields($scope.dictionaryView.perspective);
 
-            console.log(data.fields);
 
+            var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
+            $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
 
+                $scope.lexicalEntries = data.lexical_entries;
+
+            }).error(function(data, status, headers, config) {
+                $log.error('Failed to load perspective!');
+            });
 
             }).error(function(data, status, headers, config) {
             $log.error('Failed to load perspective!');
@@ -668,16 +740,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
 
-    var getAllLexicalEntries = function() {
-        var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
-        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
 
-            $scope.lexicalEntries = data.fields;
-
-        }).error(function(data, status, headers, config) {
-            $log.error('Failed to load perspective!');
-        });
-    };
 
 
 
@@ -686,7 +749,10 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     //getDictStats();
     //getMetawords();
 
-    getPerspective();
+    loadDictionary();
+
+
+
 
 }]);
 
