@@ -1290,12 +1290,12 @@ def create_perspective_fields(request):
         return {'error': str(e)}
 
 
-def object_file_path(obj, settings, data_type, filename='noname', extension='noext', create_dir=False):
+def object_file_path(obj, settings, data_type, filename, create_dir=False):
     base_path = settings['storage']['path']
     storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
     if create_dir:
         os.makedirs(storage_dir, exist_ok=True)
-    storage_path = os.path.join(storage_dir, filename + "." + extension)
+    storage_path = os.path.join(storage_dir, filename)
 
     return storage_path
 
@@ -1320,7 +1320,7 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
 
 # Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
 # it's uploaded via multipart form, it's just saved as-is.
-def create_object(request, content, obj, data_type, filename, extension, json_input=True):
+def create_object(request, content, obj, data_type, filename, json_input=True):
     # here will be object storage write as an option. Fallback (default) is filesystem write
     settings = request.registry.settings
     storage = settings['storage']
@@ -1331,7 +1331,8 @@ def create_object(request, content, obj, data_type, filename, extension, json_in
         filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
         real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
     else:
-        storage_path = object_file_path(obj, settings, data_type, filename, extension, True)
+        filename = filename or 'noname.noext'
+        storage_path = object_file_path(obj, settings, data_type, filename, True)
 
         with open(storage_path, 'wb+') as f:
             if json_input:
@@ -1349,8 +1350,7 @@ def create_object(request, content, obj, data_type, filename, extension, json_in
                   '/',
                   str(obj.client_id), '/',
                   str(obj.object_id), '/',
-                  filename,
-                  extension))
+                  filename))
     return real_location, url
 
 @view_config(route_name='upload_user_blob', renderer='json', request_method='POST')
@@ -1369,8 +1369,7 @@ def upload_user_blob(request):
     blob.object_id = DBSession.query(UserBlobs).filter_by(client_id=client.id).count()+1
     blob.data_type = request.POST['data_type']
 
-    blob.filename = os.path.splitext(filename)[0]
-    blob.extension = request.POST.get(['extension']) or os.path.splitext(filename)[1] or 'noext'
+    blob.filename = filename
 
     current_user = DBSession.query(User).filter_by(id=client.user_id).first()
 
@@ -1383,7 +1382,7 @@ def upload_user_blob(request):
     current_user.userblobs.append(blob_object)
     DBSession.flush()
     blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob_object, blob.data_type,
-                                                                       blob.filename, blob.extension, json_input=False)
+                                                                       blob.filename, json_input=False)
     DBSession.add(blob_object)
     DBSession.add(current_user)
     request.response.status = HTTPOk.code
@@ -1440,12 +1439,11 @@ def create_l1_entity(request):
         DBSession.add(entity)
         DBSession.flush()
         data_type = req.get('data_type')
-        extension = req.get('extension') or 'noext'
-        filename = req.get('filename') or 'noname'
+        filename = req.get('filename')
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
-            real_location, url = create_object(request, req['content'], entity, data_type, filename, extension)
+            real_location, url = create_object(request, req['content'], entity, data_type, filename)
 
         if url and real_location:
             entity.content = url
@@ -1569,12 +1567,11 @@ def create_l2_entity(request):
         DBSession.add(entity)
         DBSession.flush()
         data_type = req.get('data_type')
-        extension = req.get('extension') or 'noext'
-        filename = req.get('filename') or 'noname'
+        filename = req.get('filename')
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
-            real_location, url = create_object(request, req['content'], entity, data_type, filename, extension)
+            real_location, url = create_object(request, req['content'], entity, data_type, filename)
 
         if url and real_location:
             entity.content = url
