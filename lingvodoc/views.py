@@ -1452,14 +1452,8 @@ def view_l1_entity(request):
     entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
     if entity:
         if not entity.marked_for_deletion:
-
-            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                 translation_string=entity.entity_type)
-            response['parent_client_id'] = entity.parent_client_id
-            response['parent_object_id'] = entity.parent_object_id
-            response['content'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                             translation_string=entity.content)
-            response['locale_id'] = entity.locale_id
+            # TODO: fix urls to relative urls in content
+            response = entity.track()
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -1483,13 +1477,12 @@ def delete_l1_entity(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No such entity in the system")}
 
-
-@view_config(route_name='get_l2_entity', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='get_level_two_entity_indict', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='get_level_two_entity', renderer='json', request_method='GET', permission='view')
 def view_l2_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-
     entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
     if entity:
         if not entity.marked_for_deletion:
@@ -1507,7 +1500,8 @@ def view_l2_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='get_l2_entity', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='get_level_two_entity_indict', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='get_level_two_entity', renderer='json', request_method='DELETE', permission='delete')
 def delete_l2_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -1544,10 +1538,21 @@ def create_l2_entity(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("No such level one entity in the system")}
         entity = LevelTwoEntity(client_id=client.id, object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
-                                content=req['content'], locale_id=req['locale_id'], metadata=req['metadata'],
+                                locale_id=req['locale_id'], metadata=req['metadata'],
                                 parent=parent)
         DBSession.add(entity)
         DBSession.flush()
+        data_type = req.get('data_type')
+        real_location = None
+        url = None
+        if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
+            real_location, url = create_object(request, req['content'], entity, data_type)
+
+        if url and real_location:
+            entity.content = url
+        else:
+            entity.content = req['content']
+        DBSession.add(entity)
         request.response.status = HTTPOk.code
         response['client_id'] = entity.client_id
         response['object_id'] = entity.object_id

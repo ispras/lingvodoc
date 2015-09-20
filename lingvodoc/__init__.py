@@ -194,7 +194,7 @@ def configure_routes(config):
     # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,
     # 'content': <'content'>, 'locale_id': <locale_id>}]
     config.add_route(name='get_level_one_entity', pattern='/leveloneentity/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityOneAcl')  # ready, not tested
+                     factory='lingvodoc.models.PerspectiveEntityOneAcl')  # ready 100%
     config.add_route(name='get_level_one_entity_indict', pattern='/dictionary/'
                                                                  '{dictionary_client_id}/{dictionary_object_id}'
                                                                  '/perspective/'
@@ -203,9 +203,20 @@ def configure_routes(config):
                                                                  '{lexical_entry_client_id}/{lexical_entry_object_id}/'
                                                                  'leveloneentity/'
                                                                  '{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityOneAcl')  # ready, not tested
+                     factory='lingvodoc.models.PerspectiveEntityOneAcl')  # ready 100%
 
-    config.add_route(name='get_l2_entity', pattern='/leveltwoentity/{client_id}/{object_id}',
+    config.add_route(name='get_level_two_entity', pattern='/leveltwoentity/{client_id}/{object_id}',
+                     factory='lingvodoc.models.PerspectiveEntityTwoAcl')  # ready, not tested
+    config.add_route(name='get_level_two_entity_indict', pattern='/dictionary/'
+                                                                 '{dictionary_client_id}/{dictionary_object_id}'
+                                                                 '/perspective/'
+                                                                 '{perspective_client_id}/{perspective_id}/'
+                                                                 'lexical_entry/'
+                                                                 '{lexical_entry_client_id}/{lexical_entry_object_id}/'
+                                                                 'leveloneentity/'
+                                                                 '{leveloneentity_client_id}/{leveloneentity_object_id}/'
+                                                                 'leveltwoentity/'
+                                                                 '{client_id}/{object_id}',
                      factory='lingvodoc.models.PerspectiveEntityTwoAcl')  # ready, not tested
 
     # API #GET && DELETE
@@ -412,6 +423,7 @@ def main(global_config, **settings):
     config.set_authorization_policy(authorization_policy)
     config.include('pyramid_chameleon')
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
+    config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
     config.add_route('testing', '/testing')
 #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
