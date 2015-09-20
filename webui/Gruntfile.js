@@ -59,7 +59,8 @@ module.exports = function(grunt) {
                     'src/js/lingvowave.js',
                     'src/js/dashboard.js',
                     'src/js/languages.js',
-                    'src/js/create_dictionary.js'
+                    'src/js/create_dictionary.js',
+                    'src/js/blob_upload.js'
 
 
                 ],

@@ -547,7 +547,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
     };
 
-    $scope.saveSoundValue = function(metaword, name, type, content) {
+    $scope.saveSoundValue = function(clientId, objectId, field, event) {
         $scope.saveValue(metaword, new model.SoundValue(name, type, content));
     };
 
@@ -626,7 +626,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                             break;
                         }
                     }
-                    
+
                     //var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
                     //$http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
                     //
