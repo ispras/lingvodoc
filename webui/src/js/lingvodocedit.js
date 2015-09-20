@@ -286,11 +286,9 @@ var elan = (function() {
 var model = {};
 
 model.Value = function() {
-    this.type = 'abstract';
 };
 
-model.TextValue = function(entityType, content) {
-    this.entityType = entityType;
+model.TextValue = function(content) {
     this.content = content;
 };
 model.TextValue.prototype = new model.Value();
@@ -300,7 +298,6 @@ model.TextValue.prototype = new model.Value();
 
 
 model.SoundValue = function(name, mime, content) {
-    this.type = 'sounds';
     this.name = name;
     this.mime = mime;
     this.content = content;
@@ -359,7 +356,7 @@ app.directive('onReadFile', function($parse) {
 });
 
 
-app.controller('EditDictionaryController', ['$scope', '$http', '$modal', function($scope, $http, $modal) {
+app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log', function($scope, $http, $modal, $log) {
 
     WaveSurferController.call(this, $scope);
 
@@ -540,9 +537,9 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
         console.log(arguments);
     };
 
-    $scope.saveTextValue = function(clientId, objectId, entityType, event) {
+    $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
         if (event.target.value) {
-            $scope.saveValue(clientId, objectId, new model.TextValue(entityType, event.target.value));
+            $scope.saveValue(clientId, objectId, field, new model.TextValue(event.target.value), parentClientId, parentObjectId);
         }
     };
 
@@ -550,8 +547,44 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
         $scope.saveValue(metaword, new model.SoundValue(name, type, content));
     };
 
-    $scope.saveValue = function(clientId, objectId, value) {
+    $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
 
+        var url;
+
+        $log.info(field);
+
+        if (field.level) {
+            switch (field.level) {
+                case  'leveloneentity':
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity';
+                    break;
+                case 'leveltwoentity':
+                    if (parentClientId && parentObjectId) {
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity/' + encodeURIComponent(parentClientId) + '/' + encodeURIComponent(parentObjectId) + '/leveltwoentity';
+                    } else {
+                        $log.error('Attempting to create Level2 entry with no Level1 entry.');
+                        return;
+                    }
+                    break;
+                case 'groupingentity':
+                    return;
+                    break;
+            }
+
+            // TODO: get locale_id from cookies
+            var entryObject = {
+                'entity_type': field.entity_type,
+                'content': value.content,
+                'locale_id': 1,
+                'metadata': {}
+            };
+
+            $http.post(url, entryObject).success(function(data, status, headers, config) {
+
+            }).error(function(data, status, headers, config) {
+
+            });
+        }
     };
 
 
@@ -591,7 +624,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
 
                 var createNewGroup = true;
                 for (var j = 0; j < fields.length; j++) {
-                    if (fields[j].group == field.group && fields[j].isGroup) {
+                    if (fields[j].entity_type == field.group && fields[j].isGroup) {
                         fields[j].contains.push(field);
                         createNewGroup = false;
                         break;

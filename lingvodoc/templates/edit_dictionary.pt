@@ -114,7 +114,7 @@
         <tr ng-repeat="lexicalEntry in lexicalEntries" ng-init="fieldValues=getFieldValues(lexicalEntry, field.entity_type)">
 
 
-            <td ng-repeat="field in perspective.fields">
+            <td ng-repeat="field in dictionaryView.dictionaryFields">
 
                 <div ng-if="field.data_type == 'text'" >
                     <ul>
@@ -131,7 +131,7 @@
                     <br>
 
                     <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
-                        <input type="text" value="" placeholder="" ng-blur="saveTextValue(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type, $event)">
+                        <input type="text" value="" placeholder="" ng-blur="saveTextValue(lexicalEntry.client_id, lexicalEntry.object_id, field, $event)">
                     </div>
 
                 </div>
