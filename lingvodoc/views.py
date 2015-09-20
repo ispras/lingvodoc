@@ -1525,7 +1525,7 @@ def create_entities_bulk(request):
         inserted_items = []
         for item in req:
             if item['level'] == 'leveloneentity':
-                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id'])
+                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
                 entity = LevelOneEntity(client_id=client.id,
                                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
@@ -1533,7 +1533,7 @@ def create_entities_bulk(request):
                                         metadata="",
                                         parent=parent)
             elif item['level'] == 'groupingentity':
-                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id'])
+                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
                 entity = GroupingEntity(client_id=client.id,
                                         object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
@@ -1541,7 +1541,7 @@ def create_entities_bulk(request):
                                         metadata="",
                                         parent=parent)
             elif item['level'] == 'leveltwoentity':
-                parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id'])
+                parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
                 entity = LevelTwoEntity(client_id=client.id,
                                         object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
@@ -1560,7 +1560,7 @@ def create_entities_bulk(request):
             if url and real_location:
                 entity.content = url
             else:
-                entity.content = req['content']
+                entity.content = item['content']
             DBSession.add(entity)
             inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
         request.response.status = HTTPOk.code

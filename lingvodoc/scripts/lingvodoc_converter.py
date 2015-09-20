@@ -274,7 +274,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
 
     create_entities_url = 'http://localhost:6543/dictionary/1/1/perspective/1/1/entities'
     push_list = create_entity_list(ids_mapping, word_cursor, words_count, 'leveloneentity', 'text', 'Word')
-    status = session.post(create_entities_url, push_list)
+    status = session.post(create_entities_url, json.dumps(push_list))
     print(status.text)
 
     return dictionary
