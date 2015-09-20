@@ -1146,6 +1146,7 @@ def view_perspective_fields(request):
                                                                translation_string=field.data_type)
                 data['position'] = field.position
                 data['status'] = field.state
+                data['level'] = field.level
                 if field.dictionaryperspectivefield:
                     contains = []
                     for field2 in field.dictionaryperspectivefield:
@@ -1157,6 +1158,7 @@ def view_perspective_fields(request):
                                                                         translation_string=field2.data_type)
                         data2['status'] = field2.state
                         data2['position'] = field2.position
+                        data2['level'] = field.level
                         contains += [data2]
                     data['contains'] = contains
                 if field.group:
@@ -1718,60 +1720,16 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            #session = DBSession()
-            #reqtype = request.params.get('sort_by')
             lexical_entries = DBSession.query(LexicalEntry)\
                 .join(LexicalEntry.leveloneentity)\
-                .filter_by(entity_type=sort_criterion)\
-                .order_by(LevelOneEntity.content).offset(start_from).limit(count)
+                #.filter_by(entity_type=sort_criterion)\
+                #.order_by(LevelOneEntity.content).offset(start_from)\
+                #.limit(count)
             result = []
             for entry in lexical_entries:
                 result.append(entry.track())
             response['lexical_entries'] = result
 
-            # levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
-            # lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
-            #     join(levonefirst).\
-            #     filter(levonefirst.entity_type == reqtype, levonefirst.parent_client_id == parent.client_id, levonefirst.parent_object_id == parent.object_id).\
-            #     order_by('obj_id').\
-            #     group_by(LexicalEntry.object_id).offset(start_from).limit(count)
-            # lexes = []
-            # for entry in lex_entries:
-            #     content = dict()
-            #     lev_one = entry.leveloneentity
-            #     # group = entry.groupingentity
-            #     for enti in lev_one:
-            #         content2 = dict()
-            #         content2['level'] = enti.level
-            #         content2['entity_type'] = enti.entity_type
-            #         content2['data_type'] = enti.data_type
-            #         content2['client_id'] = enti.client_id
-            #         content2['object_id'] = enti.object_id
-            #         lev_two = enti.leveltwoentity
-            #         if lev_two:
-            #             contains = []
-            #             for ent in lev_two:
-            #                 content3 = dict()
-            #                 content3['level'] = ent.level
-            #                 content3['entity_type'] = ent.entity_type
-            #                 content3['data_type'] = ent.data_type
-            #                 content3['client_id'] = ent.client_id
-            #                 content3['object_id'] = ent.object_id
-            #                 contains += [content3]
-            #
-            #             content2['contains'] = contains
-            #         content += [content2]
-            #     # for enti in group:
-            #     #     content2 = dict()
-            #     #     content2['level'] = enti.level
-            #     #     content2['entity_type'] = enti.entity_type
-            #     #     content2['data_type'] = enti.data_type
-            #     #     content2['client_id'] = enti.client_id
-            #     #     content2['object_id'] = enti.object_id
-            #     #     content += [content2]
-            #     lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
-            #
-            # response['lexical_entries'] = lexes
             request.response.status = HTTPOk.code
             return response
     else:
@@ -1854,7 +1812,6 @@ def view_lexical_entry(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    #entry = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if entry:
         if not entry.marked_for_deletion:
@@ -1869,45 +1826,6 @@ def view_lexical_entry(request):
             else:
                 response['lexical_entry'] = entry.track()
 
-                # content = dict()
-                # lev_one = entry.publishleveloneentity
-                # group = entry.publishgroupingentity
-                # lev_two_publ = entry.publishleveltwoentity
-                # for ent in lev_one:
-                #     enti = ent.entry
-                #     content2 = dict()
-                #     content2['level'] = enti.level
-                #     content2['entity_type'] = enti.entity_type
-                #     content2['data_type'] = enti.data_type
-                #     content2['content'] = enti.content
-                #     content2['client_id'] = enti.client_id
-                #     content2['object_id'] = enti.object_id
-                #     lev_two = enti.leveltwoentity
-                #     if lev_two:
-                #         contains = []
-                #         for entit in lev_two:
-                #             if entit in lev_two_publ:
-                #                 content3 = dict()
-                #                 content3['level'] = entit.level
-                #                 content3['entity_type'] = entit.entity_type
-                #                 content3['data_type'] = entit.data_type
-                #                 content3['client_id'] = entit.client_id
-                #                 content3['object_id'] = entit.object_id
-                #                 content3['content'] = entit.content
-                #                 contains += [content3]
-                #         if contains:
-                #             content2['contains'] = contains
-                #     content += [content2]
-                # for ent in group:
-                #     enti = ent.entry
-                #     content2 = dict()
-                #     content2['level'] = enti.level
-                #     content2['entity_type'] = enti.entity_type
-                #     content2['data_type'] = enti.data_type
-                #     content2['client_id'] = enti.client_id
-                #     content2['object_id'] = enti.object_id
-                #     content += [content2]
-                # response['content'] = content
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
