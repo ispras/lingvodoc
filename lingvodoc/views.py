@@ -1352,17 +1352,20 @@ def create_object(request, content, obj, data_type, json_input=True):
                   str(obj.object_id), '/'))
     return real_location, url
 
-
 @view_config(route_name='upload_user_blob', renderer='json', request_method='POST')
 def upload_user_blob(request):
     variables = {'auth': authenticated_userid(request)}
     response = dict()
+    print(request.POST)
     filename = request.POST['blob'].filename
     input_file = request.POST['blob'].file
 
-    blob = dict()
-    blob.filename = "".join([c for c in filename if c.isalpha() or c.isdigit() or c==' ']).rstrip()
+    class Object(object):
+        pass
+    blob = Object()
+    blob.filename = filename #"".join([c for c in filename if c.isalpha() or c.isdigit() or c==' ']).rstrip()
     blob.client_id = variables['auth']
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
     blob.object_id = DBSession.query(UserBlobs).filter_by(client_id=client.id).count()+1
     blob.data_type = request.POST['data_type']
 
@@ -1371,11 +1374,12 @@ def upload_user_blob(request):
     blob_object = UserBlobs(object_id=blob.object_id,
                             client_id=blob.client_id,
                             name=filename,
-                            data_type=data_type,
+                            data_type=blob.data_type,
                             user_id=current_user.id)
 
     current_user.userblobs.append(blob_object)
-    blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob, blob.data_type, json_input=False)
+    DBSession.flush()
+    blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob_object, blob.data_type, json_input=False)
     DBSession.add(blob_object)
     DBSession.add(current_user)
 
@@ -2232,5 +2236,22 @@ def edit_dictionary_get(request):
 
     return render_to_response('templates/edit_dictionary.pt', variables, request=request)
 
+@view_config(route_name='blob_upload', renderer='templates/blob_upload.pt', request_method='GET')
+def blob_upload_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
 
+    dictionary_client_id = request.matchdict.get('dictionary_client_id')
+    dictionary_object_id = request.matchdict.get('dictionary_object_id')
+    perspective_client_id = request.matchdict.get('perspective_client_id')
+    perspective_id = request.matchdict.get('perspective_id')
+
+    variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
+                 'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
+                 'perspective_id': perspective_id}
+
+    return render_to_response('templates/blob_upload.pt', variables, request=request)
 
