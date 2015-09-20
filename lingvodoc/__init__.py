@@ -411,7 +411,7 @@ def main(global_config, **settings):
     config.set_authentication_policy(authentication_policy)
     config.set_authorization_policy(authorization_policy)
     config.include('pyramid_chameleon')
-    config.add_static_view(settings['storage']['static_path'], path='lingvodoc:static', cache_max_age=3600)
+    config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
     configure_routes(config)
     config.add_route('testing', '/testing')
 #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')

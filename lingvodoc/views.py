@@ -1056,7 +1056,7 @@ def dictionaries_list(request):
 
     return response\
 
-@view_config(route_name = 'all_perspectives', renderer = 'json', request_method='GET')
+@view_config(route_name='all_perspectives', renderer = 'json', request_method='GET')
 def perspectives_list(request):
     response = dict()
     is_template = None
@@ -1093,7 +1093,7 @@ def perspectives_list(request):
     return response
 
 
-@view_config(route_name = 'users', renderer = 'json', request_method='GET')
+@view_config(route_name='users', renderer='json', request_method='GET')
 def users_list(request):
     response = dict()
     search = None
@@ -1199,7 +1199,7 @@ def delete_perspective_fields(request):
         return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_fields', renderer = 'json', request_method='POST', permission='edit')
+@view_config(route_name='perspective_fields', renderer='json', request_method='POST', permission='edit')
 def create_perspective_fields(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1343,7 +1343,7 @@ def create_object(request, content, obj, data_type, json_input=True):
         real_location = storage_path
 
     url = "".join((settings['storage']['prefix'],
-                  settings['storage']['static_path'],
+                  settings['storage']['static_route'],
                   obj.__tablename__,
                   '/',
                   data_type,
