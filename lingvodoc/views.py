@@ -3,6 +3,8 @@ from pyramid.view import view_config
 
 from sqlalchemy.exc import DBAPIError
 
+from .scripts.lingvodoc_converter import convert_one
+
 from .models import (
     DBSession,
     Dictionary,
@@ -116,6 +118,46 @@ def find_locale_id(request):
         return int(request.cookies['locale_id'])
     except:
         return 1
+
+@view_config(route_name='basic_search', renderer='json', request_method='GET')
+def basic_search(request):
+    searchstring = request.params.get('leveloneentity')
+    results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%')).all()
+    results = []
+    for item in results_cursor:
+        result = dict()
+        result['client_id'] = item.parent_client_id
+        result['object_id'] = item.parent_object_id
+        result['origin_perspective_client_id'] = item.parent.parent.client_id
+        result['origin_perspective_object_id'] = item.parent.parent.object_id
+        result['origin_perspective_name'] = item.parent.parent.name
+        result['origin_dictionary_client_id'] = item.parent.parent.parent.client_id
+        result['origin_dictionary_object_id'] = item.parent.parent.parent.object_id
+        result['origin_dictionary_name'] = item.parent.parent.parent.name
+        results.append(result)
+    return results
+
+from multiprocessing import Process
+
+#TODO: make it normal, it's just a test
+@view_config(route_name='convert_dictionary', renderer='json', request_method='GET')
+def convert_dictionary(request):
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    user = client.user
+
+    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+
+    p = Process(target=convert_one, args=(blob.real_storage_path,
+                                          request.authenticated_userid,
+                                          user.login,
+                                          user.password.hash,
+                                          1,
+                                          1))
+    p.start()
+
+    return {"status": "Your task have started to execute. Wait 5-10 minutes and you will see new dictionary."}
 
 
 @view_config(route_name='language', renderer='json', request_method='GET')
@@ -2118,6 +2160,29 @@ def login_post(request):
     print(login)
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.check_password(password):
+        client = Client(user_id=user.id)
+        user.clients.append(client)
+        DBSession.add(client)
+        DBSession.flush()
+        headers = remember(request, principal=client.id)
+        response = Response()
+        response.headers = headers
+        locale_id = user.default_locale_id
+        if not locale_id:
+            locale_id = 1
+        response.set_cookie(key='locale_id', value=str(locale_id))
+        headers = remember(request, principal=client.id)
+        return HTTPFound(location=next, headers=response.headers)
+    return HTTPUnauthorized(location=request.route_url('login'))
+
+@view_config(route_name='cheatlogin', request_method='POST')
+def login_cheat(request):
+    next = request.params.get('next') or request.route_url('dashboard')
+    login = request.POST.get('login', '')
+    passwordhash = request.POST.get('passwordhash', '')
+    print(login)
+    user = DBSession.query(User).filter_by(login=login).first()
+    if user and user.password.hash == passwordhash:
         client = Client(user_id=user.id)
         user.clients.append(client)
         DBSession.add(client)

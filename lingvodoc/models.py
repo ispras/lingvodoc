@@ -577,7 +577,7 @@ def acl_by_groups(object_id, client_id, subject):
             group_name = base_group.action + ":" + base_group.subject \
                      + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
-    print("ACLS", acls)
+    #print("ACLS", acls)
     return acls
 
 
