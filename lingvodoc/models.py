@@ -78,8 +78,9 @@ def recursive_content(self):
                              'parent_client_id': xx.parent_client_id,
                              'entity_type': xx.entity_type,
                              'marked_for_deletion': xx.marked_for_deletion,
-                             'locale_id': xx.locale_id}]
-                    vec += recursive_content(xx)
+                             'locale_id': xx.locale_id,
+                             'contains': recursive_content(xx)}]
+                    # vec += recursive_content(xx)
     return vec
 
 
