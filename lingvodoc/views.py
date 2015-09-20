@@ -59,6 +59,7 @@ from pyramid.renderers import render_to_response
 from pyramid.response import FileResponse
 
 import os
+import shutil
 import datetime
 import base64
 import string
@@ -1289,15 +1290,13 @@ def create_perspective_fields(request):
         return {'error': str(e)}
 
 
-def object_file_path(obj, settings, data_type, extension=None, create_dir=False):
+def object_file_path(obj, settings, data_type, filename='noname', extension='noext', create_dir=False):
     base_path = settings['storage']['path']
     storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
     if create_dir:
         os.makedirs(storage_dir, exist_ok=True)
-    if extension:
-        storage_path = os.path.join(storage_dir, "content." + extension)
-    else:
-        storage_path = os.path.join(storage_dir, "content.noext")
+    storage_path = os.path.join(storage_dir, filename + "." + extension)
+
     return storage_path
 
 
@@ -1321,7 +1320,7 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
 
 # Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
 # it's uploaded via multipart form, it's just saved as-is.
-def create_object(request, content, obj, data_type, json_input=True):
+def create_object(request, content, obj, data_type, filename, extension, json_input=True):
     # here will be object storage write as an option. Fallback (default) is filesystem write
     settings = request.registry.settings
     storage = settings['storage']
@@ -1332,14 +1331,14 @@ def create_object(request, content, obj, data_type, json_input=True):
         filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
         real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
     else:
-        storage_path = object_file_path(obj, settings, data_type, None, True)
+        storage_path = object_file_path(obj, settings, data_type, filename, extension, True)
 
-        f = open(storage_path, 'wb+')
-        if json_input:
-            f.write(base64.urlsafe_b64decode(content))
-        else:
-            f.write(content)
-        f.close()
+        with open(storage_path, 'wb+') as f:
+            if json_input:
+                f.write(base64.urlsafe_b64decode(content))
+            else:
+                shutil.copyfileobj(content, f)
+
         real_location = storage_path
 
     url = "".join((settings['storage']['prefix'],
@@ -1349,25 +1348,29 @@ def create_object(request, content, obj, data_type, json_input=True):
                   data_type,
                   '/',
                   str(obj.client_id), '/',
-                  str(obj.object_id), '/'))
+                  str(obj.object_id), '/',
+                  filename,
+                  extension))
     return real_location, url
 
 @view_config(route_name='upload_user_blob', renderer='json', request_method='POST')
 def upload_user_blob(request):
     variables = {'auth': authenticated_userid(request)}
     response = dict()
-    print(request.POST)
+    #print(request.POST)
     filename = request.POST['blob'].filename
     input_file = request.POST['blob'].file
 
     class Object(object):
         pass
     blob = Object()
-    blob.filename = filename #"".join([c for c in filename if c.isalpha() or c.isdigit() or c==' ']).rstrip()
     blob.client_id = variables['auth']
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
     blob.object_id = DBSession.query(UserBlobs).filter_by(client_id=client.id).count()+1
     blob.data_type = request.POST['data_type']
+
+    blob.filename = os.path.splitext(filename)[0]
+    blob.extension = request.POST.get(['extension']) or os.path.splitext(filename)[1] or 'noext'
 
     current_user = DBSession.query(User).filter_by(id=client.user_id).first()
 
@@ -1379,20 +1382,37 @@ def upload_user_blob(request):
 
     current_user.userblobs.append(blob_object)
     DBSession.flush()
-    blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob_object, blob.data_type, json_input=False)
+    blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob_object, blob.data_type,
+                                                                       blob.filename, blob.extension, json_input=False)
     DBSession.add(blob_object)
     DBSession.add(current_user)
+    request.response.status = HTTPOk.code
+    response = {"client_id": blob.client_id, "object_id": blob.object_id, "content": blob_object.content}
+    return response
 
 
-@view_config(route_name='get_user_blob', request_method='GET')
-def get_user_blob(request):
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
-    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
-    if blob:
-        FileResponse(blob.real_storage_path)
-    else:
-        raise HTTPNotFound
+# seems to be redundant
+# @view_config(route_name='get_user_blob', request_method='GET')
+# def get_user_blob(request):
+#     client_id = request.matchdict.get('client_id')
+#     object_id = request.matchdict.get('object_id')
+#     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+#     if blob:
+#         FileResponse(blob.real_storage_path)
+#     else:
+#         raise HTTPNotFound
+
+@view_config(route_name='list_user_blobs', renderer='json', request_method='GET')
+def list_user_blobs(request):
+    variables = {'auth': authenticated_userid(request)}
+#    user_client_ids = [cl_id.id for cl_id in DBSession.query(Client).filter_by(id=variables['auth']).all()]
+#    user_blobs = DBSession.query(UserBlobs).filter_by(client_id.in_(user_client_ids)).all()
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
+    request.response.status = HTTPOk.code
+    response = [{'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                 'client_id': blob.client_id, 'object_id': blob_object_id} for blob in user_blobs]
+    return response
 
 
 @view_config(route_name='create_level_one_entity', renderer='json', request_method='POST', permission='create')
@@ -1420,10 +1440,12 @@ def create_l1_entity(request):
         DBSession.add(entity)
         DBSession.flush()
         data_type = req.get('data_type')
+        extension = req.get('extension') or 'noext'
+        filename = req.get('filename') or 'noname'
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
-            real_location, url = create_object(request, req['content'], entity, data_type)
+            real_location, url = create_object(request, req['content'], entity, data_type, filename, extension)
 
         if url and real_location:
             entity.content = url
@@ -1547,10 +1569,12 @@ def create_l2_entity(request):
         DBSession.add(entity)
         DBSession.flush()
         data_type = req.get('data_type')
+        extension = req.get('extension') or 'noext'
+        filename = req.get('filename') or 'noname'
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
-            real_location, url = create_object(request, req['content'], entity, data_type)
+            real_location, url = create_object(request, req['content'], entity, data_type, filename, extension)
 
         if url and real_location:
             entity.content = url

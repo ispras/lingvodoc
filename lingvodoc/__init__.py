@@ -184,10 +184,15 @@ def configure_routes(config):
     config.add_route(name="upload_user_blob",
                      pattern="/blob")
 
+    # seems to be redundant
     # API #GET
     # no params, returns file
-    config.add_route(name="get_user_blob",
-                     pattern="/blobs/{client_id}/{object_id}")
+    #config.add_route(name="get_user_blob",
+    #                 pattern="/blobs/{client_id}/{object_id}")
+    # API #GET
+    # no params, lists only own blobs
+    config.add_route(name="list_user_blobs",
+                     pattern="/blobs/")
 
 # TODO: LOCALES!
     # API #GET && DELETE
