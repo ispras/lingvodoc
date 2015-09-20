@@ -79,7 +79,7 @@ def recursive_content(self):
                              'entity_type': xx.entity_type,
                              'marked_for_deletion': xx.marked_for_deletion,
                              'locale_id': xx.locale_id,
-                             'contains': recursive_content(xx)}]
+                             'contains': recursive_content(xx) or None}]
                     # vec += recursive_content(xx)
     return vec
 
@@ -327,6 +327,23 @@ class EntityMixin(object):
     locale_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    def track(self):
+        dictionary = {'level': self.__tablename__,
+                      'content': self.content,
+                      'object_id': self.object_id,
+                      'client_id': self.client_id,
+                      'parent_object_id': self.parent_object_id,
+                      'parent_client_id': self.parent_client_id,
+                      'entity_type': self.entity_type,
+                      'marked_for_deletion': self.marked_for_deletion,
+                      'locale_id': self.locale_id,
+                      }
+        children = recursive_content(self)
+        if children:
+            dictionary['contains'] = children
+        return dictionary
+
 
 
 class PublishingEntityMixin(object):
