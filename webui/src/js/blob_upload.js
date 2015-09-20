@@ -2,7 +2,7 @@
 
 var app = angular.module('BlobUploadModule', ['ui.bootstrap']);
 
-app.directive('onReadFile', function($parse) {
+app.directive('onReadFileA', function($parse) {
     return {
         restrict: 'A',
         scope: false,

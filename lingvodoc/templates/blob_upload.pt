@@ -78,10 +78,6 @@
 
 
 
-    <input class="form-control" type="file" on-read-file="readFile($file)"/>
-
-
-
 </div>
 
 </body>
