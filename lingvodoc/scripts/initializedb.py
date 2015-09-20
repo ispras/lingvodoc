@@ -233,24 +233,24 @@ def main(argv=sys.argv):
         word_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                              #object_id=1,
                                              client_id=client.id,
-                                             entity_type="Word", data_type="text", level="L1E", position=1,
+                                             entity_type="Word", data_type="text", level="leveloneentity", position=1,
                                              state="enabled")
         transcription_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                       #object_id=2,
                                                       client_id=client.id,
                                                       entity_type="Transcription", data_type="text",
-                                                      level="L1E", position=2,
+                                                      level="leveloneentity", position=2,
                                                       state="enabled")
         translation_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                     #object_id=3,
                                                     client_id=client.id,
                                                     entity_type="Translation",
-                                                    data_type="text", level="L1E", position=3,
+                                                    data_type="text", level="leveloneentity", position=3,
                                                     state="enabled")
         sound_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                               #object_id=4,
                                               client_id=client.id,
-                                              entity_type="Sound", data_type="sound", level="L1E", position=4,
+                                              entity_type="Sound", data_type="sound", level="leveloneentity", position=4,
                                               state="enabled")
         for field in [word_ld, transcription_ld, translation_ld, sound_ld]:
             DBSession.add(field)
@@ -259,30 +259,30 @@ def main(argv=sys.argv):
                                               entity_object_id=sound_ld.object_id, entity_client_id=sound_ld.client_id,
                                               #object_id=5,
                                               client_id=client.id,
-                                              entity_type="Praat markup", data_type="markup", level="L2E", position=5,
+                                              entity_type="Praat markup", data_type="markup", level="leveltwoentity", position=5,
                                               state="enabled")
         paradigm_word_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                       #object_id=6,
                                                       client_id=client.id,
-                                                      entity_type="Paradigm word", data_type="text", level="L1E",
+                                                      entity_type="Paradigm word", data_type="text", level="leveloneentity",
                                                       group="Paradigm", position=6,
                                                       state="enabled")
         paradigm_transcription_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                                #object_id=7,
                                                                client_id=client.id,
                                                                entity_type="Paradigm transcription", data_type="text",
-                                                               level="L1E", position=7,
+                                                               level="leveloneentity", position=7,
                                                                state="enabled")
         paradigm_translation_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                              #object_id=8,
                                                              client_id=client.id,
                                                              entity_type="Paradigm translation", data_type="text",
-                                                             level="L1E", position=8,
+                                                             level="leveloneentity", position=8,
                                                              state="enabled")
         paradigm_sound_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                        #object_id=9,
                                                        client_id=client.id,
-                                                       entity_type="Paradigm sound", data_type="sound", level="L1E",
+                                                       entity_type="Paradigm sound", data_type="sound", level="leveloneentity",
                                                        position=9,
                                                        state="enabled")
         for field in [praat_ld, paradigm_word_ld, paradigm_transcription_ld,
@@ -294,12 +294,12 @@ def main(argv=sys.argv):
                                                        #object_id=10,
                                                        client_id=client.id,
                                                        entity_type="Paradigm Praat markup", data_type="markup",
-                                                       level="L2E", position=10,
+                                                       level="leveltwoentity", position=10,
                                                        state="enabled")
         etymology_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                   #object_id=11,
                                                   client_id=client.id,
-                                                  entity_type="Etymology", data_type="grouping_tag", level="GE",
+                                                  entity_type="Etymology", data_type="grouping_tag", level="groupingentity",
                                                   position=11,
                                                   state="enabled")
         for field in [paradigm_praat_ld, etymology_ld]:

@@ -267,24 +267,24 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #             DBSession.add(new_dict)
 #             field = DictionaryPerspectiveField(parent = persp, client_id=1, object_id=1,
 #                                                entity_type='protoform', data_type='text',
-#                                                level='L1E', state='enabled', position=1)
+#                                                level='leveloneentity', state='enabled', position=1)
 #             DBSession.add(field)
 #             field1 = DictionaryPerspectiveField(parent=persp, client_id=1, object_id=2,entity_type='sound',
-#                                                 data_type='sound', level='L1E', state = 'enabled', position=2)
+#                                                 data_type='sound', level='leveloneentity', state = 'enabled', position=2)
 #             DBSession.add(field1)
 #             field2 = DictionaryPerspectiveField(parent_entity=field1, parent=persp, client_id=1,
-#                                                 object_id=3, entity_type='praat', level='L2E',
+#                                                 object_id=3, entity_type='praat', level='leveltwoentity',
 #                                                 data_type='markup', state='enabled', position=1)
 #             DBSession.add(field2)
 #             fieldgroup = DictionaryPerspectiveField(parent=persp, client_id=1, object_id=4,
 #                                                     entity_type='protoform', data_type='text',
-#                                                     level='L1E', group='testgroup', state='enabled', position=3)
+#                                                     level='leveloneentity', group='testgroup', state='enabled', position=3)
 #             DBSession.add(fieldgroup)
 #             grouping = DictionaryPerspectiveField(parent=persp, client_id=1, object_id=5, entity_type='etymology',
-#                                                   data_type='grouping_tag', level='GE', state='enabled', position=4)
+#                                                   data_type='grouping_tag', level='groupingentity', state='enabled', position=4)
 #             DBSession.add(grouping)
 #             field3 = DictionaryPerspectiveField(parent_entity=field1, parent=persp, client_id=1,
-#                                                 object_id=6, entity_type='praat2', level='L2E',
+#                                                 object_id=6, entity_type='praat2', level='leveltwoentity',
 #                                                 data_type='markup', state='enabled', position=1)
 #             DBSession.add(field3)
 #             new_uets = UserEntitiesTranslationString(object_id=1, client_id = 1,
@@ -395,7 +395,7 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #             DBSession.add(new_dict)
 #             field = DictionaryPerspectiveField(parent = persp, client_id=1, object_id=1,
 #                                                entity_type='protoform', data_type='text',
-#                                                level='L1E', state='enabled', position=1)
+#                                                level='leveloneentity', state='enabled', position=1)
 #             DBSession.add(field)
 #             new_uets = UserEntitiesTranslationString(object_id=1, client_id = 1,
 #                                                      locale_id=1, translation_string='protoform',
@@ -469,20 +469,20 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #         from lingvodoc.models import DictionaryPerspectiveField
 #         fields = [{'entity_type_translation': 'protoform1', 'entity_type': 'protoform',
 #                    'data_type_translation': 'text1', 'data_type': 'text',
-#                    'state': 'enabled', 'level': 'L1E', 'position': 1},
+#                    'state': 'enabled', 'level': 'leveloneentity', 'position': 1},
 #                   {'entity_type_translation': 'sound1', 'entity_type': 'sound', 'data_type_translation': 'sound1',
 #                    'data_type': 'sound', 'state': 'enabled',
 #                    'contains': [{'entity_type_translation': 'praat1',
 #                                  'entity_type': 'praat',
 #                                  'data_type_translation': 'markup1',
 #                                  'data_type': 'markup',
-#                                  'state': 'enabled', 'level': 'L2E', 'position': 1}], 'level': 'L1E', 'position': 2},
+#                                  'state': 'enabled', 'level': 'leveltwoentity', 'position': 1}], 'level': 'leveloneentity', 'position': 2},
 #                   {'entity_type_translation': 'protoform1', 'entity_type': 'protoform',
 #                    'data_type_translation': 'text1', 'data_type': 'text', 'state': 'enabled',
-#                    'group_translation':'testgroup1', 'group':'testgroup', 'level': 'L1E', 'position': 3},
+#                    'group_translation':'testgroup1', 'group':'testgroup', 'level': 'leveloneentity', 'position': 3},
 #                   {'entity_type_translation': 'etymology1', 'entity_type': 'etymology',
 #                    'data_type_translation': 'grouping_tag1', 'data_type': 'grouping_tag',
-#                    'state': 'enabled', 'level': 'GE', 'position': 4}]
+#                    'state': 'enabled', 'level': 'groupingentity', 'position': 4}]
 #
 #         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
 #         response = self.app.post_json('/dictionary/1/1/perspective/1/1/fields', params={'fields': fields})
@@ -494,7 +494,7 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #                                                                       entity_type='protoform',
 #                                                                       data_type='text',
 #                                                                       state='enabled',
-#                                                                       level='L1E',
+#                                                                       level='leveloneentity',
 #                                                                       group=None,
 #                                                                       position=1).first()
 #         self.assertNotEqual(field, None)
@@ -503,7 +503,7 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #                                                                       entity_type='sound',
 #                                                                       data_type='sound',
 #                                                                       state='enabled',
-#                                                                       level='L1E',
+#                                                                       level='leveloneentity',
 #                                                                       position=2).first()
 #         self.assertNotEqual(field, None)
 #         field = DBSession.query(DictionaryPerspectiveField).filter_by(parent_client_id=1,
@@ -511,7 +511,7 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #                                                                       entity_type='praat',
 #                                                                       data_type='markup',
 #                                                                       state='enabled',
-#                                                                       level='L2E',
+#                                                                       level='leveltwoentity',
 #                                                                       position=1).first()
 #         self.assertNotEqual(field, None)
 #         field = DBSession.query(DictionaryPerspectiveField).filter_by(parent_client_id=1,
@@ -519,7 +519,7 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #                                                                       entity_type='protoform',
 #                                                                       data_type='text',
 #                                                                       state='enabled',
-#                                                                       level='L1E',
+#                                                                       level='leveloneentity',
 #                                                                       group='testgroup',
 #                                                                       position=3).first()
 #         self.assertNotEqual(field, None)
@@ -528,7 +528,7 @@ class TestEmptyListSuccessCondition(unittest.TestCase):
 #                                                                       entity_type='etymology',
 #                                                                       data_type='grouping_tag',
 #                                                                       state='enabled',
-#                                                                       level='GE',
+#                                                                       level='groupingentity',
 #                                                                       position=4).first()
 #         self.assertNotEqual(field, None)
 

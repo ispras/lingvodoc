@@ -1138,7 +1138,7 @@ def view_perspective_fields(request):
         for field in perspective.dictionaryperspectivefield:
 
             data = dict()
-            if field.level == 'L1E' or field.level == 'GE':
+            if field.level == 'leveloneentity' or field.level == 'groupingentity':
                 data['entity_type'] = find_by_translation_string(locale_id=locale_id,
                                                                  translation_string=field.entity_type)
 
@@ -1243,7 +1243,7 @@ def create_perspective_fields(request):
                                                         client_id=variables['auth'],
                                                         entity_type=ent['entity_type'],
                                                         data_type=ent['data_type'],
-                                                        level='L2E',
+                                                        level='leveltwoentity',
                                                         parent=perspective,
                                                         parent_entity=field,
                                                         state=entry['status'])
@@ -1970,21 +1970,21 @@ def approve_entity(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
-            if entry['type'] == 'L1E':
+            if entry['type'] == 'leveloneentity':
                 entity = DBSession.query_property(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
                 publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
                                                    entity=entity, parent=entity.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
-            elif entry['type'] == 'L2E':
+            elif entry['type'] == 'leveltwoentity':
                 entity = DBSession.query_property(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
                 publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
                                                    entity=entity, parent=entity.parent.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
-            elif entry['type'] == 'GE':
+            elif entry['type'] == 'groupingentity':
                 entity = DBSession.query_property(GroupingEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
                 publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,

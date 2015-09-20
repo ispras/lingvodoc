@@ -76,9 +76,9 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
             positionCount += 1;
 
             if (field.data_type !== 'grouping_tag') {
-                field['level'] = 'L1E';
+                field['level'] = 'leveloneentity';
             } else {
-                field['level'] = 'GE';
+                field['level'] = 'groupingentity';
             }
 
             if (field._groupEnabled) {
@@ -92,7 +92,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 
             if (field.contains) {
                 for (var j = 0; j < field.contains.length; j++) {
-                    field.contains[j].level = 'L2E';
+                    field.contains[j].level = 'leveltwoentity';
                     field.contains[j].position = positionCount;
                     positionCount += 1;
                 }
