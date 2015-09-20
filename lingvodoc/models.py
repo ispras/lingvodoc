@@ -70,7 +70,7 @@ def recursive_content(self):
             if i.direction.name == "ONETOMANY":
                 x = getattr(self, str(entry))
                 for xx in x:
-                    vec += [{'name': xx.__tablename__,
+                    vec += [{'level': xx.__tablename__,
                              'content': xx.content,
                              'object_id': xx.object_id,
                              'client_id': xx.client_id,
@@ -304,7 +304,8 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     def track(self):
         vec = []
         vec += recursive_content(self)
-        return vec
+        response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec}
+        return response
 
 
 class EntityMixin(object):
