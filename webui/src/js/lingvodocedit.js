@@ -333,6 +333,23 @@ model.ImageValue = function(name, mime, content) {
 model.ImageValue.prototype = new model.Value();
 
 
+model.MarkupValue = function(name, mime, content) {
+    this.name = name;
+    this.mime = mime;
+    this.content = content;
+
+    this.export = function() {
+        return {
+            'content': content,
+            'filename': name,
+            'data_type': 'markup'
+        }
+    };
+};
+model.MarkupValue.prototype = new model.Value();
+
+
+
 
 var app = angular.module('EditDictionaryModule', ['ui.bootstrap']);
 
@@ -600,6 +617,13 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
     };
 
+    $scope.saveMarkupValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+
+        console.log(arguments);
+
+        var value = new model.MarkupValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+    };
 
     $scope.editGroup = function(clientId, objectId, field, values) {
 
@@ -682,6 +706,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             entryObject['entity_type'] = field.entity_type;
             entryObject['locale_id'] = 1;
             entryObject['metadata'] = {};
+
+
 
 
             $http.post(url, entryObject).success(function(data, status, headers, config) {

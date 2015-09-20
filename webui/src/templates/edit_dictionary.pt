@@ -169,6 +169,37 @@
                             <button type="button" class="btn btn-default btn-sm" ng-click="play(fieldValue.content)">
                                 <span class="glyphicon glyphicon-play">Play</span>
                             </button>
+
+
+                            <div ng-if="field.contains && field.contains.length > 0">
+
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.contains[0].entity_type)">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                                <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.contains[0].entity_type)">
+                                    <span class="btn btn-default btn-file">
+                                        Upload markup <input type="file" on-read-file="saveMarkupValue(lexicalEntry.client_id, lexicalEntry.object_id, field.contains[0], $fileName, $fileType, $fileContent, fieldValue.client_id, fieldValue.object_id)">
+                                    </span>
+                                </div>
+
+                            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                         </li>
                     </ul>
 
@@ -536,6 +567,7 @@
                             </div>
 
                             <div ng-if="fieldsIdx[$index].data_type == 'sound'">
+
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in field">
                                         <button type="button" class="btn btn-default btn-sm"
