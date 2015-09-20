@@ -558,9 +558,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
 
         if (removeIndex >= 0) {
-            $log.info(enabledInputs);
             enabledInputs.splice(removeIndex, 1);
-            $log.info(enabledInputs);
         }
     };
 
@@ -583,7 +581,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
     $scope.removeValue = function(clientId, objectId, entityType, value) {
-        console.log(arguments);
+
     };
 
     $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
@@ -623,9 +621,9 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         });
 
         modalInstance.result.then(function (value) {
-            $log.info(value);
+
         }, function () {
-            $log.info('Modal dismissed at: ' + new Date());
+
         });
     };
 
@@ -649,9 +647,9 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         });
 
         modalInstance.result.then(function (value) {
-            $log.info(value);
+
         }, function () {
-            $log.info('Modal dismissed at: ' + new Date());
+
         });
     };
 
@@ -1061,7 +1059,6 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
     };
 
     $scope.removeValue = function(clientId, objectId, entityType, value) {
-        console.log(arguments);
     };
 
     $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
@@ -1149,15 +1146,13 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
 
     $scope.$watch('entry', function (updatedEntry) {
         $scope.mapFieldValues([updatedEntry], $scope.fields);
-        $log.info('NEW!');
-        $log.info($scope.fieldsValues);
     }, true);
 
 }]);
 
 
 
-app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance', '$log', 'groupParams', function($scope, $http, $modalInstance, $log, groupParams) {
+app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'groupParams', function($scope, $http, $modalInstance, $q, $log, groupParams) {
 
     var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
     var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
@@ -1170,6 +1165,7 @@ app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance'
 
     $scope.fields = groupParams.fields;
     $scope.connectedEntries = [];
+    $scope.suggestedEntries = [];
 
 
     $scope.searchQuery = '';
@@ -1186,8 +1182,6 @@ app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance'
 
         var result = [];
         $scope.fieldsValues = [];
-        $scope.fieldsIdx = [];
-
         for (var i = 0; i < allEntries.length; i++) {
             var entryRow = [];
             for (var j = 0; j < allFields.length; j++) {
@@ -1228,6 +1222,15 @@ app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance'
         return values;
     };
 
+    $scope.linkEntry = function(index) {
+        $scope.connectedEntries.push($scope.suggestedEntries[index]);
+    };
+
+
+    $scope.unlinkEntry = function(index) {
+        $scope.connectedEntries.splice(index);
+    };
+
 
     $scope.ok = function () {
         $modalInstance.close();
@@ -1248,6 +1251,45 @@ app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance'
 
 
     $scope.$watch('searchQuery', function (updatedQuery) {
+
+        if (!updatedQuery || updatedQuery.length < 3) {
+            return;
+        }
+
+        var url = '/basic_search?leveloneentity=' + encodeURIComponent(updatedQuery);
+        $http.get(url).success(function(data, status, headers, config) {
+            $scope.suggestedEntries = [];
+
+            var urls = [];
+            for (var i = 0; i < data.length; i++) {
+                var entr = data[i];
+                var getEntryUrl = '/dictionary/' + encodeURIComponent(entr.origin_dictionary_client_id) +'/'+ encodeURIComponent(entr.origin_dictionary_object_id) + '/perspective/' + encodeURIComponent(entr.origin_perspective_client_id) +  '/' + encodeURIComponent(entr.origin_perspective_object_id) + '/lexical_entry/' + encodeURIComponent(entr.client_id) + '/' + encodeURIComponent(entr.object_id);
+                urls.push(getEntryUrl);
+            }
+
+            var uniqueUrls = urls.filter(function(item, pos) {
+                return urls.indexOf(item) == pos;
+            });
+
+            var requests = [];
+            for (var j = 0; j < uniqueUrls.length; j++) {
+                var r = $http.get(uniqueUrls[j]);
+                requests.push(r);
+            }
+
+            $q.all(requests).then(function(results) {
+                for (var k = 0; k < results.length; k++) {
+                    if (results[k].data) {
+                        $scope.suggestedEntries.push(results[k].data.lexical_entry);
+                    }
+                }
+            });
+
+
+
+        }).error(function(data, status, headers, config) {
+
+        });
 
     }, true);
 
