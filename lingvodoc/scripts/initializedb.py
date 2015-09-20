@@ -271,17 +271,21 @@ def main(argv=sys.argv):
                                                                #object_id=7,
                                                                client_id=client.id,
                                                                entity_type="Paradigm transcription", data_type="text",
-                                                               level="leveloneentity", position=7,
+                                                               level="leveloneentity",
+                                                               group="Paradigm",
+                                                               position=7,
                                                                state="enabled")
         paradigm_translation_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                              #object_id=8,
                                                              client_id=client.id,
                                                              entity_type="Paradigm translation", data_type="text",
+                                                             group="Paradigm",
                                                              level="leveloneentity", position=8,
                                                              state="enabled")
         paradigm_sound_ld = DictionaryPerspectiveField(parent_object_id=dialeqt_template.object_id, parent_client_id=dialeqt_template.client_id,
                                                        #object_id=9,
                                                        client_id=client.id,
+                                                       group="Paradigm",
                                                        entity_type="Paradigm sound", data_type="sound", level="leveloneentity",
                                                        position=9,
                                                        state="enabled")
@@ -293,6 +297,7 @@ def main(argv=sys.argv):
                                                        entity_object_id=paradigm_sound_ld.object_id, entity_client_id=paradigm_sound_ld.client_id,
                                                        #object_id=10,
                                                        client_id=client.id,
+                                                       group="Paradigm",
                                                        entity_type="Paradigm Praat markup", data_type="markup",
                                                        level="leveltwoentity", position=10,
                                                        state="enabled")
