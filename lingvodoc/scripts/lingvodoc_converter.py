@@ -205,6 +205,24 @@ def convert_db(sqconn, session, args):
 import requests
 import json
 
+
+def create_entity_list(ids_mapping, cursor, count, level, data_type, entity_type, locale_id=1):
+    push_list = []
+    for ld_cursor in cursor:
+        ld_id = ld_cursor[0]
+        content = ld_cursor[1]
+        parent_client_id = ids_mapping[ld_id][0]
+        parent_object_id = ids_mapping[ld_id][1]
+        element = {"locale_id": locale_id,
+                   "level": level,
+                   "data_type": data_type,
+                   "entity_type": entity_type,
+                   "parent_client_id": parent_client_id,
+                   "parent_object_id": parent_object_id,
+                   "content": content}
+        push_list.append(element)
+    return push_list
+
 def convert_db_new(sqconn, session, language_client_id, language_object_id):
     dict_attributes = get_dict_attributes(sqconn)
     create_dictionary_request = {"parent_client_id": language_client_id,
@@ -227,15 +245,37 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
 
     get_all_ids = sqconn.cursor()
     get_all_ids.execute("select id from dictionary")
+
+    create_lexical_entries_url = perspective_create_url + '/%s/%s/lexical_entries' % (perspective['client_id'], perspective['object_id'])
+    count_cursor = sqconn.cursor()
+    count_cursor.execute("select count(*) from dictionary")
+    words_count = count_cursor.fetchone()[0]
+    print(words_count)
+    lexical_entries_create_request = json.dumps({"count": words_count+1})
+    status = session.post(create_lexical_entries_url, lexical_entries_create_request)
+    ids_dict = json.loads(status.text)
+
     ids_mapping = dict()
-    for cursor in get_all_ids:
-        create_lexical_entry_url = perspective_create_url + '/%s/%s/lexical_entry' % (perspective['client_id'], perspective['object_id'])
-        status = session.post(create_lexical_entry_url)
-        print(status.text)
-        ids_dict = json.loads(status.text)
-        client_id = ids_dict['client_id']
-        object_id = ids_dict['object_id']
-        ids_mapping[cursor[0]] = (client_id, object_id)
+    i = 0
+    for id_cursor in get_all_ids:
+        id = id_cursor[0]
+        print(i)
+        client_id = ids_dict[i]['client_id']
+        object_id = ids_dict[i]['object_id']
+        ids_mapping[id] = (client_id, object_id)
+        i += 1
+
+    print(len(ids_mapping))
+    print(words_count)
+    print(i)
+
+    word_cursor = sqconn.cursor()
+    word_cursor.execute("select id, word from dictionary")
+
+    create_entities_url = 'http://localhost:6543/dictionary/1/1/perspective/1/1/entities'
+    push_list = create_entity_list(ids_mapping, word_cursor, words_count, 'leveloneentity', 'text', 'Word')
+    status = session.post(create_entities_url, push_list)
+    print(status.text)
 
     return dictionary
 

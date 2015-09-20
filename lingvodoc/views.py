@@ -1508,6 +1508,75 @@ def create_l1_entity(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
+@view_config(route_name='create_entities_bulk', renderer='json', request_method='POST', permission='create')
+def create_entities_bulk(request):
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        response = dict()
+        req = request.json_body
+
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        inserted_items = []
+        for item in req:
+            if item['level'] == 'leveloneentity':
+                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id'])
+                entity = LevelOneEntity(client_id=client.id,
+                                        object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
+                                        entity_type=item['entity_type'],
+                                        locale_id=item['locale_id'],
+                                        metadata="",
+                                        parent=parent)
+            elif item['level'] == 'groupingentity':
+                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id'])
+                entity = GroupingEntity(client_id=client.id,
+                                        object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
+                                        entity_type=item['entity_type'],
+                                        locale_id=item['locale_id'],
+                                        metadata="",
+                                        parent=parent)
+            elif item['level'] == 'leveltwoentity':
+                parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id'])
+                entity = LevelTwoEntity(client_id=client.id,
+                                        object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
+                                        entity_type=item['entity_type'],
+                                        locale_id=item['locale_id'],
+                                        metadata="",
+                                        parent=parent)
+            DBSession.add(entity)
+            DBSession.flush()
+            data_type = item.get('data_type')
+            filename = item.get('filename')
+            real_location = None
+            url = None
+            if data_type == 'sound':
+                real_location, url = create_object(request, req['content'], entity, data_type, filename)
+
+            if url and real_location:
+                entity.content = url
+            else:
+                entity.content = req['content']
+            DBSession.add(entity)
+            inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
+        request.response.status = HTTPOk.code
+        return inserted_items
+    #    except KeyError as e:
+    #        request.response.status = HTTPBadRequest.code
+    #        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
 
 @view_config(route_name='get_level_one_entity_indict', renderer='json', request_method='GET', permission='view')
 @view_config(route_name='get_level_one_entity', renderer='json', request_method='GET', permission='view')
@@ -1766,6 +1835,56 @@ def create_lexical_entry(request):
         request.response.status = HTTPOk.code
         return {'object_id': lexentr.object_id,
                 'client_id': lexentr.client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+@view_config(route_name='create_lexical_entry_bulk', renderer='json', request_method='POST', permission='create')
+def create_lexical_entry_bulk(request):
+    try:
+        dictionary_client_id = request.matchdict.get('dictionary_client_id')
+        dictionary_object_id = request.matchdict.get('dictionary_object_id')
+        perspective_client_id = request.matchdict.get('perspective_client_id')
+        perspective_id = request.matchdict.get('perspective_id')
+
+        count = request.json_body.get('count')
+
+        variables = {'auth': request.authenticated_userid}
+
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        perspective = DBSession.query(DictionaryPerspective). \
+            filter_by(client_id=perspective_client_id, object_id = perspective_id).first()
+        if not perspective:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such perspective in the system")}
+
+        lexes_list = []
+        for i in range(1,count):
+            lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=variables['auth'],
+                                   parent_object_id=perspective_id, parent=perspective)
+            DBSession.add(lexentr)
+            lexes_list.append(lexentr)
+        DBSession.flush()
+        lexes_ids_list = []
+        for lexentr in lexes_list:
+            lexes_ids_list.append({'client_id': lexentr.client_id, 'object_id': lexentr.object_id})
+
+        request.response.status = HTTPOk.code
+        return lexes_ids_list
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}

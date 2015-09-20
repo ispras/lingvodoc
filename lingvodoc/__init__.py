@@ -249,7 +249,12 @@ def configure_routes(config):
     config.add_route(name='create_lexical_entry', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                           '/perspective/{perspective_client_id}/{perspective_id}/'
                                                           'lexical_entry',
-                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, not tested
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, tested
+
+    config.add_route(name='create_lexical_entry_bulk', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                               '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                               'lexical_entries',
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready
 
     # API #POST
     # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
@@ -258,7 +263,11 @@ def configure_routes(config):
                                                       '/perspective/{perspective_client_id}/{perspective_id}/'
                                                       'lexical_entry/{lexical_entry_client_id}/'
                                                       '{lexical_entry_object_id}/leveloneentity',
-                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, not tested
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, tested
+
+    config.add_route(name='create_entities_bulk', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                          '/perspective/{perspective_client_id}/{perspective_id}/entities',
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
 
     # API #POST
     # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
