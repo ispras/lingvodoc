@@ -1138,7 +1138,7 @@ def view_perspective_fields(request):
         for field in perspective.dictionaryperspectivefield:
 
             data = dict()
-            if field.level == 'L1E' or field.level == 'GE':
+            if field.level == 'leveloneentity' or field.level == 'groupingentity':
                 data['entity_type'] = find_by_translation_string(locale_id=locale_id,
                                                                  translation_string=field.entity_type)
 
@@ -1243,7 +1243,7 @@ def create_perspective_fields(request):
                                                         client_id=variables['auth'],
                                                         entity_type=ent['entity_type'],
                                                         data_type=ent['data_type'],
-                                                        level='L2E',
+                                                        level='leveltwoentity',
                                                         parent=perspective,
                                                         parent_entity=field,
                                                         state=entry['status'])
@@ -1287,13 +1287,13 @@ def create_perspective_fields(request):
         return {'error': str(e)}
 
 
-def object_file_path(obj, settings, create_dir=False):
+def object_file_path(obj, settings, data_type, extension=None, create_dir=False):
     base_path = settings['storage']['path']
-    storage_dir = os.path.join(base_path, obj.data_type, str(obj.client_id), str(obj.id))
+    storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
     if create_dir:
         os.makedirs(storage_dir, exist_ok=True)
-    if 'extension' in obj:
-        storage_path = os.path.join(storage_dir, "content." + obj['extension'])
+    if extension:
+        storage_path = os.path.join(storage_dir, "content." + extension)
     else:
         storage_path = os.path.join(storage_dir, "content.noext")
     return storage_path
@@ -1319,7 +1319,7 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
 
 # Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
 # it's uploaded via multipart form, it's just saved as-is.
-def create_object(request, content, obj, json_input=True):
+def create_object(request, content, obj, data_type, json_input=True):
     # here will be object storage write as an option. Fallback (default) is filesystem write
     settings = request.registry.settings
     storage = settings['storage']
@@ -1330,7 +1330,7 @@ def create_object(request, content, obj, json_input=True):
         filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
         real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
     else:
-        storage_path = object_file_path(obj, settings, True)
+        storage_path = object_file_path(obj, settings, data_type, None, True)
 
         f = open(storage_path, 'wb+')
         if json_input:
@@ -1340,7 +1340,14 @@ def create_object(request, content, obj, json_input=True):
         f.close()
         real_location = storage_path
 
-    url = request.route_path('get_user_blob', client_id=obj.client_id, object_id=obj.id)
+    url = "".join((settings['storage']['prefix'],
+                  settings['storage']['static_path'],
+                  obj.__tablename__,
+                  '/',
+                  data_type,
+                  '/',
+                  str(obj.client_id), '/',
+                  str(obj.object_id), '/'))
     return real_location, url
 
 
@@ -1366,7 +1373,7 @@ def upload_user_blob(request):
                             user_id=current_user.id)
 
     current_user.userblobs.append(blob_object)
-    blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob, json_input=False)
+    blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob, blob.data_type, json_input=False)
     DBSession.add(blob_object)
     DBSession.add(current_user)
 
@@ -1380,45 +1387,6 @@ def get_user_blob(request):
         FileResponse(blob.real_storage_path)
     else:
         raise HTTPNotFound
-
-
-@view_config(route_name='get_l1_entity', renderer='json', request_method='GET', permission='view')
-def view_l1_entity(request):
-    response = dict()
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
-    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
-    if entity:
-        if not entity.marked_for_deletion:
-
-            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                 translation_string=entity.entity_type)
-            response['parent_client_id'] = entity.parent_client_id
-            response['parent_object_id'] = entity.parent_object_id
-            response['content'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                             translation_string=entity.content)
-            response['locale_id'] = entity.locale_id
-            request.response.status = HTTPOk.code
-            return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such entity in the system")}
-
-
-@view_config(route_name='get_l1_entity', renderer='json', request_method='DELETE', permission='delete')
-def delete_l1_entity(request):
-    response = dict()
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
-
-    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
-    if entity:
-        if not entity.marked_for_deletion:
-
-            entity.marked_for_deletion = True
-            request.response.status = HTTPOk.code
-            return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such entity in the system")}
 
 
 @view_config(route_name='create_level_one_entity', renderer='json', request_method='POST', permission='create')
@@ -1441,17 +1409,28 @@ def create_l1_entity(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
         entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
-                                content=req['content'], locale_id=req['locale_id'], metadata=req['metadata'],
+                                locale_id=req['locale_id'], metadata=req.get('metadata'),
                                 parent=parent)
         DBSession.add(entity)
         DBSession.flush()
+        data_type = req.get('data_type')
+        real_location = None
+        url = None
+        if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
+            real_location, url = create_object(request, req['content'], entity, data_type)
+
+        if url and real_location:
+            entity.content = url
+        else:
+            entity.content = req['content']
+        DBSession.add(entity)
         request.response.status = HTTPOk.code
         response['client_id'] = entity.client_id
         response['object_id'] = entity.object_id
         return response
-    except KeyError as e:
-        request.response.status = HTTPBadRequest.code
-        return {'error': str(e)}
+#    except KeyError as e:
+#        request.response.status = HTTPBadRequest.code
+#        return {'error': str(e)}
 
     except IntegrityError as e:
         request.response.status = HTTPInternalServerError.code
@@ -1460,6 +1439,47 @@ def create_l1_entity(request):
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
+
+
+@view_config(route_name='get_level_one_entity_indict', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='get_level_one_entity', renderer='json', request_method='GET', permission='view')
+def view_l1_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                                 translation_string=entity.entity_type)
+            response['parent_client_id'] = entity.parent_client_id
+            response['parent_object_id'] = entity.parent_object_id
+            response['content'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                             translation_string=entity.content)
+            response['locale_id'] = entity.locale_id
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such entity in the system")}
+
+
+@view_config(route_name='get_level_one_entity_indict', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='get_level_one_entity', renderer='json', request_method='DELETE', permission='delete')
+def delete_l1_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+
+    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity:
+        if not entity.marked_for_deletion:
+
+            entity.marked_for_deletion = True
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such entity in the system")}
 
 
 @view_config(route_name='get_l2_entity', renderer='json', request_method='GET', permission='view')
@@ -1950,21 +1970,21 @@ def approve_entity(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
-            if entry['type'] == 'L1E':
+            if entry['type'] == 'leveloneentity':
                 entity = DBSession.query_property(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
                 publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
                                                    entity=entity, parent=entity.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
-            elif entry['type'] == 'L2E':
+            elif entry['type'] == 'leveltwoentity':
                 entity = DBSession.query_property(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
                 publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
                                                    entity=entity, parent=entity.parent.parent)
                 DBSession.add(publishent)
                 DBSession.flush()
-            elif entry['type'] == 'GE':
+            elif entry['type'] == 'groupingentity':
                 entity = DBSession.query_property(GroupingEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
                 publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
