@@ -365,9 +365,15 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
 
 
 
-    $scope.perspective = {
-        'fields': []
+    $scope.dictionaryView = {
+        'perspective': {
+            'fields': []
+        },
+        'dictionaryFields': []
     };
+
+
+
 
     $scope.lexicalEntries = [];
 
@@ -514,14 +520,21 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
 
 
     $scope.addNewLexicalEntry = function() {
-        $scope.lexicalEntries.unshift({
-            'client_id': -1,
-            'object_id': -1,
-            'contains': []
+
+        var createLexicalEntryUrl = $('#createLexicalEntryUrl').data('lingvodoc');
+
+        $http.post(createLexicalEntryUrl).success(function (data, status, headers, config) {
+
+            $scope.lexicalEntries.unshift({
+                'client_id': data.client_id,
+                'object_id': data.object_id,
+                'contains': []
+            });
+
+        }).error(function (data, status, headers, config) {
+            alert('Failed to create lexical entry!');
         });
     };
-
-
 
     $scope.removeValue = function(clientId, objectId, entityType, value) {
         console.log(arguments);
@@ -539,42 +552,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
 
     $scope.saveValue = function(clientId, objectId, value) {
 
-        var updateId = false;
-        var obj = {};
-        // when edit existing word, copy id and dict_id
-        if (clientId !== -1 && objectId !== -1) {
-            obj['client_id'] = metaword.client_id;
-            obj['metaword_id'] = metaword.metaword_id;
-            obj['metaword_client_id'] = metaword.metaword_client_id;
-        } else {
-            updateId = true; // update id after word is saved
-        }
-
-        if (value instanceof model.SoundValue) {
-            obj[value.type] = [];
-            obj[value.type].push({'name': value.name, 'content': value.content, 'type': value.mime});
-        } else if (value instanceof model.TextValue) {
-            obj[value.type] = [];
-            obj[value.type].push({'content': value.content});
-        } else {
-            console.error('Value type is not supported!');
-            return;
-        }
-
-        var url = $('#getMetaWordsUrl').data('lingvodoc');
-        $http.post(url, obj).success(function(data, status, headers, config) {
-
-            if (updateId) {
-                metaword.client_id = data.client_id;
-                metaword.metaword_id = data.metaword_id;
-                metaword.metaword_client_id = data.metaword_client_id;
-            }
-            metaword[value.type] = data[value.type];
-
-            $scope.disableInput(metaword, value.type);
-
-        }).error(function(data, status, headers, config) {
-        });
     };
 
 
@@ -606,12 +583,51 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', functio
         });
     };
 
+    var perspectiveToDictionaryFields = function(perspective) {
+        var fields = [];
+        for (var i = 0; i < perspective.fields.length; i++) {
+            var field = perspective.fields[i];
+            if (typeof field.group == 'string') {
+
+                var createNewGroup = true;
+                for (var j = 0; j < fields.length; j++) {
+                    if (fields[j].group == field.group && fields[j].isGroup) {
+                        fields[j].contains.push(field);
+                        createNewGroup = false;
+                        break;
+                    }
+                }
+
+                if (createNewGroup) {
+                    fields.push({
+                        'entity_type': field.group,
+                        'isGroup': true,
+                        'contains': [field]
+                    });
+                }
+
+            } else {
+                fields.push(field);
+            }
+        }
+
+        console.log(fields);
+
+        return fields;
+    };
+
 
     var getPerspective = function() {
         var getFieldsUrl = $('#getPerspectiveFieldsUrl').data('lingvodoc');
         $http.get(getFieldsUrl).success(function(data, status, headers, config) {
 
-            $scope.perspective['fields'] = data.fields;
+            $scope.dictionaryView.perspective['fields'] = data.fields;
+
+            $scope.dictionaryView.dictionaryFields = perspectiveToDictionaryFields($scope.dictionaryView.perspective);
+
+            console.log(data.fields);
+
+
 
             }).error(function(data, status, headers, config) {
             $log.error('Failed to load perspective!');
