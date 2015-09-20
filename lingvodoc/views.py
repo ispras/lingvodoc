@@ -1380,15 +1380,27 @@ def upload_user_blob(request):
     DBSession.add(current_user)
 
 
-@view_config(route_name='get_user_blob', request_method='GET')
-def get_user_blob(request):
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
-    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
-    if blob:
-        FileResponse(blob.real_storage_path)
-    else:
-        raise HTTPNotFound
+# seems to be redundant
+# @view_config(route_name='get_user_blob', request_method='GET')
+# def get_user_blob(request):
+#     client_id = request.matchdict.get('client_id')
+#     object_id = request.matchdict.get('object_id')
+#     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+#     if blob:
+#         FileResponse(blob.real_storage_path)
+#     else:
+#         raise HTTPNotFound
+
+@view_config(route_name='list_user_blobs', renderer='json', request_method='GET')
+def list_user_blobs(request):
+    variables = {'auth': authenticated_userid(request)}
+#    user_client_ids = [cl_id.id for cl_id in DBSession.query(Client).filter_by(id=variables['auth']).all()]
+#    user_blobs = DBSession.query(UserBlobs).filter_by(client_id.in_(user_client_ids)).all()
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
+    return [{'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+             'client_id': blob.client_id, 'object_id': blob_object_id} for blob in user_blobs]
+
 
 
 @view_config(route_name='create_level_one_entity', renderer='json', request_method='POST', permission='create')
