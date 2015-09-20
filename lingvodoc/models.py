@@ -70,7 +70,15 @@ def recursive_content(self):
             if i.direction.name == "ONETOMANY":
                 x = getattr(self, str(entry))
                 for xx in x:
-                    vec += [{'name': xx.__tablename__, 'content': xx.content}]
+                    vec += [{'name': xx.__tablename__,
+                             'content': xx.content,
+                             'object_id': xx.object_id,
+                             'client_id': xx.client_id,
+                             'parent_object_id': xx.parent_object_id,
+                             'parent_client_id': xx.parent_client_id,
+                             'entity_type': xx.entity_type,
+                             'marked_for_deletion': xx.marked_for_deletion,
+                             'locale_id': xx.locale_id}]
                     vec += recursive_content(xx)
     return vec
 

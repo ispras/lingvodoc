@@ -223,20 +223,20 @@ def configure_routes(config):
     # API #POST
     # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
     # ids are returned
-    config.add_route(name='create_entity_level_one', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
-                                                   'lexical_entry/{lexical_entry_client_id>}'
-                                                   '{lexical_entry_object_id}',
+    config.add_route(name='create_level_one_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                      '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                      'lexical_entry/{lexical_entry_client_id}/'
+                                                      '{lexical_entry_object_id}/leveloneentity',
                      factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, not tested
 
     # API #POST
     # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
     # ids are returned
-    config.add_route(name='create_entity_level_two', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+    config.add_route(name='create_level_two_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                    '/perspective/{perspective_client_id}/{perspective_id}/'
                                                    'lexical_entry/{lexical_entry_client_id}/'
-                                                   '{lexical_entry_object_id}/{level_one_client_id}/'
-                                                   '{level_one_object_id}',
+                                                   '{lexical_entry_object_id}/leveloneentity/{level_one_client_id}/'
+                                                   '{level_one_object_id}/leveltwoentity',
                      factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # ready, not tested
 
     # API #GET
@@ -254,8 +254,7 @@ def configure_routes(config):
     config.add_route(name='lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}')  # ready, not tested
     config.add_route(name='lexical_entry_in_perspective', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
-                                                                  'lexical_entry/{lexical_entry_client_id}/'
-                                                                  '{lexical_entry_object_id}')
+                                                                  'lexical_entry/{client_id}/{object_id}')
     # API #PATCH
     # Publishers view: this can approve word versions.
     # [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>, "enabled": <boolean>}, ]

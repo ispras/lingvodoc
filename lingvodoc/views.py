@@ -1421,7 +1421,7 @@ def delete_l1_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='create_entity_level_one', renderer='json', request_method='POST', permission='create')
+@view_config(route_name='create_level_one_entity', renderer='json', request_method='POST', permission='create')
 def create_l1_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1502,7 +1502,7 @@ def delete_l2_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='create_entity_level_two', renderer='json', request_method='POST', permission='create')
+@view_config(route_name='create_level_two_entity', renderer='json', request_method='POST', permission='create')
 def create_l2_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -1839,47 +1839,55 @@ def view_lexical_entry(request):
     if entry:
         if not entry.marked_for_deletion:
             if entry.moved_to:
-                response['moved_to'] = entry.moved_to
+                url = request.route_url('lexical_entry',
+                                        client_id=entry.moved_to.split("/")[0],
+                                        object_id=entry.moved_to.split("/")[1])
+                subreq = Request.blank(url)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                return request.invoke_subrequest(subreq)
             else:
-                content = dict()
-                lev_one = entry.publishleveloneentity
-                group = entry.publishgroupingentity
-                lev_two_publ = entry.publishleveltwoentity
-                for ent in lev_one:
-                    enti = ent.entry
-                    content2 = dict()
-                    content2['level'] = enti.level
-                    content2['entity_type'] = enti.entity_type
-                    content2['data_type'] = enti.data_type
-                    content2['content'] = enti.content
-                    content2['client_id'] = enti.client_id
-                    content2['object_id'] = enti.object_id
-                    lev_two = enti.leveltwoentity
-                    if lev_two:
-                        contains = []
-                        for entit in lev_two:
-                            if entit in lev_two_publ:
-                                content3 = dict()
-                                content3['level'] = entit.level
-                                content3['entity_type'] = entit.entity_type
-                                content3['data_type'] = entit.data_type
-                                content3['client_id'] = entit.client_id
-                                content3['object_id'] = entit.object_id
-                                content3['content'] = entit.content
-                                contains += [content3]
-                        if contains:
-                            content2['contains'] = contains
-                    content += [content2]
-                for ent in group:
-                    enti = ent.entry
-                    content2 = dict()
-                    content2['level'] = enti.level
-                    content2['entity_type'] = enti.entity_type
-                    content2['data_type'] = enti.data_type
-                    content2['client_id'] = enti.client_id
-                    content2['object_id'] = enti.object_id
-                    content += [content2]
-                response['content'] = content
+                response['lexical_entry'] = entry.track()
+
+                # content = dict()
+                # lev_one = entry.publishleveloneentity
+                # group = entry.publishgroupingentity
+                # lev_two_publ = entry.publishleveltwoentity
+                # for ent in lev_one:
+                #     enti = ent.entry
+                #     content2 = dict()
+                #     content2['level'] = enti.level
+                #     content2['entity_type'] = enti.entity_type
+                #     content2['data_type'] = enti.data_type
+                #     content2['content'] = enti.content
+                #     content2['client_id'] = enti.client_id
+                #     content2['object_id'] = enti.object_id
+                #     lev_two = enti.leveltwoentity
+                #     if lev_two:
+                #         contains = []
+                #         for entit in lev_two:
+                #             if entit in lev_two_publ:
+                #                 content3 = dict()
+                #                 content3['level'] = entit.level
+                #                 content3['entity_type'] = entit.entity_type
+                #                 content3['data_type'] = entit.data_type
+                #                 content3['client_id'] = entit.client_id
+                #                 content3['object_id'] = entit.object_id
+                #                 content3['content'] = entit.content
+                #                 contains += [content3]
+                #         if contains:
+                #             content2['contains'] = contains
+                #     content += [content2]
+                # for ent in group:
+                #     enti = ent.entry
+                #     content2 = dict()
+                #     content2['level'] = enti.level
+                #     content2['entity_type'] = enti.entity_type
+                #     content2['data_type'] = enti.data_type
+                #     content2['client_id'] = enti.client_id
+                #     content2['object_id'] = enti.object_id
+                #     content += [content2]
+                # response['content'] = content
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
