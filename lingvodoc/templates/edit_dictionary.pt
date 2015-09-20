@@ -178,23 +178,18 @@
 
                 </div>
 
-                <div ng-if="field.data_type == 'group'">
+                <div ng-if="field.isGroup">
                     <ul class="entries_list">
                         <li ng-repeat="fieldValue in fieldValues">
-                            {{ fieldValue.content }}
+                            <button type="button" class="btn btn-default btn-sm" ng-click="viewGroup(fieldValue)">
+                                <span class="glyphicon glyphicon-list">View</span>
+                            </button>
                         </li>
                     </ul>
 
-
-                    <button type="button" class="btn btn-default btn-sm" ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                    <button type="button" class="btn btn-default btn-sm" ng-click="addGroup(lexicalEntry.client_id, lexicalEntry.object_id, field)">
                         <span class="glyphicon glyphicon-plus"></span>
                     </button>
-
-                    <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
-                        <span class="btn btn-default btn-file">
-                            Upload <input type="file" on-read-file="saveGroupValue(lexicalEntry.client_id, lexicalEntry.object_id, field)">
-                        </span>
-                    </div>
 
                 </div>
 

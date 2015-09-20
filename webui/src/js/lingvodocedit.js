@@ -588,6 +588,17 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
 
+    $scope.addGroup = function(clientId, objectId, field) {
+
+
+
+
+
+
+    };
+
+
+
     $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
 
         var url;
@@ -651,10 +662,11 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
                                 break;
                             }
-
-                            // and finally close input
-                            $scope.disableInput(clientId, objectId, field.entity_type);
                         }
+
+                        // and finally close input
+                        $scope.disableInput(clientId, objectId, field.entity_type);
+
                     }).error(function(data, status, headers, config) {
 
                     });
