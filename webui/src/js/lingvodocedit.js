@@ -411,18 +411,33 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
 
     $scope.getFieldValues = function(entry, field) {
+
+        var value;
         var values = [];
         if (entry && entry.contains) {
 
-            for (var i = 0; i < entry.contains.length; i++) {
-                var value = entry.contains[i];
-                if (value.entity_type == field.entity_type) {
-                    values.push(value);
+            if (field.isGroup) {
+
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
                 }
             }
         }
         return values;
-
     };
 
 
@@ -588,13 +603,30 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
 
-    $scope.addGroup = function(clientId, objectId, field) {
+    $scope.editGroup = function(clientId, objectId, field, values) {
 
+        var modalInstance = $modal.open({
+            animation: true,
+            templateUrl: 'createGroupModal.html',
+            controller: 'createGroupController',
+            size: 'lg',
+            resolve: {
+                'groupParams': function() {
+                    return {
+                        'clientId': clientId,
+                        'objectId': objectId,
+                        'field': field,
+                        'values': values
+                    };
+                }
+            }
+        });
 
-
-
-
-
+        modalInstance.result.then(function (value) {
+            $log.info(value);
+        }, function () {
+            $log.info('Modal dismissed at: ' + new Date());
+        });
     };
 
 
@@ -893,3 +925,215 @@ app.controller('AnnotationController',
         });
 
     }]);
+
+
+app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$log', 'groupParams', function($scope, $http, $modalInstance, $log, groupParams) {
+
+    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
+    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
+    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
+    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
+
+    WaveSurferController.call(this, $scope);
+
+    $scope.fields = groupParams.field.contains;
+    $scope.entry = {
+        'client_id': groupParams.clientId,
+        'object_id': groupParams.objectId,
+        'contains': groupParams.values
+    };
+    $scope.title = groupParams.field.entity_type;
+
+    var enabledInputs = [];
+    
+    //$scope.fieldsValuesMap = [];
+    //$scope.mapFieldValues = function(allEntries, allFields) {
+    //    $scope.fieldValues = [];
+    //    for (var j = 0; j < allFields.length; j++) {
+    //        for (var i = 0; i < allEntries.length; i++) {
+    //            var entry = {
+    //                'field': allFields[j],
+    //                'values': $scope.getFieldValues(allEntries[i], allFields[j])
+    //            };
+    //
+    //
+    //
+    //        }
+    //    }
+    //};
+
+    $scope.getFieldValues = function(entry, field) {
+
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+
+            if (field.isGroup) {
+
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+
+
+    $scope.enableInput = function(clientId, objectId, entityType) {
+        if (!$scope.isInputEnabled(clientId, objectId, entityType)) {
+            enabledInputs.push({
+                'clientId': clientId,
+                'objectId': objectId,
+                'entityType': entityType
+            });
+        }
+    };
+
+    $scope.isInputEnabled = function(clientId, objectId, entityType) {
+        for (var i = 0; i < enabledInputs.length; i++) {
+            var checkItem = enabledInputs[i];
+            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    $scope.disableInput = function(clientId, objectId, entityType) {
+
+        var removeIndex = -1;
+        for (var i = 0; i < enabledInputs.length; i++) {
+            var checkItem = enabledInputs[i];
+            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
+                removeIndex = i;
+                break;
+            }
+        }
+
+        if (removeIndex >= 0) {
+            enabledInputs.splice(removeIndex, 1);
+        }
+    };
+
+
+
+    $log.info($scope.entry);
+
+    $scope.removeValue = function(clientId, objectId, entityType, value) {
+        console.log(arguments);
+    };
+
+    $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
+        if (event.target.value) {
+            $scope.saveValue(clientId, objectId, field, new model.TextValue(event.target.value), parentClientId, parentObjectId);
+        }
+    };
+
+    $scope.saveSoundValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+        var value = new model.SoundValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+    };
+
+    $scope.saveImageValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+        var value = new model.ImageValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+    };
+
+    $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
+
+        var url;
+        if (field.level) {
+            switch (field.level) {
+                case  'leveloneentity':
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity';
+                    break;
+                case 'leveltwoentity':
+                    if (parentClientId && parentObjectId) {
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity/' + encodeURIComponent(parentClientId) + '/' + encodeURIComponent(parentObjectId) + '/leveltwoentity';
+                    } else {
+                        $log.error('Attempting to create Level2 entry with no Level1 entry.');
+                        return;
+                    }
+                    break;
+                case 'groupingentity':
+                    return;
+                    break;
+            }
+
+            var entryObject = value.export();
+
+            // TODO: get locale_id from cookies
+            entryObject['entity_type'] = field.entity_type;
+            entryObject['locale_id'] = 1;
+            entryObject['metadata'] = {};
+
+            if (field.group) {
+                entryObject['group'] = field.group;
+            }
+
+
+            $http.post(url, entryObject).success(function(data, status, headers, config) {
+
+                if (data.client_id && data.object_id) {
+
+                    entryObject.client_id = data.client_id;
+                    entryObject.object_id = data.object_id;
+
+                    var getSavedEntityUrl = '/leveloneentity/' + data.client_id + '/' + data.object_id;
+                    $http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
+
+                        $scope.$$postDigest(function () {
+                            //$scope.entry = {
+                            //    'client_id': groupParams.clientId,
+                            //    'object_id': groupParams.objectId,
+                            //    'contains': groupParams.values
+                            //};
+                            //$scope.entry.contains.push(data);
+
+                            $scope.entry = {
+                            };
+
+
+                            $scope.$apply();
+                        });
+
+                        // and finally close input
+                        $scope.disableInput(clientId, objectId, field.entity_type);
+
+                    }).error(function(data, status, headers, config) {
+
+                    });
+                }
+
+            }).error(function(data, status, headers, config) {
+
+            });
+        }
+    };
+
+    $scope.ok = function () {
+        $modalInstance.close({'test': 'pass'});
+    };
+
+    $scope.cancel = function () {
+        $modalInstance.dismiss('cancel');
+    };
+
+
+}]);
+
+

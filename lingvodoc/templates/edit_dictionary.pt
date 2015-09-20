@@ -179,21 +179,15 @@
                 </div>
 
                 <div ng-if="field.isGroup">
-                    <ul class="entries_list">
-                        <li ng-repeat="fieldValue in fieldValues">
-                            <button type="button" class="btn btn-default btn-sm" ng-click="viewGroup(fieldValue)">
-                                <span class="glyphicon glyphicon-list">View</span>
-                            </button>
-                        </li>
-                    </ul>
+                    <div ng-if="field.isGroup">
 
-                    <button type="button" class="btn btn-default btn-sm" ng-click="addGroup(lexicalEntry.client_id, lexicalEntry.object_id, field)">
-                        <span class="glyphicon glyphicon-plus"></span>
-                    </button>
+                        <button type="button" class="btn btn-default btn-sm" ng-click="editGroup(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)">
+                            <span class="glyphicon glyphicon-list">Edit</span>
+                        </button>
+
+                    </div>
 
                 </div>
-
-
 
                 <div ng-if="field.data_type == 'grouping_tag'">
 
@@ -463,6 +457,154 @@
             </div>
         </div>
     </div>
+</script>
+
+
+<script type="text/ng-template" id="createGroupModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <div class="row" style="margin: 30px 0">
+            <div class="col-sm-10">
+                <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
+            </div>
+
+            <div class="col-sm-2">
+                <button ng-class="{disabled: !isMediaFileAvailable()}" class="btn btn-success btn-block"
+                        ng-click="playPause()">
+                    <span id="play" ng-show="paused">
+                        <i class="glyphicon glyphicon-play"></i>
+                        Play
+                    </span>
+
+                    <span id="pause" ng-show="!paused">
+                        <i class="glyphicon glyphicon-pause"></i>
+                        Pause
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 ">
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                        <td> <!-- action --> </td>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr>
+
+                        <td ng-repeat="field in fields" ng-init="fieldValues=getFieldValues(entry, field)">
+
+                            <div ng-if="field.data_type == 'text'" >
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in fieldValues">
+                                        {{ fieldValue.content }}
+                                    </li>
+                                </ul>
+
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="enableInput(entry.client_id, entry.object_id, field.entity_type)">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                                <br>
+
+                                <div ng-if="isInputEnabled(entry.client_id, entry.object_id, field.entity_type)">
+                                    <input type="text" value="" placeholder="" ng-blur="saveTextValue(entry.client_id, entry.object_id, field, $event)">
+                                </div>
+
+                            </div>
+
+
+                            <div ng-if="field.data_type == 'image'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in fieldValues">
+                                        {{ fieldValue.content }}
+                                    </li>
+                                </ul>
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="enableInput(entry.client_id, entry.object_id, field.entity_type)">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                                <div ng-if="isInputEnabled(entry.client_id, entry.object_id, field.entity_type)">
+                        <span class="btn btn-default btn-file">
+                            Upload <input type="file" on-read-file="saveImageValue(entry.client_id, entry.object_id, field, $fileName, $fileType, $fileContent)">
+                        </span>
+                                </div>
+
+                            </div>
+
+                            <div ng-if="field.data_type == 'sound'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in fieldValues">
+                                        <button type="button" class="btn btn-default btn-sm" ng-click="play(fieldValue.content)">
+                                            <span class="glyphicon glyphicon-play">Play</span>
+                                        </button>
+                                    </li>
+                                </ul>
+
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="enableInput(entry.client_id, entry.object_id, field.entity_type)">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                                <div ng-if="isInputEnabled(entry.client_id, entry.object_id, field.entity_type)">
+                        <span class="btn btn-default btn-file">
+                            Upload <input type="file" on-read-file="saveSoundValue(entry.client_id, entry.object_id, field, $fileName, $fileType, $fileContent)">
+                        </span>
+                                </div>
+
+                            </div>
+
+                            <div ng-if="field.isGroup">
+
+                                <button type="button" class="btn btn-default btn-sm" ng-if="fieldValues.length == 0" ng-click="viewGroup(fieldValues)">
+                                    <span class="glyphicon glyphicon-list">View</span>
+                                </button>
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="addGroup(entry.client_id, entry.object_id, fieldValues)">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                            </div>
+
+
+
+                            <div ng-if="field.data_type == 'grouping_tag'">
+
+                            </div>
+
+                        </td>
+
+                        <td> <!-- action --> </td>
+
+                    </tr>
+
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+
 </script>
 
 
