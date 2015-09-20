@@ -934,7 +934,11 @@ app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$
     var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
     var perspectiveId  = $('#perspectiveId').data('lingvodoc');
 
+    var enabledInputs = [];
+
     WaveSurferController.call(this, $scope);
+
+    $scope.title = groupParams.field.entity_type;
 
     $scope.fields = groupParams.field.contains;
     $scope.entry = {
@@ -942,25 +946,26 @@ app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$
         'object_id': groupParams.objectId,
         'contains': groupParams.values
     };
-    $scope.title = groupParams.field.entity_type;
 
-    var enabledInputs = [];
-    
-    //$scope.fieldsValuesMap = [];
-    //$scope.mapFieldValues = function(allEntries, allFields) {
-    //    $scope.fieldValues = [];
-    //    for (var j = 0; j < allFields.length; j++) {
-    //        for (var i = 0; i < allEntries.length; i++) {
-    //            var entry = {
-    //                'field': allFields[j],
-    //                'values': $scope.getFieldValues(allEntries[i], allFields[j])
-    //            };
-    //
-    //
-    //
-    //        }
-    //    }
-    //};
+
+    $scope.fieldsIdx = [];
+    $scope.fieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+        $scope.fieldsValues = [];
+        $scope.fieldsIdx = [];
+
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            $scope.fieldsValues.push(entryRow);
+        }
+
+        for (var k = 0; k < allFields.length; k++) {
+            $scope.fieldsIdx.push(allFields[k]);
+        }
+    };
 
     $scope.getFieldValues = function(entry, field) {
 
@@ -1029,10 +1034,6 @@ app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$
         }
     };
 
-
-
-    $log.info($scope.entry);
-
     $scope.removeValue = function(clientId, objectId, entityType, value) {
         console.log(arguments);
     };
@@ -1085,7 +1086,6 @@ app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$
                 entryObject['group'] = field.group;
             }
 
-
             $http.post(url, entryObject).success(function(data, status, headers, config) {
 
                 if (data.client_id && data.object_id) {
@@ -1096,20 +1096,7 @@ app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$
                     var getSavedEntityUrl = '/leveloneentity/' + data.client_id + '/' + data.object_id;
                     $http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
 
-                        $scope.$$postDigest(function () {
-                            //$scope.entry = {
-                            //    'client_id': groupParams.clientId,
-                            //    'object_id': groupParams.objectId,
-                            //    'contains': groupParams.values
-                            //};
-                            //$scope.entry.contains.push(data);
-
-                            $scope.entry = {
-                            };
-
-
-                            $scope.$apply();
-                        });
+                        $scope.entry.contains.push(data);
 
                         // and finally close input
                         $scope.disableInput(clientId, objectId, field.entity_type);
@@ -1126,13 +1113,19 @@ app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$
     };
 
     $scope.ok = function () {
-        $modalInstance.close({'test': 'pass'});
+        $modalInstance.close();
     };
 
     $scope.cancel = function () {
         $modalInstance.dismiss('cancel');
     };
 
+
+    $scope.$watch('entry', function (updatedEntry) {
+        $scope.mapFieldValues([updatedEntry], $scope.fields);
+        $log.info('NEW!');
+        $log.info($scope.fieldsValues);
+    }, true);
 
 }]);
 
