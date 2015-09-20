@@ -543,7 +543,9 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
 
         if (removeIndex >= 0) {
+            $log.info(enabledInputs);
             enabledInputs.splice(removeIndex, 1);
+            $log.info(enabledInputs);
         }
     };
 
