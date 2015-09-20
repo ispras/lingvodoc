@@ -607,8 +607,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
         var modalInstance = $modal.open({
             animation: true,
-            templateUrl: 'createGroupModal.html',
-            controller: 'createGroupController',
+            templateUrl: 'editGroupModal.html',
+            controller: 'editGroupController',
             size: 'lg',
             resolve: {
                 'groupParams': function() {
@@ -617,6 +617,32 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                         'objectId': objectId,
                         'field': field,
                         'values': values
+                    };
+                }
+            }
+        });
+
+        modalInstance.result.then(function (value) {
+            $log.info(value);
+        }, function () {
+            $log.info('Modal dismissed at: ' + new Date());
+        });
+    };
+
+
+    $scope.editGroupingTag = function(clientId, objectId, field, values) {
+
+        var modalInstance = $modal.open({
+            animation: true,
+            templateUrl: 'editGroupingTagModal.html',
+            controller: 'editGroupingTagController',
+            size: 'lg',
+            resolve: {
+                'groupParams': function() {
+                    return {
+                        'clientId': clientId,
+                        'objectId': objectId,
+                        'fields': $scope.dictionaryView.dictionaryFields
                     };
                 }
             }
@@ -927,7 +953,7 @@ app.controller('AnnotationController',
     }]);
 
 
-app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$log', 'groupParams', function($scope, $http, $modalInstance, $log, groupParams) {
+app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$log', 'groupParams', function($scope, $http, $modalInstance, $log, groupParams) {
 
     var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
     var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
@@ -1126,6 +1152,119 @@ app.controller('createGroupController', ['$scope', '$http', '$modalInstance', '$
         $log.info('NEW!');
         $log.info($scope.fieldsValues);
     }, true);
+
+}]);
+
+
+
+app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance', '$log', 'groupParams', function($scope, $http, $modalInstance, $log, groupParams) {
+
+    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
+    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
+    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
+    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
+
+    var enabledInputs = [];
+
+    WaveSurferController.call(this, $scope);
+
+    $scope.fields = groupParams.fields;
+    $scope.connectedEntries = [];
+
+
+    $scope.searchQuery = '';
+
+
+    $scope.fieldsIdx = [];
+    for (var k = 0; k < $scope.fields.length; k++) {
+        $scope.fieldsIdx.push($scope.fields[k]);
+    }
+
+    $scope.fieldsValues = [];
+    $scope.suggestedFieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+
+        var result = [];
+        $scope.fieldsValues = [];
+        $scope.fieldsIdx = [];
+
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            result.push(entryRow);
+        }
+        return result;
+    };
+
+    $scope.getFieldValues = function (entry, field) {
+
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+
+            if (field.isGroup) {
+
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+
+
+    $scope.ok = function () {
+        $modalInstance.close();
+    };
+
+    $scope.cancel = function () {
+        $modalInstance.dismiss('cancel');
+    };
+
+    $scope.$watch('connectedEntries', function (updatedEntries) {
+        $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+
+
+    $scope.$watch('suggestedEntries', function (updatedEntries) {
+        $scope.suggestedFieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+
+
+    $scope.$watch('searchQuery', function (updatedQuery) {
+
+    }, true);
+
+
+    var loadConnectedWords = function() {
+        var url = '/lexical_entry/' + encodeURIComponent(groupParams.clientId) + '/' + encodeURIComponent(groupParams.objectId) + '/connected';
+        $http.get(url).success(function(data, status, headers, config) {
+
+
+
+        }).error(function(data, status, headers, config) {
+
+        });
+
+    };
+
+    loadConnectedWords();
 
 }]);
 

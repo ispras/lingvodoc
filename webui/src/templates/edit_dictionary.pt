@@ -201,7 +201,13 @@
 
                 <div ng-if="field.data_type == 'grouping_tag'">
 
+                    <button type="button" class="btn btn-default btn-sm"
+                            ng-click="editGroupingTag(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)">
+                        <span class="glyphicon glyphicon-list">Edit</span>
+                    </button>
+
                 </div>
+
 
             </td>
 
@@ -226,176 +232,6 @@
         </ul>
     </nav>
 </div>
-
-<script type="text/ng-template" id="etymologyModal.html">
-
-    <div class="modal-header">
-        <h3 class="modal-title">Этимология</h3>
-    </div>
-
-    <div class="modal-body">
-
-        <div class="row" style="margin: 30px 0">
-
-            <div class="col-sm-10">
-                <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
-            </div>
-
-            <div class="col-sm-2">
-                <button ng-class="{disabled: !isMediaFileAvailable()}" class="btn btn-success btn-block"
-                        ng-click="playPause()">
-                    <span id="play" ng-show="paused">
-                        <i class="glyphicon glyphicon-play"></i>
-                        Play
-                    </span>
-
-                    <span id="pause" ng-show="!paused">
-                        <i class="glyphicon glyphicon-pause"></i>
-                        Pause
-                    </span>
-                </button>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-12">
-
-                <table class="table table-striped table-bordered">
-                    <thead>
-                    <tr>
-                        <td>Запись слова</td>
-                        <td>Транскрипция</td>
-                        <td>Перевод</td>
-                        <td>Звук</td>
-                        <td>Словарь</td>
-                    </tr>
-                    </thead>
-
-                    <tbody>
-
-                    <tr ng-repeat="word in words">
-                        <td>
-                            <div ng-repeat="entry in word.entries">
-                                <div>{{ entry.content }}</div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div ng-repeat="transcription in word.transcriptions">
-                                <div>{{ transcription.content }}</div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div ng-repeat="translation in word.translations">
-                                <div>{{ translation.content }}</div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div ng-repeat="sound in word.sounds">
-                                <div>
-                                    <button type="button" class="btn btn-default btn-sm" ng-click="play(sound.url)">
-                                        <span class="glyphicon glyphicon-play">Воспроизвести</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div>{{ word.dictionary_name }}</div>
-                        </td>
-
-                    </tr>
-
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</script>
-
-
-<script type="text/ng-template" id="paradigmModal.html">
-
-    <div class="modal-header">
-        <h3 class="modal-title">Этимология</h3>
-    </div>
-
-    <div class="modal-body">
-
-        <div class="row" style="margin: 30px 0">
-            <div class="col-sm-10">
-                <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
-            </div>
-
-            <div class="col-sm-2">
-                <button ng-class="{disabled: !isMediaFileAvailable()}" class="btn btn-success btn-block"
-                        ng-click="playPause()">
-                    <span id="play" ng-show="paused">
-                        <i class="glyphicon glyphicon-play"></i>
-                        Play
-                    </span>
-
-                    <span id="pause" ng-show="!paused">
-                        <i class="glyphicon glyphicon-pause"></i>
-                        Pause
-                    </span>
-                </button>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-12 ">
-
-                <table class="table table-striped table-bordered">
-                    <thead>
-                    <tr>
-                        <td>Запись слова</td>
-                        <td>Транскрипция</td>
-                        <td>Перевод</td>
-                        <td>Звук</td>
-                    </tr>
-                    </thead>
-
-                    <tbody>
-
-                    <tr ng-repeat="word in words">
-                        <td>
-                            <div ng-repeat="entry in word.entries">
-                                <div>{{ entry.content }}</div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div ng-repeat="transcription in word.transcriptions">
-                                <div>{{ transcription.content }}</div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div ng-repeat="translation in word.translations">
-                                <div>{{ translation.content }}</div>
-                            </div>
-                        </td>
-
-                        <td>
-                            <div ng-repeat="sound in word.sounds">
-                                <div>
-                                    <button type="button" class="btn btn-default btn-sm" ng-click="play(sound.url)">
-                                        <span class="glyphicon glyphicon-play">Воспроизвести</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</script>
 
 
 <script type="text/ng-template" id="annotationModal.html">
@@ -470,7 +306,7 @@
 </script>
 
 
-<script type="text/ng-template" id="createGroupModal.html">
+<script type="text/ng-template" id="editGroupModal.html">
 
     <div class="modal-header">
         <h3 class="modal-title">{{ title }}</h3>
@@ -588,11 +424,6 @@
                             <div ng-if="fieldsIdx[$index].isGroup">
 
                                 <button type="button" class="btn btn-default btn-sm"
-                                        ng-if="fieldsIdx[$index].length == 0" ng-click="viewGroup(field)">
-                                    <span class="glyphicon glyphicon-list">View</span>
-                                </button>
-
-                                <button type="button" class="btn btn-default btn-sm"
                                         ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
                                     <span class="glyphicon glyphicon-plus"></span>
                                 </button>
@@ -601,6 +432,11 @@
 
 
                             <div ng-if="fieldsIdx[$index].data_type == 'grouping_tag'">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
 
                             </div>
 
@@ -613,6 +449,207 @@
                     </tbody>
 
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+
+</script>
+
+<script type="text/ng-template" id="editGroupingTagModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <div class="row" style="margin: 30px 0">
+            <div class="col-sm-10">
+                <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
+            </div>
+
+            <div class="col-sm-2">
+                <button ng-class="{disabled: !isMediaFileAvailable()}" class="btn btn-success btn-block"
+                        ng-click="playPause()">
+                    <span id="play" ng-show="paused">
+                        <i class="glyphicon glyphicon-play"></i>
+                        Play
+                    </span>
+
+                    <span id="pause" ng-show="!paused">
+                        <i class="glyphicon glyphicon-pause"></i>
+                        Pause
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 ">
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                        <td> <!-- action --> </td>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr ng-repeat="entry in fieldsValues">
+
+                        <td ng-repeat="field in fieldsValues[$index]">
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'text'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in field">
+                                        {{ fieldValue.content }}
+                                    </li>
+                                </ul>
+
+                            </div>
+
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'image'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in field">
+                                        {{ fieldValue.content }}
+                                    </li>
+                                </ul>
+
+                            </div>
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'sound'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in field">
+                                        <button type="button" class="btn btn-default btn-sm"
+                                                ng-click="play(fieldValue.content)">
+                                            <span class="glyphicon glyphicon-play">Play</span>
+                                        </button>
+                                    </li>
+                                </ul>
+
+                            </div>
+
+                            <div ng-if="fieldsIdx[$index].isGroup">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                            </div>
+
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'grouping_tag'">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                            </div>
+
+                        </td>
+
+                        <td> <!-- action --> </td>
+
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+                <hr>
+                <h2>Add connected words</h2>
+
+                <input type="text" class="form-control" ng-model="searchQuery">
+
+                <hr>
+
+
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                        <td> <!-- action --> </td>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    <tr ng-repeat="entry in suggestedFieldsValues">
+
+                        <td ng-repeat="field in suggestedFieldsValues[$index]">
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'text'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in field">
+                                        {{ fieldValue.content }}
+                                    </li>
+                                </ul>
+
+                            </div>
+
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'image'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in field">
+                                        {{ fieldValue.content }}
+                                    </li>
+                                </ul>
+
+                            </div>
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'sound'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in field">
+                                        <button type="button" class="btn btn-default btn-sm"
+                                                ng-click="play(fieldValue.content)">
+                                            <span class="glyphicon glyphicon-play">Play</span>
+                                        </button>
+                                    </li>
+                                </ul>
+
+                            </div>
+
+                            <div ng-if="fieldsIdx[$index].isGroup">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                            </div>
+
+
+                            <div ng-if="fieldsIdx[$index].data_type == 'grouping_tag'">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
+                                    <span class="glyphicon glyphicon-plus"></span>
+                                </button>
+
+                            </div>
+
+                        </td>
+
+                        <td> <!-- action --> </td>
+
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
             </div>
         </div>
     </div>
