@@ -400,6 +400,10 @@ def configure_routes(config):
     config.add_route(name='get_translations', pattern='/translations')  # ready, not tested
 
 
+    # web-view #GET
+    config.add_route(name='blob_upload', pattern='/blob_upload')
+
+
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
