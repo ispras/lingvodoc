@@ -201,28 +201,50 @@ def convert_db(sqconn, session, args):
             result = session.post(add_paradigm_route, json={"metaparadigms": par_list})
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description='Dictionary converter for lingvodoc 2.0')
-    parser.add_argument('--login', '-l', type=str, required=False, default='demo',
-                        help='Choose the IMDG to test')
-    parser.add_argument('--password', '-p', type=str, required=False, default='demopass')
-    parser.add_argument('--server-url', '-a', type=str, required=False, default='http://localhost:6543/')
-    parser.add_argument('--dictionaries-folder', '-i', type=str, required=False, default='/Users/al/Movies/dicts-10.02.2014/')
-
-    opts = parser.parse_args()
-    print(opts.__dict__)
-    return opts
 
 import requests
+import json
 
-if __name__ == '__main__':
-    args = get_args()
+def convert_db_new(sqconn, session, language_client_id, language_object_id):
+    dict_attributes = get_dict_attributes(sqconn)
+    create_dictionary_request = {"parent_client_id": language_client_id,
+                                 "parent_object_id": language_object_id,
+                                 "translation": dict_attributes['dictionary_name'],
+                                 "name": dict_attributes['dictionary_name']}
+    status = session.post('http://localhost:6543/dictionary', data=json.dumps(create_dictionary_request))
+    dictionary = json.loads(status.text)
 
+    perspective_create_url = 'http://localhost:6543/dictionary/%s/%s/perspective' % (dictionary['client_id'], dictionary['object_id'])
+    create_perspective_request = {"translation": "Этимологический словарь из Lingvodoc 0.97",
+                                  "name": "Lingvodoc 0.97 etymology dictionary"}
+
+    status = session.post(perspective_create_url, data=json.dumps(create_perspective_request))
+    perspective = json.loads(status.text)
+
+    create_perspective_fields_request = session.get('http://localhost:6543/dictionary/1/1/perspective/1/1/fields')
+    perspective_fields_create_url = perspective_create_url + '/%s/%s/fields' % (perspective['client_id'], perspective['object_id'])
+    status = session.post(perspective_fields_create_url, data=create_perspective_fields_request)
+
+    get_all_ids = sqconn.cursor()
+    get_all_ids.execute("select id from dictionary")
+    ids_mapping = dict()
+    for cursor in get_all_ids:
+        create_lexical_entry_url = perspective_create_url + '/%s/%s/lexical_entry' % (perspective['client_id'], perspective['object_id'])
+        status = session.post(create_lexical_entry_url)
+        print(status.text)
+        ids_dict = json.loads(status.text)
+        client_id = ids_dict['client_id']
+        object_id = ids_dict['object_id']
+        ids_mapping[cursor[0]] = (client_id, object_id)
+
+    return dictionary
+
+
+def convert_one(filename, client_id, login, password_hash, language_client_id, language_object_id):
     session = requests.Session()
-    r = session.post(args.server_url+'login', data={'login': args.login, 'password': args.password})
-
-    sqlitefilelist = glob.glob(args.dictionaries_folder + "/*.sqlite")
-    print(sqlitefilelist)
-    for sqlitefile in sqlitefilelist:
-        sqconn = sqlite3.connect(sqlitefile)
-        convert_db(sqconn, session, args)
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1)
+    session.mount('http://', adapter)
+    cookie_set = session.post('http://localhost:6543/cheatlogin', data={'login': login, 'passwordhash': password_hash})
+    sqconn = sqlite3.connect(filename)
+    return convert_db_new(sqconn, session, language_client_id, language_object_id)
