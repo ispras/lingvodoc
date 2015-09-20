@@ -44,6 +44,7 @@ def configure_routes(config):
     # API #POST
     # this is the same operation as login - but params are sent via json
     config.add_route(name='signin', pattern='/signin')  # 100% ready
+    config.add_route(name='cheatlogin', pattern='/cheatlogin')
 
     # web-view #POST
     config.add_route(name='logout', pattern='/logout')
@@ -233,6 +234,10 @@ def configure_routes(config):
     # GET parameter: entity_type = <type> (e.g: "etymology")
     config.add_route(name='get_connected_words', pattern='/lexical_entry/{client_id}/{object_id}/connected')
 
+    # API #GET
+    # like
+    config.add_route(name='basic_search', pattern='/basic_search')
+
 
     # API #POST (TODO: change to PATCH method later)
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
@@ -407,6 +412,8 @@ def configure_routes(config):
 
     # web-view #GET
     config.add_route(name='blob_upload', pattern='/blob_upload')
+
+    config.add_route(name='convert_dictionary', pattern='/convert/blob/{client_id}/{object_id}')
 
 
 def main(global_config, **settings):
