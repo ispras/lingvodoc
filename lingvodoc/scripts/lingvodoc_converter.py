@@ -206,6 +206,61 @@ import requests
 import json
 import hashlib
 
+def upload_audio(upload_url, audio_sequence, markup_sequence, session):
+    status = session.post(upload_url, json.dumps(audio_sequence))
+    print(status.text)
+    audio_ids_list = json.loads(status.text)
+    for k in range(0, len(audio_ids_list)):
+        parent_client_id = audio_ids_list[k]['client_id']
+        parent_object_id = audio_ids_list[k]['object_id']
+        markup_sequence[k]["parent_client_id"] = parent_client_id
+        markup_sequence[k]["parent_object_id"] = parent_object_id
+    status = session.post(upload_url, json.dumps(markup_sequence))
+    print(status.text)
+
+def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, upload_url, audio_hashes, entity_types, locale_id=1):
+    audio_sequence = []
+    markup_sequence = []
+    for cursor in sound_and_markup_cursor:
+        blob_id = cursor[0]
+        audio = cursor[1]
+        markup = cursor[2]
+        common_name = cursor[3]
+        word_id = cursor[4]
+        audio_hashes.add(hashlib.sha224(audio).hexdigest())
+
+        audio_element = {"locale_id": locale_id,
+                         "level": "leveloneentity",
+                         "data_type": "sound",
+                         "filename": common_name + ".wav",
+                         "entity_type": entity_types[0],
+                         "parent_client_id": ids_mapping[int(word_id)][0],
+                         "parent_object_id": ids_mapping[int(word_id)][1],
+                         "content": base64.urlsafe_b64encode(audio).decode()}
+        audio_sequence.append(audio_element)
+
+        markup_element = {
+            "locale_id": locale_id,
+            "level": "leveltwoentity",
+            "data_type": "markup",
+            "filename": common_name + ".TextGrid",
+            "entity_type": entity_types[1],
+            # need to set after push "parent_client_id": ids_mapping[int(word_id)][0],
+            # need to set after push "parent_object_id": ids_mapping[int(word_id)][1],
+            "content": base64.urlsafe_b64encode(markup).decode()}
+        markup_sequence.append(markup_element)
+
+        if len(audio_sequence) > 25:
+            upload_audio(upload_url, audio_sequence, markup_sequence, session)
+            audio_sequence = []
+            markup_sequence = []
+
+    if len(audio_sequence) != 0:
+        upload_audio(upload_url, audio_sequence, markup_sequence, session)
+        audio_sequence = []
+        markup_sequence = []
+
+
 def convert_db_new(sqconn, session, language_client_id, language_object_id, locale_id=1):
     dict_attributes = get_dict_attributes(sqconn)
     create_dictionary_request = {"parent_client_id": language_client_id,
@@ -271,7 +326,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
                        "parent_object_id": parent_object_id,
                        "content": content}
             if not is_a_regular_form:
-                element['additional_metadata'] = '"client_id": %s, "row_id": %s' % (client_id, ld_cursor[2])
+                element['additional_metadata'] = '{"client_id": %s, "row_id": %s}' % (client_id, ld_cursor[2])
             push_list.append(element)
         return push_list
 
@@ -311,58 +366,25 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
                                             and dictionary.is_a_regular_form=1;""")
 
     audio_hashes = set()
-    i = 1
-    for cursor in sound_and_markup_word_cursor:
-        audio_ids_list = []
-        audio_sequence = []
-        markup_sequence = []
+    entity_types = ['Sound', 'Praat markup']
+    upload_audio_with_markup(session, ids_mapping, sound_and_markup_word_cursor, create_entities_url, audio_hashes, entity_types, locale_id)
+    print(audio_hashes)
 
-        blob_id = cursor[0]
-        audio = cursor[1]
-        markup = cursor[2]
-        common_name = cursor[3]
-        word_id = cursor[4]
-        audio_hashes.add(hashlib.sha224(audio).hexdigest())
+    paradigm_sound_and_markup_cursor = sqconn.cursor()
+    paradigm_sound_and_markup_cursor.execute("""select blobs.id,
+                                                blobs.secblob,
+                                                blobs.mainblob,
+                                                dict_blobs_description.name,
+                                                dictionary.regular_form
+                                                from blobs, dict_blobs_description, dictionary
+                                                where dict_blobs_description.blobid=blobs.id
+                                                and dict_blobs_description.wordid=dictionary.id
+                                                and dict_blobs_description.type=2
+                                                and dictionary.is_a_regular_form=0;""")
 
-        audio_element = {"locale_id": locale_id,
-                         "level": "leveloneentity",
-                         "data_type": "sound",
-                         "filename": common_name + ".wav",
-                         "entity_type": "Sound",
-                         "parent_client_id": ids_mapping[int(word_id)][0],
-                         "parent_object_id": ids_mapping[int(word_id)][1],
-                         "content": str(base64.urlsafe_b64encode(audio))}
-        audio_sequence.append(audio_element)
-
-        markup_element = {
-            "locale_id": locale_id,
-            "level": "leveltwoentity",
-            "data_type": "markup",
-            "filename": common_name + ".TextGrid",
-            "entity_type": "Praat markup",
-            # need to set after push "parent_client_id": ids_mapping[int(word_id)][0],
-            # need to set after push "parent_object_id": ids_mapping[int(word_id)][1],
-            "content": str(base64.urlsafe_b64encode(markup))}
-        markup_sequence.append(markup_element)
-
-        if len(audio_sequence) > 0:
-            status = session.post(create_entities_url, json.dumps(audio_sequence))
-            print(status.text)
-            audio_ids_list = json.loads(status.text)
-            for k in range(0, len(audio_ids_list)):
-                parent_client_id = audio_ids_list[k]['client_id']
-                parent_object_id = audio_ids_list[k]['object_id']
-                markup_sequence[k]["parent_client_id"] = parent_client_id
-                markup_sequence[k]["parent_object_id"] = parent_object_id
-            status = session.post(create_entities_url, json.dumps(markup_sequence))
-            print(status.text)
-            audio_ids_list = []
-            audio_sequence = []
-            markup_sequence = []
-
-
-
-
+    entity_types = ['Paradigm sound', "Paradigm Praat markup"]
+    upload_audio_with_markup(session, ids_mapping, paradigm_sound_and_markup_cursor, create_entities_url, audio_hashes, entity_types, locale_id)
+    print(audio_hashes)
 
 
 
@@ -379,7 +401,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
     return dictionary
 
 
-def convert_one(filename, client_id, login, password_hash, language_client_id, language_object_id):
+def convert_one(filename, login, password_hash, language_client_id, language_object_id):
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=4)
@@ -391,6 +413,6 @@ def convert_one(filename, client_id, login, password_hash, language_client_id, l
     return status
 
 if __name__ == "__main__":
-    convert_one(filename="/tmp/userblobs/dialeqt_dictionary/2/2/nenets_kaninski.sqlite", client_id=2, login="admin",
+    convert_one(filename="/tmp/userblobs/dialeqt_dictionary/2/2/nenets_kaninski.sqlite", login="admin",
                 password_hash="$2a$12$IMhcUHE4AtlP/M7fSg.RrOlVtrsyRteK92dRZpfffDjEMYeopmMdG",
                 language_client_id=1, language_object_id=1)

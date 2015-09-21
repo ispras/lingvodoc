@@ -140,24 +140,28 @@ def basic_search(request):
 from multiprocessing import Process
 
 #TODO: make it normal, it's just a test
-@view_config(route_name='convert_dictionary', renderer='json', request_method='GET')
+@view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
 def convert_dictionary(request):
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
+    req = request.json_body
+
+    client_id = req['blob_client_id']
+    object_id = req['blob_object_id']
+    parent_client_id = req['parent_client_id']
+    parent_object_id = req['parent_object_id']
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     user = client.user
 
     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
 
     p = Process(target=convert_one, args=(blob.real_storage_path,
-                                          request.authenticated_userid,
                                           user.login,
                                           user.password.hash,
-                                          1,
-                                          1))
+                                          parent_client_id,
+                                          parent_object_id))
     p.start()
-
-    return {"status": "Your task have started to execute. Wait 5-10 minutes and you will see new dictionary."}
+    request.response.status = HTTPOk.code
+    return {"status": "Your dictionary is being converted."
+                      " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
 
 
 @view_config(route_name='language', renderer='json', request_method='GET')
@@ -1557,8 +1561,8 @@ def create_entities_bulk(request):
             filename = item.get('filename')
             real_location = None
             url = None
-            if data_type == 'sound':
-                real_location, url = create_object(item, item['content'], entity, data_type, filename)
+            if data_type == 'sound' or data_type == 'markup':
+                real_location, url = create_object(request, item['content'], entity, data_type, filename)
 
             if url and real_location:
                 entity.content = url
@@ -1932,6 +1936,25 @@ def lexical_entries_all(request):
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
 
+@view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET', permission='view')
+def lexical_entries_all_count(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    sort_criterion = request.params.get('sort_by') or 'Translation'
+    start_from = request.params.get('start_from') or 0
+    count = request.params.get('count') or 200
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).scalar()
+            return {"count": lexical_entries_count}
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
 
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
 def lexical_entries_published(request):
