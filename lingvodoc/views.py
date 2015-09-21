@@ -1873,7 +1873,7 @@ def create_lexical_entry_bulk(request):
             return {'error': str("No such perspective in the system")}
 
         lexes_list = []
-        for i in range(1, count):
+        for i in range(0, count):
             lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=variables['auth'],
                                    parent_object_id=perspective_id, parent=perspective)
             DBSession.add(lexentr)

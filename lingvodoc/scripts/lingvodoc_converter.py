@@ -206,7 +206,7 @@ import requests
 import json
 
 
-def create_entity_list(ids_mapping, cursor, count, level, data_type, entity_type, locale_id=1):
+def create_entity_list(ids_mapping, cursor, level, data_type, entity_type, locale_id=1):
     push_list = []
     for ld_cursor in cursor:
         ld_id = ld_cursor[0]
@@ -244,14 +244,13 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
     status = session.post(perspective_fields_create_url, data=create_perspective_fields_request)
 
     get_all_ids = sqconn.cursor()
-    get_all_ids.execute("select id from dictionary")
+    get_all_ids.execute("select id from dictionary where is_a_regular_form=1")
 
     create_lexical_entries_url = perspective_create_url + '/%s/%s/lexical_entries' % (perspective['client_id'], perspective['object_id'])
     count_cursor = sqconn.cursor()
-    count_cursor.execute("select count(*) from dictionary")
+    count_cursor.execute("select count(*) from dictionary where is_a_regular_form=1")
     words_count = count_cursor.fetchone()[0]
-    print(words_count)
-    lexical_entries_create_request = json.dumps({"count": words_count+1})
+    lexical_entries_create_request = json.dumps({"count": words_count})
     status = session.post(create_lexical_entries_url, lexical_entries_create_request)
     ids_dict = json.loads(status.text)
 
@@ -259,23 +258,46 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
     i = 0
     for id_cursor in get_all_ids:
         id = id_cursor[0]
-        print(i)
         client_id = ids_dict[i]['client_id']
         object_id = ids_dict[i]['object_id']
         ids_mapping[id] = (client_id, object_id)
         i += 1
 
-    print(len(ids_mapping))
-    print(words_count)
-    print(i)
-
-    word_cursor = sqconn.cursor()
-    word_cursor.execute("select id, word from dictionary")
+    # print(len(ids_mapping))
+    # print(words_count)
+    # print(i)
 
     create_entities_url = 'http://localhost:6543/dictionary/1/1/perspective/1/1/entities'
-    push_list = create_entity_list(ids_mapping, word_cursor, words_count, 'leveloneentity', 'text', 'Word')
-    status = session.post(create_entities_url, json.dumps(push_list))
-    print(status.text)
+
+    def prepare_and_upload_text_entities(id_column, is_a_regular_form, text_column, entity_type):
+        sqcursor = sqconn.cursor()
+        sqcursor.execute("select %s,%s from dictionary where is_a_regular_form=(?)" % (id_column, text_column),
+                         [is_a_regular_form])
+        push_list = create_entity_list(ids_mapping, sqcursor, "leveloneentity", 'text', entity_type)
+        return session.post(create_entities_url, json.dumps(push_list))
+
+    for column_and_type in [("word", "Word"),
+                            ("transcription", "Transcription"),
+                            ("translation", "Translation")]:
+        status = prepare_and_upload_text_entities("id", 1, column_and_type[0], column_and_type[1])
+        print(status.text)
+
+    for column_and_type in [("word", "Paradigm word"),
+                            ("transcription", "Paradigm transcription"),
+                            ("translation", "Paradigm translation")]:
+        status = prepare_and_upload_text_entities("regular_form", 0, column_and_type[0], column_and_type[1])
+        print(status.text)
+    # word_cursor = sqconn.cursor()
+    # word_cursor.execute("select id, word from dictionary where is_a_regular_form=1")
+    # push_list = create_entity_list(ids_mapping, word_cursor, 'leveloneentity', 'text', 'Word')
+    # status = session.post(create_entities_url, json.dumps(push_list))
+    #
+    # paradigm_word_cursor = sqconn.cursor()
+    # paradigm_word_cursor.execute("select regular_form, word from dictionary where is_a_regular_form=0")
+    # push_list = create_entity_list(ids_mapping, paradigm_word_cursor, 'leveloneentity', 'text', 'Paradigm word')
+    # status = session.post(create_entities_url, json.dumps(push_list))
+
+
 
     return dictionary
 
@@ -283,8 +305,10 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
 def convert_one(filename, client_id, login, password_hash, language_client_id, language_object_id):
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
-    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1)
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=4)
     session.mount('http://', adapter)
     cookie_set = session.post('http://localhost:6543/cheatlogin', data={'login': login, 'passwordhash': password_hash})
     sqconn = sqlite3.connect(filename)
-    return convert_db_new(sqconn, session, language_client_id, language_object_id)
+    status = convert_db_new(sqconn, session, language_client_id, language_object_id)
+    print(status)
+    return status
