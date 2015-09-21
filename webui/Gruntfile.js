@@ -93,7 +93,8 @@ module.exports = function(grunt) {
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
-                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js'
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'src/js/home.js'
                 ],
                 dest: '../lingvodoc/static/js/home.js'
             },
@@ -175,6 +176,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'bower_components/angular-loading-bar/src/loading-bar.js',
                     'src/js/user_upload.js'
                 ],
                 dest: '../lingvodoc/static/js/user-upload.js'

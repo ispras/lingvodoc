@@ -16,7 +16,12 @@
 
 </head>
 
-<body class="body-dashboard" ng-app="DashboardModule">
+<body class="body-dashboard" ng-app="HomeModule">
+
+
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="dictionariesUrl" data-lingvodoc="${request.route_url('dictionaries')}"></div>
+<div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
 
 <nav class="lingvodoc-navbar">
     <div class="container">
@@ -64,7 +69,7 @@
 </nav>
 
 
-<div class="container">
+<div class="container" ng-controller="HomeController">
 
     <blockquote>Проект выполняется при финансовой поддержке грантов Президента РФ МД-6198.2013.6 (рук. Ю.В.Норманская) и
         Программы ОИФН Типологическое и историческое изучение языковых явлений в их соотношении с культурной эволюцией,
@@ -153,6 +158,32 @@
 
         <p>
     </div>
+
+
+
+    <div ng-repeat="group in groupDictionaries">
+        <h3>{{ group.name }}</h3>
+
+        <ul class="entries_list">
+            <li ng-repeat="dictionary in group.dicts">
+                {{ dictionary.name }}
+
+                <ul class="entries_list">
+                    <li ng-repeat="p in dictionary.links">
+                        <a href="{{ p.link }}">{{ p.name }}</a>
+                    </li>
+                </ul>
+
+            </li>
+        </ul>
+
+    </div>
+
+
+
+
+
+
 </div>
 
 </body>
