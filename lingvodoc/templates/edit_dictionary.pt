@@ -249,20 +249,22 @@
         </tbody>
 
     </table>
+
+
+    <div class="text-center">
+
+        <nav>
+            <ul class="pagination pagination-sm">
+                    <li ng-repeat="pageNumber in range(1, pageCount)" ng-class="{active: pageNumber == pageIndex}">
+                        <a href="#" ng-click="getPage(pageNumber)">{{ pageNumber }}</a>
+                    </li>
+            </ul>
+        </nav>
+    </div>
+
 </div>
 
-<div class="text-center">
-    <nav>
-        <ul class="pagination" ng-repeat="pageNumber in range(1, pageCount)">
-                <span ng-if="pageNumber == pageIndex">
-                    <li class="active">{{ pageNumber }}</li>
-                </span>
-                <span ng-if="pageNumber != pageIndex">
-                    <li><a href="#" ng-click="getPage(pageNumber)">{{ pageNumber }}</a></li>
-                </span>
-        </ul>
-    </nav>
-</div>
+
 
 
 <script type="text/ng-template" id="annotationModal.html">
@@ -671,7 +673,6 @@
                     </tbody>
 
                 </table>
-
             </div>
         </div>
     </div>

@@ -421,7 +421,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     $scope.lexicalEntries = [];
 
     $scope.pageIndex = 1;
-    $scope.pageSize = 10;
+    $scope.pageSize = 50;
     $scope.pageCount = 1;
 
     var enabledInputs = [];
@@ -457,53 +457,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         return values;
     };
 
-
-    $scope.showEtymology = function(metaword) {
-
-        var url = $('#getMetaWordsUrl').data('lingvodoc') + encodeURIComponent(metaword.metaword_client_id) +
-            '/' + encodeURIComponent(metaword.metaword_id) + '/etymology';
-
-        $http.get(url).success(function(data, status, headers, config) {
-
-            var modalInstance = $modal.open({
-                animation: true,
-                templateUrl: 'etymologyModal.html',
-                controller: 'ShowEtymologyController',
-                size: 'lg',
-                resolve: {
-                    words: function() {
-                        return data;
-                    }
-                }
-            });
-
-        }).error(function(data, status, headers, config) {
-        });
-    };
-
-
-    $scope.showParadigms = function(metaword) {
-        var url = $('#getMetaWordsUrl').data('lingvodoc') + encodeURIComponent(metaword.metaword_client_id) +
-            '/' + encodeURIComponent(metaword.metaword_id) + '/metaparadigms';
-
-        $http.get(url).success(function(data, status, headers, config) {
-
-            var modalInstance = $modal.open({
-                animation: true,
-                templateUrl: 'paradigmModal.html',
-                controller: 'ShowParadigmsController',
-                size: 'lg',
-                resolve: {
-                    words: function() {
-                        return data;
-                    }
-                }
-            });
-
-        }).error(function(data, status, headers, config) {
-        });
-    };
-
     $scope.annotate = function(sound) {
         var modalInstance = $modal.open({
             animation: true,
@@ -524,7 +477,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     $scope.getPage = function(pageNumber) {
         if (pageNumber > 0 && pageNumber <= $scope.pageCount) {
             $scope.pageIndex = pageNumber;
-            getMetawords();
+            loadEntries();
         }
     };
 
@@ -537,11 +490,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
         return input;
     };
-
-    $scope.addedByUser = function(metaword) {
-        return !!metaword.addedByUser;
-    };
-
 
     $scope.enableInput = function(clientId, objectId, entityType) {
         if (!$scope.isInputEnabled(clientId, objectId, entityType)) {
@@ -618,9 +566,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
     $scope.saveMarkupValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
-
-        console.log(arguments);
-
         var value = new model.MarkupValue(fileName, fileType, fileContent);
         $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
     };
@@ -651,7 +596,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         });
     };
 
-
     $scope.editGroupingTag = function(clientId, objectId, field, values) {
 
         var modalInstance = $modal.open({
@@ -676,8 +620,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
         });
     };
-
-
 
     $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
 
@@ -706,8 +648,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             entryObject['entity_type'] = field.entity_type;
             entryObject['locale_id'] = 1;
             entryObject['metadata'] = {};
-
-
 
 
             $http.post(url, entryObject).success(function(data, status, headers, config) {
@@ -760,33 +700,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
     };
 
-
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf('?') >= 0 ? "&" : '?') + encodeURIComponent(key) + "=" + encodeURIComponent(value);
-    };
-
-
-    var getDictStats = function() {
-        var getDictStatsUrl = $('#getDictionaryStatUrl').data('lingvodoc');
-        $http.get(getDictStatsUrl).success(function(data, status, headers, config) {
-            if (data.metawords) {
-                $scope.pageCount = Math.ceil(parseInt(data.metawords) / $scope.pageSize);
-            }
-        }).error(function(data, status, headers, config) {
-        });
-    };
-
-
-    var getMetawords = function() {
-
-        var getMetawordsUrl = $('#getMetaWordsUrl').data('lingvodoc');
-        getMetawordsUrl = addUrlParameter(getMetawordsUrl, 'offset', ($scope.pageIndex - 1) * $scope.pageSize);
-        getMetawordsUrl = addUrlParameter(getMetawordsUrl, 'size', $scope.pageSize);
-
-        $http.get(getMetawordsUrl).success(function(data, status, headers, config) {
-            $scope.lexicalEntries = data;
-        }).error(function(data, status, headers, config) {
-        });
     };
 
     var perspectiveToDictionaryFields = function(perspective) {
@@ -820,41 +735,51 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         return fields;
     };
 
+    var getDictStats = function() {
+        var getDictStatsUrl = $('#getEntriesCountUrl').data('lingvodoc');
+        $http.get(getDictStatsUrl).success(function(data, status, headers, config) {
+            var totalEntries = data.count;
+            $scope.pageCount = Math.ceil(totalEntries / $scope.pageSize);
+            loadEntries();
+        }).error(function(data, status, headers, config) {
+            $log.error('Failed to load dictionary size!');
 
-    var loadDictionary = function() {
+            $scope.pageCount = Math.ceil(5000 / $scope.pageSize);
+            loadEntries();
+
+        });
+    };
+
+
+    var loadEntries = function() {
+        var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, 'start_from', ($scope.pageIndex - 1) * $scope.pageSize);
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, 'count', $scope.pageSize);
+        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
+            $scope.lexicalEntries = data.lexical_entries;
+        }).error(function(data, status, headers, config) {
+            $log.error('Failed to load entries!');
+        });
+    };
+
+    var loadPerspective = function() {
         var getFieldsUrl = $('#getPerspectiveFieldsUrl').data('lingvodoc');
         $http.get(getFieldsUrl).success(function(data, status, headers, config) {
 
             $scope.dictionaryView.perspective['fields'] = data.fields;
             $scope.dictionaryView.dictionaryFields = perspectiveToDictionaryFields($scope.dictionaryView.perspective);
 
+            getDictStats();
 
-            var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
-            $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
-
-                $scope.lexicalEntries = data.lexical_entries;
-
-            }).error(function(data, status, headers, config) {
-                $log.error('Failed to load perspective!');
-            });
-
-            }).error(function(data, status, headers, config) {
+        }).error(function(data, status, headers, config) {
             $log.error('Failed to load perspective!');
         });
     };
 
-    loadDictionary();
+    loadPerspective();
+
 }]);
 
-app.controller('ShowEtymologyController', ['$scope', '$http', 'words', function($scope, $http, words) {
-    WaveSurferController.call(this, $scope);
-    $scope.words = words;
-}]);
-
-app.controller('ShowParadigmsController', ['$scope', '$http', 'words', function($scope, $http, words) {
-    WaveSurferController.call(this, $scope);
-    $scope.words = words;
-}]);
 
 
 app.controller('AnnotationController',
@@ -1168,7 +1093,6 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
     $scope.cancel = function () {
         $modalInstance.dismiss('cancel');
     };
-
 
     $scope.$watch('entry', function (updatedEntry) {
         $scope.mapFieldValues([updatedEntry], $scope.fields);
