@@ -146,6 +146,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/elan.js',
                     'src/js/view_dictionary.js',
                     'src/js/lingvowave.js'
                 ],
@@ -159,6 +160,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/elan.js',
                     'src/js/util.js',
                     'src/js/edit_dictionary.js',
                     'src/js/lingvowave.js'

@@ -118,10 +118,9 @@
         <span>No dictionaries</span>
     </div>
 
+    <hr>
+    
     <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary...</a>
-
-
-    <a href="#" ng-click="test()">dump</a>
 
 </div>
 

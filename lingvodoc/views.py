@@ -1456,7 +1456,7 @@ def list_user_blobs(request):
     user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
     request.response.status = HTTPOk.code
     response = [{'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
-                 'client_id': blob.client_id, 'object_id': blob_object_id} for blob in user_blobs]
+                 'client_id': blob.client_id, 'object_id': blob.object_id} for blob in user_blobs]
     return response
 
 

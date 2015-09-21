@@ -25,6 +25,9 @@
 <div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
 <div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
 <div id="allPerspectivesUrl" data-lingvodoc="${request.route_url('all_perspectives')}"></div>
+<div id="listBlobsUrl" data-lingvodoc="${request.route_url('list_user_blobs')}"></div>
+<div id="convertUrl" data-lingvodoc="${request.route_url('convert_dictionary')}"></div>
+
 
 
 <nav class="lingvodoc-navbar">
@@ -101,9 +104,26 @@
         <span class="glyphicon glyphicon-plus-sign" ng-click="newLanguage()"></span>
         <hr>
 
-        <label for="name">Name</label>
-        <input type="text" id="name" name="name" class="form-control" placeholder="" required autofocus
-               ng-model="dictionaryData.name">
+        <ol>
+            <li><label><input type="radio" name="mode" ng-model="wizard.mode" value="create"> Create new dictionary</label></li>
+            <li><label><input type="radio" name="mode" ng-model="wizard.mode" value="import"> Import dictionary</label></li>
+        </ol>
+
+        <div ng-if="wizard.mode == 'create'">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" class="form-control" placeholder="" required autofocus ng-model="dictionaryData.name">
+        </div>
+
+
+
+        <div ng-if="wizard.mode == 'import'">
+            <label for="selectFile">Select uploaded file</label>
+            <select id="selectFile" class="form-control" ng-model="wizard.importedDictionaryId" ng-options="d.id as d.data.name for d in uploadedDictionaries track by d.id">
+
+            </select>
+        </div>
+
+
     </div>
 
     <a href="#" class="btn btn-block btn-info" ng-click="createDictionary()">

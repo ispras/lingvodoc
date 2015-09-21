@@ -1,8 +1,6 @@
 'use strict';
 
-var app = angular.module('UserUploadModule', ['ui.bootstrap']);
-
-app.directive('onReadFile', function($parse) {
+angular.module('UserUploadModule', ['ui.bootstrap']).directive('onReadFile', function($parse) {
     return {
         restrict: 'A',
         scope: false,
@@ -22,31 +20,37 @@ app.directive('onReadFile', function($parse) {
             });
         }
     };
-});
+}).controller('UserUploadController', ['$scope', '$http', '$modal', '$log', '$timeout', function($scope, $http, $modal, $log, $timeout) {
 
-app.controller('UserUploadController', ['$scope', '$http', '$modal', '$log', '$timeout', function($scope, $http, $modal, $log, $timeout) {
-
-    $scope.readFile = function(file) {
+    var listBlobsUrl = $('#listBlobsUrl').data('lingvodoc');
 
 
-        $log.info(file);
+    $scope.files = [];
+
+    $scope.upload = function(file) {
 
         var fd = new FormData();
-        fd.append('file', file);
-        fd.append('filename', file.name);
+        fd.append('blob', file);
         fd.append('data_type', 'dialeqt_dictionary');
 
         $http.post('/blob', fd, {
             transformRequest: angular.identity,
             headers: {'Content-Type': undefined}
         }).success(function () {
-
+            loadBlobs();
         }).error(function () {
 
-
         });
-    }
+    };
 
+    var loadBlobs = function() {
+        $http.get(listBlobsUrl).success(function (data, status, headers, config) {
+            $scope.files = data;
+        }).error(function (data, status, headers, config) {
+        });
+    };
+
+    loadBlobs();
 
 }]);
 

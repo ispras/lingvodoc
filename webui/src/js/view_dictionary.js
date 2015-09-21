@@ -423,7 +423,7 @@ app.controller('AnnotationController',
                     createRegions(annotation);
 
                 } catch (e) {
-                    console.error('Failed to parse ELAN annotation: ' + e);
+                    alert('Failed to parse ELAN annotation: ' + e);
                 }
 
             }).error(function(data, status, headers, config) {
