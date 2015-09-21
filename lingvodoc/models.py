@@ -296,13 +296,10 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     Parent: DictionaryPerspective.
     """
     __parentname__ = 'DictionaryPerspective'
-    __table_args__ = CompositeKeysHelper. \
-        set_table_args_for_publishing_fk_composite_key(parent_name="DictionaryPerspective",
-                                                       entity_name="LexicalEntry")
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
+
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
-    entity_object_id = Column(BigInteger)
-    entity_client_id = Column(BigInteger)
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
 
@@ -311,10 +308,6 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
         vec += recursive_content(self)
         response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec}
         return response
-LexicalEntry.upper = relationship('LexicalEntry',
-                                  remote_side=[LexicalEntry.client_id,
-                                               LexicalEntry.object_id],
-                                  backref=backref('lexicalentries'))
 
 
 class EntityMixin(object):
