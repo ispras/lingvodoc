@@ -8,6 +8,7 @@ function WaveSurferController($scope) {
     var activeUrl = null;
 
     $scope.play = function(url) {
+
         if (!$scope.wavesurfer) {
             return;
         }

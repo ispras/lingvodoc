@@ -335,9 +335,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 
     $scope.$watch('dictionaryData.perspectiveId', function (id) {
 
-        console.log("Change!");
-        console.log($scope.dictionaryData);
-
         if (typeof id == 'string') {
             var ids = id.split('_');
             for (var i = 0; i < $scope.perspectives.length; i++) {
@@ -347,8 +344,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                     break;
                 }
             }
-
-            console.log($scope.perspective);
         }
     });
 

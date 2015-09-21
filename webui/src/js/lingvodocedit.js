@@ -333,6 +333,23 @@ model.ImageValue = function(name, mime, content) {
 model.ImageValue.prototype = new model.Value();
 
 
+model.MarkupValue = function(name, mime, content) {
+    this.name = name;
+    this.mime = mime;
+    this.content = content;
+
+    this.export = function() {
+        return {
+            'content': content,
+            'filename': name,
+            'data_type': 'markup'
+        }
+    };
+};
+model.MarkupValue.prototype = new model.Value();
+
+
+
 
 var app = angular.module('EditDictionaryModule', ['ui.bootstrap']);
 
@@ -411,18 +428,33 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
 
     $scope.getFieldValues = function(entry, field) {
+
+        var value;
         var values = [];
         if (entry && entry.contains) {
 
-            for (var i = 0; i < entry.contains.length; i++) {
-                var value = entry.contains[i];
-                if (value.entity_type == field.entity_type) {
-                    values.push(value);
+            if (field.isGroup) {
+
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
                 }
             }
         }
         return values;
-
     };
 
 
@@ -543,9 +575,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
 
         if (removeIndex >= 0) {
-            $log.info(enabledInputs);
             enabledInputs.splice(removeIndex, 1);
-            $log.info(enabledInputs);
         }
     };
 
@@ -568,7 +598,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
     $scope.removeValue = function(clientId, objectId, entityType, value) {
-        console.log(arguments);
+
     };
 
     $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
@@ -586,6 +616,67 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         var value = new model.ImageValue(fileName, fileType, fileContent);
         $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
     };
+
+    $scope.saveMarkupValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+
+        console.log(arguments);
+
+        var value = new model.MarkupValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+    };
+
+    $scope.editGroup = function(clientId, objectId, field, values) {
+
+        var modalInstance = $modal.open({
+            animation: true,
+            templateUrl: 'editGroupModal.html',
+            controller: 'editGroupController',
+            size: 'lg',
+            resolve: {
+                'groupParams': function() {
+                    return {
+                        'clientId': clientId,
+                        'objectId': objectId,
+                        'field': field,
+                        'values': values
+                    };
+                }
+            }
+        });
+
+        modalInstance.result.then(function (value) {
+
+        }, function () {
+
+        });
+    };
+
+
+    $scope.editGroupingTag = function(clientId, objectId, field, values) {
+
+        var modalInstance = $modal.open({
+            animation: true,
+            templateUrl: 'editGroupingTagModal.html',
+            controller: 'editGroupingTagController',
+            size: 'lg',
+            resolve: {
+                'groupParams': function() {
+                    return {
+                        'clientId': clientId,
+                        'objectId': objectId,
+                        'fields': $scope.dictionaryView.dictionaryFields
+                    };
+                }
+            }
+        });
+
+        modalInstance.result.then(function (value) {
+
+        }, function () {
+
+        });
+    };
+
 
 
     $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
@@ -615,6 +706,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             entryObject['entity_type'] = field.entity_type;
             entryObject['locale_id'] = 1;
             entryObject['metadata'] = {};
+
+
 
 
             $http.post(url, entryObject).success(function(data, status, headers, config) {
@@ -651,10 +744,11 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
                                 break;
                             }
-
-                            // and finally close input
-                            $scope.disableInput(clientId, objectId, field.entity_type);
                         }
+
+                        // and finally close input
+                        $scope.disableInput(clientId, objectId, field.entity_type);
+
                     }).error(function(data, status, headers, config) {
 
                     });
@@ -881,3 +975,365 @@ app.controller('AnnotationController',
         });
 
     }]);
+
+
+app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$log', 'groupParams', function($scope, $http, $modalInstance, $log, groupParams) {
+
+    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
+    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
+    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
+    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
+
+    var enabledInputs = [];
+
+    WaveSurferController.call(this, $scope);
+
+    $scope.title = groupParams.field.entity_type;
+
+    $scope.fields = groupParams.field.contains;
+    $scope.entry = {
+        'client_id': groupParams.clientId,
+        'object_id': groupParams.objectId,
+        'contains': groupParams.values
+    };
+
+
+    $scope.fieldsIdx = [];
+    $scope.fieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+        $scope.fieldsValues = [];
+        $scope.fieldsIdx = [];
+
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            $scope.fieldsValues.push(entryRow);
+        }
+
+        for (var k = 0; k < allFields.length; k++) {
+            $scope.fieldsIdx.push(allFields[k]);
+        }
+    };
+
+    $scope.getFieldValues = function(entry, field) {
+
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+
+            if (field.isGroup) {
+
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+
+
+    $scope.enableInput = function(clientId, objectId, entityType) {
+        if (!$scope.isInputEnabled(clientId, objectId, entityType)) {
+            enabledInputs.push({
+                'clientId': clientId,
+                'objectId': objectId,
+                'entityType': entityType
+            });
+        }
+    };
+
+    $scope.isInputEnabled = function(clientId, objectId, entityType) {
+        for (var i = 0; i < enabledInputs.length; i++) {
+            var checkItem = enabledInputs[i];
+            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    $scope.disableInput = function(clientId, objectId, entityType) {
+
+        var removeIndex = -1;
+        for (var i = 0; i < enabledInputs.length; i++) {
+            var checkItem = enabledInputs[i];
+            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
+                removeIndex = i;
+                break;
+            }
+        }
+
+        if (removeIndex >= 0) {
+            enabledInputs.splice(removeIndex, 1);
+        }
+    };
+
+    $scope.removeValue = function(clientId, objectId, entityType, value) {
+    };
+
+    $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
+        if (event.target.value) {
+            $scope.saveValue(clientId, objectId, field, new model.TextValue(event.target.value), parentClientId, parentObjectId);
+        }
+    };
+
+    $scope.saveSoundValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+        var value = new model.SoundValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+    };
+
+    $scope.saveImageValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+        var value = new model.ImageValue(fileName, fileType, fileContent);
+        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+    };
+
+    $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
+
+        var url;
+        if (field.level) {
+            switch (field.level) {
+                case  'leveloneentity':
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity';
+                    break;
+                case 'leveltwoentity':
+                    if (parentClientId && parentObjectId) {
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity/' + encodeURIComponent(parentClientId) + '/' + encodeURIComponent(parentObjectId) + '/leveltwoentity';
+                    } else {
+                        $log.error('Attempting to create Level2 entry with no Level1 entry.');
+                        return;
+                    }
+                    break;
+                case 'groupingentity':
+                    return;
+                    break;
+            }
+
+            var entryObject = value.export();
+
+            // TODO: get locale_id from cookies
+            entryObject['entity_type'] = field.entity_type;
+            entryObject['locale_id'] = 1;
+            entryObject['metadata'] = {};
+
+            if (field.group) {
+                entryObject['group'] = field.group;
+            }
+
+            $http.post(url, entryObject).success(function(data, status, headers, config) {
+
+                if (data.client_id && data.object_id) {
+
+                    entryObject.client_id = data.client_id;
+                    entryObject.object_id = data.object_id;
+
+                    var getSavedEntityUrl = '/leveloneentity/' + data.client_id + '/' + data.object_id;
+                    $http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
+
+                        $scope.entry.contains.push(data);
+
+                        // and finally close input
+                        $scope.disableInput(clientId, objectId, field.entity_type);
+
+                    }).error(function(data, status, headers, config) {
+
+                    });
+                }
+
+            }).error(function(data, status, headers, config) {
+
+            });
+        }
+    };
+
+    $scope.ok = function () {
+        $modalInstance.close();
+    };
+
+    $scope.cancel = function () {
+        $modalInstance.dismiss('cancel');
+    };
+
+
+    $scope.$watch('entry', function (updatedEntry) {
+        $scope.mapFieldValues([updatedEntry], $scope.fields);
+    }, true);
+
+}]);
+
+
+
+app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'groupParams', function($scope, $http, $modalInstance, $q, $log, groupParams) {
+
+    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
+    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
+    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
+    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
+
+    var enabledInputs = [];
+
+    WaveSurferController.call(this, $scope);
+
+    $scope.fields = groupParams.fields;
+    $scope.connectedEntries = [];
+    $scope.suggestedEntries = [];
+
+
+    $scope.searchQuery = '';
+
+
+    $scope.fieldsIdx = [];
+    for (var k = 0; k < $scope.fields.length; k++) {
+        $scope.fieldsIdx.push($scope.fields[k]);
+    }
+
+    $scope.fieldsValues = [];
+    $scope.suggestedFieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+
+        var result = [];
+        $scope.fieldsValues = [];
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            result.push(entryRow);
+        }
+        return result;
+    };
+
+    $scope.getFieldValues = function (entry, field) {
+
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+
+            if (field.isGroup) {
+
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+
+    $scope.linkEntry = function(index) {
+        $scope.connectedEntries.push($scope.suggestedEntries[index]);
+    };
+
+
+    $scope.unlinkEntry = function(index) {
+        $scope.connectedEntries.splice(index);
+    };
+
+
+    $scope.ok = function () {
+        $modalInstance.close();
+    };
+
+    $scope.cancel = function () {
+        $modalInstance.dismiss('cancel');
+    };
+
+    $scope.$watch('connectedEntries', function (updatedEntries) {
+        $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+
+
+    $scope.$watch('suggestedEntries', function (updatedEntries) {
+        $scope.suggestedFieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+
+
+    $scope.$watch('searchQuery', function (updatedQuery) {
+
+        if (!updatedQuery || updatedQuery.length < 3) {
+            return;
+        }
+
+        var url = '/basic_search?leveloneentity=' + encodeURIComponent(updatedQuery);
+        $http.get(url).success(function(data, status, headers, config) {
+            $scope.suggestedEntries = [];
+
+            var urls = [];
+            for (var i = 0; i < data.length; i++) {
+                var entr = data[i];
+                var getEntryUrl = '/dictionary/' + encodeURIComponent(entr.origin_dictionary_client_id) +'/'+ encodeURIComponent(entr.origin_dictionary_object_id) + '/perspective/' + encodeURIComponent(entr.origin_perspective_client_id) +  '/' + encodeURIComponent(entr.origin_perspective_object_id) + '/lexical_entry/' + encodeURIComponent(entr.client_id) + '/' + encodeURIComponent(entr.object_id);
+                urls.push(getEntryUrl);
+            }
+
+            var uniqueUrls = urls.filter(function(item, pos) {
+                return urls.indexOf(item) == pos;
+            });
+
+            var requests = [];
+            for (var j = 0; j < uniqueUrls.length; j++) {
+                var r = $http.get(uniqueUrls[j]);
+                requests.push(r);
+            }
+
+            $q.all(requests).then(function(results) {
+                for (var k = 0; k < results.length; k++) {
+                    if (results[k].data) {
+                        $scope.suggestedEntries.push(results[k].data.lexical_entry);
+                    }
+                }
+            });
+
+
+
+        }).error(function(data, status, headers, config) {
+
+        });
+
+    }, true);
+
+
+    var loadConnectedWords = function() {
+        var url = '/lexical_entry/' + encodeURIComponent(groupParams.clientId) + '/' + encodeURIComponent(groupParams.objectId) + '/connected';
+        $http.get(url).success(function(data, status, headers, config) {
+
+
+
+        }).error(function(data, status, headers, config) {
+
+        });
+
+    };
+
+    loadConnectedWords();
+
+}]);
+
+
