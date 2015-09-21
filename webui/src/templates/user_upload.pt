@@ -90,6 +90,10 @@
 
         <tbody>
 
+
+
+
+
         <tr ng-repeat="file in files">
             <td>
                 {{ file.name }}
@@ -108,6 +112,8 @@
         </tbody>
 
     </table>
+
+    <p class="bg-warning" ng-if="uploadMsg">Upload started. You will be redirected automatically.</p>
 
 
     <span class="btn btn-default btn-file">
