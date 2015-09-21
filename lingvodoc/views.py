@@ -1201,7 +1201,7 @@ def view_perspective_fields(request):
                                                                         translation_string=field2.data_type)
                         data2['status'] = field2.state
                         data2['position'] = field2.position
-                        data2['level'] = field.level
+                        data2['level'] = field2.level
                         contains += [data2]
                     data['contains'] = contains
                 if field.group:
@@ -1555,7 +1555,7 @@ def create_entities_bulk(request):
             real_location = None
             url = None
             if data_type == 'sound':
-                real_location, url = create_object(request, req['content'], entity, data_type, filename)
+                real_location, url = create_object(item, item['content'], entity, data_type, filename)
 
             if url and real_location:
                 entity.content = url
@@ -1873,7 +1873,7 @@ def create_lexical_entry_bulk(request):
             return {'error': str("No such perspective in the system")}
 
         lexes_list = []
-        for i in range(1,count):
+        for i in range(1, count):
             lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=variables['auth'],
                                    parent_object_id=perspective_id, parent=perspective)
             DBSession.add(lexentr)
