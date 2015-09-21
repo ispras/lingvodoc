@@ -38,6 +38,9 @@ angular.module('UserUploadModule', ['ui.bootstrap']).directive('onReadFile', fun
             headers: {'Content-Type': undefined}
         }).success(function () {
             loadBlobs();
+
+            window.location = '/create_dictionary';
+
         }).error(function () {
 
         });

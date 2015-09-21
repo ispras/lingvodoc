@@ -28,7 +28,7 @@ app.config(function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/create/step1');
 });
 
-app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$log', function ($scope, $http, $modal, $interval, $state, $log) {
+app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$location', '$log', function ($scope, $http, $modal, $interval, $state, $location, $log) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -131,16 +131,9 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
             for (var i = 0; i < $scope.languages.length; i++) {
                 if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1])
 
-                    $log.info($scope.languages[i]);
-
                     return $scope.languages[i];
             }
-
-
-            $log.info('no found!');
         }
-
-        $log.info('no found id!');
     };
 
 
@@ -183,7 +176,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                 alert('Failed to save language!');
             });
         }, function () {
-            $log.info('Modal dismissed at: ' + new Date());
         });
     };
 
@@ -216,12 +208,10 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 
         var language = getLanguageById($scope.dictionaryData.languageId);
         if ((!$scope.dictionaryData.name && $scope.wizard.mode == 'create') || (typeof $scope.wizard.importedDictionaryId != 'string' && $scope.wizard.mode == 'import') || !language) {
-
             return;
         }
 
         if ($scope.wizard.mode == 'create') {
-
 
             var dictionaryObj = {
                 'parent_client_id': language.client_id,
@@ -290,7 +280,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                 var setFieldsUrl = '/dictionary/' + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + '/' + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + '/perspective/' + encodeURIComponent($scope.dictionaryData.perspective_client_id) + '/' + encodeURIComponent($scope.dictionaryData.perspective_object_id) + '/fields';
 
                 $http.post(setFieldsUrl, exportPerpective($scope.perspective)).success(function(data, status, headers, config) {
-                    $state.go('create.step3');
+                    window.location = '/dashboard';
                 }).error(function(data, status, headers, config) {
                     alert('Failed to create perspective!');
                 });
@@ -387,8 +377,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                     });
                 }
             }
-
-            $log.info($scope.uploadedDictionaries);
 
 
         }).error(function (data, status, headers, config) {

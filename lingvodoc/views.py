@@ -2368,9 +2368,9 @@ def signup_post(request):
         email = request.POST.getone('email')
         password = request.POST.getone('password')
 
-        day = request.POST.getone('day')
-        month = request.POST.getone('month')
-        year = request.POST.getone('year')
+        day = request.POST.get('day', "1")
+        month = request.POST.get('month', "1")
+        year = request.POST.get('year', "1970")
         birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
 
         if DBSession.query(User).filter_by(login=login).first():

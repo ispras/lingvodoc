@@ -1071,7 +1071,28 @@ app.controller('editGroupingTagController', ['$scope', '$http', '$modalInstance'
     };
 
     $scope.linkEntry = function(index) {
-        $scope.connectedEntries.push($scope.suggestedEntries[index]);
+
+        //{entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
+
+
+        var linkObject = {
+            'entity_type': 'Etymology',
+            'connections': [{
+                'client_id': groupParams.clientId,
+                'object_id': groupParams.objectId
+            },
+            {
+                'client_id': $scope.suggestedEntries[index].clientId,
+                'object_id': $scope.suggestedEntries[index].objectId
+            }]};
+
+
+        var url = '/group_entity';
+        $http.post(url, linkObject).success(function(data, status, headers, config) {
+            $scope.connectedEntries.push($scope.suggestedEntries[index]);
+        }).error(function(data, status, headers, config) {
+
+        });
     };
 
 

@@ -88,7 +88,7 @@ def configure_routes(config):
     config.add_route('users', '/users')
 
     # web-view
-    config.add_route(name='new_dictionary', pattern='/dashboard/create_dictionary')
+    config.add_route(name='new_dictionary', pattern='/create_dictionary')
 
     # web-view
     config.add_route(name='edit_dictionary_properties', pattern='/dictionary/{client_id}/{object_id}/edit')
