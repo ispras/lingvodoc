@@ -26,6 +26,7 @@ angular.module('UserUploadModule', ['ui.bootstrap']).directive('onReadFile', fun
 
 
     $scope.files = [];
+    $scope.uploadMsg = false;
 
     $scope.upload = function(file) {
 
@@ -33,14 +34,14 @@ angular.module('UserUploadModule', ['ui.bootstrap']).directive('onReadFile', fun
         fd.append('blob', file);
         fd.append('data_type', 'dialeqt_dictionary');
 
+        $scope.uploadMsg = true;
+
         $http.post('/blob', fd, {
             transformRequest: angular.identity,
             headers: {'Content-Type': undefined}
         }).success(function () {
             loadBlobs();
-
             window.location = '/create_dictionary';
-
         }).error(function () {
 
         });

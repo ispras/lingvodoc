@@ -2304,7 +2304,7 @@ def login_get(request):
 
 @view_config(route_name='login', request_method='POST')
 def login_post(request):
-    next = request.params.get('next') or request.route_url('dashboard')
+    next = request.params.get('next') or request.route_url('home')
     login = request.POST.get('login', '')
     password = request.POST.get('password', '')
     print(login)

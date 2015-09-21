@@ -69,12 +69,34 @@
 </nav>
 
 
-<div class="container" ng-controller="HomeController">
+<div class="container" ng-controller="HomeController" ng-cloak>
 
     <blockquote>Проект выполняется при финансовой поддержке грантов Президента РФ МД-6198.2013.6 (рук. Ю.В.Норманская) и
         Программы ОИФН Типологическое и историческое изучение языковых явлений в их соотношении с культурной эволюцией,
         реконструкция культуры по данным языка (рук. А.В.Дыбо)
     </blockquote>
+
+
+    <h2>Опубликованные словари</h2>
+
+    <div ng-repeat="group in groupDictionaries">
+        <h3>{{ group.name }}</h3>
+
+        <ul class="entries_list">
+            <li ng-repeat="dictionary in group.dicts">
+                {{ dictionary.name }}
+
+                <ul class="entries_list">
+                    <li ng-repeat="p in dictionary.links">
+                        <a href="{{ p.link }}">{{ p.name }}</a>
+                    </li>
+                </ul>
+
+            </li>
+        </ul>
+
+    </div>
+
 
     <h1>О проекте</h1>
 
@@ -161,23 +183,7 @@
 
 
 
-    <div ng-repeat="group in groupDictionaries">
-        <h3>{{ group.name }}</h3>
 
-        <ul class="entries_list">
-            <li ng-repeat="dictionary in group.dicts">
-                {{ dictionary.name }}
-
-                <ul class="entries_list">
-                    <li ng-repeat="p in dictionary.links">
-                        <a href="{{ p.link }}">{{ p.name }}</a>
-                    </li>
-                </ul>
-
-            </li>
-        </ul>
-
-    </div>
 
 
 
