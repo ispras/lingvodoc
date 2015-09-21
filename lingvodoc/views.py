@@ -1030,10 +1030,10 @@ def dictionaries_list(request):
         languages = req['languages']
     dicts = DBSession.query(Dictionary)
     if published:
-        if published == 'true':
-            dicts = dicts.filter(Dictionary).filter_by(state='published')
-        if published == 'false':
-            dicts = dicts.filter(Dictionary).filter(Dictionary.state != 'published')
+        if published:
+            dicts = dicts.filter(Dictionary).filter_by(state='Published')
+        else:
+            dicts = dicts.filter(Dictionary).filter(Dictionary.state != 'Published')
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
