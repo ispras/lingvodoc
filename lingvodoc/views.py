@@ -76,7 +76,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.inspection import inspect
 from pyramid.request import Request
 # import redis
-
+import json
 
 class CommonException(Exception):
     def __init__(self, value):
@@ -1475,8 +1475,11 @@ def create_l1_entity(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
+        additional_metadata=req.get('additional_metadata')
+        if additional_metadata:
+            additional_metadata = json.dumps(additional_metadata)
         entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
-                                locale_id=req['locale_id'], additional_metadata=req.get('additional_metadata'),
+                                locale_id=req['locale_id'], additional_metadata=additional_metadata,
                                 parent=parent)
         DBSession.add(entity)
         DBSession.flush()
