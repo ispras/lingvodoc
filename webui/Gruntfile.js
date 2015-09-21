@@ -37,8 +37,8 @@ module.exports = function(grunt) {
         },
         uglify: {
             options: {
-                compress: false,
-                mangle: false
+                compress: true,
+                mangle: true
             },
             lingvodoc: {
                 src: [
@@ -54,18 +54,109 @@ module.exports = function(grunt) {
                     'bower_components/angular-animate/angular-animate.js',
                     'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/lingvodemo.js',
-                    'src/js/lingvodocedit.js',
-                    'src/js/lingvodocview.js',
+                    'src/js/edit_dictionary.js',
+                    'src/js/view_dictionary.js',
                     'src/js/lingvowave.js',
                     'src/js/dashboard.js',
                     'src/js/languages.js',
                     'src/js/create_dictionary.js',
                     'src/js/blob_upload.js'
-
-
                 ],
                 dest: '../lingvodoc/static/js/lingvodoc.js'
+            },
+            login: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/bootstrap-validator/dist/validator.js'
+                ],
+                dest: '../lingvodoc/static/js/login.js'
+            },
+            home: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js'
+                ],
+                dest: '../lingvodoc/static/js/home.js'
+            },
+            dashboard: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'bower_components/autocomplete/script/autocomplete.js',
+                    'src/js/dashboard.js'
+                ],
+                dest: '../lingvodoc/static/js/dashboard.js'
+            },
+            languages: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'bower_components/autocomplete/script/autocomplete.js',
+                    'src/js/languages.js'
+                ],
+                dest: '../lingvodoc/static/js/languages.js'
+            },
+            createdictionary: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/angular-route/angular-route.js',
+                    'bower_components/angular-ui-router/release/angular-ui-router.js',
+                    'bower_components/angular-animate/angular-animate.js',
+                    'bower_components/autocomplete/script/autocomplete.js',
+                    'src/js/create_dictionary.js'
+                ],
+                dest: '../lingvodoc/static/js/create-dictionary.js'
+            },
+            viewdictionary: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/view_dictionary.js',
+                    'src/js/lingvowave.js'
+                ],
+                dest: '../lingvodoc/static/js/view-dictionary.js'
+            },
+            editdictionary: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/edit_dictionary.js',
+                    'src/js/lingvowave.js'
+                ],
+                dest: '../lingvodoc/static/js/edit-dictionary.js'
             }
+
+
+
+
+
         }
     });
     grunt.loadNpmTasks('grunt-contrib-copy');

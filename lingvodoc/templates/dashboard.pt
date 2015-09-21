@@ -12,7 +12,7 @@
 
     <title>Lingvodoc future</title>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
-    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/dashboard.js')}"></script>
 
 </head>
 
@@ -36,11 +36,10 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="#">Lingvodoc</a>
+            <a class="navbar-brand" href="${request.route_url('home')}">Lingvodoc</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li><a href="${request.route_url('home')}">Home</a></li>
                 <li class="active"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
                 <li><a href="${request.route_url('languages')}">Languages</a></li>
                 <li><a href="#contact">Contact</a></li>

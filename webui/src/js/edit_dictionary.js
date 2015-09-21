@@ -717,9 +717,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                                 $scope.lexicalEntries[i].contains[j].marked_for_deletion = true;
                             }
                         }
-
-
-                        $scope.lexicalEntries[i].contains.push(data);
                         break;
                     }
                 }
@@ -1159,6 +1156,10 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
         $scope.saveValue(entry, field, value, parent);
     };
 
+    $scope.addedByUser = function(entry) {
+        return entry.client_id == $('#clientId').data('lingvodoc');
+    };
+
     $scope.saveValue = function(entry, field, value, parent) {
 
         var url;
@@ -1229,11 +1230,11 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
         if (field.level) {
             switch (field.level) {
                 case  'leveloneentity':
-                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity/' ;
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id);
                     break;
                 case 'leveltwoentity':
                     if (parentClientId && parentObjectId) {
-                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity/';
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id);
                     } else {
                         $log.error('Attempting to delete Level2 entry with no Level1 entry.');
                         return;
@@ -1246,11 +1247,26 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
 
             $http.delete(url).success(function(data, status, headers, config) {
 
+                for (var i = 0; i < $scope.entries.length; i++) {
+                    if ($scope.entries[i].row_id == entry.row_id &&
+                        $scope.entries[i].client_id == entry.client_id) {
+
+                        var lexicalEntry = $scope.entries[i];
+                        for (var j = 0; j < lexicalEntry.contains.length; j++) {
+                            if (lexicalEntry.contains[j].client_id == fieldValue.client_id && lexicalEntry.contains[j].object_id == fieldValue.object_id) {
+                                $scope.entries[i].contains[j].marked_for_deletion = true;
+                            }
+                        }
+                        break;
+                    }
+                }
+
             }).error(function(data, status, headers, config) {
 
             });
         }
     };
+
 
     $scope.ok = function () {
         $modalInstance.close();

@@ -12,7 +12,7 @@
 
     <title>Lingvodoc future</title>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
-    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/edit-dictionary.js')}"></script>
 
 </head>
 
@@ -45,11 +45,10 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="#">Lingvodoc</a>
+            <a class="navbar-brand" href="${request.route_url('home')}">Lingvodoc</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li><a href="${request.route_url('home')}">Home</a></li>
                 <li class="active"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
                 <li><a href="${request.route_url('languages')}">Languages</a></li>
                 <li><a href="#contact">Contact</a></li>
@@ -71,7 +70,11 @@
     </div>
 </nav>
 
+<br>
+
 <div class="container-fluid" style="padding-top: 20px" ng-controller="EditDictionaryController" ng-cloak>
+
+    <br>
 
     <div class="row" style="margin: 30px 0">
         <div class="col-sm-10">
@@ -103,59 +106,60 @@
         </div>
     </div>
 
-    <table class="table table-striped table-bordered">
-        <thead>
-        <tr>
-            <td ng-repeat="field in fields">{{ field.entity_type }}</td>
-            <td> <!-- action --> </td>
-        </tr>
-        </thead>
 
-        <tbody>
+    <div class="row">
+        <table class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                <td> <!-- action --> </td>
+            </tr>
+            </thead>
 
-
-        <tr ng-repeat="entryFields in dictionaryMatrix">
-
+            <tbody>
 
 
+            <tr ng-repeat="entryFields in dictionaryMatrix">
 
-            <td ng-repeat="fieldValues in entryFields" ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
+                <td ng-repeat="fieldValues in entryFields"
+                    ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
 
 
-                <div ng-if="field.data_type == 'text'">
-                    <ul class="entries_list">
-                        <li ng-repeat="fieldValue in fieldValues" ng-class="{removed: fieldValue.marked_for_deletion}">
-                            {{ fieldValue.content }}
+                    <div ng-if="field.data_type == 'text'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues"
+                                ng-class="{removed: fieldValue.marked_for_deletion}">
+                                {{ fieldValue.content }}
                             <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
                                     <button type="button" class="btn btn-default btn-xs"
-                                        ng-click="removeValue(lexicalEntry, field, fieldValue)">
-                                    <span class="glyphicon glyphicon-remove-sign"></span>
-                                </button>
+                                            ng-click="removeValue(lexicalEntry, field, fieldValue)">
+                                        <span class="glyphicon glyphicon-remove-sign"></span>
+                                    </button>
                             </span>
-                        </li>
-                    </ul>
+                            </li>
+                        </ul>
 
 
-                    <button type="button" class="btn btn-default btn-sm"
-                            ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
-                        <span class="glyphicon glyphicon-plus"></span>
-                    </button>
+                        <button type="button" class="btn btn-default btn-sm"
+                                ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
 
-                    <br>
+                        <br>
 
-                    <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
-                        <input type="text" value="" placeholder=""
-                               ng-blur="saveTextValue(lexicalEntry, field, $event)">
+                        <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                            <input type="text" value="" placeholder=""
+                                   ng-blur="saveTextValue(lexicalEntry, field, $event)">
+                        </div>
+
                     </div>
 
-                </div>
 
+                    <div ng-if="field.data_type == 'image'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
 
-                <div ng-if="field.data_type == 'image'" ng-if="!fieldValue.marked_for_deletion">
-                    <ul class="entries_list">
-                        <li ng-repeat="fieldValue in fieldValues" ng-class="{removed: fieldValue.marked_for_deletion}">
-
-                            <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
+                                <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
 
                             <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
                                     <button type="button" class="btn btn-default btn-xs"
@@ -163,45 +167,49 @@
                                         <span class="glyphicon glyphicon-remove-sign"></span>
                                     </button>
                             </span>
-                        </li>
-                    </ul>
+                            </li>
+                        </ul>
 
-                    <button type="button" class="btn btn-default btn-sm"
-                            ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
-                        <span class="glyphicon glyphicon-plus"></span>
-                    </button>
+                        <button type="button" class="btn btn-default btn-sm"
+                                ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
 
-                    <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
                         <span class="btn btn-default btn-file">
                             Upload <input type="file"
                                           on-read-file="saveImageValue(lexicalEntry, field, $fileName, $fileType, $fileContent)">
                         </span>
+                        </div>
+
                     </div>
 
-                </div>
+                    <div ng-if="field.data_type == 'sound'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
 
-                <div ng-if="field.data_type == 'sound'">
-                    <ul class="entries_list">
-                        <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="play(fieldValue.content)">
+                                    <span class="glyphicon glyphicon-play">Play sound</span>
+                                </button>
 
-                            <button type="button" class="btn btn-default btn-sm" ng-click="play(fieldValue.content)">
-                                <span class="glyphicon glyphicon-play">Play sound</span>
-                            </button>
-
-                            <button type="button" class="btn btn-default btn-sm" ng-if="fieldValue.contains && fieldValue.contains.length > 0" ng-click="annotate(fieldValue, fieldValue.contains[0])">
-                                <span class="glyphicon glyphicon-list">View markup</span>
-                            </button>
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-if="fieldValue.contains && fieldValue.contains.length > 0"
+                                        ng-click="annotate(fieldValue, fieldValue.contains[0])">
+                                    <span class="glyphicon glyphicon-list">View markup</span>
+                                </button>
 
                             <span ng-repeat="markupField in field.contains">
 
                                 <button type="button" class="btn btn-default btn-sm"
-                                        ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, markupField.entity_type)" >
+                                        ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, markupField.entity_type)">
                                     <span class="glyphicon glyphicon-open-file">Upload markup</span>
                                 </button>
 
                                 <span ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, markupField.entity_type)">
                                     <span class="btn btn-default btn-file">
-                                        Upload markup <input type="file" on-read-file="saveMarkupValue(lexicalEntry, markupField, $fileName, $fileType, $fileContent, fieldValue)">
+                                        Upload markup <input type="file"
+                                                             on-read-file="saveMarkupValue(lexicalEntry, markupField, $fileName, $fileType, $fileContent, fieldValue)">
                                     </span>
                                 </span>
                             </span>
@@ -213,71 +221,70 @@
                                     </button>
                             </span>
 
-                        </li>
-                    </ul>
+                            </li>
+                        </ul>
 
 
-                    <button type="button" class="btn btn-default btn-sm"
-                            ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
-                        <span class="glyphicon glyphicon-plus"></span>
-                    </button>
+                        <button type="button" class="btn btn-default btn-sm"
+                                ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
 
-                    <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
+                        <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.entity_type)">
                         <span class="btn btn-default btn-file">
                             Upload <input type="file"
                                           on-read-file="saveSoundValue(lexicalEntry, field, $fileName, $fileType, $fileContent)">
                         </span>
+                        </div>
+
                     </div>
 
-                </div>
-
-                <div ng-if="field.isGroup">
                     <div ng-if="field.isGroup">
+                        <div ng-if="field.isGroup">
+
+                            <button type="button" class="btn btn-default btn-sm"
+                                    ng-click="editGroup(lexicalEntry, field, fieldValues)">
+                                <span class="glyphicon glyphicon-list">Edit</span>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div ng-if="field.data_type == 'grouping_tag'">
 
                         <button type="button" class="btn btn-default btn-sm"
-                                ng-click="editGroup(lexicalEntry, field, fieldValues)">
+                                ng-click="editGroupingTag(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)">
                             <span class="glyphicon glyphicon-list">Edit</span>
                         </button>
 
                     </div>
 
-                </div>
 
-                <div ng-if="field.data_type == 'grouping_tag'">
+                </td>
 
-                    <button type="button" class="btn btn-default btn-sm"
-                            ng-click="editGroupingTag(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)">
-                        <span class="glyphicon glyphicon-list">Edit</span>
-                    </button>
+                <td> <!-- action --> </td>
 
-                </div>
+            </tr>
 
+            </tbody>
 
-            </td>
-
-            <td> <!-- action --> </td>
-
-        </tr>
-
-        </tbody>
-
-    </table>
+        </table>
 
 
-    <div class="text-center">
+        <div class="text-center">
 
-        <nav>
-            <ul class="pagination pagination-sm">
+            <nav>
+                <ul class="pagination pagination-sm">
                     <li ng-repeat="pageNumber in range(1, pageCount)" ng-class="{active: pageNumber == pageIndex}">
                         <a href="#" ng-click="getPage(pageNumber)">{{ pageNumber }}</a>
                     </li>
-            </ul>
-        </nav>
+                </ul>
+            </nav>
+        </div>
     </div>
 
 </div>
-
-
 
 
 <script type="text/ng-template" id="annotationModal.html">
@@ -406,13 +413,14 @@
 
                     <tr ng-repeat="entryFields in fieldsValues">
 
-                        <td ng-repeat="fieldValues in entryFields" ng-init="lexicalEntry=entries[$parent.$index]; field=fieldsIdx[$index]">
+                        <td ng-repeat="fieldValues in entryFields"
+                            ng-init="lexicalEntry=entries[$parent.$index]; field=fieldsIdx[$index]">
 
                             <div ng-if="field.data_type == 'text'">
                                 <ul class="entries_list">
-                                    <li ng-repeat="fieldValue in fieldValues">
+                                    <li ng-repeat="fieldValue in fieldValues" ng-class="{removed: fieldValue.marked_for_deletion}">
                                         {{ fieldValue.content }}
-                            <span ng-if="addedByUser(lexicalEntry)">
+                            <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
                                     <button type="button" class="btn btn-default btn-xs"
                                             ng-click="removeValue(lexicalEntry, field, fieldValue)">
                                         <span class="glyphicon glyphicon-remove-sign"></span>
@@ -439,8 +447,8 @@
 
                             <div ng-if="field.data_type == 'image'">
                                 <ul class="entries_list">
-                                    <li ng-repeat="fieldValue in fieldValues">
-                                        {{ fieldValue.content }}
+                                    <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                        <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
                                     </li>
                                 </ul>
 
@@ -460,7 +468,7 @@
 
                             <div ng-if="field.data_type == 'sound'">
                                 <ul class="entries_list">
-                                    <li ng-repeat="fieldValue in fieldValues">
+                                    <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
 
                                         <button type="button" class="btn btn-default btn-sm"
                                                 ng-click="play(fieldValue.content)">
@@ -520,7 +528,6 @@
 
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
     </div>
 
 
@@ -579,7 +586,8 @@
                             </button>
                         </td>
 
-                        <td ng-repeat="field in fieldsValues[$index]" ng-if="fieldsIdx[$index].data_type!='grouping_tag' && !fieldsIdx[$index].isGroup">
+                        <td ng-repeat="field in fieldsValues[$index]"
+                            ng-if="fieldsIdx[$index].data_type!='grouping_tag' && !fieldsIdx[$index].isGroup">
 
                             <div ng-if="fieldsIdx[$index].data_type == 'text'">
                                 <ul class="entries_list">
@@ -651,7 +659,9 @@
                     <thead>
                     <tr>
                         <td></td>
-                        <td ng-repeat="field in fields" ng-if="field.data_type!='grouping_tag' && !field.isGroup">{{ field.entity_type }}</td>
+                        <td ng-repeat="field in fields" ng-if="field.data_type!='grouping_tag' && !field.isGroup">{{
+                            field.entity_type }}
+                        </td>
                     </tr>
                     </thead>
 
@@ -665,7 +675,8 @@
                             </button>
                         </td>
 
-                        <td ng-repeat="field in suggestedFieldsValues[$index]" ng-if="fieldsIdx[$index].data_type!='grouping_tag' && !fieldsIdx[$index].isGroup">
+                        <td ng-repeat="field in suggestedFieldsValues[$index]"
+                            ng-if="fieldsIdx[$index].data_type!='grouping_tag' && !fieldsIdx[$index].isGroup">
 
                             <div ng-if="fieldsIdx[$index].data_type == 'text'">
                                 <ul class="entries_list">
@@ -711,7 +722,6 @@
 
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
     </div>
 
 
