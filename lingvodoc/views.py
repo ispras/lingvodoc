@@ -1031,9 +1031,9 @@ def dictionaries_list(request):
     dicts = DBSession.query(Dictionary)
     if published:
         if published:
-            dicts = dicts.filter(Dictionary).filter_by(state='Published')
+            dicts = dicts.filter_by(Dictionary.state == 'Published')
         else:
-            dicts = dicts.filter(Dictionary).filter(Dictionary.state != 'Published')
+            dicts = dicts.filter_by(Dictionary.state != 'Published')
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
