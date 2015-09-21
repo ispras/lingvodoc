@@ -12,11 +12,14 @@
 
     <title>Lingvodoc future</title>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
-    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/user-upload.js')}"></script>
 
 </head>
 
-<body class="body-dashboard" ng-app="BlobUploadModule">
+<body class="body-dashboard" ng-app="UserUploadModule">
+
+<div id="listBlobsUrl" data-lingvodoc="${request.route_url('list_user_blobs')}"></div>
+
 
 <nav class="lingvodoc-navbar">
     <div class="container">
@@ -46,6 +49,7 @@
                        aria-expanded="false">${user.name}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
+                        <li><a href="${request.route_url('blob_upload')}">Manage files</a></li>
                         <li><a href="${request.route_url('logout')}">Sign out</a></li>
                     </ul>
                 </li>
@@ -64,19 +68,50 @@
 </nav>
 
 
-<div class="container" ng-controller="BlobUploadController">
+<div class="container" ng-controller="UserUploadController">
+
+    <table class="table table-striped table-bordered">
+        <thead>
+        <tr>
+            <td>
+                File name
+            </td>
+
+            <td>
+                Type
+            </td>
+
+            <td>
+                Link
+            </td>
+        </tr>
+        </thead>
 
 
-    <form action="/blob" method="post" accept-charset="utf-8" enctype="multipart/form-data">
+        <tbody>
 
-        <label for="mp3">Mp3</label>
-        <input id="mp3" name="blob" type="file" value="" />
-        <input type="hidden" name="data_type" value="dialeqt_dictionary">
+        <tr ng-repeat="file in files">
+            <td>
+                {{ file.name }}
+            </td>
 
-        <input type="submit" value="submit" />
-    </form>
+            <td>
+                {{ file.data_type }}
+            </td>
+
+            <td>
+                <a ng-href="{{ file.content }}"><span class="glyphicon glyphicon-download"></span></a>
+            </td>
+
+        </tr>
+
+        </tbody>
+
+    </table>
 
 
+    <span class="btn btn-default btn-file">
+        Upload <input type="file" on-read-file="upload($file)"></span>
 
 </div>
 

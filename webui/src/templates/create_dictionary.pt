@@ -5,14 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-
     <meta name="description" content="">
     <meta name="author" content="">
     <link rel="icon" href="favicon.ico">
 
     <title>Lingvodoc future</title>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
-    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/create-dictionary.js')}"></script>
 
 </head>
 
@@ -26,7 +25,9 @@
 <div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
 <div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
 <div id="allPerspectivesUrl" data-lingvodoc="${request.route_url('all_perspectives')}"></div>
-<!--?<div id="perspectiveFieldsUrl" data-lingvodoc="${request.route_url('perspective_fields')}"></div>-->
+<div id="listBlobsUrl" data-lingvodoc="${request.route_url('list_user_blobs')}"></div>
+<div id="convertUrl" data-lingvodoc="${request.route_url('convert_dictionary')}"></div>
+
 
 
 <nav class="lingvodoc-navbar">
@@ -39,11 +40,10 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="#">Lingvodoc</a>
+            <a class="navbar-brand" href="${request.route_url('home')}">Lingvodoc</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li><a href="#">Home</a></li>
                 <li class="active"><a href="">Dictionaries</a></li>
                 <li><a href="${request.route_url('languages')}">Languages</a></li>
                 <li><a href="#contact">Contact</a></li>
@@ -57,6 +57,7 @@
                        aria-expanded="false">${user.name}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
+                        <li><a href="${request.route_url('blob_upload')}">Manage files</a></li>
                         <li><a href="${request.route_url('logout')}">Sign out</a></li>
                     </ul>
                 </li>
@@ -82,16 +83,9 @@
 
                 <div class="page-header text-center">
                     <h2>Create dictionary</h2>
-
-                    <div class="text-center status-buttons">
-                        <a ui-sref-active="active" ui-sref=".step1"><span>1</span></a>
-                        <a ui-sref-active="active" ui-sref=".step2"><span>2</span></a>
-                        <a ui-sref-active="active" ui-sref=".step3"><span>3</span></a>
-                    </div>
                 </div>
 
             </div>
-
 
             <div id="form-views" ui-view></div>
 
@@ -111,9 +105,26 @@
         <span class="glyphicon glyphicon-plus-sign" ng-click="newLanguage()"></span>
         <hr>
 
-        <label for="name">Name</label>
-        <input type="text" id="name" name="name" class="form-control" placeholder="" required autofocus
-               ng-model="dictionaryData.name">
+        <ol>
+            <li><label><input type="radio" name="mode" ng-model="wizard.mode" value="create"> Create new dictionary</label></li>
+            <li><label><input type="radio" name="mode" ng-model="wizard.mode" value="import"> Import dictionary</label></li>
+        </ol>
+
+        <div ng-if="wizard.mode == 'create'">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" class="form-control" placeholder="" required autofocus ng-model="dictionaryData.name">
+        </div>
+
+
+
+        <div ng-if="wizard.mode == 'import'">
+            <label for="selectFile">Select uploaded file</label>
+            <select id="selectFile" class="form-control" ng-model="wizard.importedDictionaryId" ng-options="d.id as d.data.name for d in uploadedDictionaries track by d.id">
+
+            </select>
+        </div>
+
+
     </div>
 
     <a href="#" class="btn btn-block btn-info" ng-click="createDictionary()">
@@ -256,12 +267,12 @@
 
     </div>
 
-    <a ng-click="createPerspective()" class="btn btn-block btn-info">
-        Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
-    </a>
+    <!--?<a ng-click="createPerspective()" class="btn btn-block btn-info">-->
+        <!--?Next <span class="glyphicon glyphicon-circle-arrow-right"></span>-->
+    <!--?</a>-->
 
-    <a ui-sref="create.step1" class="btn btn-block btn-info">
-        <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
+    <a class="btn btn-block btn-warning" ng-click="saveDictionary()">
+        Complete <span class="glyphicon glyphicon-ok-sign"></span>
     </a>
 
 
@@ -292,7 +303,6 @@
         Can merge dictionaries and perspectives
         -->
 
-
         <table class="table">
             <thead>
             <tr>
@@ -319,11 +329,11 @@
         </table>
     </div>
 
+
+
     <a class="btn btn-block btn-warning" ng-click="saveDictionary()">
         Complete <span class="glyphicon glyphicon-ok-sign"></span>
     </a>
-
-
 </script>
 
 
@@ -349,7 +359,6 @@
 
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
     </div>
 
 </script>

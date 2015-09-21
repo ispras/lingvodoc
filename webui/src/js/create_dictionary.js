@@ -37,11 +37,19 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     var createDictionaryUrl = $('#createDictionaryUrl').data('lingvodoc');
     var allPerspectivesUrl = $('#allPerspectivesUrl').data('lingvodoc');
     var perspectiveFieldsUrl = '/dictionary';
+    var listBlobsUrl = $('#listBlobsUrl').data('lingvodoc');
 
 
+
+    $scope.wizard = {
+        'mode': 'create',
+        'importedDictionaryId': -1
+    };
 
     $scope.users = [];
     $scope.userLogins = [];
+    $scope.uploadedDictionaries = [];
+
 
     var wrapPerspective = function (perspective) {
 
@@ -100,7 +108,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
             jsPerspective.fields.push(field);
         }
 
-        console.log(jsPerspective);
         return jsPerspective;
     };
 
@@ -123,9 +130,17 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
             var ids = id.split('_');
             for (var i = 0; i < $scope.languages.length; i++) {
                 if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1])
+
+                    $log.info($scope.languages[i]);
+
                     return $scope.languages[i];
             }
+
+
+            $log.info('no found!');
         }
+
+        $log.info('no found id!');
     };
 
 
@@ -200,32 +215,59 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     $scope.createDictionary = function() {
 
         var language = getLanguageById($scope.dictionaryData.languageId);
-        if (!$scope.dictionaryData.name) {
+        if ((!$scope.dictionaryData.name && $scope.wizard.mode == 'create') || (typeof $scope.wizard.importedDictionaryId != 'string' && $scope.wizard.mode == 'import') || !language) {
+
             return;
         }
 
-        var dictionaryObj = {
-            'parent_client_id': language.client_id,
-            'parent_object_id': language.object_id,
-            'name': $scope.dictionaryData.name,
-            'translation': $scope.dictionaryData.name
-        };
+        if ($scope.wizard.mode == 'create') {
 
-        $http.post(createDictionaryUrl, dictionaryObj).success(function(data, status, headers, config) {
 
-            if (data.object_id && data.client_id) {
-                $scope.dictionaryData.dictionary_client_id = data.client_id;
-                $scope.dictionaryData.dictionary_object_id = data.object_id;
-                $state.go('create.step2');
-            } else {
+            var dictionaryObj = {
+                'parent_client_id': language.client_id,
+                'parent_object_id': language.object_id,
+                'name': $scope.dictionaryData.name,
+                'translation': $scope.dictionaryData.name
+            };
+
+            $http.post(createDictionaryUrl, dictionaryObj).success(function (data, status, headers, config) {
+
+                if (data.object_id && data.client_id) {
+                    $scope.dictionaryData.dictionary_client_id = data.client_id;
+                    $scope.dictionaryData.dictionary_object_id = data.object_id;
+                    $state.go('create.step2');
+                } else {
+                    alert('Failed to create dictionary!');
+                }
+
+            }).error(function (data, status, headers, config) {
                 alert('Failed to create dictionary!');
+            });
+        }
+
+
+        if ($scope.wizard.mode == 'import') {
+
+            if (typeof $scope.wizard.importedDictionaryId == 'string') {
+
+                var ids = $scope.wizard.importedDictionaryId.split('_');
+                var url = $('#convertUrl').data('lingvodoc');
+                var convertObject = {
+                    'blob_client_id': parseInt(ids[0]),
+                    'blob_object_id': parseInt(ids[1]),
+                    'parent_client_id': language.client_id,
+                    'parent_object_id': language.object_id
+                };
+
+
+                $http.post(url, convertObject).success(function (data, status, headers, config) {
+                    alert(data.status);
+                }).error(function (data, status, headers, config) {
+
+                });
             }
-
-        }).error(function(data, status, headers, config) {
-            alert('Failed to create dictionary!');
-        });
+        }
     };
-
 
     // Save perspective
     $scope.createPerspective = function() {
@@ -285,9 +327,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 
     $scope.addUser = function(userLogin) {
 
-
-
-
     };
 
     // Load data from backend
@@ -322,7 +361,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                         if (wrappedPerspective) {
                             $scope.perspectives.push(wrappedPerspective);
                         }
-                        console.log(wrappedPerspective);
                     }
                 })(perspective)).error(function(data, status, headers, config) {
                     $log.error('Failed to load perspectives!');
@@ -333,6 +371,31 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         });
     };
 
+
+    var loadBlobs = function() {
+        $http.get(listBlobsUrl).success(function (data, status, headers, config) {
+            $scope.uploadedDictionaries = [];
+
+
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].data_type='dialeqt_dictionary') {
+                    var id = data[i].client_id + '_' + data[i].object_id;
+
+                    $scope.uploadedDictionaries.push({
+                        'id': id,
+                        'data': data[i]
+                    });
+                }
+            }
+
+            $log.info($scope.uploadedDictionaries);
+
+
+        }).error(function (data, status, headers, config) {
+        });
+    };
+
+
     $scope.$watch('dictionaryData.perspectiveId', function (id) {
 
         if (typeof id == 'string') {
@@ -340,15 +403,18 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
             for (var i = 0; i < $scope.perspectives.length; i++) {
                 if ($scope.perspectives[i].client_id == ids[0] && $scope.perspectives[i].object_id == ids[1]) {
                     $scope.perspective = $scope.perspectives[i];
-                    console.log('Found!');
                     break;
                 }
             }
         }
     });
 
+
+
+
     loadLanguages();
     loadPerspectives();
+    loadBlobs();
 }]);
 
 
@@ -419,16 +485,7 @@ app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$mo
 
     $http.get(languagesUrl).success(function (data, status, headers, config) {
         $scope.languages = flatLanguages(data.languages);
-        $interval(function () {
-            $http.get(languagesUrl).success(function (data, status, headers, config) {
-                $scope.languages = flatLanguages(data.languages);
-            }).error(function (data, status, headers, config) {
-                // error handling
-            });
-        }, 3000);
     }).error(function (data, status, headers, config) {
         // error handling
     });
-
-
 }]);
