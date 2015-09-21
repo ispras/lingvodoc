@@ -1906,16 +1906,18 @@ def lexical_entries_all(request):
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
-    count = request.params.get('count') or 10000
+    count = request.params.get('count') or 200
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries = DBSession.query(LexicalEntry)\
-                .join(LexicalEntry.leveloneentity)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .offset(start_from) \
+                .limit(count)
                 #.filter_by(entity_type=sort_criterion)\
-                #.order_by(LevelOneEntity.content).offset(start_from)\
-                #.limit(count)
+                #.order_by(LevelOneEntity.content)
+
             result = []
             for entry in lexical_entries:
                 result.append(entry.track())
