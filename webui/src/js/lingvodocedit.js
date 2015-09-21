@@ -404,6 +404,7 @@ app.directive('onReadFile', function($parse) {
 app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log', '$timeout', function($scope, $http, $modal, $log, $timeout) {
 
 
+    var currentClientId = $('#clientId').data('lingvodoc');
     var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
     var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
     var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
@@ -411,14 +412,13 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
     WaveSurferController.call(this, $scope);
 
-    $scope.dictionaryView = {
-        'perspective': {
-            'fields': []
-        },
-        'dictionaryFields': []
+    $scope.perspective = {
+        'fields': []
     };
 
+    $scope.fields = [];
     $scope.lexicalEntries = [];
+    $scope.dictionaryMatrix = [];
 
     $scope.pageIndex = 1;
     $scope.pageSize = 50;
@@ -426,8 +426,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
 
     var enabledInputs = [];
 
-
-    $scope.getFieldValues = function(entry, field) {
+    $scope.getFieldValues = function (entry, field) {
 
         var value;
         var values = [];
@@ -530,6 +529,10 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         }
     };
 
+    $scope.addedByUser = function(entry) {
+        return entry.client_id == $('#clientId').data('lingvodoc');
+    };
+
 
     $scope.addNewLexicalEntry = function() {
 
@@ -548,32 +551,28 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         });
     };
 
-    $scope.removeValue = function(clientId, objectId, entityType, value) {
-
-    };
-
-    $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
+    $scope.saveTextValue = function(entry, field, event, parent) {
         if (event.target.value) {
-            $scope.saveValue(clientId, objectId, field, new model.TextValue(event.target.value), parentClientId, parentObjectId);
+            $scope.saveValue(entry, field, new model.TextValue(event.target.value), parent);
         }
     };
 
-    $scope.saveSoundValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+    $scope.saveSoundValue = function(entry, field, fileName, fileType, fileContent, parent) {
         var value = new model.SoundValue(fileName, fileType, fileContent);
-        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+        $scope.saveValue(entry, field, value, parent);
     };
 
-    $scope.saveImageValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+    $scope.saveImageValue = function(entry, field, fileName, fileType, fileContent, parent) {
         var value = new model.ImageValue(fileName, fileType, fileContent);
-        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+        $scope.saveValue(entry, field, value, parent);
     };
 
-    $scope.saveMarkupValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+    $scope.saveMarkupValue = function(entry, field, $fileName, $fileType, $fileContent, parent) {
         var value = new model.MarkupValue(fileName, fileType, fileContent);
-        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+        $scope.saveValue(entry, field, value, parent);
     };
 
-    $scope.editGroup = function(clientId, objectId, field, values) {
+    $scope.editGroup = function(entry, field, values) {
 
         var modalInstance = $modal.open({
             animation: true,
@@ -583,8 +582,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             resolve: {
                 'groupParams': function() {
                     return {
-                        'clientId': clientId,
-                        'objectId': objectId,
+                        'entry': entry,
                         'field': field,
                         'values': values
                     };
@@ -599,7 +597,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         });
     };
 
-    $scope.editGroupingTag = function(clientId, objectId, field, values) {
+    $scope.editGroupingTag = function(entry, field, values) {
 
         var modalInstance = $modal.open({
             animation: true,
@@ -609,9 +607,9 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             resolve: {
                 'groupParams': function() {
                     return {
-                        'clientId': clientId,
-                        'objectId': objectId,
-                        'fields': $scope.dictionaryView.dictionaryFields
+                        'clientId': entry.client_id,
+                        'objectId': entry.object_id,
+                        'fields': $scope.fields
                     };
                 }
             }
@@ -624,17 +622,17 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         });
     };
 
-    $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
+    $scope.saveValue = function(entry, field, value, parent) {
 
         var url;
         if (field.level) {
             switch (field.level) {
                 case  'leveloneentity':
-                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity';
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity';
                     break;
                 case 'leveltwoentity':
                     if (parentClientId && parentObjectId) {
-                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity/' + encodeURIComponent(parentClientId) + '/' + encodeURIComponent(parentObjectId) + '/leveltwoentity';
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
                     } else {
                         $log.error('Attempting to create Level2 entry with no Level1 entry.');
                         return;
@@ -664,8 +662,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                     $http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
                         // add to parent lexical entry
                         for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                            if ($scope.lexicalEntries[i].object_id == objectId &&
-                                $scope.lexicalEntries[i].client_id == clientId) {
+                            if ($scope.lexicalEntries[i].object_id == entry.object_id &&
+                                $scope.lexicalEntries[i].client_id == entry.client_id) {
                                 $scope.lexicalEntries[i].contains.push(data);
 
                                 // FIXME: This hack forces angularjs to re-render view
@@ -690,7 +688,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                         }
 
                         // and finally close input
-                        $scope.disableInput(clientId, objectId, field.entity_type);
+                        $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
 
                     }).error(function(data, status, headers, config) {
 
@@ -702,6 +700,85 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             });
         }
     };
+
+    $scope.removeValue = function(entry, field, fieldValue, parent) {
+
+        var url;
+        if (field.level) {
+            switch (field.level) {
+                case  'leveloneentity':
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity';
+                    break;
+                case 'leveltwoentity':
+                    if (parentClientId && parentObjectId) {
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
+                    } else {
+                        $log.error('Attempting to delete Level2 entry with no Level1 entry.');
+                        return;
+                    }
+                    break;
+                case 'groupingentity':
+                    return;
+                    break;
+            }
+
+            $http.delete(url).success(function(data, status, headers, config) {
+
+            }).error(function(data, status, headers, config) {
+
+            });
+        }
+    };
+
+
+    $scope.$watch('lexicalEntries', function (updatedEntries) {
+
+        var getFieldValues = function (entry, field) {
+
+            var value;
+            var values = [];
+            if (entry && entry.contains) {
+
+                if (field.isGroup) {
+
+                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                        var subField = field.contains[fieldIndex];
+
+                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                            value = entry.contains[valueIndex];
+                            if (value.entity_type == subField.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < entry.contains.length; i++) {
+                        value = entry.contains[i];
+                        if (value.entity_type == field.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            }
+            return values;
+        };
+
+        var mapFieldValues = function(allEntries, allFields) {
+            var result = [];
+            for (var i = 0; i < allEntries.length; i++) {
+                var entryRow = [];
+                for (var j = 0; j < allFields.length; j++) {
+                    entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+                }
+                result.push(entryRow);
+            }
+            return result;
+        };
+
+        $scope.dictionaryMatrix = mapFieldValues(updatedEntries, $scope.fields);
+
+    }, true);
+
 
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf('?') >= 0 ? "&" : '?') + encodeURIComponent(key) + "=" + encodeURIComponent(value);
@@ -769,8 +846,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         var getFieldsUrl = $('#getPerspectiveFieldsUrl').data('lingvodoc');
         $http.get(getFieldsUrl).success(function(data, status, headers, config) {
 
-            $scope.dictionaryView.perspective['fields'] = data.fields;
-            $scope.dictionaryView.dictionaryFields = perspectiveToDictionaryFields($scope.dictionaryView.perspective);
+            $scope.perspective['fields'] = data.fields;
+            $scope.fields = perspectiveToDictionaryFields($scope.perspective);
 
             getDictStats();
 
@@ -917,14 +994,46 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
     WaveSurferController.call(this, $scope);
 
     $scope.title = groupParams.field.entity_type;
-
     $scope.fields = groupParams.field.contains;
-    $scope.entry = {
-        'client_id': groupParams.clientId,
-        'object_id': groupParams.objectId,
-        'contains': groupParams.values
+    $scope.parentEntry = groupParams.entry;
+
+    var createVirtualEntries = function(values) {
+        var virtualEntries = [];
+
+        var addValue = function(value, entries) {
+
+            var createNewEntry = true;
+            if (value.additional_metadata) {
+                for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+                    var currentEntry = entries[entryIndex];
+
+                    if (entries[entryIndex].client_id == value.client_id &&
+                        entries[entryIndex].row_id == value.additional_metadata.row_id) {
+                        entries[entryIndex].contains.push(value);
+                        return;
+                    }
+                }
+
+                entries.push(
+                    {
+                        'client_id': $scope.parentEntry.client_id,
+                        'object_id': $scope.parentEntry.object_id,
+                        'row_id': value.additional_metadata.row_id,
+                        'contains': [value]
+                    }
+                );
+            }
+        };
+
+        for (var i = 0; i < values.length; i++) {
+            var value = values[i];
+            addValue(value, virtualEntries);
+        }
+
+        return virtualEntries;
     };
 
+    $scope.entries = createVirtualEntries(groupParams.values);
 
     $scope.fieldsIdx = [];
     $scope.fieldsValues = [];
@@ -976,6 +1085,23 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
     };
 
 
+    $scope.addNewEntry = function() {
+
+        var maxRowId = 0;
+        for (var i = 0; i < $scope.entries.length; i++) {
+            maxRowId = Math.max(maxRowId, $scope.entries[i].row_id);
+        }
+        var rowId = maxRowId + 1;
+
+        $scope.entries.push({
+            'row_id': rowId,
+            'client_id': dictionaryClientId,
+            'object_id': $scope.parentEntry.object_id,
+            'contains': []
+        });
+    };
+
+
     $scope.enableInput = function(clientId, objectId, entityType) {
         if (!$scope.isInputEnabled(clientId, objectId, entityType)) {
             enabledInputs.push({
@@ -1012,36 +1138,38 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
         }
     };
 
-    $scope.removeValue = function(clientId, objectId, entityType, value) {
-    };
-
-    $scope.saveTextValue = function(clientId, objectId, field, event, parentClientId, parentObjectId) {
+    $scope.saveTextValue = function(entry, field, event, parent) {
         if (event.target.value) {
-            $scope.saveValue(clientId, objectId, field, new model.TextValue(event.target.value), parentClientId, parentObjectId);
+            $scope.saveValue(entry, field, new model.TextValue(event.target.value), parent);
         }
     };
 
-    $scope.saveSoundValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+    $scope.saveSoundValue = function(entry, field, fileName, fileType, fileContent, parent) {
         var value = new model.SoundValue(fileName, fileType, fileContent);
-        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+        $scope.saveValue(entry, field, value, parent);
     };
 
-    $scope.saveImageValue = function(clientId, objectId, field, fileName, fileType, fileContent, parentClientId, parentObjectId) {
+    $scope.saveImageValue = function(entry, field, fileName, fileType, fileContent, parent) {
         var value = new model.ImageValue(fileName, fileType, fileContent);
-        $scope.saveValue(clientId, objectId, field, value, parentClientId, parentObjectId);
+        $scope.saveValue(entry, field, value, parent);
     };
 
-    $scope.saveValue = function(clientId, objectId, field, value, parentClientId, parentObjectId) {
+    $scope.saveMarkupValue = function(entry, field, $fileName, $fileType, $fileContent, parent) {
+        var value = new model.MarkupValue(fileName, fileType, fileContent);
+        $scope.saveValue(entry, field, value, parent);
+    };
+
+    $scope.saveValue = function(entry, field, value, parent) {
 
         var url;
         if (field.level) {
             switch (field.level) {
                 case  'leveloneentity':
-                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity';
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent($scope.parentEntry.client_id) + '/' + encodeURIComponent($scope.parentEntry.object_id) + '/leveloneentity';
                     break;
                 case 'leveltwoentity':
                     if (parentClientId && parentObjectId) {
-                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/leveloneentity/' + encodeURIComponent(parentClientId) + '/' + encodeURIComponent(parentObjectId) + '/leveltwoentity';
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent($scope.parentEntry.client_id) + '/' + encodeURIComponent($scope.parentEntry.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
                     } else {
                         $log.error('Attempting to create Level2 entry with no Level1 entry.');
                         return;
@@ -1057,11 +1185,11 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
             // TODO: get locale_id from cookies
             entryObject['entity_type'] = field.entity_type;
             entryObject['locale_id'] = 1;
-            entryObject['metadata'] = {};
+            entryObject['additional_metadata'] = {
+                'row_id': entry.row_id,
+                'client_id': entry.client_id
+            };
 
-            if (field.group) {
-                entryObject['group'] = field.group;
-            }
 
             $http.post(url, entryObject).success(function(data, status, headers, config) {
 
@@ -1072,16 +1200,51 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
 
                     var getSavedEntityUrl = '/leveloneentity/' + data.client_id + '/' + data.object_id;
                     $http.get(getSavedEntityUrl).success(function(data, status, headers, config) {
-
-                        $scope.entry.contains.push(data);
+                        // add to parent lexical entry
+                        for (var i = 0; i < $scope.entries.length; i++) {
+                            if ($scope.entries[i].row_id == entry.row_id &&
+                                $scope.entries[i].client_id == entry.client_id) {
+                                $scope.entries[i].contains.push(data);
+                                break;
+                            }
+                        }
 
                         // and finally close input
-                        $scope.disableInput(clientId, objectId, field.entity_type);
+                        $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
 
                     }).error(function(data, status, headers, config) {
 
                     });
                 }
+
+            }).error(function(data, status, headers, config) {
+
+            });
+        }
+    };
+
+    $scope.removeValue = function(entry, field, fieldValue, parent) {
+
+        var url;
+        if (field.level) {
+            switch (field.level) {
+                case  'leveloneentity':
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity';
+                    break;
+                case 'leveltwoentity':
+                    if (parentClientId && parentObjectId) {
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
+                    } else {
+                        $log.error('Attempting to delete Level2 entry with no Level1 entry.');
+                        return;
+                    }
+                    break;
+                case 'groupingentity':
+                    return;
+                    break;
+            }
+
+            $http.delete(url).success(function(data, status, headers, config) {
 
             }).error(function(data, status, headers, config) {
 
@@ -1097,8 +1260,12 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
         $modalInstance.dismiss('cancel');
     };
 
-    $scope.$watch('entry', function (updatedEntry) {
-        $scope.mapFieldValues([updatedEntry], $scope.fields);
+    $scope.$watch('entries', function (updatedEntries) {
+        $scope.mapFieldValues(updatedEntries, $scope.fields);
+
+        $log.info($scope.fieldsValues);
+
+
     }, true);
 
 }]);

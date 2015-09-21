@@ -40,6 +40,8 @@ from passlib.hash import bcrypt
 
 import datetime
 
+import json
+
 from sqlalchemy.inspection import inspect
 
 from sqlalchemy.ext.compiler import compiles
@@ -70,6 +72,9 @@ def recursive_content(self):
             if i.direction.name == "ONETOMANY":
                 x = getattr(self, str(entry))
                 for xx in x:
+                    additional_metadata = None
+                    if xx.additional_metadata:
+                        additional_metadata = json.loads(xx.additional_metadata)
                     vec += [{'level': xx.__tablename__,
                              'content': xx.content,
                              'object_id': xx.object_id,
@@ -79,7 +84,7 @@ def recursive_content(self):
                              'entity_type': xx.entity_type,
                              'marked_for_deletion': xx.marked_for_deletion,
                              'locale_id': xx.locale_id,
-                             'additional_metadata': xx.additional_metadata,
+                             'additional_metadata': additional_metadata,
                              'contains': recursive_content(xx) or None}]
                     # vec += recursive_content(xx)
     return vec
