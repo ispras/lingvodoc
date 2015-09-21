@@ -1754,7 +1754,7 @@ def delete_group_entity(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No such entity in the system")}
 
-
+@view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')  # TODO: check for permission
 def create_group_entity(request):
     try:

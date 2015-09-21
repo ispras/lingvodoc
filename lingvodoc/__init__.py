@@ -233,15 +233,28 @@ def configure_routes(config):
     # API #GET
     # GET parameter: entity_type = <type> (e.g: "etymology")
     config.add_route(name='get_connected_words', pattern='/lexical_entry/{client_id}/{object_id}/connected')
+    config.add_route(name='get_connected_words_indict', pattern='/dictionary/'
+                                                                '{dictionary_client_id}/{dictionary_object_id}'
+                                                                '/perspective/'
+                                                                '{perspective_client_id}/{perspective_id}/'
+                                                                'lexical_entry/'
+                                                                '{lexical_entry_client_id}/{lexical_entry_object_id}/'
+                                                                'connected')
+
+    # API #POST (TODO: change to PATCH method later)
+    # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
+    config.add_route(name='add_group_entity', pattern='/group_entity')  # ready, not tested
+    config.add_route(name='add_group_indict', pattern='/dictionary/'
+                                                      '{dictionary_client_id}/{dictionary_object_id}'
+                                                      '/perspective/'
+                                                      '{perspective_client_id}/{perspective_id}/'
+                                                      'lexical_entry/'
+                                                      'connect')  # ready, not tested
 
     # API #GET
     # like
     config.add_route(name='basic_search', pattern='/basic_search')
 
-
-    # API #POST (TODO: change to PATCH method later)
-    # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='add_group_entity', pattern='/group_entity')  # ready, not tested
 
     # API #POST
     # no parameters needed.
