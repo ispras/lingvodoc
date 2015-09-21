@@ -166,40 +166,28 @@
                 <div ng-if="field.data_type == 'sound'">
                     <ul class="entries_list">
                         <li ng-repeat="fieldValue in fieldValues">
+                            
                             <button type="button" class="btn btn-default btn-sm" ng-click="play(fieldValue.content)">
-                                <span class="glyphicon glyphicon-play">Play</span>
+                                <span class="glyphicon glyphicon-play">Play sound</span>
                             </button>
 
+                            <button type="button" class="btn btn-default btn-sm" ng-if="fieldValue.contains && fieldValue.contains.length > 0" ng-click="annotate(fieldValue, fieldValue.contains[0])">
+                                <span class="glyphicon glyphicon-list">View markup</span>
+                            </button>
 
-                            <div ng-if="field.contains && field.contains.length > 0">
-
+                            <span ng-repeat="markupField in field.contains">
 
                                 <button type="button" class="btn btn-default btn-sm"
-                                        ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, field.contains[0].entity_type)">
-                                    <span class="glyphicon glyphicon-plus"></span>
+                                        ng-click="enableInput(lexicalEntry.client_id, lexicalEntry.object_id, markupField.entity_type)" >
+                                    <span class="glyphicon glyphicon-open-file">Upload markup</span>
                                 </button>
 
-                                <div ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, field.contains[0].entity_type)">
+                                <span ng-if="isInputEnabled(lexicalEntry.client_id, lexicalEntry.object_id, markupField.entity_type)">
                                     <span class="btn btn-default btn-file">
-                                        Upload markup <input type="file" on-read-file="saveMarkupValue(lexicalEntry.client_id, lexicalEntry.object_id, field.contains[0], $fileName, $fileType, $fileContent, fieldValue.client_id, fieldValue.object_id)">
+                                        Upload markup <input type="file" on-read-file="saveMarkupValue(lexicalEntry.client_id, lexicalEntry.object_id, markupField, $fileName, $fileType, $fileContent, fieldValue.client_id, fieldValue.object_id)">
                                     </span>
-                                </div>
-
-                            </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                                </span>
+                            </span>
                         </li>
                     </ul>
 

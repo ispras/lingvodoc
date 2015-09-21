@@ -457,7 +457,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         return values;
     };
 
-    $scope.annotate = function(sound) {
+    $scope.annotate = function(soundEntity, markupEntity) {
+
         var modalInstance = $modal.open({
             animation: true,
             templateUrl: 'annotationModal.html',
@@ -465,10 +466,10 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             size: 'lg',
             resolve: {
                 soundUrl: function() {
-                    return sound.url;
+                    return soundEntity.content;
                 },
                 annotationUrl: function() {
-                    return 'http://127.1.0.1:6543/static/test.eaf';
+                    return markupEntity.content;
                 }
             }
         });
@@ -498,6 +499,8 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                 'objectId': objectId,
                 'entityType': entityType
             });
+        } else {
+            $scope.disableInput(clientId, objectId, entityType);
         }
     };
 
