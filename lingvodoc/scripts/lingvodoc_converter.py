@@ -209,7 +209,7 @@ import json
 def create_entity_list(ids_mapping, cursor, level, data_type, entity_type, locale_id=1):
     push_list = []
     for ld_cursor in cursor:
-        ld_id = ld_cursor[0]
+        ld_id = int(ld_cursor[0])
         content = ld_cursor[1]
         parent_client_id = ids_mapping[ld_id][0]
         parent_object_id = ids_mapping[ld_id][1]
@@ -297,8 +297,6 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
     # push_list = create_entity_list(ids_mapping, paradigm_word_cursor, 'leveloneentity', 'text', 'Paradigm word')
     # status = session.post(create_entities_url, json.dumps(push_list))
 
-
-
     return dictionary
 
 
@@ -312,3 +310,8 @@ def convert_one(filename, client_id, login, password_hash, language_client_id, l
     status = convert_db_new(sqconn, session, language_client_id, language_object_id)
     print(status)
     return status
+
+if __name__ == "__main__":
+    convert_one(filename="/tmp/userblobs/dialeqt_dictionary/2/2/nenets_kaninski.sqlite", client_id=2, login="admin",
+                password_hash="$2a$12$IMhcUHE4AtlP/M7fSg.RrOlVtrsyRteK92dRZpfffDjEMYeopmMdG",
+                language_client_id=1, language_object_id=1)
