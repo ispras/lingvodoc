@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}" />
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+
+</head>
+
+<body class="body-dashboard ng-scope" ng-app="CreatePerspective">
+
+
+<nav class="lingvodoc-navbar">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Lingvodoc</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Home</a></li>
+                <li class="active"><a href="#"></a></li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Settings <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#">Profile</a></li>
+                    </ul>
+                </li>
+
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+
+<div class="container" ng-controller="MainCtrl">
+
+
+    <div class="drag-object ng-binding ng-scope" ng-repeat="obj in draggableObjects">
+
+        <div ng-drag="true" ng-drag-data="obj" draggable="false" class="drag-object" style="">
+            {{ obj.name }}
+        </div>
+    </div>
+
+
+
+    <div ng-drop="true" ng-drop-success="onDropComplete($data,$event)" ng-drag-stop="onDragStop($data,$event)" class="drop-area">
+        <span class="title">Drop element here</span>
+
+        <div class="drag-object" ng-repeat="obj in droppedObjects" ng-drag="true" ng-drag-data="obj" ng-drag-success="onDragSuccess($data,$event)" >
+            {{obj.name}}
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

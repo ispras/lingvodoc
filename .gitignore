@@ -5,3 +5,8 @@ virtual_env/
 venv/
 .tox/
 *.sqlite
+*/__pycache__/*
+*.pyc
+webui/node_modules/
+webui/bower_components/
+webui/.sass-cache/
