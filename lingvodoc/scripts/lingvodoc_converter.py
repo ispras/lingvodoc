@@ -204,26 +204,9 @@ def convert_db(sqconn, session, args):
 
 import requests
 import json
+import hashlib
 
-
-def create_entity_list(ids_mapping, cursor, level, data_type, entity_type, locale_id=1):
-    push_list = []
-    for ld_cursor in cursor:
-        ld_id = int(ld_cursor[0])
-        content = ld_cursor[1]
-        parent_client_id = ids_mapping[ld_id][0]
-        parent_object_id = ids_mapping[ld_id][1]
-        element = {"locale_id": locale_id,
-                   "level": level,
-                   "data_type": data_type,
-                   "entity_type": entity_type,
-                   "parent_client_id": parent_client_id,
-                   "parent_object_id": parent_object_id,
-                   "content": content}
-        push_list.append(element)
-    return push_list
-
-def convert_db_new(sqconn, session, language_client_id, language_object_id):
+def convert_db_new(sqconn, session, language_client_id, language_object_id, locale_id=1):
     dict_attributes = get_dict_attributes(sqconn)
     create_dictionary_request = {"parent_client_id": language_client_id,
                                  "parent_object_id": language_object_id,
@@ -231,6 +214,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
                                  "name": dict_attributes['dictionary_name']}
     status = session.post('http://localhost:6543/dictionary', data=json.dumps(create_dictionary_request))
     dictionary = json.loads(status.text)
+    client_id = dictionary['client_id']
 
     perspective_create_url = 'http://localhost:6543/dictionary/%s/%s/perspective' % (dictionary['client_id'], dictionary['object_id'])
     create_perspective_request = {"translation": "Этимологический словарь из Lingvodoc 0.97",
@@ -267,26 +251,121 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id):
     # print(words_count)
     # print(i)
 
-    create_entities_url = 'http://localhost:6543/dictionary/1/1/perspective/1/1/entities'
+    create_entities_url = 'http://localhost:6543/dictionary/%s/%s/perspective/%s/%s/entities' % (dictionary['client_id'],
+                                                                                                 dictionary['object_id'],
+                                                                                                 perspective['client_id'],
+                                                                                                 perspective['object_id'])
+
+    def create_entity_list(mapping, cursor, level, data_type, entity_type, is_a_regular_form, locale_id=1):
+        push_list = []
+        for ld_cursor in cursor:
+            ld_id = int(ld_cursor[0])
+            content = ld_cursor[1]
+            parent_client_id = mapping[ld_id][0]
+            parent_object_id = mapping[ld_id][1]
+            element = {"locale_id": locale_id,
+                       "level": level,
+                       "data_type": data_type,
+                       "entity_type": entity_type,
+                       "parent_client_id": parent_client_id,
+                       "parent_object_id": parent_object_id,
+                       "content": content}
+            if not is_a_regular_form:
+                element['additional_metadata'] = '"client_id": %s, "row_id": %s' % (client_id, ld_cursor[2])
+            push_list.append(element)
+        return push_list
 
     def prepare_and_upload_text_entities(id_column, is_a_regular_form, text_column, entity_type):
         sqcursor = sqconn.cursor()
-        sqcursor.execute("select %s,%s from dictionary where is_a_regular_form=(?)" % (id_column, text_column),
-                         [is_a_regular_form])
-        push_list = create_entity_list(ids_mapping, sqcursor, "leveloneentity", 'text', entity_type)
+        if is_a_regular_form:
+            sqcursor.execute("select %s,%s from dictionary where is_a_regular_form=1" % (id_column, text_column))
+        else:
+            sqcursor.execute("select %s,%s,id from dictionary where is_a_regular_form=0" % (id_column, text_column))
+        push_list = create_entity_list(ids_mapping, sqcursor, "leveloneentity", 'text', entity_type, is_a_regular_form)
         return session.post(create_entities_url, json.dumps(push_list))
+
 
     for column_and_type in [("word", "Word"),
                             ("transcription", "Transcription"),
                             ("translation", "Translation")]:
-        status = prepare_and_upload_text_entities("id", 1, column_and_type[0], column_and_type[1])
+        status = prepare_and_upload_text_entities("id", True, column_and_type[0], column_and_type[1])
         print(status.text)
 
     for column_and_type in [("word", "Paradigm word"),
                             ("transcription", "Paradigm transcription"),
                             ("translation", "Paradigm translation")]:
-        status = prepare_and_upload_text_entities("regular_form", 0, column_and_type[0], column_and_type[1])
+        status = prepare_and_upload_text_entities("regular_form", False, column_and_type[0], column_and_type[1])
         print(status.text)
+
+
+    sound_and_markup_word_cursor = sqconn.cursor()
+    sound_and_markup_word_cursor.execute("""select blobs.id,
+                                            blobs.secblob,
+                                            blobs.mainblob,
+                                            dict_blobs_description.name,
+                                            dictionary.id
+                                            from blobs, dict_blobs_description, dictionary
+                                            where dict_blobs_description.blobid=blobs.id
+                                            and dict_blobs_description.wordid=dictionary.id
+                                            and dict_blobs_description.type=2
+                                            and dictionary.is_a_regular_form=1;""")
+
+    audio_hashes = set()
+    i = 1
+    for cursor in sound_and_markup_word_cursor:
+        audio_ids_list = []
+        audio_sequence = []
+        markup_sequence = []
+
+        blob_id = cursor[0]
+        audio = cursor[1]
+        markup = cursor[2]
+        common_name = cursor[3]
+        word_id = cursor[4]
+        audio_hashes.add(hashlib.sha224(audio).hexdigest())
+
+        audio_element = {"locale_id": locale_id,
+                         "level": "leveloneentity",
+                         "data_type": "sound",
+                         "filename": common_name + ".wav",
+                         "entity_type": "Sound",
+                         "parent_client_id": ids_mapping[int(word_id)][0],
+                         "parent_object_id": ids_mapping[int(word_id)][1],
+                         "content": str(base64.urlsafe_b64encode(audio))}
+        audio_sequence.append(audio_element)
+
+        markup_element = {
+            "locale_id": locale_id,
+            "level": "leveltwoentity",
+            "data_type": "markup",
+            "filename": common_name + ".TextGrid",
+            "entity_type": "Praat markup",
+            # need to set after push "parent_client_id": ids_mapping[int(word_id)][0],
+            # need to set after push "parent_object_id": ids_mapping[int(word_id)][1],
+            "content": str(base64.urlsafe_b64encode(markup))}
+        markup_sequence.append(markup_element)
+
+        if len(audio_sequence) > 0:
+            status = session.post(create_entities_url, json.dumps(audio_sequence))
+            print(status.text)
+            audio_ids_list = json.loads(status.text)
+            for k in range(0, len(audio_ids_list)):
+                parent_client_id = audio_ids_list[k]['client_id']
+                parent_object_id = audio_ids_list[k]['object_id']
+                markup_sequence[k]["parent_client_id"] = parent_client_id
+                markup_sequence[k]["parent_object_id"] = parent_object_id
+            status = session.post(create_entities_url, json.dumps(markup_sequence))
+            print(status.text)
+            audio_ids_list = []
+            audio_sequence = []
+            markup_sequence = []
+
+
+
+
+
+
+
     # word_cursor = sqconn.cursor()
     # word_cursor.execute("select id, word from dictionary where is_a_regular_form=1")
     # push_list = create_entity_list(ids_mapping, word_cursor, 'leveloneentity', 'text', 'Word')
