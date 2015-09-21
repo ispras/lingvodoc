@@ -284,6 +284,11 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_id}/all',
                      factory='lingvodoc.models.PerspectivePublishAcl')  # filter not ready
+
+    config.add_route(name='lexical_entries_all_count', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                               '/perspective/{perspective_client_id}/{perspective_id}/all_count',
+                     factory='lingvodoc.models.PerspectivePublishAcl')
+
     config.add_route(name='lexical_entries_published', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/published',
                      factory='lingvodoc.models.PerspectivePublishAcl')  # filter not ready
@@ -422,7 +427,10 @@ def configure_routes(config):
     # web-view #GET
     config.add_route(name='blob_upload', pattern='/blob_upload')
 
-    config.add_route(name='convert_dictionary', pattern='/convert/blob/{client_id}/{object_id}')
+    # API #POST
+    # params:
+    # {"blob_client_id": <id>, "blob_object_id": <id>, "parent_client_id": <language_client_id>, "parent_object_id": <language_object_id>}
+    config.add_route(name='convert_dictionary', pattern='/convert')
 
 
 def main(global_config, **settings):
