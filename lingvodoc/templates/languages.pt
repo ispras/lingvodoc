@@ -50,6 +50,7 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${user.name}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="#">Profile</a></li>
+                        <li><a href="${request.route_url('blob_upload')}">Manage files</a></li>
                         <li><a href="#">Sign out</a></li>
                     </ul>
                 </li>
