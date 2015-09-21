@@ -567,7 +567,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         $scope.saveValue(entry, field, value, parent);
     };
 
-    $scope.saveMarkupValue = function(entry, field, $fileName, $fileType, $fileContent, parent) {
+    $scope.saveMarkupValue = function(entry, field, fileName, fileType, fileContent, parent) {
         var value = new model.MarkupValue(fileName, fileType, fileContent);
         $scope.saveValue(entry, field, value, parent);
     };
@@ -665,24 +665,6 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                             if ($scope.lexicalEntries[i].object_id == entry.object_id &&
                                 $scope.lexicalEntries[i].client_id == entry.client_id) {
                                 $scope.lexicalEntries[i].contains.push(data);
-
-                                // FIXME: This hack forces angularjs to re-render view
-                                var copy = $scope.lexicalEntries[i];
-                                $scope.lexicalEntries[i] = {
-                                    object_id: -1,
-                                    client_id: -1,
-                                    contains: []
-                                };
-
-                                // FIXME: uses private angularjs method $$postDigest
-                                $scope.$$postDigest((function(index, originalEntry) {
-                                    return function(){
-                                        // restore original entry
-                                        $scope.lexicalEntries[index] = originalEntry;
-                                        $scope.$apply();
-                                    }
-                                })(i, copy));
-
                                 break;
                             }
                         }
@@ -707,11 +689,11 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
         if (field.level) {
             switch (field.level) {
                 case  'leveloneentity':
-                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity';
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id);
                     break;
                 case 'leveltwoentity':
                     if (parentClientId && parentObjectId) {
-                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id);
                     } else {
                         $log.error('Attempting to delete Level2 entry with no Level1 entry.');
                         return;
@@ -723,6 +705,24 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
             }
 
             $http.delete(url).success(function(data, status, headers, config) {
+
+                for (var i = 0; i < $scope.lexicalEntries.length; i++) {
+                    if ($scope.lexicalEntries[i].object_id == entry.object_id &&
+                        $scope.lexicalEntries[i].client_id == entry.client_id) {
+
+                        var lexicalEntry = $scope.lexicalEntries[i];
+
+                        for (var j = 0; j < lexicalEntry.contains.length; j++) {
+                            if (lexicalEntry.contains[j].client_id == fieldValue.client_id && lexicalEntry.contains[j].object_id == fieldValue.object_id) {
+                                $scope.lexicalEntries[i].contains[j].marked_for_deletion = true;
+                            }
+                        }
+
+
+                        $scope.lexicalEntries[i].contains.push(data);
+                        break;
+                    }
+                }
 
             }).error(function(data, status, headers, config) {
 
@@ -1229,11 +1229,11 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
         if (field.level) {
             switch (field.level) {
                 case  'leveloneentity':
-                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity';
+                    url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity/' ;
                     break;
                 case 'leveltwoentity':
                     if (parentClientId && parentObjectId) {
-                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
+                        url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(fieldValue.client_id) + '/' + encodeURIComponent(fieldValue.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity/';
                     } else {
                         $log.error('Attempting to delete Level2 entry with no Level1 entry.');
                         return;
@@ -1262,10 +1262,6 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
 
     $scope.$watch('entries', function (updatedEntries) {
         $scope.mapFieldValues(updatedEntries, $scope.fields);
-
-        $log.info($scope.fieldsValues);
-
-
     }, true);
 
 }]);

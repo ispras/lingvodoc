@@ -114,16 +114,19 @@
         <tbody>
 
 
-        <tr ng-repeat="lexicalEntry in lexicalEntries">
+        <tr ng-repeat="entryFields in dictionaryMatrix">
 
-            <td ng-repeat="field in fields"
-                ng-init="fieldValues=getFieldValues(lexicalEntry, field)">
+
+
+
+            <td ng-repeat="fieldValues in entryFields" ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
+
 
                 <div ng-if="field.data_type == 'text'">
                     <ul class="entries_list">
-                        <li ng-repeat="fieldValue in fieldValues">
+                        <li ng-repeat="fieldValue in fieldValues" ng-class="{removed: fieldValue.marked_for_deletion}">
                             {{ fieldValue.content }}
-                            <span ng-if="addedByUser(lexicalEntry)">
+                            <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
                                     <button type="button" class="btn btn-default btn-xs"
                                         ng-click="removeValue(lexicalEntry, field, fieldValue)">
                                     <span class="glyphicon glyphicon-remove-sign"></span>
@@ -148,10 +151,18 @@
                 </div>
 
 
-                <div ng-if="field.data_type == 'image'">
+                <div ng-if="field.data_type == 'image'" ng-if="!fieldValue.marked_for_deletion">
                     <ul class="entries_list">
-                        <li ng-repeat="fieldValue in fieldValues">
-                            {{ fieldValue.content }}
+                        <li ng-repeat="fieldValue in fieldValues" ng-class="{removed: fieldValue.marked_for_deletion}">
+
+                            <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
+
+                            <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
+                                    <button type="button" class="btn btn-default btn-xs"
+                                            ng-click="removeValue(lexicalEntry, field, fieldValue)">
+                                        <span class="glyphicon glyphicon-remove-sign"></span>
+                                    </button>
+                            </span>
                         </li>
                     </ul>
 
@@ -171,7 +182,7 @@
 
                 <div ng-if="field.data_type == 'sound'">
                     <ul class="entries_list">
-                        <li ng-repeat="fieldValue in fieldValues">
+                        <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
 
                             <button type="button" class="btn btn-default btn-sm" ng-click="play(fieldValue.content)">
                                 <span class="glyphicon glyphicon-play">Play sound</span>
@@ -194,6 +205,14 @@
                                     </span>
                                 </span>
                             </span>
+
+                            <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
+                                    <button type="button" class="btn btn-default btn-xs"
+                                            ng-click="removeValue(lexicalEntry, field, fieldValue)">
+                                        <span class="glyphicon glyphicon-remove-sign"></span>
+                                    </button>
+                            </span>
+
                         </li>
                     </ul>
 
@@ -387,7 +406,7 @@
 
                     <tr ng-repeat="entryFields in fieldsValues">
 
-                        <td ng-repeat="fieldValues in entryFields" ng-init="lexicalEntry=entries[$parent.$index]; field=fieldsIdx[$index]" >
+                        <td ng-repeat="fieldValues in entryFields" ng-init="lexicalEntry=entries[$parent.$index]; field=fieldsIdx[$index]">
 
                             <div ng-if="field.data_type == 'text'">
                                 <ul class="entries_list">
