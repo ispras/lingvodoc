@@ -473,7 +473,9 @@ def edit_dictionary_status(request):
             req = request.json_body
             status = req['status']
             dictionary.state = status
+            DBSession.add(dictionary)
             request.response.status = HTTPOk.code
+            response['status'] = status
             return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
@@ -1754,7 +1756,7 @@ def delete_group_entity(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No such entity in the system")}
 
-
+@view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')  # TODO: check for permission
 def create_group_entity(request):
     try:
@@ -1773,11 +1775,11 @@ def create_group_entity(request):
             tags += [req['tag']]
 
         for par in req['connections']:
-            parent = DBSession.query(LevelOneEntity).\
+            parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             if not parent:
                 request.response.status = HTTPNotFound.code
-                return {'error': str("No such level one entity in the system")}
+                return {'error': str("No such lexical entry in the system")}
             par_tags = DBSession.query(GroupingEntity).\
                 filter_by(entity_type=req['entity_type'], parent=parent).all()
             tags += [o.content for o in par_tags]
@@ -1786,8 +1788,9 @@ def create_group_entity(request):
             tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                          for c in range(n))
             tags += [tag]
+
         for par in req['connections']:
-            parent = DBSession.query(LevelOneEntity).\
+            parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             for tag in tags:
                 ent = DBSession.query(GroupingEntity).\
@@ -1797,7 +1800,7 @@ def create_group_entity(request):
                 entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=req['entity_type'], content=tag, parent=parent)
                 DBSession.add(entity)
-                DBSession.flush()
+
         request.response.status = HTTPOk.code
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
