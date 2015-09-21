@@ -29,6 +29,8 @@
 
 <div id="allLexicalEntriesUrl"
      data-lingvodoc="${request.route_url('lexical_entries_all', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
+<div id="allLexicalEntriesCountUrl"
+     data-lingvodoc="${request.route_url('lexical_entries_all_count', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
 <div id="getPerspectiveFieldsUrl"
      data-lingvodoc="${request.route_url('perspective_fields', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
 <div id="createLexicalEntryUrl"

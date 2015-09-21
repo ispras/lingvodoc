@@ -530,7 +530,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
     var getDictStats = function() {
-        var getDictStatsUrl = $('#getEntriesCountUrl').data('lingvodoc');
+        var getDictStatsUrl = $('#allLexicalEntriesCountUrl').data('lingvodoc');
         $http.get(getDictStatsUrl).success(function(data, status, headers, config) {
             var totalEntries = data.count;
             $scope.pageCount = Math.ceil(totalEntries / $scope.pageSize);
