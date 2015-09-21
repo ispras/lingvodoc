@@ -111,6 +111,9 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
         audio_sequence = []
         markup_sequence = []
 
+def change_dict_status(session, converting_status_url, status):
+    session.put(converting_status_url, json.dumps({'status': status}))
+
 
 def convert_db_new(sqconn, session, language_client_id, language_object_id, locale_id=1):
     dict_attributes = get_dict_attributes(sqconn)
@@ -122,9 +125,12 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
     dictionary = json.loads(status.text)
     client_id = dictionary['client_id']
 
+    converting_status_url = 'http://localhost:6543/dictionary/%s/%s/state' % (dictionary['client_id'], dictionary['object_id'])
+    change_dict_status(session, converting_status_url, 'Converting 5%')
+
     perspective_create_url = 'http://localhost:6543/dictionary/%s/%s/perspective' % (dictionary['client_id'], dictionary['object_id'])
-    create_perspective_request = {"translation": "Этимологический словарь из Lingvodoc 0.97",
-                                  "name": "Lingvodoc 0.97 etymology dictionary"}
+    create_perspective_request = {"translation": "Этимологический словарь из Lingvodoc 0.98",
+                                  "name": "Lingvodoc 0.98 etymology dictionary"}
 
     status = session.post(perspective_create_url, data=json.dumps(create_perspective_request))
     perspective = json.loads(status.text)
@@ -158,6 +164,8 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
                                                                                                  perspective['client_id'],
                                                                                                  perspective['object_id'])
 
+    change_dict_status(session, converting_status_url, 'Converting 15%')
+
     def create_entity_list(mapping, cursor, level, data_type, entity_type, is_a_regular_form, locale_id=1):
         push_list = []
         for ld_cursor in cursor:
@@ -186,7 +194,6 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
         push_list = create_entity_list(ids_mapping, sqcursor, "leveloneentity", 'text', entity_type, is_a_regular_form)
         return session.post(create_entities_url, json.dumps(push_list))
 
-
     for column_and_type in [("word", "Word"),
                             ("transcription", "Transcription"),
                             ("translation", "Translation")]:
@@ -199,6 +206,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
         status = prepare_and_upload_text_entities("regular_form", False, column_and_type[0], column_and_type[1])
         print(status.text)
 
+    change_dict_status(session, converting_status_url, 'Converting 35%')
 
     sound_and_markup_word_cursor = sqconn.cursor()
     sound_and_markup_word_cursor.execute("""select blobs.id,
@@ -217,6 +225,8 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
     upload_audio_with_markup(session, ids_mapping, sound_and_markup_word_cursor, create_entities_url, audio_hashes, entity_types, locale_id)
     print(audio_hashes)
 
+    change_dict_status(session, converting_status_url, 'Converting 45%')
+
     paradigm_sound_and_markup_cursor = sqconn.cursor()
     paradigm_sound_and_markup_cursor.execute("""select blobs.id,
                                                 blobs.secblob,
@@ -233,6 +243,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
     upload_audio_with_markup(session, ids_mapping, paradigm_sound_and_markup_cursor, create_entities_url, audio_hashes, entity_types, locale_id)
     print(audio_hashes)
 
+    change_dict_status(session, converting_status_url, 'Converting 60%')
 
     simple_word_sound_cursor = sqconn.cursor()
     simple_word_sound_cursor.execute("""select blobs.id,
@@ -247,6 +258,8 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
     entity_types = ['Sound']
     upload_audio_simple(session, ids_mapping, simple_word_sound_cursor, create_entities_url, audio_hashes, entity_types, locale_id)
 
+    change_dict_status(session, converting_status_url, 'Converting 70%')
+
     simple_paradigm_sound_cursor = sqconn.cursor()
     simple_paradigm_sound_cursor.execute("""select blobs.id,
                                             blobs.mainblob,
@@ -260,10 +273,12 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
     entity_types = ['Paradigm sound']
     upload_audio_simple(session, ids_mapping, simple_paradigm_sound_cursor, create_entities_url, audio_hashes, entity_types, locale_id)
 
-    connect_url = 'http://localhost:6543/dictionary/%s/%s/perspective/%s/%s/connect' % (dictionary['client_id'],
-                                                                                        dictionary['object_id'],
-                                                                                        perspective['client_id'],
-                                                                                        perspective['object_id'])
+    change_dict_status(session, converting_status_url, 'Converting 80%')
+
+    connect_url = 'http://localhost:6543/dictionary/%s/%s/perspective/%s/%s/lexical_entry/connect' % (dictionary['client_id'],
+                                                                                                      dictionary['object_id'],
+                                                                                                      perspective['client_id'],
+                                                                                                      perspective['object_id'])
     etymology_cursor = sqconn.cursor()
     etymology_cursor.execute("""select id, etimology_tag
                                 FROM dictionary
@@ -275,6 +290,10 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, loca
         item = {"entity_type": "Etymology", "content": cursor[1], "connections": [{"client_id": client_id, "object_id": object_id}]}
         status = session.post(connect_url, json.dumps(item))
         print(status.text)
+
+    change_dict_status(session, converting_status_url, 'Converted 100%')
+
+    change_dict_status(session, converting_status_url, 'Published')
 
     return dictionary
 
