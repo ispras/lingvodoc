@@ -159,7 +159,7 @@
                         <ul class="entries_list">
                             <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
 
-                                <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
+                                <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
 
                             <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
                                     <button type="button" class="btn btn-default btn-xs"

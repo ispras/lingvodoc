@@ -530,7 +530,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
     };
 
     $scope.addedByUser = function(entry) {
-        return entry.client_id == $('#clientId').data('lingvodoc');
+        return (entry.client_id == $('#clientId').data('lingvodoc'));
     };
 
 
@@ -631,7 +631,7 @@ app.controller('EditDictionaryController', ['$scope', '$http', '$modal', '$log',
                     url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity';
                     break;
                 case 'leveltwoentity':
-                    if (parentClientId && parentObjectId) {
+                    if (parent.client_id && parent.object_id) {
                         url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent(entry.client_id) + '/' + encodeURIComponent(entry.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
                     } else {
                         $log.error('Attempting to create Level2 entry with no Level1 entry.');
@@ -1151,13 +1151,13 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
         $scope.saveValue(entry, field, value, parent);
     };
 
-    $scope.saveMarkupValue = function(entry, field, $fileName, $fileType, $fileContent, parent) {
+    $scope.saveMarkupValue = function(entry, field, fileName, fileType, fileContent, parent) {
         var value = new model.MarkupValue(fileName, fileType, fileContent);
         $scope.saveValue(entry, field, value, parent);
     };
 
     $scope.addedByUser = function(entry) {
-        return entry.client_id == $('#clientId').data('lingvodoc');
+        return (entry.client_id == $('#clientId').data('lingvodoc'));
     };
 
     $scope.saveValue = function(entry, field, value, parent) {
@@ -1169,7 +1169,7 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
                     url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent($scope.parentEntry.client_id) + '/' + encodeURIComponent($scope.parentEntry.object_id) + '/leveloneentity';
                     break;
                 case 'leveltwoentity':
-                    if (parentClientId && parentObjectId) {
+                    if (parent.client_id && parent.object_id) {
                         url ='/dictionary/' + encodeURIComponent(dictionaryClientId) + '/' + encodeURIComponent(dictionaryObjectId) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveId) + '/lexical_entry/' + encodeURIComponent($scope.parentEntry.client_id) + '/' + encodeURIComponent($scope.parentEntry.object_id) + '/leveloneentity/' + encodeURIComponent(parent.client_id) + '/' + encodeURIComponent(parent.object_id) + '/leveltwoentity';
                     } else {
                         $log.error('Attempting to create Level2 entry with no Level1 entry.');
@@ -1190,7 +1190,6 @@ app.controller('editGroupController', ['$scope', '$http', '$modalInstance', '$lo
                 'row_id': entry.row_id,
                 'client_id': entry.client_id
             };
-
 
             $http.post(url, entryObject).success(function(data, status, headers, config) {
 

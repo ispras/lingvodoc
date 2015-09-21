@@ -2466,7 +2466,27 @@ def view_dictionary_get(request):
     return render_to_response('templates/view_dictionary.pt', variables, request=request)
 
 
-@view_config(route_name='blob_upload', renderer='templates/blob_upload.pt', request_method='GET')
+@view_config(route_name='publish_dictionary', renderer='templates/publish_dictionary.pt', request_method='GET')
+def publish_dictionary_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+
+    dictionary_client_id = request.matchdict.get('dictionary_client_id')
+    dictionary_object_id = request.matchdict.get('dictionary_object_id')
+    perspective_client_id = request.matchdict.get('perspective_client_id')
+    perspective_id = request.matchdict.get('perspective_id')
+
+    variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
+                 'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
+                 'perspective_id': perspective_id}
+
+    return render_to_response('templates/publish_dictionary.pt', variables, request=request)
+
+
+@view_config(route_name='blob_upload', renderer='templates/user_upload.pt', request_method='GET')
 def blob_upload_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
@@ -2483,5 +2503,5 @@ def blob_upload_get(request):
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
                  'perspective_id': perspective_id}
 
-    return render_to_response('templates/blob_upload.pt', variables, request=request)
+    return render_to_response('templates/user_upload.pt', variables, request=request)
 

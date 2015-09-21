@@ -16,7 +16,7 @@
 
 </head>
 
-<body class="body-dashboard" ng-app="BlobUploadModule">
+<body class="body-dashboard" ng-app="UserUploadModule">
 
 <nav class="lingvodoc-navbar">
     <div class="container">
@@ -64,18 +64,9 @@
 </nav>
 
 
-<div class="container" ng-controller="BlobUploadController">
+<div class="container" ng-controller="UserUploadController">
 
-    <form action="/blob" method="post" accept-charset="utf-8" enctype="multipart/form-data">
-
-        <label for="mp3">Mp3</label>
-        <input id="mp3" name="blob" type="file" value="" />
-        <input type="hidden" name="data_type" value="dialeqt_dictionary">
-
-        <input type="submit" value="submit" />
-    </form>
-
-
+    <i
 
 </div>
 

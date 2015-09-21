@@ -30,15 +30,27 @@ module.exports = function(grunt) {
         copy: {
             main: {
                 files: [
-                    {expand: true, flatten: true, src: ['bower_components/bootstrap-sass/assets/fonts/bootstrap/*'], dest: '../lingvodoc/static/fonts/bootstrap/', filter: 'isFile'},
-                    {expand: true, flatten: true, src: ['src/templates/*'], dest: '../lingvodoc/templates/', filter: 'isFile'}
+                    {
+                        expand: true,
+                        flatten: true,
+                        src: ['bower_components/bootstrap-sass/assets/fonts/bootstrap/*'],
+                        dest: '../lingvodoc/static/fonts/bootstrap/',
+                        filter: 'isFile'
+                    },
+                    {
+                        expand: true,
+                        flatten: true,
+                        src: ['src/templates/*'],
+                        dest: '../lingvodoc/templates/',
+                        filter: 'isFile'
+                    }
                 ],
             },
         },
         uglify: {
             options: {
-                compress: true,
-                mangle: true
+                compress: false,
+                mangle: false
             },
             lingvodoc: {
                 src: [
@@ -147,18 +159,28 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/util.js',
                     'src/js/edit_dictionary.js',
                     'src/js/lingvowave.js'
                 ],
                 dest: '../lingvodoc/static/js/edit-dictionary.js'
+            },
+            userupload: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/user_upload.js'
+                ],
+                dest: '../lingvodoc/static/js/user-upload.js'
             }
-
-
-
-
-
         }
     });
+
+
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-sass');

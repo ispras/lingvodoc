@@ -1,8 +1,8 @@
 'use strict';
 
-var app = angular.module('BlobUploadModule', ['ui.bootstrap']);
+var app = angular.module('UserUploadModule', ['ui.bootstrap']);
 
-app.directive('onReadFileA', function($parse) {
+app.directive('onReadFile', function($parse) {
     return {
         restrict: 'A',
         scope: false,
@@ -24,7 +24,7 @@ app.directive('onReadFileA', function($parse) {
     };
 });
 
-app.controller('BlobUploadController', ['$scope', '$http', '$modal', '$log', '$timeout', function($scope, $http, $modal, $log, $timeout) {
+app.controller('UserUploadController', ['$scope', '$http', '$modal', '$log', '$timeout', function($scope, $http, $modal, $log, $timeout) {
 
     $scope.readFile = function(file) {
 
