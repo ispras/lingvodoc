@@ -34,9 +34,12 @@ app.controller('DashboardController', ['$scope', '$http', '$interval', '$log', f
         }
     };
 
-
-    $scope.test = function () {
-        console.log($scope.dictionaries);
+    $scope.follow = function(link) {
+        if (!link) {
+            alert('Please, select perspective first.');
+            return;
+        }
+        window.location = link;
     };
 
     $scope.getCompositeKey = function (object) {
@@ -60,7 +63,7 @@ app.controller('DashboardController', ['$scope', '$http', '$interval', '$log', f
             $http.get(getPerspectivesUrl).success((function (index) {
                 return function (data, status, headers, config) {
                     $scope.dictionaries[index]['perspectives'] = data.perspectives;
-                    $scope.dictionaries[index]['selectedPerspectiveId'] = -1;
+                    $scope.dictionaries[index]['selectedPerspectiveId'] =  -1;
                 };
             })(i)).error(function (data, status, headers, config) {
                 // error handling
