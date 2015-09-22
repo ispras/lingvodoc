@@ -44,7 +44,7 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li class="active"><a href="">Dictionaries</a></li>
+                <li class="active"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
                 <li><a href="${request.route_url('languages')}">Languages</a></li>
                 <li><a href="#contact">Contact</a></li>
                 <li><a href="#about">About</a></li>
@@ -118,7 +118,7 @@
 
 
         <div ng-if="wizard.mode == 'import'">
-            <label for="selectFile">Select uploaded file</label>
+            <label for="selectFile">Select uploaded file</label> (<a href="${request.route_url('blob_upload')}">Upload dictionary</a>)
             <select id="selectFile" class="form-control" ng-model="wizard.importedDictionaryId" ng-options="d.id as d.data.name for d in uploadedDictionaries track by d.id">
 
             </select>
@@ -188,7 +188,7 @@
                             <option value="image" ng-if="field.data_type != 'image'">Image</option>
                             <option value="sound" ng-if="field.data_type == 'sound'" selected>Audio</option>
                             <option value="sound" ng-if="field.data_type != 'sound'">Audio</option>
-                            <option value="grouping_tag" ng-if="field.data_type == 'grouping_tag'" selected>Groupping
+                            <option value="grouping_tag" ng-if="field.data_type == 'grouping_tag'" selected>Grouping
                                 tag
                             </option>
                             <option value="grouping_tag" ng-if="field.data_type != 'grouping_tag'">Groupping tag
@@ -271,7 +271,7 @@
         <!--?Next <span class="glyphicon glyphicon-circle-arrow-right"></span>-->
     <!--?</a>-->
 
-    <a class="btn btn-block btn-warning" ng-click="saveDictionary()">
+    <a class="btn btn-block btn-warning" ng-click="createPerspective()">
         Complete <span class="glyphicon glyphicon-ok-sign"></span>
     </a>
 

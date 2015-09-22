@@ -1030,10 +1030,10 @@ def dictionaries_list(request):
         languages = req['languages']
     dicts = DBSession.query(Dictionary)
     if published:
-        if published == 'true':
-            dicts = dicts.filter(Dictionary).filter_by(state='published')
-        if published == 'false':
-            dicts = dicts.filter(Dictionary).filter(Dictionary.state != 'published')
+        if published:
+            dicts = dicts.filter_by(state='Published')
+        # else:
+        #     dicts = dicts.filter_by(state!='Published')
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
@@ -2304,7 +2304,7 @@ def login_get(request):
 
 @view_config(route_name='login', request_method='POST')
 def login_post(request):
-    next = request.params.get('next') or request.route_url('dashboard')
+    next = request.params.get('next') or request.route_url('home')
     login = request.POST.get('login', '')
     password = request.POST.get('password', '')
     print(login)
@@ -2368,9 +2368,9 @@ def signup_post(request):
         email = request.POST.getone('email')
         password = request.POST.getone('password')
 
-        day = request.POST.getone('day')
-        month = request.POST.getone('month')
-        year = request.POST.getone('year')
+        day = request.POST.get('day', "1")
+        month = request.POST.get('month', "1")
+        year = request.POST.get('year', "1970")
         birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
 
         if DBSession.query(User).filter_by(login=login).first():
