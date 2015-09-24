@@ -160,7 +160,7 @@
                     <div ng-if="field.isGroup">
                         <div ng-if="field.isGroup">
                             <button type="button" class="btn btn-default btn-sm"
-                                    ng-click="viewGroup(lexicalEntry, field, fieldValues)">
+                                    ng-click="viewGroup(lexicalEntry, field, fieldValues)" ng-if="fieldValues.length > 0">
                                 <span class="glyphicon glyphicon-list">View</span>
                             </button>
                         </div>
@@ -168,7 +168,7 @@
 
                     <div ng-if="field.data_type == 'grouping_tag'">
                         <button type="button" class="btn btn-default btn-sm"
-                                ng-click="viewGroupingTag(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)">
+                                ng-click="viewGroupingTag(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)" ng-if="false">
                             <span class="glyphicon glyphicon-list">View</span>
                         </button>
                     </div>
