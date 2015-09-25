@@ -78,6 +78,9 @@ from pyramid.request import Request
 # import redis
 import json
 
+import logging
+log = logging.getLogger(__name__)
+
 class CommonException(Exception):
     def __init__(self, value):
         self.value = value
@@ -1721,23 +1724,27 @@ def view_group_entity(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-    if entity:
-        if not entity.marked_for_deletion:
-
-            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                 translation_string=entity.entity_type)
-            response['content'] = entity.tag
-            entities = DBSession.query(GroupingEntity).filter_by(tag=entity.tag)
-            objs = []
-            for entry in entities:
-                obj = {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id}
-                objs += [obj]
-            response['connections'] = objs
-            request.response.status = HTTPOk.code
-            return response
+    entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
+    ents = []
+    if entities:
+        for entity in entities:
+            if not entity.marked_for_deletion:
+                ent = dict()
+                ent['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                                     translation_string=entity.entity_type)
+                ent['content'] = entity.content
+                entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
+                objs = []
+                for entry in entities2:
+                    obj = {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id}
+                    objs += [obj]
+                ent['connections'] = objs
+                ents += [ent]
+        response['entities'] = ents
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
-    return {'error': str("No such entity in the system")}
+    return {'error': str("No entities in the system")}
 
 
 @view_config(route_name='get_group_entity', renderer='json', request_method='DELETE', permission='delete')
@@ -1795,13 +1802,14 @@ def create_group_entity(request):
             for tag in tags:
                 ent = DBSession.query(GroupingEntity).\
                     filter_by(entity_type=req['entity_type'], content=tag, parent=parent).first()
-                if ent:
-                    continue
-                entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                        entity_type=req['entity_type'], content=tag, parent=parent)
-                DBSession.add(entity)
-
+                if not ent:
+                    entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
+                                            entity_type=req['entity_type'], content=tag, parent=parent)
+                    DBSession.add(entity)
+                    DBSession.flush()
+        log.debug('TAGS: %s', tags)
         request.response.status = HTTPOk.code
+        return {"oke":"oke"}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
@@ -2289,10 +2297,22 @@ def searchby(reqtype):
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    result = []
+    log.debug('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
 
-    return result
-
+    result = dict()
+    result['POST'] = request.POST.get('login')
+    result['GET'] = request.GET.get('login')
+    result['params'] = request.params.get('login')
+    try:
+        result['json'] = request.json_body['login']
+    except:
+        pass
+    log.debug('WTF?: %s ', result)
+    try:
+        req = request.json_body
+        return req
+    except:
+        return result
 
 
 
