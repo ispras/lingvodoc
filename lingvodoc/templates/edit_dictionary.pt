@@ -121,8 +121,7 @@
 
             <tbody>
 
-
-            <tr ng-repeat="entryFields in dictionaryMatrix">
+            <tr ng-repeat="entryFields in dictionaryTable">
 
                 <td ng-repeat="fieldValues in entryFields"
                     ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
