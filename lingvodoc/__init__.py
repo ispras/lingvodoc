@@ -238,7 +238,7 @@ def configure_routes(config):
                                                                 '/perspective/'
                                                                 '{perspective_client_id}/{perspective_id}/'
                                                                 'lexical_entry/'
-                                                                '{lexical_entry_client_id}/{lexical_entry_object_id}/'
+                                                                '{client_id}/{object_id}/'
                                                                 'connected')
 
     # API #POST (TODO: change to PATCH method later)

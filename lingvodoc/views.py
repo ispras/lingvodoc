@@ -1746,6 +1746,51 @@ def view_group_entity(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No entities in the system")}
 
+@view_config(route_name='get_connected_words', renderer='json', request_method='GET')
+@view_config(route_name='get_connected_words_indict', renderer='json', request_method='GET')
+def view_connected_words(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+    if lexical_entry:
+        if not lexical_entry.marked_for_deletion:
+            words = []
+            path = request.route_url('get_group_entity',
+                                     client_id=lexical_entry.client_id,
+                                     object_id=lexical_entry.object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            respon = request.invoke_subrequest(subreq)
+            if not 'error' in respon.json:
+                connections = respon.json['entities'][0]['connections']
+                for lex in connections:
+                    path = request.route_url('lexical_entry',
+                                             client_id=lex['client_id'],
+                                             object_id=lex['object_id'])
+                    subreq = Request.blank(path)
+                    subreq.method = 'GET'
+                    subreq.headers = request.headers
+                    resp = request.invoke_subrequest(subreq)
+                    words += [resp.json]
+            else:
+                path = request.route_url('lexical_entry',
+                                         client_id=lexical_entry.client_id,
+                                         object_id=lexical_entry.object_id)
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                words += [resp.json]
+
+            response['words'] = words
+            return response
+
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such lexical entry in the system")}
+
 
 @view_config(route_name='get_group_entity', renderer='json', request_method='DELETE', permission='delete')
 def delete_group_entity(request):
