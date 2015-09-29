@@ -129,7 +129,7 @@ def configure_routes(config):
     config.add_route(name='create_perspective',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective',
-                     factory='lingvodoc.models.CreatePerspectiveAcl')  # 100% ready
+                     factory='lingvodoc.models.PerspectiveCreateAcl')  # 100% ready
 
     # API #GET
     # list perspectives
@@ -310,7 +310,7 @@ def configure_routes(config):
     # API #GET
     # all children
     config.add_route(name='lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectivePublishAcl')  # ready, not tested
+                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')  # ready, not tested
     config.add_route(name='lexical_entry_in_perspective', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
                                                                   'lexical_entry/{client_id}/{object_id}',

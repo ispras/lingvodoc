@@ -11,6 +11,9 @@ from .models import (
 
 from pyramid.security import forget
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def groupfinder(client_id, request):
     if not client_id:
@@ -41,7 +44,7 @@ def groupfinder(client_id, request):
                 group_name = base_group.action + ":" + base_group.subject \
                              + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         grouplist.append(group_name)
-    #print("GROUPLIST", grouplist)
+    log.debug("GROUPLIST: %s", grouplist)
     return grouplist
 
 

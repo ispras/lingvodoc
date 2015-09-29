@@ -635,14 +635,33 @@ class PerspectiveAcl(object):
 
     def __acl__(self):
         acls = []
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
         object_id=None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
+
+
+class PerspectiveCreateAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
         client_id=None
         try:
-            client_id = self.request.matchdict['perspective_client_id']
+            client_id = self.request.matchdict['dictionary_client_id']
+        except:
+            pass
+        object_id=None
+        try:
+            object_id = self.request.matchdict['dictionary_object_id']
         except:
             pass
         return acls + acl_by_groups(object_id, client_id, 'perspective')
@@ -732,15 +751,15 @@ class CreatePerspectiveAcl(object):
         acls = []
         object_id=None
         try:
-            object_id = self.request.matchdict['dictionary_perspective_id']
+            object_id = self.request.matchdict['dictionary_client_id']
         except:
             pass
         client_id=None
         try:
-            client_id = self.request.matchdict['dictionary_perspective_client_id']
+            client_id = self.request.matchdict['dictionary_object_id']
         except:
             pass
-        return acls + acl_by_groups(object_id, client_id, 'dictionary')
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
 
 
 class PerspectiveRolesAcl(object):
@@ -818,8 +837,8 @@ class PerspectiveEntityOneAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        # perspective = levoneent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        perspective = levoneent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'approve_entities')
 
 
 class PerspectiveEntityTwoAcl(object):
@@ -839,8 +858,8 @@ class PerspectiveEntityTwoAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        # perspective = levoneent.parent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        perspective = levoneent.parent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'approve_entities')
 
 
 class PerspectiveEntityGroupAcl(object):
@@ -859,9 +878,9 @@ class PerspectiveEntityGroupAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        levoneent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        # perspective = levoneent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = group_ent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'approve_entities')
 
 
 class PerspectivePublishAcl(object):
@@ -882,3 +901,22 @@ class PerspectivePublishAcl(object):
             pass
         return acls + acl_by_groups(object_id, client_id, 'approve_entities')
 
+class PerspectiveLexicalViewAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        lex_ent = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = lex_ent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
