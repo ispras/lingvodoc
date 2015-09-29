@@ -818,7 +818,7 @@ class PerspectiveEntityOneAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent
+        # perspective = levoneent.parent
         return acls + acl_by_groups(object_id, client_id, 'approve_entities')
 
 
@@ -839,7 +839,7 @@ class PerspectiveEntityTwoAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent.parent
+        # perspective = levoneent.parent.parent
         return acls + acl_by_groups(object_id, client_id, 'approve_entities')
 
 
@@ -860,7 +860,7 @@ class PerspectiveEntityGroupAcl(object):
         except:
             pass
         levoneent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent
+        # perspective = levoneent.parent
         return acls + acl_by_groups(object_id, client_id, 'approve_entities')
 
 
