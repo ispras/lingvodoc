@@ -1794,9 +1794,17 @@ def create_group_entity(request):
             n = 10  # better read from settings
             tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                          for c in range(n))
-            tags += [tag]
-
-        for par in req['connections']:
+            if not tag in tags:
+                tags += [tag]
+        parents = req['connections']
+        for tag in tags:
+            pars = DBSession.query(GroupingEntity).\
+                filter_by(content = tag).all()
+            for par in pars:
+                pa = {'client_id':par.parent_client_id, 'object_id':par.parent_object_id}
+                if not pa in parents:
+                    parents += [pa]
+        for par in parents:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             for tag in tags:
@@ -1809,7 +1817,7 @@ def create_group_entity(request):
                     DBSession.flush()
         log.debug('TAGS: %s', tags)
         request.response.status = HTTPOk.code
-        return {"oke":"oke"}
+        return {}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
