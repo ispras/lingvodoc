@@ -238,7 +238,7 @@ def configure_routes(config):
                                                                 '/perspective/'
                                                                 '{perspective_client_id}/{perspective_id}/'
                                                                 'lexical_entry/'
-                                                                '{lexical_entry_client_id}/{lexical_entry_object_id}/'
+                                                                '{client_id}/{object_id}/'
                                                                 'connected')
 
     # API #POST (TODO: change to PATCH method later)
@@ -309,10 +309,12 @@ def configure_routes(config):
 
     # API #GET
     # all children
-    config.add_route(name='lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}')  # ready, not tested
+    config.add_route(name='lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}',
+                     factory='lingvodoc.models.PerspectivePublishAcl')  # ready, not tested
     config.add_route(name='lexical_entry_in_perspective', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
-                                                                  'lexical_entry/{client_id}/{object_id}')
+                                                                  'lexical_entry/{client_id}/{object_id}',
+                     factory='lingvodoc.models.PerspectivePublishAcl')
     # API #PATCH
     # Publishers view: this can approve word versions.
     # [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>, "enabled": <boolean>}, ]

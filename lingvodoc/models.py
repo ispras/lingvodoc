@@ -1,4 +1,4 @@
-from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS
+from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS, Everyone
 
 
 from sqlalchemy.orm import (
@@ -34,6 +34,7 @@ from sqlalchemy.engine import (
     Engine
 )
 
+
 from zope.sqlalchemy import ZopeTransactionExtension
 
 from passlib.hash import bcrypt
@@ -45,6 +46,9 @@ import json
 from sqlalchemy.inspection import inspect
 
 from sqlalchemy.ext.compiler import compiles
+
+import logging
+log = logging.getLogger(__name__)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
@@ -571,7 +575,7 @@ class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
 
 def acl_by_groups(object_id, client_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
-    # acls += [(Allow, Authenticated, ALL_PERMISSIONS)]
+    acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
 
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
@@ -584,13 +588,13 @@ def acl_by_groups(object_id, client_id, subject):
             group_name = base_group.action + ":" + base_group.subject \
                      + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
-    #print("ACLS", acls)
+    log.debug("ACLS: %s", acls)
     return acls
 
 
 def acl_by_groups_single_id(object_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
-    # acls += [(Allow, Authenticated, ALL_PERMISSIONS)]
+    acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
@@ -602,6 +606,7 @@ def acl_by_groups_single_id(object_id, subject):
             group_name = base_group.action + ":" + base_group.subject \
                      + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
+    log.debug("ACLS: %s", acls)
     return acls
 
 
@@ -762,6 +767,7 @@ class CreateLexicalEntriesEntitiesAcl(object):
         self.request = request
 
     def __acl__(self):
+        log.debug('I\'M HERE')
         acls = []
         object_id=None
         try:

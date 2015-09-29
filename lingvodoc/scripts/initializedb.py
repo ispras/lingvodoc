@@ -320,51 +320,262 @@ def main(argv=sys.argv):
         DBSession.add(regular_dictionary_template)
         DBSession.flush()
 
-        # protoform_ordinary = DictionaryPerspectiveField(parent_object_id=2, parent_client_id=client.id,
-        #                                                 object_id=, client_id=client.id,
-        #                                                 entity_type="", data_type=, level=, position=,
-        #                                                 state="enabled")
-        # word_ordinary
-        # transcription_ordinary
-        # duration_1_vowel_ordinary
-        # intensity_1_vowel_ordinary
-        # native_speaker_ordinary
-        # dialect_ordinary
-        # translation_ld_ordinary
-        # grammatical_form_ordinary
-        # it_is_formed_from_ordinary
-        # similarity_ordinary
-        # the_page_ordinary
-        # the_line_ordinary
-        # the_head_ordinary
-        # the_verse_ordinary
-        # notes_ordinary
-        # sound_ordinary
-        # DBSession.flush()
-        # praat_ordinary
-        # paradigm_word_ordinary
-        # paradigm_transcription_ordinary
-        # paradigm_translation_ordinary
-        # paradigm_sound_ordinary
-        # DBSession.flush()
-        # paradigm_praat_ordinary
-        # etymology_ordinary
-        #
-        # gram_cat_morph = DictionaryPerspectiveField(parent_object_id=3, parent_client_id=client.id,
-        #                                             object_id=, client_id=client.id,
-        #                                             entity_type=, data_type=, level=, position=)
-        # form_morph
-        # transcription_morph
-        # variants_morph
-        # native_speaker_morph
-        # text_morph
-        # dialect_morph
-        # in_combination_with_cat_morph
-        # frequency_morph
-        # number_of_an_affix_morph
-        # the_page_morph
-        # the_line_morph
-        # notes_morph
+        protoform_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                        parent_object_id=regular_dictionary_template.object_id,
+                                                        client_id=client.id,
+                                                        data_type="text",
+                                                        level='leveloneentity',
+                                                        state="enabled",
+                                                        position=1,
+                                                        entity_type="Protoform"
+                                                        )
+        word_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                   parent_object_id=regular_dictionary_template.object_id,
+                                                   client_id=client.id,
+                                                   data_type="text",
+                                                   level='leveloneentity',
+                                                   state="enabled",
+                                                   position=2,
+                                                   entity_type="Word"
+                                                   )
+        transcription_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                            parent_object_id=regular_dictionary_template.object_id,
+                                                            client_id=client.id,
+                                                            data_type="text",
+                                                            level='leveloneentity',
+                                                            state="enabled",
+                                                            position=3,
+                                                            entity_type="Transcription"
+                                                            )
+        duration_1_vowel_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                               parent_object_id=regular_dictionary_template.object_id,
+                                                               client_id=client.id,
+                                                               data_type="text",
+                                                               level='leveloneentity',
+                                                               state="enabled",
+                                                               position=4,
+                                                               entity_type="Duration 1 vowel"
+                                                               )
+
+        intensity_1_vowel_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                                parent_object_id=regular_dictionary_template.object_id,
+                                                                client_id=client.id,
+                                                                data_type="text",
+                                                                level='leveloneentity',
+                                                                state="enabled",
+                                                                position=5,
+                                                                entity_type="Intensity 1 vowel"
+                                                                )
+        native_speaker_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                             parent_object_id=regular_dictionary_template.object_id,
+                                                             client_id=client.id,
+                                                             data_type="text",
+                                                             level='leveloneentity',
+                                                             state="enabled",
+                                                             position=6,
+                                                             entity_type="Native speaker"
+                                                             )
+        dialect_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                      parent_object_id=regular_dictionary_template.object_id,
+                                                      client_id=client.id,
+                                                      data_type="text",
+                                                      level='leveloneentity',
+                                                      state="enabled",
+                                                      position=1,
+                                                      entity_type="Dialect"
+                                                      )
+        translation_ld_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                             parent_object_id=regular_dictionary_template.object_id,
+                                                             client_id=client.id,
+                                                             data_type="text",
+                                                             level='leveloneentity',
+                                                             state="enabled",
+                                                             position=7,
+                                                             entity_type="Translation"
+                                                             )
+        grammatical_form_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                               parent_object_id=regular_dictionary_template.object_id,
+                                                               client_id=client.id,
+                                                               data_type="text",
+                                                               level='leveloneentity',
+                                                               state="enabled",
+                                                               position=8,
+                                                               entity_type="Grammatical form"
+                                                               )
+        it_is_formed_from_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                                parent_object_id=regular_dictionary_template.object_id,
+                                                                client_id=client.id,
+                                                                data_type="text",
+                                                                level='leveloneentity',
+                                                                state="enabled",
+                                                                position=9,
+                                                                entity_type="It is formed from"
+                                                                )
+        similarity_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                         parent_object_id=regular_dictionary_template.object_id,
+                                                         client_id=client.id,
+                                                         data_type="text",
+                                                         level='leveloneentity',
+                                                         state="enabled",
+                                                         position=10,
+                                                         entity_type="Similarity"
+                                                         )
+        the_page_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                       parent_object_id=regular_dictionary_template.object_id,
+                                                       client_id=client.id,
+                                                       data_type="text",
+                                                       level='leveloneentity',
+                                                       state="enabled",
+                                                       position=11,
+                                                       entity_type="the Page"
+                                                       )
+        the_line_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                       parent_object_id=regular_dictionary_template.object_id,
+                                                       client_id=client.id,
+                                                       data_type="text",
+                                                       level='leveloneentity',
+                                                       state="enabled",
+                                                       position=12,
+                                                       entity_type="the Line"
+                                                       )
+        the_head_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                       parent_object_id=regular_dictionary_template.object_id,
+                                                       client_id=client.id,
+                                                       data_type="text",
+                                                       level='leveloneentity',
+                                                       state="enabled",
+                                                       position=13,
+                                                       entity_type="the Head"
+                                                       )
+        the_verse_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                        parent_object_id=regular_dictionary_template.object_id,
+                                                        client_id=client.id,
+                                                        data_type="text",
+                                                        level='leveloneentity',
+                                                        state="enabled",
+                                                        position=14,
+                                                        entity_type="the Verse"
+                                                        )
+        notes_ordinary = DictionaryPerspectiveField(parent_client_id=regular_dictionary_template.client_id,
+                                                    parent_object_id=regular_dictionary_template.object_id,
+                                                    client_id=client.id,
+                                                    data_type="text",
+                                                    level='leveloneentity',
+                                                    state="enabled",
+                                                    position=15,
+                                                    entity_type="Notes"
+                                                    )
+        for field in [protoform_ordinary, word_ordinary, transcription_ordinary, duration_1_vowel_ordinary, intensity_1_vowel_ordinary,
+                      native_speaker_ordinary, dialect_ordinary, translation_ld_ordinary, grammatical_form_ordinary,
+                      it_is_formed_from_ordinary, similarity_ordinary, the_page_ordinary, the_line_ordinary,
+                      the_head_ordinary, the_verse_ordinary, notes_ordinary]:
+            DBSession.add(field)
 
 
+        morphodict = DictionaryPerspective(client_id=client.id,
+                                           parent_client_id=fake_dictionary.client_id,
+                                           parent_object_id=fake_dictionary.object_id,
+                                           is_template=True,
+                                           state="Service",
+                                           name="Morhological dictionary")
+        DBSession.add(morphodict)
+        DBSession.flush()
+
+        morph_cate = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                parent_object_id=morphodict.object_id,
+                                                client_id=client.id,
+                                                data_type="text", level="leveloneentity",
+                                                state='enabled',
+                                                position=0,
+                                                entity_type="Grammatical category")
+
+        form_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                parent_object_id=morphodict.object_id,
+                                                client_id=client.id,
+                                                data_type="text", level="leveloneentity",
+                                                state='enabled',
+                                                position=1,
+                                                entity_type="Form")
+        transcription_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                         parent_object_id=morphodict.object_id,
+                                                         client_id=client.id,
+                                                         data_type="text", level="leveloneentity",
+                                                         state='enabled',
+                                                         position=2,
+                                                         entity_type="Transcription")
+        variants_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                    parent_object_id=morphodict.object_id,
+                                                    client_id=client.id,
+                                                    data_type="text", level="leveloneentity",
+                                                    state='enabled',
+                                                    position=3,
+                                                    entity_type="Variants")
+        native_speaker_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                          parent_object_id=morphodict.object_id,
+                                                          client_id=client.id,
+                                                          data_type="text", level="leveloneentity",
+                                                          state='enabled',
+                                                          position=4,
+                                                          entity_type="Native speaker")
+        text_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                parent_object_id=morphodict.object_id,
+                                                client_id=client.id,
+                                                data_type="text", level="leveloneentity",
+                                                state='enabled',
+                                                position=5,
+                                                entity_type="Text")
+        dialect_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                   parent_object_id=morphodict.object_id,
+                                                   client_id=client.id,
+                                                   data_type="text", level="leveloneentity",
+                                                   state='enabled',
+                                                   position=6,
+                                                   entity_type="Dialect")
+        in_combination_with_cat_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                                   parent_object_id=morphodict.object_id,
+                                                                   client_id=client.id,
+                                                                   data_type="text", level="leveloneentity",
+                                                                   state='enabled',
+                                                                   position=7,
+                                                                   entity_type="in combination with categories")
+        frequency_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                     parent_object_id=morphodict.object_id,
+                                                     client_id=client.id,
+                                                     data_type="text", level="leveloneentity",
+                                                     state='enabled',
+                                                     position=8,
+                                                     entity_type="Frequency")
+        number_of_an_affix_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                              parent_object_id=morphodict.object_id,
+                                                              client_id=client.id,
+                                                              data_type="text", level="leveloneentity",
+                                                              state='enabled',
+                                                              position=9,
+                                                              entity_type="Number of an affix")
+        the_page_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                    parent_object_id=morphodict.object_id,
+                                                    client_id=client.id,
+                                                    data_type="text", level="leveloneentity",
+                                                    state='enabled',
+                                                    position=10,
+                                                    entity_type="the Page")
+        the_line_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                    parent_object_id=morphodict.object_id,
+                                                    client_id=client.id,
+                                                    data_type="text", level="leveloneentity",
+                                                    state='enabled',
+                                                    position=11,
+                                                    entity_type="the Line")
+        notes_morph = DictionaryPerspectiveField(parent_client_id=morphodict.client_id,
+                                                 parent_object_id=morphodict.object_id,
+                                                 client_id=client.id,
+                                                 data_type="text", level="leveloneentity",
+                                                 state='enabled',
+                                                 position=12,
+                                                 entity_type="Notes")
+
+        for field in [morph_cate, form_morph, transcription_morph, variants_morph, native_speaker_morph, text_morph,
+                      dialect_morph, in_combination_with_cat_morph, frequency_morph, number_of_an_affix_morph,
+                      the_page_morph, the_line_morph, notes_morph]:
+            DBSession.add(field)
 

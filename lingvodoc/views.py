@@ -78,6 +78,9 @@ from pyramid.request import Request
 # import redis
 import json
 
+import logging
+log = logging.getLogger(__name__)
+
 class CommonException(Exception):
     def __init__(self, value):
         self.value = value
@@ -1030,10 +1033,10 @@ def dictionaries_list(request):
         languages = req['languages']
     dicts = DBSession.query(Dictionary)
     if published:
-        if published == 'true':
-            dicts = dicts.filter(Dictionary).filter_by(state='published')
-        if published == 'false':
-            dicts = dicts.filter(Dictionary).filter(Dictionary.state != 'published')
+        if published:
+            dicts = dicts.filter_by(state='Published')
+        # else:
+        #     dicts = dicts.filter_by(state!='Published')
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
@@ -1721,23 +1724,72 @@ def view_group_entity(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-    if entity:
-        if not entity.marked_for_deletion:
-
-            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                 translation_string=entity.entity_type)
-            response['content'] = entity.tag
-            entities = DBSession.query(GroupingEntity).filter_by(tag=entity.tag)
-            objs = []
-            for entry in entities:
-                obj = {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id}
-                objs += [obj]
-            response['connections'] = objs
-            request.response.status = HTTPOk.code
-            return response
+    entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
+    ents = []
+    if entities:
+        for entity in entities:
+            if not entity.marked_for_deletion:
+                ent = dict()
+                ent['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                                     translation_string=entity.entity_type)
+                ent['content'] = entity.content
+                entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
+                objs = []
+                for entry in entities2:
+                    obj = {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id}
+                    objs += [obj]
+                ent['connections'] = objs
+                ents += [ent]
+        response['entities'] = ents
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
-    return {'error': str("No such entity in the system")}
+    return {'error': str("No entities in the system")}
+
+@view_config(route_name='get_connected_words', renderer='json', request_method='GET')
+@view_config(route_name='get_connected_words_indict', renderer='json', request_method='GET')
+def view_connected_words(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+    if lexical_entry:
+        if not lexical_entry.marked_for_deletion:
+            words = []
+            path = request.route_url('get_group_entity',
+                                     client_id=lexical_entry.client_id,
+                                     object_id=lexical_entry.object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            respon = request.invoke_subrequest(subreq)
+            if not 'error' in respon.json:
+                connections = respon.json['entities'][0]['connections']
+                for lex in connections:
+                    path = request.route_url('lexical_entry',
+                                             client_id=lex['client_id'],
+                                             object_id=lex['object_id'])
+                    subreq = Request.blank(path)
+                    subreq.method = 'GET'
+                    subreq.headers = request.headers
+                    resp = request.invoke_subrequest(subreq)
+                    words += [resp.json]
+            else:
+                path = request.route_url('lexical_entry',
+                                         client_id=lexical_entry.client_id,
+                                         object_id=lexical_entry.object_id)
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                words += [resp.json]
+
+            response['words'] = words
+            return response
+
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such lexical entry in the system")}
 
 
 @view_config(route_name='get_group_entity', renderer='json', request_method='DELETE', permission='delete')
@@ -1787,21 +1839,30 @@ def create_group_entity(request):
             n = 10  # better read from settings
             tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                          for c in range(n))
-            tags += [tag]
-
-        for par in req['connections']:
+            if not tag in tags:
+                tags += [tag]
+        parents = req['connections']
+        for tag in tags:
+            pars = DBSession.query(GroupingEntity).\
+                filter_by(content = tag).all()
+            for par in pars:
+                pa = {'client_id':par.parent_client_id, 'object_id':par.parent_object_id}
+                if not pa in parents:
+                    parents += [pa]
+        for par in parents:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             for tag in tags:
                 ent = DBSession.query(GroupingEntity).\
                     filter_by(entity_type=req['entity_type'], content=tag, parent=parent).first()
-                if ent:
-                    continue
-                entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                        entity_type=req['entity_type'], content=tag, parent=parent)
-                DBSession.add(entity)
-
+                if not ent:
+                    entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
+                                            entity_type=req['entity_type'], content=tag, parent=parent)
+                    DBSession.add(entity)
+                    DBSession.flush()
+        log.debug('TAGS: %s', tags)
         request.response.status = HTTPOk.code
+        return {}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
@@ -2289,10 +2350,22 @@ def searchby(reqtype):
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    result = []
+    log.debug('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
 
-    return result
-
+    result = dict()
+    result['POST'] = request.POST.get('login')
+    result['GET'] = request.GET.get('login')
+    result['params'] = request.params.get('login')
+    try:
+        result['json'] = request.json_body['login']
+    except:
+        pass
+    log.debug('WTF?: %s ', result)
+    try:
+        req = request.json_body
+        return req
+    except:
+        return result
 
 
 
