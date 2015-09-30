@@ -579,9 +579,19 @@ class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
 
 def acl_by_groups(object_id, client_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
-    acls += [(Allow, Everyone, ALL_PERMISSIONS)]
+    # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
-
+    if client_id and object_id:
+        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
+            persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+            if persp:
+                if persp.state == 'published':
+                    acls += [(Allow, Everyone, 'view')]
+        elif subject in ['dictionary', 'other dictionary subjects']:
+            dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+            if dict:
+                if dict.state == 'published':
+                    acls += [(Allow, Everyone, 'view')]
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
@@ -598,7 +608,7 @@ def acl_by_groups(object_id, client_id, subject):
 
 def acl_by_groups_single_id(object_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
-    acls += [(Allow, Everyone, ALL_PERMISSIONS)]
+    # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
@@ -894,6 +904,25 @@ class PerspectiveLexicalViewAcl(object):
         acls = []
         object_id=None
         try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
+
+
+class LexicalViewAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
             object_id = self.request.matchdict['object_id']
         except:
             pass
@@ -902,6 +931,6 @@ class PerspectiveLexicalViewAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        lex_ent = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = lex_ent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
+        lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id,object_id=object_id).first()
+        parent = lex.parent
+        return acls + acl_by_groups(parent.object_id, parent.client_id, 'lexical_entries_and_entities')

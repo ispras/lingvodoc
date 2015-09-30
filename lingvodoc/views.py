@@ -858,7 +858,8 @@ def view_perspective_roles(request):
     if perspective:
         if not perspective.marked_for_deletion:
             bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
-            roles = []
+            roles_users = dict()
+            roles_organizations = dict()
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
@@ -867,9 +868,14 @@ def view_perspective_roles(request):
                 users = []
                 for user in group.users:
                     users += [user.id]
-                # TODO: add users from organizations. or view organizations separately
-                roles[perm] = users
-            response['roles'] = roles
+                organizations = []
+                for org in group.organizations:
+                    organizations += [org.id]
+                roles_users[perm] = users
+                roles_organizations[perm] = organizations
+            response['roles_users'] = roles_users
+            response['roles_organizations'] = roles_organizations
+
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -2090,7 +2096,7 @@ def lexical_entries_published(request):
     return {'error': str("No such perspective in the system")}
 
 # TODO: fix ACL
-@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET')#, permission='view')
+@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET', permission='view')#, permission='view')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):
     response = dict()

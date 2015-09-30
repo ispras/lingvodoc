@@ -296,11 +296,11 @@ def configure_routes(config):
     # params: start_from=M, count=N, sort_by=<entity_type>
     config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_id}/all',
-                     factory='lingvodoc.models.PerspectivePublishAcl')  # filter not ready
+                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')  # filter not ready
 
     config.add_route(name='lexical_entries_all_count', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/all_count',
-                     factory='lingvodoc.models.PerspectivePublishAcl')
+                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')
 
     config.add_route(name='lexical_entries_published', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/published',
@@ -310,7 +310,7 @@ def configure_routes(config):
     # API #GET
     # all children
     config.add_route(name='lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')  # ready, not tested
+                     factory='lingvodoc.models.LexicalViewAcl')  # ready, not tested
     config.add_route(name='lexical_entry_in_perspective', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
                                                                   'lexical_entry/{client_id}/{object_id}',
