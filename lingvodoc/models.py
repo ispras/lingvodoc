@@ -77,8 +77,12 @@ def recursive_content(self):
                 x = getattr(self, str(entry))
                 for xx in x:
                     additional_metadata = None
-                    if xx.additional_metadata:
-                        additional_metadata = json.loads(xx.additional_metadata)
+                    if hasattr(xx, "additional_metadata"):
+                        if xx.additional_metadata:
+                            additional_metadata = json.loads(xx.additional_metadata)
+                    locale_id = None
+                    if hasattr(xx, "locale_id"):
+                        locale_id = xx.locale_id
                     vec += [{'level': xx.__tablename__,
                              'content': xx.content,
                              'object_id': xx.object_id,
@@ -87,7 +91,7 @@ def recursive_content(self):
                              'parent_client_id': xx.parent_client_id,
                              'entity_type': xx.entity_type,
                              'marked_for_deletion': xx.marked_for_deletion,
-                             'locale_id': xx.locale_id,
+                             'locale_id': locale_id,
                              'additional_metadata': additional_metadata,
                              'contains': recursive_content(xx) or None}]
                     # vec += recursive_content(xx)

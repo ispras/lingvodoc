@@ -2183,21 +2183,21 @@ def approve_all(request):
                                                 perspective_client_id=client_id,
                                                 perspective_id=object_id)
                         subreq = Request.blank(url)
-                        subreq.json_body = [{"type": 'leveloneentity',
+                        subreq.json = [{"type": 'leveloneentity',
                                              "client_id":levone.client_id,
                                             "object_id":levone.object_id}]
                         subreq.method = 'PATCH'
                         subreq.headers = request.headers
                         request.invoke_subrequest(subreq)
                     for levtwo in levone.leveltwoentity:
-                        if not levone.publishleveltwoentity:
+                        if not levtwo.publishleveltwoentity:
                             url = request.route_url('approve_entity',
                                                     dictionary_client_id=dictionary_client_id,
                                                     dictionary_object_id=dictionary_object_id,
                                                     perspective_client_id=client_id,
                                                     perspective_id=object_id)
                             subreq = Request.blank(url)
-                            subreq.json_body = [{"type": 'leveltwoentity',
+                            subreq.json = [{"type": 'leveltwoentity',
                                                  "client_id":levtwo.client_id,
                                                 "object_id":levtwo.object_id}]
                             subreq.method = 'PATCH'
@@ -2212,7 +2212,7 @@ def approve_all(request):
                                                 perspective_client_id=client_id,
                                                 perspective_id=object_id)
                         subreq = Request.blank(url)
-                        subreq.json_body = [{"type": 'leveloneentity',
+                        subreq.json = [{"type": 'groupingentity',
                                              "client_id":groupent.client_id,
                                             "object_id":groupent.object_id}]
                         subreq.method = 'PATCH'
@@ -2239,26 +2239,29 @@ def approve_entity(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
             if entry['type'] == 'leveloneentity':
-                entity = DBSession.query_property(LevelOneEntity).\
+                entity = DBSession.query(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
+                                                       entity=entity, parent=entity.parent)
+                    DBSession.add(publishent)
+                    DBSession.flush()
             elif entry['type'] == 'leveltwoentity':
-                entity = DBSession.query_property(LevelTwoEntity).\
+                entity = DBSession.query(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
+                                                       entity=entity, parent=entity.parent.parent)
+                    DBSession.add(publishent)
+                    DBSession.flush()
             elif entry['type'] == 'groupingentity':
-                entity = DBSession.query_property(GroupingEntity).\
+                entity = DBSession.query(GroupingEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
+                                                       entity=entity, parent=entity.parent)
+                    DBSession.add(publishent)
+                    DBSession.flush()
             else:
                 raise CommonException("Unacceptable type")
 
