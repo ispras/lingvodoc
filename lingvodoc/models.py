@@ -579,7 +579,7 @@ class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
 
 def acl_by_groups(object_id, client_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
-    # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
+    acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
         if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
@@ -608,7 +608,7 @@ def acl_by_groups(object_id, client_id, subject):
 
 def acl_by_groups_single_id(object_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
-    # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
+    acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
@@ -833,7 +833,7 @@ class PerspectiveEntityOneAcl(object):
             pass
         levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = levoneent.parent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'approve_entities')
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectiveEntityTwoAcl(object):
@@ -854,7 +854,7 @@ class PerspectiveEntityTwoAcl(object):
             pass
         levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = levoneent.parent.parent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'approve_entities')
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectiveEntityGroupAcl(object):
@@ -875,7 +875,7 @@ class PerspectiveEntityGroupAcl(object):
             pass
         group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = group_ent.parent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'approve_entities')
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectivePublishAcl(object):
@@ -895,6 +895,7 @@ class PerspectivePublishAcl(object):
         except:
             pass
         return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+
 
 class PerspectiveLexicalViewAcl(object):
     def __init__(self, request):
