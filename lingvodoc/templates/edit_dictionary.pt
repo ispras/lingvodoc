@@ -121,8 +121,7 @@
 
             <tbody>
 
-
-            <tr ng-repeat="entryFields in dictionaryMatrix">
+            <tr ng-repeat="entryFields in dictionaryTable">
 
                 <td ng-repeat="fieldValues in entryFields"
                     ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
@@ -257,7 +256,7 @@
                     <div ng-if="field.data_type == 'grouping_tag'">
 
                         <button type="button" class="btn btn-default btn-sm"
-                                ng-click="editGroupingTag(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)">
+                                ng-click="editGroupingTag(lexicalEntry, field, fieldValues)">
                             <span class="glyphicon glyphicon-list">Edit</span>
                         </button>
 
@@ -582,7 +581,6 @@
 
                     <tr ng-repeat="entry in fieldsValues">
 
-
                         <td>
                             <button type="button" class="btn btn-default" ng-click="unlinkEntry($index)">
                                 <span class="glyphicon glyphicon-minus"></span>
@@ -673,7 +671,7 @@
                     <tr ng-repeat="entry in suggestedFieldsValues">
 
                         <td>
-                            <button type="button" class="btn btn-default" ng-click="linkEntry($index)">
+                            <button type="button" class="btn btn-default" ng-click="linkEntries(suggestedEntries[$index])">
                                 <span class="glyphicon glyphicon-plus"></span>
                             </button>
                         </td>
