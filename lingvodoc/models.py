@@ -743,25 +743,6 @@ class DictionaryRolesAcl(object):
         return acls + acl_by_groups(object_id, client_id, 'dictionary_role')
 
 
-class CreatePerspectiveAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id=None
-        try:
-            object_id = self.request.matchdict['dictionary_client_id']
-        except:
-            pass
-        client_id=None
-        try:
-            client_id = self.request.matchdict['dictionary_object_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'perspective')
-
-
 class PerspectiveRolesAcl(object):
     def __init__(self, request):
         self.request = request

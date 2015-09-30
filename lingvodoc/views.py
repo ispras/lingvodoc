@@ -747,10 +747,12 @@ def view_dictionary_roles(request):
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'POST', permission='create')
 def edit_dictionary_roles(request):
     response = dict()
+    log.debug("VERY IMPORTANT 1")
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     req = request.json_body
     user_id = None
+    log.debug("VERY IMPORTANT",req)
     if 'user_id' in req:
         user_id = req['user_id']
     organization_id = None
@@ -859,8 +861,8 @@ def view_perspective_roles(request):
             roles = []
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=base.object_id,
-                                                             subject_client_id=base.client_id).first()
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                 perm = base.translation_string
                 users = []
                 for user in group.users:
@@ -2156,6 +2158,71 @@ def get_user_info(request):
     response['is_active']=str(user.is_active)
     request.response.status = HTTPOk.code
     return response
+
+
+@view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
+def approve_all(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+
+    if parent:
+        if not parent.marked_for_deletion:
+            dictionary_client_id = parent.parent_client_id
+            dictionary_object_id = parent.parent_object_id
+            lexes = DBSession.query(LexicalEntry).filter_by(parent=parent).all()
+            for lex in lexes:
+                levones = DBSession.query(LevelOneEntity).filter_by(parent=lex).all()
+                for levone in levones:
+                    if not levone.publishleveloneentity:
+                        url = request.route_url('approve_entity',
+                                                dictionary_client_id=dictionary_client_id,
+                                                dictionary_object_id=dictionary_object_id,
+                                                perspective_client_id=client_id,
+                                                perspective_id=object_id)
+                        subreq = Request.blank(url)
+                        subreq.json_body = [{"type": 'leveloneentity',
+                                             "client_id":levone.client_id,
+                                            "object_id":levone.object_id}]
+                        subreq.method = 'PATCH'
+                        subreq.headers = request.headers
+                        request.invoke_subrequest(subreq)
+                    for levtwo in levone.leveltwoentity:
+                        if not levone.publishleveltwoentity:
+                            url = request.route_url('approve_entity',
+                                                    dictionary_client_id=dictionary_client_id,
+                                                    dictionary_object_id=dictionary_object_id,
+                                                    perspective_client_id=client_id,
+                                                    perspective_id=object_id)
+                            subreq = Request.blank(url)
+                            subreq.json_body = [{"type": 'leveltwoentity',
+                                                 "client_id":levtwo.client_id,
+                                                "object_id":levtwo.object_id}]
+                            subreq.method = 'PATCH'
+                            subreq.headers = request.headers
+                            request.invoke_subrequest(subreq)
+                groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
+                for groupent in groupents:
+                    if not groupent.publishgroupingentity:
+                        url = request.route_url('approve_entity',
+                                                dictionary_client_id=dictionary_client_id,
+                                                dictionary_object_id=dictionary_object_id,
+                                                perspective_client_id=client_id,
+                                                perspective_id=object_id)
+                        subreq = Request.blank(url)
+                        subreq.json_body = [{"type": 'leveloneentity',
+                                             "client_id":groupent.client_id,
+                                            "object_id":groupent.object_id}]
+                        subreq.method = 'PATCH'
+                        subreq.headers = request.headers
+                        request.invoke_subrequest(subreq)
+
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
