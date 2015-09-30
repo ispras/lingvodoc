@@ -27400,13 +27400,82 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         });
         return deferred.promise;
     };
+    var getConnectedWords = function(clientId, objectId) {
+        var deferred = $q.defer();
+        var url = "/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/connected";
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.words)) {
+                deferred.resolve(data.words);
+            } else {
+                deferred.reject("An error  occurred while fetching connected words");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while fetching connected words");
+        });
+        return deferred.promise;
+    };
+    var linkEntries = function(e1, e2, entityType) {
+        var deferred = $q.defer();
+        var linkObject = {
+            entity_type: entityType,
+            connections: [ {
+                client_id: e1.client_id,
+                object_id: e1.object_id
+            }, {
+                client_id: e2.client_id,
+                object_id: e2.object_id
+            } ]
+        };
+        var url = "/group_entity";
+        $http.post(url, linkObject).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while connecting 2 entries");
+        });
+        return deferred.promise;
+    };
+    var search = function(query) {
+        var deferred = $q.defer();
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
+        $http.get(url).success(function(data, status, headers, config) {
+            var urls = [];
+            for (var i = 0; i < data.length; i++) {
+                var entr = data[i];
+                var getEntryUrl = "/dictionary/" + encodeURIComponent(entr.origin_dictionary_client_id) + "/" + encodeURIComponent(entr.origin_dictionary_object_id) + "/perspective/" + encodeURIComponent(entr.origin_perspective_client_id) + "/" + encodeURIComponent(entr.origin_perspective_object_id) + "/lexical_entry/" + encodeURIComponent(entr.client_id) + "/" + encodeURIComponent(entr.object_id);
+                urls.push(getEntryUrl);
+            }
+            var uniqueUrls = urls.filter(function(item, pos) {
+                return urls.indexOf(item) == pos;
+            });
+            var requests = [];
+            for (var j = 0; j < uniqueUrls.length; j++) {
+                var r = $http.get(uniqueUrls[j]);
+                requests.push(r);
+            }
+            $q.all(requests).then(function(results) {
+                var suggestedEntries = [];
+                for (var k = 0; k < results.length; k++) {
+                    if (results[k].data) {
+                        suggestedEntries.push(results[k].data.lexical_entry);
+                    }
+                }
+                deferred.resolve(suggestedEntries);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing basic search");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
         getPerspectiveFields: getPerspectiveFields,
         addNewLexicalEntry: addNewLexicalEntry,
         saveValue: saveValue,
-        removeValue: removeValue
+        removeValue: removeValue,
+        getConnectedWords: getConnectedWords,
+        linkEntries: linkEntries,
+        search: search
     };
 }).directive("wavesurfer", function() {
     return {
@@ -27652,8 +27721,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             resolve: {
                 groupParams: function() {
                     return {
-                        clientId: entry.client_id,
-                        objectId: entry.object_id,
+                        entry: entry,
                         fields: $scope.fields
                     };
                 }
@@ -27678,7 +27746,6 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         });
     };
     $scope.$watch("lexicalEntries", function(updatedEntries) {
-        $log.info("Changed!");
         var getFieldValues = function(entry, field) {
             var value;
             var values = [];
@@ -27933,7 +28000,6 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         }
     };
     $scope.saveTextValue = function(entry, field, event, parent) {
-        $log.info(parent);
         if (event.target.value) {
             $scope.saveValue(entry, field, new model.TextValue(event.target.value), parent);
         }
@@ -27996,12 +28062,11 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.$watch("entries", function(updatedEntries) {
         $scope.mapFieldValues(updatedEntries, $scope.fields);
     }, true);
-} ]).controller("editGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "groupParams", function($scope, $http, $modalInstance, $q, $log, groupParams) {
+} ]).controller("editGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "dictionaryService", "groupParams", function($scope, $http, $modalInstance, $q, $log, dictionaryService, groupParams) {
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
     var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
     var perspectiveId = $("#perspectiveId").data("lingvodoc");
-    var enabledInputs = [];
     WaveSurferController.call(this, $scope);
     $scope.fields = groupParams.fields;
     $scope.connectedEntries = [];
@@ -28015,7 +28080,6 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.suggestedFieldsValues = [];
     $scope.mapFieldValues = function(allEntries, allFields) {
         var result = [];
-        $scope.fieldsValues = [];
         for (var i = 0; i < allEntries.length; i++) {
             var entryRow = [];
             for (var j = 0; j < allFields.length; j++) {
@@ -28050,21 +28114,12 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         }
         return values;
     };
-    $scope.linkEntry = function(index) {
-        var linkObject = {
-            entity_type: "Etymology",
-            connections: [ {
-                client_id: groupParams.clientId,
-                object_id: groupParams.objectId
-            }, {
-                client_id: $scope.suggestedEntries[index].clientId,
-                object_id: $scope.suggestedEntries[index].objectId
-            } ]
-        };
-        var url = "/group_entity";
-        $http.post(url, linkObject).success(function(data, status, headers, config) {
-            $scope.connectedEntries.push($scope.suggestedEntries[index]);
-        }).error(function(data, status, headers, config) {});
+    $scope.linkEntries = function(entry) {
+        dictionaryService.linkEntries(groupParams.entry, entry, "Etymology").then(function(data) {
+            $scope.connectedEntries.push(entry);
+        }, function(reason) {
+            $log.error(reason);
+        });
     };
     $scope.unlinkEntry = function(index) {
         $scope.connectedEntries.splice(index);
@@ -28085,37 +28140,18 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         if (!updatedQuery || updatedQuery.length < 3) {
             return;
         }
-        var url = "/basic_search?leveloneentity=" + encodeURIComponent(updatedQuery);
-        $http.get(url).success(function(data, status, headers, config) {
-            $scope.suggestedEntries = [];
-            var urls = [];
-            for (var i = 0; i < data.length; i++) {
-                var entr = data[i];
-                var getEntryUrl = "/dictionary/" + encodeURIComponent(entr.origin_dictionary_client_id) + "/" + encodeURIComponent(entr.origin_dictionary_object_id) + "/perspective/" + encodeURIComponent(entr.origin_perspective_client_id) + "/" + encodeURIComponent(entr.origin_perspective_object_id) + "/lexical_entry/" + encodeURIComponent(entr.client_id) + "/" + encodeURIComponent(entr.object_id);
-                urls.push(getEntryUrl);
-            }
-            var uniqueUrls = urls.filter(function(item, pos) {
-                return urls.indexOf(item) == pos;
-            });
-            var requests = [];
-            for (var j = 0; j < uniqueUrls.length; j++) {
-                var r = $http.get(uniqueUrls[j]);
-                requests.push(r);
-            }
-            $q.all(requests).then(function(results) {
-                for (var k = 0; k < results.length; k++) {
-                    if (results[k].data) {
-                        $scope.suggestedEntries.push(results[k].data.lexical_entry);
-                    }
-                }
-            });
-        }).error(function(data, status, headers, config) {});
+        $scope.suggestedEntries = [];
+        dictionaryService.search(updatedQuery).then(function(suggestedEntries) {
+            $scope.suggestedEntries = suggestedEntries;
+        }, function(reason) {
+            $log.error(reason);
+        });
     }, true);
-    var loadConnectedWords = function() {
-        var url = "/lexical_entry/" + encodeURIComponent(groupParams.clientId) + "/" + encodeURIComponent(groupParams.objectId) + "/connected";
-        $http.get(url).success(function(data, status, headers, config) {}).error(function(data, status, headers, config) {});
-    };
-    loadConnectedWords();
+    dictionaryService.getConnectedWords(groupParams.entry.client_id, groupParams.entry.object_id).then(function(entries) {
+        angular.forEach(entries, function(entry) {
+            $scope.connectedEntries.push(entry.lexical_entry);
+        });
+    }, function(reason) {});
 } ]);
 
 function WaveSurferController($scope) {
