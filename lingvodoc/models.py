@@ -101,7 +101,7 @@ def recursive_content(self):
                             if 'publish' in ent['level']:
                                 if not ent['marked_for_deletion']:
                                     published = True
-                                break
+                                    break
                     info['published'] = published
                     vec += [info]
                     # vec += recursive_content(xx)
