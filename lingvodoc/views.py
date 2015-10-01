@@ -2225,16 +2225,15 @@ def approve_all(request):
                                             perspective_client_id=client_id,
                                             perspective_id=object_id)
                     subreq = Request.blank(url)
-                    subreq.json = [{"type": "leveloneentity",
-                                         "client_id":levone.client_id,
-                                        "object_id":levone.object_id}]
+                    jsn = dict()
+                    entities = [{'type': 'leveloneentity',
+                                         'client_id': levone.client_id,
+                                        'object_id': levone.object_id}]
+                    jsn['entities']= entities
+                    subreq.json = jsn
                     subreq.method = 'PATCH'
                     subreq.headers = request.headers
-                    try:
-                        request.invoke_subrequest(subreq)
-                    except:
-                        log.debug('JSON:', subreq.json)
-                        return{'error': subreq.json}
+                    request.invoke_subrequest(subreq)
                     for levtwo in levone.leveltwoentity:
                         url = request.route_url('approve_entity',
                                                 dictionary_client_id=dictionary_client_id,
@@ -2242,9 +2241,12 @@ def approve_all(request):
                                                 perspective_client_id=client_id,
                                                 perspective_id=object_id)
                         subreq = Request.blank(url)
-                        subreq.json = [{"type": "leveltwoentity",
-                                             "client_id":levtwo.client_id,
-                                            "object_id":levtwo.object_id}]
+                        jsn = dict()
+                        entities = [{'type': 'leveltwoentity',
+                                             'client_id':levtwo.client_id,
+                                            'object_id':levtwo.object_id}]
+                        jsn['entities']= entities
+                        subreq.json = jsn
                         subreq.method = 'PATCH'
                         subreq.headers = request.headers
                         request.invoke_subrequest(subreq)
@@ -2256,9 +2258,12 @@ def approve_all(request):
                                             perspective_client_id=client_id,
                                             perspective_id=object_id)
                     subreq = Request.blank(url)
-                    subreq.json = [{"type": "groupingentity",
-                                         "client_id":groupent.client_id,
-                                        "object_id":groupent.object_id}]
+                    jsn = dict()
+                    entities = [{'type': 'groupingentity',
+                                         'client_id':groupent.client_id,
+                                        'object_id':groupent.object_id}]
+                    jsn['entities']= entities
+                    subreq.json = jsn
                     subreq.method = 'PATCH'
                     subreq.headers = request.headers
                     request.invoke_subrequest(subreq)
@@ -2282,7 +2287,8 @@ def approve_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        for entry in req:
+        log.debug('REQUEST BODY:', req)
+        for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
                 entity = DBSession.query(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
