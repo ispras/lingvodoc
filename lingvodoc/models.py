@@ -99,8 +99,9 @@ def recursive_content(self):
                         log.debug(info['contains'])
                         for ent in info['contains']:
                             if 'publish' in ent['level']:
-                                published = True
-                                break
+                                if not ent['marked_for_deletion']:
+                                    published = True
+                                    break
                     info['published'] = published
                     vec += [info]
                     # vec += recursive_content(xx)
