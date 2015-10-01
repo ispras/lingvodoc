@@ -747,10 +747,12 @@ def view_dictionary_roles(request):
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'POST', permission='create')
 def edit_dictionary_roles(request):
     response = dict()
+    log.debug("VERY IMPORTANT 1")
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     req = request.json_body
     user_id = None
+    log.debug("VERY IMPORTANT",req)
     if 'user_id' in req:
         user_id = req['user_id']
     organization_id = None
@@ -856,18 +858,24 @@ def view_perspective_roles(request):
     if perspective:
         if not perspective.marked_for_deletion:
             bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
-            roles = []
+            roles_users = dict()
+            roles_organizations = dict()
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=base.object_id,
-                                                             subject_client_id=base.client_id).first()
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                 perm = base.translation_string
                 users = []
                 for user in group.users:
                     users += [user.id]
-                # TODO: add users from organizations. or view organizations separately
-                roles[perm] = users
-            response['roles'] = roles
+                organizations = []
+                for org in group.organizations:
+                    organizations += [org.id]
+                roles_users[perm] = users
+                roles_organizations[perm] = organizations
+            response['roles_users'] = roles_users
+            response['roles_organizations'] = roles_organizations
+
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -1918,6 +1926,24 @@ def create_lexical_entry(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
+
+
+# @view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='DELETE', permission='delete')#, permission='view')
+# @view_config(route_name='lexical_entry', renderer='json', request_method='DELETE', permission='delete')
+# def delete_lexical_entry(request):
+#     client_id = request.matchdict.get('client_id')
+#     object_id = request.matchdict.get('object_id')
+#
+#     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+#     if entry:
+#         if not entry.marked_for_deletion:
+#             entry.marked_for_deletion = True
+#             request.response.status = HTTPOk.code
+#             return {}
+#     request.response.status = HTTPNotFound.code
+#     return {'error': str("No such lexical entry in the system")}
+
+
 @view_config(route_name='create_lexical_entry_bulk', renderer='json', request_method='POST', permission='create')
 def create_lexical_entry_bulk(request):
     try:
@@ -2088,7 +2114,7 @@ def lexical_entries_published(request):
     return {'error': str("No such perspective in the system")}
 
 # TODO: fix ACL
-@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET')#, permission='view')
+@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET', permission='view')#, permission='view')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):
     response = dict()
@@ -2158,6 +2184,68 @@ def get_user_info(request):
     return response
 
 
+@view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
+def approve_all(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+
+    if parent:
+        if not parent.marked_for_deletion:
+            dictionary_client_id = parent.parent_client_id
+            dictionary_object_id = parent.parent_object_id
+            lexes = DBSession.query(LexicalEntry).filter_by(parent=parent).all()
+            for lex in lexes:
+                levones = DBSession.query(LevelOneEntity).filter_by(parent=lex).all()
+                for levone in levones:
+                    url = request.route_url('approve_entity',
+                                            dictionary_client_id=dictionary_client_id,
+                                            dictionary_object_id=dictionary_object_id,
+                                            perspective_client_id=client_id,
+                                            perspective_id=object_id)
+                    subreq = Request.blank(url)
+                    subreq.json = [{"type": 'leveloneentity',
+                                         "client_id":levone.client_id,
+                                        "object_id":levone.object_id}]
+                    subreq.method = 'PATCH'
+                    subreq.headers = request.headers
+                    request.invoke_subrequest(subreq)
+                    for levtwo in levone.leveltwoentity:
+                        url = request.route_url('approve_entity',
+                                                dictionary_client_id=dictionary_client_id,
+                                                dictionary_object_id=dictionary_object_id,
+                                                perspective_client_id=client_id,
+                                                perspective_id=object_id)
+                        subreq = Request.blank(url)
+                        subreq.json = [{"type": 'leveltwoentity',
+                                             "client_id":levtwo.client_id,
+                                            "object_id":levtwo.object_id}]
+                        subreq.method = 'PATCH'
+                        subreq.headers = request.headers
+                        request.invoke_subrequest(subreq)
+                groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
+                for groupent in groupents:
+                    url = request.route_url('approve_entity',
+                                            dictionary_client_id=dictionary_client_id,
+                                            dictionary_object_id=dictionary_object_id,
+                                            perspective_client_id=client_id,
+                                            perspective_id=object_id)
+                    subreq = Request.blank(url)
+                    subreq.json = [{"type": 'groupingentity',
+                                         "client_id":groupent.client_id,
+                                        "object_id":groupent.object_id}]
+                    subreq.method = 'PATCH'
+                    subreq.headers = request.headers
+                    request.invoke_subrequest(subreq)
+
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
@@ -2172,26 +2260,101 @@ def approve_entity(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
             if entry['type'] == 'leveloneentity':
-                entity = DBSession.query_property(LevelOneEntity).\
+                entity = DBSession.query(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    if not entity.publishleveloneentity:
+                        publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
+                                                           entity=entity, parent=entity.parent)
+                        DBSession.add(publishent)
+                        DBSession.flush()
+                    else:
+                        for ent in entity.publishleveloneentity:
+                            if ent.marked_for_deletion:
+                                ent.marked_for_deletion = False
+                                DBSession.flush()
             elif entry['type'] == 'leveltwoentity':
-                entity = DBSession.query_property(LevelTwoEntity).\
+                entity = DBSession.query(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    if not entity.publishleveltwoentity:
+                        publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
+                                                           entity=entity, parent=entity.parent.parent)
+                        DBSession.add(publishent)
+                        DBSession.flush()
+                    else:
+                        for ent in entity.publishleveltwoentity:
+                            if ent.marked_for_deletion:
+                                ent.marked_for_deletion = False
+                                DBSession.flush()
             elif entry['type'] == 'groupingentity':
-                entity = DBSession.query_property(GroupingEntity).\
+                entity = DBSession.query(GroupingEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    if not entity.publishgroupingentity:
+                        publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
+                                                           entity=entity, parent=entity.parent)
+                        DBSession.add(publishent)
+                        DBSession.flush()
+                    else:
+                        for ent in entity.publishgroupingentity:
+                            if ent.marked_for_deletion:
+                                ent.marked_for_deletion = False
+                                DBSession.flush()
+            else:
+                raise CommonException("Unacceptable type")
+
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='approve_entity', renderer='json', request_method='DELETE', permission='delete')
+def disapprove_entity(request):
+    try:
+        req = request.json_body
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        for entry in req:
+            if entry['type'] == 'leveloneentity':
+                entity = DBSession.query(LevelOneEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                if entity:
+                    for ent in entity.publishleveloneentity:
+                        ent.marked_for_deletion = True
+                        DBSession.flush()
+                else:
+                    log.debug("WARNING: NO ENTITY")
+            elif entry['type'] == 'leveltwoentity':
+                entity = DBSession.query(LevelTwoEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                if entity:
+                    for ent in entity.publishleveltwoentity:
+                        ent.marked_for_deletion = True
+                        DBSession.flush()
+            elif entry['type'] == 'groupingentity':
+                entity = DBSession.query(GroupingEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                if entity:
+                    for ent in entity.publishgroupingentity:
+                        ent.marked_for_deletion = True
+                        DBSession.flush()
             else:
                 raise CommonException("Unacceptable type")
 

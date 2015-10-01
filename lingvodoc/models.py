@@ -77,8 +77,12 @@ def recursive_content(self):
                 x = getattr(self, str(entry))
                 for xx in x:
                     additional_metadata = None
-                    if xx.additional_metadata:
-                        additional_metadata = json.loads(xx.additional_metadata)
+                    if hasattr(xx, "additional_metadata"):
+                        if xx.additional_metadata:
+                            additional_metadata = json.loads(xx.additional_metadata)
+                    locale_id = None
+                    if hasattr(xx, "locale_id"):
+                        locale_id = xx.locale_id
                     vec += [{'level': xx.__tablename__,
                              'content': xx.content,
                              'object_id': xx.object_id,
@@ -87,7 +91,7 @@ def recursive_content(self):
                              'parent_client_id': xx.parent_client_id,
                              'entity_type': xx.entity_type,
                              'marked_for_deletion': xx.marked_for_deletion,
-                             'locale_id': xx.locale_id,
+                             'locale_id': locale_id,
                              'additional_metadata': additional_metadata,
                              'contains': recursive_content(xx) or None}]
                     # vec += recursive_content(xx)
@@ -577,7 +581,17 @@ def acl_by_groups(object_id, client_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
     acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
-
+    if client_id and object_id:
+        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
+            persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+            if persp:
+                if persp.state == 'published':
+                    acls += [(Allow, Everyone, 'view')]
+        elif subject in ['dictionary', 'other dictionary subjects']:
+            dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+            if dict:
+                if dict.state == 'published':
+                    acls += [(Allow, Everyone, 'view')]
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
@@ -635,14 +649,33 @@ class PerspectiveAcl(object):
 
     def __acl__(self):
         acls = []
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
         object_id=None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
+
+
+class PerspectiveCreateAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
         client_id=None
         try:
-            client_id = self.request.matchdict['perspective_client_id']
+            client_id = self.request.matchdict['dictionary_client_id']
+        except:
+            pass
+        object_id=None
+        try:
+            object_id = self.request.matchdict['dictionary_object_id']
         except:
             pass
         return acls + acl_by_groups(object_id, client_id, 'perspective')
@@ -724,25 +757,6 @@ class DictionaryRolesAcl(object):
         return acls + acl_by_groups(object_id, client_id, 'dictionary_role')
 
 
-class CreatePerspectiveAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id=None
-        try:
-            object_id = self.request.matchdict['dictionary_perspective_id']
-        except:
-            pass
-        client_id=None
-        try:
-            client_id = self.request.matchdict['dictionary_perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'dictionary')
-
-
 class PerspectiveRolesAcl(object):
     def __init__(self, request):
         self.request = request
@@ -818,8 +832,8 @@ class PerspectiveEntityOneAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        # perspective = levoneent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        perspective = levoneent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectiveEntityTwoAcl(object):
@@ -839,8 +853,8 @@ class PerspectiveEntityTwoAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        # perspective = levoneent.parent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        perspective = levoneent.parent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectiveEntityGroupAcl(object):
@@ -859,9 +873,9 @@ class PerspectiveEntityGroupAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        levoneent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        # perspective = levoneent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        perspective = group_ent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectivePublishAcl(object):
@@ -882,3 +896,42 @@ class PerspectivePublishAcl(object):
             pass
         return acls + acl_by_groups(object_id, client_id, 'approve_entities')
 
+
+class PerspectiveLexicalViewAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
+
+
+class LexicalViewAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id,object_id=object_id).first()
+        parent = lex.parent
+        return acls + acl_by_groups(parent.object_id, parent.client_id, 'lexical_entries_and_entities')
