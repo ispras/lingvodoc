@@ -1740,7 +1740,7 @@ def view_group_entity(request):
                 ent = dict()
                 ent['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
                                                                      translation_string=entity.entity_type)
-                ent['content'] = entity.content
+                ent['tag'] = entity.content
                 entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
                 objs = []
                 for entry in entities2:
@@ -1753,6 +1753,7 @@ def view_group_entity(request):
         return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No entities in the system")}
+
 
 @view_config(route_name='get_connected_words', renderer='json', request_method='GET')
 @view_config(route_name='get_connected_words_indict', renderer='json', request_method='GET')
@@ -1771,7 +1772,7 @@ def view_connected_words(request):
             subreq.method = 'GET'
             subreq.headers = request.headers
             respon = request.invoke_subrequest(subreq)
-            if not 'error' in respon.json:
+            if 'error' not in respon.json:
                 connections = respon.json['entities'][0]['connections']
                 for lex in connections:
                     path = request.route_url('lexical_entry',
@@ -1795,7 +1796,6 @@ def view_connected_words(request):
             response['words'] = words
             return response
 
-
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
 
@@ -1805,16 +1805,16 @@ def delete_group_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-
-    entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-    if entity:
-        if not entity.marked_for_deletion:
-
-            entity.marked_for_deletion = True
-            request.response.status = HTTPOk.code
-            return response
+    entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
+    if entities:
+        for entity in entities:
+            if not entity.marked_for_deletion:
+                entity.marked_for_deletion = True
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such entity in the system")}
+
 
 @view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')  # TODO: check for permission
@@ -1850,13 +1850,13 @@ def create_group_entity(request):
             if not tag in tags:
                 tags += [tag]
         parents = req['connections']
-        for tag in tags:
-            pars = DBSession.query(GroupingEntity).\
-                filter_by(content = tag).all()
-            for par in pars:
-                pa = {'client_id':par.parent_client_id, 'object_id':par.parent_object_id}
-                if not pa in parents:
-                    parents += [pa]
+        # for tag in tags:
+        #     pars = DBSession.query(GroupingEntity).\
+        #         filter_by(content = tag).all()
+        #     for par in pars:
+        #         pa = {'client_id':par.parent_client_id, 'object_id':par.parent_object_id}
+        #         if not pa in parents:
+        #             parents += [pa]
         for par in parents:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
@@ -2008,16 +2008,25 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries = DBSession.query(LexicalEntry)\
+            lex_ents = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("cont"))\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .join(LevelOneEntity)\
+                .filter(LevelOneEntity.entity_type != sort_criterion)\
+                .group_by(LexicalEntry)
+
+            lexical_entries = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("content"))\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .join(LevelOneEntity)\
+                .filter_by(entity_type=sort_criterion)\
+                .group_by(LexicalEntry)\
+                .union(lex_ents)\
+                .order_by("content")\
                 .offset(start_from) \
-                .limit(count)
-                #.filter_by(entity_type=sort_criterion)\
-                #.order_by(LevelOneEntity.content)
+                .limit(count).all()
 
             result = []
             for entry in lexical_entries:
-                result.append(entry.track())
+                result.append(entry[0].track())
             response['lexical_entries'] = result
 
             request.response.status = HTTPOk.code
@@ -2025,6 +2034,7 @@ def lexical_entries_all(request):
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
+
 
 @view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all_count(request):
@@ -2045,6 +2055,7 @@ def lexical_entries_all_count(request):
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
+
 
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
 def lexical_entries_published(request):
