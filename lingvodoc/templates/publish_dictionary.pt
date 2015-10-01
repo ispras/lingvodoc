@@ -33,6 +33,11 @@
      data-lingvodoc="${request.route_url('lexical_entries_all_count', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
 <div id="getPerspectiveFieldsUrl"
      data-lingvodoc="${request.route_url('perspective_fields', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
+<div id="approveEntityUrl"
+     data-lingvodoc="${request.route_url('approve_entity', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
+<div id="approveAllEntityUrl"
+     data-lingvodoc="${request.route_url('approve_all', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
+
 
 
 <nav class="lingvodoc-navbar">
@@ -121,11 +126,11 @@
                             <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
                                 {{ fieldValue.content }}
 
-                                <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue)" ng-if="approved(lexicalEntry, field, fieldValue)">
+                                <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
                                     <span class="glyphicon glyphicon-ban-circle"></span>
                                 </button>
 
-                                <button type="button" class="btn btn-default btn-sm" ng-click="disapprove(lexicalEntry, field, fieldValue)" ng-if="!approved(lexicalEntry, field, fieldValue)">
+                                <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
                                     <span class="glyphicon glyphicon-ok-circle"></span>
                                 </button>
 
@@ -523,6 +528,26 @@
     </div>
 
 </script>
+
+
+<script type="text/ng-template" id="viewGroupingTagModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+    </div>
+
+    <div class="modal-body">
+
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()">OK</button>
+    </div>
+
+</script>
+
 
 </body>
 </html>

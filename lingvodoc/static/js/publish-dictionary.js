@@ -27453,6 +27453,40 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
         });
         return deferred.promise;
     };
+    var approve = function(url, entity, status) {
+        var deferred = $q.defer();
+        if (status) {
+            $http.patch(url, entity).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        } else {
+            var config = {
+                method: "DELETE",
+                url: url,
+                data: entity,
+                headers: {
+                    "Content-Type": "application/json;charset=utf-8"
+                }
+            };
+            $http(config).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        }
+        return deferred.promise;
+    };
+    var approveAll = function(url) {
+        var deferred = $q.defer();
+        $http.patch(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to change approval status ");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -27462,7 +27496,9 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
         removeValue: removeValue,
         getConnectedWords: getConnectedWords,
         linkEntries: linkEntries,
-        search: search
+        search: search,
+        approve: approve,
+        approveAll: approveAll
     };
 }).directive("wavesurfer", function() {
     return {
@@ -27502,7 +27538,7 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
             });
         }
     };
-}).controller("PublishDictionaryController", [ "$scope", "$http", "$modal", "$log", "dictionaryService", function($scope, $http, $modal, $log, dictionaryService) {
+}).controller("PublishDictionaryController", [ "$scope", "$window", "$http", "$modal", "$log", "dictionaryService", function($scope, $window, $http, $modal, $log, dictionaryService) {
     var currentClientId = $("#clientId").data("lingvodoc");
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
@@ -27559,14 +27595,39 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
         }
         return input;
     };
-    $scope.approve = function(lexicalEntry, field, fieldValue) {
-        $log.info(arguments);
-    };
-    $scope.disapprove = function(lexicalEntry, field, fieldValue) {
-        $log.info(arguments);
+    $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
+        var url = $("#approveEntityUrl").data("lingvodoc");
+        var obj = {
+            type: field.level,
+            client_id: fieldValue.client_id,
+            object_id: fieldValue.object_id
+        };
+        dictionaryService.approve(url, [ obj ], approved).then(function(data) {
+            fieldValue["published"] = approved;
+        }, function(reason) {
+            $log.error(reason);
+        });
     };
     $scope.approved = function(lexicalEntry, field, fieldValue) {
-        return field.status == "enabled";
+        if (!fieldValue.published) {
+            return false;
+        }
+        return !!fieldValue.published;
+    };
+    $scope.approveAll = function() {
+        var approveAll = $window.confirm("Are you sure you want to approve all entries?");
+        if (approveAll) {
+            var url = $("#approveAllEntityUrl").data("lingvodoc");
+            dictionaryService.approveAll(url).then(function(data) {
+                angular.forEach($scope.lexicalEntries, function(entry) {
+                    if (!entry.published) {
+                        entry.published = true;
+                    }
+                });
+            }, function(reason) {
+                $log.error(reason);
+            });
+        }
     };
     $scope.viewGroup = function(entry, field, values) {
         $modal.open({

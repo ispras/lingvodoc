@@ -27515,7 +27515,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             });
         }
     };
-}).controller("EditDictionaryController", [ "$scope", "$http", "$modal", "$log", "dictionaryService", function($scope, $http, $modal, $log, dictionaryService) {
+}).controller("EditDictionaryController", [ "$scope", "$http", "$window", "$modal", "$log", "dictionaryService", function($scope, $http, $window, $modal, $log, dictionaryService) {
     var currentClientId = $("#clientId").data("lingvodoc");
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
