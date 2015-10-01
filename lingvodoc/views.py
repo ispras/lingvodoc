@@ -2008,26 +2008,24 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lex_ents = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("content"))\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .join(LevelOneEntity)\
-                .filter(LevelOneEntity.entity_type != sort_criterion)\
-                .group_by(LexicalEntry)
-
-            lexical_entries = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("content"))\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .join(LevelOneEntity)\
-                .filter_by(entity_type=sort_criterion)\
-                .group_by(LexicalEntry)\
-                .union(lex_ents)\
-                .order_by("content")\
-                .offset(start_from) \
-                .limit(count).all()
-
-            result42 = []
-            for entry in lexical_entries:
-                result42.append(entry[0].track())
-            response['lexical_entries_test'] = result42
+            # lex_ents1 = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("content"))\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).\
+            #     .
+            #
+            # lexical_entries = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("content"))\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .join(LevelOneEntity)\
+            #     .filter_by(entity_type=sort_criterion)\
+            #     .group_by(LexicalEntry)\
+            #     .union(lex_ents)\
+            #     .order_by("content")\
+            #     .offset(start_from) \
+            #     .limit(count).all()
+            #
+            # result42 = []
+            # for entry in lexical_entries:
+            #     result42.append(entry[0].track())
+            # response['lexical_entries_test'] = result42
 
             lexical_entries = DBSession.query(LexicalEntry)\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
@@ -2124,13 +2122,15 @@ def lexical_entries_published(request):
                 #     content2['client_id'] = enti.client_id
                 #     content2['object_id'] = enti.object_id
                 #     content += [content2]
-                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
+                if content:
+                    lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
 
             response['lexical_entries'] = lexes
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
+
 
 # TODO: fix ACL
 @view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET', permission='view')#, permission='view')
@@ -2233,7 +2233,11 @@ def approve_all(request):
                     subreq.json = jsn
                     subreq.method = 'PATCH'
                     subreq.headers = request.headers
-                    request.invoke_subrequest(subreq)
+                    try:
+                        request.invoke_subrequest(subreq)
+                    except:
+                        log.debug('JSON', jsn)
+
                     for levtwo in levone.leveltwoentity:
                         url = request.route_url('approve_entity',
                                                 dictionary_client_id=dictionary_client_id,
@@ -2249,7 +2253,10 @@ def approve_all(request):
                         subreq.json = jsn
                         subreq.method = 'PATCH'
                         subreq.headers = request.headers
-                        request.invoke_subrequest(subreq)
+                        try:
+                            request.invoke_subrequest(subreq)
+                        except:
+                            log.debug('JSON', jsn)
                 groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
                 for groupent in groupents:
                     url = request.route_url('approve_entity',
@@ -2266,7 +2273,10 @@ def approve_all(request):
                     subreq.json = jsn
                     subreq.method = 'PATCH'
                     subreq.headers = request.headers
-                    request.invoke_subrequest(subreq)
+                    try:
+                        request.invoke_subrequest(subreq)
+                    except:
+                        log.debug('JSON', jsn)
 
             request.response.status = HTTPOk.code
             return response
