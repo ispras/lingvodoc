@@ -2225,7 +2225,7 @@ def approve_all(request):
                                             perspective_client_id=client_id,
                                             perspective_id=object_id)
                     subreq = Request.blank(url)
-                    subreq.json = [{"type": 'leveloneentity',
+                    subreq.json = [{"type": "leveloneentity",
                                          "client_id":levone.client_id,
                                         "object_id":levone.object_id}]
                     subreq.method = 'PATCH'
@@ -2242,7 +2242,7 @@ def approve_all(request):
                                                 perspective_client_id=client_id,
                                                 perspective_id=object_id)
                         subreq = Request.blank(url)
-                        subreq.json = [{"type": 'leveltwoentity',
+                        subreq.json = [{"type": "leveltwoentity",
                                              "client_id":levtwo.client_id,
                                             "object_id":levtwo.object_id}]
                         subreq.method = 'PATCH'
@@ -2256,7 +2256,7 @@ def approve_all(request):
                                             perspective_client_id=client_id,
                                             perspective_id=object_id)
                     subreq = Request.blank(url)
-                    subreq.json = [{"type": 'groupingentity',
+                    subreq.json = [{"type": "groupingentity",
                                          "client_id":groupent.client_id,
                                         "object_id":groupent.object_id}]
                     subreq.method = 'PATCH'
