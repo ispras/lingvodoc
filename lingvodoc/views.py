@@ -2008,7 +2008,7 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lex_ents = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("cont"))\
+            lex_ents = DBSession.query(LexicalEntry, func.min(LevelOneEntity.content).label("content"))\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .join(LevelOneEntity)\
                 .filter(LevelOneEntity.entity_type != sort_criterion)\
@@ -2024,9 +2024,17 @@ def lexical_entries_all(request):
                 .offset(start_from) \
                 .limit(count).all()
 
+            result42 = []
+            for entry in lexical_entries:
+                result42.append(entry[0].track())
+            response['lexical_entries_test'] = result42
+
+            lexical_entries = DBSession.query(LexicalEntry)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
+
             result = []
             for entry in lexical_entries:
-                result.append(entry[0].track())
+                result.append(entry.track())
             response['lexical_entries'] = result
 
             request.response.status = HTTPOk.code
@@ -2222,7 +2230,11 @@ def approve_all(request):
                                         "object_id":levone.object_id}]
                     subreq.method = 'PATCH'
                     subreq.headers = request.headers
-                    request.invoke_subrequest(subreq)
+                    try:
+                        request.invoke_subrequest(subreq)
+                    except:
+                        log.debug('JSON:', subreq.json)
+                        return{'error': subreq.json}
                     for levtwo in levone.leveltwoentity:
                         url = request.route_url('approve_entity',
                                                 dictionary_client_id=dictionary_client_id,
@@ -2260,6 +2272,7 @@ def approve_all(request):
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
+
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
