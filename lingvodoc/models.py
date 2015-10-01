@@ -83,7 +83,7 @@ def recursive_content(self):
                     locale_id = None
                     if hasattr(xx, "locale_id"):
                         locale_id = xx.locale_id
-                    vec += [{'level': xx.__tablename__,
+                    info = {'level': xx.__tablename__,
                              'content': xx.content,
                              'object_id': xx.object_id,
                              'client_id': xx.client_id,
@@ -93,7 +93,16 @@ def recursive_content(self):
                              'marked_for_deletion': xx.marked_for_deletion,
                              'locale_id': locale_id,
                              'additional_metadata': additional_metadata,
-                             'contains': recursive_content(xx) or None}]
+                             'contains': recursive_content(xx) or None}
+                    published = False
+                    if info['contains']:
+                        log.debug(info['contains'])
+                        for ent in info['contains']:
+                            if 'publish' in ent['level']:
+                                published = True
+                                break
+                    info['published'] = published
+                    vec += [info]
                     # vec += recursive_content(xx)
     return vec
 
