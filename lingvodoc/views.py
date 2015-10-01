@@ -2237,7 +2237,7 @@ def approve_all(request):
                         request.invoke_subrequest(subreq)
                     except:
                         log.debug('JSON', jsn)
-
+                        return{'error': str(jsn)}
                     for levtwo in levone.leveltwoentity:
                         url = request.route_url('approve_entity',
                                                 dictionary_client_id=dictionary_client_id,
