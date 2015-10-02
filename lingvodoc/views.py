@@ -2122,18 +2122,25 @@ def lexical_entries_published(request):
             # for entry in lexical_entries:
             #     result.append(entry[0].track(True))
             # response['lexical_entries'] = result
-
-            lexical_entries = DBSession.query(LexicalEntry)\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .filter(or_(LexicalEntry.publishleveloneentity != None,
-                            LexicalEntry.publishleveltwoentity != None,
-                            LexicalEntry.publishgroupingentity != None))\
-                .offset(start_from) \
-                .limit(count).all()
+            lexical_entries = DBSession.query(LexicalEntry).outerjoin(PublishGroupingEntity)\
+                .outerjoin(PublishLevelOneEntity)\
+                .outerjoin(PublishLevelTwoEntity)\
+                .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
+                            PublishLevelOneEntity.marked_for_deletion==False,
+                            PublishLevelTwoEntity.marked_for_deletion==False,
+                            ))\
+                .group_by(LexicalEntry).all()
+            # lexical_entries = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .filter(or_(LexicalEntry.publishleveloneentity != None,
+            #                 LexicalEntry.publishleveltwoentity != None,
+            #                 LexicalEntry.publishgroupingentity != None))\
+            #     .offset(start_from) \
+            #     .limit(count).all()
 
             resultold = []
             for entry in lexical_entries:
-                resultold.append(entry.track(False))
+                resultold.append(entry.track(True))
             response['lexical_entries'] = resultold
 
             request.response.status = HTTPOk.code

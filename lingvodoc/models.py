@@ -102,13 +102,16 @@ def recursive_content(self, publish):
                             ents += [ent]
                             # log.debug('CONTAINS', ent)
                         for ent in ents:
-                            if 'publish' in ent['level']:
+                            try:
+                                if 'publish' in ent['level']:
                                     if not ent['marked_for_deletion']:
                                         published = True
                                         if not publish:
                                             break
                                     if publish:
                                         info['contains'].remove(ent)
+                            except TypeError:
+                                log.debug('IDK: %s' % str(ent))
                     if publish:
                         if not published:
                             if 'publish' in info['level']:
@@ -117,8 +120,6 @@ def recursive_content(self, publish):
                                 res['marked_for_deletion'] = info['marked_for_deletion']
                                 info = res
                             else:
-                                info = None
-                                vec += [info]
                                 continue
                     info['published'] = published
                     vec += [info]
@@ -353,13 +354,16 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
             for ent in vec:
                 ents += [ent]
             for ent in ents:
-                if 'publish' in ent['level']:
-                        if not ent['marked_for_deletion']:
-                            published = True
-                            if not publish:
-                                break
-                        if publish:
-                            vec.remove(ent)
+                try:
+                    if 'publish' in ent['level']:
+                            if not ent['marked_for_deletion']:
+                                published = True
+                                if not publish:
+                                    break
+                            if publish:
+                                vec.remove(ent)
+                except:
+                    log.debug('IDK: %s' % ent)
         response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published}
         return response
 
