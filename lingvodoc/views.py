@@ -2095,6 +2095,7 @@ def lexical_entries_published(request):
                 .filter_by(entity_type=sort_criterion)\
                 .group_by(LexicalEntry).subquery().select()
             lexical_entries_not_criterion = DBSession.query(LexicalEntry)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .except_(lexical_entries_criterion)
             lexical_entries_criterion2 = DBSession.query(LexicalEntry,
                                                         func.min(LevelOneEntity.content).label("content"))\
