@@ -27239,20 +27239,7 @@ var elan = function() {
     return elan;
 }();
 
-function getCookie(name) {
-    var nameEQ = name + "=";
-    var ca = document.cookie.split(";");
-    for (var i = 0; i < ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) == " ") c = c.substring(1, c.length);
-        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-}
-
-"use strict";
-
-angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionaryService", function($http, $q) {
+angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionaryService", function($http, $q) {
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
     };
@@ -27466,6 +27453,40 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         });
         return deferred.promise;
     };
+    var approve = function(url, entity, status) {
+        var deferred = $q.defer();
+        if (status) {
+            $http.patch(url, entity).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        } else {
+            var config = {
+                method: "DELETE",
+                url: url,
+                data: entity,
+                headers: {
+                    "Content-Type": "application/json;charset=utf-8"
+                }
+            };
+            $http(config).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        }
+        return deferred.promise;
+    };
+    var approveAll = function(url) {
+        var deferred = $q.defer();
+        $http.patch(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to change approval status ");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -27475,7 +27496,9 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         removeValue: removeValue,
         getConnectedWords: getConnectedWords,
         linkEntries: linkEntries,
-        search: search
+        search: search,
+        approve: approve,
+        approveAll: approveAll
     };
 }).directive("wavesurfer", function() {
     return {
@@ -27515,7 +27538,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             });
         }
     };
-}).controller("EditDictionaryController", [ "$scope", "$http", "$window", "$modal", "$log", "dictionaryService", function($scope, $http, $window, $modal, $log, dictionaryService) {
+}).controller("PublishDictionaryController", [ "$scope", "$window", "$http", "$modal", "$log", "dictionaryService", function($scope, $window, $http, $modal, $log, dictionaryService) {
     var currentClientId = $("#clientId").data("lingvodoc");
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
@@ -27529,7 +27552,6 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.pageIndex = 1;
     $scope.pageSize = 50;
     $scope.pageCount = 1;
-    var enabledInputs = [];
     $scope.getFieldValues = function(entry, field) {
         var value;
         var values = [];
@@ -27573,109 +27595,47 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         }
         return input;
     };
-    $scope.enableInput = function(clientId, objectId, entityType) {
-        if (!$scope.isInputEnabled(clientId, objectId, entityType)) {
-            enabledInputs.push({
-                clientId: clientId,
-                objectId: objectId,
-                entityType: entityType
-            });
-        } else {
-            $scope.disableInput(clientId, objectId, entityType);
-        }
-    };
-    $scope.isInputEnabled = function(clientId, objectId, entityType) {
-        for (var i = 0; i < enabledInputs.length; i++) {
-            var checkItem = enabledInputs[i];
-            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
-                return true;
-            }
-        }
-        return false;
-    };
-    $scope.disableInput = function(clientId, objectId, entityType) {
-        var removeIndex = -1;
-        for (var i = 0; i < enabledInputs.length; i++) {
-            var checkItem = enabledInputs[i];
-            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
-                removeIndex = i;
-                break;
-            }
-        }
-        if (removeIndex >= 0) {
-            enabledInputs.splice(removeIndex, 1);
-        }
-    };
-    $scope.addedByUser = function(entry) {
-        return entry.client_id == $("#clientId").data("lingvodoc");
-    };
-    $scope.addNewLexicalEntry = function() {
-        var createLexicalEntryUrl = $("#createLexicalEntryUrl").data("lingvodoc");
-        dictionaryService.addNewLexicalEntry(createLexicalEntryUrl).then(function(data) {
-            $scope.lexicalEntries.unshift({
-                client_id: data.client_id,
-                object_id: data.object_id,
-                contains: []
-            });
+    $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
+        var url = $("#approveEntityUrl").data("lingvodoc");
+        var obj = {
+            type: field.level,
+            client_id: fieldValue.client_id,
+            object_id: fieldValue.object_id
+        };
+        dictionaryService.approve(url, {
+            entities: [ obj ]
+        }, approved).then(function(data) {
+            fieldValue["published"] = approved;
         }, function(reason) {
             $log.error(reason);
         });
     };
-    $scope.saveTextValue = function(entry, field, event, parent) {
-        if (event.target.value) {
-            $scope.saveValue(entry, field, new model.TextValue(event.target.value), parent);
+    $scope.approved = function(lexicalEntry, field, fieldValue) {
+        if (!fieldValue.published) {
+            return false;
         }
+        return !!fieldValue.published;
     };
-    $scope.saveSoundValue = function(entry, field, fileName, fileType, fileContent, parent) {
-        var value = new model.SoundValue(fileName, fileType, fileContent);
-        $scope.saveValue(entry, field, value, parent);
-    };
-    $scope.saveImageValue = function(entry, field, fileName, fileType, fileContent, parent) {
-        var value = new model.ImageValue(fileName, fileType, fileContent);
-        $scope.saveValue(entry, field, value, parent);
-    };
-    $scope.saveMarkupValue = function(entry, field, fileName, fileType, fileContent, parent) {
-        var value = new model.MarkupValue(fileName, fileType, fileContent);
-        $scope.saveValue(entry, field, value, parent);
-    };
-    $scope.saveValue = function(entry, field, value, parent) {
-        var entryObject = value.export();
-        entryObject["entity_type"] = field.entity_type;
-        entryObject["locale_id"] = 1;
-        dictionaryService.saveValue(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveId, entry, field, entryObject, parent).then(function(data) {
-            for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                if ($scope.lexicalEntries[i].object_id == entry.object_id && $scope.lexicalEntries[i].client_id == entry.client_id) {
-                    $scope.lexicalEntries[i].contains.push(data);
-                    break;
-                }
-            }
-            $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
-        }, function(reason) {
-            $log.error(reason);
-        });
-    };
-    $scope.removeValue = function(entry, field, fieldValue, parent) {
-        dictionaryService.removeValue(entry, field, fieldValue, parent).then(function(data) {
-            for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                if ($scope.lexicalEntries[i].object_id == entry.object_id && $scope.lexicalEntries[i].client_id == entry.client_id) {
-                    var lexicalEntry = $scope.lexicalEntries[i];
-                    for (var j = 0; j < lexicalEntry.contains.length; j++) {
-                        if (lexicalEntry.contains[j].client_id == fieldValue.client_id && lexicalEntry.contains[j].object_id == fieldValue.object_id) {
-                            $scope.lexicalEntries[i].contains[j].marked_for_deletion = true;
-                        }
+    $scope.approveAll = function() {
+        var approveAll = $window.confirm("Are you sure you want to approve all entries?");
+        if (approveAll) {
+            var url = $("#approveAllEntityUrl").data("lingvodoc");
+            dictionaryService.approveAll(url).then(function(data) {
+                angular.forEach($scope.lexicalEntries, function(entry) {
+                    if (!entry.published) {
+                        entry.published = true;
                     }
-                    break;
-                }
-            }
-        }, function(reason) {
-            $log.error(reason);
-        });
+                });
+            }, function(reason) {
+                $log.error(reason);
+            });
+        }
     };
-    $scope.editGroup = function(entry, field, values) {
-        var modalInstance = $modal.open({
+    $scope.viewGroup = function(entry, field, values) {
+        $modal.open({
             animation: true,
-            templateUrl: "editGroupModal.html",
-            controller: "editGroupController",
+            templateUrl: "viewGroupModal.html",
+            controller: "viewGroupController",
             size: "lg",
             backdrop: "static",
             keyboard: false,
@@ -27689,34 +27649,12 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
                 }
             }
         });
-        modalInstance.result.then(function(entries) {
-            if (angular.isArray(entries)) {
-                angular.forEach(entries, function(e) {
-                    for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                        if ($scope.lexicalEntries[i].client_id == e.client_id && $scope.lexicalEntries[i].object_id == e.object_id) {
-                            angular.forEach(e.contains, function(value) {
-                                var newValue = true;
-                                angular.forEach($scope.lexicalEntries[i].contains, function(checkValue) {
-                                    if (value.client_id == checkValue.client_id && value.object_id == checkValue.object_id) {
-                                        newValue = false;
-                                    }
-                                });
-                                if (newValue) {
-                                    $scope.lexicalEntries[i].contains.push(value);
-                                }
-                            });
-                            break;
-                        }
-                    }
-                });
-            }
-        }, function() {});
     };
-    $scope.editGroupingTag = function(entry, field, values) {
-        var modalInstance = $modal.open({
+    $scope.viewGroupingTag = function(entry, field, values) {
+        $modal.open({
             animation: true,
-            templateUrl: "editGroupingTagModal.html",
-            controller: "editGroupingTagController",
+            templateUrl: "viewGroupingTagModal.html",
+            controller: "viewGroupingTagController",
             size: "lg",
             resolve: {
                 groupParams: function() {
@@ -27727,7 +27665,6 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
                 }
             }
         });
-        modalInstance.result.then(function(value) {}, function() {});
     };
     $scope.annotate = function(soundEntity, markupEntity) {
         var modalInstance = $modal.open({
@@ -27877,12 +27814,11 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         $scope.wavesurfer.stop();
         $scope.wavesurfer.destroy();
     });
-} ]).controller("editGroupController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "groupParams", function($scope, $http, $modalInstance, $log, dictionaryService, groupParams) {
+} ]).controller("viewGroupController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "groupParams", function($scope, $http, $modalInstance, $log, dictionaryService, groupParams) {
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
     var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
     var perspectiveId = $("#perspectiveId").data("lingvodoc");
-    var enabledInputs = [];
     WaveSurferController.call(this, $scope);
     $scope.title = groupParams.field.entity_type;
     $scope.fields = groupParams.field.contains;
@@ -27955,106 +27891,26 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         }
         return values;
     };
-    $scope.addNewEntry = function() {
-        var maxRowId = 0;
-        for (var i = 0; i < $scope.entries.length; i++) {
-            maxRowId = Math.max(maxRowId, $scope.entries[i].row_id);
-        }
-        var rowId = maxRowId + 1;
-        $scope.entries.push({
-            row_id: rowId,
-            client_id: dictionaryClientId,
-            object_id: $scope.parentEntry.object_id,
-            contains: []
-        });
-    };
-    $scope.enableInput = function(clientId, objectId, entityType) {
-        if (!$scope.isInputEnabled(clientId, objectId, entityType)) {
-            enabledInputs.push({
-                clientId: clientId,
-                objectId: objectId,
-                entityType: entityType
-            });
-        }
-    };
-    $scope.isInputEnabled = function(clientId, objectId, entityType) {
-        for (var i = 0; i < enabledInputs.length; i++) {
-            var checkItem = enabledInputs[i];
-            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
-                return true;
-            }
-        }
-        return false;
-    };
-    $scope.disableInput = function(clientId, objectId, entityType) {
-        var removeIndex = -1;
-        for (var i = 0; i < enabledInputs.length; i++) {
-            var checkItem = enabledInputs[i];
-            if (checkItem.clientId === clientId && checkItem.objectId == objectId && checkItem.entityType === entityType) {
-                removeIndex = i;
-                break;
-            }
-        }
-        if (removeIndex >= 0) {
-            enabledInputs.splice(removeIndex, 1);
-        }
-    };
-    $scope.saveTextValue = function(entry, field, event, parent) {
-        if (event.target.value) {
-            $scope.saveValue(entry, field, new model.TextValue(event.target.value), parent);
-        }
-    };
-    $scope.saveSoundValue = function(entry, field, fileName, fileType, fileContent, parent) {
-        var value = new model.SoundValue(fileName, fileType, fileContent);
-        $scope.saveValue(entry, field, value, parent);
-    };
-    $scope.saveImageValue = function(entry, field, fileName, fileType, fileContent, parent) {
-        var value = new model.ImageValue(fileName, fileType, fileContent);
-        $scope.saveValue(entry, field, value, parent);
-    };
-    $scope.saveMarkupValue = function(entry, field, fileName, fileType, fileContent, parent) {
-        var value = new model.MarkupValue(fileName, fileType, fileContent);
-        $scope.saveValue(entry, field, value, parent);
-    };
-    $scope.saveValue = function(entry, field, value, parent) {
-        var entryObject = value.export();
-        entryObject["entity_type"] = field.entity_type;
-        entryObject["locale_id"] = 1;
-        if (entry.client_id && entry.row_id) {
-            entryObject["additional_metadata"] = {
-                row_id: entry.row_id,
-                client_id: entry.client_id
-            };
-        }
-        dictionaryService.saveValue(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveId, entry, field, entryObject, parent).then(function(data) {
-            for (var i = 0; i < $scope.entries.length; i++) {
-                if ($scope.entries[i].row_id == entry.row_id && $scope.entries[i].client_id == entry.client_id) {
-                    $scope.entries[i].contains.push(data);
-                    break;
-                }
-            }
-            $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
-            $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
+    $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
+        var url = $("#approveEntityUrl").data("lingvodoc");
+        var obj = {
+            type: field.level,
+            client_id: fieldValue.client_id,
+            object_id: fieldValue.object_id
+        };
+        dictionaryService.approve(url, {
+            entities: [ obj ]
+        }, approved).then(function(data) {
+            fieldValue["published"] = approved;
         }, function(reason) {
             $log.error(reason);
         });
     };
-    $scope.removeValue = function(entry, field, fieldValue, parent) {
-        dictionaryService.removeValue(entry, field, fieldValue, parent).then(function(data) {
-            for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                if ($scope.lexicalEntries[i].object_id == entry.object_id && $scope.lexicalEntries[i].client_id == entry.client_id) {
-                    var lexicalEntry = $scope.lexicalEntries[i];
-                    for (var j = 0; j < lexicalEntry.contains.length; j++) {
-                        if (lexicalEntry.contains[j].client_id == fieldValue.client_id && lexicalEntry.contains[j].object_id == fieldValue.object_id) {
-                            $scope.lexicalEntries[i].contains[j].marked_for_deletion = true;
-                        }
-                    }
-                    break;
-                }
-            }
-        }, function(reason) {
-            $log.error(reason);
-        });
+    $scope.approved = function(lexicalEntry, field, fieldValue) {
+        if (!fieldValue.published) {
+            return false;
+        }
+        return !!fieldValue.published;
     };
     $scope.ok = function() {
         $modalInstance.close($scope.entries);
@@ -28062,7 +27918,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.$watch("entries", function(updatedEntries) {
         $scope.mapFieldValues(updatedEntries, $scope.fields);
     }, true);
-} ]).controller("editGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "dictionaryService", "groupParams", function($scope, $http, $modalInstance, $q, $log, dictionaryService, groupParams) {
+} ]).controller("viewGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "dictionaryService", "groupParams", function($scope, $http, $modalInstance, $q, $log, dictionaryService, groupParams) {
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
     var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
@@ -28127,25 +27983,8 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.ok = function() {
         $modalInstance.close();
     };
-    $scope.cancel = function() {
-        $modalInstance.dismiss("cancel");
-    };
     $scope.$watch("connectedEntries", function(updatedEntries) {
         $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
-    $scope.$watch("suggestedEntries", function(updatedEntries) {
-        $scope.suggestedFieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
-    $scope.$watch("searchQuery", function(updatedQuery) {
-        if (!updatedQuery || updatedQuery.length < 3) {
-            return;
-        }
-        $scope.suggestedEntries = [];
-        dictionaryService.search(updatedQuery).then(function(suggestedEntries) {
-            $scope.suggestedEntries = suggestedEntries;
-        }, function(reason) {
-            $log.error(reason);
-        });
     }, true);
     dictionaryService.getConnectedWords(groupParams.entry.client_id, groupParams.entry.object_id).then(function(entries) {
         angular.forEach(entries, function(entry) {

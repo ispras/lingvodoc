@@ -131,6 +131,21 @@ module.exports = function(grunt) {
                 ],
                 dest: '../lingvodoc/static/js/view-dictionary.js'
             },
+            publishdictionary: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/model.js',
+                    'src/js/elan.js',
+                    'src/js/publish_dictionary.js',
+                    'src/js/lingvowave.js'
+                ],
+                dest: '../lingvodoc/static/js/publish-dictionary.js'
+            },
             editdictionary: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
