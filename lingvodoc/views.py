@@ -1608,7 +1608,7 @@ def view_l1_entity(request):
     if entity:
         if not entity.marked_for_deletion:
             # TODO: fix urls to relative urls in content
-            response = entity.track()
+            response = entity.track(False)
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -2168,7 +2168,7 @@ def view_lexical_entry(request):
                 subreq.headers = request.headers
                 return request.invoke_subrequest(subreq)
             else:
-                response['lexical_entry'] = entry.track()
+                response['lexical_entry'] = entry.track(False)
 
             request.response.status = HTTPOk.code
             return response
@@ -2387,7 +2387,7 @@ def disapprove_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        for entry in req:
+        for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
                 entity = DBSession.query(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
@@ -2524,6 +2524,38 @@ def merge_dictionaries(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
+
+@view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH')  # TODO: check for permission
+def move_lexical_entry(request):
+    req = request.json_body
+    # variables = {'auth': request.authenticated_userid}
+    object_id = req['object_id']
+    client_id = req['client_id']
+    cli_id = req['client_id']
+    obj_id = req['object_id']
+    response = dict()
+    return response
+    # client_id = request.matchdict.get('client_id')
+    # object_id = request.matchdict.get('object_id')
+    #
+    # entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+    # if entry:
+    #     if not entry.marked_for_deletion:
+    #         if entry.moved_to:
+    #             url = request.route_url('lexical_entry',
+    #                                     client_id=entry.moved_to.split("/")[0],
+    #                                     object_id=entry.moved_to.split("/")[1])
+    #             subreq = Request.blank(url)
+    #             subreq.method = 'GET'
+    #             subreq.headers = request.headers
+    #             return request.invoke_subrequest(subreq)
+    #         else:
+    #             response['lexical_entry'] = entry.track()
+    #
+    #         request.response.status = HTTPOk.code
+    #         return response
+    # request.response.status = HTTPNotFound.code
+    # return {'error': str("No such lexical entry in the system")}
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
