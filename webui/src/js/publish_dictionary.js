@@ -440,7 +440,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
                 'object_id': fieldValue.object_id
             };
 
-            dictionaryService.approve(url, [obj], approved).then(function(data) {
+            dictionaryService.approve(url, { 'entities': [obj] }, approved).then(function(data) {
                 fieldValue['published'] = approved;
             }, function(reason) {
                 $log.error(reason);
@@ -493,7 +493,6 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
                     }
                 }
             });
-
         };
 
         $scope.viewGroupingTag = function(entry, field, values) {
@@ -820,6 +819,32 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
                 }
             }
             return values;
+        };
+
+        $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
+
+            var url = $('#approveEntityUrl').data('lingvodoc');
+
+            var obj = {
+                'type': field.level,
+                'client_id': fieldValue.client_id,
+                'object_id': fieldValue.object_id
+            };
+
+            dictionaryService.approve(url, { 'entities': [obj] }, approved).then(function(data) {
+                fieldValue['published'] = approved;
+            }, function(reason) {
+                $log.error(reason);
+            });
+        };
+
+        $scope.approved = function(lexicalEntry, field, fieldValue) {
+
+            if (!fieldValue.published) {
+                return false;
+            }
+
+            return !!fieldValue.published;
         };
 
         $scope.ok = function() {

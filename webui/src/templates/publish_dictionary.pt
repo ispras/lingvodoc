@@ -146,6 +146,14 @@
 
                                 <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
 
+                                <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
+                                    <span class="glyphicon glyphicon-ban-circle"></span>
+                                </button>
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
+                                    <span class="glyphicon glyphicon-ok-circle"></span>
+                                </button>
+
                             </li>
                         </ul>
 
@@ -165,6 +173,16 @@
                                         ng-click="annotate(fieldValue, fieldValue.contains[0])">
                                     <span class="glyphicon glyphicon-list">View markup</span>
                                 </button>
+
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
+                                    <span class="glyphicon glyphicon-ban-circle"></span>
+                                </button>
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
+                                    <span class="glyphicon glyphicon-ok-circle"></span>
+                                </button>
+
 
                             </li>
                         </ul>
@@ -349,6 +367,14 @@
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
                                         {{ fieldValue.content }}
+
+                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
+                                            <span class="glyphicon glyphicon-ban-circle"></span>
+                                        </button>
+
+                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
+                                            <span class="glyphicon glyphicon-ok-circle"></span>
+                                        </button>
                                     </li>
                                 </ul>
                             </div>
@@ -357,6 +383,14 @@
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
                                         <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
+
+                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
+                                            <span class="glyphicon glyphicon-ban-circle"></span>
+                                        </button>
+
+                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
+                                            <span class="glyphicon glyphicon-ok-circle"></span>
+                                        </button>
                                     </li>
                                 </ul>
                             </div>
@@ -376,10 +410,14 @@
                                             <span class="glyphicon glyphicon-list">View markup</span>
                                         </button>
 
-                                        <span ng-repeat="markupField in field.contains">
+                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
+                                            <span class="glyphicon glyphicon-ban-circle"></span>
+                                        </button>
 
+                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
+                                            <span class="glyphicon glyphicon-ok-circle"></span>
+                                        </button>
 
-                                        </span>
                                     </li>
                                 </ul>
 
@@ -528,26 +566,6 @@
     </div>
 
 </script>
-
-
-<script type="text/ng-template" id="viewGroupingTagModal.html">
-
-    <div class="modal-header">
-        <h3 class="modal-title">{{ title }}</h3>
-    </div>
-
-    <div class="modal-body">
-
-
-    </div>
-
-    <div class="modal-footer">
-        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-danger" type="button" ng-click="cancel()">OK</button>
-    </div>
-
-</script>
-
 
 </body>
 </html>
