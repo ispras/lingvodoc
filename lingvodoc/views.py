@@ -2030,7 +2030,8 @@ def lexical_entries_all(request):
             lexical_entries_not_criterion = DBSession.query(LexicalEntry,
                                                             sqlalchemy.null().label('content'))\
                 .correlate(lexical_entries_not_criterion)
-            lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion).order_by('content')\
+            lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).order_by('content')\
                 .offset(start_from) \
                 .limit(count).all()
 
@@ -2110,6 +2111,7 @@ def lexical_entries_published(request):
                 .filter(or_(LexicalEntry.publishleveloneentity != None,
                             LexicalEntry.publishleveltwoentity != None,
                             LexicalEntry.publishgroupingentity != None))\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .order_by('content')\
                 .offset(start_from) \
                 .limit(count).all()
