@@ -393,13 +393,12 @@ class EntityMixin(object):
                       'parent_client_id': self.parent_client_id,
                       'entity_type': self.entity_type,
                       'marked_for_deletion': self.marked_for_deletion,
-                      'locale_id': self.locale_id,
+                      'locale_id': self.locale_id
                       }
         children = recursive_content(self, publish)
         if children:
             dictionary['contains'] = children
         return dictionary
-
 
 
 class PublishingEntityMixin(object):
