@@ -2280,7 +2280,7 @@ def approve_all(request):
 def approve_entity(request):
     try:
 
-        req = request.json
+        req = request.json_body
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
