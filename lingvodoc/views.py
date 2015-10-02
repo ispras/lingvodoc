@@ -2067,7 +2067,7 @@ def lexical_entries_all_count(request):
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).scalar()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -2141,7 +2141,7 @@ def lexical_entries_published_count(request):
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .filter(or_(LexicalEntry.publishleveloneentity != None,
                             LexicalEntry.publishleveltwoentity != None,
-                            LexicalEntry.publishgroupingentity != None))
+                            LexicalEntry.publishgroupingentity != None)).scalar()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
