@@ -30,7 +30,8 @@ from .models import (
     PublishLevelTwoEntity,
     Base,
     Organization,
-    UserBlobs
+    UserBlobs,
+    About
     )
 
 from sqlalchemy.orm import sessionmaker
@@ -2248,6 +2249,96 @@ def get_user_info(request):
     response['birthday']=str(user.birthday)
     response['signup_date']=str(user.signup_date)
     response['is_active']=str(user.is_active)
+    email = None
+    if user.email:
+        for em in user.email:
+            email = em.email
+            break
+    response['email'] = email
+    about = None
+    if user.about:
+        for ab in user.about:
+            about = ab.content
+            break
+    response['about'] = about
+    organizations = []
+    for organization in user.organizations:
+        organizations += [{'organization_id':organization.id}]
+    response['organizations'] = organizations
+    request.response.status = HTTPOk.code
+    return response
+
+
+@view_config(route_name='get_user_info', renderer='json', request_method='PUT')
+def edit_user_info(request):
+    response = dict()
+    client_id = None
+    try:
+        client_id = request.params.get('client_id')
+    except:
+        pass
+    user_id=None
+    try:
+        user_id = request.params.get('user_id')
+    except:
+        pass
+    user = None
+    if client_id:
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if not client:
+
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such client in the system")}
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such user in the system")}
+    else:
+        user = DBSession.query(User).filter_by(id=user_id).first()
+        if not user:
+
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such user in the system")}
+    req = request.json_body
+    user.name=req['name']
+    user.default_locale_id = req['default_locale_id']
+    user.birthday = datetime.date(response['birthday'])
+    if user.email:
+        for em in user.email:
+            em.email = req['email']
+    else:
+        new_email = Email(user=user, email=req['email'])
+        DBSession.add(new_email)
+        DBSession.flush()
+    if user.about:
+        for ab in user.about:
+            ab.content = req['about']
+    else:
+        new_about = About(user=user, email=req['about'])
+        DBSession.add(new_about)
+        DBSession.flush()
+
+    # response['is_active']=str(user.is_active)
+    request.response.status = HTTPOk.code
+    return response
+
+
+@view_config(route_name='get_organization_info', renderer='json', request_method='GET')
+def get_organization_info(request):
+    response = dict()
+    organization_id = request.params.get('organization_id')
+
+    organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+    if not organization:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such organization in the system")}
+    users = []
+    for user in organization.users:
+        users += [{'user_id':user.id}]
+    response['users'] = users
+    response['name']=organization.name
+    response['about'] = organization.about
     request.response.status = HTTPOk.code
     return response
 
