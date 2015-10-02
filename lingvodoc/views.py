@@ -2067,7 +2067,7 @@ def lexical_entries_all_count(request):
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).scalar()
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -2119,6 +2119,30 @@ def lexical_entries_published(request):
 
             request.response.status = HTTPOk.code
             return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
+def lexical_entries_published_count(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    sort_criterion = request.params.get('sort_by') or 'Translation'
+    start_from = request.params.get('start_from') or 0
+    count = request.params.get('count') or 200
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .filter(or_(LexicalEntry.publishleveloneentity != None,
+                            LexicalEntry.publishleveltwoentity != None,
+                            LexicalEntry.publishgroupingentity != None))
+            return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
@@ -2445,13 +2469,13 @@ def merge_dictionaries(request):
         perspectives = []
         for dicti in dictionaries:
             for entry in dicti.dictionaryperspective:
-                perspectives += entry
+                perspectives += [entry]
             for entry in perspectives:
                 dicti.dictionaryperspective.remove(entry)
                 new_dict.dictionaryperspective.append(entry)
             cli_id = dicti.client_id
             obj_id = dicti.object_id
-            bases = DBSession.query(BaseGroup).filter_by(subject='dictionary')
+            bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
             groups = []
             for base in bases:
 
@@ -2461,7 +2485,9 @@ def merge_dictionaries(request):
                 groups += [group]
 
             for group in groups:
-                existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
+                existing = DBSession.query(Group).join(BaseGroup).filter_by(dictionary_default=True,
+                                                         subject_object_id=obj_id,
+                                                         subject_client_id=cli_id).first()
                 if existing:
                     users = []
                     for user in group.users:
@@ -2472,7 +2498,8 @@ def merge_dictionaries(request):
                             existing.users.append(user)
                 else:
                     new_group = Group(base_group_id=group.base_group_id,
-                                      subject='dictionary'+str(client_id)+'_'+str(object_id))
+                                      subject_object_id=cli_id,
+                                      subject_client_id=obj_id)
                     DBSession.add(new_group)
                     users = []
                     for user in group.users:
