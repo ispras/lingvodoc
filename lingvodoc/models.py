@@ -68,7 +68,7 @@ def bi_c(element, compiler, **kw):
     return compiler.visit_BIGINT(element, **kw)
 
 
-def recursive_content(self):
+def recursive_content(self, publish):
     vec = []
     for entry in dir(self):
         if entry in inspect(type(self)).relationships:
@@ -84,24 +84,42 @@ def recursive_content(self):
                     if hasattr(xx, "locale_id"):
                         locale_id = xx.locale_id
                     info = {'level': xx.__tablename__,
-                             'content': xx.content,
-                             'object_id': xx.object_id,
-                             'client_id': xx.client_id,
-                             'parent_object_id': xx.parent_object_id,
-                             'parent_client_id': xx.parent_client_id,
-                             'entity_type': xx.entity_type,
-                             'marked_for_deletion': xx.marked_for_deletion,
-                             'locale_id': locale_id,
-                             'additional_metadata': additional_metadata,
-                             'contains': recursive_content(xx) or None}
+                            'content': xx.content,
+                            'object_id': xx.object_id,
+                            'client_id': xx.client_id,
+                            'parent_object_id': xx.parent_object_id,
+                            'parent_client_id': xx.parent_client_id,
+                            'entity_type': xx.entity_type,
+                            'marked_for_deletion': xx.marked_for_deletion,
+                            'locale_id': locale_id,
+                            'additional_metadata': additional_metadata,
+                            'contains': recursive_content(xx, publish) or None}
                     published = False
                     if info['contains']:
                         log.debug(info['contains'])
+                        ents = []
                         for ent in info['contains']:
+                            ents += [ent]
+                            # log.debug('CONTAINS', ent)
+                        for ent in ents:
                             if 'publish' in ent['level']:
-                                if not ent['marked_for_deletion']:
-                                    published = True
-                                    break
+                                    if not ent['marked_for_deletion']:
+                                        published = True
+                                        if not publish:
+                                            break
+                                    if publish:
+                                        info['contains'].remove(ent)
+                    if publish:
+                        if not published:
+                            if 'publish' in info['level']:
+                                res = dict()
+                                res['level'] = info['level']
+                                res['marked_for_deletion'] = info['marked_for_deletion']
+                                info = res
+                            else:
+                                info = None
+                                vec += [info]
+                                continue
                     info['published'] = published
                     vec += [info]
                     # vec += recursive_content(xx)
@@ -326,10 +344,23 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
 
-    def track(self):
+    def track(self, publish):
         vec = []
-        vec += recursive_content(self)
-        response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec}
+        vec += recursive_content(self, publish)
+        published = False
+        if vec:
+            ents = []
+            for ent in vec:
+                ents += [ent]
+            for ent in ents:
+                if 'publish' in ent['level']:
+                        if not ent['marked_for_deletion']:
+                            published = True
+                            if not publish:
+                                break
+                        if publish:
+                            vec.remove(ent)
+        response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published}
         return response
 
 
@@ -353,7 +384,7 @@ class EntityMixin(object):
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    def track(self):
+    def track(self, publish):
         dictionary = {'level': self.__tablename__,
                       'content': self.content,
                       'object_id': self.object_id,
@@ -364,7 +395,7 @@ class EntityMixin(object):
                       'marked_for_deletion': self.marked_for_deletion,
                       'locale_id': self.locale_id,
                       }
-        children = recursive_content(self)
+        children = recursive_content(self, publish)
         if children:
             dictionary['contains'] = children
         return dictionary
