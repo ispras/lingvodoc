@@ -84,6 +84,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
                     'bower_components/autocomplete/script/autocomplete.js',
+                    'src/js/api.js',
                     'src/js/dashboard.js'
                 ],
                 dest: '../lingvodoc/static/js/dashboard.js'

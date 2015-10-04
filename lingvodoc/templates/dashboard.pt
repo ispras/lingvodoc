@@ -98,6 +98,7 @@
                     <a class="btn btn-primary"  href="#" ng-click="follow(getActionDictionaryLink(dictionary, 'view'))"><span class="glyphicon glyphicon-list"></span> View</a>
                     <a class="btn btn-primary"  href="#" ng-click="follow(getActionDictionaryLink(dictionary, 'edit'))"><span class="glyphicon glyphicon-edit"></span> Edit</a>
                     <a class="btn btn-primary"  href="#" ng-click="follow(getActionDictionaryLink(dictionary, 'publish'))"><span class="glyphicon glyphicon-print"></span> Publish</a>
+                    <a class="btn btn-primary"  href="#" ng-click="editDictionaryProperties(dictionary)"><span class="glyphicon glyphicon-print"></span> Properties</a>
                 </td>
 
 
@@ -126,7 +127,33 @@
 </div>
 
 
+<script type="text/ng-template" id="editDictionaryPropertiesModal.html">
 
+    <div class="modal-header">
+        <h3 class="modal-title"></h3>
+    </div>
+
+    <div class="modal-body">
+
+        <label for="dictionaryName">Dictionary name</label>
+        <input type="text" id="dictionaryName" class="form-control" placeholder="" required autofocus
+               ng-model="dictionaryProperties.name">
+
+        <label for="language">Language</label>
+        <select id="language" class="form-control" ng-model="data.selectedLanguage" ng-options="language.compositeId as language.translation_string for language in languages">
+            <option></option>
+        </select>
+
+        <button class="btn btn-primary" type="button" ng-click="publish()">Publish dictionary</button>
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+</script>
 
 
 </body>
