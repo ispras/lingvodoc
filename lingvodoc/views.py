@@ -1043,7 +1043,8 @@ def dictionaries_list(request):
     dicts = DBSession.query(Dictionary)
     if published:
         if published:
-            dicts = dicts.filter_by(state='Published')
+            dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
+                .filter(DictionaryPerspective.state == 'Published')
         # else:
         #     dicts = dicts.filter_by(state!='Published')
     if user_created:
