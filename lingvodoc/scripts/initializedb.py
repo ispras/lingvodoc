@@ -208,7 +208,7 @@ def main(argv=sys.argv):
         base_groups.append(BaseGroup(translation_string="Can merge dictionaries and perspectives",
                                      subject="merge",
                                      action="create",
-                                     perspective_default=True))
+                                     dictionary_default=True))
 
         for base_group in base_groups:
             DBSession.add(base_group)
