@@ -2369,7 +2369,7 @@ def approve_all(request):
                     jsn = dict()
                     entities = [{'type': 'leveloneentity',
                                          'client_id': levone.client_id,
-                                        'object_id': levone.object_id}]
+                                         'object_id': levone.object_id}]
                     jsn['entities']= entities
                     subreq.json = jsn
                     subreq.method = 'PATCH'
@@ -2389,7 +2389,7 @@ def approve_all(request):
                         jsn = dict()
                         entities = [{'type': 'leveltwoentity',
                                              'client_id':levtwo.client_id,
-                                            'object_id':levtwo.object_id}]
+                                             'object_id':levtwo.object_id}]
                         jsn['entities']= entities
                         subreq.json = jsn
                         subreq.method = 'PATCH'
@@ -2408,9 +2408,9 @@ def approve_all(request):
                     subreq = Request.blank(url)
                     jsn = dict()
                     entities = [{'type': 'groupingentity',
-                                         'client_id':groupent.client_id,
-                                        'object_id':groupent.object_id}]
-                    jsn['entities']= entities
+                                         'client_id': groupent.client_id,
+                                         'object_id': groupent.object_id}]
+                    jsn['entities'] = entities
                     subreq.json = jsn
                     subreq.method = 'PATCH'
                     subreq.headers = request.headers
@@ -2568,8 +2568,14 @@ def get_translations(request):
 def merge_dictionaries(request):
     try:
         req = request.json_body
-
         variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent_object_id = req['language_object_id']
         parent_client_id = req['language_client_id']
         name = req['name']
@@ -2579,24 +2585,44 @@ def merge_dictionaries(request):
         if len(dictionaries) != 2:
             raise KeyError("Wrong number of dictionaries to merge.",
                            len(dictionaries))
+        new_dicts = []
         for dicti in dictionaries:
-            if parent_client_id != dicti.parent_client_id or parent_object_id != dicti.parent_object_id:
+            diction = DBSession.query(Dictionary).filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).first()
+            if not diction:
+                raise KeyError("Dictionary do not exist in the system")
+            if parent_client_id != diction.parent_client_id or parent_object_id != diction.parent_object_id:
                 raise KeyError("Both dictionaries should have same language.")
+            new_dicts += [diction]
+        dictionaries = new_dicts
+        base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
+        override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if user not in override.users:
+            grps = []
+            for dict in dictionaries:
+                gr = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                      subject_client_id=dict.client_id,
+                                                      subject_object_id=dict.object_id).first()
+                grps += [gr]
+        for gr in grps:
+            if user not in gr.users:
+                raise KeyError("Not enough permission to do that")
+
         subreq = Request.blank('/dictionary')
         subreq.method = 'POST'
-        subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
+        subreq.json = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
                             'name': name, 'translation': translation}
+        subreq.headers = request.headers
         response = request.invoke_subrequest(subreq)
         client_id = response.json['client_id']
         object_id = response.json['object_id']
         new_dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-
         perspectives = []
         for dicti in dictionaries:
             for entry in dicti.dictionaryperspective:
                 perspectives += [entry]
             for entry in perspectives:
-                dicti.dictionaryperspective.remove(entry)
+                if entry in dicti.dictionaryperspective:
+                    dicti.dictionaryperspective.remove(entry)
                 new_dict.dictionaryperspective.append(entry)
             cli_id = dicti.client_id
             obj_id = dicti.object_id
@@ -2610,15 +2636,16 @@ def merge_dictionaries(request):
                 groups += [group]
 
             for group in groups:
-                existing = DBSession.query(Group).join(BaseGroup).filter_by(dictionary_default=True,
-                                                         subject_object_id=obj_id,
-                                                         subject_client_id=cli_id).first()
+                existing = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.dictionary_default==True,
+                                                         Group.subject_object_id==obj_id,
+                                                         Group.subject_client_id==cli_id).first()
                 if existing:
                     users = []
                     for user in group.users:
                         users += [user]
                     for user in users:
-                        group.remove(user)
+                        if user in group.users:
+                            group.users.remove(user)
                         if not user in existing.users:
                             existing.users.append(user)
                 else:
