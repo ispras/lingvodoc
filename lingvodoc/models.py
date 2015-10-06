@@ -577,6 +577,7 @@ class Organization(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
     users = relationship("User", secondary=user_to_organization_association, backref=backref("organizations"))
     about = Column(UnicodeText)
+    marked_for_deletion = Column(Boolean, default=False)
     # locale_id = Column(ForeignKey("locale.id"))
 
 
@@ -662,7 +663,7 @@ def acl_by_groups_single_id(object_id, subject):
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \
-                     + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
+                     + ":"  + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
     log.debug("ACLS: %s", acls)
     return acls
@@ -731,17 +732,12 @@ class OrganizationAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        organization_id=None
         try:
-            object_id = self.request.matchdict['perspective_id']
+            organization_id = self.request.matchdict['organization_id']
         except:
             pass
-        client_id=None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'organization')
+        return acls + acl_by_groups_single_id(organization_id, 'organization')
 
 
 class DictionaryAcl(object):

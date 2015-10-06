@@ -103,6 +103,16 @@ def configure_routes(config):
     config.add_route(name='dictionary', pattern='/dictionary/{client_id}/{object_id}',
                      factory='lingvodoc.models.DictionaryAcl')  # 100% ready
 
+    # API #POST
+    # Creating organization
+    config.add_route(name='create_organization', pattern='/organization',
+                     factory='lingvodoc.models.OrganizationAcl')  # 100% ready
+
+    # API #GET && PUT && DELETE
+    # Gets/puts info about organization
+    config.add_route(name='organization', pattern='/organization/{organization_id}',
+                     factory='lingvodoc.models.OrganizationAcl')
+
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create and modify perspectives)
     # Request format: {[user id: <user_id>, role_name: <role_name>]}. Get request is empty and returns list of roles.
@@ -442,10 +452,7 @@ def configure_routes(config):
     # client_id = <client_id>
     # Response example:
     # {"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}
-    config.add_route(name='get_user_info', pattern='/user')  # ready, not tested\
-    # organization_id
-    config.add_route(name='get_organization_info', pattern='/organization')  # ready, not tested
-
+    config.add_route(name='get_user_info', pattern='/user')  # ready, not tested
     # API #GET
     # Returns translations for a list of words for current or default or fallback locale
     # ["translation_string", "translation_string2", ...]

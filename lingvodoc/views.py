@@ -1214,8 +1214,8 @@ def view_perspective_fields(request):
                     data['position'] = field.position
                     data['status'] = field.state
                     data['level'] = field.level
+                    contains = []
                     if field.dictionaryperspectivefield:
-                        contains = []
                         for field2 in field.dictionaryperspectivefield:
                             if not field2.marked_for_deletion:
                                 data2 = dict()
@@ -1227,13 +1227,17 @@ def view_perspective_fields(request):
                                 data2['status'] = field2.state
                                 data2['position'] = field2.position
                                 data2['level'] = field2.level
+                                data2['client_id'] = field2.client_id
+                                data2['object_id'] = field2.object_id
                                 contains += [data2]
-                        data['contains'] = contains
+                    data['contains'] = contains
                     if field.group:
                         #group = DBSession.query(UserEntitiesTranslationString).\
                         #    filter_by(translation_string=field.group, locale_id=locale_id).first()
                         data['group'] = find_by_translation_string(locale_id=locale_id,
                                                                    translation_string=field.group)
+                    data['client_id'] = field.client_id
+                    data['object_id'] = field.object_id
                     fields += [data]
         response['fields'] = fields
         request.response.status = HTTPOk.code
@@ -2329,25 +2333,6 @@ def edit_user_info(request):
     return response
 
 
-@view_config(route_name='get_organization_info', renderer='json', request_method='GET')
-def get_organization_info(request):
-    response = dict()
-    organization_id = request.params.get('organization_id')
-
-    organization = DBSession.query(Organization).filter_by(id=organization_id).first()
-    if not organization:
-        request.response.status = HTTPNotFound.code
-        return {'error': str("No such organization in the system")}
-    users = []
-    for user in organization.users:
-        users += [{'user_id':user.id}]
-    response['users'] = users
-    response['name']=organization.name
-    response['about'] = organization.about
-    request.response.status = HTTPOk.code
-    return response
-
-
 @view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
 def approve_all(request):
     response = dict()
@@ -2680,6 +2665,7 @@ def merge_dictionaries(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
+
 @view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH')  # TODO: check for permission
 def move_lexical_entry(request):
     req = request.json_body
@@ -2716,6 +2702,118 @@ def move_lexical_entry(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
 
+
+@view_config(route_name='organization', renderer='json', request_method='GET')
+def view_organization(request):
+    response = dict()
+    organization_id = request.matchdict.get('organization_id')
+    organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+    if organization:
+        if not organization.marked_for_deletion:
+            response['name'] = organization.name
+            response['about'] = organization.parent_object_id
+            users = []
+            for user in organization.users:
+                users += [user.id]
+            response['users'] = users
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such organization in the system")}
+
+
+@view_config(route_name='organization', renderer='json', request_method='PUT', permission='edit')
+def edit_organization(request):
+    try:
+        response = dict()
+        organization_id = request.matchdict.get('organization_id')
+        organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+        if organization:
+            if not organization.marked_for_deletion:
+                req = request.json_body
+                if 'add_users' in req:
+                    for user in req['add_users']:
+                        if user not in organization.users:
+                            organization.user.append(user)
+                            bases = DBSession.query(BaseGroup).filter_by(subject='organization')
+                            for base in bases:
+                                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                                         subject_object_id=organization.id).first()
+                                group.users.append(user)
+                if 'delete_users' in req:
+                    for user in req['delete_users']:
+                        if user not in organization.users:
+                            organization.user.remove(user)
+                            bases = DBSession.query(BaseGroup).filter_by(subject='organization')
+                            for base in bases:
+                                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                                         subject_object_id=organization.id).first()
+                                group.users.remove(user)
+                if 'name' in req:
+                    organization.name = req['name']
+                if 'about' in req:
+                    organization.name = req['about']
+                request.response.status = HTTPOk.code
+                return response
+
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such organization in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='organization', renderer='json', request_method='DELETE', permission='delete')
+def delete_organization(request):
+    response = dict()
+    organization_id = request.matchdict.get('organization_id')
+    organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+    if organization:
+        if not organization.marked_for_deletion:
+            organization.marked_for_deletion = True
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such organization in the system")}
+
+
+@view_config(route_name='create_organization', renderer='json', request_method='POST', permission='create')
+def create_organization(request):
+    try:
+
+        variables = {'auth': request.authenticated_userid}
+        req = request.json_body
+        name = req['name']
+        about = req['about']
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        organization = Organization(name=name,
+                                    about=about)
+        DBSession.add(organization)
+        DBSession.flush()
+        bases = DBSession.query(BaseGroup).filter_by(subject='organization')
+        for base in bases:
+            group = Group(parent=base, subject_object_id=organization.id)
+            group.users.append(user)
+        request.response.status = HTTPOk.code
+        return {'organization_id': organization.id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
 might be caused by one of the following things:
@@ -2733,52 +2831,13 @@ try it again.
 """
 
 
-
-
-def searchby(reqtype):
-    res = []
-    engine = create_engine('sqlite:///sqlalchemy_example.db')
-    Base.metadata.bind = engine
-    DBSession = sessionmaker()
-    DBSession.bind = engine
-    session = DBSession()
-    levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
-    levone = sqlalchemy.orm.aliased(LevelOneEntity, name="levone")
-    # some = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
-    #     join(levonefirst).\
-    #     filter(levonefirst.entity_type == reqtype).\
-    #     order_by(my_order('obj_id')).\
-    #     group_by(LexicalEntry.object_id)
-    # subq = some.subquery()
-    # something = session.query(subq.c.object_id, subq.c.obj_id, levone.entity_type, levone.content).\
-    #     join(levone).filter(levone.entity_type=='2').\
-    #     order_by(my_order('obj_id'))
-    #     add_column(levone.content).\
-    #     add_column(levone.entity_type).\
-    something = session.query(LexicalEntry.object_id).order_by()
-    for ent in something:
-        res += [ent]
-    return res
-
-
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    log.debug('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
-
-    result = dict()
-    result['POST'] = request.POST.get('login')
-    result['GET'] = request.GET.get('login')
-    result['params'] = request.params.get('login')
-    try:
-        result['json'] = request.json_body['login']
-    except:
-        pass
-    log.debug('WTF?: %s ', result)
     try:
         req = request.json_body
         return req
     except:
-        return result
+        return request
 
 
 
