@@ -70,7 +70,7 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
-    var getPerspectiveFields = function(url) {
+    var getPerspectiveDictionaryFields = function(url) {
         var deferred = $q.defer();
         $http.get(url).success(function(data, status, headers, config) {
             if (angular.isArray(data.fields)) {
@@ -211,7 +211,7 @@ function lingvodocAPI($http, $q) {
         $http.post(url, linkObject).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
-            deferred.reject('An error  occurred while connecting 2 entries')
+            deferred.reject('An error  occurred while connecting 2 entries');
         });
 
         return deferred.promise;
@@ -262,7 +262,7 @@ function lingvodocAPI($http, $q) {
             $http.patch(url, entity).success(function(data, status, headers, config) {
                 deferred.resolve(data);
             }).error(function(data, status, headers, config) {
-                deferred.reject('An error  occurred while trying to change approval status ')
+                deferred.reject('An error  occurred while trying to change approval status ');
             });
         } else {
 
@@ -275,7 +275,7 @@ function lingvodocAPI($http, $q) {
             $http(config).success(function(data, status, headers, config) {
                 deferred.resolve(data);
             }).error(function(data, status, headers, config) {
-                deferred.reject('An error  occurred while trying to change approval status ')
+                deferred.reject('An error  occurred while trying to change approval status ');
             });
         }
         return deferred.promise;
@@ -286,7 +286,7 @@ function lingvodocAPI($http, $q) {
         $http.patch(url).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
-            deferred.reject('An error  occurred while trying to change approval status ')
+            deferred.reject('An error  occurred while trying to change approval status ');
         });
 
         return deferred.promise;
@@ -298,7 +298,7 @@ function lingvodocAPI($http, $q) {
         $http.get(url).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
-            deferred.reject('An error  occurred while trying to get dictionary properties')
+            deferred.reject('An error  occurred while trying to get dictionary properties');
         });
 
         return deferred.promise;
@@ -310,7 +310,7 @@ function lingvodocAPI($http, $q) {
         $http.put(url, properties).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
-            deferred.reject('An error  occurred while trying to get dictionary properties')
+            deferred.reject('An error  occurred while trying to get dictionary properties');
         });
 
         return deferred.promise;
@@ -334,7 +334,7 @@ function lingvodocAPI($http, $q) {
         $http.get(url).success(function (data, status, headers, config) {
             deferred.resolve(flatLanguages(data.languages));
         }).error(function (data, status, headers, config) {
-            deferred.reject('An error  occurred while trying to get languages')
+            deferred.reject('An error  occurred while trying to get languages');
         });
 
         return deferred.promise;
@@ -345,19 +345,43 @@ function lingvodocAPI($http, $q) {
         $http.put(url, {'status': status }).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
-            deferred.reject('An error  occurred while trying to set dictionary status')
+            deferred.reject('An error  occurred while trying to set dictionary status');
         });
 
         return deferred.promise;
     };
 
 
+    var getPerspectiveFields = function(url) {
+
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to load perspective fields');
+        });
+
+        return deferred.promise;
+    };
+
+    var setPerspectiveFields = function(url, fields) {
+
+        var deferred = $q.defer();
+        $http.post(url, fields).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to save perspective fields');
+        });
+
+        return deferred.promise;
+    };
+
 
     // Return public API.
     return ({
         'getLexicalEntries': getLexicalEntries,
         'getLexicalEntriesCount': getLexicalEntriesCount,
-        'getPerspectiveFields': getPerspectiveFields,
+        'getPerspectiveDictionaryFields': getPerspectiveDictionaryFields,
         'addNewLexicalEntry': addNewLexicalEntry,
         'saveValue': saveValue,
         'removeValue': removeValue,
@@ -369,6 +393,8 @@ function lingvodocAPI($http, $q) {
         'getDictionaryProperties': getDictionaryProperties,
         'setDictionaryProperties': setDictionaryProperties,
         'getLanguages': getLanguages,
-        'setDictionaryStatus': setDictionaryStatus
+        'setDictionaryStatus': setDictionaryStatus,
+        'getPerspectiveFields': getPerspectiveFields,
+        'setPerspectiveFields': setPerspectiveFields
     });
 };

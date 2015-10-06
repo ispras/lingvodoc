@@ -52,37 +52,33 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
                 }
             }
         });
+    };
 
-        modalInstance.result.then(function(entries) {
-            if (angular.isArray(entries)) {
-                angular.forEach(entries, function(e) {
-                    for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                        if ($scope.lexicalEntries[i].client_id == e.client_id &&
-                            $scope.lexicalEntries[i].object_id == e.object_id) {
 
-                            angular.forEach(e.contains, function(value) {
-                                var newValue = true;
-                                angular.forEach($scope.lexicalEntries[i].contains, function(checkValue) {
-                                    if (value.client_id == checkValue.client_id && value.object_id == checkValue.object_id) {
-                                        newValue = false;
-                                    }
-                                });
+    $scope.editPerspectiveProperties = function(dictionary) {
 
-                                if (newValue) {
-                                    $scope.lexicalEntries[i].contains.push(value);
-                                }
-                            });
-                            break;
+        if (dictionary.selectedPerspectiveId != -1) {
+            var perspective = getObjectByCompositeKey(dictionary.selectedPerspectiveId, dictionary.perspectives);
+            if (perspective) {
+                $modal.open({
+                    animation: true,
+                    templateUrl: 'editPerspectivePropertiesModal.html',
+                    controller: 'editPerspectivePropertiesController',
+                    size: 'lg',
+                    backdrop: 'static',
+                    keyboard: false,
+                    resolve: {
+                        'params': function() {
+                            return {
+                                'dictionary': dictionary,
+                                'perspective': perspective
+                            };
                         }
                     }
                 });
             }
-
-        }, function() {
-
-        });
+        }
     };
-
 
     $scope.follow = function(link) {
         if (!link) {
@@ -197,7 +193,36 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
 }]);
 
 
+app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
 
+    $scope.perspective = {};
+
+    $scope.addField = function () {
+        $scope.perspective.fields.push({'entity_type': '', 'data_type': 'text', 'status': 'enabled'});
+    };
+
+    $scope.ok = function() {
+        var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
+        dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
+            $modalInstance.close();
+        }, function(fields) {
+
+        });
+    };
+
+    $scope.cancel = function() {
+        $modalInstance.dismiss('cancel');
+    };
+
+    var url = '/dictionary/' + params.perspective.parent_client_id + '/' + params.perspective.parent_object_id + '/perspective/' + params.perspective.client_id + '/' + params.perspective.object_id + '/fields';
+    dictionaryService.getPerspectiveFields(url).then(function(fields) {
+        params.perspective['fields'] = fields;
+        $scope.perspective = wrapPerspective(params.perspective);
+    }, function(fields) {
+
+    });
+
+}]);
 
 
 

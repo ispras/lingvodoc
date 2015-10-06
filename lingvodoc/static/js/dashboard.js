@@ -27166,6 +27166,64 @@ app.directive("suggestion", function() {
     };
 });
 
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(";");
+    for (var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == " ") c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+var wrapPerspective = function(perspective) {
+    if (typeof perspective.fields == "undefined") {
+        return;
+    }
+    for (var i = 0; i < perspective.fields.length; i++) {
+        if (typeof perspective.fields[i].group !== "undefined") {
+            perspective.fields[i]._groupEnabled = true;
+        }
+        if (typeof perspective.fields[i].contains !== "undefined") {
+            perspective.fields[i]._containsEnabled = true;
+        }
+    }
+    return perspective;
+};
+
+var exportPerspective = function(perspective) {
+    var jsPerspective = {
+        fields: []
+    };
+    var positionCount = 1;
+    for (var i = 0; i < perspective.fields.length; i++) {
+        var field = JSON.parse(JSON.stringify(perspective.fields[i]));
+        field["position"] = positionCount;
+        positionCount += 1;
+        if (field.data_type !== "grouping_tag") {
+            field["level"] = "leveloneentity";
+        } else {
+            field["level"] = "groupingentity";
+        }
+        if (field._groupEnabled) {
+            delete field._groupEnabled;
+        }
+        if (field._containsEnabled) {
+            delete field._containsEnabled;
+        }
+        if (field.contains) {
+            for (var j = 0; j < field.contains.length; j++) {
+                field.contains[j].level = "leveltwoentity";
+                field.contains[j].position = positionCount;
+                positionCount += 1;
+            }
+        }
+        jsPerspective.fields.push(field);
+    }
+    return jsPerspective;
+};
+
 function lingvodocAPI($http, $q) {
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
@@ -27225,7 +27283,7 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var getPerspectiveFields = function(url) {
+    var getPerspectiveDictionaryFields = function(url) {
         var deferred = $q.defer();
         $http.get(url).success(function(data, status, headers, config) {
             if (angular.isArray(data.fields)) {
@@ -27464,10 +27522,28 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getPerspectiveFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveFields = function(url, fields) {
+        var deferred = $q.defer();
+        $http.post(url, fields).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to save perspective fields");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
-        getPerspectiveFields: getPerspectiveFields,
+        getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
         addNewLexicalEntry: addNewLexicalEntry,
         saveValue: saveValue,
         removeValue: removeValue,
@@ -27479,7 +27555,9 @@ function lingvodocAPI($http, $q) {
         getDictionaryProperties: getDictionaryProperties,
         setDictionaryProperties: setDictionaryProperties,
         getLanguages: getLanguages,
-        setDictionaryStatus: setDictionaryStatus
+        setDictionaryStatus: setDictionaryStatus,
+        getPerspectiveFields: getPerspectiveFields,
+        setPerspectiveFields: setPerspectiveFields
     };
 }
 
@@ -27529,28 +27607,29 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
                 }
             }
         });
-        modalInstance.result.then(function(entries) {
-            if (angular.isArray(entries)) {
-                angular.forEach(entries, function(e) {
-                    for (var i = 0; i < $scope.lexicalEntries.length; i++) {
-                        if ($scope.lexicalEntries[i].client_id == e.client_id && $scope.lexicalEntries[i].object_id == e.object_id) {
-                            angular.forEach(e.contains, function(value) {
-                                var newValue = true;
-                                angular.forEach($scope.lexicalEntries[i].contains, function(checkValue) {
-                                    if (value.client_id == checkValue.client_id && value.object_id == checkValue.object_id) {
-                                        newValue = false;
-                                    }
-                                });
-                                if (newValue) {
-                                    $scope.lexicalEntries[i].contains.push(value);
-                                }
-                            });
-                            break;
+    };
+    $scope.editPerspectiveProperties = function(dictionary) {
+        if (dictionary.selectedPerspectiveId != -1) {
+            var perspective = getObjectByCompositeKey(dictionary.selectedPerspectiveId, dictionary.perspectives);
+            if (perspective) {
+                $modal.open({
+                    animation: true,
+                    templateUrl: "editPerspectivePropertiesModal.html",
+                    controller: "editPerspectivePropertiesController",
+                    size: "lg",
+                    backdrop: "static",
+                    keyboard: false,
+                    resolve: {
+                        params: function() {
+                            return {
+                                dictionary: dictionary,
+                                perspective: perspective
+                            };
                         }
                     }
                 });
             }
-        }, function() {});
+        }
     };
     $scope.follow = function(link) {
         if (!link) {
@@ -27638,4 +27717,29 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
     $scope.cancel = function() {
         $modalInstance.dismiss("cancel");
     };
+} ]);
+
+app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+    $scope.perspective = {};
+    $scope.addField = function() {
+        $scope.perspective.fields.push({
+            entity_type: "",
+            data_type: "text",
+            status: "enabled"
+        });
+    };
+    $scope.ok = function() {
+        var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/perspective/" + encodeURIComponent(params.perspective.client_id) + "/" + encodeURIComponent(params.perspective.object_id) + "/fields";
+        dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
+            $modalInstance.close();
+        }, function(fields) {});
+    };
+    $scope.cancel = function() {
+        $modalInstance.dismiss("cancel");
+    };
+    var url = "/dictionary/" + params.perspective.parent_client_id + "/" + params.perspective.parent_object_id + "/perspective/" + params.perspective.client_id + "/" + params.perspective.object_id + "/fields";
+    dictionaryService.getPerspectiveFields(url).then(function(fields) {
+        params.perspective["fields"] = fields;
+        $scope.perspective = wrapPerspective(params.perspective);
+    }, function(fields) {});
 } ]);
