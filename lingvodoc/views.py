@@ -545,6 +545,10 @@ def edit_perspective(request):
                     add_translation_to_translation_string(locale_id=find_locale_id(request),
                                                           translation_string=perspective.name,
                                                           translation=req['name_translation'], client_id = client.id)
+                if 'parent_client_id' in req:
+                    perspective.parent_client_id = req['parent_client_id']
+                if 'parent_object_id' in req:
+                    perspective.parent_object_id = req['parent_object_id']
                 request.response.status = HTTPOk.code
                 return response
         else:
@@ -1200,35 +1204,37 @@ def view_perspective_fields(request):
         for field in perspective.dictionaryperspectivefield:
 
             data = dict()
-            if field.level == 'leveloneentity' or field.level == 'groupingentity':
-                data['entity_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                 translation_string=field.entity_type)
+            if not field.marked_for_deletion:
+                if field.level == 'leveloneentity' or field.level == 'groupingentity':
+                    data['entity_type'] = find_by_translation_string(locale_id=locale_id,
+                                                                     translation_string=field.entity_type)
 
-                data['data_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                               translation_string=field.data_type)
-                data['position'] = field.position
-                data['status'] = field.state
-                data['level'] = field.level
-                if field.dictionaryperspectivefield:
-                    contains = []
-                    for field2 in field.dictionaryperspectivefield:
-                        data2 = dict()
-                        data2['entity_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                          translation_string=field2.entity_type)
+                    data['data_type'] = find_by_translation_string(locale_id=find_locale_id(request),
+                                                                   translation_string=field.data_type)
+                    data['position'] = field.position
+                    data['status'] = field.state
+                    data['level'] = field.level
+                    if field.dictionaryperspectivefield:
+                        contains = []
+                        for field2 in field.dictionaryperspectivefield:
+                            if not field2.marked_for_deletion:
+                                data2 = dict()
+                                data2['entity_type'] = find_by_translation_string(locale_id=locale_id,
+                                                                                  translation_string=field2.entity_type)
 
-                        data2['data_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                        translation_string=field2.data_type)
-                        data2['status'] = field2.state
-                        data2['position'] = field2.position
-                        data2['level'] = field2.level
-                        contains += [data2]
-                    data['contains'] = contains
-                if field.group:
-                    #group = DBSession.query(UserEntitiesTranslationString).\
-                    #    filter_by(translation_string=field.group, locale_id=locale_id).first()
-                    data['group'] = find_by_translation_string(locale_id=locale_id,
-                                                               translation_string=field.group)
-                fields += [data]
+                                data2['data_type'] = find_by_translation_string(locale_id=locale_id,
+                                                                                translation_string=field2.data_type)
+                                data2['status'] = field2.state
+                                data2['position'] = field2.position
+                                data2['level'] = field2.level
+                                contains += [data2]
+                        data['contains'] = contains
+                    if field.group:
+                        #group = DBSession.query(UserEntitiesTranslationString).\
+                        #    filter_by(translation_string=field.group, locale_id=locale_id).first()
+                        data['group'] = find_by_translation_string(locale_id=locale_id,
+                                                                   translation_string=field.group)
+                    fields += [data]
         response['fields'] = fields
         request.response.status = HTTPOk.code
         return response
@@ -1270,7 +1276,6 @@ def create_perspective_fields(request):
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
         fields = request.json_body['fields']
-
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -1283,7 +1288,8 @@ def create_perspective_fields(request):
         if not perspective:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such dictionary in the system")}
-
+        for field in perspective.dictionaryperspectivefield:
+            field.marked_for_deletion = True
         locale_id = find_locale_id(request)
 
         for entry in fields:
@@ -1335,9 +1341,7 @@ def create_perspective_fields(request):
                                                   translation_string=entry['data_type'],
                                                   translation=entry['data_type'], client_id=client.id)
         request.response.status = HTTPOk.code
-        return {
-                'object_id': perspective.object_id,
-                'client_id': perspective.client_id}
+        return {}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
