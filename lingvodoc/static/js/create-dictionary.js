@@ -30667,6 +30667,64 @@ app.directive("suggestion", function() {
     };
 });
 
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(";");
+    for (var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == " ") c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+var wrapPerspective = function(perspective) {
+    if (typeof perspective.fields == "undefined") {
+        return;
+    }
+    for (var i = 0; i < perspective.fields.length; i++) {
+        if (typeof perspective.fields[i].group !== "undefined") {
+            perspective.fields[i]._groupEnabled = true;
+        }
+        if (typeof perspective.fields[i].contains !== "undefined") {
+            perspective.fields[i]._containsEnabled = true;
+        }
+    }
+    return perspective;
+};
+
+var exportPerspective = function(perspective) {
+    var jsPerspective = {
+        fields: []
+    };
+    var positionCount = 1;
+    for (var i = 0; i < perspective.fields.length; i++) {
+        var field = JSON.parse(JSON.stringify(perspective.fields[i]));
+        field["position"] = positionCount;
+        positionCount += 1;
+        if (field.data_type !== "grouping_tag") {
+            field["level"] = "leveloneentity";
+        } else {
+            field["level"] = "groupingentity";
+        }
+        if (field._groupEnabled) {
+            delete field._groupEnabled;
+        }
+        if (field._containsEnabled) {
+            delete field._containsEnabled;
+        }
+        if (field.contains) {
+            for (var j = 0; j < field.contains.length; j++) {
+                field.contains[j].level = "leveltwoentity";
+                field.contains[j].position = positionCount;
+                positionCount += 1;
+            }
+        }
+        jsPerspective.fields.push(field);
+    }
+    return jsPerspective;
+};
+
 var app = angular.module("CreateDictionaryModule", [ "ui.router", "ngAnimate", "ui.bootstrap", "autocomplete" ]);
 
 app.config(function($stateProvider, $urlRouterProvider) {
@@ -30703,51 +30761,6 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
     $scope.users = [];
     $scope.userLogins = [];
     $scope.uploadedDictionaries = [];
-    var wrapPerspective = function(perspective) {
-        if (typeof perspective.fields == "undefined") {
-            return;
-        }
-        for (var i = 0; i < perspective.fields.length; i++) {
-            if (typeof perspective.fields[i].group !== "undefined") {
-                perspective.fields[i]._groupEnabled = true;
-            }
-            if (typeof perspective.fields[i].contains !== "undefined") {
-                perspective.fields[i]._containsEnabled = true;
-            }
-        }
-        return perspective;
-    };
-    var exportPerpective = function(perspective) {
-        var jsPerspective = {
-            fields: []
-        };
-        var positionCount = 1;
-        for (var i = 0; i < perspective.fields.length; i++) {
-            var field = JSON.parse(JSON.stringify(perspective.fields[i]));
-            field["position"] = positionCount;
-            positionCount += 1;
-            if (field.data_type !== "grouping_tag") {
-                field["level"] = "leveloneentity";
-            } else {
-                field["level"] = "groupingentity";
-            }
-            if (field._groupEnabled) {
-                delete field._groupEnabled;
-            }
-            if (field._containsEnabled) {
-                delete field._containsEnabled;
-            }
-            if (field.contains) {
-                for (var j = 0; j < field.contains.length; j++) {
-                    field.contains[j].level = "leveltwoentity";
-                    field.contains[j].position = positionCount;
-                    positionCount += 1;
-                }
-            }
-            jsPerspective.fields.push(field);
-        }
-        return jsPerspective;
-    };
     var flatLanguages = function(languages) {
         var flat = [];
         for (var i = 0; i < languages.length; i++) {
@@ -30877,7 +30890,7 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
                 $scope.dictionaryData.perspective_client_id = data.client_id;
                 $scope.dictionaryData.perspective_object_id = data.object_id;
                 var setFieldsUrl = "/dictionary/" + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + "/" + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + "/perspective/" + encodeURIComponent($scope.dictionaryData.perspective_client_id) + "/" + encodeURIComponent($scope.dictionaryData.perspective_object_id) + "/fields";
-                $http.post(setFieldsUrl, exportPerpective($scope.perspective)).success(function(data, status, headers, config) {
+                $http.post(setFieldsUrl, exportPerspective($scope.perspective)).success(function(data, status, headers, config) {
                     window.location = "/dashboard";
                 }).error(function(data, status, headers, config) {
                     alert("Failed to create perspective!");
