@@ -82,6 +82,7 @@ import json
 import logging
 log = logging.getLogger(__name__)
 
+
 class CommonException(Exception):
     def __init__(self, value):
         self.value = value
@@ -2650,6 +2651,112 @@ def merge_dictionaries(request):
                         new_group.users.append(user)
                 group.marked_for_deletion = True
             dicti.marked_for_deletion = True
+        request.response.status = HTTPOk.code
+        return {'object_id': object_id,
+                'client_id': client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')  # TODO: check for permission
+def merge_perspectives(request):
+    try:
+        req = request.json_body
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        dictionary_client_id = req['dictionary_client_id']
+        dictionary_object_id = req['dictionary_object_id']
+        name = req['name']
+        translation = req['translation']
+
+        perspectives = req['perspectives']
+        if len(perspectives) != 2:
+            raise KeyError("Wrong number of perspectives to merge.",
+                           len(perspectives))
+        new_persps = []
+        for persp in perspectives:
+            perspe = DBSession.query(DictionaryPerspective).filter_by(client_id=persp['client_id'],
+                                                                       object_id=persp['object_id']).first()
+            if not perspe:
+                raise KeyError("Perspective do not exist in the system")
+            if dictionary_client_id != perspe.parent_client_id or dictionary_object_id != perspe.parent_object_id:
+                raise KeyError("Both perspective should from same dictionary.")
+            new_persps += [perspe]
+        perspectives = new_persps
+        base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
+        override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if user not in override.users:
+            group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                  subject_client_id=dictionary_client_id,
+                                                  subject_object_id=dictionary_object_id).first()
+            if user not in group.users:
+                raise KeyError("Not enough permission to do that")
+
+        subreq = Request.blank('/dictionary/%s/%s/perspective' % (dictionary_client_id, dictionary_object_id))
+        subreq.method = 'POST'
+        subreq.json = {'name': name, 'translation': translation}
+        subreq.headers = request.headers
+        response = request.invoke_subrequest(subreq)
+        client_id = response.json['client_id']
+        object_id = response.json['object_id']
+        new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        perspectives = []
+        # TODO: make fields for new perspective
+        for persp in perspectives:
+            # TODO: make movement of lexical entries in new perspective.
+            #  Must be complex, because fields of perspective should change
+            obj_id = persp.object_id
+            cli_id = persp.client_id
+            bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
+            groups = []
+            for base in bases:
+
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=obj_id,
+                                                         subject_client_id=cli_id).first()
+                groups += [group]
+
+            for group in groups:
+                existing = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.perspective_default==True,
+                                                         Group.subject_object_id==obj_id,
+                                                         Group.subject_client_id==cli_id).first()
+                if existing:
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        if user in group.users:
+                            group.users.remove(user)
+                        if not user in existing.users:
+                            existing.users.append(user)
+                else:
+                    new_group = Group(base_group_id=group.base_group_id,
+                                      subject_object_id=cli_id,
+                                      subject_client_id=obj_id)
+                    DBSession.add(new_group)
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        group.remove(user)
+                        new_group.users.append(user)
+                group.marked_for_deletion = True
+            persp.marked_for_deletion = True
         request.response.status = HTTPOk.code
         return {'object_id': object_id,
                 'client_id': client_id}
