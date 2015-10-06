@@ -374,10 +374,10 @@ def edit_dictionary(request):
                 if 'parent_object_id' in req:
                     dictionary.parent_object_id = req['parent_object_id']
                 # TODO: fix translation stuff
-                if 'name_translation' in req:
+                if 'name' in req:
                     add_translation_to_translation_string(locale_id=find_locale_id(request),
                                                           translation_string=dictionary.name,
-                                                          translation=req['name_translation'], client_id=client.id)
+                                                          translation=req['name'], client_id=client.id)
                 request.response.status = HTTPOk.code
                 return response
 
