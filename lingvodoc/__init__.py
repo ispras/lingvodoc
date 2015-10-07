@@ -424,7 +424,13 @@ def configure_routes(config):
     #   },
     # ]
 
-    config.add_route(name='merge_suggestions', pattern='/merge/suggestions')
+    config.add_route(name='merge_suggestions', pattern='/merge/suggestions/'
+        '{dictionary_client_id_1}/{dictionary_object_id_1}/'
+        '{perspective_client_id_1}/{perspective_object_id_1}/'
+        '{dictionary_client_id_2}/{dictionary_object_id_2}/'
+        '{perspective_client_id_2}/{perspective_object_id_2}/'
+        '{entity_type_primary}/{threshold}/{entity_type_secondary}/'
+        '{levenstein}')
 
     # API #PATCH
     # {'client_id':<client_id>, 'object_id':<object_id>}  id's of entry where moving to
