@@ -321,7 +321,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         };
     })
 
-    .controller('EditDictionaryController', ['$scope', '$http', '$window', '$modal', '$log', 'dictionaryService', function($scope, $http, $window, $modal, $log, dictionaryService) {
+    .controller('EditDictionaryController', ['$scope', '$http', '$window', '$modal', '$log', 'dictionaryService', function($scope, $http, $window$modal, $log, dictionaryService) {
 
 
         var currentClientId = $('#clientId').data('lingvodoc');
