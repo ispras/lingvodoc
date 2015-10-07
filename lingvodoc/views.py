@@ -148,7 +148,9 @@ def view_language(request):
             response['parent_object_id'] = language.parent_object_id
             response['client_id'] = language.client_id
             response['object_id'] = language.object_id
-            response['translation_string'] = language.get_translation(request)
+            translation_string = language.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             if language.locale:
                 response['locale_exist'] = True
             else:
@@ -164,7 +166,9 @@ def language_info(lang, request):
     result = dict()
     result['client_id'] = lang.client_id
     result['object_id'] = lang.object_id
-    result['translation_string'] = lang.get_translation(request)
+    translation_string = lang.get_translation(request)
+    result['translation_string'] = translation_string['translation_string']
+    result['translation'] = translation_string['translation']
     if lang.locale:
         result['locale_exist'] = True
     else:
@@ -304,7 +308,9 @@ def view_dictionary(request):
             response['parent_object_id'] = dictionary.parent_object_id
             response['client_id'] = dictionary.client_id
             response['object_id'] = dictionary.object_id
-            response['name'] = dictionary.get_translation(request)
+            translation_string = dictionary.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             response['status'] = dictionary.state
             request.response.status = HTTPOk.code
             return response
@@ -329,7 +335,6 @@ def edit_dictionary(request):
                     dictionary.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     dictionary.parent_object_id = req['parent_object_id']
-                # TODO: fix translation stuff
                 if 'translation' in req:
                     dictionary.set_translation(request)
                 request.response.status = HTTPOk.code
@@ -460,7 +465,9 @@ def view_perspective(request):
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
             response['object_id'] = perspective.object_id
-            response['name'] = perspective.get_translation(request)
+            translation_string = perspective.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
             request.response.status = HTTPOk.code
@@ -1162,8 +1169,12 @@ def view_perspective_fields(request):
             data = dict()
             if not field.marked_for_deletion:
                 if field.level == 'leveloneentity' or field.level == 'groupingentity':
-                    data['entity_type'] = field.get_entity_type(request)
-                    data['data_type'] = field.get_data_type(request)
+                    ent_type = field.get_entity_type(request)
+                    data['entity_type'] = ent_type['translation_string']
+                    data['entity_type_translation'] = ent_type['translation']
+                    data_type = field.get_data_type(request)
+                    data['data_type'] = data_type['translation_string']
+                    data['data_type_translation'] = data_type['translation']
                     data['position'] = field.position
                     data['status'] = field.state
                     data['level'] = field.level
@@ -1172,9 +1183,12 @@ def view_perspective_fields(request):
                         for field2 in field.dictionaryperspectivefield:
                             if not field2.marked_for_deletion:
                                 data2 = dict()
-                                data2['entity_type'] = field2.get_entity_type(request)
-
-                                data2['data_type'] = field2.get_data_type(request)
+                                ent_type = field2.get_entity_type(request)
+                                data2['entity_type'] = ent_type['translation_string']
+                                data2['entity_type_translation'] = ent_type['translation']
+                                data_type = field2.get_data_type(request)
+                                data2['data_type'] = data_type['translation_string']
+                                data2['data_type_translation'] = data_type['translation']
                                 data2['status'] = field2.state
                                 data2['position'] = field2.position
                                 data2['level'] = field2.level
@@ -1183,9 +1197,9 @@ def view_perspective_fields(request):
                                 contains += [data2]
                     data['contains'] = contains
                     if field.group:
-                        #group = DBSession.query(UserEntitiesTranslationString).\
-                        #    filter_by(translation_string=field.group, locale_id=locale_id).first()
-                        data['group'] = field.get_group(request)
+                        group = field.get_group(request)
+                        data['group'] = group['translation_string']
+                        data['group_translation'] = group['translation']
                     data['client_id'] = field.client_id
                     data['object_id'] = field.object_id
                     fields += [data]
