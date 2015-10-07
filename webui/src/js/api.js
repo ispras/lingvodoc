@@ -376,6 +376,83 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
+    var getUserInfo = function(userId, clientId) {
+        var deferred = $q.defer();
+        var url = '/user' + '?client_id= ' + encodeURIComponent(clientId) + '&user_id= ' + encodeURIComponent(userId);
+
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to get user info');
+        });
+
+        return deferred.promise;
+    };
+
+    var setUserInfo = function(userId, clientId, userInfo) {
+
+        var deferred = $q.defer();
+        var url = '/user' + '?client_id= ' + encodeURIComponent(clientId) + '&user_id= ' + encodeURIComponent(userId);
+
+        $http.post(url, userInfo).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to set user info');
+        });
+
+        return deferred.promise;
+    };
+
+    var createOrganization = function(org) {
+        var deferred = $q.defer();
+        var url = '/organization';
+
+        $http.post(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to create organization');
+        });
+
+        return deferred.promise;
+    };
+
+    var getOrganization = function(orgId) {
+        var deferred = $q.defer();
+        var url = '/organization/' + encodeURIComponent(orgId) ;
+
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to get information about organization');
+        });
+
+        return deferred.promise;
+    };
+
+    var editOrganization = function(orgId, org) {
+        var deferred = $q.defer();
+        var url = '/organization/' + encodeURIComponent(orgId) ;
+
+        $http.put(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to change information about organization');
+        });
+
+        return deferred.promise;
+    };
+
+    var searchUsers = function(query) {
+        var deferred = $q.defer();
+        $http.get('/users?search=' + encodeURIComponent(query)).success(function(data, status, headers, config) {
+            deferred.resolve(data.users);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to search for users');
+        });
+
+        return deferred.promise;
+    };
+
 
     // Return public API.
     return ({
@@ -395,6 +472,12 @@ function lingvodocAPI($http, $q) {
         'getLanguages': getLanguages,
         'setDictionaryStatus': setDictionaryStatus,
         'getPerspectiveFields': getPerspectiveFields,
-        'setPerspectiveFields': setPerspectiveFields
+        'setPerspectiveFields': setPerspectiveFields,
+        'getUserInfo': getUserInfo,
+        'setUserInfo': setUserInfo,
+        'createOrganization': createOrganization,
+        'getOrganization': getOrganization,
+        'editOrganization': editOrganization,
+        'searchUsers': searchUsers
     });
 };
