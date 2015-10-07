@@ -53,6 +53,9 @@ def configure_routes(config):
     config.add_route(name='dashboard', pattern='/dashboard')
 
     # web-view #GET
+    config.add_route(name='profile', pattern='/profile')
+
+    # web-view #GET
     config.add_route(name='languages', pattern='/languages/map')
 
     # API #GET && PUT && DELETE
@@ -102,6 +105,11 @@ def configure_routes(config):
     # Gets/puts info about dictionary (name/additional authors/etc)
     config.add_route(name='dictionary', pattern='/dictionary/{client_id}/{object_id}',
                      factory='lingvodoc.models.DictionaryAcl')  # 100% ready
+
+
+    # web-view
+    config.add_route(name='organizations', pattern='/organizations')
+
 
     # API #POST
     # Creating organization

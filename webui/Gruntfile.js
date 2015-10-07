@@ -176,6 +176,36 @@ module.exports = function(grunt) {
                     'src/js/user_upload.js'
                 ],
                 dest: '../lingvodoc/static/js/user-upload.js'
+            },
+            profile: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'bower_components/autocomplete/script/autocomplete.js',
+                    'src/js/util.js',
+                    'src/js/api.js',
+                    'src/js/profile.js'
+                ],
+                dest: '../lingvodoc/static/js/profile.js'
+            },
+            organizations: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'bower_components/autocomplete/script/autocomplete.js',
+                    'src/js/util.js',
+                    'src/js/api.js',
+                    'src/js/organizations.js'
+                ],
+                dest: '../lingvodoc/static/js/organizations.js'
             }
         }
     });

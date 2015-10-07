@@ -3229,3 +3229,22 @@ def merge_suggestions(request):
     results = [get_dict(i) for i in mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))]
     return json.dumps(results)
 
+@view_config(route_name='profile', renderer='templates/profile.pt', request_method='GET')
+def profile_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+    variables = {'client_id': client_id, 'user': user }
+    return render_to_response('templates/profile.pt', variables, request=request)
+
+@view_config(route_name='organizations', renderer='templates/organizations.pt', request_method='GET')
+def organizations_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+    variables = {'client_id': client_id, 'user': user }
+    return render_to_response('templates/organizations.pt', variables, request=request)
