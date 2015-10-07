@@ -68,3 +68,10 @@ var exportPerspective = function(perspective) {
 
     return jsPerspective;
 };
+
+var cloneObject = function(oldObject) {
+    return JSON.parse(JSON.stringify(oldObject));
+};
+
+
+

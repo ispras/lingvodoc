@@ -26225,4228 +26225,727 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
 
 !angular.$$csp() && angular.element(document).find("head").prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
 
-(function(window, angular, undefined) {
-    "use strict";
-    var ngRouteModule = angular.module("ngRoute", [ "ng" ]).provider("$route", $RouteProvider), $routeMinErr = angular.$$minErr("ngRoute");
-    function $RouteProvider() {
-        function inherit(parent, extra) {
-            return angular.extend(Object.create(parent), extra);
-        }
-        var routes = {};
-        this.when = function(path, route) {
-            var routeCopy = angular.copy(route);
-            if (angular.isUndefined(routeCopy.reloadOnSearch)) {
-                routeCopy.reloadOnSearch = true;
-            }
-            if (angular.isUndefined(routeCopy.caseInsensitiveMatch)) {
-                routeCopy.caseInsensitiveMatch = this.caseInsensitiveMatch;
-            }
-            routes[path] = angular.extend(routeCopy, path && pathRegExp(path, routeCopy));
-            if (path) {
-                var redirectPath = path[path.length - 1] == "/" ? path.substr(0, path.length - 1) : path + "/";
-                routes[redirectPath] = angular.extend({
-                    redirectTo: path
-                }, pathRegExp(redirectPath, routeCopy));
-            }
-            return this;
-        };
-        this.caseInsensitiveMatch = false;
-        function pathRegExp(path, opts) {
-            var insensitive = opts.caseInsensitiveMatch, ret = {
-                originalPath: path,
-                regexp: path
-            }, keys = ret.keys = [];
-            path = path.replace(/([().])/g, "\\$1").replace(/(\/)?:(\w+)([\?\*])?/g, function(_, slash, key, option) {
-                var optional = option === "?" ? option : null;
-                var star = option === "*" ? option : null;
-                keys.push({
-                    name: key,
-                    optional: !!optional
-                });
-                slash = slash || "";
-                return "" + (optional ? "" : slash) + "(?:" + (optional ? slash : "") + (star && "(.+?)" || "([^/]+)") + (optional || "") + ")" + (optional || "");
-            }).replace(/([\/$\*])/g, "\\$1");
-            ret.regexp = new RegExp("^" + path + "$", insensitive ? "i" : "");
-            return ret;
-        }
-        this.otherwise = function(params) {
-            if (typeof params === "string") {
-                params = {
-                    redirectTo: params
-                };
-            }
-            this.when(null, params);
-            return this;
-        };
-        this.$get = [ "$rootScope", "$location", "$routeParams", "$q", "$injector", "$templateRequest", "$sce", function($rootScope, $location, $routeParams, $q, $injector, $templateRequest, $sce) {
-            var forceReload = false, preparedRoute, preparedRouteIsUpdateOnly, $route = {
-                routes: routes,
-                reload: function() {
-                    forceReload = true;
-                    $rootScope.$evalAsync(function() {
-                        prepareRoute();
-                        commitRoute();
-                    });
-                },
-                updateParams: function(newParams) {
-                    if (this.current && this.current.$$route) {
-                        newParams = angular.extend({}, this.current.params, newParams);
-                        $location.path(interpolate(this.current.$$route.originalPath, newParams));
-                        $location.search(newParams);
-                    } else {
-                        throw $routeMinErr("norout", "Tried updating route when with no current route");
-                    }
-                }
-            };
-            $rootScope.$on("$locationChangeStart", prepareRoute);
-            $rootScope.$on("$locationChangeSuccess", commitRoute);
-            return $route;
-            function switchRouteMatcher(on, route) {
-                var keys = route.keys, params = {};
-                if (!route.regexp) return null;
-                var m = route.regexp.exec(on);
-                if (!m) return null;
-                for (var i = 1, len = m.length; i < len; ++i) {
-                    var key = keys[i - 1];
-                    var val = m[i];
-                    if (key && val) {
-                        params[key.name] = val;
-                    }
-                }
-                return params;
-            }
-            function prepareRoute($locationEvent) {
-                var lastRoute = $route.current;
-                preparedRoute = parseRoute();
-                preparedRouteIsUpdateOnly = preparedRoute && lastRoute && preparedRoute.$$route === lastRoute.$$route && angular.equals(preparedRoute.pathParams, lastRoute.pathParams) && !preparedRoute.reloadOnSearch && !forceReload;
-                if (!preparedRouteIsUpdateOnly && (lastRoute || preparedRoute)) {
-                    if ($rootScope.$broadcast("$routeChangeStart", preparedRoute, lastRoute).defaultPrevented) {
-                        if ($locationEvent) {
-                            $locationEvent.preventDefault();
-                        }
-                    }
-                }
-            }
-            function commitRoute() {
-                var lastRoute = $route.current;
-                var nextRoute = preparedRoute;
-                if (preparedRouteIsUpdateOnly) {
-                    lastRoute.params = nextRoute.params;
-                    angular.copy(lastRoute.params, $routeParams);
-                    $rootScope.$broadcast("$routeUpdate", lastRoute);
-                } else if (nextRoute || lastRoute) {
-                    forceReload = false;
-                    $route.current = nextRoute;
-                    if (nextRoute) {
-                        if (nextRoute.redirectTo) {
-                            if (angular.isString(nextRoute.redirectTo)) {
-                                $location.path(interpolate(nextRoute.redirectTo, nextRoute.params)).search(nextRoute.params).replace();
-                            } else {
-                                $location.url(nextRoute.redirectTo(nextRoute.pathParams, $location.path(), $location.search())).replace();
-                            }
-                        }
-                    }
-                    $q.when(nextRoute).then(function() {
-                        if (nextRoute) {
-                            var locals = angular.extend({}, nextRoute.resolve), template, templateUrl;
-                            angular.forEach(locals, function(value, key) {
-                                locals[key] = angular.isString(value) ? $injector.get(value) : $injector.invoke(value, null, null, key);
-                            });
-                            if (angular.isDefined(template = nextRoute.template)) {
-                                if (angular.isFunction(template)) {
-                                    template = template(nextRoute.params);
-                                }
-                            } else if (angular.isDefined(templateUrl = nextRoute.templateUrl)) {
-                                if (angular.isFunction(templateUrl)) {
-                                    templateUrl = templateUrl(nextRoute.params);
-                                }
-                                if (angular.isDefined(templateUrl)) {
-                                    nextRoute.loadedTemplateUrl = $sce.valueOf(templateUrl);
-                                    template = $templateRequest(templateUrl);
-                                }
-                            }
-                            if (angular.isDefined(template)) {
-                                locals["$template"] = template;
-                            }
-                            return $q.all(locals);
-                        }
-                    }).then(function(locals) {
-                        if (nextRoute == $route.current) {
-                            if (nextRoute) {
-                                nextRoute.locals = locals;
-                                angular.copy(nextRoute.params, $routeParams);
-                            }
-                            $rootScope.$broadcast("$routeChangeSuccess", nextRoute, lastRoute);
-                        }
-                    }, function(error) {
-                        if (nextRoute == $route.current) {
-                            $rootScope.$broadcast("$routeChangeError", nextRoute, lastRoute, error);
-                        }
-                    });
-                }
-            }
-            function parseRoute() {
-                var params, match;
-                angular.forEach(routes, function(route, path) {
-                    if (!match && (params = switchRouteMatcher($location.path(), route))) {
-                        match = inherit(route, {
-                            params: angular.extend({}, $location.search(), params),
-                            pathParams: params
-                        });
-                        match.$$route = route;
-                    }
-                });
-                return match || routes[null] && inherit(routes[null], {
-                    params: {},
-                    pathParams: {}
-                });
-            }
-            function interpolate(string, params) {
-                var result = [];
-                angular.forEach((string || "").split(":"), function(segment, i) {
-                    if (i === 0) {
-                        result.push(segment);
-                    } else {
-                        var segmentMatch = segment.match(/(\w+)(?:[?*])?(.*)/);
-                        var key = segmentMatch[1];
-                        result.push(params[key]);
-                        result.push(segmentMatch[2] || "");
-                        delete params[key];
-                    }
-                });
-                return result.join("");
-            }
-        } ];
-    }
-    ngRouteModule.provider("$routeParams", $RouteParamsProvider);
-    function $RouteParamsProvider() {
-        this.$get = function() {
-            return {};
-        };
-    }
-    ngRouteModule.directive("ngView", ngViewFactory);
-    ngRouteModule.directive("ngView", ngViewFillContentFactory);
-    ngViewFactory.$inject = [ "$route", "$anchorScroll", "$animate" ];
-    function ngViewFactory($route, $anchorScroll, $animate) {
-        return {
-            restrict: "ECA",
-            terminal: true,
-            priority: 400,
-            transclude: "element",
-            link: function(scope, $element, attr, ctrl, $transclude) {
-                var currentScope, currentElement, previousLeaveAnimation, autoScrollExp = attr.autoscroll, onloadExp = attr.onload || "";
-                scope.$on("$routeChangeSuccess", update);
-                update();
-                function cleanupLastView() {
-                    if (previousLeaveAnimation) {
-                        $animate.cancel(previousLeaveAnimation);
-                        previousLeaveAnimation = null;
-                    }
-                    if (currentScope) {
-                        currentScope.$destroy();
-                        currentScope = null;
-                    }
-                    if (currentElement) {
-                        previousLeaveAnimation = $animate.leave(currentElement);
-                        previousLeaveAnimation.then(function() {
-                            previousLeaveAnimation = null;
-                        });
-                        currentElement = null;
-                    }
-                }
-                function update() {
-                    var locals = $route.current && $route.current.locals, template = locals && locals.$template;
-                    if (angular.isDefined(template)) {
-                        var newScope = scope.$new();
-                        var current = $route.current;
-                        var clone = $transclude(newScope, function(clone) {
-                            $animate.enter(clone, null, currentElement || $element).then(function onNgViewEnter() {
-                                if (angular.isDefined(autoScrollExp) && (!autoScrollExp || scope.$eval(autoScrollExp))) {
-                                    $anchorScroll();
-                                }
-                            });
-                            cleanupLastView();
-                        });
-                        currentElement = clone;
-                        currentScope = current.scope = newScope;
-                        currentScope.$emit("$viewContentLoaded");
-                        currentScope.$eval(onloadExp);
-                    } else {
-                        cleanupLastView();
-                    }
-                }
-            }
-        };
-    }
-    ngViewFillContentFactory.$inject = [ "$compile", "$controller", "$route" ];
-    function ngViewFillContentFactory($compile, $controller, $route) {
-        return {
-            restrict: "ECA",
-            priority: -400,
-            link: function(scope, $element) {
-                var current = $route.current, locals = current.locals;
-                $element.html(locals.$template);
-                var link = $compile($element.contents());
-                if (current.controller) {
-                    locals.$scope = scope;
-                    var controller = $controller(current.controller, locals);
-                    if (current.controllerAs) {
-                        scope[current.controllerAs] = controller;
-                    }
-                    $element.data("$ngControllerController", controller);
-                    $element.children().data("$ngControllerController", controller);
-                }
-                link(scope);
-            }
-        };
-    }
-})(window, window.angular);
+"use strict";
 
-if (typeof module !== "undefined" && typeof exports !== "undefined" && module.exports === exports) {
-    module.exports = "ui.router";
-}
+var WaveSurfer = {
+    defaultParams: {
+        height: 128,
+        waveColor: "#999",
+        progressColor: "#555",
+        cursorColor: "#333",
+        cursorWidth: 1,
+        skipLength: 2,
+        minPxPerSec: 20,
+        pixelRatio: window.devicePixelRatio,
+        fillParent: !0,
+        scrollParent: !1,
+        hideScrollbar: !1,
+        normalize: !1,
+        audioContext: null,
+        container: null,
+        dragSelection: !0,
+        loopSelection: !0,
+        audioRate: 1,
+        interact: !0,
+        splitChannels: !1,
+        renderer: "Canvas",
+        backend: "WebAudio",
+        mediaType: "audio"
+    },
+    init: function(a) {
+        if (this.params = WaveSurfer.util.extend({}, this.defaultParams, a), this.container = "string" == typeof a.container ? document.querySelector(this.params.container) : this.params.container, 
+        !this.container) throw new Error("Container element not found");
+        if ("undefined" == typeof this.params.mediaContainer ? this.mediaContainer = this.container : "string" == typeof this.params.mediaContainer ? this.mediaContainer = document.querySelector(this.params.mediaContainer) : this.mediaContainer = this.params.mediaContainer, 
+        !this.mediaContainer) throw new Error("Media Container element not found");
+        this.savedVolume = 0, this.isMuted = !1, this.tmpEvents = [], this.createDrawer(), 
+        this.createBackend();
+    },
+    createDrawer: function() {
+        var a = this;
+        this.drawer = Object.create(WaveSurfer.Drawer[this.params.renderer]), this.drawer.init(this.container, this.params), 
+        this.drawer.on("redraw", function() {
+            a.drawBuffer(), a.drawer.progress(a.backend.getPlayedPercents());
+        }), this.drawer.on("click", function(b, c) {
+            setTimeout(function() {
+                a.seekTo(c);
+            }, 0);
+        }), this.drawer.on("scroll", function(b) {
+            a.fireEvent("scroll", b);
+        });
+    },
+    createBackend: function() {
+        var a = this;
+        this.backend && this.backend.destroy(), "AudioElement" == this.params.backend && (this.params.backend = "MediaElement"), 
+        "WebAudio" != this.params.backend || WaveSurfer.WebAudio.supportsWebAudio() || (this.params.backend = "MediaElement"), 
+        this.backend = Object.create(WaveSurfer[this.params.backend]), this.backend.init(this.params), 
+        this.backend.on("finish", function() {
+            a.fireEvent("finish");
+        }), this.backend.on("play", function() {
+            a.fireEvent("play");
+        }), this.backend.on("pause", function() {
+            a.fireEvent("pause");
+        }), this.backend.on("audioprocess", function(b) {
+            a.drawer.progress(a.backend.getPlayedPercents()), a.fireEvent("audioprocess", b);
+        });
+    },
+    getDuration: function() {
+        return this.backend.getDuration();
+    },
+    getCurrentTime: function() {
+        return this.backend.getCurrentTime();
+    },
+    play: function(a, b) {
+        this.backend.play(a, b);
+    },
+    pause: function() {
+        this.backend.pause();
+    },
+    playPause: function() {
+        this.backend.isPaused() ? this.play() : this.pause();
+    },
+    isPlaying: function() {
+        return !this.backend.isPaused();
+    },
+    skipBackward: function(a) {
+        this.skip(-a || -this.params.skipLength);
+    },
+    skipForward: function(a) {
+        this.skip(a || this.params.skipLength);
+    },
+    skip: function(a) {
+        var b = this.getCurrentTime() || 0, c = this.getDuration() || 1;
+        b = Math.max(0, Math.min(c, b + (a || 0))), this.seekAndCenter(b / c);
+    },
+    seekAndCenter: function(a) {
+        this.seekTo(a), this.drawer.recenter(a);
+    },
+    seekTo: function(a) {
+        var b = this.backend.isPaused(), c = this.params.scrollParent;
+        b && (this.params.scrollParent = !1), this.backend.seekTo(a * this.getDuration()), 
+        this.drawer.progress(this.backend.getPlayedPercents()), b || (this.backend.pause(), 
+        this.backend.play()), this.params.scrollParent = c, this.fireEvent("seek", a);
+    },
+    stop: function() {
+        this.pause(), this.seekTo(0), this.drawer.progress(0);
+    },
+    setVolume: function(a) {
+        this.backend.setVolume(a);
+    },
+    setPlaybackRate: function(a) {
+        this.backend.setPlaybackRate(a);
+    },
+    toggleMute: function() {
+        this.isMuted ? (this.backend.setVolume(this.savedVolume), this.isMuted = !1) : (this.savedVolume = this.backend.getVolume(), 
+        this.backend.setVolume(0), this.isMuted = !0);
+    },
+    toggleScroll: function() {
+        this.params.scrollParent = !this.params.scrollParent, this.drawBuffer();
+    },
+    toggleInteraction: function() {
+        this.params.interact = !this.params.interact;
+    },
+    drawBuffer: function() {
+        var a = Math.round(this.getDuration() * this.params.minPxPerSec * this.params.pixelRatio), b = this.drawer.getWidth(), c = a;
+        this.params.fillParent && (!this.params.scrollParent || b > a) && (c = b);
+        var d = this.backend.getPeaks(c);
+        this.drawer.drawPeaks(d, c), this.fireEvent("redraw", d, c);
+    },
+    zoom: function(a) {
+        this.params.minPxPerSec = a, this.params.scrollParent = !0, this.drawBuffer(), this.seekAndCenter(this.getCurrentTime() / this.getDuration());
+    },
+    loadArrayBuffer: function(a) {
+        this.decodeArrayBuffer(a, function(a) {
+            this.loadDecodedBuffer(a);
+        }.bind(this));
+    },
+    loadDecodedBuffer: function(a) {
+        this.backend.load(a), this.drawBuffer(), this.fireEvent("ready");
+    },
+    loadBlob: function(a) {
+        var b = this, c = new FileReader();
+        c.addEventListener("progress", function(a) {
+            b.onProgress(a);
+        }), c.addEventListener("load", function(a) {
+            b.loadArrayBuffer(a.target.result);
+        }), c.addEventListener("error", function() {
+            b.fireEvent("error", "Error reading file");
+        }), c.readAsArrayBuffer(a), this.empty();
+    },
+    load: function(a, b) {
+        switch (this.params.backend) {
+          case "WebAudio":
+            return this.loadBuffer(a);
 
-(function(window, angular, undefined) {
-    "use strict";
-    var isDefined = angular.isDefined, isFunction = angular.isFunction, isString = angular.isString, isObject = angular.isObject, isArray = angular.isArray, forEach = angular.forEach, extend = angular.extend, copy = angular.copy;
-    function inherit(parent, extra) {
-        return extend(new (extend(function() {}, {
-            prototype: parent
-        }))(), extra);
-    }
-    function merge(dst) {
-        forEach(arguments, function(obj) {
-            if (obj !== dst) {
-                forEach(obj, function(value, key) {
-                    if (!dst.hasOwnProperty(key)) dst[key] = value;
-                });
-            }
-        });
-        return dst;
-    }
-    function ancestors(first, second) {
-        var path = [];
-        for (var n in first.path) {
-            if (first.path[n] !== second.path[n]) break;
-            path.push(first.path[n]);
+          case "MediaElement":
+            return this.loadMediaElement(a, b);
         }
-        return path;
-    }
-    function objectKeys(object) {
-        if (Object.keys) {
-            return Object.keys(object);
-        }
-        var result = [];
-        forEach(object, function(val, key) {
-            result.push(key);
+    },
+    loadBuffer: function(a) {
+        return this.empty(), this.getArrayBuffer(a, this.loadArrayBuffer.bind(this));
+    },
+    loadMediaElement: function(a, b) {
+        this.empty(), this.backend.load(a, this.mediaContainer, b), this.tmpEvents.push(this.backend.once("canplay", function() {
+            this.drawBuffer(), this.fireEvent("ready");
+        }.bind(this)), this.backend.once("error", function(a) {
+            this.fireEvent("error", a);
+        }.bind(this))), !b && this.backend.supportsWebAudio() && this.getArrayBuffer(a, function(a) {
+            this.decodeArrayBuffer(a, function(a) {
+                this.backend.buffer = a, this.drawBuffer();
+            }.bind(this));
+        }.bind(this));
+    },
+    decodeArrayBuffer: function(a, b) {
+        this.backend.decodeArrayBuffer(a, this.fireEvent.bind(this, "decoded"), this.fireEvent.bind(this, "error", "Error decoding audiobuffer")), 
+        this.tmpEvents.push(this.once("decoded", b));
+    },
+    getArrayBuffer: function(a, b) {
+        var c = this, d = WaveSurfer.util.ajax({
+            url: a,
+            responseType: "arraybuffer"
         });
-        return result;
-    }
-    function indexOf(array, value) {
-        if (Array.prototype.indexOf) {
-            return array.indexOf(value, Number(arguments[2]) || 0);
-        }
-        var len = array.length >>> 0, from = Number(arguments[2]) || 0;
-        from = from < 0 ? Math.ceil(from) : Math.floor(from);
-        if (from < 0) from += len;
-        for (;from < len; from++) {
-            if (from in array && array[from] === value) return from;
-        }
-        return -1;
-    }
-    function inheritParams(currentParams, newParams, $current, $to) {
-        var parents = ancestors($current, $to), parentParams, inherited = {}, inheritList = [];
-        for (var i in parents) {
-            if (!parents[i].params) continue;
-            parentParams = objectKeys(parents[i].params);
-            if (!parentParams.length) continue;
-            for (var j in parentParams) {
-                if (indexOf(inheritList, parentParams[j]) >= 0) continue;
-                inheritList.push(parentParams[j]);
-                inherited[parentParams[j]] = currentParams[parentParams[j]];
-            }
-        }
-        return extend({}, inherited, newParams);
-    }
-    function equalForKeys(a, b, keys) {
-        if (!keys) {
-            keys = [];
-            for (var n in a) keys.push(n);
-        }
-        for (var i = 0; i < keys.length; i++) {
-            var k = keys[i];
-            if (a[k] != b[k]) return false;
-        }
-        return true;
-    }
-    function filterByKeys(keys, values) {
-        var filtered = {};
-        forEach(keys, function(name) {
-            filtered[name] = values[name];
+        return this.tmpEvents.push(d.on("progress", function(a) {
+            c.onProgress(a);
+        }), d.on("success", b), d.on("error", function(a) {
+            c.fireEvent("error", "XHR error: " + a.target.statusText);
+        })), d;
+    },
+    onProgress: function(a) {
+        if (a.lengthComputable) var b = a.loaded / a.total; else b = a.loaded / (a.loaded + 1e6);
+        this.fireEvent("loading", Math.round(100 * b), a.target);
+    },
+    exportPCM: function(a, b, c) {
+        a = a || 1024, b = b || 1e4, c = c || !1;
+        var d = this.backend.getPeaks(a, b), e = [].map.call(d, function(a) {
+            return Math.round(a * b) / b;
+        }), f = JSON.stringify(e);
+        return c || window.open("data:application/json;charset=utf-8," + encodeURIComponent(f)), 
+        f;
+    },
+    clearTmpEvents: function() {
+        this.tmpEvents.forEach(function(a) {
+            a.un();
         });
-        return filtered;
+    },
+    empty: function() {
+        this.backend.isPaused() || (this.stop(), this.backend.disconnectSource()), this.clearTmpEvents(), 
+        this.drawer.progress(0), this.drawer.setWidth(0), this.drawer.drawPeaks({
+            length: this.drawer.getWidth()
+        }, 0);
+    },
+    destroy: function() {
+        this.fireEvent("destroy"), this.clearTmpEvents(), this.unAll(), this.backend.destroy(), 
+        this.drawer.destroy();
     }
-    function indexBy(array, propName) {
-        var result = {};
-        forEach(array, function(item) {
-            result[item[propName]] = item;
-        });
-        return result;
-    }
-    function pick(obj) {
-        var copy = {};
-        var keys = Array.prototype.concat.apply(Array.prototype, Array.prototype.slice.call(arguments, 1));
-        forEach(keys, function(key) {
-            if (key in obj) copy[key] = obj[key];
-        });
-        return copy;
-    }
-    function omit(obj) {
-        var copy = {};
-        var keys = Array.prototype.concat.apply(Array.prototype, Array.prototype.slice.call(arguments, 1));
-        for (var key in obj) {
-            if (indexOf(keys, key) == -1) copy[key] = obj[key];
-        }
-        return copy;
-    }
-    function pluck(collection, key) {
-        var result = isArray(collection) ? [] : {};
-        forEach(collection, function(val, i) {
-            result[i] = isFunction(key) ? key(val) : val[key];
-        });
-        return result;
-    }
-    function filter(collection, callback) {
-        var array = isArray(collection);
-        var result = array ? [] : {};
-        forEach(collection, function(val, i) {
-            if (callback(val, i)) {
-                result[array ? result.length : i] = val;
-            }
-        });
-        return result;
-    }
-    function map(collection, callback) {
-        var result = isArray(collection) ? [] : {};
-        forEach(collection, function(val, i) {
-            result[i] = callback(val, i);
-        });
-        return result;
-    }
-    angular.module("ui.router.util", [ "ng" ]);
-    angular.module("ui.router.router", [ "ui.router.util" ]);
-    angular.module("ui.router.state", [ "ui.router.router", "ui.router.util" ]);
-    angular.module("ui.router", [ "ui.router.state" ]);
-    angular.module("ui.router.compat", [ "ui.router" ]);
-    $Resolve.$inject = [ "$q", "$injector" ];
-    function $Resolve($q, $injector) {
-        var VISIT_IN_PROGRESS = 1, VISIT_DONE = 2, NOTHING = {}, NO_DEPENDENCIES = [], NO_LOCALS = NOTHING, NO_PARENT = extend($q.when(NOTHING), {
-            $$promises: NOTHING,
-            $$values: NOTHING
-        });
-        this.study = function(invocables) {
-            if (!isObject(invocables)) throw new Error("'invocables' must be an object");
-            var invocableKeys = objectKeys(invocables || {});
-            var plan = [], cycle = [], visited = {};
-            function visit(value, key) {
-                if (visited[key] === VISIT_DONE) return;
-                cycle.push(key);
-                if (visited[key] === VISIT_IN_PROGRESS) {
-                    cycle.splice(0, indexOf(cycle, key));
-                    throw new Error("Cyclic dependency: " + cycle.join(" -> "));
-                }
-                visited[key] = VISIT_IN_PROGRESS;
-                if (isString(value)) {
-                    plan.push(key, [ function() {
-                        return $injector.get(value);
-                    } ], NO_DEPENDENCIES);
-                } else {
-                    var params = $injector.annotate(value);
-                    forEach(params, function(param) {
-                        if (param !== key && invocables.hasOwnProperty(param)) visit(invocables[param], param);
-                    });
-                    plan.push(key, value, params);
-                }
-                cycle.pop();
-                visited[key] = VISIT_DONE;
-            }
-            forEach(invocables, visit);
-            invocables = cycle = visited = null;
-            function isResolve(value) {
-                return isObject(value) && value.then && value.$$promises;
-            }
-            return function(locals, parent, self) {
-                if (isResolve(locals) && self === undefined) {
-                    self = parent;
-                    parent = locals;
-                    locals = null;
-                }
-                if (!locals) locals = NO_LOCALS; else if (!isObject(locals)) {
-                    throw new Error("'locals' must be an object");
-                }
-                if (!parent) parent = NO_PARENT; else if (!isResolve(parent)) {
-                    throw new Error("'parent' must be a promise returned by $resolve.resolve()");
-                }
-                var resolution = $q.defer(), result = resolution.promise, promises = result.$$promises = {}, values = extend({}, locals), wait = 1 + plan.length / 3, merged = false;
-                function done() {
-                    if (!--wait) {
-                        if (!merged) merge(values, parent.$$values);
-                        result.$$values = values;
-                        result.$$promises = result.$$promises || true;
-                        delete result.$$inheritedValues;
-                        resolution.resolve(values);
-                    }
-                }
-                function fail(reason) {
-                    result.$$failure = reason;
-                    resolution.reject(reason);
-                }
-                if (isDefined(parent.$$failure)) {
-                    fail(parent.$$failure);
-                    return result;
-                }
-                if (parent.$$inheritedValues) {
-                    merge(values, omit(parent.$$inheritedValues, invocableKeys));
-                }
-                extend(promises, parent.$$promises);
-                if (parent.$$values) {
-                    merged = merge(values, omit(parent.$$values, invocableKeys));
-                    result.$$inheritedValues = omit(parent.$$values, invocableKeys);
-                    done();
-                } else {
-                    if (parent.$$inheritedValues) {
-                        result.$$inheritedValues = omit(parent.$$inheritedValues, invocableKeys);
-                    }
-                    parent.then(done, fail);
-                }
-                for (var i = 0, ii = plan.length; i < ii; i += 3) {
-                    if (locals.hasOwnProperty(plan[i])) done(); else invoke(plan[i], plan[i + 1], plan[i + 2]);
-                }
-                function invoke(key, invocable, params) {
-                    var invocation = $q.defer(), waitParams = 0;
-                    function onfailure(reason) {
-                        invocation.reject(reason);
-                        fail(reason);
-                    }
-                    forEach(params, function(dep) {
-                        if (promises.hasOwnProperty(dep) && !locals.hasOwnProperty(dep)) {
-                            waitParams++;
-                            promises[dep].then(function(result) {
-                                values[dep] = result;
-                                if (!--waitParams) proceed();
-                            }, onfailure);
-                        }
-                    });
-                    if (!waitParams) proceed();
-                    function proceed() {
-                        if (isDefined(result.$$failure)) return;
-                        try {
-                            invocation.resolve($injector.invoke(invocable, self, values));
-                            invocation.promise.then(function(result) {
-                                values[key] = result;
-                                done();
-                            }, onfailure);
-                        } catch (e) {
-                            onfailure(e);
-                        }
-                    }
-                    promises[key] = invocation.promise;
-                }
-                return result;
-            };
-        };
-        this.resolve = function(invocables, locals, parent, self) {
-            return this.study(invocables)(locals, parent, self);
-        };
-    }
-    angular.module("ui.router.util").service("$resolve", $Resolve);
-    $TemplateFactory.$inject = [ "$http", "$templateCache", "$injector" ];
-    function $TemplateFactory($http, $templateCache, $injector) {
-        this.fromConfig = function(config, params, locals) {
-            return isDefined(config.template) ? this.fromString(config.template, params) : isDefined(config.templateUrl) ? this.fromUrl(config.templateUrl, params) : isDefined(config.templateProvider) ? this.fromProvider(config.templateProvider, params, locals) : null;
-        };
-        this.fromString = function(template, params) {
-            return isFunction(template) ? template(params) : template;
-        };
-        this.fromUrl = function(url, params) {
-            if (isFunction(url)) url = url(params);
-            if (url == null) return null; else return $http.get(url, {
-                cache: $templateCache,
-                headers: {
-                    Accept: "text/html"
-                }
-            }).then(function(response) {
-                return response.data;
+};
+
+WaveSurfer.create = function(a) {
+    var b = Object.create(WaveSurfer);
+    return b.init(a), b;
+}, WaveSurfer.util = {
+    extend: function(a) {
+        var b = Array.prototype.slice.call(arguments, 1);
+        return b.forEach(function(b) {
+            Object.keys(b).forEach(function(c) {
+                a[c] = b[c];
             });
-        };
-        this.fromProvider = function(provider, params, locals) {
-            return $injector.invoke(provider, null, locals || {
-                params: params
-            });
-        };
+        }), a;
+    },
+    getId: function() {
+        return "wavesurfer_" + Math.random().toString(32).substring(2);
+    },
+    ajax: function(a) {
+        var b = Object.create(WaveSurfer.Observer), c = new XMLHttpRequest(), d = !1;
+        return c.open(a.method || "GET", a.url, !0), c.responseType = a.responseType || "json", 
+        c.addEventListener("progress", function(a) {
+            b.fireEvent("progress", a), a.lengthComputable && a.loaded == a.total && (d = !0);
+        }), c.addEventListener("load", function(a) {
+            d || b.fireEvent("progress", a), b.fireEvent("load", a), 200 == c.status || 206 == c.status ? b.fireEvent("success", c.response, a) : b.fireEvent("error", a);
+        }), c.addEventListener("error", function(a) {
+            b.fireEvent("error", a);
+        }), c.send(), b.xhr = c, b;
     }
-    angular.module("ui.router.util").service("$templateFactory", $TemplateFactory);
-    var $$UMFP;
-    function UrlMatcher(pattern, config, parentMatcher) {
-        config = extend({
-            params: {}
-        }, isObject(config) ? config : {});
-        var placeholder = /([:*])([\w\[\]]+)|\{([\w\[\]]+)(?:\:((?:[^{}\\]+|\\.|\{(?:[^{}\\]+|\\.)*\})+))?\}/g, searchPlaceholder = /([:]?)([\w\[\]-]+)|\{([\w\[\]-]+)(?:\:((?:[^{}\\]+|\\.|\{(?:[^{}\\]+|\\.)*\})+))?\}/g, compiled = "^", last = 0, m, segments = this.segments = [], parentParams = parentMatcher ? parentMatcher.params : {}, params = this.params = parentMatcher ? parentMatcher.params.$$new() : new $$UMFP.ParamSet(), paramNames = [];
-        function addParameter(id, type, config, location) {
-            paramNames.push(id);
-            if (parentParams[id]) return parentParams[id];
-            if (!/^\w+(-+\w+)*(?:\[\])?$/.test(id)) throw new Error("Invalid parameter name '" + id + "' in pattern '" + pattern + "'");
-            if (params[id]) throw new Error("Duplicate parameter name '" + id + "' in pattern '" + pattern + "'");
-            params[id] = new $$UMFP.Param(id, type, config, location);
-            return params[id];
-        }
-        function quoteRegExp(string, pattern, squash, optional) {
-            var surroundPattern = [ "", "" ], result = string.replace(/[\\\[\]\^$*+?.()|{}]/g, "\\$&");
-            if (!pattern) return result;
-            switch (squash) {
-              case false:
-                surroundPattern = [ "(", ")" + (optional ? "?" : "") ];
-                break;
-
-              case true:
-                surroundPattern = [ "?(", ")?" ];
-                break;
-
-              default:
-                surroundPattern = [ "(" + squash + "|", ")?" ];
-                break;
-            }
-            return result + surroundPattern[0] + pattern + surroundPattern[1];
-        }
-        this.source = pattern;
-        function matchDetails(m, isSearch) {
-            var id, regexp, segment, type, cfg, arrayMode;
-            id = m[2] || m[3];
-            cfg = config.params[id];
-            segment = pattern.substring(last, m.index);
-            regexp = isSearch ? m[4] : m[4] || (m[1] == "*" ? ".*" : null);
-            type = $$UMFP.type(regexp || "string") || inherit($$UMFP.type("string"), {
-                pattern: new RegExp(regexp, config.caseInsensitive ? "i" : undefined)
-            });
-            return {
-                id: id,
-                regexp: regexp,
-                segment: segment,
-                type: type,
-                cfg: cfg
-            };
-        }
-        var p, param, segment;
-        while (m = placeholder.exec(pattern)) {
-            p = matchDetails(m, false);
-            if (p.segment.indexOf("?") >= 0) break;
-            param = addParameter(p.id, p.type, p.cfg, "path");
-            compiled += quoteRegExp(p.segment, param.type.pattern.source, param.squash, param.isOptional);
-            segments.push(p.segment);
-            last = placeholder.lastIndex;
-        }
-        segment = pattern.substring(last);
-        var i = segment.indexOf("?");
-        if (i >= 0) {
-            var search = this.sourceSearch = segment.substring(i);
-            segment = segment.substring(0, i);
-            this.sourcePath = pattern.substring(0, last + i);
-            if (search.length > 0) {
-                last = 0;
-                while (m = searchPlaceholder.exec(search)) {
-                    p = matchDetails(m, true);
-                    param = addParameter(p.id, p.type, p.cfg, "search");
-                    last = placeholder.lastIndex;
-                }
-            }
-        } else {
-            this.sourcePath = pattern;
-            this.sourceSearch = "";
-        }
-        compiled += quoteRegExp(segment) + (config.strict === false ? "/?" : "") + "$";
-        segments.push(segment);
-        this.regexp = new RegExp(compiled, config.caseInsensitive ? "i" : undefined);
-        this.prefix = segments[0];
-        this.$$paramNames = paramNames;
-    }
-    UrlMatcher.prototype.concat = function(pattern, config) {
-        var defaultConfig = {
-            caseInsensitive: $$UMFP.caseInsensitive(),
-            strict: $$UMFP.strictMode(),
-            squash: $$UMFP.defaultSquashPolicy()
+}, WaveSurfer.Observer = {
+    on: function(a, b) {
+        this.handlers || (this.handlers = {});
+        var c = this.handlers[a];
+        return c || (c = this.handlers[a] = []), c.push(b), {
+            name: a,
+            callback: b,
+            un: this.un.bind(this, a, b)
         };
-        return new UrlMatcher(this.sourcePath + pattern + this.sourceSearch, extend(defaultConfig, config), this);
-    };
-    UrlMatcher.prototype.toString = function() {
-        return this.source;
-    };
-    UrlMatcher.prototype.exec = function(path, searchParams) {
-        var m = this.regexp.exec(path);
-        if (!m) return null;
-        searchParams = searchParams || {};
-        var paramNames = this.parameters(), nTotal = paramNames.length, nPath = this.segments.length - 1, values = {}, i, j, cfg, paramName;
-        if (nPath !== m.length - 1) throw new Error("Unbalanced capture group in route '" + this.source + "'");
-        function decodePathArray(string) {
-            function reverseString(str) {
-                return str.split("").reverse().join("");
-            }
-            function unquoteDashes(str) {
-                return str.replace(/\\-/g, "-");
-            }
-            var split = reverseString(string).split(/-(?!\\)/);
-            var allReversed = map(split, reverseString);
-            return map(allReversed, unquoteDashes).reverse();
+    },
+    un: function(a, b) {
+        if (this.handlers) {
+            var c = this.handlers[a];
+            if (c) if (b) for (var d = c.length - 1; d >= 0; d--) c[d] == b && c.splice(d, 1); else c.length = 0;
         }
-        for (i = 0; i < nPath; i++) {
-            paramName = paramNames[i];
-            var param = this.params[paramName];
-            var paramVal = m[i + 1];
-            for (j = 0; j < param.replace; j++) {
-                if (param.replace[j].from === paramVal) paramVal = param.replace[j].to;
-            }
-            if (paramVal && param.array === true) paramVal = decodePathArray(paramVal);
-            values[paramName] = param.value(paramVal);
-        }
-        for (;i < nTotal; i++) {
-            paramName = paramNames[i];
-            values[paramName] = this.params[paramName].value(searchParams[paramName]);
-        }
-        return values;
-    };
-    UrlMatcher.prototype.parameters = function(param) {
-        if (!isDefined(param)) return this.$$paramNames;
-        return this.params[param] || null;
-    };
-    UrlMatcher.prototype.validates = function(params) {
-        return this.params.$$validates(params);
-    };
-    UrlMatcher.prototype.format = function(values) {
-        values = values || {};
-        var segments = this.segments, params = this.parameters(), paramset = this.params;
-        if (!this.validates(values)) return null;
-        var i, search = false, nPath = segments.length - 1, nTotal = params.length, result = segments[0];
-        function encodeDashes(str) {
-            return encodeURIComponent(str).replace(/-/g, function(c) {
-                return "%5C%" + c.charCodeAt(0).toString(16).toUpperCase();
+    },
+    unAll: function() {
+        this.handlers = null;
+    },
+    once: function(a, b) {
+        var c = this, d = function() {
+            b.apply(this, arguments), setTimeout(function() {
+                c.un(a, d);
+            }, 0);
+        };
+        return this.on(a, d);
+    },
+    fireEvent: function(a) {
+        if (this.handlers) {
+            var b = this.handlers[a], c = Array.prototype.slice.call(arguments, 1);
+            b && b.forEach(function(a) {
+                a.apply(null, c);
             });
         }
-        for (i = 0; i < nTotal; i++) {
-            var isPathParam = i < nPath;
-            var name = params[i], param = paramset[name], value = param.value(values[name]);
-            var isDefaultValue = param.isOptional && param.type.equals(param.value(), value);
-            var squash = isDefaultValue ? param.squash : false;
-            var encoded = param.type.encode(value);
-            if (isPathParam) {
-                var nextSegment = segments[i + 1];
-                if (squash === false) {
-                    if (encoded != null) {
-                        if (isArray(encoded)) {
-                            result += map(encoded, encodeDashes).join("-");
-                        } else {
-                            result += encodeURIComponent(encoded);
-                        }
-                    }
-                    result += nextSegment;
-                } else if (squash === true) {
-                    var capture = result.match(/\/$/) ? /\/?(.*)/ : /(.*)/;
-                    result += nextSegment.match(capture)[1];
-                } else if (isString(squash)) {
-                    result += squash + nextSegment;
-                }
+    }
+}, WaveSurfer.util.extend(WaveSurfer, WaveSurfer.Observer), WaveSurfer.WebAudio = {
+    scriptBufferSize: 256,
+    PLAYING_STATE: 0,
+    PAUSED_STATE: 1,
+    FINISHED_STATE: 2,
+    supportsWebAudio: function() {
+        return !(!window.AudioContext && !window.webkitAudioContext);
+    },
+    getAudioContext: function() {
+        return WaveSurfer.WebAudio.audioContext || (WaveSurfer.WebAudio.audioContext = new (window.AudioContext || window.webkitAudioContext)()), 
+        WaveSurfer.WebAudio.audioContext;
+    },
+    getOfflineAudioContext: function(a) {
+        return WaveSurfer.WebAudio.offlineAudioContext || (WaveSurfer.WebAudio.offlineAudioContext = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 2, a)), 
+        WaveSurfer.WebAudio.offlineAudioContext;
+    },
+    init: function(a) {
+        this.params = a, this.ac = a.audioContext || this.getAudioContext(), this.lastPlay = this.ac.currentTime, 
+        this.startPosition = 0, this.scheduledPause = null, this.states = [ Object.create(WaveSurfer.WebAudio.state.playing), Object.create(WaveSurfer.WebAudio.state.paused), Object.create(WaveSurfer.WebAudio.state.finished) ], 
+        this.createVolumeNode(), this.createScriptNode(), this.createAnalyserNode(), this.setState(this.PAUSED_STATE), 
+        this.setPlaybackRate(this.params.audioRate);
+    },
+    disconnectFilters: function() {
+        this.filters && (this.filters.forEach(function(a) {
+            a && a.disconnect();
+        }), this.filters = null, this.analyser.connect(this.gainNode));
+    },
+    setState: function(a) {
+        this.state !== this.states[a] && (this.state = this.states[a], this.state.init.call(this));
+    },
+    setFilter: function() {
+        this.setFilters([].slice.call(arguments));
+    },
+    setFilters: function(a) {
+        this.disconnectFilters(), a && a.length && (this.filters = a, this.analyser.disconnect(), 
+        a.reduce(function(a, b) {
+            return a.connect(b), b;
+        }, this.analyser).connect(this.gainNode));
+    },
+    createScriptNode: function() {
+        this.ac.createScriptProcessor ? this.scriptNode = this.ac.createScriptProcessor(this.scriptBufferSize) : this.scriptNode = this.ac.createJavaScriptNode(this.scriptBufferSize), 
+        this.scriptNode.connect(this.ac.destination);
+    },
+    addOnAudioProcess: function() {
+        var a = this;
+        this.scriptNode.onaudioprocess = function() {
+            var b = a.getCurrentTime();
+            b >= a.getDuration() ? (a.setState(a.FINISHED_STATE), a.fireEvent("pause")) : b >= a.scheduledPause ? (a.setState(a.PAUSED_STATE), 
+            a.fireEvent("pause")) : a.state === a.states[a.PLAYING_STATE] && a.fireEvent("audioprocess", b);
+        };
+    },
+    removeOnAudioProcess: function() {
+        this.scriptNode.onaudioprocess = null;
+    },
+    createAnalyserNode: function() {
+        this.analyser = this.ac.createAnalyser(), this.analyser.connect(this.gainNode);
+    },
+    createVolumeNode: function() {
+        this.ac.createGain ? this.gainNode = this.ac.createGain() : this.gainNode = this.ac.createGainNode(), 
+        this.gainNode.connect(this.ac.destination);
+    },
+    setVolume: function(a) {
+        this.gainNode.gain.value = a;
+    },
+    getVolume: function() {
+        return this.gainNode.gain.value;
+    },
+    decodeArrayBuffer: function(a, b, c) {
+        this.offlineAc || (this.offlineAc = this.getOfflineAudioContext(this.ac ? this.ac.sampleRate : 44100)), 
+        this.offlineAc.decodeAudioData(a, function(a) {
+            b(a);
+        }.bind(this), c);
+    },
+    getPeaks: function(a) {
+        for (var b = this.buffer.length / a, c = ~~(b / 10) || 1, d = this.buffer.numberOfChannels, e = [], f = [], g = 0; d > g; g++) for (var h = e[g] = [], i = this.buffer.getChannelData(g), j = 0; a > j; j++) {
+            for (var k = ~~(j * b), l = ~~(k + b), m = i[0], n = i[0], o = k; l > o; o += c) {
+                var p = i[o];
+                p > n && (n = p), m > p && (m = p);
+            }
+            h[2 * j] = n, h[2 * j + 1] = m, (0 == g || n > f[2 * j]) && (f[2 * j] = n), (0 == g || m < f[2 * j + 1]) && (f[2 * j + 1] = m);
+        }
+        return this.params.splitChannels ? e : f;
+    },
+    getPlayedPercents: function() {
+        return this.state.getPlayedPercents.call(this);
+    },
+    disconnectSource: function() {
+        this.source && this.source.disconnect();
+    },
+    destroy: function() {
+        this.isPaused() || this.pause(), this.unAll(), this.buffer = null, this.disconnectFilters(), 
+        this.disconnectSource(), this.gainNode.disconnect(), this.scriptNode.disconnect(), 
+        this.analyser.disconnect();
+    },
+    load: function(a) {
+        this.startPosition = 0, this.lastPlay = this.ac.currentTime, this.buffer = a, this.createSource();
+    },
+    createSource: function() {
+        this.disconnectSource(), this.source = this.ac.createBufferSource(), this.source.start = this.source.start || this.source.noteGrainOn, 
+        this.source.stop = this.source.stop || this.source.noteOff, this.source.playbackRate.value = this.playbackRate, 
+        this.source.buffer = this.buffer, this.source.connect(this.analyser);
+    },
+    isPaused: function() {
+        return this.state !== this.states[this.PLAYING_STATE];
+    },
+    getDuration: function() {
+        return this.buffer ? this.buffer.duration : 0;
+    },
+    seekTo: function(a, b) {
+        return this.scheduledPause = null, null == a && (a = this.getCurrentTime(), a >= this.getDuration() && (a = 0)), 
+        null == b && (b = this.getDuration()), this.startPosition = a, this.lastPlay = this.ac.currentTime, 
+        this.state === this.states[this.FINISHED_STATE] && this.setState(this.PAUSED_STATE), 
+        {
+            start: a,
+            end: b
+        };
+    },
+    getPlayedTime: function() {
+        return (this.ac.currentTime - this.lastPlay) * this.playbackRate;
+    },
+    play: function(a, b) {
+        this.createSource();
+        var c = this.seekTo(a, b);
+        a = c.start, b = c.end, this.scheduledPause = b, this.source.start(0, a, b - a), 
+        this.setState(this.PLAYING_STATE), this.fireEvent("play");
+    },
+    pause: function() {
+        this.scheduledPause = null, this.startPosition += this.getPlayedTime(), this.source && this.source.stop(0), 
+        this.setState(this.PAUSED_STATE), this.fireEvent("pause");
+    },
+    getCurrentTime: function() {
+        return this.state.getCurrentTime.call(this);
+    },
+    setPlaybackRate: function(a) {
+        a = a || 1, this.isPaused() ? this.playbackRate = a : (this.pause(), this.playbackRate = a, 
+        this.play());
+    }
+}, WaveSurfer.WebAudio.state = {}, WaveSurfer.WebAudio.state.playing = {
+    init: function() {
+        this.addOnAudioProcess();
+    },
+    getPlayedPercents: function() {
+        var a = this.getDuration();
+        return this.getCurrentTime() / a || 0;
+    },
+    getCurrentTime: function() {
+        return this.startPosition + this.getPlayedTime();
+    }
+}, WaveSurfer.WebAudio.state.paused = {
+    init: function() {
+        this.removeOnAudioProcess();
+    },
+    getPlayedPercents: function() {
+        var a = this.getDuration();
+        return this.getCurrentTime() / a || 0;
+    },
+    getCurrentTime: function() {
+        return this.startPosition;
+    }
+}, WaveSurfer.WebAudio.state.finished = {
+    init: function() {
+        this.removeOnAudioProcess(), this.fireEvent("finish");
+    },
+    getPlayedPercents: function() {
+        return 1;
+    },
+    getCurrentTime: function() {
+        return this.getDuration();
+    }
+}, WaveSurfer.util.extend(WaveSurfer.WebAudio, WaveSurfer.Observer), WaveSurfer.MediaElement = Object.create(WaveSurfer.WebAudio), 
+WaveSurfer.util.extend(WaveSurfer.MediaElement, {
+    init: function(a) {
+        this.params = a, this.media = {
+            currentTime: 0,
+            duration: 0,
+            paused: !0,
+            playbackRate: 1,
+            play: function() {},
+            pause: function() {}
+        }, this.mediaType = a.mediaType.toLowerCase(), this.elementPosition = a.elementPosition;
+    },
+    load: function(a, b, c) {
+        var d = this, e = document.createElement(this.mediaType);
+        e.controls = !1, e.autoplay = !1, e.preload = "auto", e.src = a, e.addEventListener("error", function() {
+            d.fireEvent("error", "Error loading media element");
+        }), e.addEventListener("canplay", function() {
+            d.fireEvent("canplay");
+        }), e.addEventListener("ended", function() {
+            d.fireEvent("finish");
+        }), e.addEventListener("timeupdate", function() {
+            d.fireEvent("audioprocess", d.getCurrentTime());
+        });
+        var f = b.querySelector(this.mediaType);
+        f && b.removeChild(f), b.appendChild(e), this.media = e, this.peaks = c, this.onPlayEnd = null, 
+        this.buffer = null, this.setPlaybackRate(this.playbackRate);
+    },
+    isPaused: function() {
+        return !this.media || this.media.paused;
+    },
+    getDuration: function() {
+        var a = this.media.duration;
+        return a >= 1 / 0 && (a = this.media.seekable.end()), a;
+    },
+    getCurrentTime: function() {
+        return this.media && this.media.currentTime;
+    },
+    getPlayedPercents: function() {
+        return this.getCurrentTime() / this.getDuration() || 0;
+    },
+    setPlaybackRate: function(a) {
+        this.playbackRate = a || 1, this.media.playbackRate = this.playbackRate;
+    },
+    seekTo: function(a) {
+        null != a && (this.media.currentTime = a), this.clearPlayEnd();
+    },
+    play: function(a, b) {
+        this.seekTo(a), this.media.play(), b && this.setPlayEnd(b), this.fireEvent("play");
+    },
+    pause: function() {
+        this.media && this.media.pause(), this.clearPlayEnd(), this.fireEvent("pause");
+    },
+    setPlayEnd: function(a) {
+        var b = this;
+        this.onPlayEnd = function(c) {
+            c >= a && (b.pause(), b.seekTo(a));
+        }, this.on("audioprocess", this.onPlayEnd);
+    },
+    clearPlayEnd: function() {
+        this.onPlayEnd && (this.un("audioprocess", this.onPlayEnd), this.onPlayEnd = null);
+    },
+    getPeaks: function(a) {
+        return this.buffer ? WaveSurfer.WebAudio.getPeaks.call(this, a) : this.peaks || [];
+    },
+    getVolume: function() {
+        return this.media.volume;
+    },
+    setVolume: function(a) {
+        this.media.volume = a;
+    },
+    destroy: function() {
+        this.pause(), this.unAll(), this.media && this.media.parentNode && this.media.parentNode.removeChild(this.media), 
+        this.media = null;
+    }
+}), WaveSurfer.AudioElement = WaveSurfer.MediaElement, WaveSurfer.Drawer = {
+    init: function(a, b) {
+        this.container = a, this.params = b, this.width = 0, this.height = b.height * this.params.pixelRatio, 
+        this.lastPos = 0, this.createWrapper(), this.createElements();
+    },
+    createWrapper: function() {
+        this.wrapper = this.container.appendChild(document.createElement("wave")), this.style(this.wrapper, {
+            display: "block",
+            position: "relative",
+            userSelect: "none",
+            webkitUserSelect: "none",
+            height: this.params.height + "px"
+        }), (this.params.fillParent || this.params.scrollParent) && this.style(this.wrapper, {
+            width: "100%",
+            overflowX: this.params.hideScrollbar ? "hidden" : "auto",
+            overflowY: "hidden"
+        }), this.setupWrapperEvents();
+    },
+    handleEvent: function(a) {
+        a.preventDefault();
+        var b = this.wrapper.getBoundingClientRect();
+        return (a.clientX - b.left + this.wrapper.scrollLeft) / this.wrapper.scrollWidth || 0;
+    },
+    setupWrapperEvents: function() {
+        var a = this;
+        this.wrapper.addEventListener("click", function(b) {
+            var c = a.wrapper.offsetHeight - a.wrapper.clientHeight;
+            if (0 != c) {
+                var d = a.wrapper.getBoundingClientRect();
+                if (b.clientY >= d.bottom - c) return;
+            }
+            a.params.interact && a.fireEvent("click", b, a.handleEvent(b));
+        }), this.wrapper.addEventListener("scroll", function(b) {
+            a.fireEvent("scroll", b);
+        });
+    },
+    drawPeaks: function(a, b) {
+        this.resetScroll(), this.setWidth(b), this.params.barWidth ? this.drawBars(a) : this.drawWave(a);
+    },
+    style: function(a, b) {
+        return Object.keys(b).forEach(function(c) {
+            a.style[c] !== b[c] && (a.style[c] = b[c]);
+        }), a;
+    },
+    resetScroll: function() {
+        null !== this.wrapper && (this.wrapper.scrollLeft = 0);
+    },
+    recenter: function(a) {
+        var b = this.wrapper.scrollWidth * a;
+        this.recenterOnPosition(b, !0);
+    },
+    recenterOnPosition: function(a, b) {
+        var c = this.wrapper.scrollLeft, d = ~~(this.wrapper.clientWidth / 2), e = a - d, f = e - c, g = this.wrapper.scrollWidth - this.wrapper.clientWidth;
+        if (0 != g) {
+            if (!b && f >= -d && d > f) {
+                var h = 5;
+                f = Math.max(-h, Math.min(h, f)), e = c + f;
+            }
+            e = Math.max(0, Math.min(g, e)), e != c && (this.wrapper.scrollLeft = e);
+        }
+    },
+    getWidth: function() {
+        return Math.round(this.container.clientWidth * this.params.pixelRatio);
+    },
+    setWidth: function(a) {
+        a != this.width && (this.width = a, this.params.fillParent || this.params.scrollParent ? this.style(this.wrapper, {
+            width: ""
+        }) : this.style(this.wrapper, {
+            width: ~~(this.width / this.params.pixelRatio) + "px"
+        }), this.updateSize());
+    },
+    setHeight: function(a) {
+        a != this.height && (this.height = a, this.style(this.wrapper, {
+            height: ~~(this.height / this.params.pixelRatio) + "px"
+        }), this.updateSize());
+    },
+    progress: function(a) {
+        var b = 1 / this.params.pixelRatio, c = Math.round(a * this.width) * b;
+        if (c < this.lastPos || c - this.lastPos >= b) {
+            if (this.lastPos = c, this.params.scrollParent) {
+                var d = ~~(this.wrapper.scrollWidth * a);
+                this.recenterOnPosition(d);
+            }
+            this.updateProgress(a);
+        }
+    },
+    destroy: function() {
+        this.unAll(), this.wrapper && (this.container.removeChild(this.wrapper), this.wrapper = null);
+    },
+    createElements: function() {},
+    updateSize: function() {},
+    drawWave: function(a, b) {},
+    clearWave: function() {},
+    updateProgress: function(a) {}
+}, WaveSurfer.util.extend(WaveSurfer.Drawer, WaveSurfer.Observer), WaveSurfer.Drawer.Canvas = Object.create(WaveSurfer.Drawer), 
+WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
+    createElements: function() {
+        var a = this.wrapper.appendChild(this.style(document.createElement("canvas"), {
+            position: "absolute",
+            zIndex: 1,
+            left: 0,
+            top: 0,
+            bottom: 0
+        }));
+        if (this.waveCc = a.getContext("2d"), this.progressWave = this.wrapper.appendChild(this.style(document.createElement("wave"), {
+            position: "absolute",
+            zIndex: 2,
+            left: 0,
+            top: 0,
+            bottom: 0,
+            overflow: "hidden",
+            width: "0",
+            display: "none",
+            boxSizing: "border-box",
+            borderRightStyle: "solid",
+            borderRightWidth: this.params.cursorWidth + "px",
+            borderRightColor: this.params.cursorColor
+        })), this.params.waveColor != this.params.progressColor) {
+            var b = this.progressWave.appendChild(document.createElement("canvas"));
+            this.progressCc = b.getContext("2d");
+        }
+    },
+    updateSize: function() {
+        var a = Math.round(this.width / this.params.pixelRatio);
+        this.waveCc.canvas.width = this.width, this.waveCc.canvas.height = this.height, 
+        this.style(this.waveCc.canvas, {
+            width: a + "px"
+        }), this.style(this.progressWave, {
+            display: "block"
+        }), this.progressCc && (this.progressCc.canvas.width = this.width, this.progressCc.canvas.height = this.height, 
+        this.style(this.progressCc.canvas, {
+            width: a + "px"
+        })), this.clearWave();
+    },
+    clearWave: function() {
+        this.waveCc.clearRect(0, 0, this.width, this.height), this.progressCc && this.progressCc.clearRect(0, 0, this.width, this.height);
+    },
+    drawBars: function(a, b) {
+        if (a[0] instanceof Array) {
+            var c = a;
+            if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), 
+            void c.forEach(this.drawBars, this);
+            a = c[0];
+        }
+        var d = .5 / this.params.pixelRatio, e = this.width, f = this.params.height * this.params.pixelRatio, g = f * b || 0, h = f / 2, i = ~~(a.length / 2), j = this.params.barWidth * this.params.pixelRatio, k = Math.max(this.params.pixelRatio, ~~(j / 2)), l = j + k, m = 1;
+        if (this.params.normalize) {
+            var n, o;
+            o = Math.max.apply(Math, a), n = Math.min.apply(Math, a), m = o, -n > m && (m = -n);
+        }
+        var p = i / e;
+        this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), 
+        [ this.waveCc, this.progressCc ].forEach(function(b) {
+            if (b) if (this.params.reflection) for (var c = 0; e > c; c += l) {
+                var f = Math.round(a[2 * c * p] / m * h);
+                b.fillRect(c + d, h - f + g, j + d, 2 * f);
             } else {
-                if (encoded == null || isDefaultValue && squash !== false) continue;
-                if (!isArray(encoded)) encoded = [ encoded ];
-                encoded = map(encoded, encodeURIComponent).join("&" + name + "=");
-                result += (search ? "&" : "?") + (name + "=" + encoded);
-                search = true;
+                for (var c = 0; e > c; c += l) {
+                    var f = Math.round(a[2 * c * p] / m * h);
+                    b.fillRect(c + d, h - f + g, j + d, f);
+                }
+                for (var c = 0; e > c; c += l) {
+                    var f = Math.round(a[2 * c * p + 1] / m * h);
+                    b.fillRect(c + d, h - f + g, j + d, f);
+                }
             }
+        }, this);
+    },
+    drawWave: function(a, b) {
+        if (a[0] instanceof Array) {
+            var c = a;
+            if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), 
+            void c.forEach(this.drawWave, this);
+            a = c[0];
         }
-        return result;
-    };
-    function Type(config) {
-        extend(this, config);
-    }
-    Type.prototype.is = function(val, key) {
-        return true;
-    };
-    Type.prototype.encode = function(val, key) {
-        return val;
-    };
-    Type.prototype.decode = function(val, key) {
-        return val;
-    };
-    Type.prototype.equals = function(a, b) {
-        return a == b;
-    };
-    Type.prototype.$subPattern = function() {
-        var sub = this.pattern.toString();
-        return sub.substr(1, sub.length - 2);
-    };
-    Type.prototype.pattern = /.*/;
-    Type.prototype.toString = function() {
-        return "{Type:" + this.name + "}";
-    };
-    Type.prototype.$normalize = function(val) {
-        return this.is(val) ? val : this.decode(val);
-    };
-    Type.prototype.$asArray = function(mode, isSearch) {
-        if (!mode) return this;
-        if (mode === "auto" && !isSearch) throw new Error("'auto' array mode is for query parameters only");
-        function ArrayType(type, mode) {
-            function bindTo(type, callbackName) {
-                return function() {
-                    return type[callbackName].apply(type, arguments);
-                };
-            }
-            function arrayWrap(val) {
-                return isArray(val) ? val : isDefined(val) ? [ val ] : [];
-            }
-            function arrayUnwrap(val) {
-                switch (val.length) {
-                  case 0:
-                    return undefined;
-
-                  case 1:
-                    return mode === "auto" ? val[0] : val;
-
-                  default:
-                    return val;
-                }
-            }
-            function falsey(val) {
-                return !val;
-            }
-            function arrayHandler(callback, allTruthyMode) {
-                return function handleArray(val) {
-                    val = arrayWrap(val);
-                    var result = map(val, callback);
-                    if (allTruthyMode === true) return filter(result, falsey).length === 0;
-                    return arrayUnwrap(result);
-                };
-            }
-            function arrayEqualsHandler(callback) {
-                return function handleArray(val1, val2) {
-                    var left = arrayWrap(val1), right = arrayWrap(val2);
-                    if (left.length !== right.length) return false;
-                    for (var i = 0; i < left.length; i++) {
-                        if (!callback(left[i], right[i])) return false;
-                    }
-                    return true;
-                };
-            }
-            this.encode = arrayHandler(bindTo(type, "encode"));
-            this.decode = arrayHandler(bindTo(type, "decode"));
-            this.is = arrayHandler(bindTo(type, "is"), true);
-            this.equals = arrayEqualsHandler(bindTo(type, "equals"));
-            this.pattern = type.pattern;
-            this.$normalize = arrayHandler(bindTo(type, "$normalize"));
-            this.name = type.name;
-            this.$arrayMode = mode;
+        var d = .5 / this.params.pixelRatio, e = this.params.height * this.params.pixelRatio, f = e * b || 0, g = e / 2, h = ~~(a.length / 2), i = 1;
+        this.params.fillParent && this.width != h && (i = this.width / h);
+        var j = 1;
+        if (this.params.normalize) {
+            var k, l;
+            l = Math.max.apply(Math, a), k = Math.min.apply(Math, a), j = l, -k > j && (j = -k);
         }
-        return new ArrayType(this, mode);
-    };
-    function $UrlMatcherFactory() {
-        $$UMFP = this;
-        var isCaseInsensitive = false, isStrictMode = true, defaultSquashPolicy = false;
-        function valToString(val) {
-            return val != null ? val.toString().replace(/\//g, "%2F") : val;
-        }
-        function valFromString(val) {
-            return val != null ? val.toString().replace(/%2F/g, "/") : val;
-        }
-        var $types = {}, enqueue = true, typeQueue = [], injector, defaultTypes = {
-            string: {
-                encode: valToString,
-                decode: valFromString,
-                is: function(val) {
-                    return val == null || !isDefined(val) || typeof val === "string";
-                },
-                pattern: /[^/]*/
-            },
-            "int": {
-                encode: valToString,
-                decode: function(val) {
-                    return parseInt(val, 10);
-                },
-                is: function(val) {
-                    return isDefined(val) && this.decode(val.toString()) === val;
-                },
-                pattern: /\d+/
-            },
-            bool: {
-                encode: function(val) {
-                    return val ? 1 : 0;
-                },
-                decode: function(val) {
-                    return parseInt(val, 10) !== 0;
-                },
-                is: function(val) {
-                    return val === true || val === false;
-                },
-                pattern: /0|1/
-            },
-            date: {
-                encode: function(val) {
-                    if (!this.is(val)) return undefined;
-                    return [ val.getFullYear(), ("0" + (val.getMonth() + 1)).slice(-2), ("0" + val.getDate()).slice(-2) ].join("-");
-                },
-                decode: function(val) {
-                    if (this.is(val)) return val;
-                    var match = this.capture.exec(val);
-                    return match ? new Date(match[1], match[2] - 1, match[3]) : undefined;
-                },
-                is: function(val) {
-                    return val instanceof Date && !isNaN(val.valueOf());
-                },
-                equals: function(a, b) {
-                    return this.is(a) && this.is(b) && a.toISOString() === b.toISOString();
-                },
-                pattern: /[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[1-2][0-9]|3[0-1])/,
-                capture: /([0-9]{4})-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])/
-            },
-            json: {
-                encode: angular.toJson,
-                decode: angular.fromJson,
-                is: angular.isObject,
-                equals: angular.equals,
-                pattern: /[^/]*/
-            },
-            any: {
-                encode: angular.identity,
-                decode: angular.identity,
-                equals: angular.equals,
-                pattern: /.*/
-            }
-        };
-        function getDefaultConfig() {
-            return {
-                strict: isStrictMode,
-                caseInsensitive: isCaseInsensitive
-            };
-        }
-        function isInjectable(value) {
-            return isFunction(value) || isArray(value) && isFunction(value[value.length - 1]);
-        }
-        $UrlMatcherFactory.$$getDefaultValue = function(config) {
-            if (!isInjectable(config.value)) return config.value;
-            if (!injector) throw new Error("Injectable functions cannot be called at configuration time");
-            return injector.invoke(config.value);
-        };
-        this.caseInsensitive = function(value) {
-            if (isDefined(value)) isCaseInsensitive = value;
-            return isCaseInsensitive;
-        };
-        this.strictMode = function(value) {
-            if (isDefined(value)) isStrictMode = value;
-            return isStrictMode;
-        };
-        this.defaultSquashPolicy = function(value) {
-            if (!isDefined(value)) return defaultSquashPolicy;
-            if (value !== true && value !== false && !isString(value)) throw new Error("Invalid squash policy: " + value + ". Valid policies: false, true, arbitrary-string");
-            defaultSquashPolicy = value;
-            return value;
-        };
-        this.compile = function(pattern, config) {
-            return new UrlMatcher(pattern, extend(getDefaultConfig(), config));
-        };
-        this.isMatcher = function(o) {
-            if (!isObject(o)) return false;
-            var result = true;
-            forEach(UrlMatcher.prototype, function(val, name) {
-                if (isFunction(val)) {
-                    result = result && (isDefined(o[name]) && isFunction(o[name]));
+        this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), 
+        [ this.waveCc, this.progressCc ].forEach(function(b) {
+            if (b) {
+                b.beginPath(), b.moveTo(d, g + f);
+                for (var c = 0; h > c; c++) {
+                    var e = Math.round(a[2 * c] / j * g);
+                    b.lineTo(c * i + d, g - e + f);
                 }
-            });
-            return result;
-        };
-        this.type = function(name, definition, definitionFn) {
-            if (!isDefined(definition)) return $types[name];
-            if ($types.hasOwnProperty(name)) throw new Error("A type named '" + name + "' has already been defined.");
-            $types[name] = new Type(extend({
-                name: name
-            }, definition));
-            if (definitionFn) {
-                typeQueue.push({
-                    name: name,
-                    def: definitionFn
-                });
-                if (!enqueue) flushTypeQueue();
-            }
-            return this;
-        };
-        function flushTypeQueue() {
-            while (typeQueue.length) {
-                var type = typeQueue.shift();
-                if (type.pattern) throw new Error("You cannot override a type's .pattern at runtime.");
-                angular.extend($types[type.name], injector.invoke(type.def));
-            }
-        }
-        forEach(defaultTypes, function(type, name) {
-            $types[name] = new Type(extend({
-                name: name
-            }, type));
-        });
-        $types = inherit($types, {});
-        this.$get = [ "$injector", function($injector) {
-            injector = $injector;
-            enqueue = false;
-            flushTypeQueue();
-            forEach(defaultTypes, function(type, name) {
-                if (!$types[name]) $types[name] = new Type(type);
-            });
-            return this;
-        } ];
-        this.Param = function Param(id, type, config, location) {
-            var self = this;
-            config = unwrapShorthand(config);
-            type = getType(config, type, location);
-            var arrayMode = getArrayMode();
-            type = arrayMode ? type.$asArray(arrayMode, location === "search") : type;
-            if (type.name === "string" && !arrayMode && location === "path" && config.value === undefined) config.value = "";
-            var isOptional = config.value !== undefined;
-            var squash = getSquashPolicy(config, isOptional);
-            var replace = getReplace(config, arrayMode, isOptional, squash);
-            function unwrapShorthand(config) {
-                var keys = isObject(config) ? objectKeys(config) : [];
-                var isShorthand = indexOf(keys, "value") === -1 && indexOf(keys, "type") === -1 && indexOf(keys, "squash") === -1 && indexOf(keys, "array") === -1;
-                if (isShorthand) config = {
-                    value: config
-                };
-                config.$$fn = isInjectable(config.value) ? config.value : function() {
-                    return config.value;
-                };
-                return config;
-            }
-            function getType(config, urlType, location) {
-                if (config.type && urlType) throw new Error("Param '" + id + "' has two type configurations.");
-                if (urlType) return urlType;
-                if (!config.type) return location === "config" ? $types.any : $types.string;
-                return config.type instanceof Type ? config.type : new Type(config.type);
-            }
-            function getArrayMode() {
-                var arrayDefaults = {
-                    array: location === "search" ? "auto" : false
-                };
-                var arrayParamNomenclature = id.match(/\[\]$/) ? {
-                    array: true
-                } : {};
-                return extend(arrayDefaults, arrayParamNomenclature, config).array;
-            }
-            function getSquashPolicy(config, isOptional) {
-                var squash = config.squash;
-                if (!isOptional || squash === false) return false;
-                if (!isDefined(squash) || squash == null) return defaultSquashPolicy;
-                if (squash === true || isString(squash)) return squash;
-                throw new Error("Invalid squash policy: '" + squash + "'. Valid policies: false, true, or arbitrary string");
-            }
-            function getReplace(config, arrayMode, isOptional, squash) {
-                var replace, configuredKeys, defaultPolicy = [ {
-                    from: "",
-                    to: isOptional || arrayMode ? undefined : ""
-                }, {
-                    from: null,
-                    to: isOptional || arrayMode ? undefined : ""
-                } ];
-                replace = isArray(config.replace) ? config.replace : [];
-                if (isString(squash)) replace.push({
-                    from: squash,
-                    to: undefined
-                });
-                configuredKeys = map(replace, function(item) {
-                    return item.from;
-                });
-                return filter(defaultPolicy, function(item) {
-                    return indexOf(configuredKeys, item.from) === -1;
-                }).concat(replace);
-            }
-            function $$getDefaultValue() {
-                if (!injector) throw new Error("Injectable functions cannot be called at configuration time");
-                var defaultValue = injector.invoke(config.$$fn);
-                if (defaultValue !== null && defaultValue !== undefined && !self.type.is(defaultValue)) throw new Error("Default value (" + defaultValue + ") for parameter '" + self.id + "' is not an instance of Type (" + self.type.name + ")");
-                return defaultValue;
-            }
-            function $value(value) {
-                function hasReplaceVal(val) {
-                    return function(obj) {
-                        return obj.from === val;
-                    };
+                for (var c = h - 1; c >= 0; c--) {
+                    var e = Math.round(a[2 * c + 1] / j * g);
+                    b.lineTo(c * i + d, g - e + f);
                 }
-                function $replace(value) {
-                    var replacement = map(filter(self.replace, hasReplaceVal(value)), function(obj) {
-                        return obj.to;
-                    });
-                    return replacement.length ? replacement[0] : value;
-                }
-                value = $replace(value);
-                return !isDefined(value) ? $$getDefaultValue() : self.type.$normalize(value);
+                b.closePath(), b.fill(), b.fillRect(0, g + f - d, this.width, d);
             }
-            function toString() {
-                return "{Param:" + id + " " + type + " squash: '" + squash + "' optional: " + isOptional + "}";
-            }
-            extend(this, {
-                id: id,
-                type: type,
-                location: location,
-                array: arrayMode,
-                squash: squash,
-                replace: replace,
-                isOptional: isOptional,
-                value: $value,
-                dynamic: undefined,
-                config: config,
-                toString: toString
-            });
-        };
-        function ParamSet(params) {
-            extend(this, params || {});
-        }
-        ParamSet.prototype = {
-            $$new: function() {
-                return inherit(this, extend(new ParamSet(), {
-                    $$parent: this
-                }));
-            },
-            $$keys: function() {
-                var keys = [], chain = [], parent = this, ignore = objectKeys(ParamSet.prototype);
-                while (parent) {
-                    chain.push(parent);
-                    parent = parent.$$parent;
-                }
-                chain.reverse();
-                forEach(chain, function(paramset) {
-                    forEach(objectKeys(paramset), function(key) {
-                        if (indexOf(keys, key) === -1 && indexOf(ignore, key) === -1) keys.push(key);
-                    });
-                });
-                return keys;
-            },
-            $$values: function(paramValues) {
-                var values = {}, self = this;
-                forEach(self.$$keys(), function(key) {
-                    values[key] = self[key].value(paramValues && paramValues[key]);
-                });
-                return values;
-            },
-            $$equals: function(paramValues1, paramValues2) {
-                var equal = true, self = this;
-                forEach(self.$$keys(), function(key) {
-                    var left = paramValues1 && paramValues1[key], right = paramValues2 && paramValues2[key];
-                    if (!self[key].type.equals(left, right)) equal = false;
-                });
-                return equal;
-            },
-            $$validates: function $$validate(paramValues) {
-                var keys = this.$$keys(), i, param, rawVal, normalized, encoded;
-                for (i = 0; i < keys.length; i++) {
-                    param = this[keys[i]];
-                    rawVal = paramValues[keys[i]];
-                    if ((rawVal === undefined || rawVal === null) && param.isOptional) break;
-                    normalized = param.type.$normalize(rawVal);
-                    if (!param.type.is(normalized)) return false;
-                    encoded = param.type.encode(normalized);
-                    if (angular.isString(encoded) && !param.type.pattern.exec(encoded)) return false;
-                }
-                return true;
-            },
-            $$parent: undefined
-        };
-        this.ParamSet = ParamSet;
-    }
-    angular.module("ui.router.util").provider("$urlMatcherFactory", $UrlMatcherFactory);
-    angular.module("ui.router.util").run([ "$urlMatcherFactory", function($urlMatcherFactory) {} ]);
-    $UrlRouterProvider.$inject = [ "$locationProvider", "$urlMatcherFactoryProvider" ];
-    function $UrlRouterProvider($locationProvider, $urlMatcherFactory) {
-        var rules = [], otherwise = null, interceptDeferred = false, listener;
-        function regExpPrefix(re) {
-            var prefix = /^\^((?:\\[^a-zA-Z0-9]|[^\\\[\]\^$*+?.()|{}]+)*)/.exec(re.source);
-            return prefix != null ? prefix[1].replace(/\\(.)/g, "$1") : "";
-        }
-        function interpolate(pattern, match) {
-            return pattern.replace(/\$(\$|\d{1,2})/, function(m, what) {
-                return match[what === "$" ? 0 : Number(what)];
-            });
-        }
-        this.rule = function(rule) {
-            if (!isFunction(rule)) throw new Error("'rule' must be a function");
-            rules.push(rule);
-            return this;
-        };
-        this.otherwise = function(rule) {
-            if (isString(rule)) {
-                var redirect = rule;
-                rule = function() {
-                    return redirect;
-                };
-            } else if (!isFunction(rule)) throw new Error("'rule' must be a function");
-            otherwise = rule;
-            return this;
-        };
-        function handleIfMatch($injector, handler, match) {
-            if (!match) return false;
-            var result = $injector.invoke(handler, handler, {
-                $match: match
-            });
-            return isDefined(result) ? result : true;
-        }
-        this.when = function(what, handler) {
-            var redirect, handlerIsString = isString(handler);
-            if (isString(what)) what = $urlMatcherFactory.compile(what);
-            if (!handlerIsString && !isFunction(handler) && !isArray(handler)) throw new Error("invalid 'handler' in when()");
-            var strategies = {
-                matcher: function(what, handler) {
-                    if (handlerIsString) {
-                        redirect = $urlMatcherFactory.compile(handler);
-                        handler = [ "$match", function($match) {
-                            return redirect.format($match);
-                        } ];
-                    }
-                    return extend(function($injector, $location) {
-                        return handleIfMatch($injector, handler, what.exec($location.path(), $location.search()));
-                    }, {
-                        prefix: isString(what.prefix) ? what.prefix : ""
-                    });
-                },
-                regex: function(what, handler) {
-                    if (what.global || what.sticky) throw new Error("when() RegExp must not be global or sticky");
-                    if (handlerIsString) {
-                        redirect = handler;
-                        handler = [ "$match", function($match) {
-                            return interpolate(redirect, $match);
-                        } ];
-                    }
-                    return extend(function($injector, $location) {
-                        return handleIfMatch($injector, handler, what.exec($location.path()));
-                    }, {
-                        prefix: regExpPrefix(what)
-                    });
-                }
-            };
-            var check = {
-                matcher: $urlMatcherFactory.isMatcher(what),
-                regex: what instanceof RegExp
-            };
-            for (var n in check) {
-                if (check[n]) return this.rule(strategies[n](what, handler));
-            }
-            throw new Error("invalid 'what' in when()");
-        };
-        this.deferIntercept = function(defer) {
-            if (defer === undefined) defer = true;
-            interceptDeferred = defer;
-        };
-        this.$get = $get;
-        $get.$inject = [ "$location", "$rootScope", "$injector", "$browser" ];
-        function $get($location, $rootScope, $injector, $browser) {
-            var baseHref = $browser.baseHref(), location = $location.url(), lastPushedUrl;
-            function appendBasePath(url, isHtml5, absolute) {
-                if (baseHref === "/") return url;
-                if (isHtml5) return baseHref.slice(0, -1) + url;
-                if (absolute) return baseHref.slice(1) + url;
-                return url;
-            }
-            function update(evt) {
-                if (evt && evt.defaultPrevented) return;
-                var ignoreUpdate = lastPushedUrl && $location.url() === lastPushedUrl;
-                lastPushedUrl = undefined;
-                function check(rule) {
-                    var handled = rule($injector, $location);
-                    if (!handled) return false;
-                    if (isString(handled)) $location.replace().url(handled);
-                    return true;
-                }
-                var n = rules.length, i;
-                for (i = 0; i < n; i++) {
-                    if (check(rules[i])) return;
-                }
-                if (otherwise) check(otherwise);
-            }
-            function listen() {
-                listener = listener || $rootScope.$on("$locationChangeSuccess", update);
-                return listener;
-            }
-            if (!interceptDeferred) listen();
-            return {
-                sync: function() {
-                    update();
-                },
-                listen: function() {
-                    return listen();
-                },
-                update: function(read) {
-                    if (read) {
-                        location = $location.url();
-                        return;
-                    }
-                    if ($location.url() === location) return;
-                    $location.url(location);
-                    $location.replace();
-                },
-                push: function(urlMatcher, params, options) {
-                    var url = urlMatcher.format(params || {});
-                    if (url !== null && params && params["#"]) {
-                        url += "#" + params["#"];
-                    }
-                    $location.url(url);
-                    lastPushedUrl = options && options.$$avoidResync ? $location.url() : undefined;
-                    if (options && options.replace) $location.replace();
-                },
-                href: function(urlMatcher, params, options) {
-                    if (!urlMatcher.validates(params)) return null;
-                    var isHtml5 = $locationProvider.html5Mode();
-                    if (angular.isObject(isHtml5)) {
-                        isHtml5 = isHtml5.enabled;
-                    }
-                    var url = urlMatcher.format(params);
-                    options = options || {};
-                    if (!isHtml5 && url !== null) {
-                        url = "#" + $locationProvider.hashPrefix() + url;
-                    }
-                    if (url !== null && params && params["#"]) {
-                        url += "#" + params["#"];
-                    }
-                    url = appendBasePath(url, isHtml5, options.absolute);
-                    if (!options.absolute || !url) {
-                        return url;
-                    }
-                    var slash = !isHtml5 && url ? "/" : "", port = $location.port();
-                    port = port === 80 || port === 443 ? "" : ":" + port;
-                    return [ $location.protocol(), "://", $location.host(), port, slash, url ].join("");
-                }
-            };
-        }
-    }
-    angular.module("ui.router.router").provider("$urlRouter", $UrlRouterProvider);
-    $StateProvider.$inject = [ "$urlRouterProvider", "$urlMatcherFactoryProvider" ];
-    function $StateProvider($urlRouterProvider, $urlMatcherFactory) {
-        var root, states = {}, $state, queue = {}, abstractKey = "abstract";
-        var stateBuilder = {
-            parent: function(state) {
-                if (isDefined(state.parent) && state.parent) return findState(state.parent);
-                var compositeName = /^(.+)\.[^.]+$/.exec(state.name);
-                return compositeName ? findState(compositeName[1]) : root;
-            },
-            data: function(state) {
-                if (state.parent && state.parent.data) {
-                    state.data = state.self.data = extend({}, state.parent.data, state.data);
-                }
-                return state.data;
-            },
-            url: function(state) {
-                var url = state.url, config = {
-                    params: state.params || {}
-                };
-                if (isString(url)) {
-                    if (url.charAt(0) == "^") return $urlMatcherFactory.compile(url.substring(1), config);
-                    return (state.parent.navigable || root).url.concat(url, config);
-                }
-                if (!url || $urlMatcherFactory.isMatcher(url)) return url;
-                throw new Error("Invalid url '" + url + "' in state '" + state + "'");
-            },
-            navigable: function(state) {
-                return state.url ? state : state.parent ? state.parent.navigable : null;
-            },
-            ownParams: function(state) {
-                var params = state.url && state.url.params || new $$UMFP.ParamSet();
-                forEach(state.params || {}, function(config, id) {
-                    if (!params[id]) params[id] = new $$UMFP.Param(id, null, config, "config");
-                });
-                return params;
-            },
-            params: function(state) {
-                return state.parent && state.parent.params ? extend(state.parent.params.$$new(), state.ownParams) : new $$UMFP.ParamSet();
-            },
-            views: function(state) {
-                var views = {};
-                forEach(isDefined(state.views) ? state.views : {
-                    "": state
-                }, function(view, name) {
-                    if (name.indexOf("@") < 0) name += "@" + state.parent.name;
-                    views[name] = view;
-                });
-                return views;
-            },
-            path: function(state) {
-                return state.parent ? state.parent.path.concat(state) : [];
-            },
-            includes: function(state) {
-                var includes = state.parent ? extend({}, state.parent.includes) : {};
-                includes[state.name] = true;
-                return includes;
-            },
-            $delegates: {}
-        };
-        function isRelative(stateName) {
-            return stateName.indexOf(".") === 0 || stateName.indexOf("^") === 0;
-        }
-        function findState(stateOrName, base) {
-            if (!stateOrName) return undefined;
-            var isStr = isString(stateOrName), name = isStr ? stateOrName : stateOrName.name, path = isRelative(name);
-            if (path) {
-                if (!base) throw new Error("No reference point given for path '" + name + "'");
-                base = findState(base);
-                var rel = name.split("."), i = 0, pathLength = rel.length, current = base;
-                for (;i < pathLength; i++) {
-                    if (rel[i] === "" && i === 0) {
-                        current = base;
-                        continue;
-                    }
-                    if (rel[i] === "^") {
-                        if (!current.parent) throw new Error("Path '" + name + "' not valid for state '" + base.name + "'");
-                        current = current.parent;
-                        continue;
-                    }
-                    break;
-                }
-                rel = rel.slice(i).join(".");
-                name = current.name + (current.name && rel ? "." : "") + rel;
-            }
-            var state = states[name];
-            if (state && (isStr || !isStr && (state === stateOrName || state.self === stateOrName))) {
-                return state;
-            }
-            return undefined;
-        }
-        function queueState(parentName, state) {
-            if (!queue[parentName]) {
-                queue[parentName] = [];
-            }
-            queue[parentName].push(state);
-        }
-        function flushQueuedChildren(parentName) {
-            var queued = queue[parentName] || [];
-            while (queued.length) {
-                registerState(queued.shift());
-            }
-        }
-        function registerState(state) {
-            state = inherit(state, {
-                self: state,
-                resolve: state.resolve || {},
-                toString: function() {
-                    return this.name;
-                }
-            });
-            var name = state.name;
-            if (!isString(name) || name.indexOf("@") >= 0) throw new Error("State must have a valid name");
-            if (states.hasOwnProperty(name)) throw new Error("State '" + name + "'' is already defined");
-            var parentName = name.indexOf(".") !== -1 ? name.substring(0, name.lastIndexOf(".")) : isString(state.parent) ? state.parent : isObject(state.parent) && isString(state.parent.name) ? state.parent.name : "";
-            if (parentName && !states[parentName]) {
-                return queueState(parentName, state.self);
-            }
-            for (var key in stateBuilder) {
-                if (isFunction(stateBuilder[key])) state[key] = stateBuilder[key](state, stateBuilder.$delegates[key]);
-            }
-            states[name] = state;
-            if (!state[abstractKey] && state.url) {
-                $urlRouterProvider.when(state.url, [ "$match", "$stateParams", function($match, $stateParams) {
-                    if ($state.$current.navigable != state || !equalForKeys($match, $stateParams)) {
-                        $state.transitionTo(state, $match, {
-                            inherit: true,
-                            location: false
-                        });
-                    }
-                } ]);
-            }
-            flushQueuedChildren(name);
-            return state;
-        }
-        function isGlob(text) {
-            return text.indexOf("*") > -1;
-        }
-        function doesStateMatchGlob(glob) {
-            var globSegments = glob.split("."), segments = $state.$current.name.split(".");
-            for (var i = 0, l = globSegments.length; i < l; i++) {
-                if (globSegments[i] === "*") {
-                    segments[i] = "*";
-                }
-            }
-            if (globSegments[0] === "**") {
-                segments = segments.slice(indexOf(segments, globSegments[1]));
-                segments.unshift("**");
-            }
-            if (globSegments[globSegments.length - 1] === "**") {
-                segments.splice(indexOf(segments, globSegments[globSegments.length - 2]) + 1, Number.MAX_VALUE);
-                segments.push("**");
-            }
-            if (globSegments.length != segments.length) {
-                return false;
-            }
-            return segments.join("") === globSegments.join("");
-        }
-        root = registerState({
-            name: "",
-            url: "^",
-            views: null,
-            "abstract": true
-        });
-        root.navigable = null;
-        this.decorator = decorator;
-        function decorator(name, func) {
-            if (isString(name) && !isDefined(func)) {
-                return stateBuilder[name];
-            }
-            if (!isFunction(func) || !isString(name)) {
-                return this;
-            }
-            if (stateBuilder[name] && !stateBuilder.$delegates[name]) {
-                stateBuilder.$delegates[name] = stateBuilder[name];
-            }
-            stateBuilder[name] = func;
-            return this;
-        }
-        this.state = state;
-        function state(name, definition) {
-            if (isObject(name)) definition = name; else definition.name = name;
-            registerState(definition);
-            return this;
-        }
-        this.$get = $get;
-        $get.$inject = [ "$rootScope", "$q", "$view", "$injector", "$resolve", "$stateParams", "$urlRouter", "$location", "$urlMatcherFactory" ];
-        function $get($rootScope, $q, $view, $injector, $resolve, $stateParams, $urlRouter, $location, $urlMatcherFactory) {
-            var TransitionSuperseded = $q.reject(new Error("transition superseded"));
-            var TransitionPrevented = $q.reject(new Error("transition prevented"));
-            var TransitionAborted = $q.reject(new Error("transition aborted"));
-            var TransitionFailed = $q.reject(new Error("transition failed"));
-            function handleRedirect(redirect, state, params, options) {
-                var evt = $rootScope.$broadcast("$stateNotFound", redirect, state, params);
-                if (evt.defaultPrevented) {
-                    $urlRouter.update();
-                    return TransitionAborted;
-                }
-                if (!evt.retry) {
-                    return null;
-                }
-                if (options.$retry) {
-                    $urlRouter.update();
-                    return TransitionFailed;
-                }
-                var retryTransition = $state.transition = $q.when(evt.retry);
-                retryTransition.then(function() {
-                    if (retryTransition !== $state.transition) return TransitionSuperseded;
-                    redirect.options.$retry = true;
-                    return $state.transitionTo(redirect.to, redirect.toParams, redirect.options);
-                }, function() {
-                    return TransitionAborted;
-                });
-                $urlRouter.update();
-                return retryTransition;
-            }
-            root.locals = {
-                resolve: null,
-                globals: {
-                    $stateParams: {}
-                }
-            };
-            $state = {
-                params: {},
-                current: root.self,
-                $current: root,
-                transition: null
-            };
-            $state.reload = function reload(state) {
-                return $state.transitionTo($state.current, $stateParams, {
-                    reload: state || true,
-                    inherit: false,
-                    notify: true
-                });
-            };
-            $state.go = function go(to, params, options) {
-                return $state.transitionTo(to, params, extend({
-                    inherit: true,
-                    relative: $state.$current
-                }, options));
-            };
-            $state.transitionTo = function transitionTo(to, toParams, options) {
-                toParams = toParams || {};
-                options = extend({
-                    location: true,
-                    inherit: false,
-                    relative: null,
-                    notify: true,
-                    reload: false,
-                    $retry: false
-                }, options || {});
-                var from = $state.$current, fromParams = $state.params, fromPath = from.path;
-                var evt, toState = findState(to, options.relative);
-                var hash = toParams["#"];
-                if (!isDefined(toState)) {
-                    var redirect = {
-                        to: to,
-                        toParams: toParams,
-                        options: options
-                    };
-                    var redirectResult = handleRedirect(redirect, from.self, fromParams, options);
-                    if (redirectResult) {
-                        return redirectResult;
-                    }
-                    to = redirect.to;
-                    toParams = redirect.toParams;
-                    options = redirect.options;
-                    toState = findState(to, options.relative);
-                    if (!isDefined(toState)) {
-                        if (!options.relative) throw new Error("No such state '" + to + "'");
-                        throw new Error("Could not resolve '" + to + "' from state '" + options.relative + "'");
-                    }
-                }
-                if (toState[abstractKey]) throw new Error("Cannot transition to abstract state '" + to + "'");
-                if (options.inherit) toParams = inheritParams($stateParams, toParams || {}, $state.$current, toState);
-                if (!toState.params.$$validates(toParams)) return TransitionFailed;
-                toParams = toState.params.$$values(toParams);
-                to = toState;
-                var toPath = to.path;
-                var keep = 0, state = toPath[keep], locals = root.locals, toLocals = [];
-                if (!options.reload) {
-                    while (state && state === fromPath[keep] && state.ownParams.$$equals(toParams, fromParams)) {
-                        locals = toLocals[keep] = state.locals;
-                        keep++;
-                        state = toPath[keep];
-                    }
-                } else if (isString(options.reload) || isObject(options.reload)) {
-                    if (isObject(options.reload) && !options.reload.name) {
-                        throw new Error("Invalid reload state object");
-                    }
-                    var reloadState = options.reload === true ? fromPath[0] : findState(options.reload);
-                    if (options.reload && !reloadState) {
-                        throw new Error("No such reload state '" + (isString(options.reload) ? options.reload : options.reload.name) + "'");
-                    }
-                    while (state && state === fromPath[keep] && state !== reloadState) {
-                        locals = toLocals[keep] = state.locals;
-                        keep++;
-                        state = toPath[keep];
-                    }
-                }
-                if (shouldSkipReload(to, toParams, from, fromParams, locals, options)) {
-                    if (hash) toParams["#"] = hash;
-                    $state.params = toParams;
-                    copy($state.params, $stateParams);
-                    if (options.location && to.navigable && to.navigable.url) {
-                        $urlRouter.push(to.navigable.url, toParams, {
-                            $$avoidResync: true,
-                            replace: options.location === "replace"
-                        });
-                        $urlRouter.update(true);
-                    }
-                    $state.transition = null;
-                    return $q.when($state.current);
-                }
-                toParams = filterByKeys(to.params.$$keys(), toParams || {});
-                if (options.notify) {
-                    if ($rootScope.$broadcast("$stateChangeStart", to.self, toParams, from.self, fromParams).defaultPrevented) {
-                        $rootScope.$broadcast("$stateChangeCancel", to.self, toParams, from.self, fromParams);
-                        $urlRouter.update();
-                        return TransitionPrevented;
-                    }
-                }
-                var resolved = $q.when(locals);
-                for (var l = keep; l < toPath.length; l++, state = toPath[l]) {
-                    locals = toLocals[l] = inherit(locals);
-                    resolved = resolveState(state, toParams, state === to, resolved, locals, options);
-                }
-                var transition = $state.transition = resolved.then(function() {
-                    var l, entering, exiting;
-                    if ($state.transition !== transition) return TransitionSuperseded;
-                    for (l = fromPath.length - 1; l >= keep; l--) {
-                        exiting = fromPath[l];
-                        if (exiting.self.onExit) {
-                            $injector.invoke(exiting.self.onExit, exiting.self, exiting.locals.globals);
-                        }
-                        exiting.locals = null;
-                    }
-                    for (l = keep; l < toPath.length; l++) {
-                        entering = toPath[l];
-                        entering.locals = toLocals[l];
-                        if (entering.self.onEnter) {
-                            $injector.invoke(entering.self.onEnter, entering.self, entering.locals.globals);
-                        }
-                    }
-                    if (hash) toParams["#"] = hash;
-                    if ($state.transition !== transition) return TransitionSuperseded;
-                    $state.$current = to;
-                    $state.current = to.self;
-                    $state.params = toParams;
-                    copy($state.params, $stateParams);
-                    $state.transition = null;
-                    if (options.location && to.navigable) {
-                        $urlRouter.push(to.navigable.url, to.navigable.locals.globals.$stateParams, {
-                            $$avoidResync: true,
-                            replace: options.location === "replace"
-                        });
-                    }
-                    if (options.notify) {
-                        $rootScope.$broadcast("$stateChangeSuccess", to.self, toParams, from.self, fromParams);
-                    }
-                    $urlRouter.update(true);
-                    return $state.current;
-                }, function(error) {
-                    if ($state.transition !== transition) return TransitionSuperseded;
-                    $state.transition = null;
-                    evt = $rootScope.$broadcast("$stateChangeError", to.self, toParams, from.self, fromParams, error);
-                    if (!evt.defaultPrevented) {
-                        $urlRouter.update();
-                    }
-                    return $q.reject(error);
-                });
-                return transition;
-            };
-            $state.is = function is(stateOrName, params, options) {
-                options = extend({
-                    relative: $state.$current
-                }, options || {});
-                var state = findState(stateOrName, options.relative);
-                if (!isDefined(state)) {
-                    return undefined;
-                }
-                if ($state.$current !== state) {
-                    return false;
-                }
-                return params ? equalForKeys(state.params.$$values(params), $stateParams) : true;
-            };
-            $state.includes = function includes(stateOrName, params, options) {
-                options = extend({
-                    relative: $state.$current
-                }, options || {});
-                if (isString(stateOrName) && isGlob(stateOrName)) {
-                    if (!doesStateMatchGlob(stateOrName)) {
-                        return false;
-                    }
-                    stateOrName = $state.$current.name;
-                }
-                var state = findState(stateOrName, options.relative);
-                if (!isDefined(state)) {
-                    return undefined;
-                }
-                if (!isDefined($state.$current.includes[state.name])) {
-                    return false;
-                }
-                return params ? equalForKeys(state.params.$$values(params), $stateParams, objectKeys(params)) : true;
-            };
-            $state.href = function href(stateOrName, params, options) {
-                options = extend({
-                    lossy: true,
-                    inherit: true,
-                    absolute: false,
-                    relative: $state.$current
-                }, options || {});
-                var state = findState(stateOrName, options.relative);
-                if (!isDefined(state)) return null;
-                if (options.inherit) params = inheritParams($stateParams, params || {}, $state.$current, state);
-                var nav = state && options.lossy ? state.navigable : state;
-                if (!nav || nav.url === undefined || nav.url === null) {
-                    return null;
-                }
-                return $urlRouter.href(nav.url, filterByKeys(state.params.$$keys().concat("#"), params || {}), {
-                    absolute: options.absolute
-                });
-            };
-            $state.get = function(stateOrName, context) {
-                if (arguments.length === 0) return map(objectKeys(states), function(name) {
-                    return states[name].self;
-                });
-                var state = findState(stateOrName, context || $state.$current);
-                return state && state.self ? state.self : null;
-            };
-            function resolveState(state, params, paramsAreFiltered, inherited, dst, options) {
-                var $stateParams = paramsAreFiltered ? params : filterByKeys(state.params.$$keys(), params);
-                var locals = {
-                    $stateParams: $stateParams
-                };
-                dst.resolve = $resolve.resolve(state.resolve, locals, dst.resolve, state);
-                var promises = [ dst.resolve.then(function(globals) {
-                    dst.globals = globals;
-                }) ];
-                if (inherited) promises.push(inherited);
-                function resolveViews() {
-                    var viewsPromises = [];
-                    forEach(state.views, function(view, name) {
-                        var injectables = view.resolve && view.resolve !== state.resolve ? view.resolve : {};
-                        injectables.$template = [ function() {
-                            return $view.load(name, {
-                                view: view,
-                                locals: dst.globals,
-                                params: $stateParams,
-                                notify: options.notify
-                            }) || "";
-                        } ];
-                        viewsPromises.push($resolve.resolve(injectables, dst.globals, dst.resolve, state).then(function(result) {
-                            if (isFunction(view.controllerProvider) || isArray(view.controllerProvider)) {
-                                var injectLocals = angular.extend({}, injectables, dst.globals);
-                                result.$$controller = $injector.invoke(view.controllerProvider, null, injectLocals);
-                            } else {
-                                result.$$controller = view.controller;
-                            }
-                            result.$$state = state;
-                            result.$$controllerAs = view.controllerAs;
-                            dst[name] = result;
-                        }));
-                    });
-                    return $q.all(viewsPromises).then(function() {
-                        return dst.globals;
-                    });
-                }
-                return $q.all(promises).then(resolveViews).then(function(values) {
-                    return dst;
-                });
-            }
-            return $state;
-        }
-        function shouldSkipReload(to, toParams, from, fromParams, locals, options) {
-            function nonSearchParamsEqual(fromAndToState, fromParams, toParams) {
-                function notSearchParam(key) {
-                    return fromAndToState.params[key].location != "search";
-                }
-                var nonQueryParamKeys = fromAndToState.params.$$keys().filter(notSearchParam);
-                var nonQueryParams = pick.apply({}, [ fromAndToState.params ].concat(nonQueryParamKeys));
-                var nonQueryParamSet = new $$UMFP.ParamSet(nonQueryParams);
-                return nonQueryParamSet.$$equals(fromParams, toParams);
-            }
-            if (!options.reload && to === from && (locals === from.locals || to.self.reloadOnSearch === false && nonSearchParamsEqual(from, fromParams, toParams))) {
-                return true;
-            }
-        }
-    }
-    angular.module("ui.router.state").value("$stateParams", {}).provider("$state", $StateProvider);
-    $ViewProvider.$inject = [];
-    function $ViewProvider() {
-        this.$get = $get;
-        $get.$inject = [ "$rootScope", "$templateFactory" ];
-        function $get($rootScope, $templateFactory) {
-            return {
-                load: function load(name, options) {
-                    var result, defaults = {
-                        template: null,
-                        controller: null,
-                        view: null,
-                        locals: null,
-                        notify: true,
-                        async: true,
-                        params: {}
-                    };
-                    options = extend(defaults, options);
-                    if (options.view) {
-                        result = $templateFactory.fromConfig(options.view, options.params, options.locals);
-                    }
-                    if (result && options.notify) {
-                        $rootScope.$broadcast("$viewContentLoading", options);
-                    }
-                    return result;
-                }
-            };
-        }
-    }
-    angular.module("ui.router.state").provider("$view", $ViewProvider);
-    function $ViewScrollProvider() {
-        var useAnchorScroll = false;
-        this.useAnchorScroll = function() {
-            useAnchorScroll = true;
-        };
-        this.$get = [ "$anchorScroll", "$timeout", function($anchorScroll, $timeout) {
-            if (useAnchorScroll) {
-                return $anchorScroll;
-            }
-            return function($element) {
-                return $timeout(function() {
-                    $element[0].scrollIntoView();
-                }, 0, false);
-            };
-        } ];
-    }
-    angular.module("ui.router.state").provider("$uiViewScroll", $ViewScrollProvider);
-    $ViewDirective.$inject = [ "$state", "$injector", "$uiViewScroll", "$interpolate" ];
-    function $ViewDirective($state, $injector, $uiViewScroll, $interpolate) {
-        function getService() {
-            return $injector.has ? function(service) {
-                return $injector.has(service) ? $injector.get(service) : null;
-            } : function(service) {
-                try {
-                    return $injector.get(service);
-                } catch (e) {
-                    return null;
-                }
-            };
-        }
-        var service = getService(), $animator = service("$animator"), $animate = service("$animate");
-        function getRenderer(attrs, scope) {
-            var statics = function() {
-                return {
-                    enter: function(element, target, cb) {
-                        target.after(element);
-                        cb();
-                    },
-                    leave: function(element, cb) {
-                        element.remove();
-                        cb();
-                    }
-                };
-            };
-            if ($animate) {
-                return {
-                    enter: function(element, target, cb) {
-                        var promise = $animate.enter(element, null, target, cb);
-                        if (promise && promise.then) promise.then(cb);
-                    },
-                    leave: function(element, cb) {
-                        var promise = $animate.leave(element, cb);
-                        if (promise && promise.then) promise.then(cb);
-                    }
-                };
-            }
-            if ($animator) {
-                var animate = $animator && $animator(scope, attrs);
-                return {
-                    enter: function(element, target, cb) {
-                        animate.enter(element, null, target);
-                        cb();
-                    },
-                    leave: function(element, cb) {
-                        animate.leave(element);
-                        cb();
-                    }
-                };
-            }
-            return statics();
-        }
-        var directive = {
-            restrict: "ECA",
-            terminal: true,
-            priority: 400,
-            transclude: "element",
-            compile: function(tElement, tAttrs, $transclude) {
-                return function(scope, $element, attrs) {
-                    var previousEl, currentEl, currentScope, latestLocals, onloadExp = attrs.onload || "", autoScrollExp = attrs.autoscroll, renderer = getRenderer(attrs, scope);
-                    scope.$on("$stateChangeSuccess", function() {
-                        updateView(false);
-                    });
-                    scope.$on("$viewContentLoading", function() {
-                        updateView(false);
-                    });
-                    updateView(true);
-                    function cleanupLastView() {
-                        if (previousEl) {
-                            previousEl.remove();
-                            previousEl = null;
-                        }
-                        if (currentScope) {
-                            currentScope.$destroy();
-                            currentScope = null;
-                        }
-                        if (currentEl) {
-                            renderer.leave(currentEl, function() {
-                                previousEl = null;
-                            });
-                            previousEl = currentEl;
-                            currentEl = null;
-                        }
-                    }
-                    function updateView(firstTime) {
-                        var newScope, name = getUiViewName(scope, attrs, $element, $interpolate), previousLocals = name && $state.$current && $state.$current.locals[name];
-                        if (!firstTime && previousLocals === latestLocals) return;
-                        newScope = scope.$new();
-                        latestLocals = $state.$current.locals[name];
-                        var clone = $transclude(newScope, function(clone) {
-                            renderer.enter(clone, $element, function onUiViewEnter() {
-                                if (currentScope) {
-                                    currentScope.$emit("$viewContentAnimationEnded");
-                                }
-                                if (angular.isDefined(autoScrollExp) && !autoScrollExp || scope.$eval(autoScrollExp)) {
-                                    $uiViewScroll(clone);
-                                }
-                            });
-                            cleanupLastView();
-                        });
-                        currentEl = clone;
-                        currentScope = newScope;
-                        currentScope.$emit("$viewContentLoaded");
-                        currentScope.$eval(onloadExp);
-                    }
-                };
-            }
-        };
-        return directive;
-    }
-    $ViewDirectiveFill.$inject = [ "$compile", "$controller", "$state", "$interpolate" ];
-    function $ViewDirectiveFill($compile, $controller, $state, $interpolate) {
-        return {
-            restrict: "ECA",
-            priority: -400,
-            compile: function(tElement) {
-                var initial = tElement.html();
-                return function(scope, $element, attrs) {
-                    var current = $state.$current, name = getUiViewName(scope, attrs, $element, $interpolate), locals = current && current.locals[name];
-                    if (!locals) {
-                        return;
-                    }
-                    $element.data("$uiView", {
-                        name: name,
-                        state: locals.$$state
-                    });
-                    $element.html(locals.$template ? locals.$template : initial);
-                    var link = $compile($element.contents());
-                    if (locals.$$controller) {
-                        locals.$scope = scope;
-                        locals.$element = $element;
-                        var controller = $controller(locals.$$controller, locals);
-                        if (locals.$$controllerAs) {
-                            scope[locals.$$controllerAs] = controller;
-                        }
-                        $element.data("$ngControllerController", controller);
-                        $element.children().data("$ngControllerController", controller);
-                    }
-                    link(scope);
-                };
-            }
-        };
-    }
-    function getUiViewName(scope, attrs, element, $interpolate) {
-        var name = $interpolate(attrs.uiView || attrs.name || "")(scope);
-        var inherited = element.inheritedData("$uiView");
-        return name.indexOf("@") >= 0 ? name : name + "@" + (inherited ? inherited.state.name : "");
-    }
-    angular.module("ui.router.state").directive("uiView", $ViewDirective);
-    angular.module("ui.router.state").directive("uiView", $ViewDirectiveFill);
-    function parseStateRef(ref, current) {
-        var preparsed = ref.match(/^\s*({[^}]*})\s*$/), parsed;
-        if (preparsed) ref = current + "(" + preparsed[1] + ")";
-        parsed = ref.replace(/\n/g, " ").match(/^([^(]+?)\s*(\((.*)\))?$/);
-        if (!parsed || parsed.length !== 4) throw new Error("Invalid state ref '" + ref + "'");
-        return {
-            state: parsed[1],
-            paramExpr: parsed[3] || null
-        };
-    }
-    function stateContext(el) {
-        var stateData = el.parent().inheritedData("$uiView");
-        if (stateData && stateData.state && stateData.state.name) {
-            return stateData.state;
-        }
-    }
-    $StateRefDirective.$inject = [ "$state", "$timeout" ];
-    function $StateRefDirective($state, $timeout) {
-        var allowedOptions = [ "location", "inherit", "reload", "absolute" ];
-        return {
-            restrict: "A",
-            require: [ "?^uiSrefActive", "?^uiSrefActiveEq" ],
-            link: function(scope, element, attrs, uiSrefActive) {
-                var ref = parseStateRef(attrs.uiSref, $state.current.name);
-                var params = null, url = null, base = stateContext(element) || $state.$current;
-                var hrefKind = Object.prototype.toString.call(element.prop("href")) === "[object SVGAnimatedString]" ? "xlink:href" : "href";
-                var newHref = null, isAnchor = element.prop("tagName").toUpperCase() === "A";
-                var isForm = element[0].nodeName === "FORM";
-                var attr = isForm ? "action" : hrefKind, nav = true;
-                var options = {
-                    relative: base,
-                    inherit: true
-                };
-                var optionsOverride = scope.$eval(attrs.uiSrefOpts) || {};
-                angular.forEach(allowedOptions, function(option) {
-                    if (option in optionsOverride) {
-                        options[option] = optionsOverride[option];
-                    }
-                });
-                var update = function(newVal) {
-                    if (newVal) params = angular.copy(newVal);
-                    if (!nav) return;
-                    newHref = $state.href(ref.state, params, options);
-                    var activeDirective = uiSrefActive[1] || uiSrefActive[0];
-                    if (activeDirective) {
-                        activeDirective.$$addStateInfo(ref.state, params);
-                    }
-                    if (newHref === null) {
-                        nav = false;
-                        return false;
-                    }
-                    attrs.$set(attr, newHref);
-                };
-                if (ref.paramExpr) {
-                    scope.$watch(ref.paramExpr, function(newVal, oldVal) {
-                        if (newVal !== params) update(newVal);
-                    }, true);
-                    params = angular.copy(scope.$eval(ref.paramExpr));
-                }
-                update();
-                if (isForm) return;
-                element.bind("click", function(e) {
-                    var button = e.which || e.button;
-                    if (!(button > 1 || e.ctrlKey || e.metaKey || e.shiftKey || element.attr("target"))) {
-                        var transition = $timeout(function() {
-                            $state.go(ref.state, params, options);
-                        });
-                        e.preventDefault();
-                        var ignorePreventDefaultCount = isAnchor && !newHref ? 1 : 0;
-                        e.preventDefault = function() {
-                            if (ignorePreventDefaultCount-- <= 0) $timeout.cancel(transition);
-                        };
-                    }
-                });
-            }
-        };
-    }
-    $StateRefActiveDirective.$inject = [ "$state", "$stateParams", "$interpolate" ];
-    function $StateRefActiveDirective($state, $stateParams, $interpolate) {
-        return {
-            restrict: "A",
-            controller: [ "$scope", "$element", "$attrs", function($scope, $element, $attrs) {
-                var states = [], activeClass;
-                activeClass = $interpolate($attrs.uiSrefActiveEq || $attrs.uiSrefActive || "", false)($scope);
-                this.$$addStateInfo = function(newState, newParams) {
-                    var state = $state.get(newState, stateContext($element));
-                    states.push({
-                        state: state || {
-                            name: newState
-                        },
-                        params: newParams
-                    });
-                    update();
-                };
-                $scope.$on("$stateChangeSuccess", update);
-                function update() {
-                    if (anyMatch()) {
-                        $element.addClass(activeClass);
-                    } else {
-                        $element.removeClass(activeClass);
-                    }
-                }
-                function anyMatch() {
-                    for (var i = 0; i < states.length; i++) {
-                        if (isMatch(states[i].state, states[i].params)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-                function isMatch(state, params) {
-                    if (typeof $attrs.uiSrefActiveEq !== "undefined") {
-                        return $state.is(state.name, params);
-                    } else {
-                        return $state.includes(state.name, params);
-                    }
-                }
-            } ]
-        };
-    }
-    angular.module("ui.router.state").directive("uiSref", $StateRefDirective).directive("uiSrefActive", $StateRefActiveDirective).directive("uiSrefActiveEq", $StateRefActiveDirective);
-    $IsStateFilter.$inject = [ "$state" ];
-    function $IsStateFilter($state) {
-        var isFilter = function(state) {
-            return $state.is(state);
-        };
-        isFilter.$stateful = true;
-        return isFilter;
-    }
-    $IncludedByStateFilter.$inject = [ "$state" ];
-    function $IncludedByStateFilter($state) {
-        var includesFilter = function(state) {
-            return $state.includes(state);
-        };
-        includesFilter.$stateful = true;
-        return includesFilter;
-    }
-    angular.module("ui.router.state").filter("isState", $IsStateFilter).filter("includedByState", $IncludedByStateFilter);
-})(window, window.angular);
-
-(function(window, angular, undefined) {
-    "use strict";
-    var noop = angular.noop;
-    var extend = angular.extend;
-    var jqLite = angular.element;
-    var forEach = angular.forEach;
-    var isArray = angular.isArray;
-    var isString = angular.isString;
-    var isObject = angular.isObject;
-    var isUndefined = angular.isUndefined;
-    var isDefined = angular.isDefined;
-    var isFunction = angular.isFunction;
-    var isElement = angular.isElement;
-    var ELEMENT_NODE = 1;
-    var COMMENT_NODE = 8;
-    var ADD_CLASS_SUFFIX = "-add";
-    var REMOVE_CLASS_SUFFIX = "-remove";
-    var EVENT_CLASS_PREFIX = "ng-";
-    var ACTIVE_CLASS_SUFFIX = "-active";
-    var NG_ANIMATE_CLASSNAME = "ng-animate";
-    var NG_ANIMATE_CHILDREN_DATA = "$$ngAnimateChildren";
-    var CSS_PREFIX = "", TRANSITION_PROP, TRANSITIONEND_EVENT, ANIMATION_PROP, ANIMATIONEND_EVENT;
-    if (isUndefined(window.ontransitionend) && isDefined(window.onwebkittransitionend)) {
-        CSS_PREFIX = "-webkit-";
-        TRANSITION_PROP = "WebkitTransition";
-        TRANSITIONEND_EVENT = "webkitTransitionEnd transitionend";
-    } else {
-        TRANSITION_PROP = "transition";
-        TRANSITIONEND_EVENT = "transitionend";
-    }
-    if (isUndefined(window.onanimationend) && isDefined(window.onwebkitanimationend)) {
-        CSS_PREFIX = "-webkit-";
-        ANIMATION_PROP = "WebkitAnimation";
-        ANIMATIONEND_EVENT = "webkitAnimationEnd animationend";
-    } else {
-        ANIMATION_PROP = "animation";
-        ANIMATIONEND_EVENT = "animationend";
-    }
-    var DURATION_KEY = "Duration";
-    var PROPERTY_KEY = "Property";
-    var DELAY_KEY = "Delay";
-    var TIMING_KEY = "TimingFunction";
-    var ANIMATION_ITERATION_COUNT_KEY = "IterationCount";
-    var ANIMATION_PLAYSTATE_KEY = "PlayState";
-    var SAFE_FAST_FORWARD_DURATION_VALUE = 9999;
-    var ANIMATION_DELAY_PROP = ANIMATION_PROP + DELAY_KEY;
-    var ANIMATION_DURATION_PROP = ANIMATION_PROP + DURATION_KEY;
-    var TRANSITION_DELAY_PROP = TRANSITION_PROP + DELAY_KEY;
-    var TRANSITION_DURATION_PROP = TRANSITION_PROP + DURATION_KEY;
-    var isPromiseLike = function(p) {
-        return p && p.then ? true : false;
-    };
-    function assertArg(arg, name, reason) {
-        if (!arg) {
-            throw ngMinErr("areq", "Argument '{0}' is {1}", name || "?", reason || "required");
-        }
-        return arg;
-    }
-    function mergeClasses(a, b) {
-        if (!a && !b) return "";
-        if (!a) return b;
-        if (!b) return a;
-        if (isArray(a)) a = a.join(" ");
-        if (isArray(b)) b = b.join(" ");
-        return a + " " + b;
-    }
-    function packageStyles(options) {
-        var styles = {};
-        if (options && (options.to || options.from)) {
-            styles.to = options.to;
-            styles.from = options.from;
-        }
-        return styles;
-    }
-    function pendClasses(classes, fix, isPrefix) {
-        var className = "";
-        classes = isArray(classes) ? classes : classes && isString(classes) && classes.length ? classes.split(/\s+/) : [];
-        forEach(classes, function(klass, i) {
-            if (klass && klass.length > 0) {
-                className += i > 0 ? " " : "";
-                className += isPrefix ? fix + klass : klass + fix;
-            }
-        });
-        return className;
-    }
-    function removeFromArray(arr, val) {
-        var index = arr.indexOf(val);
-        if (val >= 0) {
-            arr.splice(index, 1);
-        }
-    }
-    function stripCommentsFromElement(element) {
-        if (element instanceof jqLite) {
-            switch (element.length) {
-              case 0:
-                return [];
-                break;
-
-              case 1:
-                if (element[0].nodeType === ELEMENT_NODE) {
-                    return element;
-                }
-                break;
-
-              default:
-                return jqLite(extractElementNode(element));
-                break;
-            }
-        }
-        if (element.nodeType === ELEMENT_NODE) {
-            return jqLite(element);
-        }
-    }
-    function extractElementNode(element) {
-        if (!element[0]) return element;
-        for (var i = 0; i < element.length; i++) {
-            var elm = element[i];
-            if (elm.nodeType == ELEMENT_NODE) {
-                return elm;
-            }
-        }
-    }
-    function $$addClass($$jqLite, element, className) {
-        forEach(element, function(elm) {
-            $$jqLite.addClass(elm, className);
+        }, this);
+    },
+    updateProgress: function(a) {
+        var b = Math.round(this.width * a) / this.params.pixelRatio;
+        this.style(this.progressWave, {
+            width: b + "px"
         });
     }
-    function $$removeClass($$jqLite, element, className) {
-        forEach(element, function(elm) {
-            $$jqLite.removeClass(elm, className);
-        });
-    }
-    function applyAnimationClassesFactory($$jqLite) {
-        return function(element, options) {
-            if (options.addClass) {
-                $$addClass($$jqLite, element, options.addClass);
-                options.addClass = null;
-            }
-            if (options.removeClass) {
-                $$removeClass($$jqLite, element, options.removeClass);
-                options.removeClass = null;
-            }
-        };
-    }
-    function prepareAnimationOptions(options) {
-        options = options || {};
-        if (!options.$$prepared) {
-            var domOperation = options.domOperation || noop;
-            options.domOperation = function() {
-                options.$$domOperationFired = true;
-                domOperation();
-                domOperation = noop;
-            };
-            options.$$prepared = true;
-        }
-        return options;
-    }
-    function applyAnimationStyles(element, options) {
-        applyAnimationFromStyles(element, options);
-        applyAnimationToStyles(element, options);
-    }
-    function applyAnimationFromStyles(element, options) {
-        if (options.from) {
-            element.css(options.from);
-            options.from = null;
-        }
-    }
-    function applyAnimationToStyles(element, options) {
-        if (options.to) {
-            element.css(options.to);
-            options.to = null;
-        }
-    }
-    function mergeAnimationOptions(element, target, newOptions) {
-        var toAdd = (target.addClass || "") + " " + (newOptions.addClass || "");
-        var toRemove = (target.removeClass || "") + " " + (newOptions.removeClass || "");
-        var classes = resolveElementClasses(element.attr("class"), toAdd, toRemove);
-        if (newOptions.preparationClasses) {
-            target.preparationClasses = concatWithSpace(newOptions.preparationClasses, target.preparationClasses);
-            delete newOptions.preparationClasses;
-        }
-        var realDomOperation = target.domOperation !== noop ? target.domOperation : null;
-        extend(target, newOptions);
-        if (realDomOperation) {
-            target.domOperation = realDomOperation;
-        }
-        if (classes.addClass) {
-            target.addClass = classes.addClass;
-        } else {
-            target.addClass = null;
-        }
-        if (classes.removeClass) {
-            target.removeClass = classes.removeClass;
-        } else {
-            target.removeClass = null;
-        }
-        return target;
-    }
-    function resolveElementClasses(existing, toAdd, toRemove) {
-        var ADD_CLASS = 1;
-        var REMOVE_CLASS = -1;
-        var flags = {};
-        existing = splitClassesToLookup(existing);
-        toAdd = splitClassesToLookup(toAdd);
-        forEach(toAdd, function(value, key) {
-            flags[key] = ADD_CLASS;
-        });
-        toRemove = splitClassesToLookup(toRemove);
-        forEach(toRemove, function(value, key) {
-            flags[key] = flags[key] === ADD_CLASS ? null : REMOVE_CLASS;
-        });
-        var classes = {
-            addClass: "",
-            removeClass: ""
-        };
-        forEach(flags, function(val, klass) {
-            var prop, allow;
-            if (val === ADD_CLASS) {
-                prop = "addClass";
-                allow = !existing[klass];
-            } else if (val === REMOVE_CLASS) {
-                prop = "removeClass";
-                allow = existing[klass];
-            }
-            if (allow) {
-                if (classes[prop].length) {
-                    classes[prop] += " ";
-                }
-                classes[prop] += klass;
-            }
-        });
-        function splitClassesToLookup(classes) {
-            if (isString(classes)) {
-                classes = classes.split(" ");
-            }
-            var obj = {};
-            forEach(classes, function(klass) {
-                if (klass.length) {
-                    obj[klass] = true;
-                }
-            });
-            return obj;
-        }
-        return classes;
-    }
-    function getDomNode(element) {
-        return element instanceof angular.element ? element[0] : element;
-    }
-    function applyGeneratedPreparationClasses(element, event, options) {
-        var classes = "";
-        if (event) {
-            classes = pendClasses(event, EVENT_CLASS_PREFIX, true);
-        }
-        if (options.addClass) {
-            classes = concatWithSpace(classes, pendClasses(options.addClass, ADD_CLASS_SUFFIX));
-        }
-        if (options.removeClass) {
-            classes = concatWithSpace(classes, pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX));
-        }
-        if (classes.length) {
-            options.preparationClasses = classes;
-            element.addClass(classes);
-        }
-    }
-    function clearGeneratedClasses(element, options) {
-        if (options.preparationClasses) {
-            element.removeClass(options.preparationClasses);
-            options.preparationClasses = null;
-        }
-        if (options.activeClasses) {
-            element.removeClass(options.activeClasses);
-            options.activeClasses = null;
-        }
-    }
-    function blockTransitions(node, duration) {
-        var value = duration ? "-" + duration + "s" : "";
-        applyInlineStyle(node, [ TRANSITION_DELAY_PROP, value ]);
-        return [ TRANSITION_DELAY_PROP, value ];
-    }
-    function blockKeyframeAnimations(node, applyBlock) {
-        var value = applyBlock ? "paused" : "";
-        var key = ANIMATION_PROP + ANIMATION_PLAYSTATE_KEY;
-        applyInlineStyle(node, [ key, value ]);
-        return [ key, value ];
-    }
-    function applyInlineStyle(node, styleTuple) {
-        var prop = styleTuple[0];
-        var value = styleTuple[1];
-        node.style[prop] = value;
-    }
-    function concatWithSpace(a, b) {
-        if (!a) return b;
-        if (!b) return a;
-        return a + " " + b;
-    }
-    function $$BodyProvider() {
-        this.$get = [ "$document", function($document) {
-            return jqLite($document[0].body);
-        } ];
-    }
-    var $$rAFSchedulerFactory = [ "$$rAF", function($$rAF) {
-        var queue, cancelFn;
-        function scheduler(tasks) {
-            queue = queue.concat(tasks);
-            nextTick();
-        }
-        queue = scheduler.queue = [];
-        scheduler.waitUntilQuiet = function(fn) {
-            if (cancelFn) cancelFn();
-            cancelFn = $$rAF(function() {
-                cancelFn = null;
-                fn();
-                nextTick();
-            });
-        };
-        return scheduler;
-        function nextTick() {
-            if (!queue.length) return;
-            var items = queue.shift();
-            for (var i = 0; i < items.length; i++) {
-                items[i]();
-            }
-            if (!cancelFn) {
-                $$rAF(function() {
-                    if (!cancelFn) nextTick();
-                });
-            }
-        }
-    } ];
-    var $$AnimateChildrenDirective = [ function() {
-        return function(scope, element, attrs) {
-            var val = attrs.ngAnimateChildren;
-            if (angular.isString(val) && val.length === 0) {
-                element.data(NG_ANIMATE_CHILDREN_DATA, true);
-            } else {
-                attrs.$observe("ngAnimateChildren", function(value) {
-                    value = value === "on" || value === "true";
-                    element.data(NG_ANIMATE_CHILDREN_DATA, value);
-                });
-            }
-        };
-    } ];
-    var ANIMATE_TIMER_KEY = "$$animateCss";
-    var ONE_SECOND = 1e3;
-    var BASE_TEN = 10;
-    var ELAPSED_TIME_MAX_DECIMAL_PLACES = 3;
-    var CLOSING_TIME_BUFFER = 1.5;
-    var DETECT_CSS_PROPERTIES = {
-        transitionDuration: TRANSITION_DURATION_PROP,
-        transitionDelay: TRANSITION_DELAY_PROP,
-        transitionProperty: TRANSITION_PROP + PROPERTY_KEY,
-        animationDuration: ANIMATION_DURATION_PROP,
-        animationDelay: ANIMATION_DELAY_PROP,
-        animationIterationCount: ANIMATION_PROP + ANIMATION_ITERATION_COUNT_KEY
-    };
-    var DETECT_STAGGER_CSS_PROPERTIES = {
-        transitionDuration: TRANSITION_DURATION_PROP,
-        transitionDelay: TRANSITION_DELAY_PROP,
-        animationDuration: ANIMATION_DURATION_PROP,
-        animationDelay: ANIMATION_DELAY_PROP
-    };
-    function getCssKeyframeDurationStyle(duration) {
-        return [ ANIMATION_DURATION_PROP, duration + "s" ];
-    }
-    function getCssDelayStyle(delay, isKeyframeAnimation) {
-        var prop = isKeyframeAnimation ? ANIMATION_DELAY_PROP : TRANSITION_DELAY_PROP;
-        return [ prop, delay + "s" ];
-    }
-    function computeCssStyles($window, element, properties) {
-        var styles = Object.create(null);
-        var detectedStyles = $window.getComputedStyle(element) || {};
-        forEach(properties, function(formalStyleName, actualStyleName) {
-            var val = detectedStyles[formalStyleName];
-            if (val) {
-                var c = val.charAt(0);
-                if (c === "-" || c === "+" || c >= 0) {
-                    val = parseMaxTime(val);
-                }
-                if (val === 0) {
-                    val = null;
-                }
-                styles[actualStyleName] = val;
-            }
-        });
-        return styles;
-    }
-    function parseMaxTime(str) {
-        var maxValue = 0;
-        var values = str.split(/\s*,\s*/);
-        forEach(values, function(value) {
-            if (value.charAt(value.length - 1) == "s") {
-                value = value.substring(0, value.length - 1);
-            }
-            value = parseFloat(value) || 0;
-            maxValue = maxValue ? Math.max(value, maxValue) : value;
-        });
-        return maxValue;
-    }
-    function truthyTimingValue(val) {
-        return val === 0 || val != null;
-    }
-    function getCssTransitionDurationStyle(duration, applyOnlyDuration) {
-        var style = TRANSITION_PROP;
-        var value = duration + "s";
-        if (applyOnlyDuration) {
-            style += DURATION_KEY;
-        } else {
-            value += " linear all";
-        }
-        return [ style, value ];
-    }
-    function createLocalCacheLookup() {
-        var cache = Object.create(null);
-        return {
-            flush: function() {
-                cache = Object.create(null);
-            },
-            count: function(key) {
-                var entry = cache[key];
-                return entry ? entry.total : 0;
-            },
-            get: function(key) {
-                var entry = cache[key];
-                return entry && entry.value;
-            },
-            put: function(key, value) {
-                if (!cache[key]) {
-                    cache[key] = {
-                        total: 1,
-                        value: value
-                    };
-                } else {
-                    cache[key].total++;
-                }
-            }
-        };
-    }
-    var $AnimateCssProvider = [ "$animateProvider", function($animateProvider) {
-        var gcsLookup = createLocalCacheLookup();
-        var gcsStaggerLookup = createLocalCacheLookup();
-        this.$get = [ "$window", "$$jqLite", "$$AnimateRunner", "$timeout", "$$forceReflow", "$sniffer", "$$rAFScheduler", "$animate", function($window, $$jqLite, $$AnimateRunner, $timeout, $$forceReflow, $sniffer, $$rAFScheduler, $animate) {
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            var parentCounter = 0;
-            function gcsHashFn(node, extraClasses) {
-                var KEY = "$$ngAnimateParentKey";
-                var parentNode = node.parentNode;
-                var parentID = parentNode[KEY] || (parentNode[KEY] = ++parentCounter);
-                return parentID + "-" + node.getAttribute("class") + "-" + extraClasses;
-            }
-            function computeCachedCssStyles(node, className, cacheKey, properties) {
-                var timings = gcsLookup.get(cacheKey);
-                if (!timings) {
-                    timings = computeCssStyles($window, node, properties);
-                    if (timings.animationIterationCount === "infinite") {
-                        timings.animationIterationCount = 1;
-                    }
-                }
-                gcsLookup.put(cacheKey, timings);
-                return timings;
-            }
-            function computeCachedCssStaggerStyles(node, className, cacheKey, properties) {
-                var stagger;
-                if (gcsLookup.count(cacheKey) > 0) {
-                    stagger = gcsStaggerLookup.get(cacheKey);
-                    if (!stagger) {
-                        var staggerClassName = pendClasses(className, "-stagger");
-                        $$jqLite.addClass(node, staggerClassName);
-                        stagger = computeCssStyles($window, node, properties);
-                        stagger.animationDuration = Math.max(stagger.animationDuration, 0);
-                        stagger.transitionDuration = Math.max(stagger.transitionDuration, 0);
-                        $$jqLite.removeClass(node, staggerClassName);
-                        gcsStaggerLookup.put(cacheKey, stagger);
-                    }
-                }
-                return stagger || {};
-            }
-            var cancelLastRAFRequest;
-            var rafWaitQueue = [];
-            function waitUntilQuiet(callback) {
-                rafWaitQueue.push(callback);
-                $$rAFScheduler.waitUntilQuiet(function() {
-                    gcsLookup.flush();
-                    gcsStaggerLookup.flush();
-                    var pageWidth = $$forceReflow();
-                    for (var i = 0; i < rafWaitQueue.length; i++) {
-                        rafWaitQueue[i](pageWidth);
-                    }
-                    rafWaitQueue.length = 0;
-                });
-            }
-            function computeTimings(node, className, cacheKey) {
-                var timings = computeCachedCssStyles(node, className, cacheKey, DETECT_CSS_PROPERTIES);
-                var aD = timings.animationDelay;
-                var tD = timings.transitionDelay;
-                timings.maxDelay = aD && tD ? Math.max(aD, tD) : aD || tD;
-                timings.maxDuration = Math.max(timings.animationDuration * timings.animationIterationCount, timings.transitionDuration);
-                return timings;
-            }
-            return function init(element, options) {
-                var node = getDomNode(element);
-                if (!node || !node.parentNode || !$animate.enabled()) {
-                    return closeAndReturnNoopAnimator();
-                }
-                options = prepareAnimationOptions(options);
-                var temporaryStyles = [];
-                var classes = element.attr("class");
-                var styles = packageStyles(options);
-                var animationClosed;
-                var animationPaused;
-                var animationCompleted;
-                var runner;
-                var runnerHost;
-                var maxDelay;
-                var maxDelayTime;
-                var maxDuration;
-                var maxDurationTime;
-                if (options.duration === 0 || !$sniffer.animations && !$sniffer.transitions) {
-                    return closeAndReturnNoopAnimator();
-                }
-                var method = options.event && isArray(options.event) ? options.event.join(" ") : options.event;
-                var isStructural = method && options.structural;
-                var structuralClassName = "";
-                var addRemoveClassName = "";
-                if (isStructural) {
-                    structuralClassName = pendClasses(method, EVENT_CLASS_PREFIX, true);
-                } else if (method) {
-                    structuralClassName = method;
-                }
-                if (options.addClass) {
-                    addRemoveClassName += pendClasses(options.addClass, ADD_CLASS_SUFFIX);
-                }
-                if (options.removeClass) {
-                    if (addRemoveClassName.length) {
-                        addRemoveClassName += " ";
-                    }
-                    addRemoveClassName += pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX);
-                }
-                if (options.applyClassesEarly && addRemoveClassName.length) {
-                    applyAnimationClasses(element, options);
-                }
-                var preparationClasses = [ structuralClassName, addRemoveClassName ].join(" ").trim();
-                var fullClassName = classes + " " + preparationClasses;
-                var activeClasses = pendClasses(preparationClasses, ACTIVE_CLASS_SUFFIX);
-                var hasToStyles = styles.to && Object.keys(styles.to).length > 0;
-                var containsKeyframeAnimation = (options.keyframeStyle || "").length > 0;
-                if (!containsKeyframeAnimation && !hasToStyles && !preparationClasses) {
-                    return closeAndReturnNoopAnimator();
-                }
-                var cacheKey, stagger;
-                if (options.stagger > 0) {
-                    var staggerVal = parseFloat(options.stagger);
-                    stagger = {
-                        transitionDelay: staggerVal,
-                        animationDelay: staggerVal,
-                        transitionDuration: 0,
-                        animationDuration: 0
-                    };
-                } else {
-                    cacheKey = gcsHashFn(node, fullClassName);
-                    stagger = computeCachedCssStaggerStyles(node, preparationClasses, cacheKey, DETECT_STAGGER_CSS_PROPERTIES);
-                }
-                if (!options.$$skipPreparationClasses) {
-                    $$jqLite.addClass(element, preparationClasses);
-                }
-                var applyOnlyDuration;
-                if (options.transitionStyle) {
-                    var transitionStyle = [ TRANSITION_PROP, options.transitionStyle ];
-                    applyInlineStyle(node, transitionStyle);
-                    temporaryStyles.push(transitionStyle);
-                }
-                if (options.duration >= 0) {
-                    applyOnlyDuration = node.style[TRANSITION_PROP].length > 0;
-                    var durationStyle = getCssTransitionDurationStyle(options.duration, applyOnlyDuration);
-                    applyInlineStyle(node, durationStyle);
-                    temporaryStyles.push(durationStyle);
-                }
-                if (options.keyframeStyle) {
-                    var keyframeStyle = [ ANIMATION_PROP, options.keyframeStyle ];
-                    applyInlineStyle(node, keyframeStyle);
-                    temporaryStyles.push(keyframeStyle);
-                }
-                var itemIndex = stagger ? options.staggerIndex >= 0 ? options.staggerIndex : gcsLookup.count(cacheKey) : 0;
-                var isFirst = itemIndex === 0;
-                if (isFirst && !options.skipBlocking) {
-                    blockTransitions(node, SAFE_FAST_FORWARD_DURATION_VALUE);
-                }
-                var timings = computeTimings(node, fullClassName, cacheKey);
-                var relativeDelay = timings.maxDelay;
-                maxDelay = Math.max(relativeDelay, 0);
-                maxDuration = timings.maxDuration;
-                var flags = {};
-                flags.hasTransitions = timings.transitionDuration > 0;
-                flags.hasAnimations = timings.animationDuration > 0;
-                flags.hasTransitionAll = flags.hasTransitions && timings.transitionProperty == "all";
-                flags.applyTransitionDuration = hasToStyles && (flags.hasTransitions && !flags.hasTransitionAll || flags.hasAnimations && !flags.hasTransitions);
-                flags.applyAnimationDuration = options.duration && flags.hasAnimations;
-                flags.applyTransitionDelay = truthyTimingValue(options.delay) && (flags.applyTransitionDuration || flags.hasTransitions);
-                flags.applyAnimationDelay = truthyTimingValue(options.delay) && flags.hasAnimations;
-                flags.recalculateTimingStyles = addRemoveClassName.length > 0;
-                if (flags.applyTransitionDuration || flags.applyAnimationDuration) {
-                    maxDuration = options.duration ? parseFloat(options.duration) : maxDuration;
-                    if (flags.applyTransitionDuration) {
-                        flags.hasTransitions = true;
-                        timings.transitionDuration = maxDuration;
-                        applyOnlyDuration = node.style[TRANSITION_PROP + PROPERTY_KEY].length > 0;
-                        temporaryStyles.push(getCssTransitionDurationStyle(maxDuration, applyOnlyDuration));
-                    }
-                    if (flags.applyAnimationDuration) {
-                        flags.hasAnimations = true;
-                        timings.animationDuration = maxDuration;
-                        temporaryStyles.push(getCssKeyframeDurationStyle(maxDuration));
-                    }
-                }
-                if (maxDuration === 0 && !flags.recalculateTimingStyles) {
-                    return closeAndReturnNoopAnimator();
-                }
-                if (options.delay != null) {
-                    var delayStyle = parseFloat(options.delay);
-                    if (flags.applyTransitionDelay) {
-                        temporaryStyles.push(getCssDelayStyle(delayStyle));
-                    }
-                    if (flags.applyAnimationDelay) {
-                        temporaryStyles.push(getCssDelayStyle(delayStyle, true));
-                    }
-                }
-                if (options.duration == null && timings.transitionDuration > 0) {
-                    flags.recalculateTimingStyles = flags.recalculateTimingStyles || isFirst;
-                }
-                maxDelayTime = maxDelay * ONE_SECOND;
-                maxDurationTime = maxDuration * ONE_SECOND;
-                if (!options.skipBlocking) {
-                    flags.blockTransition = timings.transitionDuration > 0;
-                    flags.blockKeyframeAnimation = timings.animationDuration > 0 && stagger.animationDelay > 0 && stagger.animationDuration === 0;
-                }
-                applyAnimationFromStyles(element, options);
-                if (flags.blockTransition || flags.blockKeyframeAnimation) {
-                    applyBlocking(maxDuration);
-                } else if (!options.skipBlocking) {
-                    blockTransitions(node, false);
-                }
-                return {
-                    $$willAnimate: true,
-                    end: endFn,
-                    start: function() {
-                        if (animationClosed) return;
-                        runnerHost = {
-                            end: endFn,
-                            cancel: cancelFn,
-                            resume: null,
-                            pause: null
-                        };
-                        runner = new $$AnimateRunner(runnerHost);
-                        waitUntilQuiet(start);
-                        return runner;
-                    }
-                };
-                function endFn() {
-                    close();
-                }
-                function cancelFn() {
-                    close(true);
-                }
-                function close(rejected) {
-                    if (animationClosed || animationCompleted && animationPaused) return;
-                    animationClosed = true;
-                    animationPaused = false;
-                    if (!options.$$skipPreparationClasses) {
-                        $$jqLite.removeClass(element, preparationClasses);
-                    }
-                    $$jqLite.removeClass(element, activeClasses);
-                    blockKeyframeAnimations(node, false);
-                    blockTransitions(node, false);
-                    forEach(temporaryStyles, function(entry) {
-                        node.style[entry[0]] = "";
-                    });
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    if (options.onDone) {
-                        options.onDone();
-                    }
-                    if (runner) {
-                        runner.complete(!rejected);
-                    }
-                }
-                function applyBlocking(duration) {
-                    if (flags.blockTransition) {
-                        blockTransitions(node, duration);
-                    }
-                    if (flags.blockKeyframeAnimation) {
-                        blockKeyframeAnimations(node, !!duration);
-                    }
-                }
-                function closeAndReturnNoopAnimator() {
-                    runner = new $$AnimateRunner({
-                        end: endFn,
-                        cancel: cancelFn
-                    });
-                    waitUntilQuiet(noop);
-                    close();
-                    return {
-                        $$willAnimate: false,
-                        start: function() {
-                            return runner;
-                        },
-                        end: endFn
-                    };
-                }
-                function start() {
-                    if (animationClosed) return;
-                    if (!node.parentNode) {
-                        close();
-                        return;
-                    }
-                    var startTime, events = [];
-                    var playPause = function(playAnimation) {
-                        if (!animationCompleted) {
-                            animationPaused = !playAnimation;
-                            if (timings.animationDuration) {
-                                var value = blockKeyframeAnimations(node, animationPaused);
-                                animationPaused ? temporaryStyles.push(value) : removeFromArray(temporaryStyles, value);
-                            }
-                        } else if (animationPaused && playAnimation) {
-                            animationPaused = false;
-                            close();
-                        }
-                    };
-                    var maxStagger = itemIndex > 0 && (timings.transitionDuration && stagger.transitionDuration === 0 || timings.animationDuration && stagger.animationDuration === 0) && Math.max(stagger.animationDelay, stagger.transitionDelay);
-                    if (maxStagger) {
-                        $timeout(triggerAnimationStart, Math.floor(maxStagger * itemIndex * ONE_SECOND), false);
-                    } else {
-                        triggerAnimationStart();
-                    }
-                    runnerHost.resume = function() {
-                        playPause(true);
-                    };
-                    runnerHost.pause = function() {
-                        playPause(false);
-                    };
-                    function triggerAnimationStart() {
-                        if (animationClosed) return;
-                        applyBlocking(false);
-                        forEach(temporaryStyles, function(entry) {
-                            var key = entry[0];
-                            var value = entry[1];
-                            node.style[key] = value;
-                        });
-                        applyAnimationClasses(element, options);
-                        $$jqLite.addClass(element, activeClasses);
-                        if (flags.recalculateTimingStyles) {
-                            fullClassName = node.className + " " + preparationClasses;
-                            cacheKey = gcsHashFn(node, fullClassName);
-                            timings = computeTimings(node, fullClassName, cacheKey);
-                            relativeDelay = timings.maxDelay;
-                            maxDelay = Math.max(relativeDelay, 0);
-                            maxDuration = timings.maxDuration;
-                            if (maxDuration === 0) {
-                                close();
-                                return;
-                            }
-                            flags.hasTransitions = timings.transitionDuration > 0;
-                            flags.hasAnimations = timings.animationDuration > 0;
-                        }
-                        if (flags.applyAnimationDelay) {
-                            relativeDelay = typeof options.delay !== "boolean" && truthyTimingValue(options.delay) ? parseFloat(options.delay) : relativeDelay;
-                            maxDelay = Math.max(relativeDelay, 0);
-                            timings.animationDelay = relativeDelay;
-                            delayStyle = getCssDelayStyle(relativeDelay, true);
-                            temporaryStyles.push(delayStyle);
-                            node.style[delayStyle[0]] = delayStyle[1];
-                        }
-                        maxDelayTime = maxDelay * ONE_SECOND;
-                        maxDurationTime = maxDuration * ONE_SECOND;
-                        if (options.easing) {
-                            var easeProp, easeVal = options.easing;
-                            if (flags.hasTransitions) {
-                                easeProp = TRANSITION_PROP + TIMING_KEY;
-                                temporaryStyles.push([ easeProp, easeVal ]);
-                                node.style[easeProp] = easeVal;
-                            }
-                            if (flags.hasAnimations) {
-                                easeProp = ANIMATION_PROP + TIMING_KEY;
-                                temporaryStyles.push([ easeProp, easeVal ]);
-                                node.style[easeProp] = easeVal;
-                            }
-                        }
-                        if (timings.transitionDuration) {
-                            events.push(TRANSITIONEND_EVENT);
-                        }
-                        if (timings.animationDuration) {
-                            events.push(ANIMATIONEND_EVENT);
-                        }
-                        startTime = Date.now();
-                        var timerTime = maxDelayTime + CLOSING_TIME_BUFFER * maxDurationTime;
-                        var endTime = startTime + timerTime;
-                        var animationsData = element.data(ANIMATE_TIMER_KEY) || [];
-                        var setupFallbackTimer = true;
-                        if (animationsData.length) {
-                            var currentTimerData = animationsData[0];
-                            setupFallbackTimer = endTime > currentTimerData.expectedEndTime;
-                            if (setupFallbackTimer) {
-                                $timeout.cancel(currentTimerData.timer);
-                            } else {
-                                animationsData.push(close);
-                            }
-                        }
-                        if (setupFallbackTimer) {
-                            var timer = $timeout(onAnimationExpired, timerTime, false);
-                            animationsData[0] = {
-                                timer: timer,
-                                expectedEndTime: endTime
-                            };
-                            animationsData.push(close);
-                            element.data(ANIMATE_TIMER_KEY, animationsData);
-                        }
-                        element.on(events.join(" "), onAnimationProgress);
-                        applyAnimationToStyles(element, options);
-                    }
-                    function onAnimationExpired() {
-                        var animationsData = element.data(ANIMATE_TIMER_KEY);
-                        if (animationsData) {
-                            for (var i = 1; i < animationsData.length; i++) {
-                                animationsData[i]();
-                            }
-                            element.removeData(ANIMATE_TIMER_KEY);
-                        }
-                    }
-                    function onAnimationProgress(event) {
-                        event.stopPropagation();
-                        var ev = event.originalEvent || event;
-                        var timeStamp = ev.$manualTimeStamp || ev.timeStamp || Date.now();
-                        var elapsedTime = parseFloat(ev.elapsedTime.toFixed(ELAPSED_TIME_MAX_DECIMAL_PLACES));
-                        if (Math.max(timeStamp - startTime, 0) >= maxDelayTime && elapsedTime >= maxDuration) {
-                            animationCompleted = true;
-                            close();
-                        }
-                    }
-                }
-            };
-        } ];
-    } ];
-    var $$AnimateCssDriverProvider = [ "$$animationProvider", function($$animationProvider) {
-        $$animationProvider.drivers.push("$$animateCssDriver");
-        var NG_ANIMATE_SHIM_CLASS_NAME = "ng-animate-shim";
-        var NG_ANIMATE_ANCHOR_CLASS_NAME = "ng-anchor";
-        var NG_OUT_ANCHOR_CLASS_NAME = "ng-anchor-out";
-        var NG_IN_ANCHOR_CLASS_NAME = "ng-anchor-in";
-        this.$get = [ "$animateCss", "$rootScope", "$$AnimateRunner", "$rootElement", "$$body", "$sniffer", "$$jqLite", function($animateCss, $rootScope, $$AnimateRunner, $rootElement, $$body, $sniffer, $$jqLite) {
-            if (!$sniffer.animations && !$sniffer.transitions) return noop;
-            var bodyNode = getDomNode($$body);
-            var rootNode = getDomNode($rootElement);
-            var rootBodyElement = jqLite(bodyNode.parentNode === rootNode ? bodyNode : rootNode);
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            return function initDriverFn(animationDetails) {
-                return animationDetails.from && animationDetails.to ? prepareFromToAnchorAnimation(animationDetails.from, animationDetails.to, animationDetails.classes, animationDetails.anchors) : prepareRegularAnimation(animationDetails);
-            };
-            function filterCssClasses(classes) {
-                return classes.replace(/\bng-\S+\b/g, "");
-            }
-            function getUniqueValues(a, b) {
-                if (isString(a)) a = a.split(" ");
-                if (isString(b)) b = b.split(" ");
-                return a.filter(function(val) {
-                    return b.indexOf(val) === -1;
-                }).join(" ");
-            }
-            function prepareAnchoredAnimation(classes, outAnchor, inAnchor) {
-                var clone = jqLite(getDomNode(outAnchor).cloneNode(true));
-                var startingClasses = filterCssClasses(getClassVal(clone));
-                outAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                inAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                clone.addClass(NG_ANIMATE_ANCHOR_CLASS_NAME);
-                rootBodyElement.append(clone);
-                var animatorIn, animatorOut = prepareOutAnimation();
-                if (!animatorOut) {
-                    animatorIn = prepareInAnimation();
-                    if (!animatorIn) {
-                        return end();
-                    }
-                }
-                var startingAnimator = animatorOut || animatorIn;
-                return {
-                    start: function() {
-                        var runner;
-                        var currentAnimation = startingAnimator.start();
-                        currentAnimation.done(function() {
-                            currentAnimation = null;
-                            if (!animatorIn) {
-                                animatorIn = prepareInAnimation();
-                                if (animatorIn) {
-                                    currentAnimation = animatorIn.start();
-                                    currentAnimation.done(function() {
-                                        currentAnimation = null;
-                                        end();
-                                        runner.complete();
-                                    });
-                                    return currentAnimation;
-                                }
-                            }
-                            end();
-                            runner.complete();
-                        });
-                        runner = new $$AnimateRunner({
-                            end: endFn,
-                            cancel: endFn
-                        });
-                        return runner;
-                        function endFn() {
-                            if (currentAnimation) {
-                                currentAnimation.end();
-                            }
-                        }
-                    }
-                };
-                function calculateAnchorStyles(anchor) {
-                    var styles = {};
-                    var coords = getDomNode(anchor).getBoundingClientRect();
-                    forEach([ "width", "height", "top", "left" ], function(key) {
-                        var value = coords[key];
-                        switch (key) {
-                          case "top":
-                            value += bodyNode.scrollTop;
-                            break;
-
-                          case "left":
-                            value += bodyNode.scrollLeft;
-                            break;
-                        }
-                        styles[key] = Math.floor(value) + "px";
-                    });
-                    return styles;
-                }
-                function prepareOutAnimation() {
-                    var animator = $animateCss(clone, {
-                        addClass: NG_OUT_ANCHOR_CLASS_NAME,
-                        delay: true,
-                        from: calculateAnchorStyles(outAnchor)
-                    });
-                    return animator.$$willAnimate ? animator : null;
-                }
-                function getClassVal(element) {
-                    return element.attr("class") || "";
-                }
-                function prepareInAnimation() {
-                    var endingClasses = filterCssClasses(getClassVal(inAnchor));
-                    var toAdd = getUniqueValues(endingClasses, startingClasses);
-                    var toRemove = getUniqueValues(startingClasses, endingClasses);
-                    var animator = $animateCss(clone, {
-                        to: calculateAnchorStyles(inAnchor),
-                        addClass: NG_IN_ANCHOR_CLASS_NAME + " " + toAdd,
-                        removeClass: NG_OUT_ANCHOR_CLASS_NAME + " " + toRemove,
-                        delay: true
-                    });
-                    return animator.$$willAnimate ? animator : null;
-                }
-                function end() {
-                    clone.remove();
-                    outAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                    inAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                }
-            }
-            function prepareFromToAnchorAnimation(from, to, classes, anchors) {
-                var fromAnimation = prepareRegularAnimation(from, noop);
-                var toAnimation = prepareRegularAnimation(to, noop);
-                var anchorAnimations = [];
-                forEach(anchors, function(anchor) {
-                    var outElement = anchor["out"];
-                    var inElement = anchor["in"];
-                    var animator = prepareAnchoredAnimation(classes, outElement, inElement);
-                    if (animator) {
-                        anchorAnimations.push(animator);
-                    }
-                });
-                if (!fromAnimation && !toAnimation && anchorAnimations.length === 0) return;
-                return {
-                    start: function() {
-                        var animationRunners = [];
-                        if (fromAnimation) {
-                            animationRunners.push(fromAnimation.start());
-                        }
-                        if (toAnimation) {
-                            animationRunners.push(toAnimation.start());
-                        }
-                        forEach(anchorAnimations, function(animation) {
-                            animationRunners.push(animation.start());
-                        });
-                        var runner = new $$AnimateRunner({
-                            end: endFn,
-                            cancel: endFn
-                        });
-                        $$AnimateRunner.all(animationRunners, function(status) {
-                            runner.complete(status);
-                        });
-                        return runner;
-                        function endFn() {
-                            forEach(animationRunners, function(runner) {
-                                runner.end();
-                            });
-                        }
-                    }
-                };
-            }
-            function prepareRegularAnimation(animationDetails) {
-                var element = animationDetails.element;
-                var options = animationDetails.options || {};
-                if (animationDetails.structural) {
-                    options.event = animationDetails.event;
-                    options.structural = true;
-                    options.applyClassesEarly = true;
-                    if (animationDetails.event === "leave") {
-                        options.onDone = options.domOperation;
-                    }
-                }
-                if (options.preparationClasses) {
-                    options.event = concatWithSpace(options.event, options.preparationClasses);
-                }
-                var animator = $animateCss(element, options);
-                return animator.$$willAnimate ? animator : null;
-            }
-        } ];
-    } ];
-    var $$AnimateJsProvider = [ "$animateProvider", function($animateProvider) {
-        this.$get = [ "$injector", "$$AnimateRunner", "$$jqLite", function($injector, $$AnimateRunner, $$jqLite) {
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            return function(element, event, classes, options) {
-                if (arguments.length === 3 && isObject(classes)) {
-                    options = classes;
-                    classes = null;
-                }
-                options = prepareAnimationOptions(options);
-                if (!classes) {
-                    classes = element.attr("class") || "";
-                    if (options.addClass) {
-                        classes += " " + options.addClass;
-                    }
-                    if (options.removeClass) {
-                        classes += " " + options.removeClass;
-                    }
-                }
-                var classesToAdd = options.addClass;
-                var classesToRemove = options.removeClass;
-                var animations = lookupAnimations(classes);
-                var before, after;
-                if (animations.length) {
-                    var afterFn, beforeFn;
-                    if (event == "leave") {
-                        beforeFn = "leave";
-                        afterFn = "afterLeave";
-                    } else {
-                        beforeFn = "before" + event.charAt(0).toUpperCase() + event.substr(1);
-                        afterFn = event;
-                    }
-                    if (event !== "enter" && event !== "move") {
-                        before = packageAnimations(element, event, options, animations, beforeFn);
-                    }
-                    after = packageAnimations(element, event, options, animations, afterFn);
-                }
-                if (!before && !after) return;
-                function applyOptions() {
-                    options.domOperation();
-                    applyAnimationClasses(element, options);
-                }
-                return {
-                    start: function() {
-                        var closeActiveAnimations;
-                        var chain = [];
-                        if (before) {
-                            chain.push(function(fn) {
-                                closeActiveAnimations = before(fn);
-                            });
-                        }
-                        if (chain.length) {
-                            chain.push(function(fn) {
-                                applyOptions();
-                                fn(true);
-                            });
-                        } else {
-                            applyOptions();
-                        }
-                        if (after) {
-                            chain.push(function(fn) {
-                                closeActiveAnimations = after(fn);
-                            });
-                        }
-                        var animationClosed = false;
-                        var runner = new $$AnimateRunner({
-                            end: function() {
-                                endAnimations();
-                            },
-                            cancel: function() {
-                                endAnimations(true);
-                            }
-                        });
-                        $$AnimateRunner.chain(chain, onComplete);
-                        return runner;
-                        function onComplete(success) {
-                            animationClosed = true;
-                            applyOptions();
-                            applyAnimationStyles(element, options);
-                            runner.complete(success);
-                        }
-                        function endAnimations(cancelled) {
-                            if (!animationClosed) {
-                                (closeActiveAnimations || noop)(cancelled);
-                                onComplete(cancelled);
-                            }
-                        }
-                    }
-                };
-                function executeAnimationFn(fn, element, event, options, onDone) {
-                    var args;
-                    switch (event) {
-                      case "animate":
-                        args = [ element, options.from, options.to, onDone ];
-                        break;
-
-                      case "setClass":
-                        args = [ element, classesToAdd, classesToRemove, onDone ];
-                        break;
-
-                      case "addClass":
-                        args = [ element, classesToAdd, onDone ];
-                        break;
-
-                      case "removeClass":
-                        args = [ element, classesToRemove, onDone ];
-                        break;
-
-                      default:
-                        args = [ element, onDone ];
-                        break;
-                    }
-                    args.push(options);
-                    var value = fn.apply(fn, args);
-                    if (value) {
-                        if (isFunction(value.start)) {
-                            value = value.start();
-                        }
-                        if (value instanceof $$AnimateRunner) {
-                            value.done(onDone);
-                        } else if (isFunction(value)) {
-                            return value;
-                        }
-                    }
-                    return noop;
-                }
-                function groupEventedAnimations(element, event, options, animations, fnName) {
-                    var operations = [];
-                    forEach(animations, function(ani) {
-                        var animation = ani[fnName];
-                        if (!animation) return;
-                        operations.push(function() {
-                            var runner;
-                            var endProgressCb;
-                            var resolved = false;
-                            var onAnimationComplete = function(rejected) {
-                                if (!resolved) {
-                                    resolved = true;
-                                    (endProgressCb || noop)(rejected);
-                                    runner.complete(!rejected);
-                                }
-                            };
-                            runner = new $$AnimateRunner({
-                                end: function() {
-                                    onAnimationComplete();
-                                },
-                                cancel: function() {
-                                    onAnimationComplete(true);
-                                }
-                            });
-                            endProgressCb = executeAnimationFn(animation, element, event, options, function(result) {
-                                var cancelled = result === false;
-                                onAnimationComplete(cancelled);
-                            });
-                            return runner;
-                        });
-                    });
-                    return operations;
-                }
-                function packageAnimations(element, event, options, animations, fnName) {
-                    var operations = groupEventedAnimations(element, event, options, animations, fnName);
-                    if (operations.length === 0) {
-                        var a, b;
-                        if (fnName === "beforeSetClass") {
-                            a = groupEventedAnimations(element, "removeClass", options, animations, "beforeRemoveClass");
-                            b = groupEventedAnimations(element, "addClass", options, animations, "beforeAddClass");
-                        } else if (fnName === "setClass") {
-                            a = groupEventedAnimations(element, "removeClass", options, animations, "removeClass");
-                            b = groupEventedAnimations(element, "addClass", options, animations, "addClass");
-                        }
-                        if (a) {
-                            operations = operations.concat(a);
-                        }
-                        if (b) {
-                            operations = operations.concat(b);
-                        }
-                    }
-                    if (operations.length === 0) return;
-                    return function startAnimation(callback) {
-                        var runners = [];
-                        if (operations.length) {
-                            forEach(operations, function(animateFn) {
-                                runners.push(animateFn());
-                            });
-                        }
-                        runners.length ? $$AnimateRunner.all(runners, callback) : callback();
-                        return function endFn(reject) {
-                            forEach(runners, function(runner) {
-                                reject ? runner.cancel() : runner.end();
-                            });
-                        };
-                    };
-                }
-            };
-            function lookupAnimations(classes) {
-                classes = isArray(classes) ? classes : classes.split(" ");
-                var matches = [], flagMap = {};
-                for (var i = 0; i < classes.length; i++) {
-                    var klass = classes[i], animationFactory = $animateProvider.$$registeredAnimations[klass];
-                    if (animationFactory && !flagMap[klass]) {
-                        matches.push($injector.get(animationFactory));
-                        flagMap[klass] = true;
-                    }
-                }
-                return matches;
-            }
-        } ];
-    } ];
-    var $$AnimateJsDriverProvider = [ "$$animationProvider", function($$animationProvider) {
-        $$animationProvider.drivers.push("$$animateJsDriver");
-        this.$get = [ "$$animateJs", "$$AnimateRunner", function($$animateJs, $$AnimateRunner) {
-            return function initDriverFn(animationDetails) {
-                if (animationDetails.from && animationDetails.to) {
-                    var fromAnimation = prepareAnimation(animationDetails.from);
-                    var toAnimation = prepareAnimation(animationDetails.to);
-                    if (!fromAnimation && !toAnimation) return;
-                    return {
-                        start: function() {
-                            var animationRunners = [];
-                            if (fromAnimation) {
-                                animationRunners.push(fromAnimation.start());
-                            }
-                            if (toAnimation) {
-                                animationRunners.push(toAnimation.start());
-                            }
-                            $$AnimateRunner.all(animationRunners, done);
-                            var runner = new $$AnimateRunner({
-                                end: endFnFactory(),
-                                cancel: endFnFactory()
-                            });
-                            return runner;
-                            function endFnFactory() {
-                                return function() {
-                                    forEach(animationRunners, function(runner) {
-                                        runner.end();
-                                    });
-                                };
-                            }
-                            function done(status) {
-                                runner.complete(status);
-                            }
-                        }
-                    };
-                } else {
-                    return prepareAnimation(animationDetails);
-                }
-            };
-            function prepareAnimation(animationDetails) {
-                var element = animationDetails.element;
-                var event = animationDetails.event;
-                var options = animationDetails.options;
-                var classes = animationDetails.classes;
-                return $$animateJs(element, event, classes, options);
-            }
-        } ];
-    } ];
-    var NG_ANIMATE_ATTR_NAME = "data-ng-animate";
-    var NG_ANIMATE_PIN_DATA = "$ngAnimatePin";
-    var $$AnimateQueueProvider = [ "$animateProvider", function($animateProvider) {
-        var PRE_DIGEST_STATE = 1;
-        var RUNNING_STATE = 2;
-        var rules = this.rules = {
-            skip: [],
-            cancel: [],
-            join: []
-        };
-        function isAllowed(ruleType, element, currentAnimation, previousAnimation) {
-            return rules[ruleType].some(function(fn) {
-                return fn(element, currentAnimation, previousAnimation);
-            });
-        }
-        function hasAnimationClasses(options, and) {
-            options = options || {};
-            var a = (options.addClass || "").length > 0;
-            var b = (options.removeClass || "").length > 0;
-            return and ? a && b : a || b;
-        }
-        rules.join.push(function(element, newAnimation, currentAnimation) {
-            return !newAnimation.structural && hasAnimationClasses(newAnimation.options);
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return !newAnimation.structural && !hasAnimationClasses(newAnimation.options);
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.event == "leave" && newAnimation.structural;
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.structural && currentAnimation.state === RUNNING_STATE && !newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.structural && newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.state === RUNNING_STATE && newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            var nO = newAnimation.options;
-            var cO = currentAnimation.options;
-            return nO.addClass && nO.addClass === cO.removeClass || nO.removeClass && nO.removeClass === cO.addClass;
-        });
-        this.$get = [ "$$rAF", "$rootScope", "$rootElement", "$document", "$$body", "$$HashMap", "$$animation", "$$AnimateRunner", "$templateRequest", "$$jqLite", "$$forceReflow", function($$rAF, $rootScope, $rootElement, $document, $$body, $$HashMap, $$animation, $$AnimateRunner, $templateRequest, $$jqLite, $$forceReflow) {
-            var activeAnimationsLookup = new $$HashMap();
-            var disabledElementsLookup = new $$HashMap();
-            var animationsEnabled = null;
-            var deregisterWatch = $rootScope.$watch(function() {
-                return $templateRequest.totalPendingRequests === 0;
-            }, function(isEmpty) {
-                if (!isEmpty) return;
-                deregisterWatch();
-                $rootScope.$$postDigest(function() {
-                    $rootScope.$$postDigest(function() {
-                        if (animationsEnabled === null) {
-                            animationsEnabled = true;
-                        }
-                    });
-                });
-            });
-            var callbackRegistry = {};
-            var classNameFilter = $animateProvider.classNameFilter();
-            var isAnimatableClassName = !classNameFilter ? function() {
-                return true;
-            } : function(className) {
-                return classNameFilter.test(className);
-            };
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            function normalizeAnimationOptions(element, options) {
-                return mergeAnimationOptions(element, options, {});
-            }
-            function findCallbacks(element, event) {
-                var targetNode = getDomNode(element);
-                var matches = [];
-                var entries = callbackRegistry[event];
-                if (entries) {
-                    forEach(entries, function(entry) {
-                        if (entry.node.contains(targetNode)) {
-                            matches.push(entry.callback);
-                        }
-                    });
-                }
-                return matches;
-            }
-            function triggerCallback(event, element, phase, data) {
-                $$rAF(function() {
-                    forEach(findCallbacks(element, event), function(callback) {
-                        callback(element, phase, data);
-                    });
-                });
-            }
-            return {
-                on: function(event, container, callback) {
-                    var node = extractElementNode(container);
-                    callbackRegistry[event] = callbackRegistry[event] || [];
-                    callbackRegistry[event].push({
-                        node: node,
-                        callback: callback
-                    });
-                },
-                off: function(event, container, callback) {
-                    var entries = callbackRegistry[event];
-                    if (!entries) return;
-                    callbackRegistry[event] = arguments.length === 1 ? null : filterFromRegistry(entries, container, callback);
-                    function filterFromRegistry(list, matchContainer, matchCallback) {
-                        var containerNode = extractElementNode(matchContainer);
-                        return list.filter(function(entry) {
-                            var isMatch = entry.node === containerNode && (!matchCallback || entry.callback === matchCallback);
-                            return !isMatch;
-                        });
-                    }
-                },
-                pin: function(element, parentElement) {
-                    assertArg(isElement(element), "element", "not an element");
-                    assertArg(isElement(parentElement), "parentElement", "not an element");
-                    element.data(NG_ANIMATE_PIN_DATA, parentElement);
-                },
-                push: function(element, event, options, domOperation) {
-                    options = options || {};
-                    options.domOperation = domOperation;
-                    return queueAnimation(element, event, options);
-                },
-                enabled: function(element, bool) {
-                    var argCount = arguments.length;
-                    if (argCount === 0) {
-                        bool = !!animationsEnabled;
-                    } else {
-                        var hasElement = isElement(element);
-                        if (!hasElement) {
-                            bool = animationsEnabled = !!element;
-                        } else {
-                            var node = getDomNode(element);
-                            var recordExists = disabledElementsLookup.get(node);
-                            if (argCount === 1) {
-                                bool = !recordExists;
-                            } else {
-                                bool = !!bool;
-                                if (!bool) {
-                                    disabledElementsLookup.put(node, true);
-                                } else if (recordExists) {
-                                    disabledElementsLookup.remove(node);
-                                }
-                            }
-                        }
-                    }
-                    return bool;
-                }
-            };
-            function queueAnimation(element, event, options) {
-                var node, parent;
-                element = stripCommentsFromElement(element);
-                if (element) {
-                    node = getDomNode(element);
-                    parent = element.parent();
-                }
-                options = prepareAnimationOptions(options);
-                var runner = new $$AnimateRunner();
-                if (isArray(options.addClass)) {
-                    options.addClass = options.addClass.join(" ");
-                }
-                if (options.addClass && !isString(options.addClass)) {
-                    options.addClass = null;
-                }
-                if (isArray(options.removeClass)) {
-                    options.removeClass = options.removeClass.join(" ");
-                }
-                if (options.removeClass && !isString(options.removeClass)) {
-                    options.removeClass = null;
-                }
-                if (options.from && !isObject(options.from)) {
-                    options.from = null;
-                }
-                if (options.to && !isObject(options.to)) {
-                    options.to = null;
-                }
-                if (!node) {
-                    close();
-                    return runner;
-                }
-                var className = [ node.className, options.addClass, options.removeClass ].join(" ");
-                if (!isAnimatableClassName(className)) {
-                    close();
-                    return runner;
-                }
-                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
-                var skipAnimations = !animationsEnabled || disabledElementsLookup.get(node);
-                var existingAnimation = !skipAnimations && activeAnimationsLookup.get(node) || {};
-                var hasExistingAnimation = !!existingAnimation.state;
-                if (!skipAnimations && (!hasExistingAnimation || existingAnimation.state != PRE_DIGEST_STATE)) {
-                    skipAnimations = !areAnimationsAllowed(element, parent, event);
-                }
-                if (skipAnimations) {
-                    close();
-                    return runner;
-                }
-                if (isStructural) {
-                    closeChildAnimations(element);
-                }
-                var newAnimation = {
-                    structural: isStructural,
-                    element: element,
-                    event: event,
-                    close: close,
-                    options: options,
-                    runner: runner
-                };
-                if (hasExistingAnimation) {
-                    var skipAnimationFlag = isAllowed("skip", element, newAnimation, existingAnimation);
-                    if (skipAnimationFlag) {
-                        if (existingAnimation.state === RUNNING_STATE) {
-                            close();
-                            return runner;
-                        } else {
-                            mergeAnimationOptions(element, existingAnimation.options, options);
-                            return existingAnimation.runner;
-                        }
-                    }
-                    var cancelAnimationFlag = isAllowed("cancel", element, newAnimation, existingAnimation);
-                    if (cancelAnimationFlag) {
-                        if (existingAnimation.state === RUNNING_STATE) {
-                            existingAnimation.runner.end();
-                        } else if (existingAnimation.structural) {
-                            existingAnimation.close();
-                        } else {
-                            mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
-                            return existingAnimation.runner;
-                        }
-                    } else {
-                        var joinAnimationFlag = isAllowed("join", element, newAnimation, existingAnimation);
-                        if (joinAnimationFlag) {
-                            if (existingAnimation.state === RUNNING_STATE) {
-                                normalizeAnimationOptions(element, options);
-                            } else {
-                                applyGeneratedPreparationClasses(element, isStructural ? event : null, options);
-                                event = newAnimation.event = existingAnimation.event;
-                                options = mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
-                                return existingAnimation.runner;
-                            }
-                        }
-                    }
-                } else {
-                    normalizeAnimationOptions(element, options);
-                }
-                var isValidAnimation = newAnimation.structural;
-                if (!isValidAnimation) {
-                    isValidAnimation = newAnimation.event === "animate" && Object.keys(newAnimation.options.to || {}).length > 0 || hasAnimationClasses(newAnimation.options);
-                }
-                if (!isValidAnimation) {
-                    close();
-                    clearElementAnimationState(element);
-                    return runner;
-                }
-                var counter = (existingAnimation.counter || 0) + 1;
-                newAnimation.counter = counter;
-                markElementAnimationState(element, PRE_DIGEST_STATE, newAnimation);
-                $rootScope.$$postDigest(function() {
-                    var animationDetails = activeAnimationsLookup.get(node);
-                    var animationCancelled = !animationDetails;
-                    animationDetails = animationDetails || {};
-                    var parentElement = element.parent() || [];
-                    var isValidAnimation = parentElement.length > 0 && (animationDetails.event === "animate" || animationDetails.structural || hasAnimationClasses(animationDetails.options));
-                    if (animationCancelled || animationDetails.counter !== counter || !isValidAnimation) {
-                        if (animationCancelled) {
-                            applyAnimationClasses(element, options);
-                            applyAnimationStyles(element, options);
-                        }
-                        if (animationCancelled || isStructural && animationDetails.event !== event) {
-                            options.domOperation();
-                            runner.end();
-                        }
-                        if (!isValidAnimation) {
-                            clearElementAnimationState(element);
-                        }
-                        return;
-                    }
-                    event = !animationDetails.structural && hasAnimationClasses(animationDetails.options, true) ? "setClass" : animationDetails.event;
-                    markElementAnimationState(element, RUNNING_STATE);
-                    var realRunner = $$animation(element, event, animationDetails.options);
-                    realRunner.done(function(status) {
-                        close(!status);
-                        var animationDetails = activeAnimationsLookup.get(node);
-                        if (animationDetails && animationDetails.counter === counter) {
-                            clearElementAnimationState(getDomNode(element));
-                        }
-                        notifyProgress(runner, event, "close", {});
-                    });
-                    runner.setHost(realRunner);
-                    notifyProgress(runner, event, "start", {});
-                });
-                return runner;
-                function notifyProgress(runner, event, phase, data) {
-                    triggerCallback(event, element, phase, data);
-                    runner.progress(event, phase, data);
-                }
-                function close(reject) {
-                    clearGeneratedClasses(element, options);
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    options.domOperation();
-                    runner.complete(!reject);
-                }
-            }
-            function closeChildAnimations(element) {
-                var node = getDomNode(element);
-                var children = node.querySelectorAll("[" + NG_ANIMATE_ATTR_NAME + "]");
-                forEach(children, function(child) {
-                    var state = parseInt(child.getAttribute(NG_ANIMATE_ATTR_NAME));
-                    var animationDetails = activeAnimationsLookup.get(child);
-                    switch (state) {
-                      case RUNNING_STATE:
-                        animationDetails.runner.end();
-
-                      case PRE_DIGEST_STATE:
-                        if (animationDetails) {
-                            activeAnimationsLookup.remove(child);
-                        }
-                        break;
-                    }
-                });
-            }
-            function clearElementAnimationState(element) {
-                var node = getDomNode(element);
-                node.removeAttribute(NG_ANIMATE_ATTR_NAME);
-                activeAnimationsLookup.remove(node);
-            }
-            function isMatchingElement(nodeOrElmA, nodeOrElmB) {
-                return getDomNode(nodeOrElmA) === getDomNode(nodeOrElmB);
-            }
-            function areAnimationsAllowed(element, parentElement, event) {
-                var bodyElementDetected = isMatchingElement(element, $$body) || element[0].nodeName === "HTML";
-                var rootElementDetected = isMatchingElement(element, $rootElement);
-                var parentAnimationDetected = false;
-                var animateChildren;
-                var parentHost = element.data(NG_ANIMATE_PIN_DATA);
-                if (parentHost) {
-                    parentElement = parentHost;
-                }
-                while (parentElement && parentElement.length) {
-                    if (!rootElementDetected) {
-                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
-                    }
-                    var parentNode = parentElement[0];
-                    if (parentNode.nodeType !== ELEMENT_NODE) {
-                        break;
-                    }
-                    var details = activeAnimationsLookup.get(parentNode) || {};
-                    if (!parentAnimationDetected) {
-                        parentAnimationDetected = details.structural || disabledElementsLookup.get(parentNode);
-                    }
-                    if (isUndefined(animateChildren) || animateChildren === true) {
-                        var value = parentElement.data(NG_ANIMATE_CHILDREN_DATA);
-                        if (isDefined(value)) {
-                            animateChildren = value;
-                        }
-                    }
-                    if (parentAnimationDetected && animateChildren === false) break;
-                    if (!rootElementDetected) {
-                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
-                        if (!rootElementDetected) {
-                            parentHost = parentElement.data(NG_ANIMATE_PIN_DATA);
-                            if (parentHost) {
-                                parentElement = parentHost;
-                            }
-                        }
-                    }
-                    if (!bodyElementDetected) {
-                        bodyElementDetected = isMatchingElement(parentElement, $$body);
-                    }
-                    parentElement = parentElement.parent();
-                }
-                var allowAnimation = !parentAnimationDetected || animateChildren;
-                return allowAnimation && rootElementDetected && bodyElementDetected;
-            }
-            function markElementAnimationState(element, state, details) {
-                details = details || {};
-                details.state = state;
-                var node = getDomNode(element);
-                node.setAttribute(NG_ANIMATE_ATTR_NAME, state);
-                var oldValue = activeAnimationsLookup.get(node);
-                var newValue = oldValue ? extend(oldValue, details) : details;
-                activeAnimationsLookup.put(node, newValue);
-            }
-        } ];
-    } ];
-    var $$AnimateAsyncRunFactory = [ "$$rAF", function($$rAF) {
-        var waitQueue = [];
-        function waitForTick(fn) {
-            waitQueue.push(fn);
-            if (waitQueue.length > 1) return;
-            $$rAF(function() {
-                for (var i = 0; i < waitQueue.length; i++) {
-                    waitQueue[i]();
-                }
-                waitQueue = [];
-            });
-        }
-        return function() {
-            var passed = false;
-            waitForTick(function() {
-                passed = true;
-            });
-            return function(callback) {
-                passed ? callback() : waitForTick(callback);
-            };
-        };
-    } ];
-    var $$AnimateRunnerFactory = [ "$q", "$sniffer", "$$animateAsyncRun", function($q, $sniffer, $$animateAsyncRun) {
-        var INITIAL_STATE = 0;
-        var DONE_PENDING_STATE = 1;
-        var DONE_COMPLETE_STATE = 2;
-        AnimateRunner.chain = function(chain, callback) {
-            var index = 0;
-            next();
-            function next() {
-                if (index === chain.length) {
-                    callback(true);
-                    return;
-                }
-                chain[index](function(response) {
-                    if (response === false) {
-                        callback(false);
-                        return;
-                    }
-                    index++;
-                    next();
-                });
-            }
-        };
-        AnimateRunner.all = function(runners, callback) {
-            var count = 0;
-            var status = true;
-            forEach(runners, function(runner) {
-                runner.done(onProgress);
-            });
-            function onProgress(response) {
-                status = status && response;
-                if (++count === runners.length) {
-                    callback(status);
-                }
-            }
-        };
-        function AnimateRunner(host) {
-            this.setHost(host);
-            this._doneCallbacks = [];
-            this._runInAnimationFrame = $$animateAsyncRun();
-            this._state = 0;
-        }
-        AnimateRunner.prototype = {
-            setHost: function(host) {
-                this.host = host || {};
-            },
-            done: function(fn) {
-                if (this._state === DONE_COMPLETE_STATE) {
-                    fn();
-                } else {
-                    this._doneCallbacks.push(fn);
-                }
-            },
-            progress: noop,
-            getPromise: function() {
-                if (!this.promise) {
-                    var self = this;
-                    this.promise = $q(function(resolve, reject) {
-                        self.done(function(status) {
-                            status === false ? reject() : resolve();
-                        });
-                    });
-                }
-                return this.promise;
-            },
-            then: function(resolveHandler, rejectHandler) {
-                return this.getPromise().then(resolveHandler, rejectHandler);
-            },
-            "catch": function(handler) {
-                return this.getPromise()["catch"](handler);
-            },
-            "finally": function(handler) {
-                return this.getPromise()["finally"](handler);
-            },
-            pause: function() {
-                if (this.host.pause) {
-                    this.host.pause();
-                }
-            },
-            resume: function() {
-                if (this.host.resume) {
-                    this.host.resume();
-                }
-            },
-            end: function() {
-                if (this.host.end) {
-                    this.host.end();
-                }
-                this._resolve(true);
-            },
-            cancel: function() {
-                if (this.host.cancel) {
-                    this.host.cancel();
-                }
-                this._resolve(false);
-            },
-            complete: function(response) {
-                var self = this;
-                if (self._state === INITIAL_STATE) {
-                    self._state = DONE_PENDING_STATE;
-                    self._runInAnimationFrame(function() {
-                        self._resolve(response);
-                    });
-                }
-            },
-            _resolve: function(response) {
-                if (this._state !== DONE_COMPLETE_STATE) {
-                    forEach(this._doneCallbacks, function(fn) {
-                        fn(response);
-                    });
-                    this._doneCallbacks.length = 0;
-                    this._state = DONE_COMPLETE_STATE;
-                }
-            }
-        };
-        return AnimateRunner;
-    } ];
-    var $$AnimationProvider = [ "$animateProvider", function($animateProvider) {
-        var NG_ANIMATE_REF_ATTR = "ng-animate-ref";
-        var drivers = this.drivers = [];
-        var RUNNER_STORAGE_KEY = "$$animationRunner";
-        function setRunner(element, runner) {
-            element.data(RUNNER_STORAGE_KEY, runner);
-        }
-        function removeRunner(element) {
-            element.removeData(RUNNER_STORAGE_KEY);
-        }
-        function getRunner(element) {
-            return element.data(RUNNER_STORAGE_KEY);
-        }
-        this.$get = [ "$$jqLite", "$rootScope", "$injector", "$$AnimateRunner", "$$HashMap", "$$rAFScheduler", function($$jqLite, $rootScope, $injector, $$AnimateRunner, $$HashMap, $$rAFScheduler) {
-            var animationQueue = [];
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            function sortAnimations(animations) {
-                var tree = {
-                    children: []
-                };
-                var i, lookup = new $$HashMap();
-                for (i = 0; i < animations.length; i++) {
-                    var animation = animations[i];
-                    lookup.put(animation.domNode, animations[i] = {
-                        domNode: animation.domNode,
-                        fn: animation.fn,
-                        children: []
-                    });
-                }
-                for (i = 0; i < animations.length; i++) {
-                    processNode(animations[i]);
-                }
-                return flatten(tree);
-                function processNode(entry) {
-                    if (entry.processed) return entry;
-                    entry.processed = true;
-                    var elementNode = entry.domNode;
-                    var parentNode = elementNode.parentNode;
-                    lookup.put(elementNode, entry);
-                    var parentEntry;
-                    while (parentNode) {
-                        parentEntry = lookup.get(parentNode);
-                        if (parentEntry) {
-                            if (!parentEntry.processed) {
-                                parentEntry = processNode(parentEntry);
-                            }
-                            break;
-                        }
-                        parentNode = parentNode.parentNode;
-                    }
-                    (parentEntry || tree).children.push(entry);
-                    return entry;
-                }
-                function flatten(tree) {
-                    var result = [];
-                    var queue = [];
-                    var i;
-                    for (i = 0; i < tree.children.length; i++) {
-                        queue.push(tree.children[i]);
-                    }
-                    var remainingLevelEntries = queue.length;
-                    var nextLevelEntries = 0;
-                    var row = [];
-                    for (i = 0; i < queue.length; i++) {
-                        var entry = queue[i];
-                        if (remainingLevelEntries <= 0) {
-                            remainingLevelEntries = nextLevelEntries;
-                            nextLevelEntries = 0;
-                            result.push(row);
-                            row = [];
-                        }
-                        row.push(entry.fn);
-                        entry.children.forEach(function(childEntry) {
-                            nextLevelEntries++;
-                            queue.push(childEntry);
-                        });
-                        remainingLevelEntries--;
-                    }
-                    if (row.length) {
-                        result.push(row);
-                    }
-                    return result;
-                }
-            }
-            return function(element, event, options) {
-                options = prepareAnimationOptions(options);
-                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
-                var runner = new $$AnimateRunner({
-                    end: function() {
-                        close();
-                    },
-                    cancel: function() {
-                        close(true);
-                    }
-                });
-                if (!drivers.length) {
-                    close();
-                    return runner;
-                }
-                setRunner(element, runner);
-                var classes = mergeClasses(element.attr("class"), mergeClasses(options.addClass, options.removeClass));
-                var tempClasses = options.tempClasses;
-                if (tempClasses) {
-                    classes += " " + tempClasses;
-                    options.tempClasses = null;
-                }
-                animationQueue.push({
-                    element: element,
-                    classes: classes,
-                    event: event,
-                    structural: isStructural,
-                    options: options,
-                    beforeStart: beforeStart,
-                    close: close
-                });
-                element.on("$destroy", handleDestroyedElement);
-                if (animationQueue.length > 1) return runner;
-                $rootScope.$$postDigest(function() {
-                    var animations = [];
-                    forEach(animationQueue, function(entry) {
-                        if (getRunner(entry.element)) {
-                            animations.push(entry);
-                        } else {
-                            entry.close();
-                        }
-                    });
-                    animationQueue.length = 0;
-                    var groupedAnimations = groupAnimations(animations);
-                    var toBeSortedAnimations = [];
-                    forEach(groupedAnimations, function(animationEntry) {
-                        toBeSortedAnimations.push({
-                            domNode: getDomNode(animationEntry.from ? animationEntry.from.element : animationEntry.element),
-                            fn: function triggerAnimationStart() {
-                                animationEntry.beforeStart();
-                                var startAnimationFn, closeFn = animationEntry.close;
-                                var targetElement = animationEntry.anchors ? animationEntry.from.element || animationEntry.to.element : animationEntry.element;
-                                if (getRunner(targetElement)) {
-                                    var operation = invokeFirstDriver(animationEntry);
-                                    if (operation) {
-                                        startAnimationFn = operation.start;
-                                    }
-                                }
-                                if (!startAnimationFn) {
-                                    closeFn();
-                                } else {
-                                    var animationRunner = startAnimationFn();
-                                    animationRunner.done(function(status) {
-                                        closeFn(!status);
-                                    });
-                                    updateAnimationRunners(animationEntry, animationRunner);
-                                }
-                            }
-                        });
-                    });
-                    $$rAFScheduler(sortAnimations(toBeSortedAnimations));
-                });
-                return runner;
-                function getAnchorNodes(node) {
-                    var SELECTOR = "[" + NG_ANIMATE_REF_ATTR + "]";
-                    var items = node.hasAttribute(NG_ANIMATE_REF_ATTR) ? [ node ] : node.querySelectorAll(SELECTOR);
-                    var anchors = [];
-                    forEach(items, function(node) {
-                        var attr = node.getAttribute(NG_ANIMATE_REF_ATTR);
-                        if (attr && attr.length) {
-                            anchors.push(node);
-                        }
-                    });
-                    return anchors;
-                }
-                function groupAnimations(animations) {
-                    var preparedAnimations = [];
-                    var refLookup = {};
-                    forEach(animations, function(animation, index) {
-                        var element = animation.element;
-                        var node = getDomNode(element);
-                        var event = animation.event;
-                        var enterOrMove = [ "enter", "move" ].indexOf(event) >= 0;
-                        var anchorNodes = animation.structural ? getAnchorNodes(node) : [];
-                        if (anchorNodes.length) {
-                            var direction = enterOrMove ? "to" : "from";
-                            forEach(anchorNodes, function(anchor) {
-                                var key = anchor.getAttribute(NG_ANIMATE_REF_ATTR);
-                                refLookup[key] = refLookup[key] || {};
-                                refLookup[key][direction] = {
-                                    animationID: index,
-                                    element: jqLite(anchor)
-                                };
-                            });
-                        } else {
-                            preparedAnimations.push(animation);
-                        }
-                    });
-                    var usedIndicesLookup = {};
-                    var anchorGroups = {};
-                    forEach(refLookup, function(operations, key) {
-                        var from = operations.from;
-                        var to = operations.to;
-                        if (!from || !to) {
-                            var index = from ? from.animationID : to.animationID;
-                            var indexKey = index.toString();
-                            if (!usedIndicesLookup[indexKey]) {
-                                usedIndicesLookup[indexKey] = true;
-                                preparedAnimations.push(animations[index]);
-                            }
-                            return;
-                        }
-                        var fromAnimation = animations[from.animationID];
-                        var toAnimation = animations[to.animationID];
-                        var lookupKey = from.animationID.toString();
-                        if (!anchorGroups[lookupKey]) {
-                            var group = anchorGroups[lookupKey] = {
-                                structural: true,
-                                beforeStart: function() {
-                                    fromAnimation.beforeStart();
-                                    toAnimation.beforeStart();
-                                },
-                                close: function() {
-                                    fromAnimation.close();
-                                    toAnimation.close();
-                                },
-                                classes: cssClassesIntersection(fromAnimation.classes, toAnimation.classes),
-                                from: fromAnimation,
-                                to: toAnimation,
-                                anchors: []
-                            };
-                            if (group.classes.length) {
-                                preparedAnimations.push(group);
-                            } else {
-                                preparedAnimations.push(fromAnimation);
-                                preparedAnimations.push(toAnimation);
-                            }
-                        }
-                        anchorGroups[lookupKey].anchors.push({
-                            out: from.element,
-                            "in": to.element
-                        });
-                    });
-                    return preparedAnimations;
-                }
-                function cssClassesIntersection(a, b) {
-                    a = a.split(" ");
-                    b = b.split(" ");
-                    var matches = [];
-                    for (var i = 0; i < a.length; i++) {
-                        var aa = a[i];
-                        if (aa.substring(0, 3) === "ng-") continue;
-                        for (var j = 0; j < b.length; j++) {
-                            if (aa === b[j]) {
-                                matches.push(aa);
-                                break;
-                            }
-                        }
-                    }
-                    return matches.join(" ");
-                }
-                function invokeFirstDriver(animationDetails) {
-                    for (var i = drivers.length - 1; i >= 0; i--) {
-                        var driverName = drivers[i];
-                        if (!$injector.has(driverName)) continue;
-                        var factory = $injector.get(driverName);
-                        var driver = factory(animationDetails);
-                        if (driver) {
-                            return driver;
-                        }
-                    }
-                }
-                function beforeStart() {
-                    element.addClass(NG_ANIMATE_CLASSNAME);
-                    if (tempClasses) {
-                        $$jqLite.addClass(element, tempClasses);
-                    }
-                }
-                function updateAnimationRunners(animation, newRunner) {
-                    if (animation.from && animation.to) {
-                        update(animation.from.element);
-                        update(animation.to.element);
-                    } else {
-                        update(animation.element);
-                    }
-                    function update(element) {
-                        getRunner(element).setHost(newRunner);
-                    }
-                }
-                function handleDestroyedElement() {
-                    var runner = getRunner(element);
-                    if (runner && (event !== "leave" || !options.$$domOperationFired)) {
-                        runner.end();
-                    }
-                }
-                function close(rejected) {
-                    element.off("$destroy", handleDestroyedElement);
-                    removeRunner(element);
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    options.domOperation();
-                    if (tempClasses) {
-                        $$jqLite.removeClass(element, tempClasses);
-                    }
-                    element.removeClass(NG_ANIMATE_CLASSNAME);
-                    runner.complete(!rejected);
-                }
-            };
-        } ];
-    } ];
-    angular.module("ngAnimate", []).provider("$$body", $$BodyProvider).directive("ngAnimateChildren", $$AnimateChildrenDirective).factory("$$rAFScheduler", $$rAFSchedulerFactory).factory("$$AnimateRunner", $$AnimateRunnerFactory).factory("$$animateAsyncRun", $$AnimateAsyncRunFactory).provider("$$animateQueue", $$AnimateQueueProvider).provider("$$animation", $$AnimationProvider).provider("$animateCss", $AnimateCssProvider).provider("$$animateCssDriver", $$AnimateCssDriverProvider).provider("$$animateJs", $$AnimateJsProvider).provider("$$animateJsDriver", $$AnimateJsDriverProvider);
-})(window, window.angular);
+});
 
 var app = angular.module("autocomplete", []);
 
@@ -30729,314 +27228,430 @@ var cloneObject = function(oldObject) {
     return JSON.parse(JSON.stringify(oldObject));
 };
 
-var app = angular.module("CreateDictionaryModule", [ "ui.router", "ngAnimate", "ui.bootstrap", "autocomplete" ]);
-
-app.config(function($stateProvider, $urlRouterProvider) {
-    $stateProvider.state("create", {
-        url: "/create",
-        templateUrl: "createDictionary.html",
-        controller: "CreateDictionaryController"
-    }).state("create.step1", {
-        url: "/step1",
-        templateUrl: "createDictionaryStep1.html"
-    }).state("create.step2", {
-        url: "/step2",
-        templateUrl: "createDictionaryStep2.html"
-    }).state("create.step3", {
-        url: "/step3",
-        templateUrl: "createDictionaryStep3.html"
-    });
-    $urlRouterProvider.otherwise("/create/step1");
-});
-
-app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$interval", "$state", "$location", "$log", function($scope, $http, $modal, $interval, $state, $location, $log) {
-    var clientId = $("#clientId").data("lingvodoc");
-    var userId = $("#userId").data("lingvodoc");
-    var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var createLanguageUrl = $("#createLanguageUrl").data("lingvodoc");
-    var createDictionaryUrl = $("#createDictionaryUrl").data("lingvodoc");
-    var allPerspectivesUrl = $("#allPerspectivesUrl").data("lingvodoc");
-    var perspectiveFieldsUrl = "/dictionary";
-    var listBlobsUrl = $("#listBlobsUrl").data("lingvodoc");
-    $scope.wizard = {
-        mode: "create",
-        importedDictionaryId: -1
+function lingvodocAPI($http, $q) {
+    var addUrlParameter = function(url, key, value) {
+        return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
     };
-    $scope.users = [];
-    $scope.userLogins = [];
-    $scope.uploadedDictionaries = [];
-    var flatLanguages = function(languages) {
-        var flat = [];
-        for (var i = 0; i < languages.length; i++) {
-            var language = languages[i];
-            flat.push(languages[i]);
-            if (language.contains && language.contains.length > 0) {
-                var childLangs = flatLanguages(language.contains);
-                flat = flat.concat(childLangs);
-            }
-        }
-        return flat;
-    };
-    var getLanguageById = function(id) {
-        if (typeof id == "string") {
-            var ids = id.split("_");
-            for (var i = 0; i < $scope.languages.length; i++) {
-                if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1]) return $scope.languages[i];
-            }
-        }
-    };
-    $scope.languages = [];
-    $scope.perspectives = [];
-    $scope.dictionaryData = {
-        languageId: -1,
-        perspectiveName: "",
-        perspectiveId: -1
-    };
-    $scope.perspective = {
-        fields: []
-    };
-    $scope.getLanguageId = function(language) {
-        if (language) {
-            return language.client_id + "_" + language.object_id;
-        }
-    };
-    $scope.newLanguage = function() {
-        var modalInstance = $modal.open({
-            animation: true,
-            templateUrl: "createLanguageModal.html",
-            controller: "CreateLanguageController",
-            size: "lg"
-        });
-        modalInstance.result.then(function(languageObj) {
-            $http.post(createLanguageUrl, languageObj).success(function(data, status, headers, config) {
-                loadLanguages();
-            }).error(function(data, status, headers, config) {
-                alert("Failed to save language!");
-            });
-        }, function() {});
-    };
-    $scope.addField = function() {
-        $scope.perspective.fields.push({
-            entity_type: "",
-            data_type: "text",
-            status: "enabled"
-        });
-    };
-    $scope.enableGroup = function(fieldIndex) {
-        if (typeof $scope.perspective.fields[fieldIndex].group === "undefined") {
-            $scope.perspective.fields[fieldIndex].group = "";
-        } else {
-            delete $scope.perspective.fields[fieldIndex].group;
-        }
-    };
-    $scope.enableLinkedField = function(fieldIndex) {
-        if (typeof $scope.perspective.fields[fieldIndex].contains === "undefined") {
-            $scope.perspective.fields[fieldIndex].contains = [ {
-                entity_type: "",
-                data_type: "markup",
-                status: "enabled"
-            } ];
-        } else {
-            delete $scope.perspective.fields[fieldIndex].contains;
-        }
-    };
-    $scope.createDictionary = function() {
-        var language = getLanguageById($scope.dictionaryData.languageId);
-        if (!$scope.dictionaryData.name && $scope.wizard.mode == "create" || typeof $scope.wizard.importedDictionaryId != "string" && $scope.wizard.mode == "import" || !language) {
-            return;
-        }
-        if ($scope.wizard.mode == "create") {
-            var dictionaryObj = {
-                parent_client_id: language.client_id,
-                parent_object_id: language.object_id,
-                name: $scope.dictionaryData.name,
-                translation: $scope.dictionaryData.name
-            };
-            $http.post(createDictionaryUrl, dictionaryObj).success(function(data, status, headers, config) {
-                if (data.object_id && data.client_id) {
-                    $scope.dictionaryData.dictionary_client_id = data.client_id;
-                    $scope.dictionaryData.dictionary_object_id = data.object_id;
-                    $state.go("create.step2");
-                } else {
-                    alert("Failed to create dictionary!");
+    var perspectiveToDictionaryFields = function(perspectiveFields) {
+        var fields = [];
+        angular.forEach(perspectiveFields, function(field, index) {
+            if (typeof field.group == "string") {
+                var createNewGroup = true;
+                for (var j = 0; j < fields.length; j++) {
+                    if (fields[j].entity_type == field.group && fields[j].isGroup) {
+                        fields[j].contains.push(field);
+                        createNewGroup = false;
+                        break;
+                    }
                 }
-            }).error(function(data, status, headers, config) {
-                alert("Failed to create dictionary!");
-            });
-        }
-        if ($scope.wizard.mode == "import") {
-            if (typeof $scope.wizard.importedDictionaryId == "string") {
-                var ids = $scope.wizard.importedDictionaryId.split("_");
-                var url = $("#convertUrl").data("lingvodoc");
-                var convertObject = {
-                    blob_client_id: parseInt(ids[0]),
-                    blob_object_id: parseInt(ids[1]),
-                    parent_client_id: language.client_id,
-                    parent_object_id: language.object_id
-                };
-                $http.post(url, convertObject).success(function(data, status, headers, config) {
-                    alert(data.status);
-                }).error(function(data, status, headers, config) {});
-            }
-        }
-    };
-    $scope.createPerspective = function() {
-        if (!$scope.dictionaryData.perspectiveName) {
-            return;
-        }
-        var createPerspectiveUrl = "/dictionary/" + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + "/" + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + "/" + "perspective";
-        var perspectiveObj = {
-            name: $scope.dictionaryData.perspectiveName,
-            translation: $scope.dictionaryData.perspectiveName
-        };
-        $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
-            if (data.object_id && data.client_id) {
-                $scope.dictionaryData.perspective_client_id = data.client_id;
-                $scope.dictionaryData.perspective_object_id = data.object_id;
-                var setFieldsUrl = "/dictionary/" + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + "/" + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + "/perspective/" + encodeURIComponent($scope.dictionaryData.perspective_client_id) + "/" + encodeURIComponent($scope.dictionaryData.perspective_object_id) + "/fields";
-                $http.post(setFieldsUrl, exportPerspective($scope.perspective)).success(function(data, status, headers, config) {
-                    window.location = "/dashboard";
-                }).error(function(data, status, headers, config) {
-                    alert("Failed to create perspective!");
-                });
-            } else {
-                alert("Failed to create perspective!");
-            }
-        }).error(function(data, status, headers, config) {
-            alert("Failed to create perspective!");
-        });
-    };
-    $scope.searchUsers = function(query) {
-        var promise = $http.get("/users?search=" + encodeURIComponent(query)).then(function(response) {
-            return response.data;
-        });
-        promise.then(function(data) {
-            var userLogins = [];
-            if (data.users) {
-                for (var i = 0; i < data.users.length; i++) {
-                    var user = data.users[i];
-                    userLogins.push(user.login);
-                }
-                $scope.userLogins = userLogins;
-                $scope.users = data.users;
-            }
-        });
-    };
-    $scope.addUser = function(userLogin) {};
-    var loadLanguages = function() {
-        $http.get(languagesUrl).success(function(data, status, headers, config) {
-            $scope.languages = flatLanguages(data.languages);
-        }).error(function(data, status, headers, config) {});
-    };
-    var loadPerspectives = function() {
-        var perspectives = [];
-        $http.get(allPerspectivesUrl).success(function(data, status, headers, config) {
-            for (var i = 0; i < data.perspectives.length; i++) {
-                var perspective = data.perspectives[i];
-                var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
-                $http.get(url).success(function(perspective) {
-                    return function(data, status, headers, config) {
-                        var p = {};
-                        p.name = perspective.name;
-                        p.object_id = perspective.object_id;
-                        p.client_id = perspective.client_id;
-                        p.fields = data.fields;
-                        var wrappedPerspective = wrapPerspective(p);
-                        if (wrappedPerspective) {
-                            $scope.perspectives.push(wrappedPerspective);
-                        }
-                    };
-                }(perspective)).error(function(data, status, headers, config) {
-                    $log.error("Failed to load perspectives!");
-                });
-            }
-        }).error(function(data, status, headers, config) {
-            $log.error("Failed to load perspectives!");
-        });
-    };
-    var loadBlobs = function() {
-        $http.get(listBlobsUrl).success(function(data, status, headers, config) {
-            $scope.uploadedDictionaries = [];
-            for (var i = 0; i < data.length; i++) {
-                if (data[i].data_type = "dialeqt_dictionary") {
-                    var id = data[i].client_id + "_" + data[i].object_id;
-                    $scope.uploadedDictionaries.push({
-                        id: id,
-                        data: data[i]
+                if (createNewGroup) {
+                    fields.push({
+                        entity_type: field.group,
+                        isGroup: true,
+                        contains: [ field ]
                     });
                 }
+            } else {
+                fields.push(field);
             }
-        }).error(function(data, status, headers, config) {});
+        });
+        return fields;
     };
-    $scope.$watch("dictionaryData.perspectiveId", function(id) {
-        if (typeof id == "string") {
-            var ids = id.split("_");
-            for (var i = 0; i < $scope.perspectives.length; i++) {
-                if ($scope.perspectives[i].client_id == ids[0] && $scope.perspectives[i].object_id == ids[1]) {
-                    $scope.perspective = $scope.perspectives[i];
-                    break;
+    var getLexicalEntries = function(url, offset, count) {
+        var deferred = $q.defer();
+        var allLexicalEntriesUrl = url;
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "start_from", offset);
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "count", count);
+        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
+            if (data.lexical_entries && angular.isArray(data.lexical_entries)) {
+                deferred.resolve(data.lexical_entries);
+            } else {
+                deferred.reject("An error occured while fetching lexical entries!");
+            }
+        }).error(function() {
+            deferred.reject("An error occured while fetching lexical entries!");
+        });
+        return deferred.promise;
+    };
+    var getLexicalEntriesCount = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            var totalEntries = parseInt(data.count);
+            if (!isNaN(totalEntries)) {
+                deferred.resolve(totalEntries);
+            } else {
+                deferred.reject("An error occurred while fetching dictionary stats");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching dictionary stats");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var removeValue = function(entry, field, fieldValue, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                break;
+
+              case "leveltwoentity":
+                if (parentClientId && parentObjectId) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                } else {
+                    deferred.reject("Attempting to delete Level2 entry with no Level1 entry.");
+                    return deferred.promise;
+                }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.delete(url).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while removing value");
+            });
+        } else {
+            deferred.reject("An error  occurred while removing value");
+        }
+        return deferred.promise;
+    };
+    var saveValue = function(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveObjectId, entry, field, value, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity";
+                break;
+
+              case "leveltwoentity":
+                if (parent.client_id && parent.object_id) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity";
+                } else {
+                    deferred.reject("Attempting to save Level2 entry with no Level1 entry.");
+                    return deferred.promise;
+                }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.post(url, value).success(function(data, status, headers, config) {
+                value.client_id = data.client_id;
+                value.object_id = data.object_id;
+                deferred.resolve(value);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while saving value");
+            });
+        } else {
+            deferred.reject("An error  occurred while saving value");
+        }
+        return deferred.promise;
+    };
+    var addNewLexicalEntry = function(url) {
+        var deferred = $q.defer();
+        $http.post(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while creating a new lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getConnectedWords = function(clientId, objectId) {
+        var deferred = $q.defer();
+        var url = "/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/connected";
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.words)) {
+                deferred.resolve(data.words);
+            } else {
+                deferred.reject("An error  occurred while fetching connected words");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while fetching connected words");
+        });
+        return deferred.promise;
+    };
+    var linkEntries = function(e1, e2, entityType) {
+        var deferred = $q.defer();
+        var linkObject = {
+            entity_type: entityType,
+            connections: [ {
+                client_id: e1.client_id,
+                object_id: e1.object_id
+            }, {
+                client_id: e2.client_id,
+                object_id: e2.object_id
+            } ]
+        };
+        var url = "/group_entity";
+        $http.post(url, linkObject).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while connecting 2 entries");
+        });
+        return deferred.promise;
+    };
+    var search = function(query) {
+        var deferred = $q.defer();
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
+        $http.get(url).success(function(data, status, headers, config) {
+            var urls = [];
+            for (var i = 0; i < data.length; i++) {
+                var entr = data[i];
+                var getEntryUrl = "/dictionary/" + encodeURIComponent(entr.origin_dictionary_client_id) + "/" + encodeURIComponent(entr.origin_dictionary_object_id) + "/perspective/" + encodeURIComponent(entr.origin_perspective_client_id) + "/" + encodeURIComponent(entr.origin_perspective_object_id) + "/lexical_entry/" + encodeURIComponent(entr.client_id) + "/" + encodeURIComponent(entr.object_id);
+                urls.push(getEntryUrl);
+            }
+            var uniqueUrls = urls.filter(function(item, pos) {
+                return urls.indexOf(item) == pos;
+            });
+            var requests = [];
+            for (var j = 0; j < uniqueUrls.length; j++) {
+                var r = $http.get(uniqueUrls[j]);
+                requests.push(r);
+            }
+            $q.all(requests).then(function(results) {
+                var suggestedEntries = [];
+                for (var k = 0; k < results.length; k++) {
+                    if (results[k].data) {
+                        suggestedEntries.push(results[k].data.lexical_entry);
+                    }
+                }
+                deferred.resolve(suggestedEntries);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing basic search");
+        });
+        return deferred.promise;
+    };
+    var approve = function(url, entity, status) {
+        var deferred = $q.defer();
+        if (status) {
+            $http.patch(url, entity).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        } else {
+            var config = {
+                method: "DELETE",
+                url: url,
+                data: entity,
+                headers: {
+                    "Content-Type": "application/json;charset=utf-8"
+                }
+            };
+            $http(config).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        }
+        return deferred.promise;
+    };
+    var approveAll = function(url) {
+        var deferred = $q.defer();
+        $http.patch(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to change approval status ");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryProperties = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryProperties = function(url, properties) {
+        var deferred = $q.defer();
+        $http.put(url, properties).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var getLanguages = function(url) {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(languages[i]);
+                if (language.contains && language.contains.length > 0) {
+                    var childLangs = flatLanguages(language.contains);
+                    flat = flat.concat(childLangs);
                 }
             }
-        }
-    });
-    loadLanguages();
-    loadPerspectives();
-    loadBlobs();
-} ]);
-
-app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$modalInstance", function($scope, $http, $interval, $modalInstance) {
-    var clientId = $("#clientId").data("lingvodoc");
-    var userId = $("#userId").data("lingvodoc");
-    var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var createLanguageUrl = $("#createLanguageUrl").data("lingvodoc");
-    $scope.languages = [];
-    $scope.parentLanguageId = -1;
-    $scope.translation = "";
-    $scope.translationString = "";
-    var getLanguageById = function(id) {
-        var ids = id.split("_");
-        for (var i = 0; i < $scope.languages.length; i++) {
-            if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1]) return $scope.languages[i];
-        }
-    };
-    var flatLanguages = function(languages) {
-        var flat = [];
-        for (var i = 0; i < languages.length; i++) {
-            var language = languages[i];
-            flat.push(languages[i]);
-            if (language.contains && language.contains.length > 0) {
-                var childLangs = flatLanguages(language.contains);
-                flat = flat.concat(childLangs);
-            }
-        }
-        return flat;
-    };
-    $scope.getLanguageId = function(language) {
-        if (language) {
-            return language.client_id + "_" + language.object_id;
-        }
-    };
-    $scope.ok = function() {
-        if (!$scope.translation) {
-            return;
-        }
-        var languageObj = {
-            translation: $scope.translation,
-            translation_string: $scope.translation
+            return flat;
         };
-        if ($scope.parentLanguageId != "-1") {
-            var parentLanguage = getLanguageById($scope.parentLanguageId);
-            if (parentLanguage) {
-                languageObj["parent_client_id"] = parentLanguage.client_id;
-                languageObj["parent_object_id"] = parentLanguage.object_id;
-            }
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(flatLanguages(data.languages));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryStatus = function(url, status) {
+        var deferred = $q.defer();
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set dictionary status");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveFields = function(url, fields) {
+        var deferred = $q.defer();
+        $http.post(url, fields).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to save perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getUserInfo = function(userId, clientId) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get user info");
+        });
+        return deferred.promise;
+    };
+    var setUserInfo = function(userId, clientId, userInfo) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.post(url, userInfo).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to set user info");
+        });
+        return deferred.promise;
+    };
+    var createOrganization = function(org) {
+        var deferred = $q.defer();
+        var url = "/organization";
+        $http.post(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to create organization");
+        });
+        return deferred.promise;
+    };
+    var getOrganization = function(orgId) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(orgId);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get information about organization");
+        });
+        return deferred.promise;
+    };
+    var editOrganization = function(orgId, org) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(orgId);
+        $http.put(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to change information about organization");
+        });
+        return deferred.promise;
+    };
+    var searchUsers = function(query) {
+        var deferred = $q.defer();
+        $http.get("/users?search=" + encodeURIComponent(query)).success(function(data, status, headers, config) {
+            deferred.resolve(data.users);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to search for users");
+        });
+        return deferred.promise;
+    };
+    return {
+        getLexicalEntries: getLexicalEntries,
+        getLexicalEntriesCount: getLexicalEntriesCount,
+        getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
+        addNewLexicalEntry: addNewLexicalEntry,
+        saveValue: saveValue,
+        removeValue: removeValue,
+        getConnectedWords: getConnectedWords,
+        linkEntries: linkEntries,
+        search: search,
+        approve: approve,
+        approveAll: approveAll,
+        getDictionaryProperties: getDictionaryProperties,
+        setDictionaryProperties: setDictionaryProperties,
+        getLanguages: getLanguages,
+        setDictionaryStatus: setDictionaryStatus,
+        getPerspectiveFields: getPerspectiveFields,
+        setPerspectiveFields: setPerspectiveFields,
+        getUserInfo: getUserInfo,
+        setUserInfo: setUserInfo,
+        createOrganization: createOrganization,
+        getOrganization: getOrganization,
+        editOrganization: editOrganization,
+        searchUsers: searchUsers
+    };
+}
+
+"use strict";
+
+var app = angular.module("ProfileModule", [ "ui.bootstrap" ]);
+
+app.service("dictionaryService", lingvodocAPI);
+
+app.controller("ProfileController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", function($scope, $http, $q, $modal, $log, dictionaryService) {
+    var userId = $("#userId").data("lingvodoc");
+    var clientId = $("#clientId").data("lingvodoc");
+    $scope.userInfo = {};
+    $scope.save = function() {
+        dictionaryService.setUserInfo(userId, clientId, $scope.userInfo).then(function(userInfo) {}, function(reason) {});
+    };
+    dictionaryService.getUserInfo(userId, clientId).then(function(userInfo) {
+        $scope.userInfo = userInfo;
+        var dateSplit = userInfo.birthday.split("-");
+        if (dateSplit.length > 1) {
+            $scope.birthdayYear = dateSplit[0];
+            $scope.birthdayMonth = dateSplit[1];
+            $scope.birthdayDay = dateSplit[2];
         }
-        $modalInstance.close(languageObj);
-    };
-    $scope.cancel = function() {
-        $modalInstance.dismiss("cancel");
-    };
-    $http.get(languagesUrl).success(function(data, status, headers, config) {
-        $scope.languages = flatLanguages(data.languages);
-    }).error(function(data, status, headers, config) {});
+    }, function(reason) {
+        $log.error(reason);
+    });
 } ]);
