@@ -413,7 +413,7 @@ def configure_routes(config):
         '{dictionary_client_id_2}/{dictionary_object_id_2}/'
         '{perspective_client_id_2}/{perspective_object_id_2}/'
         '{entity_type_primary}/{threshold}/{entity_type_secondary}/'
-        '{levenstein}', factory='lingvodoc.models.PerspectivePublishAcl')
+        '{levenstein}')
 
     # web-view
     config.add_route(name='merge_master', pattern='/dashboard/merge')
