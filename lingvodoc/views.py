@@ -30,7 +30,8 @@ from .models import (
     PublishLevelTwoEntity,
     Base,
     Organization,
-    UserBlobs
+    UserBlobs,
+    About
     )
 
 from .merge_perspectives import (
@@ -85,6 +86,7 @@ import json
 import logging
 log = logging.getLogger(__name__)
 
+
 class CommonException(Exception):
     def __init__(self, value):
         self.value = value
@@ -92,39 +94,6 @@ class CommonException(Exception):
     def __str__(self):
         return repr(self.value)
 
-
-def find_by_translation_string(locale_id, translation_string):
-        trstr = DBSession.query(UserEntitiesTranslationString).\
-            filter_by(locale_id=locale_id, translation_string=translation_string).first()
-        if not trstr:
-            trstr = DBSession.query(UserEntitiesTranslationString).\
-                filter_by(locale_id=1, translation_string=translation_string).first()
-        if not trstr:
-            return translation_string
-        return trstr.translation
-
-
-def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
-                                                                        translation_string=translation_string).first()
-        if not uets:
-            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
-                                                 client_id=client.id,
-                                                 locale_id=locale_id,
-                                                 translation_string=translation_string,
-                                                 translation=translation)
-            DBSession.add(uets)
-            DBSession.flush()
-        else:
-            uets.translation = translation
-
-
-def find_locale_id(request):
-    try:
-        return int(request.cookies['locale_id'])
-    except:
-        return 1
 
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
 def basic_search(request):
@@ -183,8 +152,9 @@ def view_language(request):
             response['parent_object_id'] = language.parent_object_id
             response['client_id'] = language.client_id
             response['object_id'] = language.object_id
-            response['translation_string'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                        translation_string=language.translation_string)
+            translation_string = language.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             if language.locale:
                 response['locale_exist'] = True
             else:
@@ -200,8 +170,9 @@ def language_info(lang, request):
     result = dict()
     result['client_id'] = lang.client_id
     result['object_id'] = lang.object_id
-    result['translation_string'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                              translation_string=lang.translation_string)
+    translation_string = lang.get_translation(request)
+    result['translation_string'] = translation_string['translation_string']
+    result['translation'] = translation_string['translation']
     if lang.locale:
         result['locale_exist'] = True
     else:
@@ -249,11 +220,8 @@ def edit_language(request):
                     language.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     language.parent_object_id = req['parent_object_id']
-                # TODO: fix translation stuff
                 if 'translation' in req:
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=language.translation_string,
-                                                          translation=req['translation'], client_id=client.id)
+                    language.set_translation(request)
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code
@@ -290,9 +258,6 @@ def create_language(request):
         except:
             parent_client_id = None
             parent_object_id = None
-        # TODO: fix translation stuff
-        translation_string = req['translation_string']
-        translation = req['translation']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -304,10 +269,8 @@ def create_language(request):
         parent = None
         if parent_client_id and parent_object_id:
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        add_translation_to_translation_string(locale_id=find_locale_id(request), translation = translation,
-                                              translation_string = translation_string, client_id = client.id)
-        language = Language(object_id=DBSession.query(Language).filter_by(client_id=client.id).count()+1, client_id=variables['auth'],
-                            translation_string = translation_string)
+        language = Language(object_id=DBSession.query(Language).filter_by(client_id=client.id).count()+1, client_id=variables['auth'])
+        language.set_translation(request)
         DBSession.add(language)
         if parent:
             language.parent = parent
@@ -349,8 +312,9 @@ def view_dictionary(request):
             response['parent_object_id'] = dictionary.parent_object_id
             response['client_id'] = dictionary.client_id
             response['object_id'] = dictionary.object_id
-            response['name'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=dictionary.name)
+            translation_string = dictionary.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             response['status'] = dictionary.state
             request.response.status = HTTPOk.code
             return response
@@ -375,11 +339,8 @@ def edit_dictionary(request):
                     dictionary.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     dictionary.parent_object_id = req['parent_object_id']
-                # TODO: fix translation stuff
-                if 'name_translation' in req:
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=dictionary.name,
-                                                          translation=req['name_translation'], client_id=client.id)
+                if 'translation' in req:
+                    dictionary.set_translation(request)
                 request.response.status = HTTPOk.code
                 return response
 
@@ -422,14 +383,12 @@ def create_dictionary(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        add_translation_to_translation_string(locale_id=find_locale_id(request), translation=translation,
-                                              translation_string=name, client_id=client.id)
 
         dictionary = Dictionary(object_id=DBSession.query(Dictionary).filter_by(client_id=client.id).count() + 1,
                                 client_id=variables['auth'],
-                                name=name,
                                 state='WiP',
                                 parent=parent)
+        dictionary.set_translation(request)
         DBSession.add(dictionary)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -510,8 +469,9 @@ def view_perspective(request):
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
             response['object_id'] = perspective.object_id
-            response['name'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=perspective.name)
+            translation_string = perspective.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
             request.response.status = HTTPOk.code
@@ -543,11 +503,12 @@ def edit_perspective(request):
                     request.response.status = HTTPNotFound.code
                     return {'error': str("No such pair of dictionary/perspective in the system")}
                 req = request.json_body
-                # TODO: fix translation stuff
-                if 'name_translation' in req:
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=perspective.name,
-                                                          translation=req['name_translation'], client_id = client.id)
+                if 'translation' in req:
+                    perspective.set_translation(request)
+                if 'parent_client_id' in req:
+                    perspective.parent_client_id = req['parent_client_id']
+                if 'parent_object_id' in req:
+                    perspective.parent_object_id = req['parent_object_id']
                 request.response.status = HTTPOk.code
                 return response
         else:
@@ -630,13 +591,11 @@ def create_perspective(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such dictionary in the system")}
-        add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name,
-                                              translation=translation, client_id=client.id)
         perspective = DictionaryPerspective(object_id=DBSession.query(DictionaryPerspective).filter_by(client_id=client.id).count() + 1,
                                             client_id=variables['auth'],
-                                            name=name,
                                             state='WiP',
                                             parent = parent)
+        perspective.set_translation(request)
         DBSession.add(perspective)
         DBSession.flush()
         owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
@@ -751,10 +710,12 @@ def view_dictionary_roles(request):
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'POST', permission='create')
 def edit_dictionary_roles(request):
     response = dict()
+    log.debug("VERY IMPORTANT 1")
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     req = request.json_body
     user_id = None
+    log.debug("VERY IMPORTANT",req)
     if 'user_id' in req:
         user_id = req['user_id']
     organization_id = None
@@ -860,18 +821,24 @@ def view_perspective_roles(request):
     if perspective:
         if not perspective.marked_for_deletion:
             bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
-            roles = []
+            roles_users = dict()
+            roles_organizations = dict()
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=base.object_id,
-                                                             subject_client_id=base.client_id).first()
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
                 perm = base.translation_string
                 users = []
                 for user in group.users:
                     users += [user.id]
-                # TODO: add users from organizations. or view organizations separately
-                roles[perm] = users
-            response['roles'] = roles
+                organizations = []
+                for org in group.organizations:
+                    organizations += [org.id]
+                roles_users[perm] = users
+                roles_organizations[perm] = organizations
+            response['roles_users'] = roles_users
+            response['roles_organizations'] = roles_organizations
+
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -1038,7 +1005,8 @@ def dictionaries_list(request):
     dicts = DBSession.query(Dictionary)
     if published:
         if published:
-            dicts = dicts.filter_by(state='Published')
+            dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
+                .filter(DictionaryPerspective.state == 'Published')
         # else:
         #     dicts = dicts.filter_by(state!='Published')
     if user_created:
@@ -1105,12 +1073,22 @@ def dictionaries_list(request):
         else:
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
 
-    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'name':o.name, 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
-
+    dictionaries = []
+    for dict in dicts:
+        path = request.route_url('dictionary',
+                                 client_id=dict.client_id,
+                                 object_id=dict.object_id)
+        subreq = Request.blank(path)
+        # subreq = request.copy()
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        dictionaries += [resp.json]
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
-    return response\
+    return response
+
 
 @view_config(route_name='all_perspectives', renderer = 'json', request_method='GET')
 def perspectives_list(request):
@@ -1188,41 +1166,47 @@ def view_perspective_fields(request):
     user = DBSession.query(User).filter_by(id=client.user_id).first()
     if not user:
         raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-    locale_id = find_locale_id(request)
     if perspective:
         fields = []
         for field in perspective.dictionaryperspectivefield:
 
             data = dict()
-            if field.level == 'leveloneentity' or field.level == 'groupingentity':
-                data['entity_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                 translation_string=field.entity_type)
-
-                data['data_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                               translation_string=field.data_type)
-                data['position'] = field.position
-                data['status'] = field.state
-                data['level'] = field.level
-                if field.dictionaryperspectivefield:
+            if not field.marked_for_deletion:
+                if field.level == 'leveloneentity' or field.level == 'groupingentity':
+                    ent_type = field.get_entity_type(request)
+                    data['entity_type'] = ent_type['translation_string']
+                    data['entity_type_translation'] = ent_type['translation']
+                    data_type = field.get_data_type(request)
+                    data['data_type'] = data_type['translation_string']
+                    data['data_type_translation'] = data_type['translation']
+                    data['position'] = field.position
+                    data['status'] = field.state
+                    data['level'] = field.level
                     contains = []
-                    for field2 in field.dictionaryperspectivefield:
-                        data2 = dict()
-                        data2['entity_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                          translation_string=field2.entity_type)
-
-                        data2['data_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                        translation_string=field2.data_type)
-                        data2['status'] = field2.state
-                        data2['position'] = field2.position
-                        data2['level'] = field2.level
-                        contains += [data2]
+                    if field.dictionaryperspectivefield:
+                        for field2 in field.dictionaryperspectivefield:
+                            if not field2.marked_for_deletion:
+                                data2 = dict()
+                                ent_type = field2.get_entity_type(request)
+                                data2['entity_type'] = ent_type['translation_string']
+                                data2['entity_type_translation'] = ent_type['translation']
+                                data_type = field2.get_data_type(request)
+                                data2['data_type'] = data_type['translation_string']
+                                data2['data_type_translation'] = data_type['translation']
+                                data2['status'] = field2.state
+                                data2['position'] = field2.position
+                                data2['level'] = field2.level
+                                data2['client_id'] = field2.client_id
+                                data2['object_id'] = field2.object_id
+                                contains += [data2]
                     data['contains'] = contains
-                if field.group:
-                    #group = DBSession.query(UserEntitiesTranslationString).\
-                    #    filter_by(translation_string=field.group, locale_id=locale_id).first()
-                    data['group'] = find_by_translation_string(locale_id=locale_id,
-                                                               translation_string=field.group)
-                fields += [data]
+                    if field.group:
+                        group = field.get_group(request)
+                        data['group'] = group['translation_string']
+                        data['group_translation'] = group['translation']
+                    data['client_id'] = field.client_id
+                    data['object_id'] = field.object_id
+                    fields += [data]
         response['fields'] = fields
         request.response.status = HTTPOk.code
         return response
@@ -1263,8 +1247,8 @@ def create_perspective_fields(request):
         parent_object_id = request.matchdict.get('perspective_id')
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
-        fields = request.json_body['fields']
-
+        req = request.json_body
+        fields = req['fields']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -1277,26 +1261,22 @@ def create_perspective_fields(request):
         if not perspective:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such dictionary in the system")}
-
-        locale_id = find_locale_id(request)
+        for field in perspective.dictionaryperspectivefield:
+            field.marked_for_deletion = True
 
         for entry in fields:
             field = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
                                                client_id=variables['auth'],
-                                               entity_type=entry['entity_type'],
-                                               data_type=entry['data_type'],
                                                parent=perspective,
                                                state=entry['status'])
+            field.set_data_type(request, entry['data_type_translation'], entry['data_type'])
+            field.set_entity_type(request, entry['entity_type_translation'], entry['entity_type'])
             if 'group' in entry:
-                field.group = entry['group']
-                add_translation_to_translation_string(locale_id=locale_id,
-                                                      translation_string=entry['group'],
-                                                      translation=entry['group'], client_id=client.id)
+                field.set_group(request, entry['group_translation'], entry['group'])
             field.level = entry['level']
             field.position = entry['position']
             if 'contains' in entry:
                 for ent in entry['contains']:
-                    # TODO: Fix translation stuff
                     field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
                                                         client_id=variables['auth'],
                                                         entity_type=ent['entity_type'],
@@ -1306,32 +1286,17 @@ def create_perspective_fields(request):
                                                         parent_entity=field,
                                                         state=entry['status'])
                     field2.position = ent['position']
+
+                    field2.set_data_type(request, ent['data_type_translation'], ent['data_type'])
+                    field2.set_entity_type(request, ent['entity_type_translation'], ent['entity_type'])
+                    if 'group' in ent:
+                        field2.set_group(request, ent['group_translation'], ent['group'])
                     DBSession.add(field2)
                     DBSession.flush()
-                    add_translation_to_translation_string(locale_id=locale_id,
-                                                          translation_string=ent['entity_type'],
-                                                          translation=ent['entity_type'],
-                                                          client_id=client.id)
-                    add_translation_to_translation_string(locale_id=locale_id,
-                                                          translation_string=ent['data_type'],
-                                                          translation=ent['data_type'], client_id=client.id)
-                    if 'group' in ent:
-                        field.group = entry['group']  # is there need for group on second level?
-                        add_translation_to_translation_string(locale_id=locale_id,
-                                                              translation_string=ent['group'],
-                                                              translation=ent['group'], client_id=client.id)
             DBSession.add(field)
             DBSession.flush()
-            add_translation_to_translation_string(locale_id=locale_id,
-                                                  translation_string=entry['entity_type'],
-                                                  translation=entry['entity_type'], client_id=client.id)
-            add_translation_to_translation_string(locale_id=locale_id,
-                                                  translation_string=entry['data_type'],
-                                                  translation=entry['data_type'], client_id=client.id)
         request.response.status = HTTPOk.code
-        return {
-                'object_id': perspective.object_id,
-                'client_id': perspective.client_id}
+        return {}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
@@ -1604,7 +1569,7 @@ def view_l1_entity(request):
     if entity:
         if not entity.marked_for_deletion:
             # TODO: fix urls to relative urls in content
-            response = entity.track()
+            response = entity.track(False)
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -1736,7 +1701,7 @@ def view_group_entity(request):
                 ent = dict()
                 ent['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
                                                                      translation_string=entity.entity_type)
-                ent['content'] = entity.content
+                ent['tag'] = entity.content
                 entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
                 objs = []
                 for entry in entities2:
@@ -1749,6 +1714,7 @@ def view_group_entity(request):
         return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No entities in the system")}
+
 
 @view_config(route_name='get_connected_words', renderer='json', request_method='GET')
 @view_config(route_name='get_connected_words_indict', renderer='json', request_method='GET')
@@ -1767,7 +1733,7 @@ def view_connected_words(request):
             subreq.method = 'GET'
             subreq.headers = request.headers
             respon = request.invoke_subrequest(subreq)
-            if not 'error' in respon.json:
+            if 'error' not in respon.json:
                 connections = respon.json['entities'][0]['connections']
                 for lex in connections:
                     path = request.route_url('lexical_entry',
@@ -1791,7 +1757,6 @@ def view_connected_words(request):
             response['words'] = words
             return response
 
-
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
 
@@ -1801,16 +1766,16 @@ def delete_group_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-
-    entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-    if entity:
-        if not entity.marked_for_deletion:
-
-            entity.marked_for_deletion = True
-            request.response.status = HTTPOk.code
-            return response
+    entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
+    if entities:
+        for entity in entities:
+            if not entity.marked_for_deletion:
+                entity.marked_for_deletion = True
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such entity in the system")}
+
 
 @view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')  # TODO: check for permission
@@ -1846,13 +1811,13 @@ def create_group_entity(request):
             if not tag in tags:
                 tags += [tag]
         parents = req['connections']
-        for tag in tags:
-            pars = DBSession.query(GroupingEntity).\
-                filter_by(content = tag).all()
-            for par in pars:
-                pa = {'client_id':par.parent_client_id, 'object_id':par.parent_object_id}
-                if not pa in parents:
-                    parents += [pa]
+        # for tag in tags:
+        #     pars = DBSession.query(GroupingEntity).\
+        #         filter_by(content = tag).all()
+        #     for par in pars:
+        #         pa = {'client_id':par.parent_client_id, 'object_id':par.parent_object_id}
+        #         if not pa in parents:
+        #             parents += [pa]
         for par in parents:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
@@ -1922,6 +1887,24 @@ def create_lexical_entry(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
+
+
+# @view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='DELETE', permission='delete')#, permission='view')
+# @view_config(route_name='lexical_entry', renderer='json', request_method='DELETE', permission='delete')
+# def delete_lexical_entry(request):
+#     client_id = request.matchdict.get('client_id')
+#     object_id = request.matchdict.get('object_id')
+#
+#     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+#     if entry:
+#         if not entry.marked_for_deletion:
+#             entry.marked_for_deletion = True
+#             request.response.status = HTTPOk.code
+#             return {}
+#     request.response.status = HTTPNotFound.code
+#     return {'error': str("No such lexical entry in the system")}
+
+
 @view_config(route_name='create_lexical_entry_bulk', renderer='json', request_method='POST', permission='create')
 def create_lexical_entry_bulk(request):
     try:
@@ -1980,29 +1963,60 @@ def lexical_entries_all(request):
     object_id = request.matchdict.get('perspective_id')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
+
+    log.debug('CRITERION: %s' % request.GET.get('sort_by'))
     start_from = request.params.get('start_from') or 0
+
+    log.debug('START FROM: %s' % request.GET.get('start_from'))
     count = request.params.get('count') or 200
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
+
+            # lexical_entries_criterion = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .join(LevelOneEntity)\
+            #     .filter_by(entity_type=sort_criterion)\
+            #     .group_by(LexicalEntry).subquery().select()
+            # lexical_entries_not_criterion = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .except_(lexical_entries_criterion)
+            # lexical_entries_criterion2 = DBSession.query(LexicalEntry,
+            #                                             func.min(LevelOneEntity.content).label("content"))\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .join(LevelOneEntity)\
+            #     .filter_by(entity_type=sort_criterion)\
+            #     .group_by(LexicalEntry)
+            # lexical_entries_not_criterion = DBSession.query(LexicalEntry,
+            #                                                 sqlalchemy.null().label('content'))\
+            #     .correlate(lexical_entries_not_criterion)
+            # lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).order_by('content')\
+            #     .offset(start_from) \
+            #     .limit(count).all()
+            #
+            # result = []
+            # for entry in lexical_entries:
+            #     result.append(entry[0].track(False))
+            # response['lexical_entries'] = result
+
             lexical_entries = DBSession.query(LexicalEntry)\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .offset(start_from) \
-                .limit(count)
-                #.filter_by(entity_type=sort_criterion)\
-                #.order_by(LevelOneEntity.content)
+                .limit(count).all()
 
-            result = []
+            resultold = []
             for entry in lexical_entries:
-                result.append(entry.track())
-            response['lexical_entries'] = result
+                resultold.append(entry.track(False))
+            response['lexical_entries'] = resultold
 
             request.response.status = HTTPOk.code
             return response
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
+
 
 @view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all_count(request):
@@ -2024,75 +2038,112 @@ def lexical_entries_all_count(request):
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
 
+
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
 def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
 
+    sort_criterion = request.params.get('sort_by') or 'Translation'
+    start_from = request.params.get('start_from') or 0
+    count = request.params.get('count') or 200
+
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            session = DBSession()
-            reqtype = request.params.get('sort_by')
-            start_from = request.params.get('start_from')
-            count = request.params.get('count')
-            levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
-            lex_entries = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
-                join(levonefirst).\
-                filter(levonefirst.entity_type == reqtype,
-                       levonefirst.parent_client_id == parent.client_id,
-                       levonefirst.parent_object_id == parent.object_id).\
-                order_by('obj_id').\
-                group_by(LexicalEntry.object_id).offset(start_from).limit(count)
-            lexes = []
-            for entry in lex_entries:
-                content = dict()
-                lev_one = entry.publishleveloneentity
-                group = entry.publishgroupingentity
-                lev_two_publ = entry.publishleveltwoentity
-                for ent in lev_one:
-                    enti = ent.entry
-                    content2 = dict()
-                    content2['level'] = enti.level
-                    content2['entity_type'] = enti.entity_type
-                    content2['data_type'] = enti.data_type
-                    content2['client_id'] = enti.client_id
-                    content2['object_id'] = enti.object_id
-                    lev_two = enti.leveltwoentity
-                    if lev_two:
-                        contains = []
-                        for entit in lev_two:
-                            if entit in lev_two_publ:
-                                content3 = dict()
-                                content3['level'] = entit.level
-                                content3['entity_type'] = entit.entity_type
-                                content3['data_type'] = entit.data_type
-                                content3['client_id'] = entit.client_id
-                                content3['object_id'] = entit.object_id
-                                contains += [content3]
-                        if contains:
-                            content2['contains'] = contains
-                    content += [content2]
-                # for ent in group:
-                #     enti = ent.entry
-                #     content2 = dict()
-                #     content2['level'] = enti.level
-                #     content2['entity_type'] = enti.entity_type
-                #     content2['data_type'] = enti.data_type
-                #     content2['client_id'] = enti.client_id
-                #     content2['object_id'] = enti.object_id
-                #     content += [content2]
-                lexes += {'client_id': entry.client_id, 'object_id': entry.object_id, 'contains': content}
 
-            response['lexical_entries'] = lexes
+            # lexical_entries_criterion = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .join(LevelOneEntity)\
+            #     .filter_by(entity_type=sort_criterion)\
+            #     .group_by(LexicalEntry).subquery().select()
+            # lexical_entries_not_criterion = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .except_(lexical_entries_criterion)
+            # lexical_entries_criterion2 = DBSession.query(LexicalEntry,
+            #                                             func.min(LevelOneEntity.content).label("content"))\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .join(LevelOneEntity)\
+            #     .filter_by(entity_type=sort_criterion)\
+            #     .group_by(LexicalEntry)
+            # lexical_entries_not_criterion = DBSession.query(LexicalEntry,
+            #                                                 sqlalchemy.null().label('content'))\
+            #     .correlate(lexical_entries_not_criterion)
+            # lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
+            #     .filter(or_(LexicalEntry.publishleveloneentity != None,
+            #                 LexicalEntry.publishleveltwoentity != None,
+            #                 LexicalEntry.publishgroupingentity != None))\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .order_by('content')\
+            #     .offset(start_from) \
+            #     .limit(count).all()
+            #
+            # result = []
+            # for entry in lexical_entries:
+            #     result.append(entry[0].track(True))
+            # response['lexical_entries'] = result
+            lexical_entries = DBSession.query(LexicalEntry)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .outerjoin(PublishGroupingEntity)\
+                .outerjoin(PublishLevelOneEntity)\
+                .outerjoin(PublishLevelTwoEntity)\
+                .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
+                            PublishLevelOneEntity.marked_for_deletion==False,
+                            PublishLevelTwoEntity.marked_for_deletion==False,
+                            ))\
+                .group_by(LexicalEntry).all()
+            # lexical_entries = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .filter(or_(LexicalEntry.publishleveloneentity != None,
+            #                 LexicalEntry.publishleveltwoentity != None,
+            #                 LexicalEntry.publishgroupingentity != None))\
+            #     .offset(start_from) \
+            #     .limit(count).all()
+
+            resultold = []
+            for entry in lexical_entries:
+                resultold.append(entry.track(True))
+            response['lexical_entries'] = resultold
+
             request.response.status = HTTPOk.code
             return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such perspective in the system")}
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
 
-# TODO: fix ACL
-@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET')#, permission='view')
+
+@view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
+def lexical_entries_published_count(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    sort_criterion = request.params.get('sort_by') or 'Translation'
+    start_from = request.params.get('start_from') or 0
+    count = request.params.get('count') or 200
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .outerjoin(PublishGroupingEntity)\
+                .outerjoin(PublishLevelOneEntity)\
+                .outerjoin(PublishLevelTwoEntity)\
+                .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
+                            PublishLevelOneEntity.marked_for_deletion==False,
+                            PublishLevelTwoEntity.marked_for_deletion==False,
+                            ))\
+                .group_by(LexicalEntry).scalar()
+            return {"count": lexical_entries_count}
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+
+
+
+@view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET', permission='view')#, permission='view')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):
     response = dict()
@@ -2111,7 +2162,7 @@ def view_lexical_entry(request):
                 subreq.headers = request.headers
                 return request.invoke_subrequest(subreq)
             else:
-                response['lexical_entry'] = entry.track()
+                response['lexical_entry'] = entry.track(False)
 
             request.response.status = HTTPOk.code
             return response
@@ -2158,12 +2209,239 @@ def get_user_info(request):
     response['birthday']=str(user.birthday)
     response['signup_date']=str(user.signup_date)
     response['is_active']=str(user.is_active)
+    email = None
+    if user.email:
+        for em in user.email:
+            email = em.email
+            break
+    response['email'] = email
+    about = None
+    if user.about:
+        for ab in user.about:
+            about = ab.content
+            break
+    response['about'] = about
+    organizations = []
+    for organization in user.organizations:
+        organizations += [{'organization_id':organization.id}]
+    response['organizations'] = organizations
     request.response.status = HTTPOk.code
     return response
 
 
+@view_config(route_name='get_user_info', renderer='json', request_method='PUT')
+def edit_user_info(request):
+    response = dict()
+    client_id = None
+    try:
+        client_id = request.params.get('client_id')
+    except:
+        pass
+    user_id=None
+    try:
+        user_id = request.params.get('user_id')
+    except:
+        pass
+    user = None
+    if client_id:
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if not client:
+
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such client in the system")}
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such user in the system")}
+    else:
+        user = DBSession.query(User).filter_by(id=user_id).first()
+        if not user:
+
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such user in the system")}
+    req = request.json_body
+    user.name=req['name']
+    user.default_locale_id = req['default_locale_id']
+    user.birthday = datetime.date(response['birthday'])
+    if user.email:
+        for em in user.email:
+            em.email = req['email']
+    else:
+        new_email = Email(user=user, email=req['email'])
+        DBSession.add(new_email)
+        DBSession.flush()
+    if user.about:
+        for ab in user.about:
+            ab.content = req['about']
+    else:
+        new_about = About(user=user, email=req['about'])
+        DBSession.add(new_about)
+        DBSession.flush()
+
+    # response['is_active']=str(user.is_active)
+    request.response.status = HTTPOk.code
+    return response
+
+
+@view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
+def approve_all(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+
+    if parent:
+        if not parent.marked_for_deletion:
+            dictionary_client_id = parent.parent_client_id
+            dictionary_object_id = parent.parent_object_id
+            lexes = DBSession.query(LexicalEntry).filter_by(parent=parent).all()
+            for lex in lexes:
+                levones = DBSession.query(LevelOneEntity).filter_by(parent=lex).all()
+                for levone in levones:
+                    url = request.route_url('approve_entity',
+                                            dictionary_client_id=dictionary_client_id,
+                                            dictionary_object_id=dictionary_object_id,
+                                            perspective_client_id=client_id,
+                                            perspective_id=object_id)
+                    subreq = Request.blank(url)
+                    jsn = dict()
+                    entities = [{'type': 'leveloneentity',
+                                         'client_id': levone.client_id,
+                                         'object_id': levone.object_id}]
+                    jsn['entities']= entities
+                    subreq.json = jsn
+                    subreq.method = 'PATCH'
+                    subreq.headers = request.headers
+                    try:
+                        request.invoke_subrequest(subreq)
+                    except:
+                        log.debug('JSON', jsn)
+                        return{'error': str(jsn)}
+                    for levtwo in levone.leveltwoentity:
+                        url = request.route_url('approve_entity',
+                                                dictionary_client_id=dictionary_client_id,
+                                                dictionary_object_id=dictionary_object_id,
+                                                perspective_client_id=client_id,
+                                                perspective_id=object_id)
+                        subreq = Request.blank(url)
+                        jsn = dict()
+                        entities = [{'type': 'leveltwoentity',
+                                             'client_id':levtwo.client_id,
+                                             'object_id':levtwo.object_id}]
+                        jsn['entities']= entities
+                        subreq.json = jsn
+                        subreq.method = 'PATCH'
+                        subreq.headers = request.headers
+                        try:
+                            request.invoke_subrequest(subreq)
+                        except:
+                            log.debug('JSON', jsn)
+                groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
+                for groupent in groupents:
+                    url = request.route_url('approve_entity',
+                                            dictionary_client_id=dictionary_client_id,
+                                            dictionary_object_id=dictionary_object_id,
+                                            perspective_client_id=client_id,
+                                            perspective_id=object_id)
+                    subreq = Request.blank(url)
+                    jsn = dict()
+                    entities = [{'type': 'groupingentity',
+                                         'client_id': groupent.client_id,
+                                         'object_id': groupent.object_id}]
+                    jsn['entities'] = entities
+                    subreq.json = jsn
+                    subreq.method = 'PATCH'
+                    subreq.headers = request.headers
+                    try:
+                        request.invoke_subrequest(subreq)
+                    except:
+                        log.debug('JSON', jsn)
+
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
+    try:
+
+        req = request.json_body
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        log.debug('REQUEST BODY:', req)
+        for entry in req['entities']:
+            if entry['type'] == 'leveloneentity':
+                entity = DBSession.query(LevelOneEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                if entity:
+                    if not entity.publishleveloneentity:
+                        publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
+                                                           entity=entity, parent=entity.parent)
+                        DBSession.add(publishent)
+                        DBSession.flush()
+                    else:
+                        for ent in entity.publishleveloneentity:
+                            if ent.marked_for_deletion:
+                                ent.marked_for_deletion = False
+                                DBSession.flush()
+            elif entry['type'] == 'leveltwoentity':
+                entity = DBSession.query(LevelTwoEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                if entity:
+                    if not entity.publishleveltwoentity:
+                        publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
+                                                           entity=entity, parent=entity.parent.parent)
+                        DBSession.add(publishent)
+                        DBSession.flush()
+                    else:
+                        for ent in entity.publishleveltwoentity:
+                            if ent.marked_for_deletion:
+                                ent.marked_for_deletion = False
+                                DBSession.flush()
+            elif entry['type'] == 'groupingentity':
+                entity = DBSession.query(GroupingEntity).\
+                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                if entity:
+                    if not entity.publishgroupingentity:
+                        publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
+                                                           entity=entity, parent=entity.parent)
+                        DBSession.add(publishent)
+                        DBSession.flush()
+                    else:
+                        for ent in entity.publishgroupingentity:
+                            if ent.marked_for_deletion:
+                                ent.marked_for_deletion = False
+                                DBSession.flush()
+            else:
+                raise CommonException("Unacceptable type")
+
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='approve_entity', renderer='json', request_method='DELETE', permission='delete')
+def disapprove_entity(request):
     try:
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
@@ -2174,28 +2452,30 @@ def approve_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        for entry in req:
+        for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
-                entity = DBSession.query_property(LevelOneEntity).\
+                entity = DBSession.query(LevelOneEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    for ent in entity.publishleveloneentity:
+                        ent.marked_for_deletion = True
+                        DBSession.flush()
+                else:
+                    log.debug("WARNING: NO ENTITY")
             elif entry['type'] == 'leveltwoentity':
-                entity = DBSession.query_property(LevelTwoEntity).\
+                entity = DBSession.query(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    for ent in entity.publishleveltwoentity:
+                        ent.marked_for_deletion = True
+                        DBSession.flush()
             elif entry['type'] == 'groupingentity':
-                entity = DBSession.query_property(GroupingEntity).\
+                entity = DBSession.query(GroupingEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                                   entity=entity, parent=entity.parent)
-                DBSession.add(publishent)
-                DBSession.flush()
+                if entity:
+                    for ent in entity.publishgroupingentity:
+                        ent.marked_for_deletion = True
+                        DBSession.flush()
             else:
                 raise CommonException("Unacceptable type")
 
@@ -2224,12 +2504,18 @@ def get_translations(request):
     return response
 
 
-@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
 def merge_dictionaries(request):
     try:
         req = request.json_body
-
         variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent_object_id = req['language_object_id']
         parent_client_id = req['language_client_id']
         name = req['name']
@@ -2239,28 +2525,48 @@ def merge_dictionaries(request):
         if len(dictionaries) != 2:
             raise KeyError("Wrong number of dictionaries to merge.",
                            len(dictionaries))
+        new_dicts = []
         for dicti in dictionaries:
-            if parent_client_id != dicti.parent_client_id or parent_object_id != dicti.parent_object_id:
+            diction = DBSession.query(Dictionary).filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).first()
+            if not diction:
+                raise KeyError("Dictionary do not exist in the system")
+            if parent_client_id != diction.parent_client_id or parent_object_id != diction.parent_object_id:
                 raise KeyError("Both dictionaries should have same language.")
+            new_dicts += [diction]
+        dictionaries = new_dicts
+        base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
+        override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if user not in override.users:
+            grps = []
+            for dict in dictionaries:
+                gr = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                      subject_client_id=dict.client_id,
+                                                      subject_object_id=dict.object_id).first()
+                grps += [gr]
+        for gr in grps:
+            if user not in gr.users:
+                raise KeyError("Not enough permission to do that")
+
         subreq = Request.blank('/dictionary')
         subreq.method = 'POST'
-        subreq.json_body = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
+        subreq.json = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
                             'name': name, 'translation': translation}
+        subreq.headers = request.headers
         response = request.invoke_subrequest(subreq)
         client_id = response.json['client_id']
         object_id = response.json['object_id']
         new_dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-
         perspectives = []
         for dicti in dictionaries:
             for entry in dicti.dictionaryperspective:
-                perspectives += entry
+                perspectives += [entry]
             for entry in perspectives:
-                dicti.dictionaryperspective.remove(entry)
+                if entry in dicti.dictionaryperspective:
+                    dicti.dictionaryperspective.remove(entry)
                 new_dict.dictionaryperspective.append(entry)
             cli_id = dicti.client_id
             obj_id = dicti.object_id
-            bases = DBSession.query(BaseGroup).filter_by(subject='dictionary')
+            bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
             groups = []
             for base in bases:
 
@@ -2270,18 +2576,22 @@ def merge_dictionaries(request):
                 groups += [group]
 
             for group in groups:
-                existing = DBSession.query(Group).filter_by(subject='dictionary'+str(client_id)+'_'+str(object_id))
+                existing = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.dictionary_default==True,
+                                                         Group.subject_object_id==obj_id,
+                                                         Group.subject_client_id==cli_id).first()
                 if existing:
                     users = []
                     for user in group.users:
                         users += [user]
                     for user in users:
-                        group.remove(user)
+                        if user in group.users:
+                            group.users.remove(user)
                         if not user in existing.users:
                             existing.users.append(user)
                 else:
                     new_group = Group(base_group_id=group.base_group_id,
-                                      subject='dictionary'+str(client_id)+'_'+str(object_id))
+                                      subject_object_id=cli_id,
+                                      subject_client_id=obj_id)
                     DBSession.add(new_group)
                     users = []
                     for user in group.users:
@@ -2307,6 +2617,269 @@ def merge_dictionaries(request):
         return {'error': str(e)}
 
 
+@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')
+def merge_perspectives(request):
+    try:
+        req = request.json_body
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        dictionary_client_id = req['dictionary_client_id']
+        dictionary_object_id = req['dictionary_object_id']
+        name = req['name']
+        translation = req['translation']
+
+        perspectives = req['perspectives']
+        if len(perspectives) != 2:
+            raise KeyError("Wrong number of perspectives to merge.",
+                           len(perspectives))
+        new_persps = []
+        for persp in perspectives:
+            perspe = DBSession.query(DictionaryPerspective).filter_by(client_id=persp['client_id'],
+                                                                       object_id=persp['object_id']).first()
+            if not perspe:
+                raise KeyError("Perspective do not exist in the system")
+            if dictionary_client_id != perspe.parent_client_id or dictionary_object_id != perspe.parent_object_id:
+                raise KeyError("Both perspective should from same dictionary.")
+            new_persps += [perspe]
+        perspectives = new_persps
+        base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
+        override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
+        if user not in override.users:
+            group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                  subject_client_id=dictionary_client_id,
+                                                  subject_object_id=dictionary_object_id).first()
+            if user not in group.users:
+                raise KeyError("Not enough permission to do that")
+
+        subreq = Request.blank('/dictionary/%s/%s/perspective' % (dictionary_client_id, dictionary_object_id))
+        subreq.method = 'POST'
+        subreq.json = {'name': name, 'translation': translation}
+        subreq.headers = request.headers
+        response = request.invoke_subrequest(subreq)
+        client_id = response.json['client_id']
+        object_id = response.json['object_id']
+        new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        perspectives = []
+
+        subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' % (dictionary_client_id,
+                                                                               dictionary_object_id,
+                                                                               client_id,
+                                                                               object_id))
+        subreq.method = 'POST'
+        # subreq.json = req['fields']
+        subreq.headers = request.headers
+        response = request.invoke_subrequest(subreq)
+        for persp in perspectives:
+
+            # TODO: make movement of lexical entries in new perspective.
+            #  Must be complex, because fields of perspective should change
+            obj_id = persp.object_id
+            cli_id = persp.client_id
+            bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
+            groups = []
+            for base in bases:
+
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=obj_id,
+                                                         subject_client_id=cli_id).first()
+                groups += [group]
+
+            for group in groups:
+                existing = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.perspective_default==True,
+                                                         Group.subject_object_id==obj_id,
+                                                         Group.subject_client_id==cli_id).first()
+                if existing:
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        if user in group.users:
+                            group.users.remove(user)
+                        if not user in existing.users:
+                            existing.users.append(user)
+                else:
+                    new_group = Group(base_group_id=group.base_group_id,
+                                      subject_object_id=cli_id,
+                                      subject_client_id=obj_id)
+                    DBSession.add(new_group)
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        group.remove(user)
+                        new_group.users.append(user)
+                group.marked_for_deletion = True
+            persp.marked_for_deletion = True
+        request.response.status = HTTPOk.code
+        return {'object_id': object_id,
+                'client_id': client_id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH')  # TODO: check for permission
+def move_lexical_entry(request):
+    req = request.json_body
+    # variables = {'auth': request.authenticated_userid}
+    object_id = req['object_id']
+    client_id = req['client_id']
+    cli_id = req['client_id']
+    obj_id = req['object_id']
+    entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+    parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
+    if entry and parent:
+        if not entry.marked_for_deletion and parent.marked_for_deletion:
+            if entry.moved_to is None and parent.moved_to is None:
+                for entity in entry.leveloneentity:
+                    entity.parent = parent
+                    for publent in entity.publishleveloneentity:
+                        publent.marked_for_deletion = True
+                        publent.parent = parent
+                    DBSession.flush()
+
+                    for ent in entity.leveltwoentity:
+                        ent.parent = parent
+                        for publent in ent.publishleveltwoentity:
+                            publent.marked_for_deletion = True
+                            publent.parent = parent
+                        DBSession.flush()
+                for entity in entry.groupingentity:
+                    entity.parent = parent
+                    for publent in entity.publishgroupingentity:
+                        publent.marked_for_deletion = True
+                        publent.parent = parent
+                    DBSession.flush()
+                entry.moved_to = str(cli_id) + '/' + str(obj_id)
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such lexical entry in the system")}
+
+
+@view_config(route_name='organization', renderer='json', request_method='GET')
+def view_organization(request):
+    response = dict()
+    organization_id = request.matchdict.get('organization_id')
+    organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+    if organization:
+        if not organization.marked_for_deletion:
+            response['name'] = organization.name
+            response['about'] = organization.parent_object_id
+            users = []
+            for user in organization.users:
+                users += [user.id]
+            response['users'] = users
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such organization in the system")}
+
+
+@view_config(route_name='organization', renderer='json', request_method='PUT', permission='edit')
+def edit_organization(request):
+    try:
+        response = dict()
+        organization_id = request.matchdict.get('organization_id')
+        organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+        if organization:
+            if not organization.marked_for_deletion:
+                req = request.json_body
+                if 'add_users' in req:
+                    for user in req['add_users']:
+                        if user not in organization.users:
+                            organization.user.append(user)
+                            bases = DBSession.query(BaseGroup).filter_by(subject='organization')
+                            for base in bases:
+                                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                                         subject_object_id=organization.id).first()
+                                group.users.append(user)
+                if 'delete_users' in req:
+                    for user in req['delete_users']:
+                        if user not in organization.users:
+                            organization.user.remove(user)
+                            bases = DBSession.query(BaseGroup).filter_by(subject='organization')
+                            for base in bases:
+                                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                                         subject_object_id=organization.id).first()
+                                group.users.remove(user)
+                if 'name' in req:
+                    organization.name = req['name']
+                if 'about' in req:
+                    organization.name = req['about']
+                request.response.status = HTTPOk.code
+                return response
+
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such organization in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='organization', renderer='json', request_method='DELETE', permission='delete')
+def delete_organization(request):
+    response = dict()
+    organization_id = request.matchdict.get('organization_id')
+    organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+    if organization:
+        if not organization.marked_for_deletion:
+            organization.marked_for_deletion = True
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such organization in the system")}
+
+
+@view_config(route_name='create_organization', renderer='json', request_method='POST', permission='create')
+def create_organization(request):
+    try:
+
+        variables = {'auth': request.authenticated_userid}
+        req = request.json_body
+        name = req['name']
+        about = req['about']
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        organization = Organization(name=name,
+                                    about=about)
+        DBSession.add(organization)
+        DBSession.flush()
+        bases = DBSession.query(BaseGroup).filter_by(subject='organization')
+        for base in bases:
+            group = Group(parent=base, subject_object_id=organization.id)
+            group.users.append(user)
+        request.response.status = HTTPOk.code
+        return {'organization_id': organization.id}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
 might be caused by one of the following things:
@@ -2324,52 +2897,13 @@ try it again.
 """
 
 
-
-
-def searchby(reqtype):
-    res = []
-    engine = create_engine('sqlite:///sqlalchemy_example.db')
-    Base.metadata.bind = engine
-    DBSession = sessionmaker()
-    DBSession.bind = engine
-    session = DBSession()
-    levonefirst = sqlalchemy.orm.aliased(LevelOneEntity, name="levonefirst")
-    levone = sqlalchemy.orm.aliased(LevelOneEntity, name="levone")
-    # some = session.query(LexicalEntry, func.min(levonefirst.object_id).label('obj_id')).\
-    #     join(levonefirst).\
-    #     filter(levonefirst.entity_type == reqtype).\
-    #     order_by(my_order('obj_id')).\
-    #     group_by(LexicalEntry.object_id)
-    # subq = some.subquery()
-    # something = session.query(subq.c.object_id, subq.c.obj_id, levone.entity_type, levone.content).\
-    #     join(levone).filter(levone.entity_type=='2').\
-    #     order_by(my_order('obj_id'))
-    #     add_column(levone.content).\
-    #     add_column(levone.entity_type).\
-    something = session.query(LexicalEntry.object_id).order_by()
-    for ent in something:
-        res += [ent]
-    return res
-
-
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    log.debug('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
-
-    result = dict()
-    result['POST'] = request.POST.get('login')
-    result['GET'] = request.GET.get('login')
-    result['params'] = request.params.get('login')
-    try:
-        result['json'] = request.json_body['login']
-    except:
-        pass
-    log.debug('WTF?: %s ', result)
     try:
         req = request.json_body
         return req
     except:
-        return result
+        return request
 
 
 
