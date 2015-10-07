@@ -2609,9 +2609,8 @@ def blob_upload_get(request):
     return render_to_response('templates/user_upload.pt', variables, request=request)
 
 
-@view_config(route_name='testing', renderer='json', request_method='GET')
-def blob_merge_test(request):
-    
+@view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
+def merge_suggestions(request):
     subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_1') + '/' + 
     request.matchdict.get('dictionary_object_id_1') + '/perspective/' +
     request.matchdict.get('perspective_client_id_1') + '/' +
@@ -2632,18 +2631,22 @@ def blob_merge_test(request):
     entity_type_secondary = request.matchdict.get('entity_type_secondary')
     threshold = request.matchdict.get('threshold')
     levenstein = request.matchdict.get('levenstein')
-    def f(elem):
+    def parse_response(elem):
         words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
         words = map(lambda x: x['content'], words)
         trans = filter(lambda x: x['entity_type'] == entity_type_secondary and not x['marked_for_deletion'], elem['contains'])
         trans = map(lambda x: x['content'], trans)
         tuples_res = [(i_word, i_trans, (elem['client_id'], elem['object_id'])) for i_word in words for i_trans in trans]
-        
         return tuples_res
-    tuples_1 = [f(i) for i in response_1['lexical_entries']]
+    tuples_1 = [parse_response(i) for i in response_1['lexical_entries']]
     tuples_1 = [item for sublist in tuples_1 for item in sublist]
-    tuples_2 = [f(i) for i in response_2['lexical_entries']]
+    tuples_2 = [parse_response(i) for i in response_2['lexical_entries']]
     tuples_2 = [item for sublist in tuples_2 for item in sublist]
-    results = mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))
-    return json.dumps(resutls)
+    def get_dict(elem):
+        return {'suggestion': [
+            {'lexical_entry_client_id': elem[0][0], 'lexical_entry_object_id': elem[0][1]},
+            {'lexical_entry_client_id': elem[1][0], 'lexical_entry_object_id': elem[1][1]}
+        ], 'confidence': elem[2]}
+    results = [get_dict(i) for i in mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))]
+    return json.dumps(results)
 
