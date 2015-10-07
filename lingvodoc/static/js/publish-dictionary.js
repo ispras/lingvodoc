@@ -27239,7 +27239,7 @@ var elan = function() {
     return elan;
 }();
 
-angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionaryService", function($http, $q) {
+angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionaryService", function($http, $q) {
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
     };
@@ -27538,7 +27538,7 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             });
         }
     };
-}).controller("ViewDictionaryController", [ "$scope", "$window", "$http", "$modal", "$log", "dictionaryService", function($scope, $window, $http, $modal, $log, dictionaryService) {
+}).controller("PublishDictionaryController", [ "$scope", "$window", "$http", "$modal", "$log", "dictionaryService", function($scope, $window, $http, $modal, $log, dictionaryService) {
     var currentClientId = $("#clientId").data("lingvodoc");
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
@@ -27594,6 +27594,42 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             input.push(i);
         }
         return input;
+    };
+    $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
+        var url = $("#approveEntityUrl").data("lingvodoc");
+        var obj = {
+            type: field.level,
+            client_id: fieldValue.client_id,
+            object_id: fieldValue.object_id
+        };
+        dictionaryService.approve(url, {
+            entities: [ obj ]
+        }, approved).then(function(data) {
+            fieldValue["published"] = approved;
+        }, function(reason) {
+            $log.error(reason);
+        });
+    };
+    $scope.approved = function(lexicalEntry, field, fieldValue) {
+        if (!fieldValue.published) {
+            return false;
+        }
+        return !!fieldValue.published;
+    };
+    $scope.approveAll = function() {
+        var approveAll = $window.confirm("Are you sure you want to approve all entries?");
+        if (approveAll) {
+            var url = $("#approveAllEntityUrl").data("lingvodoc");
+            dictionaryService.approveAll(url).then(function(data) {
+                angular.forEach($scope.lexicalEntries, function(entry) {
+                    if (!entry.published) {
+                        entry.published = true;
+                    }
+                });
+            }, function(reason) {
+                $log.error(reason);
+            });
+        }
     };
     $scope.viewGroup = function(entry, field, values) {
         $modal.open({
@@ -27687,7 +27723,7 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     }, true);
     dictionaryService.getPerspectiveFields($("#getPerspectiveFieldsUrl").data("lingvodoc")).then(function(fields) {
         $scope.fields = fields;
-        dictionaryService.getLexicalEntries($("#allPublishedEntriesUrl").data("lingvodoc"), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
+        dictionaryService.getLexicalEntries($("#allLexicalEntriesUrl").data("lingvodoc"), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
             $scope.lexicalEntries = lexicalEntries;
         }, function(reason) {
             $log.error(reason);
@@ -27695,7 +27731,7 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     }, function(reason) {
         $log.error(reason);
     });
-    dictionaryService.getLexicalEntriesCount($("#allPublishedEntriesCountUrl").data("lingvodoc")).then(function(totalEntriesCount) {
+    dictionaryService.getLexicalEntriesCount($("#allLexicalEntriesCountUrl").data("lingvodoc")).then(function(totalEntriesCount) {
         $scope.pageCount = Math.ceil(totalEntriesCount / $scope.pageSize);
     }, function(reason) {
         $log.error(reason);
