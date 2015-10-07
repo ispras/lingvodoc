@@ -51,7 +51,6 @@ import logging
 log = logging.getLogger(__name__)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
-session = DBSession()
 Base = declarative_base()
 
 
@@ -209,61 +208,10 @@ class RelationshipPublishingMixin(RelationshipMixin):
     @declared_attr
     def entity(cls):
         return relationship(cls.__entityname__,
-                            backref=backref(cls.__tablename__.lower())
-                            )
+                            backref=backref(cls.__tablename__.lower()))
 
 
-def find_by_translation_string(locale_id, translation_string):
-        trstr = session.query(UserEntitiesTranslationString).\
-            filter_by(locale_id=locale_id, translation_string=translation_string).first()
-        if not trstr:
-            trstr = session.query(UserEntitiesTranslationString).\
-                filter_by(locale_id=1, translation_string=translation_string).first()
-        if not trstr:
-            return {'translation_string': translation_string, 'translation': translation_string}
-        return {'translation_string': translation_string, 'translation': trstr.translation}
-
-
-def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-        if not translation:
-            translation = translation_string
-        client = session.query(Client).filter_by(id=client_id).first()
-        uets = session.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
-                                                                        translation_string=translation_string).first()
-        if not uets:
-            uets = UserEntitiesTranslationString(object_id=session.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
-                                                 client_id=client.id,
-                                                 locale_id=locale_id,
-                                                 translation_string=translation_string,
-                                                 translation=translation)
-            session.add(uets)
-            session.flush()
-        else:
-            uets.translation = translation
-
-
-def find_locale_id(request):
-    try:
-        return int(request.cookies['locale_id'])
-    except:
-        return 1
-
-
-class TranslationStringMixin(object):
-    @declared_attr
-    def get_translation(cls, request):
-        return find_by_translation_string(find_locale_id(request), cls.translation_string)
-
-    @declared_attr
-    def set_translation(cls, request):
-        add_translation_to_translation_string(find_locale_id(request),
-                                              request.json_boy['translation'],
-                                              request.json_boy['translation_string'],
-                                              request.authenticated_userid)
-        cls.translation_string = request.json_body['translation_string']
-        return
-
-class Language(Base, TableNameMixin, TranslationStringMixin):
+class Language(Base, TableNameMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -312,7 +260,7 @@ class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     translation = Column(UnicodeText)
 
 
-class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
+class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -324,11 +272,12 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, Tran
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
-    translation_string = Column(UnicodeText)
+    name = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
 
 
-class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
+
+class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -344,7 +293,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    translation_string = Column(UnicodeText)
+    name = Column(UnicodeText)
     is_template = Column(Boolean, default=False)
 
 
@@ -375,40 +324,6 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     marked_for_deletion = Column(Boolean, default=False)
     state = Column(UnicodeText)
     position = Column(BigInteger)
-
-    def set_entity_type(self, request, translation, translation_string):
-        add_translation_to_translation_string(find_locale_id(request),
-                                              translation,
-                                              translation_string,
-                                              request.authenticated_userid)
-        self.entity_type = translation_string
-        return
-
-    def get_entity_type(self, request):
-        return find_by_translation_string(find_locale_id(request), self.entity_type)
-
-    def set_data_type(self, request, translation, translation_string):
-        add_translation_to_translation_string(find_locale_id(request),
-                                              translation,
-                                              translation_string,
-                                              request.authenticated_userid)
-        self.data_type = translation_string
-        return
-
-    def get_data_type(self, request):
-        return find_by_translation_string(find_locale_id(request), self.data_type)
-
-    def set_group(self, request, translation, translation_string):
-        add_translation_to_translation_string(find_locale_id(request),
-                                              translation,
-                                              translation_string,
-                                              request.authenticated_userid)
-        self.group = translation_string
-        return
-
-    def get_group(self, request):
-        return find_by_translation_string(find_locale_id(request), self.group)
-
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
                                                                      DictionaryPerspectiveField.object_id],
@@ -710,19 +625,19 @@ class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
 def acl_by_groups(object_id, client_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
-    groups = session.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
+    groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
         if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
-            persp = session.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+            persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
                 if persp.state == 'published':
                     acls += [(Allow, Everyone, 'view')]
         elif subject in ['dictionary', 'other dictionary subjects']:
-            dict = session.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+            dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
             if dict:
                 if dict.state == 'published':
                     acls += [(Allow, Everyone, 'view')]
-    groups += session.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
+    groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
         base_group = group.parent
@@ -739,8 +654,8 @@ def acl_by_groups(object_id, client_id, subject):
 def acl_by_groups_single_id(object_id, subject):
     acls = [] #TODO DANGER if acls do not work -- incomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
-    groups = session.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
-    groups += session.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
+    groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
+    groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
         base_group = group.parent
@@ -956,7 +871,7 @@ class PerspectiveEntityOneAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        levoneent = session.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = levoneent.parent.parent
         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
@@ -977,7 +892,7 @@ class PerspectiveEntityTwoAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        levoneent = session.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = levoneent.parent.parent.parent
         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
@@ -998,7 +913,7 @@ class PerspectiveEntityGroupAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        group_ent = session.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = group_ent.parent.parent
         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
@@ -1057,6 +972,6 @@ class LexicalViewAcl(object):
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        lex = session.query(LexicalEntry).filter_by(client_id=client_id,object_id=object_id).first()
+        lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id,object_id=object_id).first()
         parent = lex.parent
         return acls + acl_by_groups(parent.object_id, parent.client_id, 'lexical_entries_and_entities')
