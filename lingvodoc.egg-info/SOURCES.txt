@@ -2,7 +2,6 @@ CHANGES.md
 MANIFEST.in
 README.md
 alembic.ini
-andrey.ini
 development.ini
 log.txt
 postgres.ini
@@ -10,8 +9,11 @@ production.ini
 requirements.txt
 setup.py
 tox.ini
+uwsgi-http-postgres.ini
 lingvodoc/__init__.py
 lingvodoc/acl.py
+lingvodoc/merge_perspectives.py
+lingvodoc/merge_perspectives_old.py
 lingvodoc/models.py
 lingvodoc/views.py
 lingvodoc.egg-info/PKG-INFO

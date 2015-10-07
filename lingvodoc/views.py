@@ -33,6 +33,10 @@ from .models import (
     UserBlobs
     )
 
+from .merge_perspectives import (
+    mergeDicts
+    )
+
 from sqlalchemy.orm import sessionmaker
 from pyramid.security import (
     Everyone,
@@ -2603,4 +2607,43 @@ def blob_upload_get(request):
                  'perspective_id': perspective_id}
 
     return render_to_response('templates/user_upload.pt', variables, request=request)
+
+
+@view_config(route_name='testing', renderer='json', request_method='GET')
+def blob_merge_test(request):
+    
+    subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_1') + '/' + 
+    request.matchdict.get('dictionary_object_id_1') + '/perspective/' +
+    request.matchdict.get('perspective_client_id_1') + '/' +
+    request.matchdict.get('perspective_object_id_1') + '/all')
+    subreq.method = 'GET'
+    response_1 = request.invoke_subrequest(subreq).json
+    subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_2') + '/' + 
+    request.matchdict.get('dictionary_object_id_2') + '/perspective/' +
+    request.matchdict.get('perspective_client_id_2') + '/' +
+    request.matchdict.get('perspective_object_id_2') + '/all')
+    subreq.method = 'GET'
+    response_2 = request.invoke_subrequest(subreq).json
+    #entity_type_primary = 'Word'
+    #entity_type_secondary = 'Transcription'
+    #threshold = 0.2
+    #levenstein = 2
+    entity_type_primary = request.matchdict.get('entity_type_primary')
+    entity_type_secondary = request.matchdict.get('entity_type_secondary')
+    threshold = request.matchdict.get('threshold')
+    levenstein = request.matchdict.get('levenstein')
+    def f(elem):
+        words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
+        words = map(lambda x: x['content'], words)
+        trans = filter(lambda x: x['entity_type'] == entity_type_secondary and not x['marked_for_deletion'], elem['contains'])
+        trans = map(lambda x: x['content'], trans)
+        tuples_res = [(i_word, i_trans, (elem['client_id'], elem['object_id'])) for i_word in words for i_trans in trans]
+        
+        return tuples_res
+    tuples_1 = [f(i) for i in response_1['lexical_entries']]
+    tuples_1 = [item for sublist in tuples_1 for item in sublist]
+    tuples_2 = [f(i) for i in response_2['lexical_entries']]
+    tuples_2 = [item for sublist in tuples_2 for item in sublist]
+    results = mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))
+    return json.dumps(resutls)
 

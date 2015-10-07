@@ -447,6 +447,10 @@ def configure_routes(config):
     # {"blob_client_id": <id>, "blob_object_id": <id>, "parent_client_id": <language_client_id>, "parent_object_id": <language_object_id>}
     config.add_route(name='convert_dictionary', pattern='/convert')
 
+    config.add_route(name='testing', pattern='/{dictionary_client_id_1}/{dictionary_object_id_1}/{perspective_client_id_1}/{perspective_object_id_1}/' +
+        '{dictionary_client_id_2}/{dictionary_object_id_2}/{perspective_client_id_2}/{perspective_object_id_2}/{entity_type_primary}/{threshold}/' +
+        '{entity_type_secondary}/{levenstein}/testing', factory='lingvodoc.models.PerspectivePublishAcl')
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
@@ -473,7 +477,7 @@ def main(global_config, **settings):
     config.add_static_view(settings['storage']['static_route'], path=settings['storage']['path'], cache_max_age=3600)
     config.add_static_view('static', path='lingvodoc:static', cache_max_age=3600)
     configure_routes(config)
-    config.add_route('testing', '/testing')
+    #config.add_route('testing', '/testing')
 #    config.add_route('example', 'some/route/{object_id}/{client_id}/of/perspective', factory = 'lingvodoc.models.DictAcl')
 
 
