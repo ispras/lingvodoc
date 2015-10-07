@@ -267,14 +267,9 @@
 
     </div>
 
-    <!--?<a ng-click="createPerspective()" class="btn btn-block btn-info">-->
-        <!--?Next <span class="glyphicon glyphicon-circle-arrow-right"></span>-->
-    <!--?</a>-->
-
     <a class="btn btn-block btn-warning" ng-click="createPerspective()">
         Complete <span class="glyphicon glyphicon-ok-sign"></span>
     </a>
-
 
 </script>
 
