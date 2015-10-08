@@ -2631,7 +2631,6 @@ def merge_perspectives_api(request):
             if dictionary_client_id != perspe.parent_client_id or dictionary_object_id != perspe.parent_object_id:
                 raise KeyError("Both perspective should from same dictionary.")
             new_persps += [perspe]
-        perspectives = new_persps
         base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
         override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
         if user not in override.users:
@@ -2649,7 +2648,6 @@ def merge_perspectives_api(request):
         client_id = response.json['client_id']
         object_id = response.json['object_id']
         new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-        perspectives = []
         fields = []
         for persp in persps:
             for entry in persp['fields']:
@@ -2670,12 +2668,12 @@ def merge_perspectives_api(request):
         subreq.json = {'fields': fields}
         subreq.headers = request.headers
         response = request.invoke_subrequest(subreq)
-        for persp in perspectives:
-            # TODO: make movement of lexical entries in new perspective.
-            #  Must be complex, because fields of perspective should change
-            obj_id = persp.object_id
-            cli_id = persp.client_id
-            bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
+        for persp in persps:
+
+            obj_id = persp['object_id']
+            cli_id = persp['client_id']
+            lexes = DBSession.query_property()
+            bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
             groups = []
             for base in bases:
 
@@ -2813,8 +2811,8 @@ def edit_organization(request):
                 req = request.json_body
                 if 'add_users' in req:
                     for user_id in req['add_users']:
-                        if user_id not in organization.users:
-                            user = DBSession.query(User).filter_by(id=user_id).first()
+                        user = DBSession.query(User).filter_by(id=user_id).first()
+                        if user not in organization.users:
                             organization.users.append(user)
                             bases = DBSession.query(BaseGroup).filter_by(subject='organization')
                             for base in bases:
@@ -2823,9 +2821,11 @@ def edit_organization(request):
                                 group.users.append(user)
                 if 'delete_users' in req:
                     for user_id in req['delete_users']:
-                        if user_id in organization.users:
-                            user = DBSession.query(User).filter_by(id=user_id).first()
+                        user = DBSession.query(User).filter_by(id=user_id).first()
+                        if user in organization.users:
                             organization.users.remove(user)
+                            for user in organization.users:
+                                print('aaa', user.id)
                             bases = DBSession.query(BaseGroup).filter_by(subject='organization')
                             for base in bases:
                                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
