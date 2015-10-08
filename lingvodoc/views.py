@@ -2602,7 +2602,7 @@ def merge_dictionaries(request):
 
 
 @view_config(route_name='merge_perspectives', renderer='json', request_method='POST')  # TODO: check for permission
-def merge_perspectives(request):
+def merge_perspectives_api(request):
     try:
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
@@ -2755,10 +2755,12 @@ def view_organization_list(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        organizations += [resp.json]
+        answ = dict()
+        answ = resp.json
+        answ['organization_id'] = organization.id
+        organizations += [answ]
     response['organizations'] = organizations
     request.response.status = HTTPOk.code
-    log.debug('WTF???: %s' % response)
     return response
 
 
