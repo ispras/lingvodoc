@@ -2806,6 +2806,14 @@ def edit_organization(request):
         response = dict()
         organization_id = request.matchdict.get('organization_id')
         organization = DBSession.query(Organization).filter_by(id=organization_id).first()
+
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        creator = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not creator:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         if organization:
             if not organization.marked_for_deletion:
                 req = request.json_body
@@ -2821,11 +2829,11 @@ def edit_organization(request):
                                 group.users.append(user)
                 if 'delete_users' in req:
                     for user_id in req['delete_users']:
+                        if user_id == creator.id:
+                            raise CommonException("You shouldn't delete yourself")
                         user = DBSession.query(User).filter_by(id=user_id).first()
                         if user in organization.users:
                             organization.users.remove(user)
-                            for user in organization.users:
-                                print('aaa', user.id)
                             bases = DBSession.query(BaseGroup).filter_by(subject='organization')
                             for base in bases:
                                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
