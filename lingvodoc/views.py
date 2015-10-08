@@ -2755,9 +2755,10 @@ def view_organization_list(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        organizations += [resp]
+        organizations += [resp.json]
     response['organizations'] = organizations
     request.response.status = HTTPOk.code
+    log.debug('WTF???: %s' % response)
     return response
 
 
@@ -2852,6 +2853,7 @@ def create_organization(request):
 
         organization = Organization(name=name,
                                     about=about)
+        organization.users.append(user)
         DBSession.add(organization)
         DBSession.flush()
         bases = DBSession.query(BaseGroup).filter_by(subject='organization')
