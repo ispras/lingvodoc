@@ -53,23 +53,11 @@ app.controller('OrganizationsController', ['$scope', '$http', '$q', '$modal', '$
             });
     };
 
-
-
-    dictionaryService.getUserInfo(userId, clientId).then(function(userInfo) {
-        $scope.userInfo = userInfo;
-        var dateSplit = userInfo.birthday.split('-');
-        if (dateSplit.length > 1) {
-
-            $scope.birthdayYear = dateSplit[0];
-            $scope.birthdayMonth = dateSplit[1];
-            $scope.birthdayDay = dateSplit[2]
-        }
-
+    dictionaryService.getOrganizations().then(function(organizations) {
+        $scope.organizations = organizations;
     }, function(reason) {
         $log.error(reason);
     });
-
-
 
 }]);
 
@@ -102,8 +90,8 @@ app.controller('createOrganizationController', ['$scope', '$http', '$modalInstan
 
 app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'params', function($scope, $http, $modalInstance, $log, dictionaryService, params) {
 
-    $scope.name = '';
-    $scope.about = '';
+    $scope.organization = {};
+
     $scope.searchQuery = '';
 
     $scope.users = [];
@@ -115,11 +103,14 @@ app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance
     $scope.ok = function() {
 
         var orgObj = {
-            'name': $scope.name,
-            'about': $scope.about,
-            'add_users': addedUsers,
-            'delete_users': removedUsers
+            'organization_id': params.organization.organization_id,
+            'name': $scope.organization.name,
+            'about': $scope.organization.about,
+            'add_users': addedUsers.map(function(u) { return u.id }),
+            'delete_users': removedUsers.map(function(u) { return u.id })
         };
+
+        $log.info(orgObj);
 
         dictionaryService.editOrganization(orgObj).then(function(data) {
             $modalInstance.close();
@@ -132,7 +123,7 @@ app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance
 
     $scope.add = function(user) {
 
-        var m = $scope.users.filter(function(u) {
+        var m = $scope.organization.users.filter(function(u) {
             return u.id === user.id;
         });
 
@@ -142,7 +133,7 @@ app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance
 
         var cuser = cloneObject(user);
         cuser['added'] = true;
-        $scope.users.push(cuser);
+        $scope.organization.users.push(cuser);
         addedUsers.push(user);
     };
 
@@ -151,7 +142,8 @@ app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance
         addedUsers = addedUsers.filter(function(obj) {
             return obj.id !== user.id;
         });
-        $scope.users = $scope.users.filter(function(obj) {
+
+        $scope.organization.users = $scope.organization.users.filter(function(obj) {
             return obj.id !== user.id;
         });
     };
@@ -177,8 +169,7 @@ app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance
 
 
     dictionaryService.getOrganization(params.organization.organization_id).then(function(data) {
-        $scope.name = data.name;
-        $scope.about = data.about;
+        $scope.organization = data;
     }, function(reason) {
 
     });

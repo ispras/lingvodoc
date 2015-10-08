@@ -27564,10 +27564,18 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getOrganizations = function() {
+        var deferred = $q.defer();
+        $http.get("/organization_list").success(function(data, status, headers, config) {
+            deferred.resolve(data.organizations);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch list of organizations");
+        });
+        return deferred.promise;
+    };
     var createOrganization = function(org) {
         var deferred = $q.defer();
-        var url = "/organization";
-        $http.post(url, org).success(function(data, status, headers, config) {
+        $http.post("/organization", org).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to create organization");
@@ -27578,15 +27586,27 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
         var url = "/organization/" + encodeURIComponent(orgId);
         $http.get(url).success(function(data, status, headers, config) {
-            deferred.resolve(data);
+            var requests = [];
+            var users = [];
+            var promises = data.users.map(function(userId) {
+                return $http.get("/user" + "?user_id= " + encodeURIComponent(userId));
+            });
+            $q.all(promises).then(function(results) {
+                angular.forEach(results, function(result) {
+                    users.push(result.data);
+                });
+                data.users = users;
+                deferred.resolve(data);
+            });
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to get information about organization");
         });
         return deferred.promise;
     };
-    var editOrganization = function(orgId, org) {
+    var editOrganization = function(org) {
         var deferred = $q.defer();
-        var url = "/organization/" + encodeURIComponent(orgId);
+        console.log(org);
+        var url = "/organization/" + encodeURIComponent(org.organization_id);
         $http.put(url, org).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
@@ -27623,6 +27643,7 @@ function lingvodocAPI($http, $q) {
         setPerspectiveFields: setPerspectiveFields,
         getUserInfo: getUserInfo,
         setUserInfo: setUserInfo,
+        getOrganizations: getOrganizations,
         createOrganization: createOrganization,
         getOrganization: getOrganization,
         editOrganization: editOrganization,
@@ -27671,14 +27692,8 @@ app.controller("OrganizationsController", [ "$scope", "$http", "$q", "$modal", "
             }
         }).result.then(function(result) {}, function() {});
     };
-    dictionaryService.getUserInfo(userId, clientId).then(function(userInfo) {
-        $scope.userInfo = userInfo;
-        var dateSplit = userInfo.birthday.split("-");
-        if (dateSplit.length > 1) {
-            $scope.birthdayYear = dateSplit[0];
-            $scope.birthdayMonth = dateSplit[1];
-            $scope.birthdayDay = dateSplit[2];
-        }
+    dictionaryService.getOrganizations().then(function(organizations) {
+        $scope.organizations = organizations;
     }, function(reason) {
         $log.error(reason);
     });
@@ -27704,8 +27719,7 @@ app.controller("createOrganizationController", [ "$scope", "$http", "$modalInsta
 } ]);
 
 app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $modalInstance, $log, dictionaryService, params) {
-    $scope.name = "";
-    $scope.about = "";
+    $scope.organization = {};
     $scope.searchQuery = "";
     $scope.users = [];
     $scope.suggestedUsers = [];
@@ -27713,11 +27727,17 @@ app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstanc
     var removedUsers = [];
     $scope.ok = function() {
         var orgObj = {
-            name: $scope.name,
-            about: $scope.about,
-            add_users: addedUsers,
-            delete_users: removedUsers
+            organization_id: params.organization.organization_id,
+            name: $scope.organization.name,
+            about: $scope.organization.about,
+            add_users: addedUsers.map(function(u) {
+                return u.id;
+            }),
+            delete_users: removedUsers.map(function(u) {
+                return u.id;
+            })
         };
+        $log.info(orgObj);
         dictionaryService.editOrganization(orgObj).then(function(data) {
             $modalInstance.close();
         }, function(reason) {
@@ -27725,7 +27745,7 @@ app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstanc
         });
     };
     $scope.add = function(user) {
-        var m = $scope.users.filter(function(u) {
+        var m = $scope.organization.users.filter(function(u) {
             return u.id === user.id;
         });
         if (m.length > 0) {
@@ -27733,7 +27753,7 @@ app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstanc
         }
         var cuser = cloneObject(user);
         cuser["added"] = true;
-        $scope.users.push(cuser);
+        $scope.organization.users.push(cuser);
         addedUsers.push(user);
     };
     $scope.remove = function(user) {
@@ -27741,7 +27761,7 @@ app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstanc
         addedUsers = addedUsers.filter(function(obj) {
             return obj.id !== user.id;
         });
-        $scope.users = $scope.users.filter(function(obj) {
+        $scope.organization.users = $scope.organization.users.filter(function(obj) {
             return obj.id !== user.id;
         });
     };
@@ -27758,7 +27778,6 @@ app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstanc
         }, function(reason) {});
     }, true);
     dictionaryService.getOrganization(params.organization.organization_id).then(function(data) {
-        $scope.name = data.name;
-        $scope.about = data.about;
+        $scope.organization = data;
     }, function(reason) {});
 } ]);

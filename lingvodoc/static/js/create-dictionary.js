@@ -30818,7 +30818,9 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
     $scope.addField = function() {
         $scope.perspective.fields.push({
             entity_type: "",
+            entity_type_translation: "",
             data_type: "text",
+            data_type_translation: "text",
             status: "enabled"
         });
     };
@@ -30833,7 +30835,9 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
         if (typeof $scope.perspective.fields[fieldIndex].contains === "undefined") {
             $scope.perspective.fields[fieldIndex].contains = [ {
                 entity_type: "",
+                entity_type_translation: "",
                 data_type: "markup",
+                data_type_translation: "markup",
                 status: "enabled"
             } ];
         } else {
@@ -30849,7 +30853,7 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
             var dictionaryObj = {
                 parent_client_id: language.client_id,
                 parent_object_id: language.object_id,
-                name: $scope.dictionaryData.name,
+                translation_string: $scope.dictionaryData.name,
                 translation: $scope.dictionaryData.name
             };
             $http.post(createDictionaryUrl, dictionaryObj).success(function(data, status, headers, config) {
@@ -30938,6 +30942,7 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
                     return function(data, status, headers, config) {
                         var p = {};
                         p.name = perspective.name;
+                        p.translation_string = perspective.translation_string;
                         p.object_id = perspective.object_id;
                         p.client_id = perspective.client_id;
                         p.fields = data.fields;

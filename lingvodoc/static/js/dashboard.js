@@ -27564,10 +27564,18 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getOrganizations = function() {
+        var deferred = $q.defer();
+        $http.get("/organization_list").success(function(data, status, headers, config) {
+            deferred.resolve(data.organizations);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch list of organizations");
+        });
+        return deferred.promise;
+    };
     var createOrganization = function(org) {
         var deferred = $q.defer();
-        var url = "/organization";
-        $http.post(url, org).success(function(data, status, headers, config) {
+        $http.post("/organization", org).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to create organization");
@@ -27578,15 +27586,27 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
         var url = "/organization/" + encodeURIComponent(orgId);
         $http.get(url).success(function(data, status, headers, config) {
-            deferred.resolve(data);
+            var requests = [];
+            var users = [];
+            var promises = data.users.map(function(userId) {
+                return $http.get("/user" + "?user_id= " + encodeURIComponent(userId));
+            });
+            $q.all(promises).then(function(results) {
+                angular.forEach(results, function(result) {
+                    users.push(result.data);
+                });
+                data.users = users;
+                deferred.resolve(data);
+            });
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to get information about organization");
         });
         return deferred.promise;
     };
-    var editOrganization = function(orgId, org) {
+    var editOrganization = function(org) {
         var deferred = $q.defer();
-        var url = "/organization/" + encodeURIComponent(orgId);
+        console.log(org);
+        var url = "/organization/" + encodeURIComponent(org.organization_id);
         $http.put(url, org).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
@@ -27623,6 +27643,7 @@ function lingvodocAPI($http, $q) {
         setPerspectiveFields: setPerspectiveFields,
         getUserInfo: getUserInfo,
         setUserInfo: setUserInfo,
+        getOrganizations: getOrganizations,
         createOrganization: createOrganization,
         getOrganization: getOrganization,
         editOrganization: editOrganization,
