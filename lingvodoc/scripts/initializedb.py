@@ -226,7 +226,7 @@ def main(argv=sys.argv):
 
         fake_dictionary = Dictionary(client_id=client.id,
                                      #object_id=1,
-                                     name="Fake dictionary",
+                                     translation_string="Fake dictionary",
                                      state="Service")
         DBSession.add(fake_dictionary)
         DBSession.flush()
@@ -237,7 +237,7 @@ def main(argv=sys.argv):
                                                  parent_object_id=fake_dictionary.object_id,
                                                  is_template=True,
                                                  state="Service",
-                                                 name="Lingvodoc desktop version")
+                                                 translation_string="Lingvodoc desktop version")
         DBSession.add(dialeqt_template)
         DBSession.flush()
 
@@ -327,7 +327,7 @@ def main(argv=sys.argv):
                                                             parent_object_id=fake_dictionary.object_id,
                                                             is_template=True,
                                                             state="Service",
-                                                            name="Regular dictionary")
+                                                            translation_string="Regular dictionary")
         DBSession.add(regular_dictionary_template)
         DBSession.flush()
 
@@ -488,7 +488,7 @@ def main(argv=sys.argv):
                                            parent_object_id=fake_dictionary.object_id,
                                            is_template=True,
                                            state="Service",
-                                           name="Morhological dictionary")
+                                           translation_string="Morhological dictionary")
         DBSession.add(morphodict)
         DBSession.flush()
 
