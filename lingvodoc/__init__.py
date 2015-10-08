@@ -111,6 +111,10 @@ def configure_routes(config):
     config.add_route(name='organizations', pattern='/organizations')
 
 
+    # API #GET
+    config.add_route(name='organization_list', pattern='/organization_list')
+
+
     # API #POST
     # Creating organization
     config.add_route(name='create_organization', pattern='/organization',

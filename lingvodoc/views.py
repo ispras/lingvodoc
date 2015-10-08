@@ -2744,6 +2744,23 @@ def move_lexical_entry(request):
     return {'error': str("No such lexical entry in the system")}
 
 
+@view_config(route_name='organization_list', renderer='json', request_method='GET')
+def view_organization_list(request):
+    response = dict()
+    organizations = []
+    for organization in DBSession.query(Organization).filter_by(marked_for_deletion=False).all():
+        path = request.route_url('organization',
+                                 organization_id=organization.id)
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        organizations += [resp]
+    response['organizations'] = organizations
+    request.response.status = HTTPOk.code
+    return response
+
+
 @view_config(route_name='organization', renderer='json', request_method='GET')
 def view_organization(request):
     response = dict()
@@ -2752,7 +2769,7 @@ def view_organization(request):
     if organization:
         if not organization.marked_for_deletion:
             response['name'] = organization.name
-            response['about'] = organization.parent_object_id
+            response['about'] = organization.about
             users = []
             for user in organization.users:
                 users += [user.id]
@@ -2793,7 +2810,7 @@ def edit_organization(request):
                 if 'name' in req:
                     organization.name = req['name']
                 if 'about' in req:
-                    organization.name = req['about']
+                    organization.about = req['about']
                 request.response.status = HTTPOk.code
                 return response
 
