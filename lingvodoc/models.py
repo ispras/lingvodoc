@@ -1,3 +1,4 @@
+
 from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS, Everyone
 
 
@@ -145,7 +146,6 @@ class TableNameMixin(object):
     """
     Look forward to:
     http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-
     It's used for automatically set tables names based on class names. Use it everywhere.
     """
     @declared_attr
@@ -208,10 +208,60 @@ class RelationshipPublishingMixin(RelationshipMixin):
     @declared_attr
     def entity(cls):
         return relationship(cls.__entityname__,
-                            backref=backref(cls.__tablename__.lower()))
+                            backref=backref(cls.__tablename__.lower())
+                            )
 
 
-class Language(Base, TableNameMixin):
+def find_by_translation_string(locale_id, translation_string):
+        trstr = DBSession.query(UserEntitiesTranslationString).\
+            filter_by(locale_id=locale_id, translation_string=translation_string).first()
+        if not trstr:
+            trstr = DBSession.query(UserEntitiesTranslationString).\
+                filter_by(locale_id=1, translation_string=translation_string).first()
+        if not trstr:
+            return {'translation_string': translation_string, 'translation': translation_string}
+        return {'translation_string': translation_string, 'translation': trstr.translation}
+
+
+def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
+        if not translation:
+            translation = translation_string
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
+                                                                        translation_string=translation_string).first()
+        if not uets:
+            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
+                                                 client_id=client.id,
+                                                 locale_id=locale_id,
+                                                 translation_string=translation_string,
+                                                 translation=translation)
+            DBSession.add(uets)
+            DBSession.flush()
+        else:
+            uets.translation = translation
+
+
+def find_locale_id(request):
+    try:
+        return int(request.cookies['locale_id'])
+    except:
+        return 1
+
+
+class TranslationStringMixin(object):
+
+    def get_translation(cls, request):
+        return find_by_translation_string(find_locale_id(request), cls.translation_string)
+
+    def set_translation(cls, request):
+        add_translation_to_translation_string(find_locale_id(request),
+                                              request.json_body['translation'],
+                                              request.json_body['translation_string'],
+                                              request.authenticated_userid)
+        cls.translation_string = request.json_body['translation_string']
+        return
+
+class Language(Base, TableNameMixin, TranslationStringMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -260,7 +310,7 @@ class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     translation = Column(UnicodeText)
 
 
-class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
+class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -272,12 +322,11 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
-    name = Column(UnicodeText)
+    translation_string = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
 
 
-
-class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
+class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -293,7 +342,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    name = Column(UnicodeText)
+    translation_string = Column(UnicodeText)
     is_template = Column(Boolean, default=False)
 
 
@@ -324,6 +373,40 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     marked_for_deletion = Column(Boolean, default=False)
     state = Column(UnicodeText)
     position = Column(BigInteger)
+
+    def set_entity_type(self, request, translation, translation_string):
+        add_translation_to_translation_string(find_locale_id(request),
+                                              translation,
+                                              translation_string,
+                                              request.authenticated_userid)
+        self.entity_type = translation_string
+        return
+
+    def get_entity_type(self, request):
+        return find_by_translation_string(find_locale_id(request), self.entity_type)
+
+    def set_data_type(self, request, translation, translation_string):
+        add_translation_to_translation_string(find_locale_id(request),
+                                              translation,
+                                              translation_string,
+                                              request.authenticated_userid)
+        self.data_type = translation_string
+        return
+
+    def get_data_type(self, request):
+        return find_by_translation_string(find_locale_id(request), self.data_type)
+
+    def set_group(self, request, translation, translation_string):
+        add_translation_to_translation_string(find_locale_id(request),
+                                              translation,
+                                              translation_string,
+                                              request.authenticated_userid)
+        self.group = translation_string
+        return
+
+    def get_group(self, request):
+        return find_by_translation_string(find_locale_id(request), self.group)
+
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
                                                                      DictionaryPerspectiveField.object_id],
@@ -372,7 +455,6 @@ class EntityMixin(object):
     """
     Look forward to:
     http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
@@ -409,7 +491,6 @@ class PublishingEntityMixin(object):
     """
     Look forward to:
     http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
@@ -465,10 +546,8 @@ class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):  # R
               differs, you should create all the GroupingEntries for each different content fields for both words.
         2. We shall provide an ability to define "content" field explicitly. If it is provided, we shall accept it
            and check the 1c case after it. It will be an often case during dictionaries conversion.
-
     Note: (1c) case will be rather frequent when desktop clients will appear. But moreover it will be a result of
           Dialeqt desktop databases conversion.
-
     Parent: LexicalEntry.
     """
     __parentname__ = 'LexicalEntry'

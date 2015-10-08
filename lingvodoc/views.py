@@ -95,39 +95,6 @@ class CommonException(Exception):
         return repr(self.value)
 
 
-def find_by_translation_string(locale_id, translation_string):
-        trstr = DBSession.query(UserEntitiesTranslationString).\
-            filter_by(locale_id=locale_id, translation_string=translation_string).first()
-        if not trstr:
-            trstr = DBSession.query(UserEntitiesTranslationString).\
-                filter_by(locale_id=1, translation_string=translation_string).first()
-        if not trstr:
-            return translation_string
-        return trstr.translation
-
-
-def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
-                                                                        translation_string=translation_string).first()
-        if not uets:
-            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
-                                                 client_id=client.id,
-                                                 locale_id=locale_id,
-                                                 translation_string=translation_string,
-                                                 translation=translation)
-            DBSession.add(uets)
-            DBSession.flush()
-        else:
-            uets.translation = translation
-
-
-def find_locale_id(request):
-    try:
-        return int(request.cookies['locale_id'])
-    except:
-        return 1
-
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
 def basic_search(request):
     searchstring = request.params.get('leveloneentity')
@@ -185,8 +152,9 @@ def view_language(request):
             response['parent_object_id'] = language.parent_object_id
             response['client_id'] = language.client_id
             response['object_id'] = language.object_id
-            response['translation_string'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                        translation_string=language.translation_string)
+            translation_string = language.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             if language.locale:
                 response['locale_exist'] = True
             else:
@@ -202,8 +170,9 @@ def language_info(lang, request):
     result = dict()
     result['client_id'] = lang.client_id
     result['object_id'] = lang.object_id
-    result['translation_string'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                              translation_string=lang.translation_string)
+    translation_string = lang.get_translation(request)
+    result['translation_string'] = translation_string['translation_string']
+    result['translation'] = translation_string['translation']
     if lang.locale:
         result['locale_exist'] = True
     else:
@@ -251,11 +220,8 @@ def edit_language(request):
                     language.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     language.parent_object_id = req['parent_object_id']
-                # TODO: fix translation stuff
                 if 'translation' in req:
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=language.translation_string,
-                                                          translation=req['translation'], client_id=client.id)
+                    language.set_translation(request)
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code
@@ -292,9 +258,6 @@ def create_language(request):
         except:
             parent_client_id = None
             parent_object_id = None
-        # TODO: fix translation stuff
-        translation_string = req['translation_string']
-        translation = req['translation']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -306,10 +269,8 @@ def create_language(request):
         parent = None
         if parent_client_id and parent_object_id:
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        add_translation_to_translation_string(locale_id=find_locale_id(request), translation = translation,
-                                              translation_string = translation_string, client_id = client.id)
-        language = Language(object_id=DBSession.query(Language).filter_by(client_id=client.id).count()+1, client_id=variables['auth'],
-                            translation_string = translation_string)
+        language = Language(object_id=DBSession.query(Language).filter_by(client_id=client.id).count()+1, client_id=variables['auth'])
+        language.set_translation(request)
         DBSession.add(language)
         if parent:
             language.parent = parent
@@ -351,8 +312,9 @@ def view_dictionary(request):
             response['parent_object_id'] = dictionary.parent_object_id
             response['client_id'] = dictionary.client_id
             response['object_id'] = dictionary.object_id
-            response['name'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=dictionary.name)
+            translation_string = dictionary.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             response['status'] = dictionary.state
             request.response.status = HTTPOk.code
             return response
@@ -377,11 +339,8 @@ def edit_dictionary(request):
                     dictionary.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     dictionary.parent_object_id = req['parent_object_id']
-                # TODO: fix translation stuff
-                if 'name' in req:
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=dictionary.name,
-                                                          translation=req['name'], client_id=client.id)
+                if 'translation' in req:
+                    dictionary.set_translation(request)
                 request.response.status = HTTPOk.code
                 return response
 
@@ -415,8 +374,6 @@ def create_dictionary(request):
         req = request.json_body
         parent_client_id = req['parent_client_id']
         parent_object_id = req['parent_object_id']
-        name = req['name']
-        translation = req['translation']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -424,14 +381,12 @@ def create_dictionary(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        add_translation_to_translation_string(locale_id=find_locale_id(request), translation=translation,
-                                              translation_string=name, client_id=client.id)
 
         dictionary = Dictionary(object_id=DBSession.query(Dictionary).filter_by(client_id=client.id).count() + 1,
                                 client_id=variables['auth'],
-                                name=name,
                                 state='WiP',
                                 parent=parent)
+        dictionary.set_translation(request)
         DBSession.add(dictionary)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -512,8 +467,9 @@ def view_perspective(request):
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
             response['object_id'] = perspective.object_id
-            response['name'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=perspective.name)
+            translation_string = perspective.get_translation(request)
+            response['translation_string'] = translation_string['translation_string']
+            response['translation'] = translation_string['translation']
             response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
             request.response.status = HTTPOk.code
@@ -545,11 +501,8 @@ def edit_perspective(request):
                     request.response.status = HTTPNotFound.code
                     return {'error': str("No such pair of dictionary/perspective in the system")}
                 req = request.json_body
-                # TODO: fix translation stuff
-                if 'name_translation' in req:
-                    add_translation_to_translation_string(locale_id=find_locale_id(request),
-                                                          translation_string=perspective.name,
-                                                          translation=req['name_translation'], client_id = client.id)
+                if 'translation' in req:
+                    perspective.set_translation(request)
                 if 'parent_client_id' in req:
                     perspective.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
@@ -623,8 +576,6 @@ def create_perspective(request):
         parent_client_id = request.matchdict.get('dictionary_client_id')
         parent_object_id = request.matchdict.get('dictionary_object_id')
         req = request.json_body
-        name = req['name']
-        translation = req['translation']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -636,13 +587,11 @@ def create_perspective(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such dictionary in the system")}
-        add_translation_to_translation_string(locale_id=find_locale_id(request), translation_string=name,
-                                              translation=translation, client_id=client.id)
         perspective = DictionaryPerspective(object_id=DBSession.query(DictionaryPerspective).filter_by(client_id=client.id).count() + 1,
                                             client_id=variables['auth'],
-                                            name=name,
                                             state='WiP',
                                             parent = parent)
+        perspective.set_translation(request)
         DBSession.add(perspective)
         DBSession.flush()
         owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
@@ -1203,7 +1152,6 @@ def view_perspective_fields(request):
     user = DBSession.query(User).filter_by(id=client.user_id).first()
     if not user:
         raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-    locale_id = find_locale_id(request)
     if perspective:
         fields = []
         for field in perspective.dictionaryperspectivefield:
@@ -1211,11 +1159,12 @@ def view_perspective_fields(request):
             data = dict()
             if not field.marked_for_deletion:
                 if field.level == 'leveloneentity' or field.level == 'groupingentity':
-                    data['entity_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                     translation_string=field.entity_type)
-
-                    data['data_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                   translation_string=field.data_type)
+                    ent_type = field.get_entity_type(request)
+                    data['entity_type'] = ent_type['translation_string']
+                    data['entity_type_translation'] = ent_type['translation']
+                    data_type = field.get_data_type(request)
+                    data['data_type'] = data_type['translation_string']
+                    data['data_type_translation'] = data_type['translation']
                     data['position'] = field.position
                     data['status'] = field.state
                     data['level'] = field.level
@@ -1224,11 +1173,12 @@ def view_perspective_fields(request):
                         for field2 in field.dictionaryperspectivefield:
                             if not field2.marked_for_deletion:
                                 data2 = dict()
-                                data2['entity_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                                  translation_string=field2.entity_type)
-
-                                data2['data_type'] = find_by_translation_string(locale_id=locale_id,
-                                                                                translation_string=field2.data_type)
+                                ent_type = field2.get_entity_type(request)
+                                data2['entity_type'] = ent_type['translation_string']
+                                data2['entity_type_translation'] = ent_type['translation']
+                                data_type = field2.get_data_type(request)
+                                data2['data_type'] = data_type['translation_string']
+                                data2['data_type_translation'] = data_type['translation']
                                 data2['status'] = field2.state
                                 data2['position'] = field2.position
                                 data2['level'] = field2.level
@@ -1237,10 +1187,9 @@ def view_perspective_fields(request):
                                 contains += [data2]
                     data['contains'] = contains
                     if field.group:
-                        #group = DBSession.query(UserEntitiesTranslationString).\
-                        #    filter_by(translation_string=field.group, locale_id=locale_id).first()
-                        data['group'] = find_by_translation_string(locale_id=locale_id,
-                                                                   translation_string=field.group)
+                        group = field.get_group(request)
+                        data['group'] = group['translation_string']
+                        data['group_translation'] = group['translation']
                     data['client_id'] = field.client_id
                     data['object_id'] = field.object_id
                     fields += [data]
@@ -1284,7 +1233,8 @@ def create_perspective_fields(request):
         parent_object_id = request.matchdict.get('perspective_id')
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
-        fields = request.json_body['fields']
+        req = request.json_body
+        fields = req['fields']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -1299,25 +1249,20 @@ def create_perspective_fields(request):
             return {'error': str("No such dictionary in the system")}
         for field in perspective.dictionaryperspectivefield:
             field.marked_for_deletion = True
-        locale_id = find_locale_id(request)
 
         for entry in fields:
             field = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
                                                client_id=variables['auth'],
-                                               entity_type=entry['entity_type'],
-                                               data_type=entry['data_type'],
                                                parent=perspective,
                                                state=entry['status'])
+            field.set_data_type(request, entry['data_type_translation'], entry['data_type'])
+            field.set_entity_type(request, entry['entity_type_translation'], entry['entity_type'])
             if 'group' in entry:
-                field.group = entry['group']
-                add_translation_to_translation_string(locale_id=locale_id,
-                                                      translation_string=entry['group'],
-                                                      translation=entry['group'], client_id=client.id)
+                field.set_group(request, entry['group_translation'], entry['group'])
             field.level = entry['level']
             field.position = entry['position']
             if 'contains' in entry:
                 for ent in entry['contains']:
-                    # TODO: Fix translation stuff
                     field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
                                                         client_id=variables['auth'],
                                                         entity_type=ent['entity_type'],
@@ -1327,28 +1272,15 @@ def create_perspective_fields(request):
                                                         parent_entity=field,
                                                         state=entry['status'])
                     field2.position = ent['position']
+
+                    field2.set_data_type(request, ent['data_type_translation'], ent['data_type'])
+                    field2.set_entity_type(request, ent['entity_type_translation'], ent['entity_type'])
+                    if 'group' in ent:
+                        field2.set_group(request, ent['group_translation'], ent['group'])
                     DBSession.add(field2)
                     DBSession.flush()
-                    add_translation_to_translation_string(locale_id=locale_id,
-                                                          translation_string=ent['entity_type'],
-                                                          translation=ent['entity_type'],
-                                                          client_id=client.id)
-                    add_translation_to_translation_string(locale_id=locale_id,
-                                                          translation_string=ent['data_type'],
-                                                          translation=ent['data_type'], client_id=client.id)
-                    if 'group' in ent:
-                        field.group = entry['group']  # is there need for group on second level?
-                        add_translation_to_translation_string(locale_id=locale_id,
-                                                              translation_string=ent['group'],
-                                                              translation=ent['group'], client_id=client.id)
             DBSession.add(field)
             DBSession.flush()
-            add_translation_to_translation_string(locale_id=locale_id,
-                                                  translation_string=entry['entity_type'],
-                                                  translation=entry['entity_type'], client_id=client.id)
-            add_translation_to_translation_string(locale_id=locale_id,
-                                                  translation_string=entry['data_type'],
-                                                  translation=entry['data_type'], client_id=client.id)
         request.response.status = HTTPOk.code
         return {}
     except KeyError as e:
@@ -1657,12 +1589,10 @@ def view_l2_entity(request):
     if entity:
         if not entity.marked_for_deletion:
 
-            response['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                 translation_string=entity.entity_type)
+            response['entity_type'] = entity.entity_type
             response['parent_client_id'] = entity.parent_client_id
             response['parent_object_id'] = entity.parent_object_id
-            response['content'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                             translation_string=entity.content)
+            response['content'] = entity.content
             response['locale_id'] = entity.locale_id
             request.response.status = HTTPOk.code
             return response
@@ -1753,8 +1683,7 @@ def view_group_entity(request):
         for entity in entities:
             if not entity.marked_for_deletion:
                 ent = dict()
-                ent['entity_type'] = find_by_translation_string(locale_id=find_locale_id(request),
-                                                                     translation_string=entity.entity_type)
+                ent['entity_type'] = entity.entity_type
                 ent['tag'] = entity.content
                 entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
                 objs = []
@@ -2550,6 +2479,7 @@ def disapprove_entity(request):
 
 @view_config(route_name='get_translations', renderer='json', request_method='GET')
 def get_translations(request):
+    from .models import find_by_translation_string, find_locale_id
     req = request.json_body
     response = []
     for entry in req:
