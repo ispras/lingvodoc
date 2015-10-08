@@ -27301,9 +27301,7 @@ var cloneObject = function(oldObject) {
     return JSON.parse(JSON.stringify(oldObject));
 };
 
-"use strict";
-
-angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionaryService", function($http, $q) {
+function lingvodocAPI($http, $q) {
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
     };
@@ -27362,7 +27360,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         });
         return deferred.promise;
     };
-    var getPerspectiveFields = function(url) {
+    var getPerspectiveDictionaryFields = function(url) {
         var deferred = $q.defer();
         $http.get(url).success(function(data, status, headers, config) {
             if (angular.isArray(data.fields)) {
@@ -27517,18 +27515,218 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         });
         return deferred.promise;
     };
+    var approve = function(url, entity, status) {
+        var deferred = $q.defer();
+        if (status) {
+            $http.patch(url, entity).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        } else {
+            var config = {
+                method: "DELETE",
+                url: url,
+                data: entity,
+                headers: {
+                    "Content-Type": "application/json;charset=utf-8"
+                }
+            };
+            $http(config).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        }
+        return deferred.promise;
+    };
+    var approveAll = function(url) {
+        var deferred = $q.defer();
+        $http.patch(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to change approval status ");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryProperties = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryProperties = function(url, properties) {
+        var deferred = $q.defer();
+        $http.put(url, properties).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var getLanguages = function(url) {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(languages[i]);
+                if (language.contains && language.contains.length > 0) {
+                    var childLangs = flatLanguages(language.contains);
+                    flat = flat.concat(childLangs);
+                }
+            }
+            return flat;
+        };
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(flatLanguages(data.languages));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryStatus = function(url, status) {
+        var deferred = $q.defer();
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set dictionary status");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveFields = function(url, fields) {
+        var deferred = $q.defer();
+        $http.post(url, fields).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to save perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getUserInfo = function(userId, clientId) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get user info");
+        });
+        return deferred.promise;
+    };
+    var setUserInfo = function(userId, clientId, userInfo) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.post(url, userInfo).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to set user info");
+        });
+        return deferred.promise;
+    };
+    var getOrganizations = function() {
+        var deferred = $q.defer();
+        $http.get("/organization_list").success(function(data, status, headers, config) {
+            deferred.resolve(data.organizations);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch list of organizations");
+        });
+        return deferred.promise;
+    };
+    var createOrganization = function(org) {
+        var deferred = $q.defer();
+        $http.post("/organization", org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to create organization");
+        });
+        return deferred.promise;
+    };
+    var getOrganization = function(orgId) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(orgId);
+        $http.get(url).success(function(data, status, headers, config) {
+            var requests = [];
+            var users = [];
+            var promises = data.users.map(function(userId) {
+                return $http.get("/user" + "?user_id= " + encodeURIComponent(userId));
+            });
+            $q.all(promises).then(function(results) {
+                angular.forEach(results, function(result) {
+                    users.push(result.data);
+                });
+                data.users = users;
+                deferred.resolve(data);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get information about organization");
+        });
+        return deferred.promise;
+    };
+    var editOrganization = function(org) {
+        var deferred = $q.defer();
+        console.log(org);
+        var url = "/organization/" + encodeURIComponent(org.organization_id);
+        $http.put(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to change information about organization");
+        });
+        return deferred.promise;
+    };
+    var searchUsers = function(query) {
+        var deferred = $q.defer();
+        $http.get("/users?search=" + encodeURIComponent(query)).success(function(data, status, headers, config) {
+            deferred.resolve(data.users);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to search for users");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
-        getPerspectiveFields: getPerspectiveFields,
+        getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
         addNewLexicalEntry: addNewLexicalEntry,
         saveValue: saveValue,
         removeValue: removeValue,
         getConnectedWords: getConnectedWords,
         linkEntries: linkEntries,
-        search: search
+        search: search,
+        approve: approve,
+        approveAll: approveAll,
+        getDictionaryProperties: getDictionaryProperties,
+        setDictionaryProperties: setDictionaryProperties,
+        getLanguages: getLanguages,
+        setDictionaryStatus: setDictionaryStatus,
+        getPerspectiveFields: getPerspectiveFields,
+        setPerspectiveFields: setPerspectiveFields,
+        getUserInfo: getUserInfo,
+        setUserInfo: setUserInfo,
+        getOrganizations: getOrganizations,
+        createOrganization: createOrganization,
+        getOrganization: getOrganization,
+        editOrganization: editOrganization,
+        searchUsers: searchUsers
     };
-}).directive("wavesurfer", function() {
+}
+
+"use strict";
+
+angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionaryService", lingvodocAPI).directive("wavesurfer", function() {
     return {
         restrict: "E",
         link: function($scope, $element, $attrs) {
@@ -27566,7 +27764,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             });
         }
     };
-}).controller("EditDictionaryController", [ "$scope", "$http", "$window", "$modal", "$log", "dictionaryService", function($scope, $http, $window$modal, $log, dictionaryService) {
+}).controller("EditDictionaryController", [ "$scope", "$http", "$window", "$modal", "$log", "dictionaryService", function($scope, $http, $window, $modal, $log, dictionaryService) {
     var currentClientId = $("#clientId").data("lingvodoc");
     var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
     var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
@@ -27835,7 +28033,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         };
         $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.fields);
     }, true);
-    dictionaryService.getPerspectiveFields($("#getPerspectiveFieldsUrl").data("lingvodoc")).then(function(fields) {
+    dictionaryService.getPerspectiveDictionaryFields($("#getPerspectiveFieldsUrl").data("lingvodoc")).then(function(fields) {
         $scope.fields = fields;
         dictionaryService.getLexicalEntries($("#allLexicalEntriesUrl").data("lingvodoc"), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
             $scope.lexicalEntries = lexicalEntries;

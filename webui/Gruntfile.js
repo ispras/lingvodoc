@@ -160,6 +160,7 @@ module.exports = function(grunt) {
                     'src/js/model.js',
                     'src/js/elan.js',
                     'src/js/util.js',
+                    'src/js/api.js',
                     'src/js/edit_dictionary.js',
                     'src/js/lingvowave.js'
                 ],

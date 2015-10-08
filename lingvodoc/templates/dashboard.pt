@@ -80,7 +80,7 @@
             <tbody>
 
             <tr ng-repeat="dictionary in dictionaries">
-                <td>{{ dictionary.name }}</td>
+                <td>{{ dictionary.translation_string }}</td>
 
                 <td>
                     {{ dictionary.status }}
@@ -88,7 +88,7 @@
 
                 <td>
                     <select class="form-control" ng-model="dictionaries[$index].selectedPerspectiveId"
-                            ng-options="getCompositeKey(p) as p.name for p in dictionary.perspectives track by getCompositeKey(p)">
+                            ng-options="getCompositeKey(p) as p.translation for p in dictionary.perspectives track by getCompositeKey(p)">
 
                     </select>
 
@@ -138,7 +138,7 @@
 
         <label for="dictionaryName">Dictionary name</label>
         <input type="text" id="dictionaryName" class="form-control" placeholder="" required autofocus
-               ng-model="dictionaryProperties.name">
+               ng-model="dictionaryProperties.translation">
 
         <label for="language">Language</label>
         <select id="language" class="form-control" ng-model="data.selectedLanguage" ng-options="language.compositeId as language.translation_string for language in languages">
@@ -168,7 +168,7 @@
         <div>
             <label for="perspectiveName">Perspective name</label>
             <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
-                   ng-model="perspective.name">
+                   ng-model="perspective.translation">
 
             <span class="glyphicon glyphicon-plus-sign" ng-click="addField()"></span>
 
