@@ -1068,8 +1068,8 @@ def dictionaries_list(request):
             dicts = prevdicts
         else:
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-
-    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'name':o.name, 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
+    # TODO: fix
+    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation_string':o.translation_string, 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
 
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
@@ -2603,7 +2603,7 @@ def merge_dictionaries(request):
 
 @view_config(route_name='merge_perspectives', renderer='json', request_method='POST')  # TODO: check for permission
 def merge_perspectives_api(request):
-    try:
+    # try:
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -2615,7 +2615,7 @@ def merge_perspectives_api(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         dictionary_client_id = req['dictionary_client_id']
         dictionary_object_id = req['dictionary_object_id']
-        name = req['name']
+        translation_string = req['translation_string']
         translation = req['translation']
 
         persps = req['perspectives']
@@ -2642,7 +2642,7 @@ def merge_perspectives_api(request):
 
         subreq = Request.blank('/dictionary/%s/%s/perspective' % (dictionary_client_id, dictionary_object_id))
         subreq.method = 'POST'
-        subreq.json = {'name': name, 'translation': translation}
+        subreq.json = {'translation_string': translation_string, 'translation': translation}
         subreq.headers = request.headers
         response = request.invoke_subrequest(subreq)
         client_id = response.json['client_id']
@@ -2658,7 +2658,7 @@ def merge_perspectives_api(request):
                 field['entity_type_translation'] = new_type_translation
                 if not field in fields:
                     fields += field
-
+        log.debug('HEY, LISTEN %s', fields)
         subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' %
                                (dictionary_client_id,
                                 dictionary_object_id,
@@ -2672,7 +2672,15 @@ def merge_perspectives_api(request):
 
             obj_id = persp['object_id']
             cli_id = persp['client_id']
-            lexes = DBSession.query_property()
+            parent = DBSession.query(DictionaryPerspective).filter_by(client_id=cli_id, object_id=object_id).all()
+            lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=cli_id, parent_object_id=object_id).all()
+            for lex in lexes:
+                lex.parent = parent
+                for leveloneentity in lex.leveloneentity:
+                    for field in persp['fields']:
+                        if leveloneentity.entity_type == field['entity_type']:
+                            leveloneentity.entity_type = field['new_type']
+                            break
             bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
             groups = []
             for base in bases:
@@ -2711,17 +2719,17 @@ def merge_perspectives_api(request):
         request.response.status = HTTPOk.code
         return {'object_id': object_id,
                 'client_id': client_id}
-    except KeyError as e:
-        request.response.status = HTTPBadRequest.code
-        return {'error': str(e)}
-
-    except IntegrityError as e:
-        request.response.status = HTTPInternalServerError.code
-        return {'error': str(e)}
-
-    except CommonException as e:
-        request.response.status = HTTPConflict.code
-        return {'error': str(e)}
+    # except KeyError as e:
+    #     request.response.status = HTTPBadRequest.code
+    #     return {'error': str(e)}
+    #
+    # except IntegrityError as e:
+    #     request.response.status = HTTPInternalServerError.code
+    #     return {'error': str(e)}
+    #
+    # except CommonException as e:
+    #     request.response.status = HTTPConflict.code
+    #     return {'error': str(e)}
 
 
 @view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH')  # TODO: check for permission
