@@ -2618,12 +2618,12 @@ def merge_perspectives_api(request):
         name = req['name']
         translation = req['translation']
 
-        perspectives = req['perspectives']
-        if len(perspectives) != 2:
+        persps = req['perspectives']
+        if len(persps) != 2:
             raise KeyError("Wrong number of perspectives to merge.",
-                           len(perspectives))
+                           len(persps))
         new_persps = []
-        for persp in perspectives:
+        for persp in persps:
             perspe = DBSession.query(DictionaryPerspective).filter_by(client_id=persp['client_id'],
                                                                        object_id=persp['object_id']).first()
             if not perspe:
@@ -2650,7 +2650,26 @@ def merge_perspectives_api(request):
         object_id = response.json['object_id']
         new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         perspectives = []
-        # TODO: make fields for new perspective
+        fields = []
+        for persp in persps:
+            for entry in persp['fields']:
+                field = entry
+                new_type = field.pop('new_name', None)
+                new_type_translation = field.pop('new_name_translation', None)
+                field['entity_type'] = new_type
+                field['entity_type_translation'] = new_type_translation
+                if not field in fields:
+                    fields += field
+
+        subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' %
+                               (dictionary_client_id,
+                                dictionary_object_id,
+                                client_id,
+                                object_id))
+        subreq.method = 'POST'
+        subreq.json = {'fields': fields}
+        subreq.headers = request.headers
+        response = request.invoke_subrequest(subreq)
         for persp in perspectives:
             # TODO: make movement of lexical entries in new perspective.
             #  Must be complex, because fields of perspective should change
@@ -2793,18 +2812,20 @@ def edit_organization(request):
             if not organization.marked_for_deletion:
                 req = request.json_body
                 if 'add_users' in req:
-                    for user in req['add_users']:
-                        if user not in organization.users:
-                            organization.user.append(user)
+                    for user_id in req['add_users']:
+                        if user_id not in organization.users:
+                            user = DBSession.query(User).filter_by(id=user_id).first()
+                            organization.users.append(user)
                             bases = DBSession.query(BaseGroup).filter_by(subject='organization')
                             for base in bases:
                                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                                          subject_object_id=organization.id).first()
                                 group.users.append(user)
                 if 'delete_users' in req:
-                    for user in req['delete_users']:
-                        if user not in organization.users:
-                            organization.user.remove(user)
+                    for user_id in req['delete_users']:
+                        if user_id in organization.users:
+                            user = DBSession.query(User).filter_by(id=user_id).first()
+                            organization.users.remove(user)
                             bases = DBSession.query(BaseGroup).filter_by(subject='organization')
                             for base in bases:
                                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
@@ -2862,6 +2883,7 @@ def create_organization(request):
         for base in bases:
             group = Group(parent=base, subject_object_id=organization.id)
             group.users.append(user)
+            DBSession.add(group)
         request.response.status = HTTPOk.code
         return {'organization_id': organization.id}
     except KeyError as e:
