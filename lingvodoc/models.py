@@ -447,7 +447,9 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
                                 vec.remove(ent)
                 except:
                     log.debug('IDK: %s' % ent)
-        response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published}
+        response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
+                    "parent_client_id": self.parent_client_id,
+                    "parent_object_id": self.parent_object_id}
         return response
 
 
