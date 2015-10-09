@@ -1963,43 +1963,40 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-
-            # lexical_entries_criterion = DBSession.query(LexicalEntry)\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .join(LevelOneEntity)\
-            #     .filter_by(entity_type=sort_criterion)\
-            #     .group_by(LexicalEntry).subquery().select()
-            # lexical_entries_not_criterion = DBSession.query(LexicalEntry)\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .except_(lexical_entries_criterion)
-            # lexical_entries_criterion2 = DBSession.query(LexicalEntry,
-            #                                             func.min(LevelOneEntity.content).label("content"))\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .join(LevelOneEntity)\
-            #     .filter_by(entity_type=sort_criterion)\
-            #     .group_by(LexicalEntry)
-            # lexical_entries_not_criterion = DBSession.query(LexicalEntry,
-            #                                                 sqlalchemy.null().label('content'))\
-            #     .correlate(lexical_entries_not_criterion)
-            # lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).order_by('content')\
-            #     .offset(start_from) \
-            #     .limit(count).all()
-            #
-            # result = []
-            # for entry in lexical_entries:
-            #     result.append(entry[0].track(False))
-            # response['lexical_entries'] = result
-
-            lexical_entries = DBSession.query(LexicalEntry)\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
+            lexical_entries_criterion = DBSession.query(lexes)\
+                .join(LevelOneEntity)\
+                .filter_by(entity_type=sort_criterion)\
+                .group_by(LexicalEntry).subquery().select()
+            lexical_entries_not_criterion = DBSession.query(lexes)\
+                .except_(lexical_entries_criterion)
+            lexical_entries_criterion2 = DBSession.query(lexes,
+                                                        func.min(LevelOneEntity.content).label("content"))\
+                .join(LevelOneEntity)\
+                .filter_by(entity_type=sort_criterion)\
+                .group_by(LexicalEntry)
+            lexical_entries_not_criterion = DBSession.query(LexicalEntry,
+                                                            sqlalchemy.null().label('content'))\
+                .correlate(lexical_entries_not_criterion)
+            lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
+                .order_by('content')\
                 .offset(start_from) \
                 .limit(count).all()
 
-            resultold = []
+            result = []
             for entry in lexical_entries:
-                resultold.append(entry.track(False))
-            response['lexical_entries'] = resultold
+                result.append(entry[0].track(False))
+            response['lexical_entries'] = result
+
+            # lexical_entries = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .offset(start_from) \
+            #     .limit(count).all()
+            #
+            # resultold = []
+            # for entry in lexical_entries:
+            #     resultold.append(entry.track(False))
+            # response['lexical_entries'] = resultold
 
             request.response.status = HTTPOk.code
             return response
@@ -2675,7 +2672,6 @@ def merge_perspectives_api(request):
         subreq.method = 'POST'
         subreq.json = {'fields': fields}
         subreq.headers = request.headers
-        print('SOMETHING IS VERY WRONG THERE', persps)
         response = request.invoke_subrequest(subreq)
         for persp in persps:
 
