@@ -125,7 +125,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     create_dictionary_request = {"parent_client_id": language_client_id,
                                  "parent_object_id": language_object_id,
                                  "translation": dict_attributes['dictionary_name'],
-                                 "name": dict_attributes['dictionary_name']}
+                                 "translation_string": dict_attributes['dictionary_name']}
     status = session.post(server_url + 'dictionary', data=json.dumps(create_dictionary_request))
     dictionary = json.loads(status.text)
     client_id = dictionary['client_id']
@@ -136,7 +136,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     perspective_create_url = server_url + 'dictionary/%s/%s/perspective' % (
     dictionary['client_id'], dictionary['object_id'])
     create_perspective_request = {"translation": "Этимологический словарь из Lingvodoc 0.98",
-                                  "name": "Lingvodoc 0.98 etymology dictionary"}
+                                  "translation_string": "Lingvodoc 0.98 etymology dictionary"}
 
     status = session.post(perspective_create_url, data=json.dumps(create_perspective_request))
     perspective = json.loads(status.text)
