@@ -283,7 +283,8 @@ def create_language(request):
             group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
             groups += [group]
         for group in groups:
-            user.groups.append(group)
+            if group not in user.groups:
+                user.groups.append(group)
         request.response.status = HTTPOk.code
         return {'object_id': language.object_id,
                 'client_id': language.client_id}
@@ -392,7 +393,8 @@ def create_dictionary(request):
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
                               subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
-            new_group.users.append(user)
+            if user not in new_group.users:
+                new_group.users.append(user)
             DBSession.add(new_group)
             DBSession.flush()
         request.response.status = HTTPOk.code
@@ -599,8 +601,10 @@ def create_perspective(request):
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
             new_group = Group(parent=base,
                               subject_object_id=perspective.object_id, subject_client_id=perspective.client_id)
-            new_group.users.append(user)
-            new_group.users.append(owner)
+            if user not in new_group.users:
+                new_group.users.append(user)
+            if owner not in new_group.users:
+                new_group.users.append(owner)
             DBSession.add(new_group)
             DBSession.flush()
         request.response.status = HTTPOk.code
@@ -737,7 +741,8 @@ def edit_dictionary_roles(request):
                         client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
                         userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
                         if userlogged in group.users:
-                            group.users.append(user)
+                            if user not in group.users:
+                                group.users.append(user)
                     request.response.status = HTTPOk.code
                     return response
                 else:
@@ -758,7 +763,8 @@ def edit_dictionary_roles(request):
                         client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
                         userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
                         if userlogged in group.users:
-                            group.org.append(org)
+                            if org not in group.org:
+                                group.org.append(org)
                     request.response.status = HTTPOk.code
                     return response
                 else:
@@ -876,7 +882,8 @@ def edit_perspective_roles(request):
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
                     if userlogged in group.users:
-                        group.users.append(user)
+                        if user not in group.users:
+                            group.users.append(user)
                 request.response.status = HTTPOk.code
                 return response
             else:
@@ -2502,7 +2509,7 @@ def merge_dictionaries(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent_object_id = req['language_object_id']
         parent_client_id = req['language_client_id']
-        name = req['name']
+        translation_string = req['translation_string']
         translation = req['translation']
 
         dictionaries = req['dictionaries']
@@ -2534,7 +2541,7 @@ def merge_dictionaries(request):
         subreq = Request.blank('/dictionary')
         subreq.method = 'POST'
         subreq.json = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
-                            'name': name, 'translation': translation}
+                            'translation_string': translation_string, 'translation': translation}
         subreq.headers = request.headers
         response = request.invoke_subrequest(subreq)
         client_id = response.json['client_id']
@@ -2560,9 +2567,10 @@ def merge_dictionaries(request):
                 groups += [group]
 
             for group in groups:
-                existing = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.dictionary_default==True,
-                                                         Group.subject_object_id==obj_id,
-                                                         Group.subject_client_id==cli_id).first()
+                base = group.parent
+                existing = DBSession.query(Group).filter_by(parent = base,
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
                 if existing:
                     users = []
                     for user in group.users:
@@ -2574,15 +2582,17 @@ def merge_dictionaries(request):
                             existing.users.append(user)
                 else:
                     new_group = Group(base_group_id=group.base_group_id,
-                                      subject_object_id=cli_id,
-                                      subject_client_id=obj_id)
+                                      subject_object_id=client_id,
+                                      subject_client_id=object_id)
                     DBSession.add(new_group)
                     users = []
                     for user in group.users:
                         users += [user]
                     for user in users:
-                        group.remove(user)
-                        new_group.users.append(user)
+                        if user in group.users:
+                            group.users.remove(user)
+                        if not user in new_group.users:
+                            new_group.users.append(user)
                 group.marked_for_deletion = True
             dicti.marked_for_deletion = True
         request.response.status = HTTPOk.code
@@ -2622,7 +2632,6 @@ def merge_perspectives_api(request):
         if len(persps) != 2:
             raise KeyError("Wrong number of perspectives to merge.",
                            len(persps))
-        new_persps = []
         for persp in persps:
             perspe = DBSession.query(DictionaryPerspective).filter_by(client_id=persp['client_id'],
                                                                        object_id=persp['object_id']).first()
@@ -2630,7 +2639,6 @@ def merge_perspectives_api(request):
                 raise KeyError("Perspective do not exist in the system")
             if dictionary_client_id != perspe.parent_client_id or dictionary_object_id != perspe.parent_object_id:
                 raise KeyError("Both perspective should from same dictionary.")
-            new_persps += [perspe]
         base = DBSession.query(BaseGroup).filter_by(subject='merge', action='create').first()
         override = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override = True).first()
         if user not in override.users:
@@ -2645,13 +2653,13 @@ def merge_perspectives_api(request):
         subreq.json = {'translation_string': translation_string, 'translation': translation}
         subreq.headers = request.headers
         response = request.invoke_subrequest(subreq)
-        client_id = response.json['client_id']
-        object_id = response.json['object_id']
-        new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        new_client_id = response.json['client_id']
+        new_object_id = response.json['object_id']
+        new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=new_client_id, object_id=new_object_id).first()
         fields = []
         for persp in persps:
             for entry in persp['fields']:
-                field = entry
+                field = dict(entry)
                 new_type = field.pop('new_name', None)
                 new_type_translation = field.pop('new_name_translation', None)
                 field['entity_type'] = new_type
@@ -2662,66 +2670,71 @@ def merge_perspectives_api(request):
         subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' %
                                (dictionary_client_id,
                                 dictionary_object_id,
-                                client_id,
-                                object_id))
+                                new_client_id,
+                                new_object_id))
         subreq.method = 'POST'
         subreq.json = {'fields': fields}
         subreq.headers = request.headers
+        print('SOMETHING IS VERY WRONG THERE', persps)
         response = request.invoke_subrequest(subreq)
         for persp in persps:
 
             obj_id = persp['object_id']
             cli_id = persp['client_id']
-            parent = DBSession.query(DictionaryPerspective).filter_by(client_id=cli_id, object_id=object_id).first()
-            lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=cli_id, parent_object_id=object_id).all()
-            for lex in lexes:
+            parent = DBSession.query(DictionaryPerspective).filter_by(client_id=cli_id, object_id=obj_id).first()
+            # lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=cli_id, parent_object_id=obj_id).all()
+
+            for lex in parent.lexicalentry:
                 lex.parent = new_persp
                 DBSession.flush()
-                for leveloneentity in lex.leveloneentity:
+                for ent in lex.leveloneentity:
                     for field in persp['fields']:
-                        if leveloneentity.entity_type == field['entity_type']:
-                            leveloneentity.entity_type = field['new_type']
-            # bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
-            # groups = []
-            # for base in bases:
-            #
-            #     group = DBSession.query(Group).filter_by(base_group_id=base.id,
-            #                                              subject_object_id=obj_id,
-            #                                              subject_client_id=cli_id).first()
-            #     groups += [group]
-            #
-            # for group in groups:
-            #     existing = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.perspective_default==True,
-            #                                              Group.subject_object_id==obj_id,
-            #                                              Group.subject_client_id==cli_id).first()
-            #     if existing:
-            #         users = []
-            #         for user in group.users:
-            #             users += [user]
-            #         for user in users:
-            #             if user in group.users:
-            #                 group.users.remove(user)
-            #             if not user in existing.users:
-            #                 existing.users.append(user)
-            #     else:
-            #         new_group = Group(base_group_id=group.base_group_id,
-            #                           subject_object_id=cli_id,
-            #                           subject_client_id=obj_id)
-            #         DBSession.add(new_group)
-            #         users = []
-            #         for user in group.users:
-            #             users += [user]
-            #         for user in users:
-            #             if user in group.users:
-            #                 group.users.remove(user)
-            #             if not user in new_group.users:
-            #                 new_group.users.append(user)
-            #     group.marked_for_deletion = True
+                        if ent.entity_type == field['entity_type']:
+                            ent.entity_type = field['new_name']
+                            break
+            bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
+            groups = []
+            for base in bases:
+
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=obj_id,
+                                                         subject_client_id=cli_id).first()
+                groups += [group]
+
+
+            for group in groups:
+                base = group.parent
+                existing = DBSession.query(Group).filter_by(parent = base,
+                                                         subject_object_id=new_object_id,
+                                                         subject_client_id=new_client_id).first()
+                if existing:
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        if user in group.users:
+                            group.users.remove(user)
+                        if not user in existing.users:
+                            existing.users.append(user)
+                else:
+                    new_group = Group(base_group_id=group.base_group_id,
+                                      subject_object_id=new_client_id,
+                                      subject_client_id=new_object_id)
+                    DBSession.add(new_group)
+                    users = []
+                    for user in group.users:
+                        users += [user]
+                    for user in users:
+                        if user in group.users:
+                            group.users.remove(user)
+                        if not user in new_group.users:
+                            new_group.users.append(user)
+                group.marked_for_deletion = True
             parent.marked_for_deletion = True
         new_persp.marked_for_deletion = False  # TODO: check where it is deleted
         request.response.status = HTTPOk.code
-        return {'object_id': object_id,
-                'client_id': client_id}
+        return {'object_id': new_object_id,
+                'client_id': new_client_id}
     # except KeyError as e:
     #     request.response.status = HTTPBadRequest.code
     #     return {'error': str(e)}
@@ -2832,12 +2845,14 @@ def edit_organization(request):
                     for user_id in req['add_users']:
                         user = DBSession.query(User).filter_by(id=user_id).first()
                         if user not in organization.users:
-                            organization.users.append(user)
+                            if not user in organization.users:
+                                organization.users.append(user)
                             bases = DBSession.query(BaseGroup).filter_by(subject='organization')
                             for base in bases:
                                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                                          subject_object_id=organization.id).first()
-                                group.users.append(user)
+                                if not user in group.users:
+                                    group.users.append(user)
                 if 'delete_users' in req:
                     for user_id in req['delete_users']:
                         if user_id == creator.id:
@@ -2895,13 +2910,15 @@ def create_organization(request):
 
         organization = Organization(name=name,
                                     about=about)
-        organization.users.append(user)
+        if user not in organization.users:
+            organization.users.append(user)
         DBSession.add(organization)
         DBSession.flush()
         bases = DBSession.query(BaseGroup).filter_by(subject='organization')
         for base in bases:
             group = Group(parent=base, subject_object_id=organization.id)
-            group.users.append(user)
+            if not user in group.users:
+                group.users.append(user)
             DBSession.add(group)
         request.response.status = HTTPOk.code
         return {'organization_id': organization.id}
@@ -3040,7 +3057,8 @@ def signup_post(request):
         for base in basegroups:
             groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]
         for group in groups:
-            new_user.groups.append(group)
+            if group not in new_user.groups:
+                new_user.groups.append(group)
         DBSession.flush()
         return login_post(request)
 
