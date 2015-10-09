@@ -1964,13 +1964,13 @@ def lexical_entries_all(request):
     if parent:
         if not parent.marked_for_deletion:
             lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
-            lexical_entries_criterion = DBSession.query(lexes)\
+            lexical_entries_criterion = lexes\
                 .join(LevelOneEntity)\
                 .filter_by(entity_type=sort_criterion)\
                 .group_by(LexicalEntry).subquery().select()
-            lexical_entries_not_criterion = DBSession.query(lexes)\
+            lexical_entries_not_criterion = lexes\
                 .except_(lexical_entries_criterion)
-            lexical_entries_criterion2 = DBSession.query(lexes,
+            lexical_entries_criterion2 = DBSession.query(LexicalEntry,
                                                         func.min(LevelOneEntity.content).label("content"))\
                 .join(LevelOneEntity)\
                 .filter_by(entity_type=sort_criterion)\
