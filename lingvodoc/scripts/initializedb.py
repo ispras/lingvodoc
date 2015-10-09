@@ -221,7 +221,8 @@ def main(argv=sys.argv):
             adm_group_list.append(Group(base_group_id=base_group.id, subject_override=True))
             for adm_group in adm_group_list:
                 DBSession.add(adm_group)
-                admin_account.groups.append(adm_group)
+                if not adm_group in admin_account.groups:
+                    admin_account.groups.append(adm_group)
         DBSession.flush()
 
         fake_dictionary = Dictionary(client_id=client.id,
