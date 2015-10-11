@@ -1948,7 +1948,6 @@ def create_lexical_entry_bulk(request):
 
 @view_config(route_name='lexical_entries_all', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all(request):
-    from sqlalchemy.orm import aliased
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1966,7 +1965,6 @@ def lexical_entries_all(request):
         if not parent.marked_for_deletion:
             lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
 
-            # lexessub = aliased(LexicalEntry, lexes.subquery())
             lexical_entries_criterion = lexes\
                 .join(LevelOneEntity)\
                 .filter_by(entity_type=sort_criterion)\
@@ -1974,7 +1972,6 @@ def lexical_entries_all(request):
 
             lexical_entries_not_criterion = lexes\
                 .except_(lexical_entries_criterion)
-            lexesnotcrit = aliased(LexicalEntry, lexical_entries_not_criterion)
             lexical_entries_criterion2 = DBSession.query(LexicalEntry,
                                                              func.min(LevelOneEntity.content).label('content'))\
                 .join(LevelOneEntity)\
@@ -2047,37 +2044,8 @@ def lexical_entries_published(request):
     if parent:
         if not parent.marked_for_deletion:
 
-            # lexical_entries_criterion = DBSession.query(LexicalEntry)\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .join(LevelOneEntity)\
-            #     .filter_by(entity_type=sort_criterion)\
-            #     .group_by(LexicalEntry).subquery().select()
-            # lexical_entries_not_criterion = DBSession.query(LexicalEntry)\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .except_(lexical_entries_criterion)
-            # lexical_entries_criterion2 = DBSession.query(LexicalEntry,
-            #                                             func.min(LevelOneEntity.content).label("content"))\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .join(LevelOneEntity)\
-            #     .filter_by(entity_type=sort_criterion)\
-            #     .group_by(LexicalEntry)
-            # lexical_entries_not_criterion = DBSession.query(LexicalEntry,
-            #                                                 sqlalchemy.null().label('content'))\
-            #     .correlate(lexical_entries_not_criterion)
-            # lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
-            #     .filter(or_(LexicalEntry.publishleveloneentity != None,
-            #                 LexicalEntry.publishleveltwoentity != None,
-            #                 LexicalEntry.publishgroupingentity != None))\
-            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .order_by('content')\
-            #     .offset(start_from) \
-            #     .limit(count).all()
-            #
-            # result = []
-            # for entry in lexical_entries:
-            #     result.append(entry[0].track(True))
-            # response['lexical_entries'] = result
-            lexical_entries = DBSession.query(LexicalEntry)\
+
+            lexes =  DBSession.query(LexicalEntry)\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .outerjoin(PublishGroupingEntity)\
                 .outerjoin(PublishLevelOneEntity)\
@@ -2086,19 +2054,75 @@ def lexical_entries_published(request):
                             PublishLevelOneEntity.marked_for_deletion==False,
                             PublishLevelTwoEntity.marked_for_deletion==False,
                             ))\
-                .group_by(LexicalEntry).all()
+                .group_by(LexicalEntry)
+
+
+            lexical_entries_criterion = lexes\
+                .join((LevelOneEntity, (LevelOneEntity.parent_client_id==LexicalEntry.client_id) &
+                       (LevelOneEntity.parent_object_id==LexicalEntry.object_id)))\
+                .filter_by(entity_type=sort_criterion)\
+                .group_by(LexicalEntry)
+
+            lexical_entries_not_criterion = lexes\
+                .except_(lexical_entries_criterion)
+            lexical_entries_criterion2 = DBSession.query(LexicalEntry,
+                                                             func.min(LevelOneEntity.content).label('content'))\
+                .filter(LexicalEntry.parent == parent)\
+                .outerjoin(PublishGroupingEntity)\
+                .outerjoin(PublishLevelOneEntity)\
+                .outerjoin(PublishLevelTwoEntity)\
+                .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
+                            PublishLevelOneEntity.marked_for_deletion==False,
+                            PublishLevelTwoEntity.marked_for_deletion==False,
+                            ))\
+                .join((LevelOneEntity, (LevelOneEntity.parent_client_id==LexicalEntry.client_id) &
+                       (LevelOneEntity.parent_object_id==LexicalEntry.object_id)))\
+                .filter(LevelOneEntity.entity_type==sort_criterion)\
+                .group_by(LexicalEntry)\
+
+            print('CRITERION', lexical_entries_criterion2.count())
+            lexical_entries_not_criterion = lexical_entries_not_criterion.add_column(
+                                                            sqlalchemy.null().label('content'))
+
+            print('NOTCRITERION', lexical_entries_not_criterion.count())
+            lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
+                .order_by('content')\
+                .offset(start_from) \
+                .limit(count)
+
+            print(lexical_entries.count())
+            result = []
+            for entry in lexical_entries:
+                print(entry[0].object_id, entry[1])
+                result.append(entry[0].track(False))
+            for entry in result:
+                print(entry['object_id'])
+            response['lexical_entries'] = result
+
+
+
             # lexical_entries = DBSession.query(LexicalEntry)\
             #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .filter(or_(LexicalEntry.publishleveloneentity != None,
-            #                 LexicalEntry.publishleveltwoentity != None,
-            #                 LexicalEntry.publishgroupingentity != None))\
-            #     .offset(start_from) \
-            #     .limit(count).all()
-
-            resultold = []
-            for entry in lexical_entries:
-                resultold.append(entry.track(True))
-            response['lexical_entries'] = resultold
+            #     .outerjoin(PublishGroupingEntity)\
+            #     .outerjoin(PublishLevelOneEntity)\
+            #     .outerjoin(PublishLevelTwoEntity)\
+            #     .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
+            #                 PublishLevelOneEntity.marked_for_deletion==False,
+            #                 PublishLevelTwoEntity.marked_for_deletion==False,
+            #                 ))\
+            #     .group_by(LexicalEntry).all()
+            # # lexical_entries = DBSession.query(LexicalEntry)\
+            # #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            # #     .filter(or_(LexicalEntry.publishleveloneentity != None,
+            # #                 LexicalEntry.publishleveltwoentity != None,
+            # #                 LexicalEntry.publishgroupingentity != None))\
+            # #     .offset(start_from) \
+            # #     .limit(count).all()
+            #
+            # resultold = []
+            # for entry in lexical_entries:
+            #     resultold.append(entry.track(True))
+            # response['lexical_entries'] = resultold
 
             request.response.status = HTTPOk.code
             return response
