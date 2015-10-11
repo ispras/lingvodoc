@@ -1948,6 +1948,7 @@ def create_lexical_entry_bulk(request):
 
 @view_config(route_name='lexical_entries_all', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all(request):
+    from sqlalchemy.orm import aliased
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1963,40 +1964,46 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            # lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
-            # lexical_entries_criterion = lexes\
-            #     .join(LevelOneEntity)\
-            #     .filter_by(entity_type=sort_criterion)\
-            #     .group_by(LexicalEntry).subquery().select()
-            # lexical_entries_not_criterion = lexes\
-            #     .except_(lexical_entries_criterion)
-            # lexical_entries_criterion2 = DBSession.query(LexicalEntry,
-            #                                             func.min(LevelOneEntity.content).label('content'))\
-            #     .join(LevelOneEntity)\
-            #     .filter_by(entity_type=sort_criterion)\
-            #     .group_by(LexicalEntry)
-            # lexical_entries_not_criterion = DBSession.query(LexicalEntry,
-            #                                                 sqlalchemy.null().label('content'))\
-            #     .correlate(lexical_entries_not_criterion)
-            # lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
-            #     .order_by('content')\
+            lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
+
+            # lexessub = aliased(LexicalEntry, lexes.subquery())
+            lexical_entries_criterion = lexes\
+                .join(LevelOneEntity)\
+                .filter_by(entity_type=sort_criterion)\
+                .group_by(LexicalEntry)
+
+            lexical_entries_not_criterion = lexes\
+                .except_(lexical_entries_criterion)
+            lexesnotcrit = aliased(LexicalEntry, lexical_entries_not_criterion)
+            lexical_entries_criterion2 = DBSession.query(LexicalEntry,
+                                                             func.min(LevelOneEntity.content).label('content'))\
+                .join(LevelOneEntity)\
+                .filter(LexicalEntry.parent == parent)\
+                .filter_by(entity_type=sort_criterion)\
+                .group_by(LexicalEntry)
+            print('CRITERION', lexical_entries_criterion2.count())
+            lexical_entries_not_criterion = lexical_entries_not_criterion.add_column(
+                                                            sqlalchemy.null().label('content'))
+            print('NOTCRITERION', lexical_entries_not_criterion.count())
+            lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
+                .order_by('content')\
+                .offset(start_from) \
+                .limit(count)
+            print(lexical_entries.count())
+            result = []
+            for entry in lexical_entries:
+                result.append(entry[0].track(False))
+            response['lexical_entries'] = result
+
+            # lexical_entries = DBSession.query(LexicalEntry)\
+            #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
             #     .offset(start_from) \
             #     .limit(count).all()
             #
-            # result = []
+            # resultold = []
             # for entry in lexical_entries:
-            #     result.append(entry[0].track(False))
-            # response['lexical_entries'] = result
-
-            lexical_entries = DBSession.query(LexicalEntry)\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .offset(start_from) \
-                .limit(count).all()
-
-            resultold = []
-            for entry in lexical_entries:
-                resultold.append(entry.track(False))
-            response['lexical_entries'] = resultold
+            #     resultold.append(entry.track(False))
+            # response['lexical_entries'] = resultold
 
             request.response.status = HTTPOk.code
             return response
@@ -2949,11 +2956,14 @@ try it again.
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    try:
-        req = request.json_body
-        return req
-    except:
-        return request
+    response = dict()
+    login = request.POST.get('login', '')
+    password = request.POST.get('password', '')
+    response['POST'] = [login, password]
+    login = request.params.get('login', '')
+    password = request.params.get('password', '')
+    response['params'] = [login, password]
+    return response
 
 
 
