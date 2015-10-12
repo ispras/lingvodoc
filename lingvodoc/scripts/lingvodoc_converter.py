@@ -131,6 +131,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     client_id = dictionary['client_id']
 
     converting_status_url = server_url + 'dictionary/%s/%s/state' % (dictionary['client_id'], dictionary['object_id'])
+
     change_dict_status(session, converting_status_url, 'Converting 5%')
 
     perspective_create_url = server_url + 'dictionary/%s/%s/perspective' % (
@@ -140,6 +141,11 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
 
     status = session.post(perspective_create_url, data=json.dumps(create_perspective_request))
     perspective = json.loads(status.text)
+
+    converting_perspective_status_url = server_url + 'dictionary/%s/%s/perspective/%s/%s/state' % \
+                                                     (dictionary['client_id'], dictionary['object_id'],
+                                                      perspective['client_id'], perspective['object_id'])
+    change_dict_status(session, converting_perspective_status_url, 'Converting')
 
     create_perspective_fields_request = session.get(server_url + 'dictionary/1/1/perspective/1/1/fields')
     perspective_fields_create_url = perspective_create_url + '/%s/%s/fields' % (
@@ -307,6 +313,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     change_dict_status(session, converting_status_url, 'Converted 100%')
 
     change_dict_status(session, converting_status_url, 'Published')
+    change_dict_status(session, converting_perspective_status_url, 'Published')
 
     return dictionary
 

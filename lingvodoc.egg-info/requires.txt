@@ -11,3 +11,4 @@ passlib
 py-bcrypt
 requests
 simplejson
+nltk

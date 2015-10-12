@@ -129,12 +129,18 @@ def convert_dictionary(request):
 
     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
 
-    p = Process(target=convert_one, args=(blob.real_storage_path,
-                                          user.login,
-                                          user.password.hash,
-                                          parent_client_id,
-                                          parent_object_id))
-    p.start()
+    convert_one(blob.real_storage_path,
+                user.login,
+                user.password.hash,
+                parent_client_id,
+                parent_object_id)
+
+    # p = Process(target=convert_one, args=(blob.real_storage_path,
+    #                                       user.login,
+    #                                       user.password.hash,
+    #                                       parent_client_id,
+    #                                       parent_object_id))
+    # p.start()
     request.response.status = HTTPOk.code
     return {"status": "Your dictionary is being converted."
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
