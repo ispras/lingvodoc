@@ -3365,9 +3365,9 @@ def merge_suggestions(request):
         trans = map(lambda x: x['content'], trans)
         tuples_res = [(i_word, i_trans, (elem['client_id'], elem['object_id'])) for i_word in words for i_trans in trans]
         return tuples_res
-    tuples_1 = [parse_response(i) for i in lexes_1['lexical_entries']]
+    tuples_1 = [parse_response(i) for i in lexes_1]
     tuples_1 = [item for sublist in tuples_1 for item in sublist]
-    tuples_2 = [parse_response(i) for i in lexes_2['lexical_entries']]
+    tuples_2 = [parse_response(i) for i in lexes_2]
     tuples_2 = [item for sublist in tuples_2 for item in sublist]
     def get_dict(elem):
         return {'suggestion': [
