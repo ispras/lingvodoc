@@ -201,6 +201,17 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
         $scope.perspective.fields.push({'entity_type': '', 'data_type': 'text', 'status': 'enabled'});
     };
 
+    $scope.removeField = function(field) {
+        $scope.perspective.fields
+
+        for(var i = $scope.perspective.fields.length-1; i >= 0; i--) {
+            if($scope.perspective.fields[i].client_id == field.client_id &&
+                $scope.perspective.fields[i].object_id == field.object_id) {
+                $scope.perspective.fields.splice(i, 1);
+            }
+        }
+    };
+
     $scope.ok = function() {
         var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
         dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {

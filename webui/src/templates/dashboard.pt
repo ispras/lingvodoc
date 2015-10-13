@@ -184,6 +184,7 @@
                     <td></td>
                     <td></td>
                     <td></td>
+                    <td></td>
                 </tr>
                 </thead>
 
@@ -276,6 +277,12 @@
                             <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'">Markup</option>
                         </select>
                     </td>
+
+                    <td>
+                        <span class="glyphicon glyphicon-remove" ng-click="removeField(field)"></span>
+                    </td>
+
+
                 </tr>
                 </tbody>
             </table>
