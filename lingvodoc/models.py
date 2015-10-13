@@ -254,8 +254,11 @@ class TranslationStringMixin(object):
         return find_by_translation_string(find_locale_id(request), cls.translation_string)
 
     def set_translation(cls, request):
+        translation = request.json_body['translation_string']
+        if 'translation' in request.json_body:
+            translation = request.json_body
         add_translation_to_translation_string(find_locale_id(request),
-                                              request.json_body['translation'],
+                                              translation,
                                               request.json_body['translation_string'],
                                               request.authenticated_userid)
         cls.translation_string = request.json_body['translation_string']
@@ -978,25 +981,25 @@ class PerspectiveEntityTwoAcl(object):
         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
-class PerspectiveEntityGroupAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id=None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id=None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
-        group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = group_ent.parent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
+# class PerspectiveEntityGroupAcl(object):
+#     def __init__(self, request):
+#         self.request = request
+#
+#     def __acl__(self):
+#         acls = []
+#         object_id=None
+#         try:
+#             object_id = self.request.matchdict['object_id']
+#         except:
+#             pass
+#         client_id=None
+#         try:
+#             client_id = self.request.matchdict['client_id']
+#         except:
+#             pass
+#         group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+#         perspective = group_ent.parent.parent
+#         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectivePublishAcl(object):

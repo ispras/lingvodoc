@@ -249,8 +249,7 @@ def configure_routes(config):
 
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityGroupAcl')  # ready, not tested
+    config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}')  # ready, not tested
 
     # API #GET
     # GET parameter: entity_type = <type> (e.g: "etymology")
