@@ -2743,13 +2743,11 @@ def merge_perspectives_api(request):
         for persp in persps:
             for entry in persp['fields']:
                 field = dict(entry)
-                new_type = field.pop('new_name', None)
-                new_type_translation = field.pop('new_name_translation', None)
+                new_type = field.pop('new_type_name', None)
                 field['entity_type'] = new_type
-                field['entity_type_translation'] = new_type_translation
+                field['entity_type_translation'] = new_type
                 if not field in fields:
                     fields += [field]
-        log.debug('HEY, LISTEN %s', fields)
         subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' %
                                (dictionary_client_id,
                                 dictionary_object_id,
@@ -2768,12 +2766,15 @@ def merge_perspectives_api(request):
             # lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=cli_id, parent_object_id=obj_id).all()
 
             for lex in parent.lexicalentry:
+                metadata = json.loads(lex.additional_metadata)
+                metadata['came_from'] = {'client_id': lex.parent_client_id, 'object_id': lex.parent_object_id}
+                lex.additional_metadata = json.dumps(metadata)
                 lex.parent = new_persp
                 DBSession.flush()
                 for ent in lex.leveloneentity:
                     for field in persp['fields']:
                         if ent.entity_type == field['entity_type']:
-                            ent.entity_type = field['new_name']
+                            ent.entity_type = field['new_type_name']
                             break
             bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
             groups = []
@@ -2783,7 +2784,6 @@ def merge_perspectives_api(request):
                                                          subject_object_id=obj_id,
                                                          subject_client_id=cli_id).first()
                 groups += [group]
-
 
             for group in groups:
                 base = group.parent
@@ -3277,8 +3277,8 @@ def blob_upload_get(request):
     return render_to_response('templates/user_upload.pt', variables, request=request)
 
 
-@view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
-def merge_suggestions(request):
+@view_config(route_name='merge_suggestions_old', renderer='json', request_method='POST')
+def merge_suggestions_old(request):
     subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_1') + '/' + 
     request.matchdict.get('dictionary_object_id_1') + '/perspective/' +
     request.matchdict.get('perspective_client_id_1') + '/' +
@@ -3309,6 +3309,65 @@ def merge_suggestions(request):
     tuples_1 = [parse_response(i) for i in response_1['lexical_entries']]
     tuples_1 = [item for sublist in tuples_1 for item in sublist]
     tuples_2 = [parse_response(i) for i in response_2['lexical_entries']]
+    tuples_2 = [item for sublist in tuples_2 for item in sublist]
+    def get_dict(elem):
+        return {'suggestion': [
+            {'lexical_entry_client_id': elem[0][0], 'lexical_entry_object_id': elem[0][1]},
+            {'lexical_entry_client_id': elem[1][0], 'lexical_entry_object_id': elem[1][1]}
+        ], 'confidence': elem[2]}
+    results = [get_dict(i) for i in mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))]
+    return json.dumps(results)
+
+
+@view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
+def merge_suggestions(request):
+    req = request.json
+
+    # subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_1') + '/' +
+    # request.matchdict.get('dictionary_object_id_1') + '/perspective/' +
+    # request.matchdict.get('perspective_client_id_1') + '/' +
+    # request.matchdict.get('perspective_object_id_1') + '/all')
+    # subreq.method = 'GET'
+    # response_1 = request.invoke_subrequest(subreq).json
+    # subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_2') + '/' +
+    # request.matchdict.get('dictionary_object_id_2') + '/perspective/' +
+    # request.matchdict.get('perspective_client_id_2') + '/' +
+    # request.matchdict.get('perspective_object_id_2') + '/all')
+    # subreq.method = 'GET'
+    # response_2 = request.invoke_subrequest(subreq).json
+    #entity_type_primary = 'Word'
+    #entity_type_secondary = 'Transcription'
+    #threshold = 0.2
+    #levenstein = 2
+    client_id = req['client_id']
+    object_id = req['object_id']
+    lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = client_id, parent_object_id = object_id).all())
+    lexes_1 = []
+    lexes_2 = []
+    if not lexes:
+        return json.dumps({})
+
+    first_persp = json.loads(lexes[0].additional_metadata['came_from'])
+    for lex in lexes:
+        meta = json.loads(lex.additional_metadata)
+        if meta['came_from'] == first_persp:
+            lexes_1 += [lex.track()]
+        else:
+            lexes_2 += [lex.track()]
+    entity_type_primary = req['entity_type_primary'] or 'Word'
+    entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
+    threshold = req['threshold'] or 0.2
+    levenstein = req['levenstein'] or 1
+    def parse_response(elem):
+        words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
+        words = map(lambda x: x['content'], words)
+        trans = filter(lambda x: x['entity_type'] == entity_type_secondary and not x['marked_for_deletion'], elem['contains'])
+        trans = map(lambda x: x['content'], trans)
+        tuples_res = [(i_word, i_trans, (elem['client_id'], elem['object_id'])) for i_word in words for i_trans in trans]
+        return tuples_res
+    tuples_1 = [parse_response(i) for i in lexes_1['lexical_entries']]
+    tuples_1 = [item for sublist in tuples_1 for item in sublist]
+    tuples_2 = [parse_response(i) for i in lexes_2['lexical_entries']]
     tuples_2 = [item for sublist in tuples_2 for item in sublist]
     def get_dict(elem):
         return {'suggestion': [

@@ -408,8 +408,14 @@ def configure_routes(config):
     # "translation": <new_name_translation>,
     # "perspectives":
     # [
-    #  {"perspective_client_id": <first_perspective_client_id, "perspective_object_id": <first_perspective_object_id>},
-    #  {"perspective_client_id": <second_perspective_client_id, "perspective_object_id": <second_perspective_object_id>}
+    #  {"perspective_client_id": <first_perspective_client_id, "perspective_object_id": <first_perspective_object_id>,
+    #   "fields": [{"new_type_name":<new_type_name>,
+    #               entity_type: <entity_type>, data_type:<text|img|sound|markup|grouping_tag>,
+    #               status: <enabled|disabled>}, contains: [{}], group: <grouping_button_localization_str>]},
+    #  {"perspective_client_id": <second_perspective_client_id, "perspective_object_id": <second_perspective_object_id>,
+    #   "fields": [{"new_type_name":<new_type_name>,
+    #               entity_type: <entity_type>, data_type:<text|img|sound|markup|grouping_tag>,
+    #               status: <enabled|disabled>}, contains: [{}], group: <grouping_button_localization_str>]}
     # ]
     # }
     # Returns new perspective object and client ids.
@@ -435,7 +441,9 @@ def configure_routes(config):
     #   },
     # ]
 
-    config.add_route(name='merge_suggestions', pattern='/merge/suggestions/'
+    config.add_route(name='merge_suggestions', pattern='/merge/suggestions/')
+
+    config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'
         '{dictionary_client_id_1}/{dictionary_object_id_1}/'
         '{perspective_client_id_1}/{perspective_object_id_1}/'
         '{dictionary_client_id_2}/{dictionary_object_id_2}/'

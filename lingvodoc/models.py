@@ -437,6 +437,7 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     parent_client_id = Column(BigInteger)
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    additional_metadata = Column(UnicodeText)
 
     def track(self, publish):
         vec = []
