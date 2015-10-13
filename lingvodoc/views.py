@@ -2835,8 +2835,8 @@ def merge_perspectives_api(request):
 def move_lexical_entry(request):
     req = request.json_body
     # variables = {'auth': request.authenticated_userid}
-    object_id = req['object_id']
-    client_id = req['client_id']
+    object_id = request.matchdict.get('object_id')
+    client_id = request.matchdict.get('client_id')
     cli_id = req['client_id']
     obj_id = req['object_id']
     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
