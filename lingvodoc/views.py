@@ -1,3 +1,4 @@
+import webob
 from pyramid.response import Response
 from pyramid.view import view_config
 
@@ -378,7 +379,11 @@ def create_dictionary(request):
     try:
 
         variables = {'auth': request.authenticated_userid}
-        req = request.json_body
+
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
         parent_client_id = req['parent_client_id']
         parent_object_id = req['parent_object_id']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -583,7 +588,11 @@ def create_perspective(request):
         variables = {'auth': authenticated_userid(request)}
         parent_client_id = request.matchdict.get('dictionary_client_id')
         parent_object_id = request.matchdict.get('dictionary_object_id')
-        req = request.json_body
+
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -1246,7 +1255,11 @@ def create_perspective_fields(request):
         parent_object_id = request.matchdict.get('perspective_id')
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
-        req = request.json_body
+
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
         fields = req['fields']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -1389,7 +1402,6 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
 def upload_user_blob(request):
     variables = {'auth': authenticated_userid(request)}
     response = dict()
-    #print(request.POST)
     filename = request.POST['blob'].filename
     input_file = request.POST['blob'].file
 
@@ -2039,15 +2051,12 @@ def lexical_entries_all(request):
                 .filter(LexicalEntry.parent == parent)\
                 .filter_by(entity_type=sort_criterion)\
                 .group_by(LexicalEntry)
-            print('CRITERION', lexical_entries_criterion2.count())
             lexical_entries_not_criterion = lexical_entries_not_criterion.add_column(
                                                             sqlalchemy.null().label('content'))
-            print('NOTCRITERION', lexical_entries_not_criterion.count())
             lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
                 .order_by('content')\
                 .offset(start_from) \
                 .limit(count)
-            print(lexical_entries.count())
             result = []
             for entry in lexical_entries:
                 result.append(entry[0].track(False))
@@ -2105,7 +2114,6 @@ def lexical_entries_published(request):
     if parent:
         if not parent.marked_for_deletion:
 
-
             lexes =  DBSession.query(LexicalEntry)\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .outerjoin(PublishGroupingEntity)\
@@ -2116,7 +2124,6 @@ def lexical_entries_published(request):
                             PublishLevelTwoEntity.marked_for_deletion==False,
                             ))\
                 .group_by(LexicalEntry)
-
 
             lexical_entries_criterion = lexes\
                 .join((LevelOneEntity, (LevelOneEntity.parent_client_id==LexicalEntry.client_id) &
@@ -2141,26 +2148,18 @@ def lexical_entries_published(request):
                 .filter(LevelOneEntity.entity_type==sort_criterion)\
                 .group_by(LexicalEntry)\
 
-            print('CRITERION', lexical_entries_criterion2.count())
             lexical_entries_not_criterion = lexical_entries_not_criterion.add_column(
                                                             sqlalchemy.null().label('content'))
 
-            print('NOTCRITERION', lexical_entries_not_criterion.count())
             lexical_entries = lexical_entries_criterion2.union(lexical_entries_not_criterion)\
                 .order_by('content')\
                 .offset(start_from) \
                 .limit(count)
 
-            print(lexical_entries.count())
             result = []
             for entry in lexical_entries:
-                print(entry[0].object_id, entry[1])
                 result.append(entry[0].track(False))
-            for entry in result:
-                print(entry['object_id'])
             response['lexical_entries'] = result
-
-
 
             # lexical_entries = DBSession.query(LexicalEntry)\
             #     .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
@@ -2221,7 +2220,6 @@ def lexical_entries_published_count(request):
         return {'error': str("No such perspective in the system")}
 
 
-# TODO: fix ACL
 @view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET', permission='view')#, permission='view')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
 def view_lexical_entry(request):
@@ -2390,14 +2388,11 @@ def approve_all(request):
                                          'client_id': levone.client_id,
                                          'object_id': levone.object_id}]
                     jsn['entities']= entities
-                    subreq.json = jsn
+                    subreq.json = json.dumps(jsn)
                     subreq.method = 'PATCH'
-                    subreq.headers = request.headers
-                    try:
-                        request.invoke_subrequest(subreq)
-                    except:
-                        log.debug('JSON', jsn)
-                        return{'error': str(jsn)}
+                    headers = {'Cookie':request.headers['Cookie']}
+                    subreq.headers =headers
+                    request.invoke_subrequest(subreq)
                     for levtwo in levone.leveltwoentity:
                         url = request.route_url('approve_entity',
                                                 dictionary_client_id=dictionary_client_id,
@@ -2410,13 +2405,11 @@ def approve_all(request):
                                              'client_id':levtwo.client_id,
                                              'object_id':levtwo.object_id}]
                         jsn['entities']= entities
-                        subreq.json = jsn
+                        subreq.json = json.dumps(jsn)
                         subreq.method = 'PATCH'
-                        subreq.headers = request.headers
-                        try:
-                            request.invoke_subrequest(subreq)
-                        except:
-                            log.debug('JSON', jsn)
+                        headers = {'Cookie':request.headers['Cookie']}
+                        subreq.headers =headers
+                        request.invoke_subrequest(subreq)
                 groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
                 for groupent in groupents:
                     url = request.route_url('approve_entity',
@@ -2430,13 +2423,11 @@ def approve_all(request):
                                          'client_id': groupent.client_id,
                                          'object_id': groupent.object_id}]
                     jsn['entities'] = entities
-                    subreq.json = jsn
+                    subreq.json = json.dumps(jsn)
                     subreq.method = 'PATCH'
-                    subreq.headers = request.headers
-                    try:
-                        request.invoke_subrequest(subreq)
-                    except:
-                        log.debug('JSON', jsn)
+                    headers = {'Cookie':request.headers['Cookie']}
+                    subreq.headers = headers
+                    request.invoke_subrequest(subreq)
 
             request.response.status = HTTPOk.code
             return response
@@ -2447,8 +2438,10 @@ def approve_all(request):
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
-
-        req = request.json_body
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -2457,7 +2450,6 @@ def approve_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        log.debug('REQUEST BODY:', req)
         for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
                 entity = DBSession.query(LevelOneEntity).\
@@ -2629,9 +2621,10 @@ def merge_dictionaries(request):
 
         subreq = Request.blank('/dictionary')
         subreq.method = 'POST'
-        subreq.json = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
-                            'translation_string': translation_string, 'translation': translation}
-        subreq.headers = request.headers
+        subreq.json = json.dumps({'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
+                            'translation_string': translation_string, 'translation': translation})
+        headers = {'Cookie':request.headers['Cookie']}
+        subreq.headers = headers
         response = request.invoke_subrequest(subreq)
         client_id = response.json['client_id']
         object_id = response.json['object_id']
@@ -2739,8 +2732,9 @@ def merge_perspectives_api(request):
 
         subreq = Request.blank('/dictionary/%s/%s/perspective' % (dictionary_client_id, dictionary_object_id))
         subreq.method = 'POST'
-        subreq.json = {'translation_string': translation_string, 'translation': translation}
-        subreq.headers = request.headers
+        subreq.json = json.dumps({'translation_string': translation_string, 'translation': translation})
+        headers = {'Cookie':request.headers['Cookie']}
+        subreq.headers = headers
         response = request.invoke_subrequest(subreq)
         new_client_id = response.json['client_id']
         new_object_id = response.json['object_id']
@@ -2762,8 +2756,9 @@ def merge_perspectives_api(request):
                                 new_client_id,
                                 new_object_id))
         subreq.method = 'POST'
-        subreq.json = {'fields': fields}
-        subreq.headers = request.headers
+        subreq.json = json.dumps({'fields': fields})
+        headers = {'Cookie':request.headers['Cookie']}
+        subreq.headers = headers
         response = request.invoke_subrequest(subreq)
         for persp in persps:
 

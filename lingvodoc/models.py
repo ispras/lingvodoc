@@ -254,15 +254,22 @@ class TranslationStringMixin(object):
         return find_by_translation_string(find_locale_id(request), cls.translation_string)
 
     def set_translation(cls, request):
-        translation = request.json_body['translation_string']
-        if 'translation' in request.json_body:
-            translation = request.json_body
+
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
+
+        translation = req['translation_string']
+        if 'translation' in req:
+            translation = req
         add_translation_to_translation_string(find_locale_id(request),
                                               translation,
-                                              request.json_body['translation_string'],
+                                              req['translation_string'],
                                               request.authenticated_userid)
-        cls.translation_string = request.json_body['translation_string']
+        cls.translation_string = req['translation_string']
         return
+
 
 class Language(Base, TableNameMixin, TranslationStringMixin):
     """
