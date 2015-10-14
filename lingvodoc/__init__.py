@@ -422,25 +422,13 @@ def configure_routes(config):
     config.add_route(name='merge_perspectives', pattern='/merge/perspectives')
 
     # API #POST
-    # {
-    # "perspectives":
-    # [
-    #  {"perspective_client_id": <first_perspective_client_id, "perspective_object_id": <first_perspective_object_id>},
-    #  {"perspective_client_id": <second_perspective_client_id, "perspective_object_id": <second_perspective_object_id>}
-    # ]
+    # {'entity_type_primary':<entity_type_primary>,
+    # 'entity_type_secondary' : <entity_type_secondary>,
+    # 'threshold': <threshold>,
+    # 'levenstein' : <levenstein>,
+    # 'client_id' : <client_id>,
+    # 'object_id' : <object_id>
     # }
-    # As a response will be given a list of tuples of the following struct:
-    # [
-    #   {
-    #       "suggestion":
-    #       [
-    #           {"lexical_entry_client_id": <client_id>, "lexical_entry_object_id": <object_id>)},
-    #           {"lexical_entry_client_id": <client_id>, "lexical_entry_object_id": <object_id>)},
-    #       ],
-    #       "confidence": <float 0-1>
-    #   },
-    # ]
-
     config.add_route(name='merge_suggestions', pattern='/merge/suggestions')
 
     config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'
