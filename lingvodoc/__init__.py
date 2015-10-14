@@ -441,7 +441,7 @@ def configure_routes(config):
     #   },
     # ]
 
-    config.add_route(name='merge_suggestions', pattern='/merge/suggestions/')
+    config.add_route(name='merge_suggestions', pattern='/merge/suggestions')
 
     config.add_route(name='merge_suggestions_old', pattern='/merge/suggestionsold/'
         '{dictionary_client_id_1}/{dictionary_object_id_1}/'
