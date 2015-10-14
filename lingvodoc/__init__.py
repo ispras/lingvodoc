@@ -453,7 +453,8 @@ def configure_routes(config):
 
     # API #PATCH
     # {'client_id':<client_id>, 'object_id':<object_id>}  id's of entry where moving to
-    config.add_route(name='move_lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}/move') #TODO: create acl model
+    config.add_route(name='move_lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}/move',
+                     factory='lingvodoc.models.LexicalViewAcl')
 
     # web-view
     config.add_route(name='merge_master', pattern='/dashboard/merge')
