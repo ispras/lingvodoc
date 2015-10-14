@@ -581,7 +581,8 @@ def view_perspectives(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        perspectives += [resp.json]
+        if 'error' not in resp.json:
+            perspectives += [resp.json]
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
     return response
@@ -2232,8 +2233,8 @@ def lexical_entries_all_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).scalar()
+            lexical_entries_count = DBSession.query(LexicalEntry)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).count()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -2344,7 +2345,7 @@ def lexical_entries_published_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
+            lexical_entries_count = DBSession.query(LexicalEntry)\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .outerjoin(PublishGroupingEntity)\
                 .outerjoin(PublishLevelOneEntity)\
@@ -2353,7 +2354,8 @@ def lexical_entries_published_count(request):
                             PublishLevelOneEntity.marked_for_deletion==False,
                             PublishLevelTwoEntity.marked_for_deletion==False,
                             ))\
-                .group_by(LexicalEntry).scalar()
+                .group_by(LexicalEntry).count()
+
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -3515,14 +3517,10 @@ def merge_suggestions(request):
     #entity_type_secondary = 'Transcription'
     #threshold = 0.2
     #levenstein = 2
-    # entity_type_primary = req['entity_type_primary'] or 'Word'
-    # entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
-    # threshold = req['threshold'] or 0.2
-    # levenstein = req['levenstein'] or 1
-    entity_type_primary =  'Word'
-    entity_type_secondary = 'Transcription'
-    threshold =  0.2
-    levenstein = 1
+    entity_type_primary = req['entity_type_primary'] or 'Word'
+    entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
+    threshold = req['threshold'] or 0.2
+    levenstein = req['levenstein'] or 1
     client_id = req['client_id']
     object_id = req['object_id']
     lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = client_id, parent_object_id = object_id).all())

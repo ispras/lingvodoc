@@ -1,6 +1,7 @@
 CHANGES.md
 MANIFEST.in
 README.md
+al-indigo.ini
 alembic_base.ini
 development.ini
 log.txt
