@@ -13,7 +13,6 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
 
     $scope.dictionaries = [];
 
-
     var getObjectByCompositeKey = function (id, arr) {
         if (typeof id == 'string') {
             var ids = id.split('_');

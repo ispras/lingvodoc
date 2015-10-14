@@ -27777,16 +27777,17 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var mergeSuggestions = function(perspective1, perspective2) {
+    var mergeSuggestions = function(perspective) {
         var deferred = $q.defer();
-        var body = [ {
-            perspective_client_id: perspective1.client_id,
-            perspective_object_id: perspective1.object_id
-        }, {
-            perspective_client_id: perspective2.client_id,
-            perspective_object_id: perspective2.object_id
-        } ];
-        $http.post("/merge/suggestions/", body).success(function(data, status, headers, config) {
+        var body = {
+            entity_type_primary: "Word",
+            entity_type_secondary: "Transcription",
+            threshold: .6,
+            levenstein: 3,
+            client_id: perspective.client_id,
+            object_id: perspective.object_id
+        };
+        $http.post("/merge/suggestions", body).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to fetch merge suggestions");

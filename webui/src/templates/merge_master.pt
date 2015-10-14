@@ -133,6 +133,48 @@
 
 </script>
 
+
+
+<script type="text/ng-template" id="mergeMasterSelectDictionaries.html">
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Choose dictionaries to merge</h3>
+        </div>
+        <div class="panel-body">
+
+            <div>
+                <label for="dictionarySelect1">Select dictionary 1</label>
+                <select id="dictionarySelect1" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId1">
+                    <option></option>
+                </select>
+
+                <label for="dictionarySelect2">Select dictionary 2</label>
+                <select id="dictionarySelect2" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId2">
+                    <option></option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div class="panel-footer">
+
+            <a ui-sref="merge.mode" class="btn btn-primary">
+                <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
+            </a>
+
+            <a class="btn btn-primary" ng-click="startMergePerspectives()">
+                Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
+            </a>
+        </div>
+    </div>
+
+</script>
+
+
+
+
 <script type="text/ng-template" id="mergeMasterSourcePerspectives.html">
 
     <div class="panel panel-default">
@@ -228,10 +270,6 @@
                     </table>
                     <!-- end of fields table -->
 
-
-
-
-
                 </div>
                 <div class="col-md-6">
                     <!-- Fields table -->
@@ -308,12 +346,7 @@
                         </tbody>
                     </table>
 
-
                     <!-- end of fields table -->
-
-
-
-
 
                 </div>
             </div>
@@ -333,6 +366,121 @@
     </div>
 
 </script>
+
+
+<script type="text/ng-template" id="mergeEntries.html">
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Merge lexical entries</h3>
+        </div>
+        <div class="panel-body">
+
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <td ng-repeat="field in master.mergedPerspectiveFields">{{ field.entity_type }}</td>
+                    <td> <!-- action --> </td>
+                </tr>
+                </thead>
+
+                <tbody>
+
+                <tr ng-repeat="entryFields in master.dictionaryTable">
+
+                    <td ng-repeat="fieldValues in entryFields"
+                        ng-init="lexicalEntry=suggestedLexicalEntries[$parent.$index]; field=master.mergedPerspectiveFields[$index]">
+
+
+                        <div ng-if="field.data_type == 'text'">
+                            <ul class="entries_list">
+                                <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                    {{ fieldValue.content }}
+                                </li>
+                            </ul>
+
+                        </div>
+
+
+                        <div ng-if="field.data_type == 'image'">
+                            <ul class="entries_list">
+                                <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                    <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                        <div ng-if="field.data_type == 'sound'">
+                            <ul class="entries_list">
+                                <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+
+                                    <button type="button" class="btn btn-default btn-sm"
+                                            ng-click="play(fieldValue.content)">
+                                        <span class="glyphicon glyphicon-play">Play sound</span>
+                                    </button>
+
+                                    <button type="button" class="btn btn-default btn-sm"
+                                            ng-if="fieldValue.contains && fieldValue.contains.length > 0"
+                                            ng-click="annotate(fieldValue, fieldValue.contains[0])">
+                                        <span class="glyphicon glyphicon-list">View markup</span>
+                                    </button>
+
+                                </li>
+                            </ul>
+
+                        </div>
+
+                        <div ng-if="field.isGroup">
+                            <div ng-if="field.isGroup">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="viewGroup(lexicalEntry, field, fieldValues)">
+                                    <span class="glyphicon glyphicon-list">Edit</span>
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        <div ng-if="field.data_type == 'grouping_tag'">
+
+                            <button type="button" class="btn btn-default btn-sm"
+                                    ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)">
+                                <span class="glyphicon glyphicon-list">Edit</span>
+                            </button>
+
+                        </div>
+
+
+                    </td>
+
+                    <td> <!-- action --> </td>
+
+                </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="panel-footer">
+
+            <a ui-sref="merge.mode" class="btn btn-primary">
+                <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
+            </a>
+
+            <a class="btn btn-primary" ng-click="startMergePerspectives()">
+                Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
+            </a>
+        </div>
+    </div>
+
+</script>
+
+
+
 
 
 </body>

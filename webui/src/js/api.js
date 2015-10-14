@@ -626,6 +626,35 @@ function lingvodocAPI($http, $q) {
     };
 
 
+    var mergeDictionaries = function(tranlation, translation_string, d1, d2) {
+
+        /*
+         { "name": <new_dictionary_name>,
+         #   "translation": <new_name_translation>,
+         #   "language_client_id": <language_client_id>,
+         #   "language_object_id": <language_object_id>,
+         #   "dictionaries":
+         #   [
+         #     {"dictionary_client_id": <first_dictionary_client_id>, "dictionary_object_id": <first_dictionary_object_id>},
+         #     {"dictionary_client_id": <second_dictionary_client_id>, "dictionary_object_id": <second_dictionary_object_id>}
+         #   ]
+         */
+
+
+        var deferred = $q.defer();
+        var req = {
+            'translation': tranlation,
+            'translation_string': translation_string,
+
+        };
+        $http.post('/merge/dictionaries', req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to merge perspectives');
+        });
+        return deferred.promise;
+    }
+
     var mergePerspectives = function(req) {
         var deferred = $q.defer();
 
@@ -639,20 +668,19 @@ function lingvodocAPI($http, $q) {
 
 
 
-    var mergeSuggestions = function(perspective1, perspective2) {
+    var mergeSuggestions = function(perspective) {
         var deferred = $q.defer();
 
-        var body = [
-            {
-                'perspective_client_id': perspective1.client_id,
-                'perspective_object_id': perspective1.object_id
-            },
-            {
-                'perspective_client_id': perspective2.client_id,
-                'perspective_object_id': perspective2.object_id
-            }];
+        var body = {
+            'entity_type_primary': 'Word',
+            'entity_type_secondary': 'Transcription',
+            'threshold': 0.6,
+            'levenstein' : 3,
+            'client_id': perspective.client_id,
+            'object_id': perspective.object_id
+        };
 
-        $http.post('/merge/suggestions/', body).success(function(data, status, headers, config) {
+        $http.post('/merge/suggestions', body).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject('Failed to fetch merge suggestions');
