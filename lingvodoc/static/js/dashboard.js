@@ -5391,7 +5391,7 @@
                 }
                 return match;
             });
-            message += "\nhttp://errors.angularjs.org/1.4.6/" + (module ? module + "/" : "") + code;
+            message += "\nhttp://errors.angularjs.org/1.4.7/" + (module ? module + "/" : "") + code;
             for (i = SKIP_INDEXES, paramPrefix = "?"; i < templateArgs.length; i++, paramPrefix = "&") {
                 message += paramPrefix + "p" + (i - SKIP_INDEXES) + "=" + encodeURIComponent(toDebugString(templateArgs[i]));
             }
@@ -6210,11 +6210,11 @@
         return obj;
     }
     var version = {
-        full: "1.4.6",
+        full: "1.4.7",
         major: 1,
         minor: 4,
-        dot: 6,
-        codeName: "multiplicative-elevation"
+        dot: 7,
+        codeName: "dark-luminescence"
     };
     function publishExternalAPI(angular) {
         extend(angular, {
@@ -6323,6 +6323,7 @@
                 $httpParamSerializer: $HttpParamSerializerProvider,
                 $httpParamSerializerJQLike: $HttpParamSerializerJQLikeProvider,
                 $httpBackend: $HttpBackendProvider,
+                $xhrFactory: $xhrFactoryProvider,
                 $location: $LocationProvider,
                 $log: $LogProvider,
                 $parse: $ParseProvider,
@@ -6368,10 +6369,10 @@
             return offset ? letter.toUpperCase() : letter;
         }).replace(MOZ_HACK_REGEXP, "Moz$1");
     }
-    var SINGLE_TAG_REGEXP = /^<(\w+)\s*\/?>(?:<\/\1>|)$/;
+    var SINGLE_TAG_REGEXP = /^<([\w-]+)\s*\/?>(?:<\/\1>|)$/;
     var HTML_REGEXP = /<|&#?\w+;/;
-    var TAG_NAME_REGEXP = /<([\w:]+)/;
-    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/gi;
+    var TAG_NAME_REGEXP = /<([\w:-]+)/;
+    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:-]+)[^>]*)\/>/gi;
     var wrapMap = {
         option: [ 1, '<select multiple="multiple">', "</select>" ],
         thead: [ 1, "<table>", "</table>" ],
@@ -7614,6 +7615,9 @@
                 }
             };
             return function(element, options) {
+                if (options.cleanupStyles) {
+                    options.from = options.to = null;
+                }
                 if (options.from) {
                     element.css(options.from);
                     options.from = null;
@@ -8879,7 +8883,7 @@
                     compile: function() {
                         return {
                             pre: function attrInterpolatePreLinkFn(scope, element, attr) {
-                                var $$observers = attr.$$observers || (attr.$$observers = {});
+                                var $$observers = attr.$$observers || (attr.$$observers = createMap());
                                 if (EVENT_HANDLER_ATTR_REGEXP.test(name)) {
                                     throw $compileMinErr("nodomevents", "Interpolations for HTML DOM event attributes are disallowed.  Please use the " + "ng- versions (such as ng-click instead of onclick) instead.");
                                 }
@@ -9542,12 +9546,16 @@
             }
         } ];
     }
-    function createXhr() {
-        return new window.XMLHttpRequest();
+    function $xhrFactoryProvider() {
+        this.$get = function() {
+            return function createXhr() {
+                return new window.XMLHttpRequest();
+            };
+        };
     }
     function $HttpBackendProvider() {
-        this.$get = [ "$browser", "$window", "$document", function($browser, $window, $document) {
-            return createHttpBackend($browser, createXhr, $browser.defer, $window.angular.callbacks, $document[0]);
+        this.$get = [ "$browser", "$window", "$document", "$xhrFactory", function($browser, $window, $document, $xhrFactory) {
+            return createHttpBackend($browser, $xhrFactory, $browser.defer, $window.angular.callbacks, $document[0]);
         } ];
     }
     function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDocument) {
@@ -9565,7 +9573,7 @@
                     callbacks[callbackId] = noop;
                 });
             } else {
-                var xhr = createXhr();
+                var xhr = createXhr(method, url);
                 xhr.open(method, url, true);
                 forEach(headers, function(value, key) {
                     if (isDefined(value)) {
@@ -10273,9 +10281,15 @@
     }
     var $parseMinErr = minErr("$parse");
     function ensureSafeMemberName(name, fullExpression) {
-        name = isObject(name) && name.toString ? name.toString() : name;
         if (name === "__defineGetter__" || name === "__defineSetter__" || name === "__lookupGetter__" || name === "__lookupSetter__" || name === "__proto__") {
             throw $parseMinErr("isecfld", "Attempting to access a disallowed field in Angular expressions! " + "Expression: {0}", fullExpression);
+        }
+        return name;
+    }
+    function getStringValue(name, fullExpression) {
+        name = name + "";
+        if (!isString(name)) {
+            throw $parseMinErr("iseccst", "Cannot convert object to primitive value! " + "Expression: {0}", fullExpression);
         }
         return name;
     }
@@ -10302,6 +10316,13 @@
                 throw $parseMinErr("isecfn", "Referencing Function in Angular expressions is disallowed! Expression: {0}", fullExpression);
             } else if (obj === CALL || obj === APPLY || obj === BIND) {
                 throw $parseMinErr("isecff", "Referencing call, apply or bind in Angular expressions is disallowed! Expression: {0}", fullExpression);
+            }
+        }
+    }
+    function ensureSafeAssignContext(obj, fullExpression) {
+        if (obj) {
+            if (obj === 0..constructor || obj === false.constructor || obj === "".constructor || obj === {}.constructor || obj === [].constructor || obj === Function.constructor) {
+                throw $parseMinErr("isecaf", "Assigning to a constructor is disallowed! Expression: {0}", fullExpression);
             }
         }
     }
@@ -11053,7 +11074,7 @@
             this.stage = "main";
             this.recurse(ast);
             var fnString = '"' + this.USE + " " + this.STRICT + '";\n' + this.filterPrefix() + "var fn=" + this.generateFunction("fn", "s,l,a,i") + extra + this.watchFns() + "return fn;";
-            var fn = new Function("$filter", "ensureSafeMemberName", "ensureSafeObject", "ensureSafeFunction", "ifDefined", "plus", "text", fnString)(this.$filter, ensureSafeMemberName, ensureSafeObject, ensureSafeFunction, ifDefined, plusFn, expression);
+            var fn = new Function("$filter", "ensureSafeMemberName", "ensureSafeObject", "ensureSafeFunction", "getStringValue", "ensureSafeAssignContext", "ifDefined", "plus", "text", fnString)(this.$filter, ensureSafeMemberName, ensureSafeObject, ensureSafeFunction, getStringValue, ensureSafeAssignContext, ifDefined, plusFn, expression);
             this.state = this.stage = undefined;
             fn.literal = isLiteral(ast);
             fn.constant = isConstant(ast);
@@ -11190,6 +11211,7 @@
                         if (ast.computed) {
                             right = self.nextId();
                             self.recurse(ast.property, right);
+                            self.getStringValue(right);
                             self.addEnsureSafeMemberName(right);
                             if (create && create !== 1) {
                                 self.if_(self.not(self.computedMember(left, right)), self.lazyAssign(self.computedMember(left, right), "{}"));
@@ -11275,6 +11297,7 @@
                     self.if_(self.notNull(left.context), function() {
                         self.recurse(ast.right, right);
                         self.addEnsureSafeObject(self.member(left.context, left.name, left.computed));
+                        self.addEnsureSafeAssignContext(left.context);
                         expression = self.member(left.context, left.name, left.computed) + ast.operator + right;
                         self.assign(intoId, expression);
                         recursionFn(intoId || expression);
@@ -11385,6 +11408,9 @@
         addEnsureSafeFunction: function(item) {
             this.current().body.push(this.ensureSafeFunction(item), ";");
         },
+        addEnsureSafeAssignContext: function(item) {
+            this.current().body.push(this.ensureSafeAssignContext(item), ";");
+        },
         ensureSafeObject: function(item) {
             return "ensureSafeObject(" + item + ",text)";
         },
@@ -11393,6 +11419,12 @@
         },
         ensureSafeFunction: function(item) {
             return "ensureSafeFunction(" + item + ",text)";
+        },
+        getStringValue: function(item) {
+            this.assign(item, "getStringValue(" + item + ",text)");
+        },
+        ensureSafeAssignContext: function(item) {
+            return "ensureSafeAssignContext(" + item + ",text)";
         },
         lazyRecurse: function(ast, intoId, nameId, recursionFn, create, skipWatchIdCheck) {
             var self = this;
@@ -11561,6 +11593,7 @@
                     var lhs = left(scope, locals, assign, inputs);
                     var rhs = right(scope, locals, assign, inputs);
                     ensureSafeObject(lhs.value, self.expression);
+                    ensureSafeAssignContext(lhs.context);
                     lhs.context[lhs.name] = rhs;
                     return context ? {
                         value: rhs
@@ -11818,6 +11851,7 @@
                 var value;
                 if (lhs != null) {
                     rhs = right(scope, locals, assign, inputs);
+                    rhs = getStringValue(rhs);
                     ensureSafeMemberName(rhs, expression);
                     if (create && create !== 1 && lhs && !lhs[rhs]) {
                         lhs[rhs] = {};
@@ -13500,6 +13534,7 @@
             if (fractionSize > 0 && number < 1) {
                 formatedText = number.toFixed(fractionSize);
                 number = parseFloat(formatedText);
+                formatedText = formatedText.replace(DECIMAL_SEP, decimalSep);
             }
         }
         if (number === 0) {
@@ -15517,11 +15552,11 @@
                 function updateOptionElement(option, element) {
                     option.element = element;
                     element.disabled = option.disabled;
-                    if (option.value !== element.value) element.value = option.selectValue;
                     if (option.label !== element.label) {
                         element.label = option.label;
                         element.textContent = option.label;
                     }
+                    if (option.value !== element.value) element.value = option.selectValue;
                 }
                 function addOrReuseElement(parent, current, type, templateElement) {
                     var element;
@@ -15549,7 +15584,7 @@
                     var emptyOption_ = emptyOption && emptyOption[0];
                     var unknownOption_ = unknownOption && unknownOption[0];
                     if (emptyOption_ || unknownOption_) {
-                        while (current && (current === emptyOption_ || current === unknownOption_)) {
+                        while (current && (current === emptyOption_ || current === unknownOption_ || emptyOption_ && emptyOption_.nodeType === NODE_TYPE_COMMENT)) {
                             current = current.nextSibling;
                         }
                     }
@@ -26895,11 +26930,11 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
         this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), 
         [ this.waveCc, this.progressCc ].forEach(function(b) {
             if (b) if (this.params.reflection) for (var c = 0; e > c; c += l) {
-                var f = Math.round(a[2 * c * p] / m * h);
+                var f = Math.round(a[Math.floor(2 * c * p)] / m * h);
                 b.fillRect(c + d, h - f + g, j + d, 2 * f);
             } else {
                 for (var c = 0; e > c; c += l) {
-                    var f = Math.round(a[2 * c * p] / m * h);
+                    var f = Math.round(a[Math.floor(2 * c * p)] / m * h);
                     b.fillRect(c + d, h - f + g, j + d, f);
                 }
                 for (var c = 0; e > c; c += l) {
@@ -27817,6 +27852,14 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
             data_type: "text",
             status: "enabled"
         });
+    };
+    $scope.removeField = function(field) {
+        $scope.perspective.fields;
+        for (var i = $scope.perspective.fields.length - 1; i >= 0; i--) {
+            if ($scope.perspective.fields[i].client_id == field.client_id && $scope.perspective.fields[i].object_id == field.object_id) {
+                $scope.perspective.fields.splice(i, 1);
+            }
+        }
     };
     $scope.ok = function() {
         var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/perspective/" + encodeURIComponent(params.perspective.client_id) + "/" + encodeURIComponent(params.perspective.object_id) + "/fields";
