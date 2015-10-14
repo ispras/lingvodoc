@@ -139,7 +139,7 @@
     <div>
         <label for="perspective">Import perspective</label>
         <select id="perspective" class="form-control" ng-model="dictionaryData.perspectiveId"
-                ng-options="getLanguageId(p) as p.name for p in perspectives track by getLanguageId(p)">
+                ng-options="getLanguageId(p) as p.translation for p in perspectives track by getLanguageId(p)">
         </select>
 
         <hr>
