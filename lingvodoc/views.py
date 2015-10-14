@@ -2831,7 +2831,7 @@ def merge_perspectives_api(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH', permission='edit')
+@view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH', permission='create')
 def move_lexical_entry(request):
     req = request.json_body
     variables = {'auth': request.authenticated_userid}
@@ -2849,17 +2849,17 @@ def move_lexical_entry(request):
     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
     if entry and parent:
-        if not entry.marked_for_deletion and parent.marked_for_deletion:
+        if not entry.marked_for_deletion and not parent.marked_for_deletion:
             groupoverride = DBSession.query(Group)\
                 .filter_by(subject_override=True)\
                 .join(BaseGroup)\
                 .filter_by(subject='lexical_entries_and_entities')\
                 .first()
             group = DBSession.query(Group)\
-                .filter_by(subject_client_id=client_id, subject_object_id=object_id)\
+                .filter_by(subject_client_id=parent.parent_client_id, subject_object_id=parent.parent_object_id)\
                 .join(BaseGroup)\
                 .filter_by(subject='lexical_entries_and_entities')\
-                .all()
+                .first()
             if user not in groupoverride.users:
                 if user not in group.users:
                     raise CommonException("You should only move to lexical entires you own")
@@ -2871,13 +2871,6 @@ def move_lexical_entry(request):
                         publent.marked_for_deletion = True
                         publent.parent = parent
                     DBSession.flush()
-
-                    for ent in entity.leveltwoentity:
-                        ent.parent = parent
-                        for publent in ent.publishleveltwoentity:
-                            publent.marked_for_deletion = True
-                            publent.parent = parent
-                        DBSession.flush()
                 for entity in entry.groupingentity:
                     entity.parent = parent
                     for publent in entity.publishgroupingentity:
@@ -2885,6 +2878,8 @@ def move_lexical_entry(request):
                         publent.parent = parent
                     DBSession.flush()
                 entry.moved_to = str(cli_id) + '/' + str(obj_id)
+                request.response.status = HTTPOk.code
+                return {}
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
 
