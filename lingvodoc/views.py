@@ -3553,7 +3553,7 @@ def merge_suggestions(request):
             {'lexical_entry_client_id': elem[1][0], 'lexical_entry_object_id': elem[1][1]}
         ], 'confidence': elem[2]}
     results = [get_dict(i) for i in mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))]
-    return json.dumps(results)
+    return results
 
 @view_config(route_name='profile', renderer='templates/profile.pt', request_method='GET')
 def profile_get(request):
