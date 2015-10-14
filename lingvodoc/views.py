@@ -2831,10 +2831,17 @@ def merge_perspectives_api(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH')  # TODO: check for permission
+@view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH', permission='edit')
 def move_lexical_entry(request):
     req = request.json_body
-    # variables = {'auth': request.authenticated_userid}
+    variables = {'auth': request.authenticated_userid}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                       variables['auth'])
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
     object_id = request.matchdict.get('object_id')
     client_id = request.matchdict.get('client_id')
     cli_id = req['client_id']
@@ -2843,6 +2850,20 @@ def move_lexical_entry(request):
     parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
     if entry and parent:
         if not entry.marked_for_deletion and parent.marked_for_deletion:
+            groupoverride = DBSession.query(Group)\
+                .filter_by(subject_override=True)\
+                .join(BaseGroup)\
+                .filter_by(subject='lexical_entries_and_entities')\
+                .first()
+            group = DBSession.query(Group)\
+                .filter_by(subject_client_id=client_id, subject_object_id=object_id)\
+                .join(BaseGroup)\
+                .filter_by(subject='lexical_entries_and_entities')\
+                .all()
+            if user not in groupoverride.users:
+                if user not in group.users:
+                    raise CommonException("You should only move to lexical entires you own")
+
             if entry.moved_to is None and parent.moved_to is None:
                 for entity in entry.leveloneentity:
                     entity.parent = parent

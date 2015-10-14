@@ -715,7 +715,7 @@ class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
 
 
 def acl_by_groups(object_id, client_id, subject):
-    acls = [] #TODO DANGER if acls do not work -- incomment string below
+    acls = [] #DANGER if acls do not work -- uncomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
@@ -744,7 +744,7 @@ def acl_by_groups(object_id, client_id, subject):
 
 
 def acl_by_groups_single_id(object_id, subject):
-    acls = [] #TODO DANGER if acls do not work -- incomment string below
+    acls = [] #DANGER if acls do not work -- uncomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
@@ -913,7 +913,6 @@ class CreateLexicalEntriesEntitiesAcl(object):
         self.request = request
 
     def __acl__(self):
-        log.debug('I\'M HERE')
         acls = []
         object_id=None
         try:
