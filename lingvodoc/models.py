@@ -354,6 +354,8 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     marked_for_deletion = Column(Boolean, default=False)
     translation_string = Column(UnicodeText)
     is_template = Column(Boolean, default=False)
+    import_source = Column(UnicodeText)
+    import_hash = Column(UnicodeText)
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -459,9 +461,12 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
                 except:
                     log.debug('IDK: %s' % ent)
         came_from = None
-        meta = json.loads(self.additional_metadata)
-        if 'came_from' in meta:
-            came_from = meta['came_from']
+        meta = None
+        if self.additional_metadata:
+            meta = json.loads(self.additional_metadata)
+        if meta:
+            if 'came_from' in meta:
+                came_from = meta['came_from']
         response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
                     "parent_client_id": self.parent_client_id,
                     "parent_object_id": self.parent_object_id,
