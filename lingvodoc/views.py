@@ -2938,7 +2938,8 @@ def merge_perspectives_api(request):
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                          subject_object_id=obj_id,
                                                          subject_client_id=cli_id).first()
-                groups += [group]
+                if group:
+                    groups += [group]
 
             for group in groups:
                 base = group.parent
