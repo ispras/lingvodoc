@@ -215,13 +215,13 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             'translation': $scope.master.perspectiveName,
             'perspectives':[
                 {
-                    'perspective_client_id': $scope.master.perspective1.client_id,
-                    'perspective_object_id': $scope.master.perspective1.object_id,
+                    'client_id': $scope.master.perspective1.client_id,
+                    'object_id': $scope.master.perspective1.object_id,
                     'fields' : updateFields1
                 },
                 {
-                    'perspective_client_id': $scope.master.perspective2.client_id,
-                    'perspective_object_id': $scope.master.perspective2.object_id,
+                    'client_id': $scope.master.perspective2.client_id,
+                    'object_id': $scope.master.perspective2.object_id,
                     'fields' : updateFields2
                 }
             ]

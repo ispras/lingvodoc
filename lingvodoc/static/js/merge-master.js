@@ -28677,6 +28677,22 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var mergeSuggestions = function(perspective1, perspective2) {
+        var deferred = $q.defer();
+        var body = [ {
+            perspective_client_id: perspective1.client_id,
+            perspective_object_id: perspective1.object_id
+        }, {
+            perspective_client_id: perspective2.client_id,
+            perspective_object_id: perspective2.object_id
+        } ];
+        $http.post("/merge/suggestions/", body).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch merge suggestions");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -28705,7 +28721,8 @@ function lingvodocAPI($http, $q) {
         getDictionaries: getDictionaries,
         getDictionaryPerspectives: getDictionaryPerspectives,
         getDictionariesWithPerspectives: getDictionariesWithPerspectives,
-        mergePerspectives: mergePerspectives
+        mergePerspectives: mergePerspectives,
+        mergeSuggestions: mergeSuggestions
     };
 }
 
@@ -28871,12 +28888,12 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
             translation_string: $scope.master.perspectiveName,
             translation: $scope.master.perspectiveName,
             perspectives: [ {
-                perspective_client_id: $scope.master.perspective1.client_id,
-                perspective_object_id: $scope.master.perspective1.object_id,
+                client_id: $scope.master.perspective1.client_id,
+                object_id: $scope.master.perspective1.object_id,
                 fields: updateFields1
             }, {
-                perspective_client_id: $scope.master.perspective2.client_id,
-                perspective_object_id: $scope.master.perspective2.object_id,
+                client_id: $scope.master.perspective2.client_id,
+                object_id: $scope.master.perspective2.object_id,
                 fields: updateFields2
             } ]
         };

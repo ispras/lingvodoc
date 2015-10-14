@@ -27615,7 +27615,7 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.getPage = function(pageNumber) {
         if (pageNumber > 0 && pageNumber <= $scope.pageCount) {
             $scope.pageIndex = pageNumber;
-            dictionaryService.getLexicalEntries($("#allLexicalEntriesUrl").data("lingvodoc"), (pageNumber - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
+            dictionaryService.getLexicalEntries($("#allPublishedEntriesUrl").data("lingvodoc"), (pageNumber - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
                 $scope.lexicalEntries = lexicalEntries;
             }, function(reason) {
                 $log.error(reason);
