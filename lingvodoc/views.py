@@ -2887,7 +2887,14 @@ def merge_perspectives_api(request):
                     field['entity_type'] = new_type
                     field['entity_type_translation'] = new_type
                 if not field in fields:
-                    fields += [field]
+                    entity_type_translation = field['entity_type_translation']
+                    add_need = True
+                    for fi in fields:
+                        if fi['entity_type_translation'] == entity_type_translation:
+                            add_need = False
+                            break
+                    if add_need:
+                        fields.append(field)
         subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' %
                                (dictionary_client_id,
                                 dictionary_object_id,
