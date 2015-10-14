@@ -262,7 +262,7 @@ class TranslationStringMixin(object):
 
         translation = req['translation_string']
         if 'translation' in req:
-            translation = req
+            translation = req['translation']
         add_translation_to_translation_string(find_locale_id(request),
                                               translation,
                                               req['translation_string'],
