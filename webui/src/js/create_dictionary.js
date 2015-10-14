@@ -282,7 +282,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                 $http.get(url).success((function (perspective) {
                     return function(data, status, headers, config) {
                         var p = { };
-                        p.name = perspective.name;
+                        p.translation = perspective.translation;
                         p.translation_string = perspective.translation_string;
                         p.object_id = perspective.object_id;
                         p.client_id = perspective.client_id;
