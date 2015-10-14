@@ -408,14 +408,14 @@ def configure_routes(config):
     # "translation": <new_name_translation>,
     # "perspectives":
     # [
-    #  {"perspective_client_id": <first_perspective_client_id, "perspective_object_id": <first_perspective_object_id>,
+    #  {"client_id": <first_perspective_client_id, "object_id": <first_perspective_object_id>,
     #   "fields": [{"new_type_name":<new_type_name>,
-    #               entity_type: <entity_type>, data_type:<text|img|sound|markup|grouping_tag>,
-    #               status: <enabled|disabled>}, contains: [{}], group: <grouping_button_localization_str>]},
-    #  {"perspective_client_id": <second_perspective_client_id, "perspective_object_id": <second_perspective_object_id>,
+    #               "entity_type": <entity_type>, "data_type":<text|img|sound|markup|grouping_tag>,
+    #               "status": <enabled|disabled>}, "contains": [{}], "group": <grouping_button_localization_str>]},
+    #  {"client_id": <second_perspective_client_id, "object_id": <second_perspective_object_id>,
     #   "fields": [{"new_type_name":<new_type_name>,
-    #               entity_type: <entity_type>, data_type:<text|img|sound|markup|grouping_tag>,
-    #               status: <enabled|disabled>}, contains: [{}], group: <grouping_button_localization_str>]}
+    #               "entity_type": <entity_type>, "data_type":<text|img|sound|markup|grouping_tag>,
+    #               "status": <enabled|disabled>}, "contains": [{}], "group": <grouping_button_localization_str>]}
     # ]
     # }
     # Returns new perspective object and client ids.

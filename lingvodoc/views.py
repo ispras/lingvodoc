@@ -3506,10 +3506,14 @@ def merge_suggestions(request):
     #entity_type_secondary = 'Transcription'
     #threshold = 0.2
     #levenstein = 2
-    entity_type_primary = req['entity_type_primary'] or 'Word'
-    entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
-    threshold = req['threshold'] or 0.2
-    levenstein = req['levenstein'] or 1
+    # entity_type_primary = req['entity_type_primary'] or 'Word'
+    # entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
+    # threshold = req['threshold'] or 0.2
+    # levenstein = req['levenstein'] or 1
+    entity_type_primary =  'Word'
+    entity_type_secondary = 'Transcription'
+    threshold =  0.2
+    levenstein = 1
     client_id = req['client_id']
     object_id = req['object_id']
     lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = client_id, parent_object_id = object_id).all())
