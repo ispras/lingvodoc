@@ -2232,8 +2232,8 @@ def lexical_entries_all_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).scalar()
+            lexical_entries_count = DBSession.query(LexicalEntry)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).count()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -2344,7 +2344,7 @@ def lexical_entries_published_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
+            lexical_entries_count = DBSession.query(LexicalEntry)\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .outerjoin(PublishGroupingEntity)\
                 .outerjoin(PublishLevelOneEntity)\
@@ -2353,7 +2353,8 @@ def lexical_entries_published_count(request):
                             PublishLevelOneEntity.marked_for_deletion==False,
                             PublishLevelTwoEntity.marked_for_deletion==False,
                             ))\
-                .group_by(LexicalEntry).scalar()
+                .group_by(LexicalEntry).count()
+
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
