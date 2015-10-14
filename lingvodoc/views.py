@@ -74,7 +74,8 @@ import base64
 import string
 import time
 import multiprocessing
-
+if sys.platform == 'darwin':
+    multiprocessing.set_start_method('spawn')
 
 import keystoneclient.v3 as keystoneclient
 import swiftclient.client as swiftclient
@@ -138,8 +139,6 @@ def convert_dictionary(request):
     #             parent_object_id)
 
     # NOTE: doesn't work on Mac OS otherwise
-    if sys.platform == 'darwin':
-        multiprocessing.set_start_method('spawn')
 
     p = multiprocessing.Process(target=convert_one, args=(blob.real_storage_path,
                                                           user.login,

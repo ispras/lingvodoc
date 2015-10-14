@@ -12,8 +12,5 @@ py-bcrypt
 requests
 simplejson
 nltk
-<<<<<<< HEAD
-=======
 python-keystoneclient
 python-swiftclient
->>>>>>> 2c3f5ad... Converter fixed for mac os x (but not refactored).

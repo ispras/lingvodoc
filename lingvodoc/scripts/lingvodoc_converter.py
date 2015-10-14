@@ -76,6 +76,8 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
         markup = cursor[2]
         common_name = cursor[3]
         word_id = cursor[4]
+        if not audio or not markup:
+            continue
         audio_hashes.add(hashlib.sha224(audio).hexdigest())
 
         audio_element = {"locale_id": locale_id,
@@ -331,7 +333,11 @@ def convert_one(filename, login, password_hash, language_client_id, language_obj
         exit(-1)
     sqconn = sqlite3.connect(filename)
     log.debug("Connected to sqlite3 database")
-    status = convert_db_new(sqconn, session, language_client_id, language_object_id, server_url)
+    try:
+        status = convert_db_new(sqconn, session, language_client_id, language_object_id, server_url)
+    except Exception as e:
+        log.error("Converting failed")
+        log.error(e.__traceback__)
     log.debug(status)
     return status
 
@@ -341,6 +347,6 @@ if __name__ == "__main__":
     log.setLevel(logging.DEBUG)
     logging.basicConfig(format='%(asctime)s\t%(levelname)s\t[%(name)s]\t%(message)s')
     log.debug("!!!!!!!!!! YOU SHOULD NOT SEE IT !!!!!!!!")
-    convert_one(filename="/tmp/userblobs/dialeqt_dictionary/2/1/chalkan (2).sqlite", login="admin",
+    convert_one(filename="/Users/al/Movies/dicts-current/narym-selkup.sqlite", login="admin",
                 password_hash="$2a$12$W5UsrDmx0oHbSL925OMVEu6ke51nLQKcS2A7cc4DQo1nCka0vWDBa",
                 language_client_id=1, language_object_id=1, server_url="http://localhost:6543/")
