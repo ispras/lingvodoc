@@ -26260,283 +26260,6 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
 
 !angular.$$csp() && angular.element(document).find("head").prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
 
-(function(window, angular, undefined) {
-    "use strict";
-    var ngRouteModule = angular.module("ngRoute", [ "ng" ]).provider("$route", $RouteProvider), $routeMinErr = angular.$$minErr("ngRoute");
-    function $RouteProvider() {
-        function inherit(parent, extra) {
-            return angular.extend(Object.create(parent), extra);
-        }
-        var routes = {};
-        this.when = function(path, route) {
-            var routeCopy = angular.copy(route);
-            if (angular.isUndefined(routeCopy.reloadOnSearch)) {
-                routeCopy.reloadOnSearch = true;
-            }
-            if (angular.isUndefined(routeCopy.caseInsensitiveMatch)) {
-                routeCopy.caseInsensitiveMatch = this.caseInsensitiveMatch;
-            }
-            routes[path] = angular.extend(routeCopy, path && pathRegExp(path, routeCopy));
-            if (path) {
-                var redirectPath = path[path.length - 1] == "/" ? path.substr(0, path.length - 1) : path + "/";
-                routes[redirectPath] = angular.extend({
-                    redirectTo: path
-                }, pathRegExp(redirectPath, routeCopy));
-            }
-            return this;
-        };
-        this.caseInsensitiveMatch = false;
-        function pathRegExp(path, opts) {
-            var insensitive = opts.caseInsensitiveMatch, ret = {
-                originalPath: path,
-                regexp: path
-            }, keys = ret.keys = [];
-            path = path.replace(/([().])/g, "\\$1").replace(/(\/)?:(\w+)([\?\*])?/g, function(_, slash, key, option) {
-                var optional = option === "?" ? option : null;
-                var star = option === "*" ? option : null;
-                keys.push({
-                    name: key,
-                    optional: !!optional
-                });
-                slash = slash || "";
-                return "" + (optional ? "" : slash) + "(?:" + (optional ? slash : "") + (star && "(.+?)" || "([^/]+)") + (optional || "") + ")" + (optional || "");
-            }).replace(/([\/$\*])/g, "\\$1");
-            ret.regexp = new RegExp("^" + path + "$", insensitive ? "i" : "");
-            return ret;
-        }
-        this.otherwise = function(params) {
-            if (typeof params === "string") {
-                params = {
-                    redirectTo: params
-                };
-            }
-            this.when(null, params);
-            return this;
-        };
-        this.$get = [ "$rootScope", "$location", "$routeParams", "$q", "$injector", "$templateRequest", "$sce", function($rootScope, $location, $routeParams, $q, $injector, $templateRequest, $sce) {
-            var forceReload = false, preparedRoute, preparedRouteIsUpdateOnly, $route = {
-                routes: routes,
-                reload: function() {
-                    forceReload = true;
-                    $rootScope.$evalAsync(function() {
-                        prepareRoute();
-                        commitRoute();
-                    });
-                },
-                updateParams: function(newParams) {
-                    if (this.current && this.current.$$route) {
-                        newParams = angular.extend({}, this.current.params, newParams);
-                        $location.path(interpolate(this.current.$$route.originalPath, newParams));
-                        $location.search(newParams);
-                    } else {
-                        throw $routeMinErr("norout", "Tried updating route when with no current route");
-                    }
-                }
-            };
-            $rootScope.$on("$locationChangeStart", prepareRoute);
-            $rootScope.$on("$locationChangeSuccess", commitRoute);
-            return $route;
-            function switchRouteMatcher(on, route) {
-                var keys = route.keys, params = {};
-                if (!route.regexp) return null;
-                var m = route.regexp.exec(on);
-                if (!m) return null;
-                for (var i = 1, len = m.length; i < len; ++i) {
-                    var key = keys[i - 1];
-                    var val = m[i];
-                    if (key && val) {
-                        params[key.name] = val;
-                    }
-                }
-                return params;
-            }
-            function prepareRoute($locationEvent) {
-                var lastRoute = $route.current;
-                preparedRoute = parseRoute();
-                preparedRouteIsUpdateOnly = preparedRoute && lastRoute && preparedRoute.$$route === lastRoute.$$route && angular.equals(preparedRoute.pathParams, lastRoute.pathParams) && !preparedRoute.reloadOnSearch && !forceReload;
-                if (!preparedRouteIsUpdateOnly && (lastRoute || preparedRoute)) {
-                    if ($rootScope.$broadcast("$routeChangeStart", preparedRoute, lastRoute).defaultPrevented) {
-                        if ($locationEvent) {
-                            $locationEvent.preventDefault();
-                        }
-                    }
-                }
-            }
-            function commitRoute() {
-                var lastRoute = $route.current;
-                var nextRoute = preparedRoute;
-                if (preparedRouteIsUpdateOnly) {
-                    lastRoute.params = nextRoute.params;
-                    angular.copy(lastRoute.params, $routeParams);
-                    $rootScope.$broadcast("$routeUpdate", lastRoute);
-                } else if (nextRoute || lastRoute) {
-                    forceReload = false;
-                    $route.current = nextRoute;
-                    if (nextRoute) {
-                        if (nextRoute.redirectTo) {
-                            if (angular.isString(nextRoute.redirectTo)) {
-                                $location.path(interpolate(nextRoute.redirectTo, nextRoute.params)).search(nextRoute.params).replace();
-                            } else {
-                                $location.url(nextRoute.redirectTo(nextRoute.pathParams, $location.path(), $location.search())).replace();
-                            }
-                        }
-                    }
-                    $q.when(nextRoute).then(function() {
-                        if (nextRoute) {
-                            var locals = angular.extend({}, nextRoute.resolve), template, templateUrl;
-                            angular.forEach(locals, function(value, key) {
-                                locals[key] = angular.isString(value) ? $injector.get(value) : $injector.invoke(value, null, null, key);
-                            });
-                            if (angular.isDefined(template = nextRoute.template)) {
-                                if (angular.isFunction(template)) {
-                                    template = template(nextRoute.params);
-                                }
-                            } else if (angular.isDefined(templateUrl = nextRoute.templateUrl)) {
-                                if (angular.isFunction(templateUrl)) {
-                                    templateUrl = templateUrl(nextRoute.params);
-                                }
-                                if (angular.isDefined(templateUrl)) {
-                                    nextRoute.loadedTemplateUrl = $sce.valueOf(templateUrl);
-                                    template = $templateRequest(templateUrl);
-                                }
-                            }
-                            if (angular.isDefined(template)) {
-                                locals["$template"] = template;
-                            }
-                            return $q.all(locals);
-                        }
-                    }).then(function(locals) {
-                        if (nextRoute == $route.current) {
-                            if (nextRoute) {
-                                nextRoute.locals = locals;
-                                angular.copy(nextRoute.params, $routeParams);
-                            }
-                            $rootScope.$broadcast("$routeChangeSuccess", nextRoute, lastRoute);
-                        }
-                    }, function(error) {
-                        if (nextRoute == $route.current) {
-                            $rootScope.$broadcast("$routeChangeError", nextRoute, lastRoute, error);
-                        }
-                    });
-                }
-            }
-            function parseRoute() {
-                var params, match;
-                angular.forEach(routes, function(route, path) {
-                    if (!match && (params = switchRouteMatcher($location.path(), route))) {
-                        match = inherit(route, {
-                            params: angular.extend({}, $location.search(), params),
-                            pathParams: params
-                        });
-                        match.$$route = route;
-                    }
-                });
-                return match || routes[null] && inherit(routes[null], {
-                    params: {},
-                    pathParams: {}
-                });
-            }
-            function interpolate(string, params) {
-                var result = [];
-                angular.forEach((string || "").split(":"), function(segment, i) {
-                    if (i === 0) {
-                        result.push(segment);
-                    } else {
-                        var segmentMatch = segment.match(/(\w+)(?:[?*])?(.*)/);
-                        var key = segmentMatch[1];
-                        result.push(params[key]);
-                        result.push(segmentMatch[2] || "");
-                        delete params[key];
-                    }
-                });
-                return result.join("");
-            }
-        } ];
-    }
-    ngRouteModule.provider("$routeParams", $RouteParamsProvider);
-    function $RouteParamsProvider() {
-        this.$get = function() {
-            return {};
-        };
-    }
-    ngRouteModule.directive("ngView", ngViewFactory);
-    ngRouteModule.directive("ngView", ngViewFillContentFactory);
-    ngViewFactory.$inject = [ "$route", "$anchorScroll", "$animate" ];
-    function ngViewFactory($route, $anchorScroll, $animate) {
-        return {
-            restrict: "ECA",
-            terminal: true,
-            priority: 400,
-            transclude: "element",
-            link: function(scope, $element, attr, ctrl, $transclude) {
-                var currentScope, currentElement, previousLeaveAnimation, autoScrollExp = attr.autoscroll, onloadExp = attr.onload || "";
-                scope.$on("$routeChangeSuccess", update);
-                update();
-                function cleanupLastView() {
-                    if (previousLeaveAnimation) {
-                        $animate.cancel(previousLeaveAnimation);
-                        previousLeaveAnimation = null;
-                    }
-                    if (currentScope) {
-                        currentScope.$destroy();
-                        currentScope = null;
-                    }
-                    if (currentElement) {
-                        previousLeaveAnimation = $animate.leave(currentElement);
-                        previousLeaveAnimation.then(function() {
-                            previousLeaveAnimation = null;
-                        });
-                        currentElement = null;
-                    }
-                }
-                function update() {
-                    var locals = $route.current && $route.current.locals, template = locals && locals.$template;
-                    if (angular.isDefined(template)) {
-                        var newScope = scope.$new();
-                        var current = $route.current;
-                        var clone = $transclude(newScope, function(clone) {
-                            $animate.enter(clone, null, currentElement || $element).then(function onNgViewEnter() {
-                                if (angular.isDefined(autoScrollExp) && (!autoScrollExp || scope.$eval(autoScrollExp))) {
-                                    $anchorScroll();
-                                }
-                            });
-                            cleanupLastView();
-                        });
-                        currentElement = clone;
-                        currentScope = current.scope = newScope;
-                        currentScope.$emit("$viewContentLoaded");
-                        currentScope.$eval(onloadExp);
-                    } else {
-                        cleanupLastView();
-                    }
-                }
-            }
-        };
-    }
-    ngViewFillContentFactory.$inject = [ "$compile", "$controller", "$route" ];
-    function ngViewFillContentFactory($compile, $controller, $route) {
-        return {
-            restrict: "ECA",
-            priority: -400,
-            link: function(scope, $element) {
-                var current = $route.current, locals = current.locals;
-                $element.html(locals.$template);
-                var link = $compile($element.contents());
-                if (current.controller) {
-                    locals.$scope = scope;
-                    var controller = $controller(current.controller, locals);
-                    if (current.controllerAs) {
-                        scope[current.controllerAs] = controller;
-                    }
-                    $element.data("$ngControllerController", controller);
-                    $element.children().data("$ngControllerController", controller);
-                }
-                link(scope);
-            }
-        };
-    }
-})(window, window.angular);
-
 if (typeof module !== "undefined" && typeof exports !== "undefined" && module.exports === exports) {
     module.exports = "ui.router";
 }
@@ -28378,2366 +28101,6 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
     angular.module("ui.router.state").filter("isState", $IsStateFilter).filter("includedByState", $IncludedByStateFilter);
 })(window, window.angular);
 
-(function(window, angular, undefined) {
-    "use strict";
-    var noop = angular.noop;
-    var extend = angular.extend;
-    var jqLite = angular.element;
-    var forEach = angular.forEach;
-    var isArray = angular.isArray;
-    var isString = angular.isString;
-    var isObject = angular.isObject;
-    var isUndefined = angular.isUndefined;
-    var isDefined = angular.isDefined;
-    var isFunction = angular.isFunction;
-    var isElement = angular.isElement;
-    var ELEMENT_NODE = 1;
-    var COMMENT_NODE = 8;
-    var ADD_CLASS_SUFFIX = "-add";
-    var REMOVE_CLASS_SUFFIX = "-remove";
-    var EVENT_CLASS_PREFIX = "ng-";
-    var ACTIVE_CLASS_SUFFIX = "-active";
-    var NG_ANIMATE_CLASSNAME = "ng-animate";
-    var NG_ANIMATE_CHILDREN_DATA = "$$ngAnimateChildren";
-    var CSS_PREFIX = "", TRANSITION_PROP, TRANSITIONEND_EVENT, ANIMATION_PROP, ANIMATIONEND_EVENT;
-    if (isUndefined(window.ontransitionend) && isDefined(window.onwebkittransitionend)) {
-        CSS_PREFIX = "-webkit-";
-        TRANSITION_PROP = "WebkitTransition";
-        TRANSITIONEND_EVENT = "webkitTransitionEnd transitionend";
-    } else {
-        TRANSITION_PROP = "transition";
-        TRANSITIONEND_EVENT = "transitionend";
-    }
-    if (isUndefined(window.onanimationend) && isDefined(window.onwebkitanimationend)) {
-        CSS_PREFIX = "-webkit-";
-        ANIMATION_PROP = "WebkitAnimation";
-        ANIMATIONEND_EVENT = "webkitAnimationEnd animationend";
-    } else {
-        ANIMATION_PROP = "animation";
-        ANIMATIONEND_EVENT = "animationend";
-    }
-    var DURATION_KEY = "Duration";
-    var PROPERTY_KEY = "Property";
-    var DELAY_KEY = "Delay";
-    var TIMING_KEY = "TimingFunction";
-    var ANIMATION_ITERATION_COUNT_KEY = "IterationCount";
-    var ANIMATION_PLAYSTATE_KEY = "PlayState";
-    var SAFE_FAST_FORWARD_DURATION_VALUE = 9999;
-    var ANIMATION_DELAY_PROP = ANIMATION_PROP + DELAY_KEY;
-    var ANIMATION_DURATION_PROP = ANIMATION_PROP + DURATION_KEY;
-    var TRANSITION_DELAY_PROP = TRANSITION_PROP + DELAY_KEY;
-    var TRANSITION_DURATION_PROP = TRANSITION_PROP + DURATION_KEY;
-    var isPromiseLike = function(p) {
-        return p && p.then ? true : false;
-    };
-    function assertArg(arg, name, reason) {
-        if (!arg) {
-            throw ngMinErr("areq", "Argument '{0}' is {1}", name || "?", reason || "required");
-        }
-        return arg;
-    }
-    function mergeClasses(a, b) {
-        if (!a && !b) return "";
-        if (!a) return b;
-        if (!b) return a;
-        if (isArray(a)) a = a.join(" ");
-        if (isArray(b)) b = b.join(" ");
-        return a + " " + b;
-    }
-    function packageStyles(options) {
-        var styles = {};
-        if (options && (options.to || options.from)) {
-            styles.to = options.to;
-            styles.from = options.from;
-        }
-        return styles;
-    }
-    function pendClasses(classes, fix, isPrefix) {
-        var className = "";
-        classes = isArray(classes) ? classes : classes && isString(classes) && classes.length ? classes.split(/\s+/) : [];
-        forEach(classes, function(klass, i) {
-            if (klass && klass.length > 0) {
-                className += i > 0 ? " " : "";
-                className += isPrefix ? fix + klass : klass + fix;
-            }
-        });
-        return className;
-    }
-    function removeFromArray(arr, val) {
-        var index = arr.indexOf(val);
-        if (val >= 0) {
-            arr.splice(index, 1);
-        }
-    }
-    function stripCommentsFromElement(element) {
-        if (element instanceof jqLite) {
-            switch (element.length) {
-              case 0:
-                return [];
-                break;
-
-              case 1:
-                if (element[0].nodeType === ELEMENT_NODE) {
-                    return element;
-                }
-                break;
-
-              default:
-                return jqLite(extractElementNode(element));
-                break;
-            }
-        }
-        if (element.nodeType === ELEMENT_NODE) {
-            return jqLite(element);
-        }
-    }
-    function extractElementNode(element) {
-        if (!element[0]) return element;
-        for (var i = 0; i < element.length; i++) {
-            var elm = element[i];
-            if (elm.nodeType == ELEMENT_NODE) {
-                return elm;
-            }
-        }
-    }
-    function $$addClass($$jqLite, element, className) {
-        forEach(element, function(elm) {
-            $$jqLite.addClass(elm, className);
-        });
-    }
-    function $$removeClass($$jqLite, element, className) {
-        forEach(element, function(elm) {
-            $$jqLite.removeClass(elm, className);
-        });
-    }
-    function applyAnimationClassesFactory($$jqLite) {
-        return function(element, options) {
-            if (options.addClass) {
-                $$addClass($$jqLite, element, options.addClass);
-                options.addClass = null;
-            }
-            if (options.removeClass) {
-                $$removeClass($$jqLite, element, options.removeClass);
-                options.removeClass = null;
-            }
-        };
-    }
-    function prepareAnimationOptions(options) {
-        options = options || {};
-        if (!options.$$prepared) {
-            var domOperation = options.domOperation || noop;
-            options.domOperation = function() {
-                options.$$domOperationFired = true;
-                domOperation();
-                domOperation = noop;
-            };
-            options.$$prepared = true;
-        }
-        return options;
-    }
-    function applyAnimationStyles(element, options) {
-        applyAnimationFromStyles(element, options);
-        applyAnimationToStyles(element, options);
-    }
-    function applyAnimationFromStyles(element, options) {
-        if (options.from) {
-            element.css(options.from);
-            options.from = null;
-        }
-    }
-    function applyAnimationToStyles(element, options) {
-        if (options.to) {
-            element.css(options.to);
-            options.to = null;
-        }
-    }
-    function mergeAnimationOptions(element, target, newOptions) {
-        var toAdd = (target.addClass || "") + " " + (newOptions.addClass || "");
-        var toRemove = (target.removeClass || "") + " " + (newOptions.removeClass || "");
-        var classes = resolveElementClasses(element.attr("class"), toAdd, toRemove);
-        if (newOptions.preparationClasses) {
-            target.preparationClasses = concatWithSpace(newOptions.preparationClasses, target.preparationClasses);
-            delete newOptions.preparationClasses;
-        }
-        var realDomOperation = target.domOperation !== noop ? target.domOperation : null;
-        extend(target, newOptions);
-        if (realDomOperation) {
-            target.domOperation = realDomOperation;
-        }
-        if (classes.addClass) {
-            target.addClass = classes.addClass;
-        } else {
-            target.addClass = null;
-        }
-        if (classes.removeClass) {
-            target.removeClass = classes.removeClass;
-        } else {
-            target.removeClass = null;
-        }
-        return target;
-    }
-    function resolveElementClasses(existing, toAdd, toRemove) {
-        var ADD_CLASS = 1;
-        var REMOVE_CLASS = -1;
-        var flags = {};
-        existing = splitClassesToLookup(existing);
-        toAdd = splitClassesToLookup(toAdd);
-        forEach(toAdd, function(value, key) {
-            flags[key] = ADD_CLASS;
-        });
-        toRemove = splitClassesToLookup(toRemove);
-        forEach(toRemove, function(value, key) {
-            flags[key] = flags[key] === ADD_CLASS ? null : REMOVE_CLASS;
-        });
-        var classes = {
-            addClass: "",
-            removeClass: ""
-        };
-        forEach(flags, function(val, klass) {
-            var prop, allow;
-            if (val === ADD_CLASS) {
-                prop = "addClass";
-                allow = !existing[klass];
-            } else if (val === REMOVE_CLASS) {
-                prop = "removeClass";
-                allow = existing[klass];
-            }
-            if (allow) {
-                if (classes[prop].length) {
-                    classes[prop] += " ";
-                }
-                classes[prop] += klass;
-            }
-        });
-        function splitClassesToLookup(classes) {
-            if (isString(classes)) {
-                classes = classes.split(" ");
-            }
-            var obj = {};
-            forEach(classes, function(klass) {
-                if (klass.length) {
-                    obj[klass] = true;
-                }
-            });
-            return obj;
-        }
-        return classes;
-    }
-    function getDomNode(element) {
-        return element instanceof angular.element ? element[0] : element;
-    }
-    function applyGeneratedPreparationClasses(element, event, options) {
-        var classes = "";
-        if (event) {
-            classes = pendClasses(event, EVENT_CLASS_PREFIX, true);
-        }
-        if (options.addClass) {
-            classes = concatWithSpace(classes, pendClasses(options.addClass, ADD_CLASS_SUFFIX));
-        }
-        if (options.removeClass) {
-            classes = concatWithSpace(classes, pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX));
-        }
-        if (classes.length) {
-            options.preparationClasses = classes;
-            element.addClass(classes);
-        }
-    }
-    function clearGeneratedClasses(element, options) {
-        if (options.preparationClasses) {
-            element.removeClass(options.preparationClasses);
-            options.preparationClasses = null;
-        }
-        if (options.activeClasses) {
-            element.removeClass(options.activeClasses);
-            options.activeClasses = null;
-        }
-    }
-    function blockTransitions(node, duration) {
-        var value = duration ? "-" + duration + "s" : "";
-        applyInlineStyle(node, [ TRANSITION_DELAY_PROP, value ]);
-        return [ TRANSITION_DELAY_PROP, value ];
-    }
-    function blockKeyframeAnimations(node, applyBlock) {
-        var value = applyBlock ? "paused" : "";
-        var key = ANIMATION_PROP + ANIMATION_PLAYSTATE_KEY;
-        applyInlineStyle(node, [ key, value ]);
-        return [ key, value ];
-    }
-    function applyInlineStyle(node, styleTuple) {
-        var prop = styleTuple[0];
-        var value = styleTuple[1];
-        node.style[prop] = value;
-    }
-    function concatWithSpace(a, b) {
-        if (!a) return b;
-        if (!b) return a;
-        return a + " " + b;
-    }
-    var $$rAFSchedulerFactory = [ "$$rAF", function($$rAF) {
-        var queue, cancelFn;
-        function scheduler(tasks) {
-            queue = queue.concat(tasks);
-            nextTick();
-        }
-        queue = scheduler.queue = [];
-        scheduler.waitUntilQuiet = function(fn) {
-            if (cancelFn) cancelFn();
-            cancelFn = $$rAF(function() {
-                cancelFn = null;
-                fn();
-                nextTick();
-            });
-        };
-        return scheduler;
-        function nextTick() {
-            if (!queue.length) return;
-            var items = queue.shift();
-            for (var i = 0; i < items.length; i++) {
-                items[i]();
-            }
-            if (!cancelFn) {
-                $$rAF(function() {
-                    if (!cancelFn) nextTick();
-                });
-            }
-        }
-    } ];
-    var $$AnimateChildrenDirective = [ function() {
-        return function(scope, element, attrs) {
-            var val = attrs.ngAnimateChildren;
-            if (angular.isString(val) && val.length === 0) {
-                element.data(NG_ANIMATE_CHILDREN_DATA, true);
-            } else {
-                attrs.$observe("ngAnimateChildren", function(value) {
-                    value = value === "on" || value === "true";
-                    element.data(NG_ANIMATE_CHILDREN_DATA, value);
-                });
-            }
-        };
-    } ];
-    var ANIMATE_TIMER_KEY = "$$animateCss";
-    var ONE_SECOND = 1e3;
-    var BASE_TEN = 10;
-    var ELAPSED_TIME_MAX_DECIMAL_PLACES = 3;
-    var CLOSING_TIME_BUFFER = 1.5;
-    var DETECT_CSS_PROPERTIES = {
-        transitionDuration: TRANSITION_DURATION_PROP,
-        transitionDelay: TRANSITION_DELAY_PROP,
-        transitionProperty: TRANSITION_PROP + PROPERTY_KEY,
-        animationDuration: ANIMATION_DURATION_PROP,
-        animationDelay: ANIMATION_DELAY_PROP,
-        animationIterationCount: ANIMATION_PROP + ANIMATION_ITERATION_COUNT_KEY
-    };
-    var DETECT_STAGGER_CSS_PROPERTIES = {
-        transitionDuration: TRANSITION_DURATION_PROP,
-        transitionDelay: TRANSITION_DELAY_PROP,
-        animationDuration: ANIMATION_DURATION_PROP,
-        animationDelay: ANIMATION_DELAY_PROP
-    };
-    function getCssKeyframeDurationStyle(duration) {
-        return [ ANIMATION_DURATION_PROP, duration + "s" ];
-    }
-    function getCssDelayStyle(delay, isKeyframeAnimation) {
-        var prop = isKeyframeAnimation ? ANIMATION_DELAY_PROP : TRANSITION_DELAY_PROP;
-        return [ prop, delay + "s" ];
-    }
-    function computeCssStyles($window, element, properties) {
-        var styles = Object.create(null);
-        var detectedStyles = $window.getComputedStyle(element) || {};
-        forEach(properties, function(formalStyleName, actualStyleName) {
-            var val = detectedStyles[formalStyleName];
-            if (val) {
-                var c = val.charAt(0);
-                if (c === "-" || c === "+" || c >= 0) {
-                    val = parseMaxTime(val);
-                }
-                if (val === 0) {
-                    val = null;
-                }
-                styles[actualStyleName] = val;
-            }
-        });
-        return styles;
-    }
-    function parseMaxTime(str) {
-        var maxValue = 0;
-        var values = str.split(/\s*,\s*/);
-        forEach(values, function(value) {
-            if (value.charAt(value.length - 1) == "s") {
-                value = value.substring(0, value.length - 1);
-            }
-            value = parseFloat(value) || 0;
-            maxValue = maxValue ? Math.max(value, maxValue) : value;
-        });
-        return maxValue;
-    }
-    function truthyTimingValue(val) {
-        return val === 0 || val != null;
-    }
-    function getCssTransitionDurationStyle(duration, applyOnlyDuration) {
-        var style = TRANSITION_PROP;
-        var value = duration + "s";
-        if (applyOnlyDuration) {
-            style += DURATION_KEY;
-        } else {
-            value += " linear all";
-        }
-        return [ style, value ];
-    }
-    function createLocalCacheLookup() {
-        var cache = Object.create(null);
-        return {
-            flush: function() {
-                cache = Object.create(null);
-            },
-            count: function(key) {
-                var entry = cache[key];
-                return entry ? entry.total : 0;
-            },
-            get: function(key) {
-                var entry = cache[key];
-                return entry && entry.value;
-            },
-            put: function(key, value) {
-                if (!cache[key]) {
-                    cache[key] = {
-                        total: 1,
-                        value: value
-                    };
-                } else {
-                    cache[key].total++;
-                }
-            }
-        };
-    }
-    function registerRestorableStyles(backup, node, properties) {
-        forEach(properties, function(prop) {
-            backup[prop] = isDefined(backup[prop]) ? backup[prop] : node.style.getPropertyValue(prop);
-        });
-    }
-    var $AnimateCssProvider = [ "$animateProvider", function($animateProvider) {
-        var gcsLookup = createLocalCacheLookup();
-        var gcsStaggerLookup = createLocalCacheLookup();
-        this.$get = [ "$window", "$$jqLite", "$$AnimateRunner", "$timeout", "$$forceReflow", "$sniffer", "$$rAFScheduler", "$animate", function($window, $$jqLite, $$AnimateRunner, $timeout, $$forceReflow, $sniffer, $$rAFScheduler, $animate) {
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            var parentCounter = 0;
-            function gcsHashFn(node, extraClasses) {
-                var KEY = "$$ngAnimateParentKey";
-                var parentNode = node.parentNode;
-                var parentID = parentNode[KEY] || (parentNode[KEY] = ++parentCounter);
-                return parentID + "-" + node.getAttribute("class") + "-" + extraClasses;
-            }
-            function computeCachedCssStyles(node, className, cacheKey, properties) {
-                var timings = gcsLookup.get(cacheKey);
-                if (!timings) {
-                    timings = computeCssStyles($window, node, properties);
-                    if (timings.animationIterationCount === "infinite") {
-                        timings.animationIterationCount = 1;
-                    }
-                }
-                gcsLookup.put(cacheKey, timings);
-                return timings;
-            }
-            function computeCachedCssStaggerStyles(node, className, cacheKey, properties) {
-                var stagger;
-                if (gcsLookup.count(cacheKey) > 0) {
-                    stagger = gcsStaggerLookup.get(cacheKey);
-                    if (!stagger) {
-                        var staggerClassName = pendClasses(className, "-stagger");
-                        $$jqLite.addClass(node, staggerClassName);
-                        stagger = computeCssStyles($window, node, properties);
-                        stagger.animationDuration = Math.max(stagger.animationDuration, 0);
-                        stagger.transitionDuration = Math.max(stagger.transitionDuration, 0);
-                        $$jqLite.removeClass(node, staggerClassName);
-                        gcsStaggerLookup.put(cacheKey, stagger);
-                    }
-                }
-                return stagger || {};
-            }
-            var cancelLastRAFRequest;
-            var rafWaitQueue = [];
-            function waitUntilQuiet(callback) {
-                rafWaitQueue.push(callback);
-                $$rAFScheduler.waitUntilQuiet(function() {
-                    gcsLookup.flush();
-                    gcsStaggerLookup.flush();
-                    var pageWidth = $$forceReflow();
-                    for (var i = 0; i < rafWaitQueue.length; i++) {
-                        rafWaitQueue[i](pageWidth);
-                    }
-                    rafWaitQueue.length = 0;
-                });
-            }
-            function computeTimings(node, className, cacheKey) {
-                var timings = computeCachedCssStyles(node, className, cacheKey, DETECT_CSS_PROPERTIES);
-                var aD = timings.animationDelay;
-                var tD = timings.transitionDelay;
-                timings.maxDelay = aD && tD ? Math.max(aD, tD) : aD || tD;
-                timings.maxDuration = Math.max(timings.animationDuration * timings.animationIterationCount, timings.transitionDuration);
-                return timings;
-            }
-            return function init(element, options) {
-                var restoreStyles = {};
-                var node = getDomNode(element);
-                if (!node || !node.parentNode || !$animate.enabled()) {
-                    return closeAndReturnNoopAnimator();
-                }
-                options = prepareAnimationOptions(options);
-                var temporaryStyles = [];
-                var classes = element.attr("class");
-                var styles = packageStyles(options);
-                var animationClosed;
-                var animationPaused;
-                var animationCompleted;
-                var runner;
-                var runnerHost;
-                var maxDelay;
-                var maxDelayTime;
-                var maxDuration;
-                var maxDurationTime;
-                if (options.duration === 0 || !$sniffer.animations && !$sniffer.transitions) {
-                    return closeAndReturnNoopAnimator();
-                }
-                var method = options.event && isArray(options.event) ? options.event.join(" ") : options.event;
-                var isStructural = method && options.structural;
-                var structuralClassName = "";
-                var addRemoveClassName = "";
-                if (isStructural) {
-                    structuralClassName = pendClasses(method, EVENT_CLASS_PREFIX, true);
-                } else if (method) {
-                    structuralClassName = method;
-                }
-                if (options.addClass) {
-                    addRemoveClassName += pendClasses(options.addClass, ADD_CLASS_SUFFIX);
-                }
-                if (options.removeClass) {
-                    if (addRemoveClassName.length) {
-                        addRemoveClassName += " ";
-                    }
-                    addRemoveClassName += pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX);
-                }
-                if (options.applyClassesEarly && addRemoveClassName.length) {
-                    applyAnimationClasses(element, options);
-                }
-                var preparationClasses = [ structuralClassName, addRemoveClassName ].join(" ").trim();
-                var fullClassName = classes + " " + preparationClasses;
-                var activeClasses = pendClasses(preparationClasses, ACTIVE_CLASS_SUFFIX);
-                var hasToStyles = styles.to && Object.keys(styles.to).length > 0;
-                var containsKeyframeAnimation = (options.keyframeStyle || "").length > 0;
-                if (!containsKeyframeAnimation && !hasToStyles && !preparationClasses) {
-                    return closeAndReturnNoopAnimator();
-                }
-                var cacheKey, stagger;
-                if (options.stagger > 0) {
-                    var staggerVal = parseFloat(options.stagger);
-                    stagger = {
-                        transitionDelay: staggerVal,
-                        animationDelay: staggerVal,
-                        transitionDuration: 0,
-                        animationDuration: 0
-                    };
-                } else {
-                    cacheKey = gcsHashFn(node, fullClassName);
-                    stagger = computeCachedCssStaggerStyles(node, preparationClasses, cacheKey, DETECT_STAGGER_CSS_PROPERTIES);
-                }
-                if (!options.$$skipPreparationClasses) {
-                    $$jqLite.addClass(element, preparationClasses);
-                }
-                var applyOnlyDuration;
-                if (options.transitionStyle) {
-                    var transitionStyle = [ TRANSITION_PROP, options.transitionStyle ];
-                    applyInlineStyle(node, transitionStyle);
-                    temporaryStyles.push(transitionStyle);
-                }
-                if (options.duration >= 0) {
-                    applyOnlyDuration = node.style[TRANSITION_PROP].length > 0;
-                    var durationStyle = getCssTransitionDurationStyle(options.duration, applyOnlyDuration);
-                    applyInlineStyle(node, durationStyle);
-                    temporaryStyles.push(durationStyle);
-                }
-                if (options.keyframeStyle) {
-                    var keyframeStyle = [ ANIMATION_PROP, options.keyframeStyle ];
-                    applyInlineStyle(node, keyframeStyle);
-                    temporaryStyles.push(keyframeStyle);
-                }
-                var itemIndex = stagger ? options.staggerIndex >= 0 ? options.staggerIndex : gcsLookup.count(cacheKey) : 0;
-                var isFirst = itemIndex === 0;
-                if (isFirst && !options.skipBlocking) {
-                    blockTransitions(node, SAFE_FAST_FORWARD_DURATION_VALUE);
-                }
-                var timings = computeTimings(node, fullClassName, cacheKey);
-                var relativeDelay = timings.maxDelay;
-                maxDelay = Math.max(relativeDelay, 0);
-                maxDuration = timings.maxDuration;
-                var flags = {};
-                flags.hasTransitions = timings.transitionDuration > 0;
-                flags.hasAnimations = timings.animationDuration > 0;
-                flags.hasTransitionAll = flags.hasTransitions && timings.transitionProperty == "all";
-                flags.applyTransitionDuration = hasToStyles && (flags.hasTransitions && !flags.hasTransitionAll || flags.hasAnimations && !flags.hasTransitions);
-                flags.applyAnimationDuration = options.duration && flags.hasAnimations;
-                flags.applyTransitionDelay = truthyTimingValue(options.delay) && (flags.applyTransitionDuration || flags.hasTransitions);
-                flags.applyAnimationDelay = truthyTimingValue(options.delay) && flags.hasAnimations;
-                flags.recalculateTimingStyles = addRemoveClassName.length > 0;
-                if (flags.applyTransitionDuration || flags.applyAnimationDuration) {
-                    maxDuration = options.duration ? parseFloat(options.duration) : maxDuration;
-                    if (flags.applyTransitionDuration) {
-                        flags.hasTransitions = true;
-                        timings.transitionDuration = maxDuration;
-                        applyOnlyDuration = node.style[TRANSITION_PROP + PROPERTY_KEY].length > 0;
-                        temporaryStyles.push(getCssTransitionDurationStyle(maxDuration, applyOnlyDuration));
-                    }
-                    if (flags.applyAnimationDuration) {
-                        flags.hasAnimations = true;
-                        timings.animationDuration = maxDuration;
-                        temporaryStyles.push(getCssKeyframeDurationStyle(maxDuration));
-                    }
-                }
-                if (maxDuration === 0 && !flags.recalculateTimingStyles) {
-                    return closeAndReturnNoopAnimator();
-                }
-                if (options.delay != null) {
-                    var delayStyle = parseFloat(options.delay);
-                    if (flags.applyTransitionDelay) {
-                        temporaryStyles.push(getCssDelayStyle(delayStyle));
-                    }
-                    if (flags.applyAnimationDelay) {
-                        temporaryStyles.push(getCssDelayStyle(delayStyle, true));
-                    }
-                }
-                if (options.duration == null && timings.transitionDuration > 0) {
-                    flags.recalculateTimingStyles = flags.recalculateTimingStyles || isFirst;
-                }
-                maxDelayTime = maxDelay * ONE_SECOND;
-                maxDurationTime = maxDuration * ONE_SECOND;
-                if (!options.skipBlocking) {
-                    flags.blockTransition = timings.transitionDuration > 0;
-                    flags.blockKeyframeAnimation = timings.animationDuration > 0 && stagger.animationDelay > 0 && stagger.animationDuration === 0;
-                }
-                if (options.from) {
-                    if (options.cleanupStyles) {
-                        registerRestorableStyles(restoreStyles, node, Object.keys(options.from));
-                    }
-                    applyAnimationFromStyles(element, options);
-                }
-                if (flags.blockTransition || flags.blockKeyframeAnimation) {
-                    applyBlocking(maxDuration);
-                } else if (!options.skipBlocking) {
-                    blockTransitions(node, false);
-                }
-                return {
-                    $$willAnimate: true,
-                    end: endFn,
-                    start: function() {
-                        if (animationClosed) return;
-                        runnerHost = {
-                            end: endFn,
-                            cancel: cancelFn,
-                            resume: null,
-                            pause: null
-                        };
-                        runner = new $$AnimateRunner(runnerHost);
-                        waitUntilQuiet(start);
-                        return runner;
-                    }
-                };
-                function endFn() {
-                    close();
-                }
-                function cancelFn() {
-                    close(true);
-                }
-                function close(rejected) {
-                    if (animationClosed || animationCompleted && animationPaused) return;
-                    animationClosed = true;
-                    animationPaused = false;
-                    if (!options.$$skipPreparationClasses) {
-                        $$jqLite.removeClass(element, preparationClasses);
-                    }
-                    $$jqLite.removeClass(element, activeClasses);
-                    blockKeyframeAnimations(node, false);
-                    blockTransitions(node, false);
-                    forEach(temporaryStyles, function(entry) {
-                        node.style[entry[0]] = "";
-                    });
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    if (Object.keys(restoreStyles).length) {
-                        forEach(restoreStyles, function(value, prop) {
-                            value ? node.style.setProperty(prop, value) : node.style.removeProperty(prop);
-                        });
-                    }
-                    if (options.onDone) {
-                        options.onDone();
-                    }
-                    if (runner) {
-                        runner.complete(!rejected);
-                    }
-                }
-                function applyBlocking(duration) {
-                    if (flags.blockTransition) {
-                        blockTransitions(node, duration);
-                    }
-                    if (flags.blockKeyframeAnimation) {
-                        blockKeyframeAnimations(node, !!duration);
-                    }
-                }
-                function closeAndReturnNoopAnimator() {
-                    runner = new $$AnimateRunner({
-                        end: endFn,
-                        cancel: cancelFn
-                    });
-                    waitUntilQuiet(noop);
-                    close();
-                    return {
-                        $$willAnimate: false,
-                        start: function() {
-                            return runner;
-                        },
-                        end: endFn
-                    };
-                }
-                function start() {
-                    if (animationClosed) return;
-                    if (!node.parentNode) {
-                        close();
-                        return;
-                    }
-                    var startTime, events = [];
-                    var playPause = function(playAnimation) {
-                        if (!animationCompleted) {
-                            animationPaused = !playAnimation;
-                            if (timings.animationDuration) {
-                                var value = blockKeyframeAnimations(node, animationPaused);
-                                animationPaused ? temporaryStyles.push(value) : removeFromArray(temporaryStyles, value);
-                            }
-                        } else if (animationPaused && playAnimation) {
-                            animationPaused = false;
-                            close();
-                        }
-                    };
-                    var maxStagger = itemIndex > 0 && (timings.transitionDuration && stagger.transitionDuration === 0 || timings.animationDuration && stagger.animationDuration === 0) && Math.max(stagger.animationDelay, stagger.transitionDelay);
-                    if (maxStagger) {
-                        $timeout(triggerAnimationStart, Math.floor(maxStagger * itemIndex * ONE_SECOND), false);
-                    } else {
-                        triggerAnimationStart();
-                    }
-                    runnerHost.resume = function() {
-                        playPause(true);
-                    };
-                    runnerHost.pause = function() {
-                        playPause(false);
-                    };
-                    function triggerAnimationStart() {
-                        if (animationClosed) return;
-                        applyBlocking(false);
-                        forEach(temporaryStyles, function(entry) {
-                            var key = entry[0];
-                            var value = entry[1];
-                            node.style[key] = value;
-                        });
-                        applyAnimationClasses(element, options);
-                        $$jqLite.addClass(element, activeClasses);
-                        if (flags.recalculateTimingStyles) {
-                            fullClassName = node.className + " " + preparationClasses;
-                            cacheKey = gcsHashFn(node, fullClassName);
-                            timings = computeTimings(node, fullClassName, cacheKey);
-                            relativeDelay = timings.maxDelay;
-                            maxDelay = Math.max(relativeDelay, 0);
-                            maxDuration = timings.maxDuration;
-                            if (maxDuration === 0) {
-                                close();
-                                return;
-                            }
-                            flags.hasTransitions = timings.transitionDuration > 0;
-                            flags.hasAnimations = timings.animationDuration > 0;
-                        }
-                        if (flags.applyAnimationDelay) {
-                            relativeDelay = typeof options.delay !== "boolean" && truthyTimingValue(options.delay) ? parseFloat(options.delay) : relativeDelay;
-                            maxDelay = Math.max(relativeDelay, 0);
-                            timings.animationDelay = relativeDelay;
-                            delayStyle = getCssDelayStyle(relativeDelay, true);
-                            temporaryStyles.push(delayStyle);
-                            node.style[delayStyle[0]] = delayStyle[1];
-                        }
-                        maxDelayTime = maxDelay * ONE_SECOND;
-                        maxDurationTime = maxDuration * ONE_SECOND;
-                        if (options.easing) {
-                            var easeProp, easeVal = options.easing;
-                            if (flags.hasTransitions) {
-                                easeProp = TRANSITION_PROP + TIMING_KEY;
-                                temporaryStyles.push([ easeProp, easeVal ]);
-                                node.style[easeProp] = easeVal;
-                            }
-                            if (flags.hasAnimations) {
-                                easeProp = ANIMATION_PROP + TIMING_KEY;
-                                temporaryStyles.push([ easeProp, easeVal ]);
-                                node.style[easeProp] = easeVal;
-                            }
-                        }
-                        if (timings.transitionDuration) {
-                            events.push(TRANSITIONEND_EVENT);
-                        }
-                        if (timings.animationDuration) {
-                            events.push(ANIMATIONEND_EVENT);
-                        }
-                        startTime = Date.now();
-                        var timerTime = maxDelayTime + CLOSING_TIME_BUFFER * maxDurationTime;
-                        var endTime = startTime + timerTime;
-                        var animationsData = element.data(ANIMATE_TIMER_KEY) || [];
-                        var setupFallbackTimer = true;
-                        if (animationsData.length) {
-                            var currentTimerData = animationsData[0];
-                            setupFallbackTimer = endTime > currentTimerData.expectedEndTime;
-                            if (setupFallbackTimer) {
-                                $timeout.cancel(currentTimerData.timer);
-                            } else {
-                                animationsData.push(close);
-                            }
-                        }
-                        if (setupFallbackTimer) {
-                            var timer = $timeout(onAnimationExpired, timerTime, false);
-                            animationsData[0] = {
-                                timer: timer,
-                                expectedEndTime: endTime
-                            };
-                            animationsData.push(close);
-                            element.data(ANIMATE_TIMER_KEY, animationsData);
-                        }
-                        element.on(events.join(" "), onAnimationProgress);
-                        if (options.to) {
-                            if (options.cleanupStyles) {
-                                registerRestorableStyles(restoreStyles, node, Object.keys(options.to));
-                            }
-                            applyAnimationToStyles(element, options);
-                        }
-                    }
-                    function onAnimationExpired() {
-                        var animationsData = element.data(ANIMATE_TIMER_KEY);
-                        if (animationsData) {
-                            for (var i = 1; i < animationsData.length; i++) {
-                                animationsData[i]();
-                            }
-                            element.removeData(ANIMATE_TIMER_KEY);
-                        }
-                    }
-                    function onAnimationProgress(event) {
-                        event.stopPropagation();
-                        var ev = event.originalEvent || event;
-                        var timeStamp = ev.$manualTimeStamp || ev.timeStamp || Date.now();
-                        var elapsedTime = parseFloat(ev.elapsedTime.toFixed(ELAPSED_TIME_MAX_DECIMAL_PLACES));
-                        if (Math.max(timeStamp - startTime, 0) >= maxDelayTime && elapsedTime >= maxDuration) {
-                            animationCompleted = true;
-                            close();
-                        }
-                    }
-                }
-            };
-        } ];
-    } ];
-    var $$AnimateCssDriverProvider = [ "$$animationProvider", function($$animationProvider) {
-        $$animationProvider.drivers.push("$$animateCssDriver");
-        var NG_ANIMATE_SHIM_CLASS_NAME = "ng-animate-shim";
-        var NG_ANIMATE_ANCHOR_CLASS_NAME = "ng-anchor";
-        var NG_OUT_ANCHOR_CLASS_NAME = "ng-anchor-out";
-        var NG_IN_ANCHOR_CLASS_NAME = "ng-anchor-in";
-        function isDocumentFragment(node) {
-            return node.parentNode && node.parentNode.nodeType === 11;
-        }
-        this.$get = [ "$animateCss", "$rootScope", "$$AnimateRunner", "$rootElement", "$sniffer", "$$jqLite", "$document", function($animateCss, $rootScope, $$AnimateRunner, $rootElement, $sniffer, $$jqLite, $document) {
-            if (!$sniffer.animations && !$sniffer.transitions) return noop;
-            var bodyNode = $document[0].body;
-            var rootNode = getDomNode($rootElement);
-            var rootBodyElement = jqLite(isDocumentFragment(rootNode) || bodyNode.contains(rootNode) ? rootNode : bodyNode);
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            return function initDriverFn(animationDetails) {
-                return animationDetails.from && animationDetails.to ? prepareFromToAnchorAnimation(animationDetails.from, animationDetails.to, animationDetails.classes, animationDetails.anchors) : prepareRegularAnimation(animationDetails);
-            };
-            function filterCssClasses(classes) {
-                return classes.replace(/\bng-\S+\b/g, "");
-            }
-            function getUniqueValues(a, b) {
-                if (isString(a)) a = a.split(" ");
-                if (isString(b)) b = b.split(" ");
-                return a.filter(function(val) {
-                    return b.indexOf(val) === -1;
-                }).join(" ");
-            }
-            function prepareAnchoredAnimation(classes, outAnchor, inAnchor) {
-                var clone = jqLite(getDomNode(outAnchor).cloneNode(true));
-                var startingClasses = filterCssClasses(getClassVal(clone));
-                outAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                inAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                clone.addClass(NG_ANIMATE_ANCHOR_CLASS_NAME);
-                rootBodyElement.append(clone);
-                var animatorIn, animatorOut = prepareOutAnimation();
-                if (!animatorOut) {
-                    animatorIn = prepareInAnimation();
-                    if (!animatorIn) {
-                        return end();
-                    }
-                }
-                var startingAnimator = animatorOut || animatorIn;
-                return {
-                    start: function() {
-                        var runner;
-                        var currentAnimation = startingAnimator.start();
-                        currentAnimation.done(function() {
-                            currentAnimation = null;
-                            if (!animatorIn) {
-                                animatorIn = prepareInAnimation();
-                                if (animatorIn) {
-                                    currentAnimation = animatorIn.start();
-                                    currentAnimation.done(function() {
-                                        currentAnimation = null;
-                                        end();
-                                        runner.complete();
-                                    });
-                                    return currentAnimation;
-                                }
-                            }
-                            end();
-                            runner.complete();
-                        });
-                        runner = new $$AnimateRunner({
-                            end: endFn,
-                            cancel: endFn
-                        });
-                        return runner;
-                        function endFn() {
-                            if (currentAnimation) {
-                                currentAnimation.end();
-                            }
-                        }
-                    }
-                };
-                function calculateAnchorStyles(anchor) {
-                    var styles = {};
-                    var coords = getDomNode(anchor).getBoundingClientRect();
-                    forEach([ "width", "height", "top", "left" ], function(key) {
-                        var value = coords[key];
-                        switch (key) {
-                          case "top":
-                            value += bodyNode.scrollTop;
-                            break;
-
-                          case "left":
-                            value += bodyNode.scrollLeft;
-                            break;
-                        }
-                        styles[key] = Math.floor(value) + "px";
-                    });
-                    return styles;
-                }
-                function prepareOutAnimation() {
-                    var animator = $animateCss(clone, {
-                        addClass: NG_OUT_ANCHOR_CLASS_NAME,
-                        delay: true,
-                        from: calculateAnchorStyles(outAnchor)
-                    });
-                    return animator.$$willAnimate ? animator : null;
-                }
-                function getClassVal(element) {
-                    return element.attr("class") || "";
-                }
-                function prepareInAnimation() {
-                    var endingClasses = filterCssClasses(getClassVal(inAnchor));
-                    var toAdd = getUniqueValues(endingClasses, startingClasses);
-                    var toRemove = getUniqueValues(startingClasses, endingClasses);
-                    var animator = $animateCss(clone, {
-                        to: calculateAnchorStyles(inAnchor),
-                        addClass: NG_IN_ANCHOR_CLASS_NAME + " " + toAdd,
-                        removeClass: NG_OUT_ANCHOR_CLASS_NAME + " " + toRemove,
-                        delay: true
-                    });
-                    return animator.$$willAnimate ? animator : null;
-                }
-                function end() {
-                    clone.remove();
-                    outAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                    inAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                }
-            }
-            function prepareFromToAnchorAnimation(from, to, classes, anchors) {
-                var fromAnimation = prepareRegularAnimation(from, noop);
-                var toAnimation = prepareRegularAnimation(to, noop);
-                var anchorAnimations = [];
-                forEach(anchors, function(anchor) {
-                    var outElement = anchor["out"];
-                    var inElement = anchor["in"];
-                    var animator = prepareAnchoredAnimation(classes, outElement, inElement);
-                    if (animator) {
-                        anchorAnimations.push(animator);
-                    }
-                });
-                if (!fromAnimation && !toAnimation && anchorAnimations.length === 0) return;
-                return {
-                    start: function() {
-                        var animationRunners = [];
-                        if (fromAnimation) {
-                            animationRunners.push(fromAnimation.start());
-                        }
-                        if (toAnimation) {
-                            animationRunners.push(toAnimation.start());
-                        }
-                        forEach(anchorAnimations, function(animation) {
-                            animationRunners.push(animation.start());
-                        });
-                        var runner = new $$AnimateRunner({
-                            end: endFn,
-                            cancel: endFn
-                        });
-                        $$AnimateRunner.all(animationRunners, function(status) {
-                            runner.complete(status);
-                        });
-                        return runner;
-                        function endFn() {
-                            forEach(animationRunners, function(runner) {
-                                runner.end();
-                            });
-                        }
-                    }
-                };
-            }
-            function prepareRegularAnimation(animationDetails) {
-                var element = animationDetails.element;
-                var options = animationDetails.options || {};
-                if (animationDetails.structural) {
-                    options.event = animationDetails.event;
-                    options.structural = true;
-                    options.applyClassesEarly = true;
-                    if (animationDetails.event === "leave") {
-                        options.onDone = options.domOperation;
-                    }
-                }
-                if (options.preparationClasses) {
-                    options.event = concatWithSpace(options.event, options.preparationClasses);
-                }
-                var animator = $animateCss(element, options);
-                return animator.$$willAnimate ? animator : null;
-            }
-        } ];
-    } ];
-    var $$AnimateJsProvider = [ "$animateProvider", function($animateProvider) {
-        this.$get = [ "$injector", "$$AnimateRunner", "$$jqLite", function($injector, $$AnimateRunner, $$jqLite) {
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            return function(element, event, classes, options) {
-                if (arguments.length === 3 && isObject(classes)) {
-                    options = classes;
-                    classes = null;
-                }
-                options = prepareAnimationOptions(options);
-                if (!classes) {
-                    classes = element.attr("class") || "";
-                    if (options.addClass) {
-                        classes += " " + options.addClass;
-                    }
-                    if (options.removeClass) {
-                        classes += " " + options.removeClass;
-                    }
-                }
-                var classesToAdd = options.addClass;
-                var classesToRemove = options.removeClass;
-                var animations = lookupAnimations(classes);
-                var before, after;
-                if (animations.length) {
-                    var afterFn, beforeFn;
-                    if (event == "leave") {
-                        beforeFn = "leave";
-                        afterFn = "afterLeave";
-                    } else {
-                        beforeFn = "before" + event.charAt(0).toUpperCase() + event.substr(1);
-                        afterFn = event;
-                    }
-                    if (event !== "enter" && event !== "move") {
-                        before = packageAnimations(element, event, options, animations, beforeFn);
-                    }
-                    after = packageAnimations(element, event, options, animations, afterFn);
-                }
-                if (!before && !after) return;
-                function applyOptions() {
-                    options.domOperation();
-                    applyAnimationClasses(element, options);
-                }
-                return {
-                    start: function() {
-                        var closeActiveAnimations;
-                        var chain = [];
-                        if (before) {
-                            chain.push(function(fn) {
-                                closeActiveAnimations = before(fn);
-                            });
-                        }
-                        if (chain.length) {
-                            chain.push(function(fn) {
-                                applyOptions();
-                                fn(true);
-                            });
-                        } else {
-                            applyOptions();
-                        }
-                        if (after) {
-                            chain.push(function(fn) {
-                                closeActiveAnimations = after(fn);
-                            });
-                        }
-                        var animationClosed = false;
-                        var runner = new $$AnimateRunner({
-                            end: function() {
-                                endAnimations();
-                            },
-                            cancel: function() {
-                                endAnimations(true);
-                            }
-                        });
-                        $$AnimateRunner.chain(chain, onComplete);
-                        return runner;
-                        function onComplete(success) {
-                            animationClosed = true;
-                            applyOptions();
-                            applyAnimationStyles(element, options);
-                            runner.complete(success);
-                        }
-                        function endAnimations(cancelled) {
-                            if (!animationClosed) {
-                                (closeActiveAnimations || noop)(cancelled);
-                                onComplete(cancelled);
-                            }
-                        }
-                    }
-                };
-                function executeAnimationFn(fn, element, event, options, onDone) {
-                    var args;
-                    switch (event) {
-                      case "animate":
-                        args = [ element, options.from, options.to, onDone ];
-                        break;
-
-                      case "setClass":
-                        args = [ element, classesToAdd, classesToRemove, onDone ];
-                        break;
-
-                      case "addClass":
-                        args = [ element, classesToAdd, onDone ];
-                        break;
-
-                      case "removeClass":
-                        args = [ element, classesToRemove, onDone ];
-                        break;
-
-                      default:
-                        args = [ element, onDone ];
-                        break;
-                    }
-                    args.push(options);
-                    var value = fn.apply(fn, args);
-                    if (value) {
-                        if (isFunction(value.start)) {
-                            value = value.start();
-                        }
-                        if (value instanceof $$AnimateRunner) {
-                            value.done(onDone);
-                        } else if (isFunction(value)) {
-                            return value;
-                        }
-                    }
-                    return noop;
-                }
-                function groupEventedAnimations(element, event, options, animations, fnName) {
-                    var operations = [];
-                    forEach(animations, function(ani) {
-                        var animation = ani[fnName];
-                        if (!animation) return;
-                        operations.push(function() {
-                            var runner;
-                            var endProgressCb;
-                            var resolved = false;
-                            var onAnimationComplete = function(rejected) {
-                                if (!resolved) {
-                                    resolved = true;
-                                    (endProgressCb || noop)(rejected);
-                                    runner.complete(!rejected);
-                                }
-                            };
-                            runner = new $$AnimateRunner({
-                                end: function() {
-                                    onAnimationComplete();
-                                },
-                                cancel: function() {
-                                    onAnimationComplete(true);
-                                }
-                            });
-                            endProgressCb = executeAnimationFn(animation, element, event, options, function(result) {
-                                var cancelled = result === false;
-                                onAnimationComplete(cancelled);
-                            });
-                            return runner;
-                        });
-                    });
-                    return operations;
-                }
-                function packageAnimations(element, event, options, animations, fnName) {
-                    var operations = groupEventedAnimations(element, event, options, animations, fnName);
-                    if (operations.length === 0) {
-                        var a, b;
-                        if (fnName === "beforeSetClass") {
-                            a = groupEventedAnimations(element, "removeClass", options, animations, "beforeRemoveClass");
-                            b = groupEventedAnimations(element, "addClass", options, animations, "beforeAddClass");
-                        } else if (fnName === "setClass") {
-                            a = groupEventedAnimations(element, "removeClass", options, animations, "removeClass");
-                            b = groupEventedAnimations(element, "addClass", options, animations, "addClass");
-                        }
-                        if (a) {
-                            operations = operations.concat(a);
-                        }
-                        if (b) {
-                            operations = operations.concat(b);
-                        }
-                    }
-                    if (operations.length === 0) return;
-                    return function startAnimation(callback) {
-                        var runners = [];
-                        if (operations.length) {
-                            forEach(operations, function(animateFn) {
-                                runners.push(animateFn());
-                            });
-                        }
-                        runners.length ? $$AnimateRunner.all(runners, callback) : callback();
-                        return function endFn(reject) {
-                            forEach(runners, function(runner) {
-                                reject ? runner.cancel() : runner.end();
-                            });
-                        };
-                    };
-                }
-            };
-            function lookupAnimations(classes) {
-                classes = isArray(classes) ? classes : classes.split(" ");
-                var matches = [], flagMap = {};
-                for (var i = 0; i < classes.length; i++) {
-                    var klass = classes[i], animationFactory = $animateProvider.$$registeredAnimations[klass];
-                    if (animationFactory && !flagMap[klass]) {
-                        matches.push($injector.get(animationFactory));
-                        flagMap[klass] = true;
-                    }
-                }
-                return matches;
-            }
-        } ];
-    } ];
-    var $$AnimateJsDriverProvider = [ "$$animationProvider", function($$animationProvider) {
-        $$animationProvider.drivers.push("$$animateJsDriver");
-        this.$get = [ "$$animateJs", "$$AnimateRunner", function($$animateJs, $$AnimateRunner) {
-            return function initDriverFn(animationDetails) {
-                if (animationDetails.from && animationDetails.to) {
-                    var fromAnimation = prepareAnimation(animationDetails.from);
-                    var toAnimation = prepareAnimation(animationDetails.to);
-                    if (!fromAnimation && !toAnimation) return;
-                    return {
-                        start: function() {
-                            var animationRunners = [];
-                            if (fromAnimation) {
-                                animationRunners.push(fromAnimation.start());
-                            }
-                            if (toAnimation) {
-                                animationRunners.push(toAnimation.start());
-                            }
-                            $$AnimateRunner.all(animationRunners, done);
-                            var runner = new $$AnimateRunner({
-                                end: endFnFactory(),
-                                cancel: endFnFactory()
-                            });
-                            return runner;
-                            function endFnFactory() {
-                                return function() {
-                                    forEach(animationRunners, function(runner) {
-                                        runner.end();
-                                    });
-                                };
-                            }
-                            function done(status) {
-                                runner.complete(status);
-                            }
-                        }
-                    };
-                } else {
-                    return prepareAnimation(animationDetails);
-                }
-            };
-            function prepareAnimation(animationDetails) {
-                var element = animationDetails.element;
-                var event = animationDetails.event;
-                var options = animationDetails.options;
-                var classes = animationDetails.classes;
-                return $$animateJs(element, event, classes, options);
-            }
-        } ];
-    } ];
-    var NG_ANIMATE_ATTR_NAME = "data-ng-animate";
-    var NG_ANIMATE_PIN_DATA = "$ngAnimatePin";
-    var $$AnimateQueueProvider = [ "$animateProvider", function($animateProvider) {
-        var PRE_DIGEST_STATE = 1;
-        var RUNNING_STATE = 2;
-        var rules = this.rules = {
-            skip: [],
-            cancel: [],
-            join: []
-        };
-        function isAllowed(ruleType, element, currentAnimation, previousAnimation) {
-            return rules[ruleType].some(function(fn) {
-                return fn(element, currentAnimation, previousAnimation);
-            });
-        }
-        function hasAnimationClasses(options, and) {
-            options = options || {};
-            var a = (options.addClass || "").length > 0;
-            var b = (options.removeClass || "").length > 0;
-            return and ? a && b : a || b;
-        }
-        rules.join.push(function(element, newAnimation, currentAnimation) {
-            return !newAnimation.structural && hasAnimationClasses(newAnimation.options);
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return !newAnimation.structural && !hasAnimationClasses(newAnimation.options);
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.event == "leave" && newAnimation.structural;
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.structural && currentAnimation.state === RUNNING_STATE && !newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.structural && newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.state === RUNNING_STATE && newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            var nO = newAnimation.options;
-            var cO = currentAnimation.options;
-            return nO.addClass && nO.addClass === cO.removeClass || nO.removeClass && nO.removeClass === cO.addClass;
-        });
-        this.$get = [ "$$rAF", "$rootScope", "$rootElement", "$document", "$$HashMap", "$$animation", "$$AnimateRunner", "$templateRequest", "$$jqLite", "$$forceReflow", function($$rAF, $rootScope, $rootElement, $document, $$HashMap, $$animation, $$AnimateRunner, $templateRequest, $$jqLite, $$forceReflow) {
-            var activeAnimationsLookup = new $$HashMap();
-            var disabledElementsLookup = new $$HashMap();
-            var animationsEnabled = null;
-            function postDigestTaskFactory() {
-                var postDigestCalled = false;
-                return function(fn) {
-                    if (postDigestCalled) {
-                        fn();
-                    } else {
-                        $rootScope.$$postDigest(function() {
-                            postDigestCalled = true;
-                            fn();
-                        });
-                    }
-                };
-            }
-            var deregisterWatch = $rootScope.$watch(function() {
-                return $templateRequest.totalPendingRequests === 0;
-            }, function(isEmpty) {
-                if (!isEmpty) return;
-                deregisterWatch();
-                $rootScope.$$postDigest(function() {
-                    $rootScope.$$postDigest(function() {
-                        if (animationsEnabled === null) {
-                            animationsEnabled = true;
-                        }
-                    });
-                });
-            });
-            var callbackRegistry = {};
-            var classNameFilter = $animateProvider.classNameFilter();
-            var isAnimatableClassName = !classNameFilter ? function() {
-                return true;
-            } : function(className) {
-                return classNameFilter.test(className);
-            };
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            function normalizeAnimationOptions(element, options) {
-                return mergeAnimationOptions(element, options, {});
-            }
-            function findCallbacks(element, event) {
-                var targetNode = getDomNode(element);
-                var matches = [];
-                var entries = callbackRegistry[event];
-                if (entries) {
-                    forEach(entries, function(entry) {
-                        if (entry.node.contains(targetNode)) {
-                            matches.push(entry.callback);
-                        }
-                    });
-                }
-                return matches;
-            }
-            return {
-                on: function(event, container, callback) {
-                    var node = extractElementNode(container);
-                    callbackRegistry[event] = callbackRegistry[event] || [];
-                    callbackRegistry[event].push({
-                        node: node,
-                        callback: callback
-                    });
-                },
-                off: function(event, container, callback) {
-                    var entries = callbackRegistry[event];
-                    if (!entries) return;
-                    callbackRegistry[event] = arguments.length === 1 ? null : filterFromRegistry(entries, container, callback);
-                    function filterFromRegistry(list, matchContainer, matchCallback) {
-                        var containerNode = extractElementNode(matchContainer);
-                        return list.filter(function(entry) {
-                            var isMatch = entry.node === containerNode && (!matchCallback || entry.callback === matchCallback);
-                            return !isMatch;
-                        });
-                    }
-                },
-                pin: function(element, parentElement) {
-                    assertArg(isElement(element), "element", "not an element");
-                    assertArg(isElement(parentElement), "parentElement", "not an element");
-                    element.data(NG_ANIMATE_PIN_DATA, parentElement);
-                },
-                push: function(element, event, options, domOperation) {
-                    options = options || {};
-                    options.domOperation = domOperation;
-                    return queueAnimation(element, event, options);
-                },
-                enabled: function(element, bool) {
-                    var argCount = arguments.length;
-                    if (argCount === 0) {
-                        bool = !!animationsEnabled;
-                    } else {
-                        var hasElement = isElement(element);
-                        if (!hasElement) {
-                            bool = animationsEnabled = !!element;
-                        } else {
-                            var node = getDomNode(element);
-                            var recordExists = disabledElementsLookup.get(node);
-                            if (argCount === 1) {
-                                bool = !recordExists;
-                            } else {
-                                bool = !!bool;
-                                if (!bool) {
-                                    disabledElementsLookup.put(node, true);
-                                } else if (recordExists) {
-                                    disabledElementsLookup.remove(node);
-                                }
-                            }
-                        }
-                    }
-                    return bool;
-                }
-            };
-            function queueAnimation(element, event, options) {
-                var node, parent;
-                element = stripCommentsFromElement(element);
-                if (element) {
-                    node = getDomNode(element);
-                    parent = element.parent();
-                }
-                options = prepareAnimationOptions(options);
-                var runner = new $$AnimateRunner();
-                var runInNextPostDigestOrNow = postDigestTaskFactory();
-                if (isArray(options.addClass)) {
-                    options.addClass = options.addClass.join(" ");
-                }
-                if (options.addClass && !isString(options.addClass)) {
-                    options.addClass = null;
-                }
-                if (isArray(options.removeClass)) {
-                    options.removeClass = options.removeClass.join(" ");
-                }
-                if (options.removeClass && !isString(options.removeClass)) {
-                    options.removeClass = null;
-                }
-                if (options.from && !isObject(options.from)) {
-                    options.from = null;
-                }
-                if (options.to && !isObject(options.to)) {
-                    options.to = null;
-                }
-                if (!node) {
-                    close();
-                    return runner;
-                }
-                var className = [ node.className, options.addClass, options.removeClass ].join(" ");
-                if (!isAnimatableClassName(className)) {
-                    close();
-                    return runner;
-                }
-                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
-                var skipAnimations = !animationsEnabled || disabledElementsLookup.get(node);
-                var existingAnimation = !skipAnimations && activeAnimationsLookup.get(node) || {};
-                var hasExistingAnimation = !!existingAnimation.state;
-                if (!skipAnimations && (!hasExistingAnimation || existingAnimation.state != PRE_DIGEST_STATE)) {
-                    skipAnimations = !areAnimationsAllowed(element, parent, event);
-                }
-                if (skipAnimations) {
-                    close();
-                    return runner;
-                }
-                if (isStructural) {
-                    closeChildAnimations(element);
-                }
-                var newAnimation = {
-                    structural: isStructural,
-                    element: element,
-                    event: event,
-                    close: close,
-                    options: options,
-                    runner: runner
-                };
-                if (hasExistingAnimation) {
-                    var skipAnimationFlag = isAllowed("skip", element, newAnimation, existingAnimation);
-                    if (skipAnimationFlag) {
-                        if (existingAnimation.state === RUNNING_STATE) {
-                            close();
-                            return runner;
-                        } else {
-                            mergeAnimationOptions(element, existingAnimation.options, options);
-                            return existingAnimation.runner;
-                        }
-                    }
-                    var cancelAnimationFlag = isAllowed("cancel", element, newAnimation, existingAnimation);
-                    if (cancelAnimationFlag) {
-                        if (existingAnimation.state === RUNNING_STATE) {
-                            existingAnimation.runner.end();
-                        } else if (existingAnimation.structural) {
-                            existingAnimation.close();
-                        } else {
-                            mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
-                            return existingAnimation.runner;
-                        }
-                    } else {
-                        var joinAnimationFlag = isAllowed("join", element, newAnimation, existingAnimation);
-                        if (joinAnimationFlag) {
-                            if (existingAnimation.state === RUNNING_STATE) {
-                                normalizeAnimationOptions(element, options);
-                            } else {
-                                applyGeneratedPreparationClasses(element, isStructural ? event : null, options);
-                                event = newAnimation.event = existingAnimation.event;
-                                options = mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
-                                return existingAnimation.runner;
-                            }
-                        }
-                    }
-                } else {
-                    normalizeAnimationOptions(element, options);
-                }
-                var isValidAnimation = newAnimation.structural;
-                if (!isValidAnimation) {
-                    isValidAnimation = newAnimation.event === "animate" && Object.keys(newAnimation.options.to || {}).length > 0 || hasAnimationClasses(newAnimation.options);
-                }
-                if (!isValidAnimation) {
-                    close();
-                    clearElementAnimationState(element);
-                    return runner;
-                }
-                var counter = (existingAnimation.counter || 0) + 1;
-                newAnimation.counter = counter;
-                markElementAnimationState(element, PRE_DIGEST_STATE, newAnimation);
-                $rootScope.$$postDigest(function() {
-                    var animationDetails = activeAnimationsLookup.get(node);
-                    var animationCancelled = !animationDetails;
-                    animationDetails = animationDetails || {};
-                    var parentElement = element.parent() || [];
-                    var isValidAnimation = parentElement.length > 0 && (animationDetails.event === "animate" || animationDetails.structural || hasAnimationClasses(animationDetails.options));
-                    if (animationCancelled || animationDetails.counter !== counter || !isValidAnimation) {
-                        if (animationCancelled) {
-                            applyAnimationClasses(element, options);
-                            applyAnimationStyles(element, options);
-                        }
-                        if (animationCancelled || isStructural && animationDetails.event !== event) {
-                            options.domOperation();
-                            runner.end();
-                        }
-                        if (!isValidAnimation) {
-                            clearElementAnimationState(element);
-                        }
-                        return;
-                    }
-                    event = !animationDetails.structural && hasAnimationClasses(animationDetails.options, true) ? "setClass" : animationDetails.event;
-                    markElementAnimationState(element, RUNNING_STATE);
-                    var realRunner = $$animation(element, event, animationDetails.options);
-                    realRunner.done(function(status) {
-                        close(!status);
-                        var animationDetails = activeAnimationsLookup.get(node);
-                        if (animationDetails && animationDetails.counter === counter) {
-                            clearElementAnimationState(getDomNode(element));
-                        }
-                        notifyProgress(runner, event, "close", {});
-                    });
-                    runner.setHost(realRunner);
-                    notifyProgress(runner, event, "start", {});
-                });
-                return runner;
-                function notifyProgress(runner, event, phase, data) {
-                    runInNextPostDigestOrNow(function() {
-                        var callbacks = findCallbacks(element, event);
-                        if (callbacks.length) {
-                            $$rAF(function() {
-                                forEach(callbacks, function(callback) {
-                                    callback(element, phase, data);
-                                });
-                            });
-                        }
-                    });
-                    runner.progress(event, phase, data);
-                }
-                function close(reject) {
-                    clearGeneratedClasses(element, options);
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    options.domOperation();
-                    runner.complete(!reject);
-                }
-            }
-            function closeChildAnimations(element) {
-                var node = getDomNode(element);
-                var children = node.querySelectorAll("[" + NG_ANIMATE_ATTR_NAME + "]");
-                forEach(children, function(child) {
-                    var state = parseInt(child.getAttribute(NG_ANIMATE_ATTR_NAME));
-                    var animationDetails = activeAnimationsLookup.get(child);
-                    switch (state) {
-                      case RUNNING_STATE:
-                        animationDetails.runner.end();
-
-                      case PRE_DIGEST_STATE:
-                        if (animationDetails) {
-                            activeAnimationsLookup.remove(child);
-                        }
-                        break;
-                    }
-                });
-            }
-            function clearElementAnimationState(element) {
-                var node = getDomNode(element);
-                node.removeAttribute(NG_ANIMATE_ATTR_NAME);
-                activeAnimationsLookup.remove(node);
-            }
-            function isMatchingElement(nodeOrElmA, nodeOrElmB) {
-                return getDomNode(nodeOrElmA) === getDomNode(nodeOrElmB);
-            }
-            function areAnimationsAllowed(element, parentElement, event) {
-                var bodyElement = jqLite($document[0].body);
-                var bodyElementDetected = isMatchingElement(element, bodyElement) || element[0].nodeName === "HTML";
-                var rootElementDetected = isMatchingElement(element, $rootElement);
-                var parentAnimationDetected = false;
-                var animateChildren;
-                var parentHost = element.data(NG_ANIMATE_PIN_DATA);
-                if (parentHost) {
-                    parentElement = parentHost;
-                }
-                while (parentElement && parentElement.length) {
-                    if (!rootElementDetected) {
-                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
-                    }
-                    var parentNode = parentElement[0];
-                    if (parentNode.nodeType !== ELEMENT_NODE) {
-                        break;
-                    }
-                    var details = activeAnimationsLookup.get(parentNode) || {};
-                    if (!parentAnimationDetected) {
-                        parentAnimationDetected = details.structural || disabledElementsLookup.get(parentNode);
-                    }
-                    if (isUndefined(animateChildren) || animateChildren === true) {
-                        var value = parentElement.data(NG_ANIMATE_CHILDREN_DATA);
-                        if (isDefined(value)) {
-                            animateChildren = value;
-                        }
-                    }
-                    if (parentAnimationDetected && animateChildren === false) break;
-                    if (!rootElementDetected) {
-                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
-                        if (!rootElementDetected) {
-                            parentHost = parentElement.data(NG_ANIMATE_PIN_DATA);
-                            if (parentHost) {
-                                parentElement = parentHost;
-                            }
-                        }
-                    }
-                    if (!bodyElementDetected) {
-                        bodyElementDetected = isMatchingElement(parentElement, bodyElement);
-                    }
-                    parentElement = parentElement.parent();
-                }
-                var allowAnimation = !parentAnimationDetected || animateChildren;
-                return allowAnimation && rootElementDetected && bodyElementDetected;
-            }
-            function markElementAnimationState(element, state, details) {
-                details = details || {};
-                details.state = state;
-                var node = getDomNode(element);
-                node.setAttribute(NG_ANIMATE_ATTR_NAME, state);
-                var oldValue = activeAnimationsLookup.get(node);
-                var newValue = oldValue ? extend(oldValue, details) : details;
-                activeAnimationsLookup.put(node, newValue);
-            }
-        } ];
-    } ];
-    var $$AnimateAsyncRunFactory = [ "$$rAF", function($$rAF) {
-        var waitQueue = [];
-        function waitForTick(fn) {
-            waitQueue.push(fn);
-            if (waitQueue.length > 1) return;
-            $$rAF(function() {
-                for (var i = 0; i < waitQueue.length; i++) {
-                    waitQueue[i]();
-                }
-                waitQueue = [];
-            });
-        }
-        return function() {
-            var passed = false;
-            waitForTick(function() {
-                passed = true;
-            });
-            return function(callback) {
-                passed ? callback() : waitForTick(callback);
-            };
-        };
-    } ];
-    var $$AnimateRunnerFactory = [ "$q", "$sniffer", "$$animateAsyncRun", function($q, $sniffer, $$animateAsyncRun) {
-        var INITIAL_STATE = 0;
-        var DONE_PENDING_STATE = 1;
-        var DONE_COMPLETE_STATE = 2;
-        AnimateRunner.chain = function(chain, callback) {
-            var index = 0;
-            next();
-            function next() {
-                if (index === chain.length) {
-                    callback(true);
-                    return;
-                }
-                chain[index](function(response) {
-                    if (response === false) {
-                        callback(false);
-                        return;
-                    }
-                    index++;
-                    next();
-                });
-            }
-        };
-        AnimateRunner.all = function(runners, callback) {
-            var count = 0;
-            var status = true;
-            forEach(runners, function(runner) {
-                runner.done(onProgress);
-            });
-            function onProgress(response) {
-                status = status && response;
-                if (++count === runners.length) {
-                    callback(status);
-                }
-            }
-        };
-        function AnimateRunner(host) {
-            this.setHost(host);
-            this._doneCallbacks = [];
-            this._runInAnimationFrame = $$animateAsyncRun();
-            this._state = 0;
-        }
-        AnimateRunner.prototype = {
-            setHost: function(host) {
-                this.host = host || {};
-            },
-            done: function(fn) {
-                if (this._state === DONE_COMPLETE_STATE) {
-                    fn();
-                } else {
-                    this._doneCallbacks.push(fn);
-                }
-            },
-            progress: noop,
-            getPromise: function() {
-                if (!this.promise) {
-                    var self = this;
-                    this.promise = $q(function(resolve, reject) {
-                        self.done(function(status) {
-                            status === false ? reject() : resolve();
-                        });
-                    });
-                }
-                return this.promise;
-            },
-            then: function(resolveHandler, rejectHandler) {
-                return this.getPromise().then(resolveHandler, rejectHandler);
-            },
-            "catch": function(handler) {
-                return this.getPromise()["catch"](handler);
-            },
-            "finally": function(handler) {
-                return this.getPromise()["finally"](handler);
-            },
-            pause: function() {
-                if (this.host.pause) {
-                    this.host.pause();
-                }
-            },
-            resume: function() {
-                if (this.host.resume) {
-                    this.host.resume();
-                }
-            },
-            end: function() {
-                if (this.host.end) {
-                    this.host.end();
-                }
-                this._resolve(true);
-            },
-            cancel: function() {
-                if (this.host.cancel) {
-                    this.host.cancel();
-                }
-                this._resolve(false);
-            },
-            complete: function(response) {
-                var self = this;
-                if (self._state === INITIAL_STATE) {
-                    self._state = DONE_PENDING_STATE;
-                    self._runInAnimationFrame(function() {
-                        self._resolve(response);
-                    });
-                }
-            },
-            _resolve: function(response) {
-                if (this._state !== DONE_COMPLETE_STATE) {
-                    forEach(this._doneCallbacks, function(fn) {
-                        fn(response);
-                    });
-                    this._doneCallbacks.length = 0;
-                    this._state = DONE_COMPLETE_STATE;
-                }
-            }
-        };
-        return AnimateRunner;
-    } ];
-    var $$AnimationProvider = [ "$animateProvider", function($animateProvider) {
-        var NG_ANIMATE_REF_ATTR = "ng-animate-ref";
-        var drivers = this.drivers = [];
-        var RUNNER_STORAGE_KEY = "$$animationRunner";
-        function setRunner(element, runner) {
-            element.data(RUNNER_STORAGE_KEY, runner);
-        }
-        function removeRunner(element) {
-            element.removeData(RUNNER_STORAGE_KEY);
-        }
-        function getRunner(element) {
-            return element.data(RUNNER_STORAGE_KEY);
-        }
-        this.$get = [ "$$jqLite", "$rootScope", "$injector", "$$AnimateRunner", "$$HashMap", "$$rAFScheduler", function($$jqLite, $rootScope, $injector, $$AnimateRunner, $$HashMap, $$rAFScheduler) {
-            var animationQueue = [];
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            function sortAnimations(animations) {
-                var tree = {
-                    children: []
-                };
-                var i, lookup = new $$HashMap();
-                for (i = 0; i < animations.length; i++) {
-                    var animation = animations[i];
-                    lookup.put(animation.domNode, animations[i] = {
-                        domNode: animation.domNode,
-                        fn: animation.fn,
-                        children: []
-                    });
-                }
-                for (i = 0; i < animations.length; i++) {
-                    processNode(animations[i]);
-                }
-                return flatten(tree);
-                function processNode(entry) {
-                    if (entry.processed) return entry;
-                    entry.processed = true;
-                    var elementNode = entry.domNode;
-                    var parentNode = elementNode.parentNode;
-                    lookup.put(elementNode, entry);
-                    var parentEntry;
-                    while (parentNode) {
-                        parentEntry = lookup.get(parentNode);
-                        if (parentEntry) {
-                            if (!parentEntry.processed) {
-                                parentEntry = processNode(parentEntry);
-                            }
-                            break;
-                        }
-                        parentNode = parentNode.parentNode;
-                    }
-                    (parentEntry || tree).children.push(entry);
-                    return entry;
-                }
-                function flatten(tree) {
-                    var result = [];
-                    var queue = [];
-                    var i;
-                    for (i = 0; i < tree.children.length; i++) {
-                        queue.push(tree.children[i]);
-                    }
-                    var remainingLevelEntries = queue.length;
-                    var nextLevelEntries = 0;
-                    var row = [];
-                    for (i = 0; i < queue.length; i++) {
-                        var entry = queue[i];
-                        if (remainingLevelEntries <= 0) {
-                            remainingLevelEntries = nextLevelEntries;
-                            nextLevelEntries = 0;
-                            result.push(row);
-                            row = [];
-                        }
-                        row.push(entry.fn);
-                        entry.children.forEach(function(childEntry) {
-                            nextLevelEntries++;
-                            queue.push(childEntry);
-                        });
-                        remainingLevelEntries--;
-                    }
-                    if (row.length) {
-                        result.push(row);
-                    }
-                    return result;
-                }
-            }
-            return function(element, event, options) {
-                options = prepareAnimationOptions(options);
-                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
-                var runner = new $$AnimateRunner({
-                    end: function() {
-                        close();
-                    },
-                    cancel: function() {
-                        close(true);
-                    }
-                });
-                if (!drivers.length) {
-                    close();
-                    return runner;
-                }
-                setRunner(element, runner);
-                var classes = mergeClasses(element.attr("class"), mergeClasses(options.addClass, options.removeClass));
-                var tempClasses = options.tempClasses;
-                if (tempClasses) {
-                    classes += " " + tempClasses;
-                    options.tempClasses = null;
-                }
-                animationQueue.push({
-                    element: element,
-                    classes: classes,
-                    event: event,
-                    structural: isStructural,
-                    options: options,
-                    beforeStart: beforeStart,
-                    close: close
-                });
-                element.on("$destroy", handleDestroyedElement);
-                if (animationQueue.length > 1) return runner;
-                $rootScope.$$postDigest(function() {
-                    var animations = [];
-                    forEach(animationQueue, function(entry) {
-                        if (getRunner(entry.element)) {
-                            animations.push(entry);
-                        } else {
-                            entry.close();
-                        }
-                    });
-                    animationQueue.length = 0;
-                    var groupedAnimations = groupAnimations(animations);
-                    var toBeSortedAnimations = [];
-                    forEach(groupedAnimations, function(animationEntry) {
-                        toBeSortedAnimations.push({
-                            domNode: getDomNode(animationEntry.from ? animationEntry.from.element : animationEntry.element),
-                            fn: function triggerAnimationStart() {
-                                animationEntry.beforeStart();
-                                var startAnimationFn, closeFn = animationEntry.close;
-                                var targetElement = animationEntry.anchors ? animationEntry.from.element || animationEntry.to.element : animationEntry.element;
-                                if (getRunner(targetElement)) {
-                                    var operation = invokeFirstDriver(animationEntry);
-                                    if (operation) {
-                                        startAnimationFn = operation.start;
-                                    }
-                                }
-                                if (!startAnimationFn) {
-                                    closeFn();
-                                } else {
-                                    var animationRunner = startAnimationFn();
-                                    animationRunner.done(function(status) {
-                                        closeFn(!status);
-                                    });
-                                    updateAnimationRunners(animationEntry, animationRunner);
-                                }
-                            }
-                        });
-                    });
-                    $$rAFScheduler(sortAnimations(toBeSortedAnimations));
-                });
-                return runner;
-                function getAnchorNodes(node) {
-                    var SELECTOR = "[" + NG_ANIMATE_REF_ATTR + "]";
-                    var items = node.hasAttribute(NG_ANIMATE_REF_ATTR) ? [ node ] : node.querySelectorAll(SELECTOR);
-                    var anchors = [];
-                    forEach(items, function(node) {
-                        var attr = node.getAttribute(NG_ANIMATE_REF_ATTR);
-                        if (attr && attr.length) {
-                            anchors.push(node);
-                        }
-                    });
-                    return anchors;
-                }
-                function groupAnimations(animations) {
-                    var preparedAnimations = [];
-                    var refLookup = {};
-                    forEach(animations, function(animation, index) {
-                        var element = animation.element;
-                        var node = getDomNode(element);
-                        var event = animation.event;
-                        var enterOrMove = [ "enter", "move" ].indexOf(event) >= 0;
-                        var anchorNodes = animation.structural ? getAnchorNodes(node) : [];
-                        if (anchorNodes.length) {
-                            var direction = enterOrMove ? "to" : "from";
-                            forEach(anchorNodes, function(anchor) {
-                                var key = anchor.getAttribute(NG_ANIMATE_REF_ATTR);
-                                refLookup[key] = refLookup[key] || {};
-                                refLookup[key][direction] = {
-                                    animationID: index,
-                                    element: jqLite(anchor)
-                                };
-                            });
-                        } else {
-                            preparedAnimations.push(animation);
-                        }
-                    });
-                    var usedIndicesLookup = {};
-                    var anchorGroups = {};
-                    forEach(refLookup, function(operations, key) {
-                        var from = operations.from;
-                        var to = operations.to;
-                        if (!from || !to) {
-                            var index = from ? from.animationID : to.animationID;
-                            var indexKey = index.toString();
-                            if (!usedIndicesLookup[indexKey]) {
-                                usedIndicesLookup[indexKey] = true;
-                                preparedAnimations.push(animations[index]);
-                            }
-                            return;
-                        }
-                        var fromAnimation = animations[from.animationID];
-                        var toAnimation = animations[to.animationID];
-                        var lookupKey = from.animationID.toString();
-                        if (!anchorGroups[lookupKey]) {
-                            var group = anchorGroups[lookupKey] = {
-                                structural: true,
-                                beforeStart: function() {
-                                    fromAnimation.beforeStart();
-                                    toAnimation.beforeStart();
-                                },
-                                close: function() {
-                                    fromAnimation.close();
-                                    toAnimation.close();
-                                },
-                                classes: cssClassesIntersection(fromAnimation.classes, toAnimation.classes),
-                                from: fromAnimation,
-                                to: toAnimation,
-                                anchors: []
-                            };
-                            if (group.classes.length) {
-                                preparedAnimations.push(group);
-                            } else {
-                                preparedAnimations.push(fromAnimation);
-                                preparedAnimations.push(toAnimation);
-                            }
-                        }
-                        anchorGroups[lookupKey].anchors.push({
-                            out: from.element,
-                            "in": to.element
-                        });
-                    });
-                    return preparedAnimations;
-                }
-                function cssClassesIntersection(a, b) {
-                    a = a.split(" ");
-                    b = b.split(" ");
-                    var matches = [];
-                    for (var i = 0; i < a.length; i++) {
-                        var aa = a[i];
-                        if (aa.substring(0, 3) === "ng-") continue;
-                        for (var j = 0; j < b.length; j++) {
-                            if (aa === b[j]) {
-                                matches.push(aa);
-                                break;
-                            }
-                        }
-                    }
-                    return matches.join(" ");
-                }
-                function invokeFirstDriver(animationDetails) {
-                    for (var i = drivers.length - 1; i >= 0; i--) {
-                        var driverName = drivers[i];
-                        if (!$injector.has(driverName)) continue;
-                        var factory = $injector.get(driverName);
-                        var driver = factory(animationDetails);
-                        if (driver) {
-                            return driver;
-                        }
-                    }
-                }
-                function beforeStart() {
-                    element.addClass(NG_ANIMATE_CLASSNAME);
-                    if (tempClasses) {
-                        $$jqLite.addClass(element, tempClasses);
-                    }
-                }
-                function updateAnimationRunners(animation, newRunner) {
-                    if (animation.from && animation.to) {
-                        update(animation.from.element);
-                        update(animation.to.element);
-                    } else {
-                        update(animation.element);
-                    }
-                    function update(element) {
-                        getRunner(element).setHost(newRunner);
-                    }
-                }
-                function handleDestroyedElement() {
-                    var runner = getRunner(element);
-                    if (runner && (event !== "leave" || !options.$$domOperationFired)) {
-                        runner.end();
-                    }
-                }
-                function close(rejected) {
-                    element.off("$destroy", handleDestroyedElement);
-                    removeRunner(element);
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    options.domOperation();
-                    if (tempClasses) {
-                        $$jqLite.removeClass(element, tempClasses);
-                    }
-                    element.removeClass(NG_ANIMATE_CLASSNAME);
-                    runner.complete(!rejected);
-                }
-            };
-        } ];
-    } ];
-    angular.module("ngAnimate", []).directive("ngAnimateChildren", $$AnimateChildrenDirective).factory("$$rAFScheduler", $$rAFSchedulerFactory).factory("$$AnimateRunner", $$AnimateRunnerFactory).factory("$$animateAsyncRun", $$AnimateAsyncRunFactory).provider("$$animateQueue", $$AnimateQueueProvider).provider("$$animation", $$AnimationProvider).provider("$animateCss", $AnimateCssProvider).provider("$$animateCssDriver", $$AnimateCssDriverProvider).provider("$$animateJs", $$AnimateJsProvider).provider("$$animateJsDriver", $$AnimateJsDriverProvider);
-})(window, window.angular);
-
-var app = angular.module("autocomplete", []);
-
-app.directive("autocomplete", function() {
-    var index = -1;
-    return {
-        restrict: "E",
-        scope: {
-            searchParam: "=ngModel",
-            suggestions: "=data",
-            onType: "=onType",
-            onSelect: "=onSelect",
-            autocompleteRequired: "="
-        },
-        controller: [ "$scope", function($scope) {
-            $scope.selectedIndex = -1;
-            $scope.initLock = true;
-            $scope.setIndex = function(i) {
-                $scope.selectedIndex = parseInt(i);
-            };
-            this.setIndex = function(i) {
-                $scope.setIndex(i);
-                $scope.$apply();
-            };
-            $scope.getIndex = function(i) {
-                return $scope.selectedIndex;
-            };
-            var watching = true;
-            $scope.completing = false;
-            $scope.$watch("searchParam", function(newValue, oldValue) {
-                if (oldValue === newValue || !oldValue && $scope.initLock) {
-                    return;
-                }
-                if (watching && typeof $scope.searchParam !== "undefined" && $scope.searchParam !== null) {
-                    $scope.completing = true;
-                    $scope.searchFilter = $scope.searchParam;
-                    $scope.selectedIndex = -1;
-                }
-                if ($scope.onType) $scope.onType($scope.searchParam);
-            });
-            this.preSelect = function(suggestion) {
-                watching = false;
-                $scope.$apply();
-                watching = true;
-            };
-            $scope.preSelect = this.preSelect;
-            this.preSelectOff = function() {
-                watching = true;
-            };
-            $scope.preSelectOff = this.preSelectOff;
-            $scope.select = function(suggestion) {
-                if (suggestion) {
-                    $scope.searchParam = suggestion;
-                    $scope.searchFilter = suggestion;
-                    if ($scope.onSelect) $scope.onSelect(suggestion);
-                }
-                watching = false;
-                $scope.completing = false;
-                setTimeout(function() {
-                    watching = true;
-                }, 1e3);
-                $scope.setIndex(-1);
-            };
-        } ],
-        link: function(scope, element, attrs) {
-            setTimeout(function() {
-                scope.initLock = false;
-                scope.$apply();
-            }, 250);
-            var attr = "";
-            scope.attrs = {
-                placeholder: "start typing...",
-                "class": "",
-                id: "",
-                inputclass: "",
-                inputid: ""
-            };
-            for (var a in attrs) {
-                attr = a.replace("attr", "").toLowerCase();
-                if (a.indexOf("attr") === 0) {
-                    scope.attrs[attr] = attrs[a];
-                }
-            }
-            if (attrs.clickActivation) {
-                element[0].onclick = function(e) {
-                    if (!scope.searchParam) {
-                        setTimeout(function() {
-                            scope.completing = true;
-                            scope.$apply();
-                        }, 200);
-                    }
-                };
-            }
-            var key = {
-                left: 37,
-                up: 38,
-                right: 39,
-                down: 40,
-                enter: 13,
-                esc: 27,
-                tab: 9
-            };
-            document.addEventListener("keydown", function(e) {
-                var keycode = e.keyCode || e.which;
-                switch (keycode) {
-                  case key.esc:
-                    scope.select();
-                    scope.setIndex(-1);
-                    scope.$apply();
-                    e.preventDefault();
-                }
-            }, true);
-            document.addEventListener("blur", function(e) {
-                setTimeout(function() {
-                    scope.select();
-                    scope.setIndex(-1);
-                    scope.$apply();
-                }, 150);
-            }, true);
-            element[0].addEventListener("keydown", function(e) {
-                var keycode = e.keyCode || e.which;
-                var l = angular.element(this).find("li").length;
-                if (!scope.completing || l == 0) return;
-                switch (keycode) {
-                  case key.up:
-                    index = scope.getIndex() - 1;
-                    if (index < -1) {
-                        index = l - 1;
-                    } else if (index >= l) {
-                        index = -1;
-                        scope.setIndex(index);
-                        scope.preSelectOff();
-                        break;
-                    }
-                    scope.setIndex(index);
-                    if (index !== -1) scope.preSelect(angular.element(angular.element(this).find("li")[index]).text());
-                    scope.$apply();
-                    break;
-
-                  case key.down:
-                    index = scope.getIndex() + 1;
-                    if (index < -1) {
-                        index = l - 1;
-                    } else if (index >= l) {
-                        index = -1;
-                        scope.setIndex(index);
-                        scope.preSelectOff();
-                        scope.$apply();
-                        break;
-                    }
-                    scope.setIndex(index);
-                    if (index !== -1) scope.preSelect(angular.element(angular.element(this).find("li")[index]).text());
-                    break;
-
-                  case key.left:
-                    break;
-
-                  case key.right:
-                  case key.enter:
-                  case key.tab:
-                    index = scope.getIndex();
-                    if (index !== -1) {
-                        scope.select(angular.element(angular.element(this).find("li")[index]).text());
-                        if (keycode == key.enter) {
-                            e.preventDefault();
-                        }
-                    } else {
-                        if (keycode == key.enter) {
-                            scope.select();
-                        }
-                    }
-                    scope.setIndex(-1);
-                    scope.$apply();
-                    break;
-
-                  case key.esc:
-                    scope.select();
-                    scope.setIndex(-1);
-                    scope.$apply();
-                    e.preventDefault();
-                    break;
-
-                  default:
-                    return;
-                }
-            });
-        },
-        template: '        <div class="autocomplete {{ attrs.class }}" id="{{ attrs.id }}">          <input            type="text"            ng-model="searchParam"            placeholder="{{ attrs.placeholder }}"            class="{{ attrs.inputclass }}"            id="{{ attrs.inputid }}"            ng-required="{{ autocompleteRequired }}" />          <ul ng-show="completing && (suggestions | filter:searchFilter).length > 0">            <li              suggestion              ng-repeat="suggestion in suggestions | filter:searchFilter | orderBy:\'toString()\' track by $index"              index="{{ $index }}"              val="{{ suggestion }}"              ng-class="{ active: ($index === selectedIndex) }"              ng-click="select(suggestion)"              ng-bind-html="suggestion | highlight:searchParam"></li>          </ul>        </div>'
-    };
-});
-
-app.filter("highlight", [ "$sce", function($sce) {
-    return function(input, searchParam) {
-        if (typeof input === "function") return "";
-        if (searchParam) {
-            var words = "(" + searchParam.split(/\ /).join(" |") + "|" + searchParam.split(/\ /).join("|") + ")", exp = new RegExp(words, "gi");
-            if (words.length) {
-                input = input.replace(exp, '<span class="highlight">$1</span>');
-            }
-        }
-        return $sce.trustAsHtml(input);
-    };
-} ]);
-
-app.directive("suggestion", function() {
-    return {
-        restrict: "A",
-        require: "^autocomplete",
-        link: function(scope, element, attrs, autoCtrl) {
-            element.bind("mouseenter", function() {
-                autoCtrl.preSelect(attrs.val);
-                autoCtrl.setIndex(attrs.index);
-            });
-            element.bind("mouseleave", function() {
-                autoCtrl.preSelectOff();
-            });
-        }
-    };
-});
-
 function getCookie(name) {
     var nameEQ = name + "=";
     var ca = document.cookie.split(";");
@@ -30800,319 +28163,788 @@ var cloneObject = function(oldObject) {
     return JSON.parse(JSON.stringify(oldObject));
 };
 
-var app = angular.module("CreateDictionaryModule", [ "ui.router", "ngAnimate", "ui.bootstrap", "autocomplete" ]);
+var lingvodoc = {};
 
-app.config(function($stateProvider, $urlRouterProvider) {
-    $stateProvider.state("create", {
-        url: "/create",
-        templateUrl: "createDictionary.html",
-        controller: "CreateDictionaryController"
-    }).state("create.step1", {
-        url: "/step1",
-        templateUrl: "createDictionaryStep1.html"
-    }).state("create.step2", {
-        url: "/step2",
-        templateUrl: "createDictionaryStep2.html"
-    }).state("create.step3", {
-        url: "/step3",
-        templateUrl: "createDictionaryStep3.html"
-    });
-    $urlRouterProvider.otherwise("/create/step1");
-});
+lingvodoc.Object = function(clientId, objectId) {
+    this.client_id = clientId;
+    this.object_id = objectId;
+    this.type = "abstract";
+    this.getId = function() {
+        return this.client_id + "" + this.object_id;
+    };
+    this.export = function() {
+        return {};
+    };
+};
 
-app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$interval", "$state", "$location", "$log", function($scope, $http, $modal, $interval, $state, $location, $log) {
-    var clientId = $("#clientId").data("lingvodoc");
-    var userId = $("#userId").data("lingvodoc");
-    var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var createLanguageUrl = $("#createLanguageUrl").data("lingvodoc");
-    var createDictionaryUrl = $("#createDictionaryUrl").data("lingvodoc");
-    var allPerspectivesUrl = $("#allPerspectivesUrl").data("lingvodoc");
-    var perspectiveFieldsUrl = "/dictionary";
-    var listBlobsUrl = $("#listBlobsUrl").data("lingvodoc");
-    $scope.wizard = {
-        mode: "create",
-        importedDictionaryId: -1
+lingvodoc.Object.prototype.equals = function(obj) {
+    return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
+};
+
+lingvodoc.Language = function() {
+    this.equals = function(obj) {
+        return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
     };
-    $scope.users = [];
-    $scope.userLogins = [];
-    $scope.uploadedDictionaries = [];
-    var flatLanguages = function(languages) {
-        var flat = [];
-        for (var i = 0; i < languages.length; i++) {
-            var language = languages[i];
-            flat.push(languages[i]);
-            if (language.contains && language.contains.length > 0) {
-                var childLangs = flatLanguages(language.contains);
-                flat = flat.concat(childLangs);
-            }
-        }
-        return flat;
+};
+
+lingvodoc.Language.prototype = new lingvodoc.Object();
+
+lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation) {
+    this.client_id = clientId;
+    this.object_id = objectId;
+    this.parent_client_id = parentClientId;
+    this.parent_object_id = parentObjectId;
+    this.translation = translation;
+    this.perspectives = [];
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
-    var getLanguageById = function(id) {
-        if (typeof id == "string") {
-            var ids = id.split("_");
-            for (var i = 0; i < $scope.languages.length; i++) {
-                if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1]) return $scope.languages[i];
-            }
-        }
+};
+
+lingvodoc.Dictionary.fromJS = function(js) {
+    return new lingvodoc.Dictionary(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation_string);
+};
+
+lingvodoc.Dictionary.prototype = new lingvodoc.Object();
+
+lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
+
+lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id, translation, translation_string, status, marked_for_deletion) {
+    lingvodoc.Object.call(this, client_id, object_id);
+    this.parent_client_id = parent_client_id;
+    this.parent_object_id = parent_object_id;
+    this.translation = translation;
+    this.translation_string = translation_string;
+    this.status = status;
+    this.marked_for_deletion = marked_for_deletion;
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
-    $scope.languages = [];
-    $scope.perspectives = [];
-    $scope.dictionaryData = {
-        languageId: -1,
-        perspectiveName: "",
-        perspectiveId: -1
+};
+
+lingvodoc.Perspective.fromJS = function(js) {
+    return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.marked_for_deletion);
+};
+
+lingvodoc.Perspective.prototype = new lingvodoc.Object();
+
+lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
+
+function lingvodocAPI($http, $q) {
+    var addUrlParameter = function(url, key, value) {
+        return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
     };
-    $scope.perspective = {
-        fields: []
-    };
-    $scope.getLanguageId = function(language) {
-        if (language) {
-            return language.client_id + "_" + language.object_id;
-        }
-    };
-    $scope.newLanguage = function() {
-        var modalInstance = $modal.open({
-            animation: true,
-            templateUrl: "createLanguageModal.html",
-            controller: "CreateLanguageController",
-            size: "lg"
-        });
-        modalInstance.result.then(function(languageObj) {
-            $http.post(createLanguageUrl, languageObj).success(function(data, status, headers, config) {
-                loadLanguages();
-            }).error(function(data, status, headers, config) {
-                alert("Failed to save language!");
-            });
-        }, function() {});
-    };
-    $scope.addField = function() {
-        $scope.perspective.fields.push({
-            entity_type: "",
-            entity_type_translation: "",
-            data_type: "text",
-            data_type_translation: "text",
-            status: "enabled"
-        });
-    };
-    $scope.enableGroup = function(fieldIndex) {
-        if (typeof $scope.perspective.fields[fieldIndex].group === "undefined") {
-            $scope.perspective.fields[fieldIndex].group = "";
-        } else {
-            delete $scope.perspective.fields[fieldIndex].group;
-        }
-    };
-    $scope.enableLinkedField = function(fieldIndex) {
-        if (typeof $scope.perspective.fields[fieldIndex].contains === "undefined") {
-            $scope.perspective.fields[fieldIndex].contains = [ {
-                entity_type: "",
-                entity_type_translation: "",
-                data_type: "markup",
-                data_type_translation: "markup",
-                status: "enabled"
-            } ];
-        } else {
-            delete $scope.perspective.fields[fieldIndex].contains;
-        }
-    };
-    $scope.createDictionary = function() {
-        var language = getLanguageById($scope.dictionaryData.languageId);
-        if (!$scope.dictionaryData.name && $scope.wizard.mode == "create" || typeof $scope.wizard.importedDictionaryId != "string" && $scope.wizard.mode == "import" || !language) {
-            return;
-        }
-        if ($scope.wizard.mode == "create") {
-            var dictionaryObj = {
-                parent_client_id: language.client_id,
-                parent_object_id: language.object_id,
-                translation_string: $scope.dictionaryData.name,
-                translation: $scope.dictionaryData.name
-            };
-            $http.post(createDictionaryUrl, dictionaryObj).success(function(data, status, headers, config) {
-                if (data.object_id && data.client_id) {
-                    $scope.dictionaryData.dictionary_client_id = data.client_id;
-                    $scope.dictionaryData.dictionary_object_id = data.object_id;
-                    $state.go("create.step2");
-                } else {
-                    alert("Failed to create dictionary!");
+    var perspectiveToDictionaryFields = function(perspectiveFields) {
+        var fields = [];
+        angular.forEach(perspectiveFields, function(field, index) {
+            if (typeof field.group == "string") {
+                var createNewGroup = true;
+                for (var j = 0; j < fields.length; j++) {
+                    if (fields[j].entity_type == field.group && fields[j].isGroup) {
+                        fields[j].contains.push(field);
+                        createNewGroup = false;
+                        break;
+                    }
                 }
-            }).error(function(data, status, headers, config) {
-                alert("Failed to create dictionary!");
-            });
-        }
-        if ($scope.wizard.mode == "import") {
-            if (typeof $scope.wizard.importedDictionaryId == "string") {
-                var ids = $scope.wizard.importedDictionaryId.split("_");
-                var url = $("#convertUrl").data("lingvodoc");
-                var convertObject = {
-                    blob_client_id: parseInt(ids[0]),
-                    blob_object_id: parseInt(ids[1]),
-                    parent_client_id: language.client_id,
-                    parent_object_id: language.object_id
-                };
-                $http.post(url, convertObject).success(function(data, status, headers, config) {
-                    alert(data.status);
-                }).error(function(data, status, headers, config) {});
-            }
-        }
-    };
-    $scope.createPerspective = function() {
-        if (!$scope.dictionaryData.perspectiveName) {
-            return;
-        }
-        var createPerspectiveUrl = "/dictionary/" + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + "/" + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + "/" + "perspective";
-        var perspectiveObj = {
-            name: $scope.dictionaryData.perspectiveName,
-            translation: $scope.dictionaryData.perspectiveName
-        };
-        $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
-            if (data.object_id && data.client_id) {
-                $scope.dictionaryData.perspective_client_id = data.client_id;
-                $scope.dictionaryData.perspective_object_id = data.object_id;
-                var setFieldsUrl = "/dictionary/" + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + "/" + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + "/perspective/" + encodeURIComponent($scope.dictionaryData.perspective_client_id) + "/" + encodeURIComponent($scope.dictionaryData.perspective_object_id) + "/fields";
-                $http.post(setFieldsUrl, exportPerspective($scope.perspective)).success(function(data, status, headers, config) {
-                    window.location = "/dashboard";
-                }).error(function(data, status, headers, config) {
-                    alert("Failed to create perspective!");
-                });
-            } else {
-                alert("Failed to create perspective!");
-            }
-        }).error(function(data, status, headers, config) {
-            alert("Failed to create perspective!");
-        });
-    };
-    $scope.searchUsers = function(query) {
-        var promise = $http.get("/users?search=" + encodeURIComponent(query)).then(function(response) {
-            return response.data;
-        });
-        promise.then(function(data) {
-            var userLogins = [];
-            if (data.users) {
-                for (var i = 0; i < data.users.length; i++) {
-                    var user = data.users[i];
-                    userLogins.push(user.login);
-                }
-                $scope.userLogins = userLogins;
-                $scope.users = data.users;
-            }
-        });
-    };
-    $scope.addUser = function(userLogin) {};
-    var loadLanguages = function() {
-        $http.get(languagesUrl).success(function(data, status, headers, config) {
-            $scope.languages = flatLanguages(data.languages);
-        }).error(function(data, status, headers, config) {});
-    };
-    var loadPerspectives = function() {
-        var perspectives = [];
-        $http.get(allPerspectivesUrl).success(function(data, status, headers, config) {
-            for (var i = 0; i < data.perspectives.length; i++) {
-                var perspective = data.perspectives[i];
-                var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
-                $http.get(url).success(function(perspective) {
-                    return function(data, status, headers, config) {
-                        var p = {};
-                        p.translation = perspective.translation;
-                        p.translation_string = perspective.translation_string;
-                        p.object_id = perspective.object_id;
-                        p.client_id = perspective.client_id;
-                        p.fields = data.fields;
-                        var wrappedPerspective = wrapPerspective(p);
-                        if (wrappedPerspective) {
-                            $scope.perspectives.push(wrappedPerspective);
-                        }
-                    };
-                }(perspective)).error(function(data, status, headers, config) {
-                    $log.error("Failed to load perspectives!");
-                });
-            }
-        }).error(function(data, status, headers, config) {
-            $log.error("Failed to load perspectives!");
-        });
-    };
-    var loadBlobs = function() {
-        $http.get(listBlobsUrl).success(function(data, status, headers, config) {
-            $scope.uploadedDictionaries = [];
-            for (var i = 0; i < data.length; i++) {
-                if (data[i].data_type = "dialeqt_dictionary") {
-                    var id = data[i].client_id + "_" + data[i].object_id;
-                    $scope.uploadedDictionaries.push({
-                        id: id,
-                        data: data[i]
+                if (createNewGroup) {
+                    fields.push({
+                        entity_type: field.group,
+                        isGroup: true,
+                        contains: [ field ]
                     });
                 }
+            } else {
+                fields.push(field);
             }
-        }).error(function(data, status, headers, config) {});
+        });
+        return fields;
     };
-    $scope.$watch("dictionaryData.perspectiveId", function(id) {
-        if (typeof id == "string") {
-            var ids = id.split("_");
-            for (var i = 0; i < $scope.perspectives.length; i++) {
-                if ($scope.perspectives[i].client_id == ids[0] && $scope.perspectives[i].object_id == ids[1]) {
-                    $scope.perspective = $scope.perspectives[i];
-                    break;
+    var getLexicalEntries = function(url, offset, count) {
+        var deferred = $q.defer();
+        var allLexicalEntriesUrl = url;
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "start_from", offset);
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "count", count);
+        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
+            if (data.lexical_entries && angular.isArray(data.lexical_entries)) {
+                deferred.resolve(data.lexical_entries);
+            } else {
+                deferred.reject("An error occured while fetching lexical entries!");
+            }
+        }).error(function() {
+            deferred.reject("An error occured while fetching lexical entries!");
+        });
+        return deferred.promise;
+    };
+    var getLexicalEntriesCount = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            var totalEntries = parseInt(data.count);
+            if (!isNaN(totalEntries)) {
+                deferred.resolve(totalEntries);
+            } else {
+                deferred.reject("An error occurred while fetching dictionary stats");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching dictionary stats");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var removeValue = function(entry, field, fieldValue, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                break;
+
+              case "leveltwoentity":
+                if (parentClientId && parentObjectId) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                } else {
+                    deferred.reject("Attempting to delete Level2 entry with no Level1 entry.");
+                    return deferred.promise;
                 }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.delete(url).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while removing value");
+            });
+        } else {
+            deferred.reject("An error  occurred while removing value");
+        }
+        return deferred.promise;
+    };
+    var saveValue = function(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveObjectId, entry, field, value, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity";
+                break;
+
+              case "leveltwoentity":
+                if (parent.client_id && parent.object_id) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity";
+                } else {
+                    deferred.reject("Attempting to save Level2 entry with no Level1 entry.");
+                    return deferred.promise;
+                }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.post(url, value).success(function(data, status, headers, config) {
+                value.client_id = data.client_id;
+                value.object_id = data.object_id;
+                deferred.resolve(value);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while saving value");
+            });
+        } else {
+            deferred.reject("An error  occurred while saving value");
+        }
+        return deferred.promise;
+    };
+    var addNewLexicalEntry = function(url) {
+        var deferred = $q.defer();
+        $http.post(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while creating a new lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getConnectedWords = function(clientId, objectId) {
+        var deferred = $q.defer();
+        var url = "/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/connected";
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.words)) {
+                deferred.resolve(data.words);
+            } else {
+                deferred.reject("An error  occurred while fetching connected words");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while fetching connected words");
+        });
+        return deferred.promise;
+    };
+    var linkEntries = function(e1, e2, entityType) {
+        var deferred = $q.defer();
+        var linkObject = {
+            entity_type: entityType,
+            connections: [ {
+                client_id: e1.client_id,
+                object_id: e1.object_id
+            }, {
+                client_id: e2.client_id,
+                object_id: e2.object_id
+            } ]
+        };
+        var url = "/group_entity";
+        $http.post(url, linkObject).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while connecting 2 entries");
+        });
+        return deferred.promise;
+    };
+    var search = function(query) {
+        var deferred = $q.defer();
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
+        $http.get(url).success(function(data, status, headers, config) {
+            var urls = [];
+            for (var i = 0; i < data.length; i++) {
+                var entr = data[i];
+                var getEntryUrl = "/dictionary/" + encodeURIComponent(entr.origin_dictionary_client_id) + "/" + encodeURIComponent(entr.origin_dictionary_object_id) + "/perspective/" + encodeURIComponent(entr.origin_perspective_client_id) + "/" + encodeURIComponent(entr.origin_perspective_object_id) + "/lexical_entry/" + encodeURIComponent(entr.client_id) + "/" + encodeURIComponent(entr.object_id);
+                urls.push(getEntryUrl);
+            }
+            var uniqueUrls = urls.filter(function(item, pos) {
+                return urls.indexOf(item) == pos;
+            });
+            var requests = [];
+            for (var j = 0; j < uniqueUrls.length; j++) {
+                var r = $http.get(uniqueUrls[j]);
+                requests.push(r);
+            }
+            $q.all(requests).then(function(results) {
+                var suggestedEntries = [];
+                for (var k = 0; k < results.length; k++) {
+                    if (results[k].data) {
+                        suggestedEntries.push(results[k].data.lexical_entry);
+                    }
+                }
+                deferred.resolve(suggestedEntries);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing basic search");
+        });
+        return deferred.promise;
+    };
+    var approve = function(url, entity, status) {
+        var deferred = $q.defer();
+        if (status) {
+            $http.patch(url, entity).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        } else {
+            var config = {
+                method: "DELETE",
+                url: url,
+                data: entity,
+                headers: {
+                    "Content-Type": "application/json;charset=utf-8"
+                }
+            };
+            $http(config).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        }
+        return deferred.promise;
+    };
+    var approveAll = function(url) {
+        var deferred = $q.defer();
+        $http.patch(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to change approval status ");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryProperties = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryProperties = function(url, properties) {
+        var deferred = $q.defer();
+        $http.put(url, properties).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var getLanguages = function(url) {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(languages[i]);
+                if (language.contains && language.contains.length > 0) {
+                    var childLangs = flatLanguages(language.contains);
+                    flat = flat.concat(childLangs);
+                }
+            }
+            return flat;
+        };
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(flatLanguages(data.languages));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryStatus = function(url, status) {
+        var deferred = $q.defer();
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set dictionary status");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveFields = function(url, fields) {
+        var deferred = $q.defer();
+        $http.post(url, fields).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to save perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getUserInfo = function(userId, clientId) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get user info");
+        });
+        return deferred.promise;
+    };
+    var setUserInfo = function(userId, clientId, userInfo) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.post(url, userInfo).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to set user info");
+        });
+        return deferred.promise;
+    };
+    var getOrganizations = function() {
+        var deferred = $q.defer();
+        $http.get("/organization_list").success(function(data, status, headers, config) {
+            deferred.resolve(data.organizations);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch list of organizations");
+        });
+        return deferred.promise;
+    };
+    var createOrganization = function(org) {
+        var deferred = $q.defer();
+        $http.post("/organization", org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to create organization");
+        });
+        return deferred.promise;
+    };
+    var getOrganization = function(orgId) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(orgId);
+        $http.get(url).success(function(data, status, headers, config) {
+            var requests = [];
+            var users = [];
+            var promises = data.users.map(function(userId) {
+                return $http.get("/user" + "?user_id= " + encodeURIComponent(userId));
+            });
+            $q.all(promises).then(function(results) {
+                angular.forEach(results, function(result) {
+                    users.push(result.data);
+                });
+                data.users = users;
+                deferred.resolve(data);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get information about organization");
+        });
+        return deferred.promise;
+    };
+    var editOrganization = function(org) {
+        var deferred = $q.defer();
+        console.log(org);
+        var url = "/organization/" + encodeURIComponent(org.organization_id);
+        $http.put(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to change information about organization");
+        });
+        return deferred.promise;
+    };
+    var searchUsers = function(query) {
+        var deferred = $q.defer();
+        $http.get("/users?search=" + encodeURIComponent(query)).success(function(data, status, headers, config) {
+            deferred.resolve(data.users);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to search for users");
+        });
+        return deferred.promise;
+    };
+    var getDictionaries = function(query) {
+        var deferred = $q.defer();
+        var dictionaries = [];
+        $http.post("/dictionaries", query).success(function(data, status, headers, config) {
+            for (var i = 0; i < data.dictionaries.length; i++) {
+                var dictionary = data.dictionaries[i];
+                dictionaries.push(lingvodoc.Dictionary.fromJS(dictionary));
+            }
+            deferred.resolve(dictionaries);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch dictionaries list");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryPerspectives = function(dictionary) {
+        var deferred = $q.defer();
+        var perspectives = [];
+        var getPerspectivesUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspectives";
+        $http.get(getPerspectivesUrl).success(function(data, status, headers, config) {
+            angular.forEach(data.perspectives, function(jspers) {
+                perspectives.push(lingvodoc.Perspective.fromJS(jspers));
+            });
+            deferred.resolve(perspectives);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspectives list");
+        });
+        return deferred.promise;
+    };
+    var getDictionariesWithPerspectives = function(query) {
+        var deferred = $q.defer();
+        getDictionaries(query).then(function(dictionaries) {
+            var r = dictionaries.map(function(d) {
+                return getDictionaryPerspectives(d);
+            });
+            $q.all(r).then(function(results) {
+                angular.forEach(dictionaries, function(dictionary, index) {
+                    dictionary.perspectives = results[index];
+                });
+                deferred.resolve(dictionaries);
+            });
+        }, function() {});
+        return deferred.promise;
+    };
+    var mergePerspectives = function(req) {
+        var deferred = $q.defer();
+        $http.post("/merge/perspectives", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to merge perspectives");
+        });
+        return deferred.promise;
+    };
+    var mergeSuggestions = function(perspective1, perspective2) {
+        var deferred = $q.defer();
+        var body = [ {
+            perspective_client_id: perspective1.client_id,
+            perspective_object_id: perspective1.object_id
+        }, {
+            perspective_client_id: perspective2.client_id,
+            perspective_object_id: perspective2.object_id
+        } ];
+        $http.post("/merge/suggestions/", body).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch merge suggestions");
+        });
+        return deferred.promise;
+    };
+    return {
+        getLexicalEntries: getLexicalEntries,
+        getLexicalEntriesCount: getLexicalEntriesCount,
+        getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
+        addNewLexicalEntry: addNewLexicalEntry,
+        saveValue: saveValue,
+        removeValue: removeValue,
+        getConnectedWords: getConnectedWords,
+        linkEntries: linkEntries,
+        search: search,
+        approve: approve,
+        approveAll: approveAll,
+        getDictionaryProperties: getDictionaryProperties,
+        setDictionaryProperties: setDictionaryProperties,
+        getLanguages: getLanguages,
+        setDictionaryStatus: setDictionaryStatus,
+        getPerspectiveFields: getPerspectiveFields,
+        setPerspectiveFields: setPerspectiveFields,
+        getUserInfo: getUserInfo,
+        setUserInfo: setUserInfo,
+        getOrganizations: getOrganizations,
+        createOrganization: createOrganization,
+        getOrganization: getOrganization,
+        editOrganization: editOrganization,
+        searchUsers: searchUsers,
+        getDictionaries: getDictionaries,
+        getDictionaryPerspectives: getDictionaryPerspectives,
+        getDictionariesWithPerspectives: getDictionariesWithPerspectives,
+        mergePerspectives: mergePerspectives,
+        mergeSuggestions: mergeSuggestions
+    };
+}
+
+var app = angular.module("MergeMasterModule", [ "ui.router", "ui.bootstrap" ]);
+
+app.config(function($stateProvider, $urlRouterProvider) {
+    $stateProvider.state("merge", {
+        url: "/merge",
+        templateUrl: "mergeMaster.html",
+        controller: "MergeMasterController"
+    }).state("merge.intro", {
+        url: "/intro",
+        templateUrl: "mergeMasterIntro.html"
+    }).state("merge.mode", {
+        url: "/mode",
+        templateUrl: "mergeMasterMode.html"
+    }).state("merge.selectDictionaries", {
+        url: "/source-dictionaries",
+        templateUrl: "mergeMasterMode.html"
+    }).state("merge.selectPerspectives", {
+        url: "/source-perspectives",
+        templateUrl: "mergeMasterSourcePerspectives.html"
+    }).state("merge.perspectives", {
+        url: "/merge-perspectives",
+        templateUrl: "mergePerspectives.html"
+    });
+    $urlRouterProvider.otherwise("/merge/intro");
+});
+
+app.service("dictionaryService", lingvodocAPI);
+
+app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interval", "$state", "$log", "dictionaryService", function($scope, $http, $modal, $interval, $state, $log, dictionaryService) {
+    var clientId = $("#clientId").data("lingvodoc");
+    var userId = $("#userId").data("lingvodoc");
+    $scope.dictionaries = [];
+    $scope.master = {
+        mergeMode: "dictionaries",
+        selectedSourceDictionaryId: "None",
+        selectedSourceDictionary: {},
+        perspectiveId1: "",
+        perspectiveId2: "",
+        perspective1: {},
+        perspective2: {},
+        perspectiveName: "",
+        perspectivePreview: []
+    };
+    var wrapFields = function(fields) {
+        angular.forEach(fields, function(field) {
+            field._statusEnabled = field.status == "enabled";
+            field._newEntityType = field.entity_type;
+        });
+        return fields;
+    };
+    var unwrapFields = function(fields) {
+        var exportFields = cloneObject(fields);
+        angular.forEach(exportFields, function(field) {
+            if (field._statusEnabled) {
+                field.status = "enabled";
+            } else {
+                field.status = "disabled";
+            }
+            delete field._statusEnabled;
+            if (field._newEntityType != field.entity_type) {
+                field.new_type_name = field._newEntityType;
+            }
+            delete field._newEntityType;
+        });
+        return exportFields;
+    };
+    var findMatchedFields = function() {
+        var matches = [];
+        angular.forEach($scope.master.fields1, function(field1) {
+            angular.forEach($scope.master.fields2, function(field2) {
+                if (field1._statusEnabled && field2._statusEnabled) {
+                    if (field1._newEntityType == field2._newEntityType) {
+                        matches.push({
+                            first: field1,
+                            second: field2
+                        });
+                    }
+                }
+            });
+        });
+        return matches;
+    };
+    var createPreview = function(fields1, fields2) {
+        $scope.master.perspectivePreview = [];
+        angular.forEach(fields1, function(field) {
+            if (field._statusEnabled) {
+                $scope.master.perspectivePreview.push(field);
+            }
+        });
+        angular.forEach(fields2, function(field) {
+            if (field._statusEnabled) {
+                $scope.master.perspectivePreview.push(field);
+            }
+        });
+    };
+    var removeFieldFromPreview = function(field) {
+        var index = -1;
+        for (var i = 0; i < $scope.master.perspectivePreview.length; i++) {
+            if ($scope.master.perspectivePreview[i]._newEntityType == field._newEntityType) {
+                index = i;
+            }
+        }
+        if (index >= 0) {
+            $scope.master.perspectivePreview.splice(index, 1);
+        }
+    };
+    var updatePreview = function() {
+        var matches = findMatchedFields();
+        $scope.master.perspectivePreview = [];
+        angular.forEach($scope.master.fields1, function(field) {
+            if (field._statusEnabled) {
+                $scope.master.perspectivePreview.push(field);
+            }
+        });
+        angular.forEach($scope.master.fields2, function(field) {
+            if (field._statusEnabled) {
+                $scope.master.perspectivePreview.push(field);
+            }
+        });
+        angular.forEach(matches, function(m) {
+            removeFieldFromPreview(m.second);
+        });
+    };
+    $scope.selectSource = function() {
+        if ($scope.master.mergeMode == "dictionaries") {
+            $state.go("merge.selectDictionaries");
+        }
+        if ($scope.master.mergeMode == "perspectives") {
+            $state.go("merge.selectPerspectives");
+        }
+    };
+    $scope.startMergePerspectives = function() {
+        if ($scope.master.perspective1 instanceof lingvodoc.Perspective && $scope.master.perspective2 instanceof lingvodoc.Perspective) {
+            if ($scope.master.perspective1.equals($scope.master.perspective2)) {
+                alert("Please, select 2 different perspectives");
+                return;
+            }
+            var p1 = $scope.master.perspective1;
+            var url1 = "/dictionary/" + p1.parent_client_id + "/" + p1.parent_object_id + "/perspective/" + p1.client_id + "/" + p1.object_id + "/fields";
+            var p2 = $scope.master.perspective2;
+            var url2 = "/dictionary/" + p2.parent_client_id + "/" + p2.parent_object_id + "/perspective/" + p2.client_id + "/" + p2.object_id + "/fields";
+            dictionaryService.getPerspectiveFields(url1).then(function(fields1) {
+                dictionaryService.getPerspectiveFields(url2).then(function(fields2) {
+                    $scope.master.fields1 = wrapFields(fields1);
+                    $scope.master.fields2 = wrapFields(fields2);
+                    createPreview($scope.master.fields1, $scope.master.fields2);
+                    $state.go("merge.perspectives");
+                }, function(reason) {});
+            }, function(reason) {});
+        } else {
+            $log.error("");
+        }
+    };
+    $scope.commitPerspective = function() {
+        var updateFields1 = unwrapFields($scope.master.fields1);
+        var updateFields2 = unwrapFields($scope.master.fields2);
+        var req = {
+            dictionary_client_id: $scope.master.selectedSourceDictionary.client_id,
+            dictionary_object_id: $scope.master.selectedSourceDictionary.object_id,
+            translation_string: $scope.master.perspectiveName,
+            translation: $scope.master.perspectiveName,
+            perspectives: [ {
+                client_id: $scope.master.perspective1.client_id,
+                object_id: $scope.master.perspective1.object_id,
+                fields: updateFields1
+            }, {
+                client_id: $scope.master.perspective2.client_id,
+                object_id: $scope.master.perspective2.object_id,
+                fields: updateFields2
+            } ]
+        };
+        dictionaryService.mergePerspectives(req).then(function(result) {
+            $log.info(result);
+        }, function(reason) {});
+    };
+    dictionaryService.getDictionariesWithPerspectives({
+        user_created: [ userId ]
+    }).then(function(dictionaries) {
+        $scope.dictionaries = dictionaries;
+    }, function(reason) {
+        $log.error(reason);
+    });
+    $scope.$watch("master.selectedSourceDictionaryId", function(id) {
+        $scope.master.selectedSourceDictionary = {};
+        for (var i = 0; i < $scope.dictionaries.length; ++i) {
+            if ($scope.dictionaries[i].getId() == id) {
+                $scope.master.selectedSourceDictionary = $scope.dictionaries[i];
+                break;
             }
         }
     });
-    loadLanguages();
-    loadPerspectives();
-    loadBlobs();
-} ]);
-
-app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$modalInstance", function($scope, $http, $interval, $modalInstance) {
-    var clientId = $("#clientId").data("lingvodoc");
-    var userId = $("#userId").data("lingvodoc");
-    var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var createLanguageUrl = $("#createLanguageUrl").data("lingvodoc");
-    $scope.languages = [];
-    $scope.parentLanguageId = -1;
-    $scope.translation = "";
-    $scope.translationString = "";
-    var getLanguageById = function(id) {
-        var ids = id.split("_");
-        for (var i = 0; i < $scope.languages.length; i++) {
-            if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1]) return $scope.languages[i];
-        }
-    };
-    var flatLanguages = function(languages) {
-        var flat = [];
-        for (var i = 0; i < languages.length; i++) {
-            var language = languages[i];
-            flat.push(languages[i]);
-            if (language.contains && language.contains.length > 0) {
-                var childLangs = flatLanguages(language.contains);
-                flat = flat.concat(childLangs);
-            }
-        }
-        return flat;
-    };
-    $scope.getLanguageId = function(language) {
-        if (language) {
-            return language.client_id + "_" + language.object_id;
-        }
-    };
-    $scope.ok = function() {
-        if (!$scope.translation) {
+    $scope.$watch("master.perspectiveId1", function(id) {
+        if (!$scope.master.selectedSourceDictionary.perspectives) {
             return;
         }
-        var languageObj = {
-            translation: $scope.translation,
-            translation_string: $scope.translation
-        };
-        if ($scope.parentLanguageId != "-1") {
-            var parentLanguage = getLanguageById($scope.parentLanguageId);
-            if (parentLanguage) {
-                languageObj["parent_client_id"] = parentLanguage.client_id;
-                languageObj["parent_object_id"] = parentLanguage.object_id;
+        $scope.master.perspective1 = {};
+        for (var i = 0; i < $scope.master.selectedSourceDictionary.perspectives.length; ++i) {
+            if ($scope.master.selectedSourceDictionary.perspectives[i].getId() == id) {
+                $scope.master.perspective1 = $scope.master.selectedSourceDictionary.perspectives[i];
+                break;
             }
         }
-        $modalInstance.close(languageObj);
-    };
-    $scope.cancel = function() {
-        $modalInstance.dismiss("cancel");
-    };
-    $http.get(languagesUrl).success(function(data, status, headers, config) {
-        $scope.languages = flatLanguages(data.languages);
-    }).error(function(data, status, headers, config) {});
+    });
+    $scope.$watch("master.perspectiveId2", function(id) {
+        if (!$scope.master.selectedSourceDictionary.perspectives) {
+            return;
+        }
+        $scope.master.perspective2 = {};
+        for (var i = 0; i < $scope.master.selectedSourceDictionary.perspectives.length; ++i) {
+            if ($scope.master.selectedSourceDictionary.perspectives[i].getId() == id) {
+                $scope.master.perspective2 = $scope.master.selectedSourceDictionary.perspectives[i];
+                break;
+            }
+        }
+    });
+    $scope.$watch("master.fields1", function(fields) {
+        updatePreview();
+    }, true);
+    $scope.$watch("master.fields2", function(fields) {
+        updatePreview();
+    }, true);
 } ]);

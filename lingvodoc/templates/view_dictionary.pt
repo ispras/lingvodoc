@@ -21,6 +21,8 @@
 <div id="clientId" data-lingvodoc="${client_id}"></div>
 <div id="userId" data-lingvodoc="${user.id}"></div>
 
+
+
 <div id="dictionaryClientId" data-lingvodoc="${dictionary_client_id}"></div>
 <div id="dictionaryObjectId" data-lingvodoc="${dictionary_object_id}"></div>
 <div id="perspectiveClientId" data-lingvodoc="${perspective_client_id}"></div>
