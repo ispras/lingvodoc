@@ -27,8 +27,10 @@ app.config(function ($stateProvider, $urlRouterProvider) {
         }).state('merge.entries', {
             url: '/entries',
             templateUrl: 'mergeEntries.html'
+        }).state('merge.perspectiveFinished', {
+            url: '/entries/finished',
+            templateUrl: 'mergeEntriesFinished.html'
         });
-
 
 
 
@@ -63,6 +65,7 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
         'perspectivePreview': [],
         'dictionaryTable': [],
         'mergedPerspectiveFields': [],
+        'suggestions': [],
         'suggestedLexicalEntries': []
     };
 
@@ -244,7 +247,21 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             var url = '/dictionary/' + $scope.master.selectedSourceDictionary.client_id + '/' + $scope.master.selectedSourceDictionary.object_id + '/perspective/' + obj.client_id + '/' + obj.object_id + '/fields';
             dictionaryService.getPerspectiveDictionaryFields(url).then(function(fields) {
                 $scope.master.mergedPerspectiveFields = fields;
-                $state.go('merge.entries');
+
+                dictionaryService.mergeSuggestions(obj).then(function(suggestions) {
+
+                    if (suggestions.length > 0) {
+                        $scope.master.suggestions = suggestions;
+                        $scope.master.suggestedLexicalEntries = $scope.master.suggestions[0].suggestion;
+                        $scope.master.suggestions.splice(0, 1);
+                        $state.go('merge.entries');
+                    } else {
+                        $state.go('merge.perspectiveFinished');
+                    }
+
+                }, function(reason) {
+                    $log.error(reason);
+                });
 
             }, function(reason) {
                 $log.error(reason);
@@ -254,6 +271,34 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
         }, function(reason) {
 
         });
+    };
+
+
+    var nextSuggestedEntries = function() {
+        if ($scope.master.suggestions.length > 0) {
+            $scope.master.suggestedLexicalEntries = $scope.master.suggestions[0].suggestion;
+            $scope.master.suggestions.splice(0, 1);
+            $state.go('merge.entries');
+        } else {
+            $state.go('merge.perspectiveFinished');
+        }
+    };
+
+    $scope.approveSuggestion = function () {
+
+        var entry1 = $scope.master.suggestedLexicalEntries[0];
+        var entry2 = $scope.master.suggestedLexicalEntries[1];
+
+        dictionaryService.moveLexicalEntry(entry1.client_id, entry1.object_id, entry2.client_id, entry2.object_id)
+            .then(function (r) {
+                nextSuggestedEntries();
+            }, function (reason) {
+                $log.error(reason);
+            });
+    };
+
+    $scope.skipSuggestion = function() {
+        nextSuggestedEntries();
     };
 
     dictionaryService.getDictionariesWithPerspectives({'user_created': [userId]}).then(function(dictionaries) {

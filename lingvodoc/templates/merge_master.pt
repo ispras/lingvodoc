@@ -467,19 +467,36 @@
 
         <div class="panel-footer">
 
-            <a ui-sref="merge.mode" class="btn btn-primary">
-                <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
+            <a class="btn btn-danger" ng-click="skipSuggestion()">
+                 Skip <span class="glyphicon glyphicon-remove"></span>
             </a>
 
-            <a class="btn btn-primary" ng-click="startMergePerspectives()">
-                Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
+            <a class="btn btn-primary" ng-click="approveSuggestion()">
+                Approve <span class="glyphicon glyphicon-ok"></span>
             </a>
         </div>
     </div>
 
 </script>
 
+<script type="text/ng-template" id="mergeEntriesFinished.html">
 
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Congratulations</h3>
+        </div>
+        <div class="panel-body">
+
+            Merge is complete!
+
+        </div>
+
+        <div class="panel-footer">
+
+        </div>
+    </div>
+
+</script>
 
 
 

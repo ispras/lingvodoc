@@ -541,7 +541,6 @@ function lingvodocAPI($http, $q) {
 
     var editOrganization = function(org) {
         var deferred = $q.defer();
-        console.log(org);
 
         var url = '/organization/' + encodeURIComponent(org.organization_id) ;
 
@@ -628,19 +627,6 @@ function lingvodocAPI($http, $q) {
 
     var mergeDictionaries = function(tranlation, translation_string, d1, d2) {
 
-        /*
-         { "name": <new_dictionary_name>,
-         #   "translation": <new_name_translation>,
-         #   "language_client_id": <language_client_id>,
-         #   "language_object_id": <language_object_id>,
-         #   "dictionaries":
-         #   [
-         #     {"dictionary_client_id": <first_dictionary_client_id>, "dictionary_object_id": <first_dictionary_object_id>},
-         #     {"dictionary_client_id": <second_dictionary_client_id>, "dictionary_object_id": <second_dictionary_object_id>}
-         #   ]
-         */
-
-
         var deferred = $q.defer();
         var req = {
             'translation': tranlation,
@@ -653,7 +639,7 @@ function lingvodocAPI($http, $q) {
             deferred.reject('Failed to merge perspectives');
         });
         return deferred.promise;
-    }
+    };
 
     var mergePerspectives = function(req) {
         var deferred = $q.defer();
@@ -666,6 +652,22 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
+
+    var getSuggestionLexicalEntry = function(entry) {
+        var deferred = $q.defer();
+        getLexicalEntry(entry.suggestion[0].lexical_entry_client_id, entry.suggestion[0].lexical_entry_object_id).then(function (e1) {
+            getLexicalEntry(entry.suggestion[1].lexical_entry_client_id, entry.suggestion[1].lexical_entry_object_id).then(function (e2) {
+                deferred.resolve({ 'confidence': entry.confidence, 'suggestion': [e1, e2] });
+            }, function (reason) {
+                deferred.reject('Failed to fetch lexical entry: ' + reason);
+            });
+
+        }, function (reason) {
+            deferred.reject('Failed to fetch lexical entry: ' + reason);
+        });
+
+        return deferred.promise;
+    };
 
 
     var mergeSuggestions = function(perspective) {
@@ -681,13 +683,41 @@ function lingvodocAPI($http, $q) {
         };
 
         $http.post('/merge/suggestions', body).success(function(data, status, headers, config) {
-            deferred.resolve(data);
+
+            if (angular.isArray(data)) {
+                var r = data.map(function (e) {
+                    return getSuggestionLexicalEntry(e);
+                });
+                $q.all(r).then(function (results) {
+                    deferred.resolve(results);
+                });
+            }
         }).error(function(data, status, headers, config) {
             deferred.reject('Failed to fetch merge suggestions');
         });
         return deferred.promise;
     };
 
+    var getLexicalEntry = function(clientId, objectId) {
+        var deferred = $q.defer();
+        $http.get('/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId)).success(function(data, status, headers, config) {
+            deferred.resolve(data.lexical_entry);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to fetch lexical entry');
+        });
+        return deferred.promise;
+    };
+
+    var moveLexicalEntry = function(clientId, objectId, toClientId, toObjectId) {
+        var deferred = $q.defer();
+        var req = {'client_id': toClientId, 'object_id': toObjectId};
+        $http.patch('/lexical_entry/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(objectId) + '/move', req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to move lexical entry');
+        });
+        return deferred.promise;
+    };
 
     // Return public API.
     return ({
@@ -719,6 +749,8 @@ function lingvodocAPI($http, $q) {
         'getDictionaryPerspectives': getDictionaryPerspectives,
         'getDictionariesWithPerspectives': getDictionariesWithPerspectives,
         'mergePerspectives': mergePerspectives,
-        'mergeSuggestions': mergeSuggestions
+        'mergeSuggestions': mergeSuggestions,
+        'getLexicalEntry': getLexicalEntry,
+        'moveLexicalEntry': moveLexicalEntry
     });
 };
