@@ -27336,6 +27336,73 @@ var cloneObject = function(oldObject) {
     return JSON.parse(JSON.stringify(oldObject));
 };
 
+var lingvodoc = {};
+
+lingvodoc.Object = function(clientId, objectId) {
+    this.client_id = clientId;
+    this.object_id = objectId;
+    this.type = "abstract";
+    this.getId = function() {
+        return this.client_id + "" + this.object_id;
+    };
+    this.export = function() {
+        return {};
+    };
+};
+
+lingvodoc.Object.prototype.equals = function(obj) {
+    return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
+};
+
+lingvodoc.Language = function() {
+    this.equals = function(obj) {
+        return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
+    };
+};
+
+lingvodoc.Language.prototype = new lingvodoc.Object();
+
+lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation) {
+    this.client_id = clientId;
+    this.object_id = objectId;
+    this.parent_client_id = parentClientId;
+    this.parent_object_id = parentObjectId;
+    this.translation = translation;
+    this.perspectives = [];
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
+    };
+};
+
+lingvodoc.Dictionary.fromJS = function(js) {
+    return new lingvodoc.Dictionary(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation_string);
+};
+
+lingvodoc.Dictionary.prototype = new lingvodoc.Object();
+
+lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
+
+lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id, translation, translation_string, status, marked_for_deletion) {
+    lingvodoc.Object.call(this, client_id, object_id);
+    this.parent_client_id = parent_client_id;
+    this.parent_object_id = parent_object_id;
+    this.translation = translation;
+    this.translation_string = translation_string;
+    this.status = status;
+    this.marked_for_deletion = marked_for_deletion;
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
+    };
+};
+
+lingvodoc.Perspective.fromJS = function(js) {
+    return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.marked_for_deletion);
+};
+
+lingvodoc.Perspective.prototype = new lingvodoc.Object();
+
+lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
+
 function lingvodocAPI($http, $q) {
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
@@ -27731,6 +27798,58 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getDictionaries = function(query) {
+        var deferred = $q.defer();
+        var dictionaries = [];
+        $http.post("/dictionaries", query).success(function(data, status, headers, config) {
+            for (var i = 0; i < data.dictionaries.length; i++) {
+                var dictionary = data.dictionaries[i];
+                dictionaries.push(lingvodoc.Dictionary.fromJS(dictionary));
+            }
+            deferred.resolve(dictionaries);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch dictionaries list");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryPerspectives = function(dictionary) {
+        var deferred = $q.defer();
+        var perspectives = [];
+        var getPerspectivesUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspectives";
+        $http.get(getPerspectivesUrl).success(function(data, status, headers, config) {
+            angular.forEach(data.perspectives, function(jspers) {
+                perspectives.push(lingvodoc.Perspective.fromJS(jspers));
+            });
+            deferred.resolve(perspectives);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspectives list");
+        });
+        return deferred.promise;
+    };
+    var getDictionariesWithPerspectives = function(query) {
+        var deferred = $q.defer();
+        getDictionaries(query).then(function(dictionaries) {
+            var r = dictionaries.map(function(d) {
+                return getDictionaryPerspectives(d);
+            });
+            $q.all(r).then(function(results) {
+                angular.forEach(dictionaries, function(dictionary, index) {
+                    dictionary.perspectives = results[index];
+                });
+                deferred.resolve(dictionaries);
+            });
+        }, function() {});
+        return deferred.promise;
+    };
+    var mergePerspectives = function(req) {
+        var deferred = $q.defer();
+        $http.post("/merge/perspectives", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to merge perspectives");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -27755,7 +27874,11 @@ function lingvodocAPI($http, $q) {
         createOrganization: createOrganization,
         getOrganization: getOrganization,
         editOrganization: editOrganization,
-        searchUsers: searchUsers
+        searchUsers: searchUsers,
+        getDictionaries: getDictionaries,
+        getDictionaryPerspectives: getDictionaryPerspectives,
+        getDictionariesWithPerspectives: getDictionariesWithPerspectives,
+        mergePerspectives: mergePerspectives
     };
 }
 

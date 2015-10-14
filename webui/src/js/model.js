@@ -64,3 +64,14 @@ model.MarkupValue = function(name, mime, content) {
     };
 };
 model.MarkupValue.prototype = new model.Value();
+
+
+
+
+
+
+
+
+
+
+
