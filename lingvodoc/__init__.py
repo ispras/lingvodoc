@@ -173,7 +173,7 @@ def configure_routes(config):
     # Get or change visibility state for perspective. States are: 'frozen', 'WiP', 'published'
     config.add_route(name='perspective_status',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                     '/perspective/{perspective_client_id}/{perspective_id}/status',
+                     '/perspective/{perspective_client_id}/{perspective_id}/state',
                      factory='lingvodoc.models.PerspectiveAcl')  # 100% ready
 
     # API #GET && POST && DELETE
