@@ -576,7 +576,8 @@ def view_perspectives(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        perspectives += [resp.json]
+        if 'error' not in resp.json:
+            perspectives += [resp.json]
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
     return response
