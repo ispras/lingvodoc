@@ -2591,7 +2591,9 @@ def merge_dictionaries(request):
         parent_object_id = req['language_object_id']
         parent_client_id = req['language_client_id']
         translation_string = req['translation_string']
-        translation = req['translation']
+        translation = translation_string
+        if 'translation' in req:
+            translation = req['translation']
 
         dictionaries = req['dictionaries']
         if len(dictionaries) != 2:
@@ -2708,7 +2710,9 @@ def merge_perspectives_api(request):
         dictionary_client_id = req['dictionary_client_id']
         dictionary_object_id = req['dictionary_object_id']
         translation_string = req['translation_string']
-        translation = req['translation']
+        translation = translation_string
+        if 'translation' in req:
+            translation = req['translation']
 
         persps = req['perspectives']
         if len(persps) != 2:
@@ -2744,8 +2748,9 @@ def merge_perspectives_api(request):
             for entry in persp['fields']:
                 field = dict(entry)
                 new_type = field.pop('new_type_name', None)
-                field['entity_type'] = new_type
-                field['entity_type_translation'] = new_type
+                if new_type:
+                    field['entity_type'] = new_type
+                    field['entity_type_translation'] = new_type
                 if not field in fields:
                     fields += [field]
         subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' %
@@ -2766,7 +2771,10 @@ def merge_perspectives_api(request):
             # lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=cli_id, parent_object_id=obj_id).all()
 
             for lex in parent.lexicalentry:
-                metadata = json.loads(lex.additional_metadata)
+                metadata = dict()
+                if lex.additional_metadata:
+                    print('what', lex.additional_metadata, type(lex.additional_metadata))
+                    metadata = json.loads(lex.additional_metadata)
                 metadata['came_from'] = {'client_id': lex.parent_client_id, 'object_id': lex.parent_object_id}
                 lex.additional_metadata = json.dumps(metadata)
                 lex.parent = new_persp
@@ -2774,7 +2782,8 @@ def merge_perspectives_api(request):
                 for ent in lex.leveloneentity:
                     for field in persp['fields']:
                         if ent.entity_type == field['entity_type']:
-                            ent.entity_type = field['new_type_name']
+                            if 'new_type_name' in field:
+                                ent.entity_type = field['new_type_name']
                             break
             bases = DBSession.query(BaseGroup).filter_by(perspective_default=True)
             groups = []
@@ -3053,7 +3062,8 @@ try it again.
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = dict()
-    return response
+    new_type = response.pop('new_type_name', None)
+    return str(new_type)
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
@@ -3355,6 +3365,10 @@ def merge_suggestions(request):
     #entity_type_secondary = 'Transcription'
     #threshold = 0.2
     #levenstein = 2
+    entity_type_primary = req['entity_type_primary'] or 'Word'
+    entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
+    threshold = req['threshold'] or 0.2
+    levenstein = req['levenstein'] or 1
     client_id = req['client_id']
     object_id = req['object_id']
     lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = client_id, parent_object_id = object_id).all())
@@ -3362,18 +3376,13 @@ def merge_suggestions(request):
     lexes_2 = []
     if not lexes:
         return json.dumps({})
-
-    first_persp = json.loads(lexes[0].additional_metadata['came_from'])
+    first_persp = json.loads(lexes[0].additional_metadata)['came_from']
     for lex in lexes:
         meta = json.loads(lex.additional_metadata)
         if meta['came_from'] == first_persp:
-            lexes_1 += [lex.track()]
+            lexes_1 += [lex.track(False)]
         else:
-            lexes_2 += [lex.track()]
-    entity_type_primary = req['entity_type_primary'] or 'Word'
-    entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
-    threshold = req['threshold'] or 0.2
-    levenstein = req['levenstein'] or 1
+            lexes_2 += [lex.track(False)]
     def parse_response(elem):
         words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
         words = map(lambda x: x['content'], words)
@@ -3385,6 +3394,7 @@ def merge_suggestions(request):
     tuples_1 = [item for sublist in tuples_1 for item in sublist]
     tuples_2 = [parse_response(i) for i in lexes_2]
     tuples_2 = [item for sublist in tuples_2 for item in sublist]
+
     def get_dict(elem):
         return {'suggestion': [
             {'lexical_entry_client_id': elem[0][0], 'lexical_entry_object_id': elem[0][1]},

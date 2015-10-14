@@ -22,6 +22,8 @@ def additional_checks(w1, w2, levenstein = 1):
 
 
 def mergeDicts(x, y, threshold = 0.0, levenstein = 1):
+    print('first', x)
+    print('second', y)
     xs = iter(sorted(flattenDict(x), key = lambda x: (x[0], x[2])))
     ys = iter(sorted(flattenDict(y), key = lambda x: (x[0], x[2])))
     def nxt(it):
@@ -50,7 +52,7 @@ def mergeDicts(x, y, threshold = 0.0, levenstein = 1):
     while x[0] == "": x = nxtx()
     while y[0] == "": y = nxty()
 
-    ycnt[y[0]] = ycnt.get(y[0], 0) + 1
+    # ycnt[y[0]] = ycnt.get(y[0], 0) + 1
     matchcnts = dict()
     while x is not None and y is not None:
         if x[0] == y[0]:
