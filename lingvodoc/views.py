@@ -67,11 +67,14 @@ from pyramid.renderers import render_to_response
 from pyramid.response import FileResponse
 
 import os
+import sys
 import shutil
 import datetime
 import base64
 import string
 import time
+import multiprocessing
+
 
 import keystoneclient.v3 as keystoneclient
 import swiftclient.client as swiftclient
@@ -114,8 +117,6 @@ def basic_search(request):
         results.append(result)
     return results
 
-from multiprocessing import Process
-
 #TODO: make it normal, it's just a test
 @view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
 def convert_dictionary(request):
@@ -130,18 +131,23 @@ def convert_dictionary(request):
 
     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
 
-    convert_one(blob.real_storage_path,
-                user.login,
-                user.password.hash,
-                parent_client_id,
-                parent_object_id)
+    # convert_one(blob.real_storage_path,
+    #             user.login,
+    #             user.password.hash,
+    #             parent_client_id,
+    #             parent_object_id)
 
-    # p = Process(target=convert_one, args=(blob.real_storage_path,
-    #                                       user.login,
-    #                                       user.password.hash,
-    #                                       parent_client_id,
-    #                                       parent_object_id))
-    # p.start()
+    # NOTE: doesn't work on Mac OS otherwise
+    if sys.platform == 'darwin':
+        multiprocessing.set_start_method('spawn')
+
+    p = multiprocessing.Process(target=convert_one, args=(blob.real_storage_path,
+                                                          user.login,
+                                                          user.password.hash,
+                                                          parent_client_id,
+                                                          parent_object_id))
+    log.debug("Conversion started")
+    p.start()
     request.response.status = HTTPOk.code
     return {"status": "Your dictionary is being converted."
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
@@ -3098,11 +3104,12 @@ def login_post(request):
 @view_config(route_name='cheatlogin', request_method='POST')
 def login_cheat(request):
     next = request.params.get('next') or request.route_url('dashboard')
-    login = request.POST.get('login', '')
-    passwordhash = request.POST.get('passwordhash', '')
-    print(login)
+    login = request.json_body.get('login', '')
+    passwordhash = request.json_body.get('passwordhash', '')
+    log.debug("Logging in with cheat method:" + login)
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.password.hash == passwordhash:
+        log.debug("Login successful")
         client = Client(user_id=user.id)
         user.clients.append(client)
         DBSession.add(client)
@@ -3116,6 +3123,8 @@ def login_cheat(request):
         response.set_cookie(key='locale_id', value=str(locale_id))
         headers = remember(request, principal=client.id)
         return HTTPFound(location=next, headers=response.headers)
+
+    log.debug("Login unsuccessful for " + login)
     return HTTPUnauthorized(location=request.route_url('login'))
 
 @view_config(route_name='logout', renderer='json')

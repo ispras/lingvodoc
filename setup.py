@@ -22,7 +22,9 @@ requires = [
     'py-bcrypt',
     'requests',
     'simplejson',
-    'nltk'
+    'nltk',
+    'python-keystoneclient',
+    'python-swiftclient'
     ]
 
 setup(name='lingvodoc',

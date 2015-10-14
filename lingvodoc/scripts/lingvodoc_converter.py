@@ -1,16 +1,9 @@
 import sqlite3
-import re
-import sys
-import os
-import subprocess
-import glob
-import json
-
-import argparse
 import base64
 import requests
 import json
 import hashlib
+import logging
 
 
 def get_dict_attributes(sqconn):
@@ -31,8 +24,9 @@ def get_dict_attributes(sqconn):
 
 
 def upload_audio(upload_url, audio_sequence, markup_sequence, session):
+    log = logging.getLogger(__name__)
     status = session.post(upload_url, json.dumps(audio_sequence))
-    print(status.text)
+    log.debug(status.text)
     audio_ids_list = json.loads(status.text)
     if markup_sequence:
         for k in range(0, len(audio_ids_list)):
@@ -41,7 +35,7 @@ def upload_audio(upload_url, audio_sequence, markup_sequence, session):
             markup_sequence[k]["parent_client_id"] = parent_client_id
             markup_sequence[k]["parent_object_id"] = parent_object_id
         status = session.post(upload_url, json.dumps(markup_sequence))
-    print(status.text)
+    log.debug(status.text)
 
 
 def upload_audio_simple(session, ids_mapping, sound_and_markup_cursor, upload_url, audio_hashes, entity_types,
@@ -121,6 +115,7 @@ def change_dict_status(session, converting_status_url, status):
 
 
 def convert_db_new(sqconn, session, language_client_id, language_object_id, server_url, locale_id=1):
+    log = logging.getLogger(__name__)
     dict_attributes = get_dict_attributes(sqconn)
     create_dictionary_request = {"parent_client_id": language_client_id,
                                  "parent_object_id": language_object_id,
@@ -212,13 +207,13 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                             ("transcription", "Transcription"),
                             ("translation", "Translation")]:
         status = prepare_and_upload_text_entities("id", True, column_and_type[0], column_and_type[1])
-        print(status.text)
+        log.debug(status.text)
 
     for column_and_type in [("word", "Paradigm word"),
                             ("transcription", "Paradigm transcription"),
                             ("translation", "Paradigm translation")]:
         status = prepare_and_upload_text_entities("regular_form", False, column_and_type[0], column_and_type[1])
-        print(status.text)
+        log.debug(status.text)
 
     change_dict_status(session, converting_status_url, 'Converting 35%')
 
@@ -238,7 +233,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     entity_types = ['Sound', 'Praat markup']
     upload_audio_with_markup(session, ids_mapping, sound_and_markup_word_cursor, create_entities_url, audio_hashes,
                              entity_types, locale_id)
-    print(audio_hashes)
+    log.debug(audio_hashes)
 
     change_dict_status(session, converting_status_url, 'Converting 45%')
 
@@ -257,7 +252,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     entity_types = ['Paradigm sound', "Paradigm Praat markup"]
     upload_audio_with_markup(session, ids_mapping, paradigm_sound_and_markup_cursor, create_entities_url, audio_hashes,
                              entity_types, locale_id)
-    print(audio_hashes)
+    log.debug(audio_hashes)
 
     change_dict_status(session, converting_status_url, 'Converting 60%')
 
@@ -308,7 +303,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
         item = {"entity_type": "Etymology", "content": cursor[1],
                 "connections": [{"client_id": client_id, "object_id": object_id}]}
         status = session.post(connect_url, json.dumps(item))
-        print(status.text)
+        log.debug(status.text)
 
     change_dict_status(session, converting_status_url, 'Converted 100%')
 
@@ -317,21 +312,35 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
 
     return dictionary
 
-
 def convert_one(filename, login, password_hash, language_client_id, language_object_id,
                 server_url="http://localhost:6543/"):
+    log = logging.getLogger(__name__)
+    log.debug("Starting convert_one")
+    log.debug("Creating session")
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=3)
     session.mount('http://', adapter)
-    cookie_set = session.post(server_url + 'cheatlogin', data={'login': login, 'passwordhash': password_hash})
+    log.debug("Going to login")
+    login_data = json.dumps({"login": login, "passwordhash": password_hash})
+    log.debug("Login data: " + str(login_data))
+    cookie_set = session.post(server_url + 'cheatlogin', data=login_data)
+    log.debug("Login status:" + str(cookie_set.status_code))
+    if cookie_set.status_code != 200:
+        log.error("Cheat login for conversion was unsuccessful")
+        exit(-1)
     sqconn = sqlite3.connect(filename)
+    log.debug("Connected to sqlite3 database")
     status = convert_db_new(sqconn, session, language_client_id, language_object_id, server_url)
-    print(status)
+    log.debug(status)
     return status
 
 
 if __name__ == "__main__":
-    convert_one(filename="/tmp/userblobs/dialeqt_dictionary/2/2/nenets_kaninski.sqlite", login="admin",
-                password_hash="$2a$12$KvDDjwRcEfBIc2np4eTINO9QrYt9V7.mDH8oCThGUZysXJ20z4Rxu",
-                language_client_id=1, language_object_id=1, server_url="http://10.10.10.61:6543/")
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)
+    logging.basicConfig(format='%(asctime)s\t%(levelname)s\t[%(name)s]\t%(message)s')
+    log.debug("!!!!!!!!!! YOU SHOULD NOT SEE IT !!!!!!!!")
+    convert_one(filename="/tmp/userblobs/dialeqt_dictionary/2/1/chalkan (2).sqlite", login="admin",
+                password_hash="$2a$12$W5UsrDmx0oHbSL925OMVEu6ke51nLQKcS2A7cc4DQo1nCka0vWDBa",
+                language_client_id=1, language_object_id=1, server_url="http://localhost:6543/")
