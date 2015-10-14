@@ -28607,7 +28607,6 @@ function lingvodocAPI($http, $q) {
     };
     var editOrganization = function(org) {
         var deferred = $q.defer();
-        console.log(org);
         var url = "/organization/" + encodeURIComponent(org.organization_id);
         $http.put(url, org).success(function(data, status, headers, config) {
             deferred.resolve(data);
@@ -28668,6 +28667,19 @@ function lingvodocAPI($http, $q) {
         }, function() {});
         return deferred.promise;
     };
+    var mergeDictionaries = function(tranlation, translation_string, d1, d2) {
+        var deferred = $q.defer();
+        var req = {
+            translation: tranlation,
+            translation_string: translation_string
+        };
+        $http.post("/merge/dictionaries", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to merge perspectives");
+        });
+        return deferred.promise;
+    };
     var mergePerspectives = function(req) {
         var deferred = $q.defer();
         $http.post("/merge/perspectives", req).success(function(data, status, headers, config) {
@@ -28677,19 +28689,65 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var mergeSuggestions = function(perspective1, perspective2) {
+    var getSuggestionLexicalEntry = function(entry) {
         var deferred = $q.defer();
-        var body = [ {
-            perspective_client_id: perspective1.client_id,
-            perspective_object_id: perspective1.object_id
-        }, {
-            perspective_client_id: perspective2.client_id,
-            perspective_object_id: perspective2.object_id
-        } ];
-        $http.post("/merge/suggestions/", body).success(function(data, status, headers, config) {
-            deferred.resolve(data);
+        getLexicalEntry(entry.suggestion[0].lexical_entry_client_id, entry.suggestion[0].lexical_entry_object_id).then(function(e1) {
+            getLexicalEntry(entry.suggestion[1].lexical_entry_client_id, entry.suggestion[1].lexical_entry_object_id).then(function(e2) {
+                deferred.resolve({
+                    confidence: entry.confidence,
+                    suggestion: [ e1, e2 ]
+                });
+            }, function(reason) {
+                deferred.reject("Failed to fetch lexical entry: " + reason);
+            });
+        }, function(reason) {
+            deferred.reject("Failed to fetch lexical entry: " + reason);
+        });
+        return deferred.promise;
+    };
+    var mergeSuggestions = function(perspective) {
+        var deferred = $q.defer();
+        var body = {
+            entity_type_primary: "Word",
+            entity_type_secondary: "Transcription",
+            threshold: .6,
+            levenstein: 3,
+            client_id: perspective.client_id,
+            object_id: perspective.object_id
+        };
+        $http.post("/merge/suggestions", body).success(function(data, status, headers, config) {
+            if (angular.isArray(data)) {
+                var r = data.map(function(e) {
+                    return getSuggestionLexicalEntry(e);
+                });
+                $q.all(r).then(function(results) {
+                    deferred.resolve(results);
+                });
+            }
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to fetch merge suggestions");
+        });
+        return deferred.promise;
+    };
+    var getLexicalEntry = function(clientId, objectId) {
+        var deferred = $q.defer();
+        $http.get("/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId)).success(function(data, status, headers, config) {
+            deferred.resolve(data.lexical_entry);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch lexical entry");
+        });
+        return deferred.promise;
+    };
+    var moveLexicalEntry = function(clientId, objectId, toClientId, toObjectId) {
+        var deferred = $q.defer();
+        var req = {
+            client_id: toClientId,
+            object_id: toObjectId
+        };
+        $http.patch("/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/move", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
         });
         return deferred.promise;
     };
@@ -28722,7 +28780,9 @@ function lingvodocAPI($http, $q) {
         getDictionaryPerspectives: getDictionaryPerspectives,
         getDictionariesWithPerspectives: getDictionariesWithPerspectives,
         mergePerspectives: mergePerspectives,
-        mergeSuggestions: mergeSuggestions
+        mergeSuggestions: mergeSuggestions,
+        getLexicalEntry: getLexicalEntry,
+        moveLexicalEntry: moveLexicalEntry
     };
 }
 
@@ -28741,13 +28801,19 @@ app.config(function($stateProvider, $urlRouterProvider) {
         templateUrl: "mergeMasterMode.html"
     }).state("merge.selectDictionaries", {
         url: "/source-dictionaries",
-        templateUrl: "mergeMasterMode.html"
+        templateUrl: "mergeMasterSelectDictionaries.html"
     }).state("merge.selectPerspectives", {
         url: "/source-perspectives",
         templateUrl: "mergeMasterSourcePerspectives.html"
     }).state("merge.perspectives", {
         url: "/merge-perspectives",
         templateUrl: "mergePerspectives.html"
+    }).state("merge.entries", {
+        url: "/entries",
+        templateUrl: "mergeEntries.html"
+    }).state("merge.perspectiveFinished", {
+        url: "/entries/finished",
+        templateUrl: "mergeEntriesFinished.html"
     });
     $urlRouterProvider.otherwise("/merge/intro");
 });
@@ -28760,6 +28826,10 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
     $scope.dictionaries = [];
     $scope.master = {
         mergeMode: "dictionaries",
+        selectedSourceDictionaryId1: "None",
+        selectedSourceDictionaryId2: "None",
+        selectedSourceDictionary1: {},
+        selectedSourceDictionary2: {},
         selectedSourceDictionaryId: "None",
         selectedSourceDictionary: {},
         perspectiveId1: "",
@@ -28767,7 +28837,11 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
         perspective1: {},
         perspective2: {},
         perspectiveName: "",
-        perspectivePreview: []
+        perspectivePreview: [],
+        dictionaryTable: [],
+        mergedPerspectiveFields: [],
+        suggestions: [],
+        suggestedLexicalEntries: []
     };
     var wrapFields = function(fields) {
         angular.forEach(fields, function(field) {
@@ -28897,9 +28971,48 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
                 fields: updateFields2
             } ]
         };
-        dictionaryService.mergePerspectives(req).then(function(result) {
-            $log.info(result);
+        dictionaryService.mergePerspectives(req).then(function(obj) {
+            $scope.master.mergedPerspectiveObject = obj;
+            var url = "/dictionary/" + $scope.master.selectedSourceDictionary.client_id + "/" + $scope.master.selectedSourceDictionary.object_id + "/perspective/" + obj.client_id + "/" + obj.object_id + "/fields";
+            dictionaryService.getPerspectiveDictionaryFields(url).then(function(fields) {
+                $scope.master.mergedPerspectiveFields = fields;
+                dictionaryService.mergeSuggestions(obj).then(function(suggestions) {
+                    if (suggestions.length > 0) {
+                        $scope.master.suggestions = suggestions;
+                        $scope.master.suggestedLexicalEntries = $scope.master.suggestions[0].suggestion;
+                        $scope.master.suggestions.splice(0, 1);
+                        $state.go("merge.entries");
+                    } else {
+                        $state.go("merge.perspectiveFinished");
+                    }
+                }, function(reason) {
+                    $log.error(reason);
+                });
+            }, function(reason) {
+                $log.error(reason);
+            });
         }, function(reason) {});
+    };
+    var nextSuggestedEntries = function() {
+        if ($scope.master.suggestions.length > 0) {
+            $scope.master.suggestedLexicalEntries = $scope.master.suggestions[0].suggestion;
+            $scope.master.suggestions.splice(0, 1);
+            $state.go("merge.entries");
+        } else {
+            $state.go("merge.perspectiveFinished");
+        }
+    };
+    $scope.approveSuggestion = function() {
+        var entry1 = $scope.master.suggestedLexicalEntries[0];
+        var entry2 = $scope.master.suggestedLexicalEntries[1];
+        dictionaryService.moveLexicalEntry(entry1.client_id, entry1.object_id, entry2.client_id, entry2.object_id).then(function(r) {
+            nextSuggestedEntries();
+        }, function(reason) {
+            $log.error(reason);
+        });
+    };
+    $scope.skipSuggestion = function() {
+        nextSuggestedEntries();
     };
     dictionaryService.getDictionariesWithPerspectives({
         user_created: [ userId ]
@@ -28913,6 +29026,24 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
         for (var i = 0; i < $scope.dictionaries.length; ++i) {
             if ($scope.dictionaries[i].getId() == id) {
                 $scope.master.selectedSourceDictionary = $scope.dictionaries[i];
+                break;
+            }
+        }
+    });
+    $scope.$watch("master.selectedSourceDictionaryId1", function(id) {
+        $scope.master.selectedSourceDictionary1 = {};
+        for (var i = 0; i < $scope.dictionaries.length; ++i) {
+            if ($scope.dictionaries[i].getId() == id) {
+                $scope.master.selectedSourceDictionary1 = $scope.dictionaries[i];
+                break;
+            }
+        }
+    });
+    $scope.$watch("master.selectedSourceDictionaryId2", function(id) {
+        $scope.master.selectedSourceDictionary2 = {};
+        for (var i = 0; i < $scope.dictionaries.length; ++i) {
+            if ($scope.dictionaries[i].getId() == id) {
+                $scope.master.selectedSourceDictionary2 = $scope.dictionaries[i];
                 break;
             }
         }
@@ -28946,5 +29077,44 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
     }, true);
     $scope.$watch("master.fields2", function(fields) {
         updatePreview();
+    }, true);
+    $scope.$watch("master.suggestedLexicalEntries", function(updatedEntries) {
+        var getFieldValues = function(entry, field) {
+            var value;
+            var values = [];
+            if (entry && entry.contains) {
+                if (field.isGroup) {
+                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                        var subField = field.contains[fieldIndex];
+                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                            value = entry.contains[valueIndex];
+                            if (value.entity_type == subField.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < entry.contains.length; i++) {
+                        value = entry.contains[i];
+                        if (value.entity_type == field.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            }
+            return values;
+        };
+        var mapFieldValues = function(allEntries, allFields) {
+            var result = [];
+            for (var i = 0; i < allEntries.length; i++) {
+                var entryRow = [];
+                for (var j = 0; j < allFields.length; j++) {
+                    entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+                }
+                result.push(entryRow);
+            }
+            return result;
+        };
+        $scope.master.dictionaryTable = mapFieldValues(updatedEntries, $scope.master.mergedPerspectiveFields);
     }, true);
 } ]);
