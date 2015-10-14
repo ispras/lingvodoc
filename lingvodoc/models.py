@@ -354,6 +354,8 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     marked_for_deletion = Column(Boolean, default=False)
     translation_string = Column(UnicodeText)
     is_template = Column(Boolean, default=False)
+    import_source = Column(UnicodeText)
+    import_hash = Column(UnicodeText)
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -458,9 +460,18 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
                                 vec.remove(ent)
                 except:
                     log.debug('IDK: %s' % ent)
+        came_from = None
+        meta = None
+        if self.additional_metadata:
+            meta = json.loads(self.additional_metadata)
+        if meta:
+            if 'came_from' in meta:
+                came_from = meta['came_from']
         response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
                     "parent_client_id": self.parent_client_id,
-                    "parent_object_id": self.parent_object_id}
+                    "parent_object_id": self.parent_object_id,
+                    "marked_for_deletion": self.marked_for_deletion,
+                    "came_from": came_from}
         return response
 
 
@@ -715,7 +726,7 @@ class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
 
 
 def acl_by_groups(object_id, client_id, subject):
-    acls = [] #TODO DANGER if acls do not work -- incomment string below
+    acls = [] #DANGER if acls do not work -- uncomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
@@ -744,7 +755,7 @@ def acl_by_groups(object_id, client_id, subject):
 
 
 def acl_by_groups_single_id(object_id, subject):
-    acls = [] #TODO DANGER if acls do not work -- incomment string below
+    acls = [] #DANGER if acls do not work -- uncomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
@@ -913,7 +924,6 @@ class CreateLexicalEntriesEntitiesAcl(object):
         self.request = request
 
     def __acl__(self):
-        log.debug('I\'M HERE')
         acls = []
         object_id=None
         try:

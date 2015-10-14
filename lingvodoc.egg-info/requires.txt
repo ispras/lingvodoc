@@ -12,3 +12,5 @@ py-bcrypt
 requests
 simplejson
 nltk
+python-keystoneclient
+python-swiftclient
