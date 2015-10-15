@@ -613,7 +613,9 @@ def create_perspective(request):
         perspective = DictionaryPerspective(object_id=DBSession.query(DictionaryPerspective).filter_by(client_id=client.id).count() + 1,
                                             client_id=variables['auth'],
                                             state='WiP',
-                                            parent = parent)
+                                            parent=parent,
+                                            imported_source=req.get('imported_source'),
+                                            imported_hash=req.get('imported_hash'))
         perspective.set_translation(request)
         DBSession.add(perspective)
         DBSession.flush()
