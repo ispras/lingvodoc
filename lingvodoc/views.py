@@ -3602,16 +3602,13 @@ def edit_dictionary_get(request):
 def view_dictionary_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
 
     dictionary_client_id = request.matchdict.get('dictionary_client_id')
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
     perspective_id = request.matchdict.get('perspective_id')
 
-    variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
+    variables = {'user': user, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
                  'perspective_id': perspective_id}
 
