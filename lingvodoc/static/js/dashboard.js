@@ -28157,7 +28157,7 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
     };
     $scope.publish = function() {
         var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/state";
-        dictionaryService.setDictionaryStatus(url, "published");
+        dictionaryService.setDictionaryStatus(url, "Published");
     };
     $scope.ok = function() {
         var language = getSelectedLanguage();
@@ -28196,7 +28196,7 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
         }
     };
     $scope.publish = function() {
-        dictionaryService.setPerspectiveStatus(params.dictionary, $scope.perspective, "published");
+        dictionaryService.setPerspectiveStatus(params.dictionary, $scope.perspective, "Published");
     };
     $scope.ok = function() {
         var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/perspective/" + encodeURIComponent(params.perspective.client_id) + "/" + encodeURIComponent(params.perspective.object_id) + "/fields";
