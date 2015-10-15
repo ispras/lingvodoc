@@ -28581,7 +28581,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         var rowId = maxRowId + 1;
         $scope.entries.push({
             row_id: rowId,
-            client_id: dictionaryClientId,
+            client_id: $scope.parentEntry.client_id,
             object_id: $scope.parentEntry.object_id,
             contains: []
         });
@@ -28637,7 +28637,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.saveValue = function(entry, field, value, parent) {
         var entryObject = value.export();
         entryObject["entity_type"] = field.entity_type;
-        entryObject["locale_id"] = 1;
+        entryObject["locale_id"] = getCookie("locale_id");
         if (entry.client_id && entry.row_id) {
             entryObject["additional_metadata"] = {
                 row_id: entry.row_id,
@@ -28651,8 +28651,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
                     break;
                 }
             }
-            $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
-            $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
+            $scope.disableInput(entry.client_id, entry.row_id, field.entity_type);
         }, function(reason) {
             $log.error(reason);
         });

@@ -29,6 +29,8 @@
 
 <div class="container" ng-controller="LanguagesController" ng-cloak>
 
+    <button class="btn btn-primary" ng-click="createLanguage();">Create language...</button>
+
 
     <div ng-if="languages.length > 0">
         <ul>
@@ -40,9 +42,6 @@
     <div ng-if="languages.length == 0">
         <span>No languages</span>
     </div>
-    
-
-    <button class="btn btn-primary" ng-click="createLanguage();">Create language...</button>
 
 </div>
 

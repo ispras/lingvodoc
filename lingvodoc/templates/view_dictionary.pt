@@ -128,7 +128,7 @@
 
                             <button type="button" class="btn btn-default btn-sm"
                                     ng-click="viewGroup(lexicalEntry, field, fieldValues)">
-                                <span class="glyphicon glyphicon-list">Edit</span>
+                                <span class="glyphicon glyphicon-list">View</span>
                             </button>
 
                         </div>
@@ -139,7 +139,7 @@
 
                         <button type="button" class="btn btn-default btn-sm"
                                 ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)">
-                            <span class="glyphicon glyphicon-list">Edit</span>
+                            <span class="glyphicon glyphicon-list">View</span>
                         </button>
 
                     </div>
@@ -455,25 +455,6 @@
                                         </button>
                                     </li>
                                 </ul>
-
-                            </div>
-
-                            <div ng-if="fieldsIdx[$index].isGroup">
-
-                                <button type="button" class="btn btn-default btn-sm"
-                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
-                                    <span class="glyphicon glyphicon-plus"></span>
-                                </button>
-
-                            </div>
-
-
-                            <div ng-if="fieldsIdx[$index].data_type == 'grouping_tag'">
-
-                                <button type="button" class="btn btn-default btn-sm"
-                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
-                                    <span class="glyphicon glyphicon-plus"></span>
-                                </button>
 
                             </div>
 

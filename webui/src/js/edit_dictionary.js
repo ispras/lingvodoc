@@ -649,7 +649,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
             $scope.entries.push({
                 'row_id': rowId,
-                'client_id': dictionaryClientId,
+                'client_id': $scope.parentEntry.client_id,
                 'object_id': $scope.parentEntry.object_id,
                 'contains': []
             });
@@ -721,7 +721,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
             // TODO: get locale_id from cookies
             entryObject['entity_type'] = field.entity_type;
-            entryObject['locale_id'] = 1;
+            entryObject['locale_id'] = getCookie('locale_id');
 
             if (entry.client_id && entry.row_id) {
                 entryObject['additional_metadata'] = {
@@ -742,10 +742,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 }
 
                 // and finally close input
-                $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
-
-                // and finally close input
-                $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
+                $scope.disableInput(entry.client_id, entry.row_id, field.entity_type);
 
             }, function(reason) {
                 $log.error(reason);
