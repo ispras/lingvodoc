@@ -67,11 +67,15 @@ from pyramid.renderers import render_to_response
 from pyramid.response import FileResponse
 
 import os
+import sys
 import shutil
 import datetime
 import base64
 import string
 import time
+import multiprocessing
+if sys.platform == 'darwin':
+    multiprocessing.set_start_method('spawn')
 
 import keystoneclient.v3 as keystoneclient
 import swiftclient.client as swiftclient
@@ -114,8 +118,6 @@ def basic_search(request):
         results.append(result)
     return results
 
-from multiprocessing import Process
-
 #TODO: make it normal, it's just a test
 @view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
 def convert_dictionary(request):
@@ -130,18 +132,21 @@ def convert_dictionary(request):
 
     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
 
-    convert_one(blob.real_storage_path,
-                user.login,
-                user.password.hash,
-                parent_client_id,
-                parent_object_id)
+    # convert_one(blob.real_storage_path,
+    #             user.login,
+    #             user.password.hash,
+    #             parent_client_id,
+    #             parent_object_id)
 
-    # p = Process(target=convert_one, args=(blob.real_storage_path,
-    #                                       user.login,
-    #                                       user.password.hash,
-    #                                       parent_client_id,
-    #                                       parent_object_id))
-    # p.start()
+    # NOTE: doesn't work on Mac OS otherwise
+
+    p = multiprocessing.Process(target=convert_one, args=(blob.real_storage_path,
+                                                          user.login,
+                                                          user.password.hash,
+                                                          parent_client_id,
+                                                          parent_object_id))
+    log.debug("Conversion started")
+    p.start()
     request.response.status = HTTPOk.code
     return {"status": "Your dictionary is being converted."
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
@@ -2270,8 +2275,8 @@ def lexical_entries_all_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).scalar()
+            lexical_entries_count = DBSession.query(LexicalEntry)\
+                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).count()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -2382,7 +2387,7 @@ def lexical_entries_published_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(func.count(LexicalEntry.object_id))\
+            lexical_entries_count = DBSession.query(LexicalEntry)\
                 .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .outerjoin(PublishGroupingEntity)\
                 .outerjoin(PublishLevelOneEntity)\
@@ -2391,7 +2396,8 @@ def lexical_entries_published_count(request):
                             PublishLevelOneEntity.marked_for_deletion==False,
                             PublishLevelTwoEntity.marked_for_deletion==False,
                             ))\
-                .group_by(LexicalEntry).scalar()
+                .group_by(LexicalEntry).count()
+
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -3286,11 +3292,12 @@ def login_post(request):
 @view_config(route_name='cheatlogin', request_method='POST')
 def login_cheat(request):
     next = request.params.get('next') or request.route_url('dashboard')
-    login = request.POST.get('login', '')
-    passwordhash = request.POST.get('passwordhash', '')
-    print(login)
+    login = request.json_body.get('login', '')
+    passwordhash = request.json_body.get('passwordhash', '')
+    log.debug("Logging in with cheat method:" + login)
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.password.hash == passwordhash:
+        log.debug("Login successful")
         client = Client(user_id=user.id)
         user.clients.append(client)
         DBSession.add(client)
@@ -3304,6 +3311,8 @@ def login_cheat(request):
         response.set_cookie(key='locale_id', value=str(locale_id))
         headers = remember(request, principal=client.id)
         return HTTPFound(location=next, headers=response.headers)
+
+    log.debug("Login unsuccessful for " + login)
     return HTTPUnauthorized(location=request.route_url('login'))
 
 @view_config(route_name='logout', renderer='json')
@@ -3610,3 +3619,13 @@ def organizations_get(request):
         return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user }
     return render_to_response('templates/organizations.pt', variables, request=request)
+
+@view_config(route_name='merge_master', renderer='templates/merge_master.pt', request_method='GET')
+def merge_master_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+    variables = {'client_id': client_id, 'user': user }
+    return render_to_response('templates/merge_master.pt', variables, request=request)

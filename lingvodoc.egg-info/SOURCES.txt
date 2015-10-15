@@ -1,9 +1,8 @@
 CHANGES.md
 MANIFEST.in
 README.md
-alembic.ini
+al-indigo.ini
 alembic_base.ini
-andrey.ini
 development.ini
 log.txt
 postgres.ini
@@ -26,6 +25,7 @@ lingvodoc.egg-info/requires.txt
 lingvodoc.egg-info/top_level.txt
 lingvodoc/scripts/__init__.py
 lingvodoc/scripts/corpora_converter.py
+lingvodoc/scripts/corpus.xml
 lingvodoc/scripts/initializedb.py
 lingvodoc/scripts/lingvodoc_converter.py
 lingvodoc/static/css/lingvodoc.css
