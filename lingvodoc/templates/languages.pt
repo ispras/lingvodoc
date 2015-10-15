@@ -31,10 +31,8 @@
 
 
     <div ng-if="languages.length > 0">
-        <ul ng-repeat="language in languages">
-            <li>
-                {{ language.translation_string }}
-            </li>
+        <ul>
+            <li ng-repeat="language in languages" ng-include="'languageTemplate.html'"></li>
         </ul>
     </div>
 
@@ -58,22 +56,29 @@
 
         <!-- parent language -->
         <label for="parentLanguage">Parent language</label>
-        <select id="parentLanguage" class="form-control" ng-model="parentLanguageId" ng-options="language.object_id as language.translation_string for language in languages track by language.object_id">
+        <select id="parentLanguage" class="form-control" ng-model="parentLanguageId"
+                ng-options="getLanguageId(language) as language.translation_string for language in languages track by getLanguageId(language)">
 
         </select>
 
         <label for="translation">Translation</label>
-        <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus ng-model="translation">
-        <!--?<label for="translationString">Translation string</label>-->
-        <!--?<input type="text" id="translationString" name="translationString" class="form-control" placeholder="" required ng-model="translationString">-->
-
+        <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus
+               ng-model="translation">
     </div>
 
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
     </div>
 
+</script>
+
+<script type="text/ng-template" id="languageTemplate.html">
+    <h4>{{ language.translation }}</h4>
+
+    <ul ng-if="language.contains">
+        <li ng-repeat="language in language.contains" ng-include="'languageTemplate.html'">
+        </li>
+    </ul>
 </script>
 
 </body>
