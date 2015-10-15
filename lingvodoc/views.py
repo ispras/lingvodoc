@@ -1163,9 +1163,8 @@ def language_dicts(lang, dicts, request):
             language_dicts(lan, dicts, request)
     return
 
+
 def group_by_languages(dicts, request):
-        dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
-            .filter(DictionaryPerspective.state == 'Published')
         path = request.route_url('get_languages')
         subreq = Request.blank(path)
         subreq.method = 'GET'
@@ -1179,17 +1178,87 @@ def group_by_languages(dicts, request):
                 return langs
 
 
-def participated_clients_list(obj):
-    clients = []
-    clients += [obj.client_id]
-    for entry in dir(obj):
-        if entry in inspect(type(obj)).relationships:
-            i = inspect(obj.__class__).relationships[entry]
-            if i.direction.name == "ONETOMANY":
-                x = getattr(obj, str(entry))
-                for xx in x:
-                    clients += participated_clients_list(xx)
+def participated_clients_rec(entry):
+    clients = [entry.client_id]
+    for ent in entry.contains:
+        clients += participated_clients_rec(ent)
     return clients
+
+
+def participated_clients_list(dictionary, request):
+    clients = [dictionary.client_id]
+    for persp in dictionary.dictionaryperspective:
+        if persp.state == 'Published':
+            path = request.route_url('lexical_entries_published',
+                                     dictionary_client_id = dictionary.client_id,
+                                     dictionary_object_id = dictionary.object_id,
+                                     perspective_client_id = persp.client_id,
+                                     perspective_id = persp.object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            print('STATES', dictionary.state, persp.state)
+            resp = request.invoke_subrequest(subreq)
+            if not 'error' in resp.json:
+                for entry in resp.json['lexical_entries']:
+                    clients += participated_clients_rec(entry)
+    return clients
+
+    # clients = []
+    # clients += [obj.client_id]
+    # for entry in dir(obj):
+    #     if entry in inspect(type(obj)).relationships:
+    #         i = inspect(obj.__class__).relationships[entry]
+    #         if i.direction.name == "ONETOMANY":
+    #             x = getattr(obj, str(entry))
+    #             for xx in x:
+    #                 clients += participated_clients_list(xx)
+    # return clients
+
+
+def group_by_organizations(dicts, request):
+        dicts_with_users = []
+        for dct in dicts:
+            users = []
+            for client in participated_clients_list(dct, request):
+                user = DBSession.query(User).join(Client).filter_by(id = client).first()
+                if user not in users:
+                    users += [user]
+            dicts_with_users += [(dct.object_id, dct.client_id, users)]
+        organizations = []
+        for organization in DBSession.query(Organization).filter_by(marked_for_deletion=False).all():
+            dictionaries = []
+            for dct in dicts_with_users:
+                for user in dct[2]:
+                    if user in organization.users:
+                        dictionaries += [dct]
+            path = request.route_url('organization',
+                 organization_id=organization.id)
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            resp = request.invoke_subrequest(subreq)
+            if 'error' not in resp.json:
+                org = resp.json
+
+                dictstemp = [{'client_id': o[1], 'object_id': o[0]} for o in dictionaries]
+                dictionaries = dicts
+                if dictstemp:
+                    prevdicts = dictionaries\
+                        .filter_by(client_id=dictstemp[0]['client_id'],
+                                   object_id=dictstemp[0]['object_id'])
+                    dictstemp.remove(dictstemp[0])
+                    for dicti in dictstemp:
+                        prevdicts = prevdicts.subquery().select()
+                        prevdicts = dictionaries.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id'])\
+                            .union_all(prevdicts)
+
+                    dictionaries = prevdicts
+
+                org['dicts'] = dictionaries
+                organizations += [org]
+        return organizations
+
 
 
 @view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
@@ -1203,20 +1272,38 @@ def published_dictionaries_list(request):
     if 'group_by_lang' in req:
         group_by_lang = req['group_by_lang']
     dicts = DBSession.query(Dictionary)
+    dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
+        .filter(DictionaryPerspective.state == 'Published')
     if group_by_lang and not group_by_org:
         return group_by_languages(dicts, request)
     if not group_by_lang and group_by_org:
-        dicts_with_users = []
-        for dct in dicts:
-            users = []
-            for client in participated_clients_list(dct):
-                user = DBSession.query(User).join(Client).filter_by(id = client.id).first()
-                if user.id not in users:
-                    users += [user.id]
-            dicts_with_users += [(dct.object_id, dct.client_id, users)]
-
-    if group_by_lang and  group_by_org:
-        return group_by_languages(dicts, request)
+        tmp = group_by_organizations(dicts, request)
+        organizations = []
+        for org in tmp:
+            dcts = org['dicts']
+            dictionaries = []
+            for dct in dcts:
+                path = request.route_url('dictionary',
+                                         client_id=dct.client_id,
+                                         object_id=dct.object_id)
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                if 'error' not in resp.json:
+                    dictionaries += [resp.json]
+            org['dicts'] = dictionaries
+            organizations += [org]
+        return {'organizations': organizations}
+    if group_by_lang and group_by_org:
+        tmp = group_by_organizations(dicts, request)
+        organizations = []
+        for org in tmp:
+            dcts = org['dicts']
+            org['langs'] = group_by_languages(dcts, request)
+            del org['dicts']
+            organizations += [org]
+        return {'organizations': organizations}
     dictionaries = []
     for dct in dicts:
         path = request.route_url('dictionary',
