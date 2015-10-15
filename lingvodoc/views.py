@@ -1163,19 +1163,7 @@ def language_dicts(lang, dicts, request):
             language_dicts(lan, dicts, request)
     return
 
-
-@view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
-def published_dictionaries_list(request):
-    req = request.json_body
-    response = dict()
-    group_by_org = None
-    if 'group_by_org' in req:
-        group_by_org = req['group_by_org']
-    group_by_lang = None
-    if 'group_by_lang' in req:
-        group_by_lang = req['group_by_lang']
-    dicts = DBSession.query(Dictionary)
-    if group_by_lang and not group_by_org:
+def group_by_languages(dicts, request):
         dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
             .filter(DictionaryPerspective.state == 'Published')
         path = request.route_url('get_languages')
@@ -1190,7 +1178,57 @@ def published_dictionaries_list(request):
                     language_dicts(lang, dicts, request)
                 return langs
 
-    response['dictionaries'] = None
+
+def participated_clients_list(obj):
+    clients = []
+    clients += [obj.client_id]
+    for entry in dir(obj):
+        if entry in inspect(type(obj)).relationships:
+            i = inspect(obj.__class__).relationships[entry]
+            if i.direction.name == "ONETOMANY":
+                x = getattr(obj, str(entry))
+                for xx in x:
+                    clients += participated_clients_list(xx)
+    return clients
+
+
+@view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
+def published_dictionaries_list(request):
+    req = request.json_body
+    response = dict()
+    group_by_org = None
+    if 'group_by_org' in req:
+        group_by_org = req['group_by_org']
+    group_by_lang = None
+    if 'group_by_lang' in req:
+        group_by_lang = req['group_by_lang']
+    dicts = DBSession.query(Dictionary)
+    if group_by_lang and not group_by_org:
+        return group_by_languages(dicts, request)
+    if not group_by_lang and group_by_org:
+        dicts_with_users = []
+        for dct in dicts:
+            users = []
+            for client in participated_clients_list(dct):
+                user = DBSession.query(User).join(Client).filter_by(id = client.id).first()
+                if user.id not in users:
+                    users += [user.id]
+            dicts_with_users += [(dct.object_id, dct.client_id, users)]
+
+    if group_by_lang and  group_by_org:
+        return group_by_languages(dicts, request)
+    dictionaries = []
+    for dct in dicts:
+        path = request.route_url('dictionary',
+                                 client_id=dct.client_id,
+                                 object_id=dct.object_id)
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            dictionaries += [resp.json]
+    response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
     return response

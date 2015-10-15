@@ -332,6 +332,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, Tran
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
+    authors = Column(UnicodeText)
     translation_string = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
 
