@@ -385,7 +385,7 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
     $scope.$watch('master.selectedSourceDictionary1', function(dict) {
 
         var language = findLanguage(dict, $scope.master.languagesTree);
-        
+
         if (language) {
             $scope.master.suggestedDictionaries = language.dictionaries;
         }

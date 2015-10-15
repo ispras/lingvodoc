@@ -27638,6 +27638,18 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var setPerspectiveStatus = function(dictionary, perspective, status) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + dictionary.client_id + "/" + dictionary.object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/state";
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set perspective status");
+        });
+        return deferred.promise;
+    };
     var getPerspectiveFields = function(url) {
         var deferred = $q.defer();
         $http.get(url).success(function(data, status, headers, config) {
@@ -27956,6 +27968,19 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getPublishedDictionaries = function() {
+        var deferred = $q.defer();
+        var req = {
+            group_by_lang: true,
+            group_by_org: false
+        };
+        $http.post("/published_dictionaries", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -27972,6 +27997,7 @@ function lingvodocAPI($http, $q) {
         setDictionaryProperties: setDictionaryProperties,
         getLanguages: getLanguages,
         setDictionaryStatus: setDictionaryStatus,
+        setPerspectiveStatus: setPerspectiveStatus,
         getPerspectiveFields: getPerspectiveFields,
         setPerspectiveFields: setPerspectiveFields,
         getUserInfo: getUserInfo,
@@ -27989,7 +28015,8 @@ function lingvodocAPI($http, $q) {
         mergeSuggestions: mergeSuggestions,
         getLexicalEntry: getLexicalEntry,
         moveLexicalEntry: moveLexicalEntry,
-        getLanguagesFull: getLanguagesFull
+        getLanguagesFull: getLanguagesFull,
+        getPublishedDictionaries: getPublishedDictionaries
     };
 }
 
