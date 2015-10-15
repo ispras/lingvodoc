@@ -472,8 +472,31 @@ def real_delete_dictionary(request):
         for perspective in perspectives:
             fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective)
             for field in fields:
-                DBSession.delete(fields)
-
+                DBSession.delete(field)
+            lexes = DBSession.query(LexicalEntry).filter_by(parent=perspective)
+            for lex in lexes:
+                l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
+                for l1e in l1es:
+                    l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
+                    for l2e in l2es:
+                        pl2es = DBSession.query(PublishLevelTwoEntity).filter_by(entity=lex)
+                        for pl2e in pl2es:
+                            DBSession.delete(pl2e)
+                        DBSession.delete(l2e)
+                    pl1es = DBSession.query(PublishLevelOneEntity).filter_by(entity=lex)
+                    for pl1e in pl1es:
+                        DBSession.delete(pl1e)
+                    DBSession.delete(l1e)
+                ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
+                for ge in ges:
+                    pges = DBSession.query(PublishGroupingEntity).filter_by(entity=lex)
+                    for pge in pges:
+                        DBSession.delete(pge)
+                    DBSession.delete(ge)
+            DBSession.delete(perspective)
+        DBSession.delete(parent)
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
