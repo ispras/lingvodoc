@@ -461,6 +461,46 @@ def edit_dictionary_status(request):
     return {'error': str("No such dictionary in the system")}
 
 
+@view_config(route_name='dictionary_delete', renderer='json', request_method='DELETE', permission='delete')
+def real_delete_dictionary(request):
+    response = dict()
+    parent_client_id = request.matchdict.get('client_id')
+    parent_object_id = request.matchdict.get('object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if parent:
+        perspectives = DBSession.query(DictionaryPerspective).filter_by(parent=parent)
+        for perspective in perspectives:
+            fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective)
+            for field in fields:
+                DBSession.delete(field)
+            lexes = DBSession.query(LexicalEntry).filter_by(parent=perspective)
+            for lex in lexes:
+                l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
+                for l1e in l1es:
+                    l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
+                    for l2e in l2es:
+                        pl2es = DBSession.query(PublishLevelTwoEntity).filter_by(entity=lex)
+                        for pl2e in pl2es:
+                            DBSession.delete(pl2e)
+                        DBSession.delete(l2e)
+                    pl1es = DBSession.query(PublishLevelOneEntity).filter_by(entity=lex)
+                    for pl1e in pl1es:
+                        DBSession.delete(pl1e)
+                    DBSession.delete(l1e)
+                ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
+                for ge in ges:
+                    pges = DBSession.query(PublishGroupingEntity).filter_by(entity=lex)
+                    for pge in pges:
+                        DBSession.delete(pge)
+                    DBSession.delete(ge)
+            DBSession.delete(perspective)
+        DBSession.delete(parent)
+        request.response.status = HTTPOk.code
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such dictionary in the system")}
+
+
 @view_config(route_name='perspective', renderer='json', request_method='GET')
 def view_perspective(request):
     response = dict()
@@ -1510,12 +1550,6 @@ def view_perspective_fields(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-    if not client:
-        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-    user = DBSession.query(User).filter_by(id=client.user_id).first()
-    if not user:
-        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
     if perspective:
         fields = []
         for field in perspective.dictionaryperspectivefield:
@@ -2233,7 +2267,6 @@ def create_group_entity(request):
                                             entity_type=req['entity_type'], content=tag, parent=parent)
                     DBSession.add(entity)
                     DBSession.flush()
-            break
         log.debug('TAGS: %s', tags)
         request.response.status = HTTPOk.code
         return {}
@@ -3602,16 +3635,13 @@ def edit_dictionary_get(request):
 def view_dictionary_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
 
     dictionary_client_id = request.matchdict.get('dictionary_client_id')
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
     perspective_id = request.matchdict.get('perspective_id')
 
-    variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
+    variables = {'user': user, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
                  'perspective_id': perspective_id}
 

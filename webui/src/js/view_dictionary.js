@@ -360,7 +360,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
     .controller('ViewDictionaryController', ['$scope', '$window', '$http', '$modal', '$log', 'dictionaryService', function($scope, $window, $http, $modal, $log, dictionaryService) {
 
 
-        var currentClientId = $('#clientId').data('lingvodoc');
         var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
         var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
         var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
