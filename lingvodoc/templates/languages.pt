@@ -24,6 +24,7 @@
 <div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
 <div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
 
+
 <div metal:use-macro="load: nav.pt"></div>
 
 <div class="container" ng-controller="LanguagesController" ng-cloak>

@@ -37,7 +37,9 @@
      data-lingvodoc="${request.route_url('perspective_fields', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
 
 
+
 <div metal:use-macro="load: nav.pt"></div>
+<br>
 
 <div class="container-fluid" style="padding-top: 20px" ng-controller="ViewDictionaryController" ng-cloak>
 

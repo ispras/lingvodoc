@@ -209,6 +209,10 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
         }
     };
 
+    $scope.publish = function() {
+        dictionaryService.setPerspectiveStatus(params.dictionary, $scope.perspective, 'published');
+    };
+
     $scope.ok = function() {
         var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
         dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {

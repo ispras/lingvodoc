@@ -2,7 +2,10 @@
 
 angular.module('HomeModule', ['ui.bootstrap'], function($rootScopeProvider) {
     $rootScopeProvider.digestTtl(1000);
-}).controller('HomeController', ['$scope', '$http', '$modal', '$q', '$log', function($scope, $http, $modal, $q, $log) {
+})
+    .service('dictionaryService', lingvodocAPI)
+
+    .controller('HomeController', ['$scope', '$http', '$modal', '$q', '$log', 'dictionaryService', function($scope, $http, $modal, $q, $log, dictionaryService) {
 
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
     var dictionariesUrl = $('#dictionariesUrl').data('lingvodoc');
@@ -130,6 +133,12 @@ angular.module('HomeModule', ['ui.bootstrap'], function($rootScopeProvider) {
         });
     }).error(function(data, status, headers, config) {
         // error handling
+    });
+
+
+
+    dictionaryService.getPublishedDictionaries().then(function(results) {
+        $log.info(results);
     });
 
 }]);

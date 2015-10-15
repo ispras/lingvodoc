@@ -27,6 +27,7 @@
 
 <div metal:use-macro="load: nav.pt"></div>
 
+
 <div class="container" ng-controller="DashboardController" ng-cloak>
 
     <div ng-if="dictionaries.length > 0">
@@ -250,6 +251,9 @@
                 </tbody>
             </table>
         </div>
+
+        <button class="btn btn-primary" type="button" ng-click="publish()">Publish perspective</button>
+
     </div>
 
     <div class="modal-footer">
