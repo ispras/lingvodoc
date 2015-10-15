@@ -1137,6 +1137,33 @@ def check_for_client(obj, clients):
     return False
 
 
+@view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
+def published_dictionaries_list(request):
+    req = request.json_body
+    response = dict()
+    group_by_org = None
+    if 'group_by_org' in req:
+        group_by_org = req['group_by_org']
+    group_by_lang = None
+    if 'group_by_lang' in req:
+        group_by_lang = req['group_by_lang']
+    dicts = DBSession.query(Dictionary)
+    if group_by_lang and not group_by_org:
+        dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
+            .filter(DictionaryPerspective.state == 'Published')
+        path = request.route_url('get_languages')
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+
+
+    response['dictionaries'] = None
+    request.response.status = HTTPOk.code
+
+    return response
+
+
 @view_config(route_name = 'dictionaries', renderer = 'json', request_method='POST')
 def dictionaries_list(request):
     req = request.json_body
@@ -1232,7 +1259,7 @@ def dictionaries_list(request):
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
-    return response\
+    return response
 
 @view_config(route_name='all_perspectives', renderer = 'json', request_method='GET')
 def perspectives_list(request):
@@ -3029,6 +3056,7 @@ def move_lexical_entry(request):
                         publent.parent = parent
                     DBSession.flush()
                 entry.moved_to = str(cli_id) + '/' + str(obj_id)
+                entry.marked_for_deletion = True
                 request.response.status = HTTPOk.code
                 return {}
     request.response.status = HTTPNotFound.code
