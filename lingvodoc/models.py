@@ -260,14 +260,17 @@ class TranslationStringMixin(object):
         else:
             req = request.json_body
 
-        translation = req['translation_string']
+        translation = req.get('translation_string')
         if 'translation' in req:
             translation = req['translation']
+        translation_string = req.get('translation_string')
+        if cls.translation_string:
+            translation_string = cls.translation_string
         add_translation_to_translation_string(find_locale_id(request),
                                               translation,
-                                              req['translation_string'],
+                                              translation_string,
                                               request.authenticated_userid)
-        cls.translation_string = req['translation_string']
+        cls.translation_string = translation_string
         return
 
 
