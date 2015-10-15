@@ -36,7 +36,6 @@
 <div id="createLexicalEntryUrl"
      data-lingvodoc="${request.route_url('create_lexical_entry', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
 
-
 <div metal:use-macro="load: nav.pt"></div>
 
 <br>

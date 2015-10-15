@@ -23,51 +23,7 @@
 <div id="dictionariesUrl" data-lingvodoc="${request.route_url('dictionaries')}"></div>
 <div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
 
-<nav class="lingvodoc-navbar">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
-                    aria-expanded="false" aria-controls="navbar">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="#">Lingvodoc</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li tal:condition="user"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
-                <li tal:condition="user"><a href="${request.route_url('languages')}">Languages</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#about">About</a></li>
-            </ul>
-
-            <ul class="nav navbar-nav navbar-right">
-
-                <li class="dropdown" tal:condition="user">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false">${user.name}<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
-                        <li><a href="${request.route_url('blob_upload')}">Manage files</a></li>
-                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
-                    </ul>
-                </li>
-
-                <li class="dropdown" tal:condition="not: user">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false">Guest<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="${request.route_url('login')}">Sign in</a></li>
-                        <li><a href="${request.route_url('signup')}">Sign up</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
+<div metal:use-macro="load: nav.pt"></div>
 
 <div class="container" ng-controller="HomeController" ng-cloak>
 
@@ -79,24 +35,11 @@
 
     <h2>Опубликованные словари</h2>
 
-    <div ng-repeat="group in groupDictionaries">
-        <h3>{{ group.name }}</h3>
-
-        <ul class="entries_list">
-            <li ng-repeat="dictionary in group.dicts">
-                {{ dictionary.name }}
-
-                <ul class="entries_list">
-                    <li ng-repeat="p in dictionary.links">
-                        <a href="{{ p.link }}">{{ p.name }}</a>
-                    </li>
-                </ul>
-
-            </li>
+    <div>
+        <ul>
+            <li ng-repeat="language in languages" ng-include="'languageTemplate.html'"></li>
         </ul>
-
     </div>
-
 
     <h1>О проекте</h1>
 
@@ -181,16 +124,25 @@
         <p>
     </div>
 
-
-
-
-
-
-
-
-
-
 </div>
+
+<script type="text/ng-template" id="languageTemplate.html">
+    <h3>{{ language.translation }}</h3>
+
+    <ul>
+        <li ng-repeat="dictionary in language.dicts">
+            {{ dictionary.translation }} <span ng-repeat="perspective in dictionary.perspectives">
+                <a ng-attr-href=" {{ getPerspectiveLink(dictionary, perspective) }}">{{ perspective.translation }}</a>
+        </span>
+
+        </li>
+    </ul>
+
+    <ul ng-if="language.contains">
+        <li ng-repeat="language in language.contains" ng-include="'languageTemplate.html'">
+        </li>
+    </ul>
+</script>
 
 </body>
 

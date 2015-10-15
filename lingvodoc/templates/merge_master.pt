@@ -22,6 +22,7 @@
 
 <div metal:use-macro="load: nav.pt"></div>
 
+
 <div class="container" ng-cloak>
 
     <div ui-view></div>

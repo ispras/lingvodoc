@@ -164,7 +164,7 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
 
     $scope.publish = function() {
         var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/state';
-        dictionaryService.setDictionaryStatus(url, 'published');
+        dictionaryService.setDictionaryStatus(url, 'Published');
     };
 
     $scope.ok = function() {
@@ -207,6 +207,10 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
                 $scope.perspective.fields.splice(i, 1);
             }
         }
+    };
+
+    $scope.publish = function() {
+        dictionaryService.setPerspectiveStatus(params.dictionary, $scope.perspective, 'Published');
     };
 
     $scope.ok = function() {

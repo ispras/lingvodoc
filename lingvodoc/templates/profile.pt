@@ -21,6 +21,7 @@
 <div id="clientId" data-lingvodoc="${client_id}"></div>
 <div id="userId" data-lingvodoc="${user.id}"></div>
 
+
 <div metal:use-macro="load: nav.pt"></div>
 
 <div class="container" ng-controller="ProfileController" ng-cloak>
