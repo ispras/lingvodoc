@@ -3712,12 +3712,14 @@ def merge_suggestions(request):
     if not lexes:
         return json.dumps({})
     first_persp = json.loads(lexes[0].additional_metadata)['came_from']
-    for lex in lexes:
-        meta = json.loads(lex.additional_metadata)
-        if meta['came_from'] == first_persp:
-            lexes_1 += [lex.track(False)]
-        else:
-            lexes_2 += [lex.track(False)]
+    # for lex in lexes:
+    #     meta = json.loads(lex.additional_metadata)
+    #     if meta['came_from'] == first_persp:
+    #         lexes_1 += [lex.track(False)]
+    #     else:
+    #         lexes_2 += [lex.track(False)]
+    lexes_1 = [o.track(False) for o in lexes]
+    lexes_2 = list(lexes_1)
     def parse_response(elem):
         words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
         words = map(lambda x: x['content'], words)
