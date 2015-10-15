@@ -303,7 +303,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
         id = int(cursor[0])
         client_id = ids_mapping[id][0]
         object_id = ids_mapping[id][1]
-        item = {"entity_type": "Etymology", "content": cursor[1],
+        item = {"entity_type": "Etymology", "tag": cursor[1],
                 "connections": [{"client_id": client_id, "object_id": object_id}]}
         status = session.post(connect_url, json=item)
         log.debug(status.text)
