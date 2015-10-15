@@ -327,6 +327,7 @@ def view_dictionary(request):
             response['translation_string'] = translation_string['translation_string']
             response['translation'] = translation_string['translation']
             response['status'] = dictionary.state
+            response['about'] = dictionary.about
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -352,6 +353,8 @@ def edit_dictionary(request):
                     dictionary.parent_object_id = req['parent_object_id']
                 if 'translation' in req:
                     dictionary.set_translation(request)
+                if 'about' in req:
+                    dictionary = req['about']
                 request.response.status = HTTPOk.code
                 return response
 
@@ -389,6 +392,7 @@ def create_dictionary(request):
             req = request.json_body
         parent_client_id = req['parent_client_id']
         parent_object_id = req['parent_object_id']
+        about = req.get('about')
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -400,7 +404,8 @@ def create_dictionary(request):
         dictionary = Dictionary(object_id=DBSession.query(Dictionary).filter_by(client_id=client.id).count() + 1,
                                 client_id=variables['auth'],
                                 state='WiP',
-                                parent=parent)
+                                parent=parent,
+                                about=about)
         dictionary.set_translation(request)
         DBSession.add(dictionary)
         DBSession.flush()
@@ -457,6 +462,23 @@ def edit_dictionary_status(request):
             request.response.status = HTTPOk.code
             response['status'] = status
             return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such dictionary in the system")}
+
+
+@view_config(route_name='dictionary_delete', renderer='json', request_method='DELETE', permission='delete')
+def real_delete_dictionary(request):
+    response = dict()
+    parent_client_id = request.matchdict.get('client_id')
+    parent_object_id = request.matchdict.get('object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if parent:
+        perspectives = DBSession.query(DictionaryPerspective).filter_by(parent=parent)
+        for perspective in perspectives:
+            fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective)
+            for field in fields:
+                pass
+
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -2233,7 +2255,6 @@ def create_group_entity(request):
                                             entity_type=req['entity_type'], content=tag, parent=parent)
                     DBSession.add(entity)
                     DBSession.flush()
-            break
         log.debug('TAGS: %s', tags)
         request.response.status = HTTPOk.code
         return {}
