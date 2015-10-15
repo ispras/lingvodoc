@@ -87,8 +87,7 @@
 
     <hr>
 
-    <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary</a>
-    <!--<a href="#" ng-click="test()">dd</a>-->
+    <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary...</a>
 </div>
 
 
