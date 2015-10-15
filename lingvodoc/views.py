@@ -2935,9 +2935,9 @@ def merge_dictionaries(request):
                                                       subject_client_id=dict.client_id,
                                                       subject_object_id=dict.object_id).first()
                 grps += [gr]
-        for gr in grps:
-            if user not in gr.users:
-                raise KeyError("Not enough permission to do that")
+            for gr in grps:
+                if user not in gr.users:
+                    raise KeyError("Not enough permission to do that")
 
         subreq = Request.blank('/dictionary')
         subreq.method = 'POST'
