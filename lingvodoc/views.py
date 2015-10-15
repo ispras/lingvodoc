@@ -1179,9 +1179,15 @@ def group_by_languages(dicts, request):
 
 
 def participated_clients_rec(entry):
-    clients = [entry.client_id]
-    for ent in entry.contains:
-        clients += participated_clients_rec(ent)
+    clients = []
+    if entry:
+        if 'level' in entry:
+            if 'publish' not in entry['level']:
+                clients += [entry['client_id']]
+                if 'contains' in entry:
+                    if entry['contains']:
+                        for ent in entry['contains']:
+                            clients += participated_clients_rec(ent)
     return clients
 
 
@@ -3331,6 +3337,38 @@ def delete_organization(request):
             return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such organization in the system")}
+
+
+@view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='edit')
+def perspective_info(request):
+    from collections import Counter
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective:
+        if not perspective.marked_for_deletion:
+            subreq = Request.blank('/dictionary/' + parent_client_id + '/' +
+            parent_object_id + '/perspective/' +
+            client_id + '/' +
+            object_id + '/published')
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            respon = request.invoke_subrequest(subreq).json
+
+
+            request.response.status = HTTPOk.code
+            return response
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='create_organization', renderer='json', request_method='POST', permission='create')
