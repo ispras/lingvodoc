@@ -1140,24 +1140,27 @@ def check_for_client(obj, clients):
     return False
 
 
-def language_dicts(lang, dicts):
-    result = dict()
-    result['client_id'] = lang.client_id
-    result['object_id'] = lang.object_id
-    translation_string = lang.get_translation(request)
-    result['translation_string'] = translation_string['translation_string']
-    result['translation'] = translation_string['translation']
-    if lang.locale:
-        result['locale_exist'] = True
-    else:
-        result['locale_exist'] = False
+def language_dicts(lang, dicts, request):
+    dictionaries = []
+    ds = dicts.filter((Dictionary.parent_client_id==lang['client_id']) & (
+                         Dictionary.parent_object_id==lang['object_id'])).all()
 
+    for dct in ds:
+        path = request.route_url('dictionary',
+                                 client_id=dct.client_id,
+                                 object_id=dct.object_id)
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            dictionaries += [resp.json]
+    lang['dicts'] = dictionaries
     if 'contains' in lang:
-        contains = lang['contains']
+        for lan in lang['contains']:
+            language_dicts(lan, dicts, request)
+    return
 
-        result['contains'] = contains
-
-    return result
 
 @view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
 def published_dictionaries_list(request):
@@ -1178,7 +1181,12 @@ def published_dictionaries_list(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-
+        if resp.json:
+            if 'languages' in resp.json:
+                langs = resp.json['languages']
+                for lang in langs:
+                    language_dicts(lang, dicts, request)
+                return langs
 
     response['dictionaries'] = None
     request.response.status = HTTPOk.code
@@ -1282,6 +1290,7 @@ def dictionaries_list(request):
     request.response.status = HTTPOk.code
 
     return response
+
 
 @view_config(route_name='all_perspectives', renderer = 'json', request_method='GET')
 def perspectives_list(request):
@@ -3597,6 +3606,8 @@ def merge_suggestions(request):
             {'lexical_entry_client_id': elem[0][0], 'lexical_entry_object_id': elem[0][1]},
             {'lexical_entry_client_id': elem[1][0], 'lexical_entry_object_id': elem[1][1]}
         ], 'confidence': elem[2]}
+    if (not tuples_1) or (not tuples_2):
+        return {}
     results = [get_dict(i) for i in mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))]
     return results
 
