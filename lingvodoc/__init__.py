@@ -492,9 +492,6 @@ def main(global_config, **settings):
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
     from pyramid.config import Configurator
-    authentication_policy = AuthTktAuthenticationPolicy('secret_string_that_you_should_change',
-                                                        hashalg='sha512', callback=groupfinder)
-    authorization_policy = ACLAuthorizationPolicy()
     config_file = global_config['__file__']
     parser = ConfigParser()
     parser.read(config_file)
@@ -504,6 +501,10 @@ def main(global_config, **settings):
         storage[k] = v
     settings['storage'] = storage
     config = Configurator(settings=settings)
+
+    authentication_policy = AuthTktAuthenticationPolicy(settings['secret'],
+                                                        hashalg='sha512', callback=groupfinder)
+    authorization_policy = ACLAuthorizationPolicy()
     config.set_authentication_policy(authentication_policy)
     config.set_authorization_policy(authorization_policy)
     config.include('pyramid_chameleon')
