@@ -1142,10 +1142,20 @@ def check_for_client(obj, clients):
     return False
 
 
-def language_dicts(lang, dicts, request):
+def language_with_dicts(lang, dicts, request):
+    result = dict()
+    result['client_id'] = lang.client_id
+    result['object_id'] = lang.object_id
+    translation_string = lang.get_translation(request)
+    result['translation_string'] = translation_string['translation_string']
+    result['translation'] = translation_string['translation']
+    if lang.locale:
+        result['locale_exist'] = True
+    else:
+        result['locale_exist'] = False
     dictionaries = []
-    ds = dicts.filter((Dictionary.parent_client_id==lang['client_id']) & (
-                         Dictionary.parent_object_id==lang['object_id'])).all()
+    ds = dicts.filter((Dictionary.parent_client_id==lang.client_id) & (
+                         Dictionary.parent_object_id==lang.object_id)).all()
 
     for dct in ds:
         path = request.route_url('dictionary',
@@ -1157,38 +1167,49 @@ def language_dicts(lang, dicts, request):
         resp = request.invoke_subrequest(subreq)
         if 'error' not in resp.json:
             dictionaries += [resp.json]
-    lang['dicts'] = dictionaries
-    if 'contains' in lang:
-        for lan in lang['contains']:
-            language_dicts(lan, dicts, request)
-    return
+    result['dicts'] = dictionaries
+
+    contains = []
+    if lang.language:
+        for childlang in lang.language:
+            ent = language_with_dicts(childlang, dicts, request)
+            if ent:
+                contains += [ent]
+    result['contains'] = contains
+    if not result['contains'] and not result['dicts']:
+        return []
+    if not result['contains']:
+        del result['contains']
+    return result
 
 
 def group_by_languages(dicts, request):
-        path = request.route_url('get_languages')
-        subreq = Request.blank(path)
-        subreq.method = 'GET'
-        subreq.headers = request.headers
-        resp = request.invoke_subrequest(subreq)
-        if resp.json:
-            if 'languages' in resp.json:
-                langs = resp.json['languages']
-                for lang in langs:
-                    language_dicts(lang, dicts, request)
-                return langs
+    langs = DBSession.query(Language).filter_by(marked_for_deletion=False, parent=None).all()
+    languages = []
+    for lang in langs:
+        la = language_with_dicts(lang, dicts, request)
+        if la:
+            languages += [la]
+    return languages
 
 
 def participated_clients_rec(entry):
-    clients = [entry.client_id]
-    for ent in entry.contains:
-        clients += participated_clients_rec(ent)
+    clients = []
+    if entry:
+        if 'level' in entry:
+            if 'publish' not in entry['level']:
+                clients += [entry['client_id']]
+                if 'contains' in entry:
+                    if entry['contains']:
+                        for ent in entry['contains']:
+                            clients += participated_clients_rec(ent)
     return clients
 
 
 def participated_clients_list(dictionary, request):
     clients = [dictionary.client_id]
     for persp in dictionary.dictionaryperspective:
-        if persp.state == 'Published':
+        if persp.state.lowercase() == 'published':
             path = request.route_url('lexical_entries_published',
                                      dictionary_client_id = dictionary.client_id,
                                      dictionary_object_id = dictionary.object_id,
@@ -1260,7 +1281,6 @@ def group_by_organizations(dicts, request):
         return organizations
 
 
-
 @view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
 def published_dictionaries_list(request):
     req = request.json_body
@@ -1272,8 +1292,8 @@ def published_dictionaries_list(request):
     if 'group_by_lang' in req:
         group_by_lang = req['group_by_lang']
     dicts = DBSession.query(Dictionary)
-    dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
-        .filter(DictionaryPerspective.state == 'Published')
+    dicts = dicts.filter(func.lower(Dictionary.state)==func.lower('published')).join(DictionaryPerspective)\
+        .filter(func.lower(DictionaryPerspective.state) == func.lower('published'))
     if group_by_lang and not group_by_org:
         return group_by_languages(dicts, request)
     if not group_by_lang and group_by_org:
@@ -2479,7 +2499,7 @@ def lexical_entries_published(request):
 
             result = []
             for entry in lexical_entries:
-                result.append(entry[0].track(False))
+                result.append(entry[0].track(True))
             response['lexical_entries'] = result
 
             # lexical_entries = DBSession.query(LexicalEntry)\
@@ -2690,7 +2710,7 @@ def approve_all(request):
     object_id = request.matchdict.get('perspective_id')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-
+    entities = []
     if parent:
         if not parent.marked_for_deletion:
             dictionary_client_id = parent.parent_client_id
@@ -2699,57 +2719,31 @@ def approve_all(request):
             for lex in lexes:
                 levones = DBSession.query(LevelOneEntity).filter_by(parent=lex).all()
                 for levone in levones:
-                    url = request.route_url('approve_entity',
-                                            dictionary_client_id=dictionary_client_id,
-                                            dictionary_object_id=dictionary_object_id,
-                                            perspective_client_id=client_id,
-                                            perspective_id=object_id)
-                    subreq = Request.blank(url)
-                    jsn = dict()
-                    entities = [{'type': 'leveloneentity',
+                    entities += [{'type': 'leveloneentity',
                                          'client_id': levone.client_id,
                                          'object_id': levone.object_id}]
-                    jsn['entities']= entities
-                    subreq.json = json.dumps(jsn)
-                    subreq.method = 'PATCH'
-                    headers = {'Cookie':request.headers['Cookie']}
-                    subreq.headers =headers
-                    request.invoke_subrequest(subreq)
                     for levtwo in levone.leveltwoentity:
-                        url = request.route_url('approve_entity',
-                                                dictionary_client_id=dictionary_client_id,
-                                                dictionary_object_id=dictionary_object_id,
-                                                perspective_client_id=client_id,
-                                                perspective_id=object_id)
-                        subreq = Request.blank(url)
-                        jsn = dict()
-                        entities = [{'type': 'leveltwoentity',
+                        entities += [{'type': 'leveltwoentity',
                                              'client_id':levtwo.client_id,
                                              'object_id':levtwo.object_id}]
-                        jsn['entities']= entities
-                        subreq.json = json.dumps(jsn)
-                        subreq.method = 'PATCH'
-                        headers = {'Cookie':request.headers['Cookie']}
-                        subreq.headers =headers
-                        request.invoke_subrequest(subreq)
                 groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
                 for groupent in groupents:
-                    url = request.route_url('approve_entity',
-                                            dictionary_client_id=dictionary_client_id,
-                                            dictionary_object_id=dictionary_object_id,
-                                            perspective_client_id=client_id,
-                                            perspective_id=object_id)
-                    subreq = Request.blank(url)
-                    jsn = dict()
-                    entities = [{'type': 'groupingentity',
+                    entities += [{'type': 'groupingentity',
                                          'client_id': groupent.client_id,
                                          'object_id': groupent.object_id}]
-                    jsn['entities'] = entities
-                    subreq.json = json.dumps(jsn)
-                    subreq.method = 'PATCH'
-                    headers = {'Cookie':request.headers['Cookie']}
-                    subreq.headers = headers
-                    request.invoke_subrequest(subreq)
+            url = request.route_url('approve_entity',
+                                    dictionary_client_id=dictionary_client_id,
+                                    dictionary_object_id=dictionary_object_id,
+                                    perspective_client_id=client_id,
+                                    perspective_id=object_id)
+            subreq = Request.blank(url)
+            jsn = dict()
+            jsn['entities'] = entities
+            subreq.json = json.dumps(jsn)
+            subreq.method = 'PATCH'
+            headers = {'Cookie':request.headers['Cookie']}
+            subreq.headers = headers
+            request.invoke_subrequest(subreq)
 
             request.response.status = HTTPOk.code
             return response
@@ -2781,12 +2775,10 @@ def approve_entity(request):
                         publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
                                                            entity=entity, parent=entity.parent)
                         DBSession.add(publishent)
-                        DBSession.flush()
                     else:
                         for ent in entity.publishleveloneentity:
                             if ent.marked_for_deletion:
                                 ent.marked_for_deletion = False
-                                DBSession.flush()
             elif entry['type'] == 'leveltwoentity':
                 entity = DBSession.query(LevelTwoEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
@@ -2795,12 +2787,10 @@ def approve_entity(request):
                         publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
                                                            entity=entity, parent=entity.parent.parent)
                         DBSession.add(publishent)
-                        DBSession.flush()
                     else:
                         for ent in entity.publishleveltwoentity:
                             if ent.marked_for_deletion:
                                 ent.marked_for_deletion = False
-                                DBSession.flush()
             elif entry['type'] == 'groupingentity':
                 entity = DBSession.query(GroupingEntity).\
                     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
@@ -2809,12 +2799,10 @@ def approve_entity(request):
                         publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
                                                            entity=entity, parent=entity.parent)
                         DBSession.add(publishent)
-                        DBSession.flush()
                     else:
                         for ent in entity.publishgroupingentity:
                             if ent.marked_for_deletion:
                                 ent.marked_for_deletion = False
-                                DBSession.flush()
             else:
                 raise CommonException("Unacceptable type")
 
@@ -3331,6 +3319,38 @@ def delete_organization(request):
             return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such organization in the system")}
+
+
+@view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='edit')
+def perspective_info(request):
+    from collections import Counter
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective:
+        if not perspective.marked_for_deletion:
+            subreq = Request.blank('/dictionary/' + parent_client_id + '/' +
+            parent_object_id + '/perspective/' +
+            client_id + '/' +
+            object_id + '/published')
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            respon = request.invoke_subrequest(subreq).json
+
+
+            request.response.status = HTTPOk.code
+            return response
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='create_organization', renderer='json', request_method='POST', permission='create')
