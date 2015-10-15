@@ -27281,17 +27281,25 @@ lingvodoc.Object.prototype.equals = function(obj) {
     return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
 };
 
-lingvodoc.Language = function() {
+lingvodoc.Language = function(clientId, objectId, translation, translation_string) {
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.translation = translation;
+    this.translation_string = translation_string;
     this.equals = function(obj) {
         return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
     };
 };
 
+lingvodoc.Language.fromJS = function(js) {
+    return new lingvodoc.Language(js.client_id, js.object_id, js.translation, js.translation_string);
+};
+
 lingvodoc.Language.prototype = new lingvodoc.Object();
 
+lingvodoc.Language.prototype.constructor = lingvodoc.Language;
+
 lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation) {
-    this.client_id = clientId;
-    this.object_id = objectId;
+    lingvodoc.Object.call(this, clientId, objectId);
     this.parent_client_id = parentClientId;
     this.parent_object_id = parentObjectId;
     this.translation = translation;
@@ -27898,14 +27906,6 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
     var dictionariesUrl = $("#dictionariesUrl").data("lingvodoc");
     var getUserInfoUrl = $("#getUserInfoUrl").data("lingvodoc");
     $scope.dictionaries = [];
-    $scope.test = function() {
-        dictionaryService.mergeSuggestions({
-            client_id: 2,
-            object_id: 1
-        }).then(function(result) {
-            $log.info(result);
-        });
-    };
     var getObjectByCompositeKey = function(id, arr) {
         if (typeof id == "string") {
             var ids = id.split("_");
