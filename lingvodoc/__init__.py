@@ -82,6 +82,9 @@ def configure_routes(config):
     #    e) Maps location (coordinates) +- radius in kilometers
     config.add_route('dictionaries', 'dictionaries')  # 100% ready
 
+
+    config.add_route(name='published_dictionaries', pattern='/published_dictionaries')
+
     # API #GET
     # Perspective list
     # 1. Filter by:

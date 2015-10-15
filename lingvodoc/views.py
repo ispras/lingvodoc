@@ -206,9 +206,7 @@ def view_languages_list(request):
     languages = DBSession.query(Language).filter_by(parent = None).all()
     if languages:
         for lang in languages:
-
             langs += [language_info(lang, request)]
-
     response['languages'] = langs
 
     request.response.status = HTTPOk.code
@@ -1142,6 +1140,52 @@ def check_for_client(obj, clients):
     return False
 
 
+def language_dicts(lang, dicts):
+    result = dict()
+    result['client_id'] = lang.client_id
+    result['object_id'] = lang.object_id
+    translation_string = lang.get_translation(request)
+    result['translation_string'] = translation_string['translation_string']
+    result['translation'] = translation_string['translation']
+    if lang.locale:
+        result['locale_exist'] = True
+    else:
+        result['locale_exist'] = False
+
+    if 'contains' in lang:
+        contains = lang['contains']
+
+        result['contains'] = contains
+
+    return result
+
+@view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
+def published_dictionaries_list(request):
+    req = request.json_body
+    response = dict()
+    group_by_org = None
+    if 'group_by_org' in req:
+        group_by_org = req['group_by_org']
+    group_by_lang = None
+    if 'group_by_lang' in req:
+        group_by_lang = req['group_by_lang']
+    dicts = DBSession.query(Dictionary)
+    if group_by_lang and not group_by_org:
+        dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
+            .filter(DictionaryPerspective.state == 'Published')
+        path = request.route_url('get_languages')
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+
+
+    response['dictionaries'] = None
+    request.response.status = HTTPOk.code
+
+    return response
+
+
 @view_config(route_name = 'dictionaries', renderer = 'json', request_method='POST')
 def dictionaries_list(request):
     req = request.json_body
@@ -1269,7 +1313,8 @@ def perspectives_list(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        perspectives += [resp.json]
+        if 'error' not in resp.json:
+            perspectives += [resp.json]
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
 
@@ -3035,6 +3080,7 @@ def move_lexical_entry(request):
                         publent.parent = parent
                     DBSession.flush()
                 entry.moved_to = str(cli_id) + '/' + str(obj_id)
+                entry.marked_for_deletion = True
                 request.response.status = HTTPOk.code
                 return {}
     request.response.status = HTTPNotFound.code
