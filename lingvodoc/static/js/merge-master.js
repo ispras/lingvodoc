@@ -28185,6 +28185,8 @@ lingvodoc.Language = function(clientId, objectId, translation, translation_strin
     lingvodoc.Object.call(this, clientId, objectId);
     this.translation = translation;
     this.translation_string = translation_string;
+    this.languages = [];
+    this.dictionaries = [];
     this.equals = function(obj) {
         return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
     };
@@ -28679,12 +28681,22 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
         var req = {
             translation: tranlation,
-            translation_string: translation_string
+            translation_string: translation_string,
+            language_client_id: d1.parent_client_id,
+            language_object_id: d1.parent_object_id,
+            dictionaries: [ {
+                client_id: d1.client_id,
+                object_id: d1.object_id
+            }, {
+                client_id: d2.client_id,
+                object_id: d2.object_id
+            } ]
         };
         $http.post("/merge/dictionaries", req).success(function(data, status, headers, config) {
+            console.log(data);
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
-            deferred.reject("Failed to merge perspectives");
+            deferred.reject("Failed to merge dictionaries");
         });
         return deferred.promise;
     };
@@ -28759,6 +28771,91 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getDictionariesByLanguage = function(language) {
+        var deferred = $q.defer();
+        var req = {
+            languages: [ {
+                client_id: language.client_id,
+                object_id: language.object_id
+            } ]
+        };
+        $http.post("/dictionaries", req).success(function(data, status, headers, config) {
+            var dictionaries = [];
+            if (angular.isArray(data.dictionaries)) {
+                angular.forEach(data.dictionaries, function(jsdict) {
+                    var dictionary = lingvodoc.Dictionary.fromJS(jsdict);
+                    if (language.client_id == dictionary.parent_client_id && language.object_id == dictionary.parent_object_id) {
+                        dictionaries.push(dictionary);
+                    }
+                });
+            }
+            deferred.resolve(dictionaries);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getLanguagesFull = function() {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(language);
+                if (language.languages.length > 0) {
+                    var childLangs = flatLanguages(language.languages);
+                    flat = flat.concat(childLangs);
+                }
+            }
+            return flat;
+        };
+        var setDictionaries = function(language, languages, dictionaries) {
+            for (var i = 0; i < languages.length; ++i) {
+                var lang = languages[i];
+                if (language.equals(lang)) {
+                    language.dictionaries = dictionaries;
+                    return true;
+                } else {
+                    if (setDictionaries(language, lang.languages, dictionaries)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        var parseResponse = function(langs) {
+            var responseLangs = [];
+            angular.forEach(langs, function(lang) {
+                var responseLang = lingvodoc.Language.fromJS(lang);
+                if (angular.isArray(lang.contains)) {
+                    responseLang.languages = parseResponse(lang.contains);
+                }
+                responseLangs.push(responseLang);
+            });
+            return responseLangs;
+        };
+        $http.get("/languages").success(function(data, status, headers, config) {
+            var languages = [];
+            if (angular.isArray(data.languages)) {
+                languages = parseResponse(data.languages);
+            }
+            var flat = flatLanguages(languages);
+            var reqs = flat.map(function(l) {
+                return getDictionariesByLanguage(l);
+            });
+            $q.all(reqs).then(function(allLangsDictionaries) {
+                angular.forEach(allLangsDictionaries, function(dictionaries, index) {
+                    setDictionaries(flat[index], languages, dictionaries);
+                });
+                deferred.resolve(languages);
+            }, function(reason) {
+                deferred.reject(reason);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -28787,10 +28884,12 @@ function lingvodocAPI($http, $q) {
         getDictionaries: getDictionaries,
         getDictionaryPerspectives: getDictionaryPerspectives,
         getDictionariesWithPerspectives: getDictionariesWithPerspectives,
+        mergeDictionaries: mergeDictionaries,
         mergePerspectives: mergePerspectives,
         mergeSuggestions: mergeSuggestions,
         getLexicalEntry: getLexicalEntry,
-        moveLexicalEntry: moveLexicalEntry
+        moveLexicalEntry: moveLexicalEntry,
+        getLanguagesFull: getLanguagesFull
     };
 }
 
@@ -28831,13 +28930,16 @@ app.service("dictionaryService", lingvodocAPI);
 app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interval", "$state", "$log", "dictionaryService", function($scope, $http, $modal, $interval, $state, $log, dictionaryService) {
     var clientId = $("#clientId").data("lingvodoc");
     var userId = $("#userId").data("lingvodoc");
-    $scope.dictionaries = [];
     $scope.master = {
         mergeMode: "dictionaries",
+        dictionaries: [],
+        languagesTree: [],
+        suggestedDictionaries: [],
         selectedSourceDictionaryId1: "None",
         selectedSourceDictionaryId2: "None",
         selectedSourceDictionary1: {},
         selectedSourceDictionary2: {},
+        mergedDictionaryName: "",
         selectedSourceDictionaryId: "None",
         selectedSourceDictionary: {},
         perspectiveId1: "",
@@ -28939,6 +29041,19 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
             $state.go("merge.selectPerspectives");
         }
     };
+    $scope.startMergeDictionaries = function() {
+        if (!$scope.master.mergedDictionaryName) {
+            alert("Please, specify new dictionary name!");
+            return;
+        }
+        if ($scope.master.selectedSourceDictionary1 instanceof lingvodoc.Dictionary && $scope.master.selectedSourceDictionary2 instanceof lingvodoc.Dictionary) {
+            dictionaryService.mergeDictionaries($scope.master.mergedDictionaryName, $scope.master.mergedDictionaryName, $scope.master.selectedSourceDictionary1, $scope.master.selectedSourceDictionary2).then(function(result) {
+                $log.info(result);
+            }, function(reason) {
+                $log.error(reason);
+            });
+        }
+    };
     $scope.startMergePerspectives = function() {
         if ($scope.master.perspective1 instanceof lingvodoc.Perspective && $scope.master.perspective2 instanceof lingvodoc.Perspective) {
             if ($scope.master.perspective1.equals($scope.master.perspective2)) {
@@ -29025,33 +29140,61 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
     dictionaryService.getDictionariesWithPerspectives({
         user_created: [ userId ]
     }).then(function(dictionaries) {
-        $scope.dictionaries = dictionaries;
+        $scope.master.dictionaries = dictionaries;
+    }, function(reason) {
+        $log.error(reason);
+    });
+    dictionaryService.getLanguagesFull().then(function(langs) {
+        $scope.master.languagesTree = langs;
     }, function(reason) {
         $log.error(reason);
     });
     $scope.$watch("master.selectedSourceDictionaryId", function(id) {
         $scope.master.selectedSourceDictionary = {};
-        for (var i = 0; i < $scope.dictionaries.length; ++i) {
-            if ($scope.dictionaries[i].getId() == id) {
-                $scope.master.selectedSourceDictionary = $scope.dictionaries[i];
+        for (var i = 0; i < $scope.master.dictionaries.length; ++i) {
+            if ($scope.master.dictionaries[i].getId() == id) {
+                $scope.master.selectedSourceDictionary = $scope.master.dictionaries[i];
                 break;
             }
         }
     });
     $scope.$watch("master.selectedSourceDictionaryId1", function(id) {
         $scope.master.selectedSourceDictionary1 = {};
-        for (var i = 0; i < $scope.dictionaries.length; ++i) {
-            if ($scope.dictionaries[i].getId() == id) {
-                $scope.master.selectedSourceDictionary1 = $scope.dictionaries[i];
+        for (var i = 0; i < $scope.master.dictionaries.length; ++i) {
+            if ($scope.master.dictionaries[i].getId() == id) {
+                $scope.master.selectedSourceDictionary1 = $scope.master.dictionaries[i];
                 break;
             }
         }
     });
+    var findLanguage = function(dictionary, languages) {
+        for (var i = 0; i < languages.length; ++i) {
+            var lang = languages[i];
+            for (var j = 0; j < lang.dictionaries.length; ++j) {
+                var dict = lang.dictionaries[j];
+                if (dictionary.equals(dict)) {
+                    return lang;
+                }
+            }
+            var language = findLanguage(dictionary, lang.languages);
+            if (language instanceof lingvodoc.Language) {
+                return language;
+            }
+        }
+        return null;
+    };
+    $scope.$watch("master.selectedSourceDictionary1", function(dict) {
+        var language = findLanguage(dict, $scope.master.languagesTree);
+        $log.info(language);
+        if (language) {
+            $scope.master.suggestedDictionaries = language.dictionaries;
+        }
+    }, true);
     $scope.$watch("master.selectedSourceDictionaryId2", function(id) {
         $scope.master.selectedSourceDictionary2 = {};
-        for (var i = 0; i < $scope.dictionaries.length; ++i) {
-            if ($scope.dictionaries[i].getId() == id) {
-                $scope.master.selectedSourceDictionary2 = $scope.dictionaries[i];
+        for (var i = 0; i < $scope.master.suggestedDictionaries.length; ++i) {
+            if ($scope.master.suggestedDictionaries[i].getId() == id) {
+                $scope.master.selectedSourceDictionary2 = $scope.master.suggestedDictionaries[i];
                 break;
             }
         }

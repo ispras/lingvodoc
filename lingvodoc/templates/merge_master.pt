@@ -109,13 +109,18 @@
         <div class="panel-body">
 
             <div>
+
+                <label for="mergedDictionaryName">New dictionary name</label>
+                <input id="mergedDictionaryName" type="text" class="form-control" ng-model="master.mergedDictionaryName">
+
+
                 <label for="dictionarySelect1">Select dictionary 1</label>
-                <select id="dictionarySelect1" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId1">
+                <select id="dictionarySelect1" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in master.dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId1">
                     <option></option>
                 </select>
 
                 <label for="dictionarySelect2">Select dictionary 2</label>
-                <select id="dictionarySelect2" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId2">
+                <select id="dictionarySelect2" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in master.suggestedDictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId2">
                     <option></option>
                 </select>
 
@@ -129,7 +134,7 @@
                 <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
             </a>
 
-            <a class="btn btn-primary" ng-click="startMergePerspectives()">
+            <a class="btn btn-primary" ng-click="startMergeDictionaries()">
                 Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
             </a>
         </div>
@@ -150,7 +155,7 @@
 
             <div>
                 <label for="dictionarySelect">Select dictionary</label>
-                <select id="dictionarySelect" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId">
+                <select id="dictionarySelect" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in master.dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId">
                     <option></option>
                 </select>
 
