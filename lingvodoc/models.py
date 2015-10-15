@@ -734,13 +734,15 @@ def acl_by_groups(object_id, client_id, subject):
         if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
             persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
-                if persp.state == 'published':
+                if persp.state == 'Published':
                     acls += [(Allow, Everyone, 'view')]
+                    return acls
         elif subject in ['dictionary', 'other dictionary subjects']:
             dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
             if dict:
-                if dict.state == 'published':
+                if dict.state == 'Published':
                     acls += [(Allow, Everyone, 'view')]
+                    return acls
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
