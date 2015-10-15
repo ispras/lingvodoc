@@ -3023,13 +3023,15 @@ def move_lexical_entry(request):
                     raise CommonException("You should only move to lexical entires you own")
 
             if entry.moved_to is None and parent.moved_to is None:
-                for entity in entry.leveloneentity:
+                l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                for entity in l1e:
                     entity.parent = parent
                     for publent in entity.publishleveloneentity:
                         publent.marked_for_deletion = True
                         publent.parent = parent
                     DBSession.flush()
-                for entity in entry.groupingentity:
+                ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                for entity in ge:
                     entity.parent = parent
                     for publent in entity.publishgroupingentity:
                         publent.marked_for_deletion = True
