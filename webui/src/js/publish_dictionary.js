@@ -357,7 +357,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
         };
     })
 
-    .controller('PublishDictionaryController', ['$scope', '$window', '$http', '$modal', '$log', 'dictionaryService', function($scope, $window, $http, $modal, $log, dictionaryService) {
+    .controller('PublishDictionaryController', ['$scope', '$window', '$http', '$modal', '$location', '$log', 'dictionaryService', function($scope, $window, $http, $modal, $location, $log, dictionaryService) {
 
 
         var currentClientId = $('#clientId').data('lingvodoc');
@@ -463,14 +463,14 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
             if(approveAll){
                 var url = $('#approveAllEntityUrl').data('lingvodoc');
                 dictionaryService.approveAll(url).then(function(data) {
-                    angular.forEach($scope.lexicalEntries, function(entry) {
-                        if (!entry.published) {
-                            entry.published = true;
-                        }
-                    });
+                    window.location = '/dashboard';
+
                 }, function(reason) {
                     $log.error(reason);
                 });
+
+                alert('Approval is in progress. Please, don\'t close the page until it is complete. You will be redirected automatically.');
+
             }
         };
 
