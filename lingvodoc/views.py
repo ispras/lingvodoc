@@ -493,7 +493,7 @@ def view_perspective(request):
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
-    return {'error': str("No such perspective in the system"), 'persp': str(perspective)}
+    return {'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='perspective', renderer='json', request_method='PUT', permission='edit')
@@ -2167,11 +2167,7 @@ def lexical_entries_all(request):
     object_id = request.matchdict.get('perspective_id')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
-
-    log.debug('CRITERION: %s' % request.GET.get('sort_by'))
     start_from = request.params.get('start_from') or 0
-
-    log.debug('START FROM: %s' % request.GET.get('start_from'))
     count = request.params.get('count') or 200
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
@@ -2200,6 +2196,7 @@ def lexical_entries_all(request):
                 .limit(count)
             result = []
             for entry in lexical_entries:
+
                 result.append(entry[0].track(False))
             response['lexical_entries'] = result
 
@@ -2371,20 +2368,20 @@ def view_lexical_entry(request):
 
     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if entry:
-        if not entry.marked_for_deletion:
-            if entry.moved_to:
-                url = request.route_url('lexical_entry',
-                                        client_id=entry.moved_to.split("/")[0],
-                                        object_id=entry.moved_to.split("/")[1])
-                subreq = Request.blank(url)
-                subreq.method = 'GET'
-                subreq.headers = request.headers
-                return request.invoke_subrequest(subreq)
-            else:
+        if entry.moved_to:
+            url = request.route_url('lexical_entry',
+                                    client_id=entry.moved_to.split("/")[0],
+                                    object_id=entry.moved_to.split("/")[1])
+            subreq = Request.blank(url)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            return request.invoke_subrequest(subreq)
+        else:
+            if not entry.marked_for_deletion:
                 response['lexical_entry'] = entry.track(False)
 
-            request.response.status = HTTPOk.code
-            return response
+                request.response.status = HTTPOk.code
+                return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
 
