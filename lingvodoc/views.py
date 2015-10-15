@@ -612,8 +612,8 @@ def create_perspective(request):
                                             client_id=variables['auth'],
                                             state='WiP',
                                             parent=parent,
-                                            imported_source=req.get('imported_source'),
-                                            imported_hash=req.get('imported_hash'))
+                                            import_source=req.get('import_source'),
+                                            import_hash=req.get('import_hash'))
         perspective.set_translation(request)
         DBSession.add(perspective)
         DBSession.flush()
@@ -3392,7 +3392,7 @@ try it again.
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = dict()
-    new_type = response.pop('new_type_name', None)
+    new_type = response.get('new_type_name')
     return str(new_type)
 
 
