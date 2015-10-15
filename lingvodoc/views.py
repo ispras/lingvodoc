@@ -201,9 +201,7 @@ def view_languages_list(request):
     languages = DBSession.query(Language).filter_by(parent = None).all()
     if languages:
         for lang in languages:
-
             langs += [language_info(lang, request)]
-
     response['languages'] = langs
 
     request.response.status = HTTPOk.code
@@ -1137,6 +1135,25 @@ def check_for_client(obj, clients):
     return False
 
 
+def language_dicts(lang, dicts):
+    result = dict()
+    result['client_id'] = lang.client_id
+    result['object_id'] = lang.object_id
+    translation_string = lang.get_translation(request)
+    result['translation_string'] = translation_string['translation_string']
+    result['translation'] = translation_string['translation']
+    if lang.locale:
+        result['locale_exist'] = True
+    else:
+        result['locale_exist'] = False
+
+    if 'contains' in lang:
+        contains = lang['contains']
+
+        result['contains'] = contains
+
+    return result
+
 @view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
 def published_dictionaries_list(request):
     req = request.json_body
@@ -1291,7 +1308,8 @@ def perspectives_list(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        perspectives += [resp.json]
+        if 'error' not in resp.json:
+            perspectives += [resp.json]
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
 
