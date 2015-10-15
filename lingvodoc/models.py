@@ -338,6 +338,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, Tran
     authors = Column(UnicodeText)
     translation_string = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    # about = Column(UnicodeText)
 
 
 class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
@@ -360,6 +361,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     is_template = Column(Boolean, default=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
+    # about = Column(UnicodeText)
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -793,6 +795,15 @@ class LanguageAcl(object):
         except:
             pass
         return acls + acl_by_groups(object_id, client_id, 'language')
+
+
+class AdminAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = [(Allow, 'Admin', ALL_PERMISSIONS)]
+        return acls
 
 
 class PerspectiveAcl(object):

@@ -110,6 +110,11 @@ def configure_routes(config):
                      factory='lingvodoc.models.DictionaryAcl')  # 100% ready
 
 
+    # API #DELETE
+    config.add_route(name='dictionary_delete', pattern='/dictionary/{client_id}/{object_id}/delete',
+                     factory='lingvodoc.models.AdminAcl')
+
+
     # web-view
     config.add_route(name='organizations', pattern='/organizations')
 
