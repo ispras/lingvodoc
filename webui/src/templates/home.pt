@@ -127,7 +127,7 @@
 </div>
 
 <script type="text/ng-template" id="languageTemplate.html">
-    <h3>{{ language.translation }}</h3>
+    <h4>{{ language.translation }}</h4>
 
     <ul>
         <li ng-repeat="dictionary in language.dicts">
