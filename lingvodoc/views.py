@@ -1340,7 +1340,7 @@ def dictionaries_list(request):
     languages = None
     if 'languages' in req:
         languages = req['languages']
-    dicts = DBSession.query(Dictionary)
+    dicts = DBSession.query(Dictionary).filter(Dictionary.marked_for_deletion==False)
     if published:
         if published:
             dicts = dicts.filter_by(state='Published').join(DictionaryPerspective)\
@@ -2354,7 +2354,9 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)
+            lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False,
+                                                            parent_client_id=parent.client_id,
+                                                            parent_object_id=parent.object_id)
 
             lexical_entries_criterion = lexes\
                 .join(LevelOneEntity)\
@@ -2412,7 +2414,7 @@ def lexical_entries_all_count(request):
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(LexicalEntry)\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id).count()
+                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id).count()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -2434,7 +2436,7 @@ def lexical_entries_published(request):
         if not parent.marked_for_deletion:
 
             lexes =  DBSession.query(LexicalEntry)\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .outerjoin(PublishGroupingEntity)\
                 .outerjoin(PublishLevelOneEntity)\
                 .outerjoin(PublishLevelTwoEntity)\
@@ -2524,7 +2526,7 @@ def lexical_entries_published_count(request):
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(LexicalEntry)\
-                .filter_by(parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .outerjoin(PublishGroupingEntity)\
                 .outerjoin(PublishLevelOneEntity)\
                 .outerjoin(PublishLevelTwoEntity)\
