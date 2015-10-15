@@ -35,24 +35,11 @@
 
     <h2>Опубликованные словари</h2>
 
-    <div ng-repeat="group in groupDictionaries">
-        <h3>{{ group.name }}</h3>
-
-        <ul class="entries_list">
-            <li ng-repeat="dictionary in group.dicts">
-                {{ dictionary.name }}
-
-                <ul class="entries_list">
-                    <li ng-repeat="p in dictionary.links">
-                        <a href="{{ p.link }}">{{ p.name }}</a>
-                    </li>
-                </ul>
-
-            </li>
+    <div>
+        <ul>
+            <li ng-repeat="language in languages" ng-include="'languageTemplate.html'"></li>
         </ul>
-
     </div>
-
 
     <h1>О проекте</h1>
 
@@ -137,16 +124,25 @@
         <p>
     </div>
 
-
-
-
-
-
-
-
-
-
 </div>
+
+<script type="text/ng-template" id="languageTemplate.html">
+    <h4>{{ language.translation }}</h4>
+
+    <ul>
+        <li ng-repeat="dictionary in language.dicts">
+            {{ dictionary.translation }} <span ng-repeat="perspective in dictionary.perspectives">
+                <a ng-attr-href=" {{ getPerspectiveLink(dictionary, perspective) }}">{{ perspective.translation }}</a>
+        </span>
+
+        </li>
+    </ul>
+
+    <ul ng-if="language.contains">
+        <li ng-repeat="language in language.contains" ng-include="'languageTemplate.html'">
+        </li>
+    </ul>
+</script>
 
 </body>
 

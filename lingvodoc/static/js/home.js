@@ -26260,108 +26260,861 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
 
 !angular.$$csp() && angular.element(document).find("head").prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
 
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(";");
+    for (var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == " ") c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+var wrapPerspective = function(perspective) {
+    if (typeof perspective.fields == "undefined") {
+        return;
+    }
+    for (var i = 0; i < perspective.fields.length; i++) {
+        if (typeof perspective.fields[i].group !== "undefined") {
+            perspective.fields[i]._groupEnabled = true;
+        }
+        if (typeof perspective.fields[i].contains !== "undefined") {
+            perspective.fields[i]._containsEnabled = true;
+        }
+    }
+    return perspective;
+};
+
+var exportPerspective = function(perspective) {
+    var jsPerspective = {
+        fields: []
+    };
+    var positionCount = 1;
+    for (var i = 0; i < perspective.fields.length; i++) {
+        var field = JSON.parse(JSON.stringify(perspective.fields[i]));
+        field["position"] = positionCount;
+        positionCount += 1;
+        if (field.data_type !== "grouping_tag") {
+            field["level"] = "leveloneentity";
+        } else {
+            field["level"] = "groupingentity";
+        }
+        if (field._groupEnabled) {
+            delete field._groupEnabled;
+        }
+        if (field._containsEnabled) {
+            delete field._containsEnabled;
+        }
+        if (field.contains) {
+            for (var j = 0; j < field.contains.length; j++) {
+                field.contains[j].level = "leveltwoentity";
+                field.contains[j].position = positionCount;
+                positionCount += 1;
+            }
+        }
+        jsPerspective.fields.push(field);
+    }
+    return jsPerspective;
+};
+
+var cloneObject = function(oldObject) {
+    return JSON.parse(JSON.stringify(oldObject));
+};
+
+var lingvodoc = {};
+
+lingvodoc.Object = function(clientId, objectId) {
+    this.client_id = clientId;
+    this.object_id = objectId;
+    this.type = "abstract";
+    this.getId = function() {
+        return this.client_id + "" + this.object_id;
+    };
+    this.export = function() {
+        return {};
+    };
+};
+
+lingvodoc.Object.prototype.equals = function(obj) {
+    return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
+};
+
+lingvodoc.Language = function(clientId, objectId, translation, translation_string) {
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.translation = translation;
+    this.translation_string = translation_string;
+    this.languages = [];
+    this.dictionaries = [];
+    this.equals = function(obj) {
+        return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
+    };
+};
+
+lingvodoc.Language.fromJS = function(js) {
+    return new lingvodoc.Language(js.client_id, js.object_id, js.translation, js.translation_string);
+};
+
+lingvodoc.Language.prototype = new lingvodoc.Object();
+
+lingvodoc.Language.prototype.constructor = lingvodoc.Language;
+
+lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation) {
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.parent_client_id = parentClientId;
+    this.parent_object_id = parentObjectId;
+    this.translation = translation;
+    this.perspectives = [];
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
+    };
+};
+
+lingvodoc.Dictionary.fromJS = function(js) {
+    return new lingvodoc.Dictionary(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation_string);
+};
+
+lingvodoc.Dictionary.prototype = new lingvodoc.Object();
+
+lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
+
+lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id, translation, translation_string, status, marked_for_deletion) {
+    lingvodoc.Object.call(this, client_id, object_id);
+    this.parent_client_id = parent_client_id;
+    this.parent_object_id = parent_object_id;
+    this.translation = translation;
+    this.translation_string = translation_string;
+    this.status = status;
+    this.marked_for_deletion = marked_for_deletion;
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
+    };
+};
+
+lingvodoc.Perspective.fromJS = function(js) {
+    return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.marked_for_deletion);
+};
+
+lingvodoc.Perspective.prototype = new lingvodoc.Object();
+
+lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
+
+function lingvodocAPI($http, $q) {
+    var addUrlParameter = function(url, key, value) {
+        return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+    };
+    var perspectiveToDictionaryFields = function(perspectiveFields) {
+        var fields = [];
+        angular.forEach(perspectiveFields, function(field, index) {
+            if (typeof field.group == "string") {
+                var createNewGroup = true;
+                for (var j = 0; j < fields.length; j++) {
+                    if (fields[j].entity_type == field.group && fields[j].isGroup) {
+                        fields[j].contains.push(field);
+                        createNewGroup = false;
+                        break;
+                    }
+                }
+                if (createNewGroup) {
+                    fields.push({
+                        entity_type: field.group,
+                        isGroup: true,
+                        contains: [ field ]
+                    });
+                }
+            } else {
+                fields.push(field);
+            }
+        });
+        return fields;
+    };
+    var getLexicalEntries = function(url, offset, count) {
+        var deferred = $q.defer();
+        var allLexicalEntriesUrl = url;
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "start_from", offset);
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "count", count);
+        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
+            if (data.lexical_entries && angular.isArray(data.lexical_entries)) {
+                deferred.resolve(data.lexical_entries);
+            } else {
+                deferred.reject("An error occured while fetching lexical entries!");
+            }
+        }).error(function() {
+            deferred.reject("An error occured while fetching lexical entries!");
+        });
+        return deferred.promise;
+    };
+    var getLexicalEntriesCount = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            var totalEntries = parseInt(data.count);
+            if (!isNaN(totalEntries)) {
+                deferred.resolve(totalEntries);
+            } else {
+                deferred.reject("An error occurred while fetching dictionary stats");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching dictionary stats");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var removeValue = function(entry, field, fieldValue, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                break;
+
+              case "leveltwoentity":
+                if (parentClientId && parentObjectId) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                } else {
+                    deferred.reject("Attempting to delete Level2 entry with no Level1 entry.");
+                    return deferred.promise;
+                }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.delete(url).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while removing value");
+            });
+        } else {
+            deferred.reject("An error  occurred while removing value");
+        }
+        return deferred.promise;
+    };
+    var saveValue = function(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveObjectId, entry, field, value, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity";
+                break;
+
+              case "leveltwoentity":
+                if (parent.client_id && parent.object_id) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity";
+                } else {
+                    deferred.reject("Attempting to save Level2 entry with no Level1 entry.");
+                    return deferred.promise;
+                }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.post(url, value).success(function(data, status, headers, config) {
+                value.client_id = data.client_id;
+                value.object_id = data.object_id;
+                deferred.resolve(value);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while saving value");
+            });
+        } else {
+            deferred.reject("An error  occurred while saving value");
+        }
+        return deferred.promise;
+    };
+    var addNewLexicalEntry = function(url) {
+        var deferred = $q.defer();
+        $http.post(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while creating a new lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getConnectedWords = function(clientId, objectId) {
+        var deferred = $q.defer();
+        var url = "/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/connected";
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.words)) {
+                deferred.resolve(data.words);
+            } else {
+                deferred.reject("An error  occurred while fetching connected words");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while fetching connected words");
+        });
+        return deferred.promise;
+    };
+    var linkEntries = function(e1, e2, entityType) {
+        var deferred = $q.defer();
+        var linkObject = {
+            entity_type: entityType,
+            connections: [ {
+                client_id: e1.client_id,
+                object_id: e1.object_id
+            }, {
+                client_id: e2.client_id,
+                object_id: e2.object_id
+            } ]
+        };
+        var url = "/group_entity";
+        $http.post(url, linkObject).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while connecting 2 entries");
+        });
+        return deferred.promise;
+    };
+    var search = function(query) {
+        var deferred = $q.defer();
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
+        $http.get(url).success(function(data, status, headers, config) {
+            var urls = [];
+            for (var i = 0; i < data.length; i++) {
+                var entr = data[i];
+                var getEntryUrl = "/dictionary/" + encodeURIComponent(entr.origin_dictionary_client_id) + "/" + encodeURIComponent(entr.origin_dictionary_object_id) + "/perspective/" + encodeURIComponent(entr.origin_perspective_client_id) + "/" + encodeURIComponent(entr.origin_perspective_object_id) + "/lexical_entry/" + encodeURIComponent(entr.client_id) + "/" + encodeURIComponent(entr.object_id);
+                urls.push(getEntryUrl);
+            }
+            var uniqueUrls = urls.filter(function(item, pos) {
+                return urls.indexOf(item) == pos;
+            });
+            var requests = [];
+            for (var j = 0; j < uniqueUrls.length; j++) {
+                var r = $http.get(uniqueUrls[j]);
+                requests.push(r);
+            }
+            $q.all(requests).then(function(results) {
+                var suggestedEntries = [];
+                for (var k = 0; k < results.length; k++) {
+                    if (results[k].data) {
+                        suggestedEntries.push(results[k].data.lexical_entry);
+                    }
+                }
+                deferred.resolve(suggestedEntries);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing basic search");
+        });
+        return deferred.promise;
+    };
+    var approve = function(url, entity, status) {
+        var deferred = $q.defer();
+        if (status) {
+            $http.patch(url, entity).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        } else {
+            var config = {
+                method: "DELETE",
+                url: url,
+                data: entity,
+                headers: {
+                    "Content-Type": "application/json;charset=utf-8"
+                }
+            };
+            $http(config).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        }
+        return deferred.promise;
+    };
+    var approveAll = function(url) {
+        var deferred = $q.defer();
+        $http.patch(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to change approval status ");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryProperties = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryProperties = function(url, properties) {
+        var deferred = $q.defer();
+        $http.put(url, properties).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var getLanguages = function(url) {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(languages[i]);
+                if (language.contains && language.contains.length > 0) {
+                    var childLangs = flatLanguages(language.contains);
+                    flat = flat.concat(childLangs);
+                }
+            }
+            return flat;
+        };
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(flatLanguages(data.languages));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryStatus = function(url, status) {
+        var deferred = $q.defer();
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set dictionary status");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveStatus = function(dictionary, perspective, status) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + dictionary.client_id + "/" + dictionary.object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/state";
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set perspective status");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveFields = function(url, fields) {
+        var deferred = $q.defer();
+        $http.post(url, fields).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to save perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getUserInfo = function(userId, clientId) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get user info");
+        });
+        return deferred.promise;
+    };
+    var setUserInfo = function(userId, clientId, userInfo) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.post(url, userInfo).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to set user info");
+        });
+        return deferred.promise;
+    };
+    var getOrganizations = function() {
+        var deferred = $q.defer();
+        $http.get("/organization_list").success(function(data, status, headers, config) {
+            deferred.resolve(data.organizations);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch list of organizations");
+        });
+        return deferred.promise;
+    };
+    var createOrganization = function(org) {
+        var deferred = $q.defer();
+        $http.post("/organization", org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to create organization");
+        });
+        return deferred.promise;
+    };
+    var getOrganization = function(orgId) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(orgId);
+        $http.get(url).success(function(data, status, headers, config) {
+            var requests = [];
+            var users = [];
+            var promises = data.users.map(function(userId) {
+                return $http.get("/user" + "?user_id= " + encodeURIComponent(userId));
+            });
+            $q.all(promises).then(function(results) {
+                angular.forEach(results, function(result) {
+                    users.push(result.data);
+                });
+                data.users = users;
+                deferred.resolve(data);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get information about organization");
+        });
+        return deferred.promise;
+    };
+    var editOrganization = function(org) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(org.organization_id);
+        $http.put(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to change information about organization");
+        });
+        return deferred.promise;
+    };
+    var searchUsers = function(query) {
+        var deferred = $q.defer();
+        $http.get("/users?search=" + encodeURIComponent(query)).success(function(data, status, headers, config) {
+            deferred.resolve(data.users);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to search for users");
+        });
+        return deferred.promise;
+    };
+    var getDictionaries = function(query) {
+        var deferred = $q.defer();
+        var dictionaries = [];
+        $http.post("/dictionaries", query).success(function(data, status, headers, config) {
+            for (var i = 0; i < data.dictionaries.length; i++) {
+                var dictionary = data.dictionaries[i];
+                dictionaries.push(lingvodoc.Dictionary.fromJS(dictionary));
+            }
+            deferred.resolve(dictionaries);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch dictionaries list");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryPerspectives = function(dictionary) {
+        var deferred = $q.defer();
+        var perspectives = [];
+        var getPerspectivesUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspectives";
+        $http.get(getPerspectivesUrl).success(function(data, status, headers, config) {
+            angular.forEach(data.perspectives, function(jspers) {
+                perspectives.push(lingvodoc.Perspective.fromJS(jspers));
+            });
+            deferred.resolve(perspectives);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspectives list");
+        });
+        return deferred.promise;
+    };
+    var getDictionariesWithPerspectives = function(query) {
+        var deferred = $q.defer();
+        getDictionaries(query).then(function(dictionaries) {
+            var r = dictionaries.map(function(d) {
+                return getDictionaryPerspectives(d);
+            });
+            $q.all(r).then(function(results) {
+                angular.forEach(dictionaries, function(dictionary, index) {
+                    dictionary.perspectives = results[index];
+                });
+                deferred.resolve(dictionaries);
+            });
+        }, function() {});
+        return deferred.promise;
+    };
+    var mergeDictionaries = function(tranlation, translation_string, d1, d2) {
+        var deferred = $q.defer();
+        var req = {
+            translation: tranlation,
+            translation_string: translation_string,
+            language_client_id: d1.parent_client_id,
+            language_object_id: d1.parent_object_id,
+            dictionaries: [ {
+                client_id: d1.client_id,
+                object_id: d1.object_id
+            }, {
+                client_id: d2.client_id,
+                object_id: d2.object_id
+            } ]
+        };
+        $http.post("/merge/dictionaries", req).success(function(data, status, headers, config) {
+            console.log(data);
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to merge dictionaries");
+        });
+        return deferred.promise;
+    };
+    var mergePerspectives = function(req) {
+        var deferred = $q.defer();
+        $http.post("/merge/perspectives", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to merge perspectives");
+        });
+        return deferred.promise;
+    };
+    var getSuggestionLexicalEntry = function(entry) {
+        var deferred = $q.defer();
+        getLexicalEntry(entry.suggestion[0].lexical_entry_client_id, entry.suggestion[0].lexical_entry_object_id).then(function(e1) {
+            getLexicalEntry(entry.suggestion[1].lexical_entry_client_id, entry.suggestion[1].lexical_entry_object_id).then(function(e2) {
+                deferred.resolve({
+                    confidence: entry.confidence,
+                    suggestion: [ e1, e2 ]
+                });
+            }, function(reason) {
+                deferred.reject("Failed to fetch lexical entry: " + reason);
+            });
+        }, function(reason) {
+            deferred.reject("Failed to fetch lexical entry: " + reason);
+        });
+        return deferred.promise;
+    };
+    var mergeSuggestions = function(perspective) {
+        var deferred = $q.defer();
+        var body = {
+            entity_type_primary: "Word",
+            entity_type_secondary: "Transcription",
+            threshold: .6,
+            levenstein: 3,
+            client_id: perspective.client_id,
+            object_id: perspective.object_id
+        };
+        $http.post("/merge/suggestions", body).success(function(data, status, headers, config) {
+            if (angular.isArray(data)) {
+                var r = data.map(function(e) {
+                    return getSuggestionLexicalEntry(e);
+                });
+                $q.all(r).then(function(results) {
+                    deferred.resolve(results);
+                });
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch merge suggestions");
+        });
+        return deferred.promise;
+    };
+    var getLexicalEntry = function(clientId, objectId) {
+        var deferred = $q.defer();
+        $http.get("/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId)).success(function(data, status, headers, config) {
+            deferred.resolve(data.lexical_entry);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch lexical entry");
+        });
+        return deferred.promise;
+    };
+    var moveLexicalEntry = function(clientId, objectId, toClientId, toObjectId) {
+        var deferred = $q.defer();
+        var req = {
+            client_id: toClientId,
+            object_id: toObjectId
+        };
+        $http.patch("/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/move", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getDictionariesByLanguage = function(language) {
+        var deferred = $q.defer();
+        var req = {
+            languages: [ {
+                client_id: language.client_id,
+                object_id: language.object_id
+            } ]
+        };
+        $http.post("/dictionaries", req).success(function(data, status, headers, config) {
+            var dictionaries = [];
+            if (angular.isArray(data.dictionaries)) {
+                angular.forEach(data.dictionaries, function(jsdict) {
+                    var dictionary = lingvodoc.Dictionary.fromJS(jsdict);
+                    if (language.client_id == dictionary.parent_client_id && language.object_id == dictionary.parent_object_id) {
+                        dictionaries.push(dictionary);
+                    }
+                });
+            }
+            deferred.resolve(dictionaries);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getLanguagesFull = function() {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(language);
+                if (language.languages.length > 0) {
+                    var childLangs = flatLanguages(language.languages);
+                    flat = flat.concat(childLangs);
+                }
+            }
+            return flat;
+        };
+        var setDictionaries = function(language, languages, dictionaries) {
+            for (var i = 0; i < languages.length; ++i) {
+                var lang = languages[i];
+                if (language.equals(lang)) {
+                    language.dictionaries = dictionaries;
+                    return true;
+                } else {
+                    if (setDictionaries(language, lang.languages, dictionaries)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        var parseResponse = function(langs) {
+            var responseLangs = [];
+            angular.forEach(langs, function(lang) {
+                var responseLang = lingvodoc.Language.fromJS(lang);
+                if (angular.isArray(lang.contains)) {
+                    responseLang.languages = parseResponse(lang.contains);
+                }
+                responseLangs.push(responseLang);
+            });
+            return responseLangs;
+        };
+        $http.get("/languages").success(function(data, status, headers, config) {
+            var languages = [];
+            if (angular.isArray(data.languages)) {
+                languages = parseResponse(data.languages);
+            }
+            var flat = flatLanguages(languages);
+            var reqs = flat.map(function(l) {
+                return getDictionariesByLanguage(l);
+            });
+            $q.all(reqs).then(function(allLangsDictionaries) {
+                angular.forEach(allLangsDictionaries, function(dictionaries, index) {
+                    setDictionaries(flat[index], languages, dictionaries);
+                });
+                deferred.resolve(languages);
+            }, function(reason) {
+                deferred.reject(reason);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
+    var getPublishedDictionaries = function() {
+        var deferred = $q.defer();
+        var req = {
+            group_by_lang: true,
+            group_by_org: false
+        };
+        $http.post("/published_dictionaries", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    return {
+        getLexicalEntries: getLexicalEntries,
+        getLexicalEntriesCount: getLexicalEntriesCount,
+        getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
+        addNewLexicalEntry: addNewLexicalEntry,
+        saveValue: saveValue,
+        removeValue: removeValue,
+        getConnectedWords: getConnectedWords,
+        linkEntries: linkEntries,
+        search: search,
+        approve: approve,
+        approveAll: approveAll,
+        getDictionaryProperties: getDictionaryProperties,
+        setDictionaryProperties: setDictionaryProperties,
+        getLanguages: getLanguages,
+        setDictionaryStatus: setDictionaryStatus,
+        setPerspectiveStatus: setPerspectiveStatus,
+        getPerspectiveFields: getPerspectiveFields,
+        setPerspectiveFields: setPerspectiveFields,
+        getUserInfo: getUserInfo,
+        setUserInfo: setUserInfo,
+        getOrganizations: getOrganizations,
+        createOrganization: createOrganization,
+        getOrganization: getOrganization,
+        editOrganization: editOrganization,
+        searchUsers: searchUsers,
+        getDictionaries: getDictionaries,
+        getDictionaryPerspectives: getDictionaryPerspectives,
+        getDictionariesWithPerspectives: getDictionariesWithPerspectives,
+        mergeDictionaries: mergeDictionaries,
+        mergePerspectives: mergePerspectives,
+        mergeSuggestions: mergeSuggestions,
+        getLexicalEntry: getLexicalEntry,
+        moveLexicalEntry: moveLexicalEntry,
+        getLanguagesFull: getLanguagesFull,
+        getPublishedDictionaries: getPublishedDictionaries
+    };
+}
+
 "use strict";
 
 angular.module("HomeModule", [ "ui.bootstrap" ], function($rootScopeProvider) {
     $rootScopeProvider.digestTtl(1e3);
-}).controller("HomeController", [ "$scope", "$http", "$modal", "$q", "$log", function($scope, $http, $modal, $q, $log) {
+}).service("dictionaryService", lingvodocAPI).controller("HomeController", [ "$scope", "$http", "$modal", "$q", "$log", "dictionaryService", function($scope, $http, $modal, $q, $log, dictionaryService) {
     var languagesUrl = $("#languagesUrl").data("lingvodoc");
     var dictionariesUrl = $("#dictionariesUrl").data("lingvodoc");
     var getUserInfoUrl = $("#getUserInfoUrl").data("lingvodoc");
-    var dictionaryQuery = {
-        published: true
-    };
     $scope.languages = [];
-    $scope.dictionaries = [];
-    $scope.groupDictionaries = [];
-    $scope.count = 0;
-    var flatLanguages = function(languages) {
-        var flat = [];
-        for (var i = 0; i < languages.length; i++) {
-            var language = languages[i];
-            flat.push(languages[i]);
-            if (language.contains && language.contains.length > 0) {
-                var childLangs = flatLanguages(language.contains);
-                flat = flat.concat(childLangs);
-            }
-        }
-        return flat;
+    $scope.getPerspectiveLink = function(dictionary, perspective) {
+        return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/view";
     };
-    var getLanguage = function(client_id, object_id) {
-        for (var i = 0; i < $scope.languages.length; i++) {
-            if ($scope.languages[i].client_id == client_id && $scope.languages[i].object_id == object_id) {
-                return $scope.languages[i];
-            }
-        }
-    };
-    var createGroupDictionaries = function(languages, dictionaries) {
-        var group = [];
-        for (var i = 0; i < dictionaries.length; i++) {
-            dictionaries[i].links = $scope.getViewDictionaryLinks(dictionaries[i]);
-            if (!dictionaries[i].parent_client_id || !dictionaries[i].parent_object_id) {
-                continue;
-            }
-            var language = getLanguage(dictionaries[i].parent_client_id, dictionaries[i].parent_object_id);
-            var createNewGroup = true;
-            for (var j = 0; j < group.length; j++) {
-                if (group[j].client_id == language.client_id && group[j].object_id == language.object_id) {
-                    group[j].dicts.push(dictionaries[i]);
-                    createNewGroup = false;
+    var getPublishedPerspectives = function(dictionary) {
+        dictionaryService.getDictionaryPerspectives(dictionary).then(function(perspectives) {
+            var published = [];
+            angular.forEach(perspectives, function(perspective) {
+                if (perspective.status.toUpperCase() == "published".toUpperCase()) {
+                    published.push(perspective);
                 }
-            }
-            if (createNewGroup) {
-                group.push({
-                    client_id: language.client_id,
-                    object_id: language.object_id,
-                    name: language.translation_string,
-                    dicts: [ dictionaries[i] ]
-                });
-            }
-        }
-        return group;
-    };
-    $scope.getViewDictionaryLinks = function(dictionary) {
-        if (!dictionary.perspectives) {
-            return [];
-        }
-        var links = [];
-        for (var i = 0; i < dictionary.perspectives.length; i++) {
-            var perspective = dictionary.perspectives[i];
-            var perspectiveClientId = perspective.client_id;
-            var perspectiveObjectId = perspective.object_id;
-            links.push({
-                name: perspective.name,
-                link: "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/view"
             });
-        }
-        return links;
+            dictionary.perspectives = published;
+        }, function() {});
     };
-    $http.get(languagesUrl).success(function(data, status, headers, config) {
-        $scope.languages = flatLanguages(data.languages);
-        $http.post(dictionariesUrl, dictionaryQuery).success(function(data, status, headers, config) {
-            var requests = [];
-            $scope.dictionaries = data.dictionaries;
-            for (var i = 0; i < $scope.dictionaries.length; i++) {
-                var dictionary = $scope.dictionaries[i];
-                var getPerspectivesUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspectives";
-                var r = $http.get(getPerspectivesUrl);
-                requests.push(r);
-            }
-            $q.all(requests).then(function(results) {
-                for (var k = 0; k < results.length; k++) {
-                    if (results[k].data) {
-                        for (var perspectiveIdx = 0; perspectiveIdx < results[k].data.perspectives.length; perspectiveIdx++) {
-                            for (var dictionaryIdx = 0; dictionaryIdx < $scope.dictionaries.length; dictionaryIdx++) {
-                                if (results[k].data.perspectives[perspectiveIdx].parent_client_id == $scope.dictionaries[dictionaryIdx].client_id && results[k].data.perspectives[perspectiveIdx].parent_object_id == $scope.dictionaries[dictionaryIdx].object_id) {
-                                    $scope.dictionaries[dictionaryIdx]["perspectives"] = results[k].data.perspectives;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                $scope.groupDictionaries = createGroupDictionaries($scope.languages, $scope.dictionaries);
+    var setPerspectives = function(languages) {
+        for (var i = 0; i < languages.length; ++i) {
+            var lang = languages[i];
+            angular.forEach(lang.dicts, function(dict) {
+                getPublishedPerspectives(dict);
             });
-        }).error(function(data, status, headers, config) {});
-    }).error(function(data, status, headers, config) {});
+            if (angular.isArray(lang.contains)) {
+                setPerspectives(lang.contains);
+            }
+        }
+    };
+    dictionaryService.getPublishedDictionaries().then(function(languages) {
+        $scope.languages = languages;
+        setPerspectives($scope.languages);
+    });
 } ]);

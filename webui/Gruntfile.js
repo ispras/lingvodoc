@@ -71,6 +71,8 @@ module.exports = function(grunt) {
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'src/js/util.js',
+                    'src/js/api.js',
                     'src/js/home.js'
                 ],
                 dest: '../lingvodoc/static/js/home.js'

@@ -38,42 +38,7 @@
 
 
 
-<nav class="lingvodoc-navbar">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
-                    aria-expanded="false" aria-controls="navbar">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="${request.route_url('home')}">Lingvodoc</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li class="active"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
-                <li><a href="${request.route_url('languages')}">Languages</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#about">About</a></li>
-            </ul>
-
-            <ul class="nav navbar-nav navbar-right">
-
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false">${user.name}<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
-                        <li><a href="${request.route_url('blob_upload')}">Manage files</a></li>
-                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
+<div metal:use-macro="load: nav.pt"></div>
 <br>
 
 <div class="container-fluid" style="padding-top: 20px" ng-controller="ViewDictionaryController" ng-cloak>
@@ -163,7 +128,7 @@
 
                             <button type="button" class="btn btn-default btn-sm"
                                     ng-click="viewGroup(lexicalEntry, field, fieldValues)">
-                                <span class="glyphicon glyphicon-list">Edit</span>
+                                <span class="glyphicon glyphicon-list">View</span>
                             </button>
 
                         </div>
@@ -174,7 +139,7 @@
 
                         <button type="button" class="btn btn-default btn-sm"
                                 ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)">
-                            <span class="glyphicon glyphicon-list">Edit</span>
+                            <span class="glyphicon glyphicon-list">View</span>
                         </button>
 
                     </div>
@@ -330,14 +295,6 @@
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
                                         {{ fieldValue.content }}
-
-                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
-                                            <span class="glyphicon glyphicon-ban-circle"></span>
-                                        </button>
-
-                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
-                                            <span class="glyphicon glyphicon-ok-circle"></span>
-                                        </button>
                                     </li>
                                 </ul>
                             </div>
@@ -346,14 +303,6 @@
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
                                         <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
-
-                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
-                                            <span class="glyphicon glyphicon-ban-circle"></span>
-                                        </button>
-
-                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
-                                            <span class="glyphicon glyphicon-ok-circle"></span>
-                                        </button>
                                     </li>
                                 </ul>
                             </div>
@@ -372,15 +321,6 @@
                                                 ng-click="annotate(fieldValue, fieldValue.contains[0])">
                                             <span class="glyphicon glyphicon-list">View markup</span>
                                         </button>
-
-                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, true)" ng-if="!approved(lexicalEntry, field, fieldValue)">
-                                            <span class="glyphicon glyphicon-ban-circle"></span>
-                                        </button>
-
-                                        <button type="button" class="btn btn-default btn-sm" ng-click="approve(lexicalEntry, field, fieldValue, false)" ng-if="approved(lexicalEntry, field, fieldValue)">
-                                            <span class="glyphicon glyphicon-ok-circle"></span>
-                                        </button>
-
                                     </li>
                                 </ul>
 
@@ -490,25 +430,6 @@
                                         </button>
                                     </li>
                                 </ul>
-
-                            </div>
-
-                            <div ng-if="fieldsIdx[$index].isGroup">
-
-                                <button type="button" class="btn btn-default btn-sm"
-                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
-                                    <span class="glyphicon glyphicon-plus"></span>
-                                </button>
-
-                            </div>
-
-
-                            <div ng-if="fieldsIdx[$index].data_type == 'grouping_tag'">
-
-                                <button type="button" class="btn btn-default btn-sm"
-                                        ng-click="addGroup(entry.client_id, entry.object_id, fieldsIdx[$index])">
-                                    <span class="glyphicon glyphicon-plus"></span>
-                                </button>
 
                             </div>
 

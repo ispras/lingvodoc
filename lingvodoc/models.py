@@ -260,14 +260,17 @@ class TranslationStringMixin(object):
         else:
             req = request.json_body
 
-        translation = req['translation_string']
+        translation = req.get('translation_string')
         if 'translation' in req:
             translation = req['translation']
+        translation_string = req.get('translation_string')
+        if cls.translation_string:
+            translation_string = cls.translation_string
         add_translation_to_translation_string(find_locale_id(request),
                                               translation,
-                                              req['translation_string'],
+                                              translation_string,
                                               request.authenticated_userid)
-        cls.translation_string = req['translation_string']
+        cls.translation_string = translation_string
         return
 
 
@@ -734,12 +737,12 @@ def acl_by_groups(object_id, client_id, subject):
         if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
             persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
-                if persp.state == 'published':
+                if persp.state == 'Published':
                     acls += [(Allow, Everyone, 'view')]
         elif subject in ['dictionary', 'other dictionary subjects']:
             dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
             if dict:
-                if dict.state == 'published':
+                if dict.state == 'Published':
                     acls += [(Allow, Everyone, 'view')]
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()

@@ -117,8 +117,6 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
     }).error(function (data, status, headers, config) {
         // error handling
     });
-
-
 }]);
 
 app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
@@ -166,7 +164,7 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
 
     $scope.publish = function() {
         var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/state';
-        dictionaryService.setDictionaryStatus(url, 'published');
+        dictionaryService.setDictionaryStatus(url, 'Published');
     };
 
     $scope.ok = function() {
@@ -211,12 +209,16 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
         }
     };
 
+    $scope.publish = function() {
+        dictionaryService.setPerspectiveStatus(params.dictionary, $scope.perspective, 'Published');
+    };
+
     $scope.ok = function() {
         var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
         dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
             $modalInstance.close();
-        }, function(fields) {
-
+        }, function(reason) {
+            $log.error(reason);
         });
     };
 
@@ -228,10 +230,9 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     dictionaryService.getPerspectiveFields(url).then(function(fields) {
         params.perspective['fields'] = fields;
         $scope.perspective = wrapPerspective(params.perspective);
-    }, function(fields) {
-
+    }, function(reason) {
+        $log.error(reason);
     });
-
 }]);
 
 
