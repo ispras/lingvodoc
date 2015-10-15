@@ -30961,7 +30961,7 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
         }
         var createPerspectiveUrl = "/dictionary/" + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + "/" + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + "/" + "perspective";
         var perspectiveObj = {
-            name: $scope.dictionaryData.perspectiveName,
+            translation_string: $scope.dictionaryData.perspectiveName,
             translation: $scope.dictionaryData.perspectiveName
         };
         $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
