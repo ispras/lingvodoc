@@ -134,7 +134,9 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     perspective_create_url = server_url + 'dictionary/%s/%s/perspective' % (
     dictionary['client_id'], dictionary['object_id'])
     create_perspective_request = {"translation": "Этимологический словарь из Lingvodoc 0.98",
-                                  "translation_string": "Lingvodoc 0.98 etymology dictionary"}
+                                  "translation_string": "Lingvodoc 0.98 etymology dictionary",
+                                  "imported_source": "Lingvodoc-0.98",
+                                  "imported_hash": dict_attributes['dialeqt_id']}
 
     status = session.post(perspective_create_url, json=create_perspective_request)
     perspective = json.loads(status.text)
