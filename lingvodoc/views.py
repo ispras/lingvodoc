@@ -3354,16 +3354,33 @@ def delete_organization(request):
     return {'error': str("No such organization in the system")}
 
 
-def user_counter(entry, result):
+def user_counter(entry, result, starting_date, ending_date):
+    resulttmp = None
+    if entry['level'] == 'lexicalentry':
+        resulttmp = dict(result)
+    if 'contains' in entry:
+        if entry['contains']:
+            for ent in entry['contains']:
+                user_counter(ent, result, starting_date, ending_date)
+    if starting_date:
+        if datetime.datetime(entry['created_at']) < starting_date:
+            return result
+    if ending_date:
+        if datetime.datetime(entry['created_at']) > ending_date:
+            return result
+    if entry['level'] == 'lexicalentry':
+        if result == resulttmp:
+            return result
+
     client = DBSession.query(Client).filter_by(id=entry['client_id']).first()
     if client:
         user = DBSession.query(Client).filter_by(id=client.user_id).first()
         if user:
             if not result.get(user.id):
-                result[user.id] = {'lexical_entries':0,
-                                   'level_one_entities':0,
-                                   'level_two_entities':0,
-                                   'grouping_entities':0}
+                result[user.id] = {'lexical_entries': 0,
+                                   'level_one_entities': 0,
+                                   'level_two_entities': 0,
+                                   'grouping_entities': 0}
             user_count = result[user.id]
             if entry['level'] == 'lexicalentry':
                 user_count['lexical_entries'] += 1
@@ -3373,11 +3390,8 @@ def user_counter(entry, result):
                 user_count['level_two_entities'] += 1
             if entry['level'] == 'groupingentity':
                 user_count['grouping_entities'] += 1
-    if 'contains' in entry:
-        if entry['contains']:
-            for ent in entry['contains']:
-                user_counter(ent, result)
     return result
+
 
 @view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='edit')
 def perspective_info(request):
@@ -3386,6 +3400,12 @@ def perspective_info(request):
     object_id = request.matchdict.get('perspective_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
+    starting_date = request.GET.matchdict.get('starting_date')
+    if starting_date:
+        starting_date = datetime.datetime(starting_date)
+    ending_date = request.GET.matchdict.get('ending_date')
+    if ending_date:
+        ending_date = datetime.datetime(ending_date)
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         request.response.status = HTTPNotFound.code
@@ -3396,15 +3416,41 @@ def perspective_info(request):
         if not perspective.marked_for_deletion:
             result = dict()
             for lex in perspective.lexicalentry:
-                user_counter(lex.track(True), result)
+                user_counter(lex.track(True), result, starting_date, ending_date)
+
             response['count'] = result
-
-
             request.response.status = HTTPOk.code
             return response
 
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='dictionary_info', renderer='json', request_method='GET', permission='edit')
+def dictionary_info(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    starting_date = request.GET.matchdict.get('starting_date')
+    if starting_date:
+        starting_date = datetime.datetime(starting_date)
+    ending_date = request.GET.matchdict.get('ending_date')
+    if ending_date:
+        ending_date = datetime.datetime(ending_date)
+    dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+    result = dict()
+    if dictionary:
+        if not dictionary.marked_for_deletion:
+            for perspective in dictionary.dictionaryperspective:
+                for lex in perspective.lexicalentry:
+                    user_counter(lex.track(True), result, starting_date, ending_date)
+
+            response['count'] = result
+            request.response.status = HTTPOk.code
+            return response
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such dictionary in the system")}
 
 
 @view_config(route_name='create_organization', renderer='json', request_method='POST', permission='create')
@@ -3468,8 +3514,6 @@ try it again.
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = dict()
-    response[1]={'lexes':13, 'l1e':452}
-    response[13]={'lexes':154, 'l1e':42}
     return
 
 
