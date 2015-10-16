@@ -470,30 +470,46 @@ def real_delete_dictionary(request):
     if parent:
         perspectives = DBSession.query(DictionaryPerspective).filter_by(parent=parent)
         for perspective in perspectives:
-            fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective)
-            for field in fields:
-                DBSession.delete(field)
+            fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective).delete()
             lexes = DBSession.query(LexicalEntry).filter_by(parent=perspective)
             for lex in lexes:
                 l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
                 for l1e in l1es:
                     l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
                     for l2e in l2es:
-                        pl2es = DBSession.query(PublishLevelTwoEntity).filter_by(entity=lex)
-                        for pl2e in pl2es:
-                            DBSession.delete(pl2e)
+                        pl2es = DBSession.query(PublishLevelTwoEntity).filter_by(entity=l2e).delete()
                         DBSession.delete(l2e)
-                    pl1es = DBSession.query(PublishLevelOneEntity).filter_by(entity=lex)
-                    for pl1e in pl1es:
-                        DBSession.delete(pl1e)
+                    pl1es = DBSession.query(PublishLevelOneEntity).filter_by(entity=l1e).delete()
                     DBSession.delete(l1e)
                 ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
                 for ge in ges:
-                    pges = DBSession.query(PublishGroupingEntity).filter_by(entity=lex)
-                    for pge in pges:
-                        DBSession.delete(pge)
+                    pges = DBSession.query(PublishGroupingEntity).filter_by(entity=ge).delete()
                     DBSession.delete(ge)
+                DBSession.delete(lex)
+            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+                groups = DBSession.query(Group).filter_by(parent=base,
+                                                          subject_client_id=perspective.client_id,
+                                                          subject_object_id=perspective.object_id).all()
+                for group in groups:
+                    users = []
+                    for user in group.users:
+                        users.append(user)
+                    for user in users:
+                        group.users.remove(user)
+                    DBSession.delete(group)
+
             DBSession.delete(perspective)
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+            groups = DBSession.query(Group).filter_by(parent=base,
+                                                      subject_client_id=parent.client_id,
+                                                      subject_object_id=parent.object_id).all()
+            for group in groups:
+                users = []
+                for user in group.users:
+                    users.append(user)
+                for user in users:
+                    group.users.remove(user)
+                DBSession.delete(group)
         DBSession.delete(parent)
         request.response.status = HTTPOk.code
         return response
