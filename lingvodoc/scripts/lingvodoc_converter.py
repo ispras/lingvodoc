@@ -294,8 +294,8 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                             and dict_blobs_description.type=1
                                             and dictionary.is_a_regular_form=0;""")
     entity_types = ['Paradigm sound']
-    upload_audio_simple(session, ids_mapping, simple_paradigm_sound_cursor, create_entities_url, audio_hashes,
-                        client_id, False, entity_types, locale_id)
+    upload_audio_simple(session, ids_mapping, simple_paradigm_sound_cursor, create_entities_url, audio_hashes, entity_types,
+                        client_id, False, locale_id)
 
     change_dict_status(session, converting_status_url, 'Converting 80%')
 
