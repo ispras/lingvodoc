@@ -306,7 +306,8 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     etymology_cursor = sqconn.cursor()
     etymology_cursor.execute("""select id, etimology_tag
                                 FROM dictionary
-                                WHERE etimology_tag NOT NULL; """)
+                                WHERE etimology_tag NOT NULL
+                                and dictionary.is_a_regular_form=1; """)
     for cursor in etymology_cursor:
         id = int(cursor[0])
         client_id = ids_mapping[id][0]
