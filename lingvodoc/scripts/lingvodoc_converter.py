@@ -38,7 +38,7 @@ def upload_audio(upload_url, audio_sequence, markup_sequence, session):
     log.debug(status.text)
 
 
-def upload_audio_simple(session, ids_mapping, sound_and_markup_cursor, upload_url, audio_hashes, entity_types,
+def upload_audio_simple(session, ids_mapping, sound_and_markup_cursor, upload_url, audio_hashes, entity_types, client_id, is_a_regular_form,
                         locale_id=1):
     audio_sequence = []
     for cursor in sound_and_markup_cursor:
@@ -57,6 +57,8 @@ def upload_audio_simple(session, ids_mapping, sound_and_markup_cursor, upload_ur
                              "parent_client_id": ids_mapping[int(word_id)][0],
                              "parent_object_id": ids_mapping[int(word_id)][1],
                              "content": base64.urlsafe_b64encode(audio).decode()}
+            if not is_a_regular_form:
+                audio_element['additional_metadata'] = '{"client_id": %s, "row_id": %s}' % (client_id, cursor[4])
             audio_sequence.append(audio_element)
             if len(audio_sequence) > 50:
                 upload_audio(upload_url, audio_sequence, None, session)
@@ -66,7 +68,7 @@ def upload_audio_simple(session, ids_mapping, sound_and_markup_cursor, upload_ur
         audio_sequence = []
 
 
-def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, upload_url, audio_hashes, entity_types,
+def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, upload_url, audio_hashes, entity_types, client_id, is_a_regular_form,
                              locale_id=1):
     audio_sequence = []
     markup_sequence = []
@@ -88,6 +90,8 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
                          "parent_client_id": ids_mapping[int(word_id)][0],
                          "parent_object_id": ids_mapping[int(word_id)][1],
                          "content": base64.urlsafe_b64encode(audio).decode()}
+        if not is_a_regular_form:
+            audio_element['additional_metadata'] = '{"client_id": %s, "row_id": %s}' % (client_id, cursor[5])
         audio_sequence.append(audio_element)
 
         markup_element = {
@@ -99,6 +103,8 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
             # need to set after push "parent_client_id": ids_mapping[int(word_id)][0],
             # need to set after push "parent_object_id": ids_mapping[int(word_id)][1],
             "content": base64.urlsafe_b64encode(markup).decode()}
+        if not is_a_regular_form:
+            audio_element['additional_metadata'] = '{"client_id": %s, "row_id": %s}' % (client_id, cursor[5])
         markup_sequence.append(markup_element)
 
         if len(audio_sequence) > 50:
@@ -235,7 +241,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     audio_hashes = set()
     entity_types = ['Sound', 'Praat markup']
     upload_audio_with_markup(session, ids_mapping, sound_and_markup_word_cursor, create_entities_url, audio_hashes,
-                             entity_types, locale_id)
+                             entity_types, client_id, True, locale_id)
     log.debug(audio_hashes)
 
     change_dict_status(session, converting_status_url, 'Converting 45%')
@@ -245,7 +251,8 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                                 blobs.secblob,
                                                 blobs.mainblob,
                                                 dict_blobs_description.name,
-                                                dictionary.regular_form
+                                                dictionary.regular_form,
+                                                dictionary.id
                                                 from blobs, dict_blobs_description, dictionary
                                                 where dict_blobs_description.blobid=blobs.id
                                                 and dict_blobs_description.wordid=dictionary.id
@@ -254,7 +261,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
 
     entity_types = ['Paradigm sound', "Paradigm Praat markup"]
     upload_audio_with_markup(session, ids_mapping, paradigm_sound_and_markup_cursor, create_entities_url, audio_hashes,
-                             entity_types, locale_id)
+                             entity_types, client_id, False, locale_id)
     log.debug(audio_hashes)
 
     change_dict_status(session, converting_status_url, 'Converting 60%')
@@ -271,7 +278,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                         and dictionary.is_a_regular_form=1;""")
     entity_types = ['Sound']
     upload_audio_simple(session, ids_mapping, simple_word_sound_cursor, create_entities_url, audio_hashes, entity_types,
-                        locale_id)
+                        client_id, True, locale_id)
 
     change_dict_status(session, converting_status_url, 'Converting 70%')
 
@@ -279,7 +286,8 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     simple_paradigm_sound_cursor.execute("""select blobs.id,
                                             blobs.mainblob,
                                             dict_blobs_description.name,
-                                            dictionary.regular_form
+                                            dictionary.regular_form,
+                                            dictionary.id
                                             from blobs, dict_blobs_description, dictionary
                                             where dict_blobs_description.blobid=blobs.id
                                             and dict_blobs_description.wordid=dictionary.id
@@ -287,7 +295,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                             and dictionary.is_a_regular_form=0;""")
     entity_types = ['Paradigm sound']
     upload_audio_simple(session, ids_mapping, simple_paradigm_sound_cursor, create_entities_url, audio_hashes,
-                        entity_types, locale_id)
+                        client_id, False, entity_types, locale_id)
 
     change_dict_status(session, converting_status_url, 'Converting 80%')
 
@@ -339,6 +347,7 @@ def convert_one(filename, login, password_hash, language_client_id, language_obj
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)
+        raise
     log.debug(status)
     return status
 
@@ -348,6 +357,6 @@ if __name__ == "__main__":
     log.setLevel(logging.DEBUG)
     logging.basicConfig(format='%(asctime)s\t%(levelname)s\t[%(name)s]\t%(message)s')
     log.debug("!!!!!!!!!! YOU SHOULD NOT SEE IT !!!!!!!!")
-    convert_one(filename="/Users/al/Movies/dicts-current/narym-selkup.sqlite", login="admin",
-                password_hash="$2a$12$W5UsrDmx0oHbSL925OMVEu6ke51nLQKcS2A7cc4DQo1nCka0vWDBa",
-                language_client_id=1, language_object_id=1, server_url="http://localhost:6543/")
+    convert_one(filename="/Users/al/Movies/dicts-current/nenets_kaninski.sqlite", login="",
+                password_hash="",
+                language_client_id=33, language_object_id=24, server_url="http://lingvodoc.ispras.ru/")
