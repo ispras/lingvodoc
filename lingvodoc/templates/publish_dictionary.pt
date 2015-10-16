@@ -68,6 +68,12 @@
         </div>
     </div>
 
+    <div class="row">
+        <div class="text-center">
+            <button type="button" class="btn btn-warning" ng-click="approveAll()">Approve all</button>
+        </div>
+        <br>
+    </div>
 
     <div class="row">
         <table class="table table-striped table-bordered">
@@ -186,10 +192,6 @@
 
         </table>
 
-
-        <div class="text-center">
-            <button type="button" class="btn btn-warning" ng-click="approveAll()">Approve all</button>
-        </div>
 
         <hr>
 
