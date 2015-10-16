@@ -473,7 +473,8 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
         if meta:
             if 'came_from' in meta:
                 came_from = meta['came_from']
-        response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
+        response = {"level": self.__tablename__,
+                    "client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
                     "parent_client_id": self.parent_client_id,
                     "parent_object_id": self.parent_object_id,
                     "marked_for_deletion": self.marked_for_deletion,

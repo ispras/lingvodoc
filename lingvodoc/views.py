@@ -3354,9 +3354,33 @@ def delete_organization(request):
     return {'error': str("No such organization in the system")}
 
 
+def user_counter(entry, result):
+    client = DBSession.query(Client).filter_by(id=entry['client_id']).first()
+    if client:
+        user = DBSession.query(Client).filter_by(id=client.user_id).first()
+        if user:
+            if not result.get(user.id):
+                result[user.id] = {'lexical_entries':0,
+                                   'level_one_entities':0,
+                                   'level_two_entities':0,
+                                   'grouping_entities':0}
+            user_count = result[user.id]
+            if entry['level'] == 'lexicalentry':
+                user_count['lexical_entries'] += 1
+            if entry['level'] == 'leveloneentity':
+                user_count['level_one_entities'] += 1
+            if entry['level'] == 'leveltwoentity':
+                user_count['level_two_entities'] += 1
+            if entry['level'] == 'groupingentity':
+                user_count['grouping_entities'] += 1
+    if 'contains' in entry:
+        if entry['contains']:
+            for ent in entry['contains']:
+                user_counter(ent, result)
+    return result
+
 @view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='edit')
 def perspective_info(request):
-    from collections import Counter
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -3370,13 +3394,10 @@ def perspective_info(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
-            subreq = Request.blank('/dictionary/' + parent_client_id + '/' +
-            parent_object_id + '/perspective/' +
-            client_id + '/' +
-            object_id + '/published')
-            subreq.method = 'GET'
-            subreq.headers = request.headers
-            respon = request.invoke_subrequest(subreq).json
+            result = dict()
+            for lex in perspective.lexicalentry:
+                user_counter(lex.track(True), result)
+            response['count'] = result
 
 
             request.response.status = HTTPOk.code
@@ -3447,8 +3468,9 @@ try it again.
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = dict()
-    new_type = response.get('new_type_name')
-    return str(new_type)
+    response[1]={'lexes':13, 'l1e':452}
+    response[13]={'lexes':154, 'l1e':42}
+    return
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
