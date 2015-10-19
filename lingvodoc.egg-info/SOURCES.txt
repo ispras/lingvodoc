@@ -1,8 +1,8 @@
 CHANGES.md
 MANIFEST.in
 README.md
-al-indigo.ini
 alembic_base.ini
+andrey.ini
 development.ini
 log.txt
 postgres.ini
@@ -25,7 +25,6 @@ lingvodoc.egg-info/requires.txt
 lingvodoc.egg-info/top_level.txt
 lingvodoc/scripts/__init__.py
 lingvodoc/scripts/corpora_converter.py
-lingvodoc/scripts/corpus.xml
 lingvodoc/scripts/initializedb.py
 lingvodoc/scripts/lingvodoc_converter.py
 lingvodoc/static/css/lingvodoc.css
@@ -41,6 +40,7 @@ lingvodoc/static/js/home.js
 lingvodoc/static/js/languages.js
 lingvodoc/static/js/lingvodoc.js
 lingvodoc/static/js/login.js
+lingvodoc/static/js/merge-master.js
 lingvodoc/static/js/organizations.js
 lingvodoc/static/js/profile.js
 lingvodoc/static/js/publish-dictionary.js
@@ -56,6 +56,8 @@ lingvodoc/templates/edit_dictionary.pt
 lingvodoc/templates/home.pt
 lingvodoc/templates/languages.pt
 lingvodoc/templates/login.pt
+lingvodoc/templates/merge_master.pt
+lingvodoc/templates/nav.pt
 lingvodoc/templates/organizations.pt
 lingvodoc/templates/profile.pt
 lingvodoc/templates/publish_dictionary.pt
