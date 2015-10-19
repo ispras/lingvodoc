@@ -31,56 +31,70 @@
 <div class="container" ng-controller="DashboardController" ng-cloak>
 
     <div ng-if="dictionaries.length > 0">
+        <ul class="list-unstyled">
+            <li ng-repeat="dictionary in dictionaries">
+                <div class="btn-group col-md-8 col-sm-8 col-lg-8">
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">{{ dictionary.translation_string }}</button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" ng-click="editDictionaryProperties(dictionary)">Edit information</a></li>
+                        <li><a href="#">Edit roles</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="#">Create new perspective</a></li>
+                    </ul>
+                </div>
+                <div class="btn-group col-md-4 col-sm-4 col-lg-4">
+                    <button type="button" class="btn btn-info">{{ dictionary.status }}</button>
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Hidden')">Hidden</a></li>
+                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'WiP')">WiP</a></li>
+                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Published')">Published</a></li>
+                    </ul>
+                </div>
 
-        <table class="table table-bordered">
-            <thead>
-            <tr>
-                <td>Name</td>
-                <td>Status</td>
-                <td>Perspective</td>
-                <td>Actions</td>
-            </tr>
-            </thead>
+                <ul class="list-unstyled">
+                    <li ng-repeat="perspective in dictionary.perspectives">
+                        <div class="btn-group btn-group-xs col-md-8 col-sm-8 col-lg-8" >
+                            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <button type="button" class="btn btn-default" data-toggle="dropdown">{{ perspective.translation }}</button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'view') }}">View published</a></li>
+                                <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}">Edit</a></li>
+                                <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}">Publish</a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a href="#">Edit roles</a></li>
+                                <li><a href="#" ng-click="editPerspectiveProperties(dictionary, perspective)">Edit properties</a></li>
 
-            <tbody>
-
-            <tr ng-repeat="dictionary in dictionaries">
-                <td>{{ dictionary.translation_string }}</td>
-
-                <td>
-                    {{ dictionary.status }}
-                </td>
-
-                <td>
-                    <select class="form-control" ng-model="dictionaries[$index].selectedPerspectiveId"
-                            ng-options="getCompositeKey(p) as p.translation for p in dictionary.perspectives track by getCompositeKey(p)">
-
-                    </select>
-
-                </td>
-
-                <td>
-                    <a class="btn btn-primary"  href="#" ng-click="follow(getActionDictionaryLink(dictionary, 'view'))"><span class="glyphicon glyphicon-list"></span> View</a>
-                    <a class="btn btn-primary"  href="#" ng-click="follow(getActionDictionaryLink(dictionary, 'edit'))"><span class="glyphicon glyphicon-edit"></span> Edit</a>
-                    <a class="btn btn-primary"  href="#" ng-click="follow(getActionDictionaryLink(dictionary, 'publish'))"><span class="glyphicon glyphicon-print"></span> Publish</a>
-                    <a class="btn btn-primary"  href="#" ng-click="editDictionaryProperties(dictionary)"><span class="glyphicon glyphicon-print"></span> Dictionary properties</a>
-                    <a class="btn btn-primary"  href="#" ng-click="editPerspectiveProperties(dictionary)"><span class="glyphicon glyphicon-print"></span> Perspective properties</a>
-                </td>
-
-
-            </tr>
-
-
-            </tbody>
-
-
-        </table>
-
-
-        <ul ng-repeat="dictionary in dictionaries">
-
+                            </ul>
+                        </div>
+                        <div class="btn-group btn-group-xs col-md-4 col-sm-4 col-lg-4">
+                            <button type="button" class="btn btn-default btn-small">{{ perspective.status }}</button>
+                            <button type="button" class="btn btn-primary btn-small dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Hidden')">Hidden</a></li>
+                                <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'WiP')">WiP</a></li>
+                                <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Published')">Published</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </li>
         </ul>
-    </div>
+
+
 
     <div ng-if="dictionaries.length == 0">
         <span>No dictionaries</span>
@@ -108,9 +122,6 @@
         <select id="language" class="form-control" ng-model="data.selectedLanguage" ng-options="language.compositeId as language.translation_string for language in languages">
             <option></option>
         </select>
-
-        <button class="btn btn-primary" type="button" ng-click="publish()">Publish dictionary</button>
-
     </div>
 
     <div class="modal-footer">
@@ -251,9 +262,6 @@
                 </tbody>
             </table>
         </div>
-
-        <button class="btn btn-primary" type="button" ng-click="publish()">Publish perspective</button>
-
     </div>
 
     <div class="modal-footer">

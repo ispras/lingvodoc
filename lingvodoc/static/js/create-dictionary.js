@@ -5391,7 +5391,7 @@
                 }
                 return match;
             });
-            message += "\nhttp://errors.angularjs.org/1.4.7/" + (module ? module + "/" : "") + code;
+            message += "\nhttp://errors.angularjs.org/1.4.6/" + (module ? module + "/" : "") + code;
             for (i = SKIP_INDEXES, paramPrefix = "?"; i < templateArgs.length; i++, paramPrefix = "&") {
                 message += paramPrefix + "p" + (i - SKIP_INDEXES) + "=" + encodeURIComponent(toDebugString(templateArgs[i]));
             }
@@ -6210,11 +6210,11 @@
         return obj;
     }
     var version = {
-        full: "1.4.7",
+        full: "1.4.6",
         major: 1,
         minor: 4,
-        dot: 7,
-        codeName: "dark-luminescence"
+        dot: 6,
+        codeName: "multiplicative-elevation"
     };
     function publishExternalAPI(angular) {
         extend(angular, {
@@ -6323,7 +6323,6 @@
                 $httpParamSerializer: $HttpParamSerializerProvider,
                 $httpParamSerializerJQLike: $HttpParamSerializerJQLikeProvider,
                 $httpBackend: $HttpBackendProvider,
-                $xhrFactory: $xhrFactoryProvider,
                 $location: $LocationProvider,
                 $log: $LogProvider,
                 $parse: $ParseProvider,
@@ -6369,10 +6368,10 @@
             return offset ? letter.toUpperCase() : letter;
         }).replace(MOZ_HACK_REGEXP, "Moz$1");
     }
-    var SINGLE_TAG_REGEXP = /^<([\w-]+)\s*\/?>(?:<\/\1>|)$/;
+    var SINGLE_TAG_REGEXP = /^<(\w+)\s*\/?>(?:<\/\1>|)$/;
     var HTML_REGEXP = /<|&#?\w+;/;
-    var TAG_NAME_REGEXP = /<([\w:-]+)/;
-    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:-]+)[^>]*)\/>/gi;
+    var TAG_NAME_REGEXP = /<([\w:]+)/;
+    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/gi;
     var wrapMap = {
         option: [ 1, '<select multiple="multiple">', "</select>" ],
         thead: [ 1, "<table>", "</table>" ],
@@ -7615,9 +7614,6 @@
                 }
             };
             return function(element, options) {
-                if (options.cleanupStyles) {
-                    options.from = options.to = null;
-                }
                 if (options.from) {
                     element.css(options.from);
                     options.from = null;
@@ -8883,7 +8879,7 @@
                     compile: function() {
                         return {
                             pre: function attrInterpolatePreLinkFn(scope, element, attr) {
-                                var $$observers = attr.$$observers || (attr.$$observers = createMap());
+                                var $$observers = attr.$$observers || (attr.$$observers = {});
                                 if (EVENT_HANDLER_ATTR_REGEXP.test(name)) {
                                     throw $compileMinErr("nodomevents", "Interpolations for HTML DOM event attributes are disallowed.  Please use the " + "ng- versions (such as ng-click instead of onclick) instead.");
                                 }
@@ -9546,16 +9542,12 @@
             }
         } ];
     }
-    function $xhrFactoryProvider() {
-        this.$get = function() {
-            return function createXhr() {
-                return new window.XMLHttpRequest();
-            };
-        };
+    function createXhr() {
+        return new window.XMLHttpRequest();
     }
     function $HttpBackendProvider() {
-        this.$get = [ "$browser", "$window", "$document", "$xhrFactory", function($browser, $window, $document, $xhrFactory) {
-            return createHttpBackend($browser, $xhrFactory, $browser.defer, $window.angular.callbacks, $document[0]);
+        this.$get = [ "$browser", "$window", "$document", function($browser, $window, $document) {
+            return createHttpBackend($browser, createXhr, $browser.defer, $window.angular.callbacks, $document[0]);
         } ];
     }
     function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDocument) {
@@ -9573,7 +9565,7 @@
                     callbacks[callbackId] = noop;
                 });
             } else {
-                var xhr = createXhr(method, url);
+                var xhr = createXhr();
                 xhr.open(method, url, true);
                 forEach(headers, function(value, key) {
                     if (isDefined(value)) {
@@ -10281,15 +10273,9 @@
     }
     var $parseMinErr = minErr("$parse");
     function ensureSafeMemberName(name, fullExpression) {
+        name = isObject(name) && name.toString ? name.toString() : name;
         if (name === "__defineGetter__" || name === "__defineSetter__" || name === "__lookupGetter__" || name === "__lookupSetter__" || name === "__proto__") {
             throw $parseMinErr("isecfld", "Attempting to access a disallowed field in Angular expressions! " + "Expression: {0}", fullExpression);
-        }
-        return name;
-    }
-    function getStringValue(name, fullExpression) {
-        name = name + "";
-        if (!isString(name)) {
-            throw $parseMinErr("iseccst", "Cannot convert object to primitive value! " + "Expression: {0}", fullExpression);
         }
         return name;
     }
@@ -10316,13 +10302,6 @@
                 throw $parseMinErr("isecfn", "Referencing Function in Angular expressions is disallowed! Expression: {0}", fullExpression);
             } else if (obj === CALL || obj === APPLY || obj === BIND) {
                 throw $parseMinErr("isecff", "Referencing call, apply or bind in Angular expressions is disallowed! Expression: {0}", fullExpression);
-            }
-        }
-    }
-    function ensureSafeAssignContext(obj, fullExpression) {
-        if (obj) {
-            if (obj === 0..constructor || obj === false.constructor || obj === "".constructor || obj === {}.constructor || obj === [].constructor || obj === Function.constructor) {
-                throw $parseMinErr("isecaf", "Assigning to a constructor is disallowed! Expression: {0}", fullExpression);
             }
         }
     }
@@ -11074,7 +11053,7 @@
             this.stage = "main";
             this.recurse(ast);
             var fnString = '"' + this.USE + " " + this.STRICT + '";\n' + this.filterPrefix() + "var fn=" + this.generateFunction("fn", "s,l,a,i") + extra + this.watchFns() + "return fn;";
-            var fn = new Function("$filter", "ensureSafeMemberName", "ensureSafeObject", "ensureSafeFunction", "getStringValue", "ensureSafeAssignContext", "ifDefined", "plus", "text", fnString)(this.$filter, ensureSafeMemberName, ensureSafeObject, ensureSafeFunction, getStringValue, ensureSafeAssignContext, ifDefined, plusFn, expression);
+            var fn = new Function("$filter", "ensureSafeMemberName", "ensureSafeObject", "ensureSafeFunction", "ifDefined", "plus", "text", fnString)(this.$filter, ensureSafeMemberName, ensureSafeObject, ensureSafeFunction, ifDefined, plusFn, expression);
             this.state = this.stage = undefined;
             fn.literal = isLiteral(ast);
             fn.constant = isConstant(ast);
@@ -11211,7 +11190,6 @@
                         if (ast.computed) {
                             right = self.nextId();
                             self.recurse(ast.property, right);
-                            self.getStringValue(right);
                             self.addEnsureSafeMemberName(right);
                             if (create && create !== 1) {
                                 self.if_(self.not(self.computedMember(left, right)), self.lazyAssign(self.computedMember(left, right), "{}"));
@@ -11297,7 +11275,6 @@
                     self.if_(self.notNull(left.context), function() {
                         self.recurse(ast.right, right);
                         self.addEnsureSafeObject(self.member(left.context, left.name, left.computed));
-                        self.addEnsureSafeAssignContext(left.context);
                         expression = self.member(left.context, left.name, left.computed) + ast.operator + right;
                         self.assign(intoId, expression);
                         recursionFn(intoId || expression);
@@ -11408,9 +11385,6 @@
         addEnsureSafeFunction: function(item) {
             this.current().body.push(this.ensureSafeFunction(item), ";");
         },
-        addEnsureSafeAssignContext: function(item) {
-            this.current().body.push(this.ensureSafeAssignContext(item), ";");
-        },
         ensureSafeObject: function(item) {
             return "ensureSafeObject(" + item + ",text)";
         },
@@ -11419,12 +11393,6 @@
         },
         ensureSafeFunction: function(item) {
             return "ensureSafeFunction(" + item + ",text)";
-        },
-        getStringValue: function(item) {
-            this.assign(item, "getStringValue(" + item + ",text)");
-        },
-        ensureSafeAssignContext: function(item) {
-            return "ensureSafeAssignContext(" + item + ",text)";
         },
         lazyRecurse: function(ast, intoId, nameId, recursionFn, create, skipWatchIdCheck) {
             var self = this;
@@ -11593,7 +11561,6 @@
                     var lhs = left(scope, locals, assign, inputs);
                     var rhs = right(scope, locals, assign, inputs);
                     ensureSafeObject(lhs.value, self.expression);
-                    ensureSafeAssignContext(lhs.context);
                     lhs.context[lhs.name] = rhs;
                     return context ? {
                         value: rhs
@@ -11851,7 +11818,6 @@
                 var value;
                 if (lhs != null) {
                     rhs = right(scope, locals, assign, inputs);
-                    rhs = getStringValue(rhs);
                     ensureSafeMemberName(rhs, expression);
                     if (create && create !== 1 && lhs && !lhs[rhs]) {
                         lhs[rhs] = {};
@@ -13534,7 +13500,6 @@
             if (fractionSize > 0 && number < 1) {
                 formatedText = number.toFixed(fractionSize);
                 number = parseFloat(formatedText);
-                formatedText = formatedText.replace(DECIMAL_SEP, decimalSep);
             }
         }
         if (number === 0) {
@@ -15552,11 +15517,11 @@
                 function updateOptionElement(option, element) {
                     option.element = element;
                     element.disabled = option.disabled;
+                    if (option.value !== element.value) element.value = option.selectValue;
                     if (option.label !== element.label) {
                         element.label = option.label;
                         element.textContent = option.label;
                     }
-                    if (option.value !== element.value) element.value = option.selectValue;
                 }
                 function addOrReuseElement(parent, current, type, templateElement) {
                     var element;
@@ -15584,7 +15549,7 @@
                     var emptyOption_ = emptyOption && emptyOption[0];
                     var unknownOption_ = unknownOption && unknownOption[0];
                     if (emptyOption_ || unknownOption_) {
-                        while (current && (current === emptyOption_ || current === unknownOption_ || emptyOption_ && emptyOption_.nodeType === NODE_TYPE_COMMENT)) {
+                        while (current && (current === emptyOption_ || current === unknownOption_)) {
                             current = current.nextSibling;
                         }
                     }
@@ -28673,6 +28638,11 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
         if (!b) return a;
         return a + " " + b;
     }
+    function $$BodyProvider() {
+        this.$get = [ "$document", function($document) {
+            return jqLite($document[0].body);
+        } ];
+    }
     var $$rAFSchedulerFactory = [ "$$rAF", function($$rAF) {
         var queue, cancelFn;
         function scheduler(tasks) {
@@ -28810,11 +28780,6 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
             }
         };
     }
-    function registerRestorableStyles(backup, node, properties) {
-        forEach(properties, function(prop) {
-            backup[prop] = isDefined(backup[prop]) ? backup[prop] : node.style.getPropertyValue(prop);
-        });
-    }
     var $AnimateCssProvider = [ "$animateProvider", function($animateProvider) {
         var gcsLookup = createLocalCacheLookup();
         var gcsStaggerLookup = createLocalCacheLookup();
@@ -28877,7 +28842,6 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                 return timings;
             }
             return function init(element, options) {
-                var restoreStyles = {};
                 var node = getDomNode(element);
                 if (!node || !node.parentNode || !$animate.enabled()) {
                     return closeAndReturnNoopAnimator();
@@ -29013,12 +28977,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                     flags.blockTransition = timings.transitionDuration > 0;
                     flags.blockKeyframeAnimation = timings.animationDuration > 0 && stagger.animationDelay > 0 && stagger.animationDuration === 0;
                 }
-                if (options.from) {
-                    if (options.cleanupStyles) {
-                        registerRestorableStyles(restoreStyles, node, Object.keys(options.from));
-                    }
-                    applyAnimationFromStyles(element, options);
-                }
+                applyAnimationFromStyles(element, options);
                 if (flags.blockTransition || flags.blockKeyframeAnimation) {
                     applyBlocking(maxDuration);
                 } else if (!options.skipBlocking) {
@@ -29061,11 +29020,6 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                     });
                     applyAnimationClasses(element, options);
                     applyAnimationStyles(element, options);
-                    if (Object.keys(restoreStyles).length) {
-                        forEach(restoreStyles, function(value, prop) {
-                            value ? node.style.setProperty(prop, value) : node.style.removeProperty(prop);
-                        });
-                    }
                     if (options.onDone) {
                         options.onDone();
                     }
@@ -29204,12 +29158,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                             element.data(ANIMATE_TIMER_KEY, animationsData);
                         }
                         element.on(events.join(" "), onAnimationProgress);
-                        if (options.to) {
-                            if (options.cleanupStyles) {
-                                registerRestorableStyles(restoreStyles, node, Object.keys(options.to));
-                            }
-                            applyAnimationToStyles(element, options);
-                        }
+                        applyAnimationToStyles(element, options);
                     }
                     function onAnimationExpired() {
                         var animationsData = element.data(ANIMATE_TIMER_KEY);
@@ -29240,14 +29189,11 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
         var NG_ANIMATE_ANCHOR_CLASS_NAME = "ng-anchor";
         var NG_OUT_ANCHOR_CLASS_NAME = "ng-anchor-out";
         var NG_IN_ANCHOR_CLASS_NAME = "ng-anchor-in";
-        function isDocumentFragment(node) {
-            return node.parentNode && node.parentNode.nodeType === 11;
-        }
-        this.$get = [ "$animateCss", "$rootScope", "$$AnimateRunner", "$rootElement", "$sniffer", "$$jqLite", "$document", function($animateCss, $rootScope, $$AnimateRunner, $rootElement, $sniffer, $$jqLite, $document) {
+        this.$get = [ "$animateCss", "$rootScope", "$$AnimateRunner", "$rootElement", "$$body", "$sniffer", "$$jqLite", function($animateCss, $rootScope, $$AnimateRunner, $rootElement, $$body, $sniffer, $$jqLite) {
             if (!$sniffer.animations && !$sniffer.transitions) return noop;
-            var bodyNode = $document[0].body;
+            var bodyNode = getDomNode($$body);
             var rootNode = getDomNode($rootElement);
-            var rootBodyElement = jqLite(isDocumentFragment(rootNode) || bodyNode.contains(rootNode) ? rootNode : bodyNode);
+            var rootBodyElement = jqLite(bodyNode.parentNode === rootNode ? bodyNode : rootNode);
             var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
             return function initDriverFn(animationDetails) {
                 return animationDetails.from && animationDetails.to ? prepareFromToAnchorAnimation(animationDetails.from, animationDetails.to, animationDetails.classes, animationDetails.anchors) : prepareRegularAnimation(animationDetails);
@@ -29716,23 +29662,10 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
             var cO = currentAnimation.options;
             return nO.addClass && nO.addClass === cO.removeClass || nO.removeClass && nO.removeClass === cO.addClass;
         });
-        this.$get = [ "$$rAF", "$rootScope", "$rootElement", "$document", "$$HashMap", "$$animation", "$$AnimateRunner", "$templateRequest", "$$jqLite", "$$forceReflow", function($$rAF, $rootScope, $rootElement, $document, $$HashMap, $$animation, $$AnimateRunner, $templateRequest, $$jqLite, $$forceReflow) {
+        this.$get = [ "$$rAF", "$rootScope", "$rootElement", "$document", "$$body", "$$HashMap", "$$animation", "$$AnimateRunner", "$templateRequest", "$$jqLite", "$$forceReflow", function($$rAF, $rootScope, $rootElement, $document, $$body, $$HashMap, $$animation, $$AnimateRunner, $templateRequest, $$jqLite, $$forceReflow) {
             var activeAnimationsLookup = new $$HashMap();
             var disabledElementsLookup = new $$HashMap();
             var animationsEnabled = null;
-            function postDigestTaskFactory() {
-                var postDigestCalled = false;
-                return function(fn) {
-                    if (postDigestCalled) {
-                        fn();
-                    } else {
-                        $rootScope.$$postDigest(function() {
-                            postDigestCalled = true;
-                            fn();
-                        });
-                    }
-                };
-            }
             var deregisterWatch = $rootScope.$watch(function() {
                 return $templateRequest.totalPendingRequests === 0;
             }, function(isEmpty) {
@@ -29769,6 +29702,13 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                     });
                 }
                 return matches;
+            }
+            function triggerCallback(event, element, phase, data) {
+                $$rAF(function() {
+                    forEach(findCallbacks(element, event), function(callback) {
+                        callback(element, phase, data);
+                    });
+                });
             }
             return {
                 on: function(event, container, callback) {
@@ -29836,7 +29776,6 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                 }
                 options = prepareAnimationOptions(options);
                 var runner = new $$AnimateRunner();
-                var runInNextPostDigestOrNow = postDigestTaskFactory();
                 if (isArray(options.addClass)) {
                     options.addClass = options.addClass.join(" ");
                 }
@@ -29971,16 +29910,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                 });
                 return runner;
                 function notifyProgress(runner, event, phase, data) {
-                    runInNextPostDigestOrNow(function() {
-                        var callbacks = findCallbacks(element, event);
-                        if (callbacks.length) {
-                            $$rAF(function() {
-                                forEach(callbacks, function(callback) {
-                                    callback(element, phase, data);
-                                });
-                            });
-                        }
-                    });
+                    triggerCallback(event, element, phase, data);
                     runner.progress(event, phase, data);
                 }
                 function close(reject) {
@@ -30018,8 +29948,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                 return getDomNode(nodeOrElmA) === getDomNode(nodeOrElmB);
             }
             function areAnimationsAllowed(element, parentElement, event) {
-                var bodyElement = jqLite($document[0].body);
-                var bodyElementDetected = isMatchingElement(element, bodyElement) || element[0].nodeName === "HTML";
+                var bodyElementDetected = isMatchingElement(element, $$body) || element[0].nodeName === "HTML";
                 var rootElementDetected = isMatchingElement(element, $rootElement);
                 var parentAnimationDetected = false;
                 var animateChildren;
@@ -30056,7 +29985,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                         }
                     }
                     if (!bodyElementDetected) {
-                        bodyElementDetected = isMatchingElement(parentElement, bodyElement);
+                        bodyElementDetected = isMatchingElement(parentElement, $$body);
                     }
                     parentElement = parentElement.parent();
                 }
@@ -30516,7 +30445,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
             };
         } ];
     } ];
-    angular.module("ngAnimate", []).directive("ngAnimateChildren", $$AnimateChildrenDirective).factory("$$rAFScheduler", $$rAFSchedulerFactory).factory("$$AnimateRunner", $$AnimateRunnerFactory).factory("$$animateAsyncRun", $$AnimateAsyncRunFactory).provider("$$animateQueue", $$AnimateQueueProvider).provider("$$animation", $$AnimationProvider).provider("$animateCss", $AnimateCssProvider).provider("$$animateCssDriver", $$AnimateCssDriverProvider).provider("$$animateJs", $$AnimateJsProvider).provider("$$animateJsDriver", $$AnimateJsDriverProvider);
+    angular.module("ngAnimate", []).provider("$$body", $$BodyProvider).directive("ngAnimateChildren", $$AnimateChildrenDirective).factory("$$rAFScheduler", $$rAFSchedulerFactory).factory("$$AnimateRunner", $$AnimateRunnerFactory).factory("$$animateAsyncRun", $$AnimateAsyncRunFactory).provider("$$animateQueue", $$AnimateQueueProvider).provider("$$animation", $$AnimationProvider).provider("$animateCss", $AnimateCssProvider).provider("$$animateCssDriver", $$AnimateCssDriverProvider).provider("$$animateJs", $$AnimateJsProvider).provider("$$animateJsDriver", $$AnimateJsDriverProvider);
 })(window, window.angular);
 
 var app = angular.module("autocomplete", []);

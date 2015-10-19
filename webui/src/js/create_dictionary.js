@@ -12,12 +12,12 @@ app.config(function ($stateProvider, $urlRouterProvider) {
 
         .state('create.step1', {
             url: '/step1',
-            templateUrl: 'createDictionaryStep1.html',
+            templateUrl: 'createDictionaryStep1.html'
         })
 
         .state('create.step2', {
             url: '/step2',
-            templateUrl: 'createDictionaryStep2.html',
+            templateUrl: 'createDictionaryStep2.html'
         })
 
         .state('create.step3', {
