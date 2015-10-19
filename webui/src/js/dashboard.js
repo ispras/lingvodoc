@@ -23,17 +23,10 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
         }
     };
 
-
-    $scope.getActionDictionaryLink = function (dictionary, action) {
-        if (dictionary.selectedPerspectiveId != -1) {
-            var perspective = getObjectByCompositeKey(dictionary.selectedPerspectiveId, dictionary.perspectives);
-            if (perspective) {
-                var perspectiveClientId = perspective.client_id;
-                var perspectiveObjectId = perspective.object_id;
-            }
-            return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspectiveClientId) + '/' + encodeURIComponent(perspectiveObjectId) + '/' + action;
-        }
+    $scope.getActionLink = function (dictionary, perspective, action) {
+        return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/' + action;
     };
+
 
     $scope.editDictionaryProperties = function(dictionary) {
         var modalInstance = $modal.open({
@@ -54,29 +47,24 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
     };
 
 
-    $scope.editPerspectiveProperties = function(dictionary) {
+    $scope.editPerspectiveProperties = function(dictionary, perspective) {
 
-        if (dictionary.selectedPerspectiveId != -1) {
-            var perspective = getObjectByCompositeKey(dictionary.selectedPerspectiveId, dictionary.perspectives);
-            if (perspective) {
-                $modal.open({
-                    animation: true,
-                    templateUrl: 'editPerspectivePropertiesModal.html',
-                    controller: 'editPerspectivePropertiesController',
-                    size: 'lg',
-                    backdrop: 'static',
-                    keyboard: false,
-                    resolve: {
-                        'params': function() {
-                            return {
-                                'dictionary': dictionary,
-                                'perspective': perspective
-                            };
-                        }
-                    }
-                });
+        $modal.open({
+            animation: true,
+            templateUrl: 'editPerspectivePropertiesModal.html',
+            controller: 'editPerspectivePropertiesController',
+            size: 'lg',
+            backdrop: 'static',
+            keyboard: false,
+            resolve: {
+                'params': function() {
+                    return {
+                        'dictionary': dictionary,
+                        'perspective': perspective
+                    };
+                }
             }
-        }
+        });
     };
 
     $scope.follow = function(link) {
@@ -93,6 +81,21 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
         }
     };
 
+    $scope.setPerspectiveStatus = function(dictionary, perspective, status) {
+        dictionaryService.setPerspectiveStatus(dictionary, perspective, status).then(function(data) {
+            perspective.status = status;
+        }, function(reason) {
+            $log.error(reason);
+        });
+    };
+
+    $scope.setDictionaryStatus = function(dictionary, status) {
+        dictionaryService.setDictionaryStatus(dictionary, status).then(function(data) {
+            dictionary.status = status;
+        }, function(reason) {
+            $log.error(reason);
+        });
+    };
 
     var dictionaryQuery = {
         'user_created': [userId]

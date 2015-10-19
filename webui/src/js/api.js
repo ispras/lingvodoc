@@ -437,8 +437,10 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
-    var setDictionaryStatus = function(url, status) {
+    var setDictionaryStatus = function(dictionary, status) {
         var deferred = $q.defer();
+
+        var url = '/dictionary/' + dictionary.client_id + '/' + dictionary.object_id + '/state';
         $http.put(url, {'status': status }).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
