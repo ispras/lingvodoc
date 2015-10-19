@@ -27305,6 +27305,24 @@ lingvodoc.Perspective.prototype = new lingvodoc.Object();
 
 lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
 
+lingvodoc.User = function(id, login, name, email, intl_name, about, signup_date, organizations) {
+    this.id = id;
+    this.login = login;
+    this.name = name;
+    this.email = email;
+    this.intl_name = intl_name;
+    this.about = about;
+    this.signup_date = signup_date;
+    this.organizations = organizations;
+    this.equals = function(obj) {
+        return this.id == obj.id;
+    };
+};
+
+lingvodoc.User.fromJS = function(js) {
+    return new lingvodoc.User(js.id, js.login, js.name, js.email, js.intl_name, js.about, js.signup_date, js.organizations);
+};
+
 function lingvodocAPI($http, $q) {
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
@@ -27930,7 +27948,7 @@ function lingvodocAPI($http, $q) {
                 deferred.reject(reason);
             });
         }).error(function(data, status, headers, config) {
-            deferred.reject("An error  occurred while trying to get languages");
+            deferred.reject("An error occurred while trying to get languages");
         });
         return deferred.promise;
     };
@@ -27944,6 +27962,58 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getUser = function(id) {
+        var deferred = $q.defer();
+        $http.get("/user" + "?user_id=" + encodeURIComponent(id)).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.User.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryRoles = function(dictionary) {
+        var deferred = $q.defer();
+        var url = "/dictionary/ " + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/roles";
+        $http.get(url).success(function(data, status, headers, config) {
+            var userIds = [];
+            angular.forEach(data.roles_users, function(role) {
+                angular.forEach(role, function(userId) {
+                    if (userIds.indexOf(userId) < 0) {
+                        userIds.push(userId);
+                    }
+                });
+            });
+            var reqs = userIds.map(function(id) {
+                return getUser(id);
+            });
+            $q.all(reqs).then(function(users) {
+                var resultRoles = {};
+                angular.forEach(data.roles_users, function(roleUsers, roleName) {
+                    resultRoles[roleName] = roleUsers.map(function(userId) {
+                        return users.filter(function(u) {
+                            return u.id == userId;
+                        })[0];
+                    });
+                });
+                deferred.resolve(resultRoles);
+            }, function(reason) {
+                deferred.reject("An error occurred while trying to get dictionary roles");
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while trying to get dictionary roles");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryRoles = function(dictionary, roles) {
+        var deferred = $q.defer();
+        var url = "/dictionary/ " + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/roles";
+        $http.post(url, roles).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to update roles");
         });
         return deferred.promise;
     };
@@ -27982,7 +28052,9 @@ function lingvodocAPI($http, $q) {
         getLexicalEntry: getLexicalEntry,
         moveLexicalEntry: moveLexicalEntry,
         getLanguagesFull: getLanguagesFull,
-        getPublishedDictionaries: getPublishedDictionaries
+        getPublishedDictionaries: getPublishedDictionaries,
+        getDictionaryRoles: getDictionaryRoles,
+        setDictionaryRoles: setDictionaryRoles
     };
 }
 
@@ -28039,6 +28111,23 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
                     return {
                         dictionary: dictionary,
                         perspective: perspective
+                    };
+                }
+            }
+        });
+    };
+    $scope.editDictionaryRoles = function(dictionary) {
+        $modal.open({
+            animation: true,
+            templateUrl: "editDictionaryRolesModal.html",
+            controller: "editDictionaryRolesController",
+            size: "lg",
+            backdrop: "static",
+            keyboard: false,
+            resolve: {
+                params: function() {
+                    return {
+                        dictionary: dictionary
                     };
                 }
             }
@@ -28183,5 +28272,93 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
         $scope.perspective = wrapPerspective(params.perspective);
     }, function(reason) {
         $log.error(reason);
+    });
+} ]);
+
+app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+    $scope.dictionary = params.dictionary;
+    $scope.roles = {};
+    $scope.userTable = [];
+    $scope.ok = function() {
+        var result = {
+            roles_users: {}
+        };
+        var roles = getRoles();
+        angular.forEach(roles, function(role) {
+            angular.forEach($scope.userTable, function(u) {
+                if (u.roles.indexOf(role) >= 0) {
+                    if (typeof result[role] != "undefined") {
+                        result.roles_users[role].push(u.id);
+                    } else {
+                        result.roles_users[role] = [ u.id ];
+                    }
+                }
+            });
+        });
+        dictionaryService.setDictionaryRoles($scope.dictionary, result).then(function() {
+            $modalInstance.close();
+        }, function(reason) {
+            $log.error(reason);
+        });
+    };
+    $scope.cancel = function() {
+        $modalInstance.dismiss("cancel");
+    };
+    $scope.userHasRole = function(user, role) {
+        var result = false;
+        angular.forEach($scope.userTable, function(u) {
+            if (u.equals(user)) {
+                if (u.roles.indexOf(role) >= 0) {
+                    result = true;
+                }
+            }
+        });
+        return result;
+    };
+    var updateSelected = function(action, user, role) {
+        if (action === "add" && user.roles.indexOf(role) === -1) {
+            user.roles.push(role);
+        }
+        if (action === "remove" && user.roles.indexOf(role) !== -1) {
+            user.roles.splice(user.roles.indexOf(role), 1);
+        }
+    };
+    $scope.toggleRole = function($event, user, role) {
+        var checkbox = $event.target;
+        var action = checkbox.checked ? "add" : "remove";
+        updateSelected(action, user, role);
+    };
+    var getRoles = function() {
+        var roles = [];
+        angular.forEach($scope.userTable, function(u) {
+            angular.forEach(u.roles, function(role) {
+                if (roles.indexOf(role) < 0) {
+                    roles.push(role);
+                }
+            });
+        });
+        return roles;
+    };
+    var createUsersTable = function(roles) {
+        var usersTable = [];
+        angular.forEach(roles, function(users, role) {
+            angular.forEach(users, function(user) {
+                var m = usersTable.filter(function(u) {
+                    return u.id == user.id;
+                });
+                if (m.length > 0) {
+                    m[0].roles.push(role);
+                } else {
+                    user.roles = [ role ];
+                    usersTable.push(user);
+                }
+            });
+        });
+        return usersTable;
+    };
+    dictionaryService.getDictionaryRoles($scope.dictionary).then(function(roles) {
+        $scope.roles = roles;
+        $scope.userTable = createUsersTable(roles);
+        $log.info($scope.userTable);
     });
 } ]);
