@@ -1464,6 +1464,9 @@ def dictionaries_list(request):
     user_created = None
     if 'user_created' in req:
         user_created = req['user_created']
+    author = None
+    if 'author' in req:
+        author = req['author']
     published = None
     if 'published' in req:
         published = req['published']
@@ -1484,18 +1487,54 @@ def dictionaries_list(request):
         # else:
         #     dicts = dicts.filter_by(state!='Published')
     if user_created:
+        log.error('WHAT %s' % user_created)
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
         response['clients'] = cli
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
+    if author:
+        user = DBSession.query(User).filter_by(id=author).first()
+        dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
+        isadmin = False
+        for group in user.groups:
+            if group.parent.dictionary_default:
+                if group.subject_override:
+                    isadmin = True
+                    break
+                dcttmp = {'client_id': group.subject_client_id, 'object_id': group.subject_object_id}
+                if dcttmp not in dictstemp:
+                    dictstemp += [dcttmp]
+            if group.parent.perspective_default:
+                if group.subject_override:
+                    isadmin = True
+                    break
+                dicti = DBSession.query(Dictionary)\
+                    .join(DictionaryPerspective)\
+                    .filter_by(client_id=group.subject_client_id,
+                               object_id=group.subject_object_id)\
+                    .first()
+                if dicti:
+                    dcttmp = {'client_id': dicti.client_id, 'object_id': dicti.object_id}
+                    if dcttmp not in dictstemp:
+                        dictstemp += [dcttmp]
+        if not isadmin:
+            if dictstemp:
+                prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+                for dicti in dictstemp:
+                    prevdicts = prevdicts.subquery().select()
+                    prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
+
+                dicts = prevdicts
+            else:
+                dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+
     if languages:
         langs = []
         for lan in languages:
             lang = DBSession.query(Language).filter_by(object_id=lan['object_id'], client_id=lan['client_id']).first()
             langs += all_languages(lang)
         if langs:
-            prevdicts = dicts.filter_by(parent_client_id=langs[0]['client_id'], parent_object_id=langs[0]['object_id'])
-            langs.remove(langs[0])
+            prevdicts = DBSession.query(Dictionary).filter_(sqlalchemy.sql.false())
             for lan in langs:
                 prevdicts = prevdicts.subquery().select()
                 prevdicts = dicts.filter_by(parent_client_id=lan['client_id'], parent_object_id=lan['object_id']).union_all(prevdicts)
@@ -1518,8 +1557,7 @@ def dictionaries_list(request):
             if check_for_client(dicti, cli):
                 dictstemp += [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
         if dictstemp:
-            prevdicts = dicts.filter_by(parent_client_id=dictstemp[0]['client_id'], parent_object_id=dictstemp[0]['object_id'])
-            dictstemp.remove(dictstemp[0])
+            prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
             for dicti in dictstemp:
                 prevdicts = prevdicts.subquery().select()
                 prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
@@ -1537,8 +1575,7 @@ def dictionaries_list(request):
             if check_for_client(dicti, cli):
                 dictstemp += [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
         if dictstemp:
-            prevdicts = dicts.filter_by(parent_client_id=dictstemp[0]['client_id'], parent_object_id=dictstemp[0]['object_id'])
-            dictstemp.remove(dictstemp[0])
+            prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
             for dicti in dictstemp:
                 prevdicts = prevdicts.subquery().select()
                 prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
