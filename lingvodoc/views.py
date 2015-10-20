@@ -631,7 +631,6 @@ def view_perspectives(request):
                                  perspective_client_id=perspective.client_id,
                                  perspective_id=perspective.object_id)
         subreq = Request.blank(path)
-        # subreq = request.copy()
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
@@ -1340,17 +1339,6 @@ def participated_clients_list(dictionary, request):
                 for entry in resp.json['lexical_entries']:
                     clients += participated_clients_rec(entry)
     return clients
-
-    # clients = []
-    # clients += [obj.client_id]
-    # for entry in dir(obj):
-    #     if entry in inspect(type(obj)).relationships:
-    #         i = inspect(obj.__class__).relationships[entry]
-    #         if i.direction.name == "ONETOMANY":
-    #             x = getattr(obj, str(entry))
-    #             for xx in x:
-    #                 clients += participated_clients_list(xx)
-    # return clients
 
 
 def group_by_organizations(dicts, request):
@@ -3013,6 +3001,8 @@ def merge_dictionaries(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        client_id = req.get('client_id')
+        object_id = req.get('object_id')
         parent_object_id = req['language_object_id']
         parent_client_id = req['language_client_id']
         translation_string = req['translation_string']
@@ -3042,19 +3032,24 @@ def merge_dictionaries(request):
                                                       subject_client_id=dict.client_id,
                                                       subject_object_id=dict.object_id).first()
                 grps += [gr]
+            if client_id and object_id:
+                gr = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                      subject_client_id=client_id,
+                                                      subject_object_id=object_id).first()
+                grps += [gr]
             for gr in grps:
                 if user not in gr.users:
                     raise KeyError("Not enough permission to do that")
-
-        subreq = Request.blank('/dictionary')
-        subreq.method = 'POST'
-        subreq.json = json.dumps({'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
-                            'translation_string': translation_string, 'translation': translation})
-        headers = {'Cookie':request.headers['Cookie']}
-        subreq.headers = headers
-        response = request.invoke_subrequest(subreq)
-        client_id = response.json['client_id']
-        object_id = response.json['object_id']
+        if not client_id or not object_id:
+            subreq = Request.blank('/dictionary')
+            subreq.method = 'POST'
+            subreq.json = json.dumps({'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
+                                'translation_string': translation_string, 'translation': translation})
+            headers = {'Cookie':request.headers['Cookie']}
+            subreq.headers = headers
+            response = request.invoke_subrequest(subreq)
+            client_id = response.json['client_id']
+            object_id = response.json['object_id']
         new_dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
         perspectives = []
         for dicti in dictionaries:
@@ -3066,6 +3061,8 @@ def merge_dictionaries(request):
                 new_dict.dictionaryperspective.append(entry)
             cli_id = dicti.client_id
             obj_id = dicti.object_id
+            if (cli_id == client_id) and (obj_id == object_id):
+                continue
             bases = DBSession.query(BaseGroup).filter_by(dictionary_default=True)
             groups = []
             for base in bases:
@@ -3132,6 +3129,8 @@ def merge_perspectives_api(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        client_id = req.get('client_id')
+        object_id = req.get('object_id')
         dictionary_client_id = req['dictionary_client_id']
         dictionary_object_id = req['dictionary_object_id']
         translation_string = req['translation_string']
@@ -3158,16 +3157,23 @@ def merge_perspectives_api(request):
                                                   subject_object_id=dictionary_object_id).first()
             if user not in group.users:
                 raise KeyError("Not enough permission to do that")
+            if client_id and object_id:
+                gr = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                      subject_client_id=client_id,
+                                                      subject_object_id=object_id).first()
+                if user not in gr.users:
+                    raise KeyError("Not enough permission to do that")
 
-        subreq = Request.blank('/dictionary/%s/%s/perspective' % (dictionary_client_id, dictionary_object_id))
-        subreq.method = 'POST'
-        subreq.json = json.dumps({'translation_string': translation_string, 'translation': translation})
-        headers = {'Cookie':request.headers['Cookie']}
-        subreq.headers = headers
-        response = request.invoke_subrequest(subreq)
-        new_client_id = response.json['client_id']
-        new_object_id = response.json['object_id']
-        new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=new_client_id, object_id=new_object_id).first()
+        if not client_id and not object_id:
+            subreq = Request.blank('/dictionary/%s/%s/perspective' % (dictionary_client_id, dictionary_object_id))
+            subreq.method = 'POST'
+            subreq.json = json.dumps({'translation_string': translation_string, 'translation': translation})
+            headers = {'Cookie':request.headers['Cookie']}
+            subreq.headers = headers
+            response = request.invoke_subrequest(subreq)
+            client_id = response.json['client_id']
+            object_id = response.json['object_id']
+        new_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         fields = []
         for persp in persps:
             for entry in persp['fields']:
@@ -3188,8 +3194,8 @@ def merge_perspectives_api(request):
         subreq = Request.blank('/dictionary/%s/%s/perspective/%s/%s/fields' %
                                (dictionary_client_id,
                                 dictionary_object_id,
-                                new_client_id,
-                                new_object_id))
+                                client_id,
+                                object_id))
         subreq.method = 'POST'
         subreq.json = json.dumps({'fields': fields})
         headers = {'Cookie':request.headers['Cookie']}
@@ -3199,6 +3205,8 @@ def merge_perspectives_api(request):
 
             obj_id = persp['object_id']
             cli_id = persp['client_id']
+            if (cli_id == client_id) and (obj_id == object_id):
+                continue
             parent = DBSession.query(DictionaryPerspective).filter_by(client_id=cli_id, object_id=obj_id).first()
             lexes = DBSession.query(LexicalEntry).filter_by(parent_client_id=cli_id, parent_object_id=obj_id).all()
 
@@ -3229,8 +3237,8 @@ def merge_perspectives_api(request):
             for group in groups:
                 base = group.parent
                 existing = DBSession.query(Group).filter_by(parent = base,
-                                                         subject_object_id=new_object_id,
-                                                         subject_client_id=new_client_id).first()
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
                 if existing:
                     users = []
                     for user in group.users:
@@ -3242,8 +3250,8 @@ def merge_perspectives_api(request):
                             existing.users.append(user)
                 else:
                     new_group = Group(base_group_id=group.base_group_id,
-                                      subject_object_id=new_client_id,
-                                      subject_client_id=new_object_id)
+                                      subject_object_id=client_id,
+                                      subject_client_id=object_id)
                     DBSession.add(new_group)
                     users = []
                     for user in group.users:
@@ -3257,8 +3265,8 @@ def merge_perspectives_api(request):
             parent.marked_for_deletion = True
         new_persp.marked_for_deletion = False  # TODO: check where it is deleted
         request.response.status = HTTPOk.code
-        return {'object_id': new_object_id,
-                'client_id': new_client_id}
+        return {'object_id': object_id,
+                'client_id': client_id}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
@@ -3436,42 +3444,44 @@ def delete_organization(request):
     return {'error': str("No such organization in the system")}
 
 
-def user_counter(entry, result, starting_date, ending_date):
+def user_counter(entry, result, starting_date, ending_date, types):
     resulttmp = None
+    empty = False
     if entry['level'] == 'lexicalentry':
-        resulttmp = dict(result)
+        if 'contains' not in entry:
+            empty = True
+        elif not entry['contains']:
+            empty = True
     if 'contains' in entry:
         if entry['contains']:
             for ent in entry['contains']:
-                user_counter(ent, result, starting_date, ending_date)
+                result = user_counter(ent, result, starting_date, ending_date, types)
     if starting_date:
         if datetime.datetime(entry['created_at']) < starting_date:
-            return result
+            empty = True
     if ending_date:
         if datetime.datetime(entry['created_at']) > ending_date:
-            return result
-    if entry['level'] == 'lexicalentry':
-        if result == resulttmp:
-            return result
+            empty = True
+    if empty:
+        return result
 
     client = DBSession.query(Client).filter_by(id=entry['client_id']).first()
     if client:
         user = DBSession.query(Client).filter_by(id=client.user_id).first()
         if user:
             if not result.get(user.id):
-                result[user.id] = {'lexical_entries': 0,
-                                   'level_one_entities': 0,
-                                   'level_two_entities': 0,
-                                   'grouping_entities': 0}
+                counters = dict()
+                for entity_type in types:
+                    counters[entity_type] = 0
+                counters['lexical_entry'] = 0
+                result[user.id] = counters
             user_count = result[user.id]
             if entry['level'] == 'lexicalentry':
-                user_count['lexical_entries'] += 1
-            if entry['level'] == 'leveloneentity':
-                user_count['level_one_entities'] += 1
-            if entry['level'] == 'leveltwoentity':
-                user_count['level_two_entities'] += 1
-            if entry['level'] == 'groupingentity':
-                user_count['grouping_entities'] += 1
+                print('there')
+                user_count['lexical_entry'] += 1
+            else:
+                if 'entity_type' in entry:
+                    user_count[entry['entity_type']] += 1
     return result
 
 
@@ -3482,10 +3492,10 @@ def perspective_info(request):
     object_id = request.matchdict.get('perspective_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
-    starting_date = request.GET.matchdict.get('starting_date')
+    starting_date = request.GET.get('starting_date')
     if starting_date:
         starting_date = datetime.datetime(starting_date)
-    ending_date = request.GET.matchdict.get('ending_date')
+    ending_date = request.GET.get('ending_date')
     if ending_date:
         ending_date = datetime.datetime(ending_date)
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
@@ -3497,8 +3507,31 @@ def perspective_info(request):
     if perspective:
         if not perspective.marked_for_deletion:
             result = dict()
+            path = request.route_url('perspective_fields',
+                                     dictionary_client_id=perspective.parent_client_id,
+                                     dictionary_object_id=perspective.parent_object_id,
+                                     perspective_client_id=perspective.client_id,
+                                     perspective_id=perspective.object_id
+                                     )
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            resp = request.invoke_subrequest(subreq)
+            fields = resp.json["fields"]
+            types = []
+            for field in fields:
+                entity_type = field['entity_type']
+                if entity_type not in types:
+                    types.append(entity_type)
+                if 'contains' in field:
+                    for field2 in field['contains']:
+                        entity_type = field2['entity_type']
+                        if entity_type not in types:
+                            types.append(entity_type)
+
             for lex in perspective.lexicalentry:
-                user_counter(lex.track(True), result, starting_date, ending_date)
+                print('here')
+                result = user_counter(lex.track(True), result, starting_date, ending_date, types)
 
             response['count'] = result
             request.response.status = HTTPOk.code
@@ -3881,23 +3914,6 @@ def merge_suggestions_old(request):
 @view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
 def merge_suggestions(request):
     req = request.json
-
-    # subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_1') + '/' +
-    # request.matchdict.get('dictionary_object_id_1') + '/perspective/' +
-    # request.matchdict.get('perspective_client_id_1') + '/' +
-    # request.matchdict.get('perspective_object_id_1') + '/all')
-    # subreq.method = 'GET'
-    # response_1 = request.invoke_subrequest(subreq).json
-    # subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_2') + '/' +
-    # request.matchdict.get('dictionary_object_id_2') + '/perspective/' +
-    # request.matchdict.get('perspective_client_id_2') + '/' +
-    # request.matchdict.get('perspective_object_id_2') + '/all')
-    # subreq.method = 'GET'
-    # response_2 = request.invoke_subrequest(subreq).json
-    #entity_type_primary = 'Word'
-    #entity_type_secondary = 'Transcription'
-    #threshold = 0.2
-    #levenstein = 2
     entity_type_primary = req['entity_type_primary'] or 'Word'
     entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
     threshold = req['threshold'] or 0.2
@@ -3910,12 +3926,6 @@ def merge_suggestions(request):
     if not lexes:
         return json.dumps({})
     first_persp = json.loads(lexes[0].additional_metadata)['came_from']
-    # for lex in lexes:
-    #     meta = json.loads(lex.additional_metadata)
-    #     if meta['came_from'] == first_persp:
-    #         lexes_1 += [lex.track(False)]
-    #     else:
-    #         lexes_2 += [lex.track(False)]
     lexes_1 = [o.track(False) for o in lexes]
     lexes_2 = list(lexes_1)
     def parse_response(elem):
