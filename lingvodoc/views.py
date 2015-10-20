@@ -830,6 +830,9 @@ def edit_dictionary_roles(request):
                             if user:
                                 if user not in group.users:
                                     group.users.append(user)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -862,9 +865,12 @@ def edit_dictionary_roles(request):
                             if org:
                                 if org not in group.organizations:
                                     group.organizations.append(org)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
-                request.response.status = HTTPOk.code
-                return response
+            request.response.status = HTTPOk.code
+            return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -913,8 +919,14 @@ def delete_dictionary_roles(request):
                         for userid in users:
                             user = DBSession.query(User).filter_by(id=userid).first()
                             if user:
+                                if user.id == userlogged.id:
+                                    request.response.status = HTTPForbidden.code
+                                    return {'error': str("Cannot delete roles from self")}
                                 if user in group.users:
                                     group.users.remove(user)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -945,11 +957,14 @@ def delete_dictionary_roles(request):
                         for orgid in orgs:
                             org = DBSession.query(Organization).filter_by(id=orgid).first()
                             if org:
-                                if org  in group.organizations:
+                                if org in group.organizations:
                                     group.organizations.remove(org)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
-                request.response.status = HTTPOk.code
-                return response
+            request.response.status = HTTPOk.code
+            return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -1047,6 +1062,9 @@ def edit_perspective_roles(request):
                             if user:
                                 if user not in group.users:
                                     group.users.append(user)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -1079,9 +1097,12 @@ def edit_perspective_roles(request):
                             if org:
                                 if org not in group.organizations:
                                     group.organizations.append(org)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
-                request.response.status = HTTPOk.code
-                return response
+            request.response.status = HTTPOk.code
+            return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
@@ -1137,8 +1158,14 @@ def delete_perspective_roles(request):
                         for userid in users:
                             user = DBSession.query(User).filter_by(id=userid).first()
                             if user:
+                                if user.id == userlogged.id:
+                                    request.response.status = HTTPForbidden.code
+                                    return {'error': str("Cannot delete roles from self")}
                                 if user in group.users:
                                     group.users.remove(user)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
             if roles_organizations:
                 for role_name in roles_organizations:
@@ -1171,9 +1198,12 @@ def delete_perspective_roles(request):
                             if org:
                                 if org in group.organizations:
                                     group.organizations.remove(org)
+                    else:
+                        request.response.status = HTTPForbidden.code
+                        return {'error': str("Not enough permission")}
 
-                request.response.status = HTTPOk.code
-                return response
+            request.response.status = HTTPOk.code
+            return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
@@ -2039,6 +2069,7 @@ def delete_l1_entity(request):
     request.response.status = HTTPNotFound.code
     return {'error': str("No such entity in the system")}
 
+
 @view_config(route_name='get_level_two_entity_indict', renderer='json', request_method='GET', permission='view')
 @view_config(route_name='get_level_two_entity', renderer='json', request_method='GET', permission='view')
 def view_l2_entity(request):
@@ -2216,38 +2247,6 @@ def view_connected_words(request):
             response['words'] = words
             request.response.status = HTTPOk.code
             return response
-
-    #         words = []
-    #         path = request.route_url('get_group_entity',
-    #                                  client_id=lexical_entry.client_id,
-    #                                  object_id=lexical_entry.object_id)
-    #         subreq = Request.blank(path)
-    #         subreq.method = 'GET'
-    #         subreq.headers = request.headers
-    #         respon = request.invoke_subrequest(subreq)
-    #         if 'error' not in respon.json:
-    #             connections = respon.json['entities'][0]['connections']
-    #             for lex in connections:
-    #                 path = request.route_url('lexical_entry',
-    #                                          client_id=lex['client_id'],
-    #                                          object_id=lex['object_id'])
-    #                 subreq = Request.blank(path)
-    #                 subreq.method = 'GET'
-    #                 subreq.headers = request.headers
-    #                 resp = request.invoke_subrequest(subreq)
-    #                 words += [resp.json]
-    #         else:
-    #             path = request.route_url('lexical_entry',
-    #                                      client_id=lexical_entry.client_id,
-    #                                      object_id=lexical_entry.object_id)
-    #             subreq = Request.blank(path)
-    #             subreq.method = 'GET'
-    #             subreq.headers = request.headers
-    #             resp = request.invoke_subrequest(subreq)
-    #             words += [resp.json]
-    #
-    #         response['words'] = words
-    #         return response
 
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
