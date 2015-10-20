@@ -89,9 +89,24 @@ lingvodoc.Perspective.fromJS = function (js) {
 lingvodoc.Perspective.prototype = new lingvodoc.Object();
 lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
 
+lingvodoc.User = function(id, login, name, email, intl_name, about, signup_date, organizations) {
 
+    this.id = id;
+    this.login = login;
+    this.name = name;
+    this.email = email;
+    this.intl_name = intl_name;
+    this.about = about;
+    this.signup_date = signup_date;
+    this.organizations = organizations;
 
-
+    this.equals = function(obj) {
+        return (this.id == obj.id);
+    };
+};
+lingvodoc.User.fromJS = function (js) {
+    return new lingvodoc.User(js.id, js.login, js.name, js.email, js.intl_name, js.about, js.signup_date, js.organizations);
+};
 
 
 
@@ -845,7 +860,7 @@ function lingvodocAPI($http, $q) {
             });
 
         }).error(function (data, status, headers, config) {
-            deferred.reject('An error  occurred while trying to get languages');
+            deferred.reject('An error occurred while trying to get languages');
         });
 
         return deferred.promise;
@@ -860,6 +875,88 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject('Failed to move lexical entry');
+        });
+        return deferred.promise;
+    };
+
+
+    var getUser = function(id) {
+        var deferred = $q.defer();
+        $http.get('/user' + '?user_id=' + encodeURIComponent(id)).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.User.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to move lexical entry');
+        });
+        return deferred.promise;
+    };
+
+    var getRoles = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+
+            var userIds = [];
+            angular.forEach(data.roles_users, function(role) {
+                angular.forEach(role, function(userId) {
+                    if (userIds.indexOf(userId) < 0) {
+                        userIds.push(userId);
+                    }
+                });
+            });
+
+            var reqs = userIds.map(function(id) {
+                return getUser(id);
+            });
+
+            $q.all(reqs).then(function(users) {
+                var resultRoles = {};
+                angular.forEach(data.roles_users, function(roleUsers, roleName) {
+                    resultRoles[roleName] = roleUsers.map(function(userId) {
+                        return users.filter(function(u) {
+                            return u.id == userId;
+                        })[0];
+                    });
+                });
+                deferred.resolve(resultRoles);
+            }, function(reason) {
+                deferred.reject('An error occurred while trying to get dictionary roles');
+            });
+
+        }).error(function(data, status, headers, config) {
+            deferred.reject('An error occurred while trying to get dictionary roles');
+        });
+        return deferred.promise;
+    };
+
+    var getDictionaryRoles = function(dictionary) {
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles';
+        return getRoles(url);
+    };
+
+    var setDictionaryRoles = function(dictionary, roles) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles';
+
+        $http.post(url, roles).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to update roles');
+        });
+        return deferred.promise;
+    };
+
+    var getPerspectiveRoles = function(dictionary, perspective, roles) {
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/roles';
+        return getRoles(url);
+    };
+
+
+    var setPerspectiveRoles = function(dictionary, perspective, roles) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/roles';
+        $http.post(url, roles).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to update roles');
         });
         return deferred.promise;
     };
@@ -902,6 +999,10 @@ function lingvodocAPI($http, $q) {
         'getLexicalEntry': getLexicalEntry,
         'moveLexicalEntry': moveLexicalEntry,
         'getLanguagesFull': getLanguagesFull,
-        'getPublishedDictionaries': getPublishedDictionaries
+        'getPublishedDictionaries': getPublishedDictionaries,
+        'getDictionaryRoles': getDictionaryRoles,
+        'setDictionaryRoles': setDictionaryRoles,
+        'getPerspectiveRoles': getPerspectiveRoles,
+        'setPerspectiveRoles': setPerspectiveRoles
     });
 };
