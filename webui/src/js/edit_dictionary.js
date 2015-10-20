@@ -69,7 +69,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
         // pagination
         $scope.pageIndex = 1;
-        $scope.pageSize = 50;
+        $scope.pageSize = 20;
         $scope.pageCount = 1;
 
         var enabledInputs = [];

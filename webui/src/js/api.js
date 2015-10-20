@@ -890,9 +890,8 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
-    var getDictionaryRoles = function(dictionary) {
+    var getRoles = function(url) {
         var deferred = $q.defer();
-        var url = '/dictionary/ ' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles'
         $http.get(url).success(function(data, status, headers, config) {
 
             var userIds = [];
@@ -928,9 +927,32 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
+    var getDictionaryRoles = function(dictionary) {
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles';
+        return getRoles(url);
+    };
+
     var setDictionaryRoles = function(dictionary, roles) {
         var deferred = $q.defer();
-        var url = '/dictionary/ ' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles'
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles';
+
+        $http.post(url, roles).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to update roles');
+        });
+        return deferred.promise;
+    };
+
+    var getPerspectiveRoles = function(dictionary, perspective, roles) {
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/roles';
+        return getRoles(url);
+    };
+
+
+    var setPerspectiveRoles = function(dictionary, perspective, roles) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/roles';
         $http.post(url, roles).success(function(data, status, headers, config) {
             deferred.resolve();
         }).error(function(data, status, headers, config) {
@@ -979,6 +1001,8 @@ function lingvodocAPI($http, $q) {
         'getLanguagesFull': getLanguagesFull,
         'getPublishedDictionaries': getPublishedDictionaries,
         'getDictionaryRoles': getDictionaryRoles,
-        'setDictionaryRoles': setDictionaryRoles
+        'setDictionaryRoles': setDictionaryRoles,
+        'getPerspectiveRoles': getPerspectiveRoles,
+        'setPerspectiveRoles': setPerspectiveRoles
     });
 };

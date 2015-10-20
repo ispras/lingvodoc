@@ -72,7 +72,7 @@
                                 <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}">Edit</a></li>
                                 <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}">Publish</a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a href="#">Edit roles</a></li>
+                                <li><a href="#" ng-click="editPerspectiveRoles(dictionary, perspective)">Edit roles</a></li>
                                 <li><a href="#" ng-click="editPerspectiveProperties(dictionary, perspective)">Edit properties</a></li>
 
                             </ul>
@@ -270,10 +270,6 @@
     </div>
 
 </script>
-
-
-
-
 
 
 <script type="text/ng-template" id="editDictionaryRolesModal.html">
