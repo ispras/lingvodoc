@@ -41,7 +41,7 @@
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">{{ dictionary.translation_string }}</button>
                     <ul class="dropdown-menu">
                         <li><a href="#" ng-click="editDictionaryProperties(dictionary)">Edit information</a></li>
-                        <li><a href="#">Edit roles</a></li>
+                        <li><a href="#" ng-click="editDictionaryRoles(dictionary)">Edit roles</a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="#">Create new perspective</a></li>
                     </ul>
@@ -72,7 +72,7 @@
                                 <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}">Edit</a></li>
                                 <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}">Publish</a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a href="#">Edit roles</a></li>
+                                <li><a href="#" ng-click="editPerspectiveRoles(dictionary, perspective)">Edit roles</a></li>
                                 <li><a href="#" ng-click="editPerspectiveProperties(dictionary, perspective)">Edit properties</a></li>
 
                             </ul>
@@ -271,6 +271,43 @@
 
 </script>
 
+
+<script type="text/ng-template" id="editDictionaryRolesModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title"></h3>
+    </div>
+
+    <div class="modal-body">
+        <div>
+
+
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <td></td>
+                    <td ng-repeat="(role, users) in roles">{{ role }}</td>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr ng-repeat="user in userTable">
+                    <td>{{ user.name }}</td>
+                    <td ng-repeat="(role, users) in roles">
+                        <input type="checkbox" ng-checked="userHasRole(user, role)" ng-click="toggleRole($event, user, role)">
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+</script>
 
 
 
