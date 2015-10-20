@@ -69,7 +69,7 @@
                                 <span class="caret"></span>
                                 <span class="sr-only">Toggle Dropdown</span>
                             </button>
-                            <button type="button" class="btn btn-default col-md-10 col-lg-11 col-sm-10 col-xs-9 dropdown-toggle" data-toggle="dropdown">{{ dictionary.translation_string }}</button>
+                            <button type="button" class="btn btn-default col-md-10 col-lg-11 col-sm-10 col-xs-9 dropdown-toggle" data-toggle="dropdown">{{ perspective.translation_string }}</button>
                             <ul class="dropdown-menu">
                                 <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'view') }}">View published</a></li>
                                 <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}">Edit</a></li>
@@ -80,8 +80,8 @@
 
                             </ul>
                         </div>
-                        <div class="btn-group col-md-4 col-sm-4 col-lg-4 col-xs-4 ">
-                            <button type="button" class="btn btn-info dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-8" data-toggle="dropdown">{{ dictionary.status }}</button>
+                        <div class="btn-group btn-group-xs col-md-4 col-sm-4 col-lg-4 col-xs-4 ">
+                            <button type="button" class="btn btn-info dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-8" data-toggle="dropdown">{{ perspective.status }}</button>
                             <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <span class="caret"></span>
                                 <span class="sr-only">Toggle Dropdown</span>
@@ -92,6 +92,7 @@
                                 <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Published')">Published</a></li>
                             </ul>
                         </div>
+                        <br><br>
                     </div>
                 </div>
                 <hr>
