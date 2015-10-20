@@ -1495,12 +1495,19 @@ def dictionaries_list(request):
     if author:
         user = DBSession.query(User).filter_by(id=author).first()
         dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
+        isadmin = False
         for group in user.groups:
             if group.parent.dictionary_default:
+                if group.subject_override:
+                    isadmin = True
+                    break
                 dcttmp = {'client_id': group.subject_client_id, 'object_id': group.subject_object_id}
                 if dcttmp not in dictstemp:
                     dictstemp += [dcttmp]
             if group.parent.perspective_default:
+                if group.subject_override:
+                    isadmin = True
+                    break
                 dicti = DBSession.query(Dictionary)\
                     .join(DictionaryPerspective)\
                     .filter_by(client_id=group.subject_client_id,
@@ -1510,16 +1517,16 @@ def dictionaries_list(request):
                     dcttmp = {'client_id': dicti.client_id, 'object_id': dicti.object_id}
                     if dcttmp not in dictstemp:
                         dictstemp += [dcttmp]
-        print('NOOO', dictstemp)
-        if dictstemp:
-            prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-            for dicti in dictstemp:
-                prevdicts = prevdicts.subquery().select()
-                prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
+        if not isadmin:
+            if dictstemp:
+                prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+                for dicti in dictstemp:
+                    prevdicts = prevdicts.subquery().select()
+                    prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
 
-            dicts = prevdicts
-        else:
-            dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+                dicts = prevdicts
+            else:
+                dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
 
     if languages:
         langs = []
