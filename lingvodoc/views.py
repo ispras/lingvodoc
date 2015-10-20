@@ -790,71 +790,81 @@ def edit_dictionary_roles(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     req = request.json_body
-    user_id = None
-    if 'user_id' in req:
-        user_id = req['user_id']
-    organization_id = None
-    if 'organization_id' in req:
-        organization_id = req['organization_id']
-
-    role_names = req['role_names']
+    roles_users = None
+    if 'roles_users' in req:
+        roles_users = req['roles_users']
+    roles_organizations = None
+    if 'roles_organizations' in req:
+        roles_organizations = req['roles_organizations']
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            if user_id:
-                user = DBSession.query(User).filter_by(id=user_id).first()
-                if user:
-                    for role_name in role_names:
-                        base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
-                        if not base:
-                            request.response.status = HTTPNotFound.code
-                            return {'error': str("No such role in the system")}
+            if roles_users:
+                for role_name in roles_users:
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'error': str("No such role in the system")}
 
-                        group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                                 subject_object_id=object_id,
-                                                                 subject_client_id=client_id).first()
-                        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                        userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
-                        if userlogged in group.users:
-                            if user not in group.users:
-                                group.users.append(user)
-                        else:
-                            for org in userlogged.organizations:
-                                if org in group.organizations:
-                                    if user not in group.users:
-                                        group.users.append(user)
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
 
-                    request.response.status = HTTPOk.code
-                    return response
-                else:
-                    request.response.status = HTTPNotFound.code
-                    return {'error': str("No such user in the system")}
-            if organization_id:
-                org = DBSession.query(Organization).filter_by(id=organization_id).first()
-                if org:
-                    for role_name in role_names:
-                        base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
-                        if not base:
-                            request.response.status = HTTPNotFound.code
-                            return {'error': str("No such role in the system")}
+                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
-                        group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                                 subject_object_id=object_id,
-                                                                 subject_client_id=client_id).first()
-                        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                        userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
-                        if userlogged in group.users:
-                            if org not in group.organizations:
-                                group.organizations.append(org)
-                        else:
-                            for org in userlogged.organizations:
+                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        users = roles_users[role_name]
+                        for userid in users:
+                            user = DBSession.query(User).filter_by(id=userid).first()
+                            if user:
+                                if user not in group.users:
+                                    group.users.append(user)
+
+            if roles_organizations:
+                for role_name in roles_organizations:
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'error': str("No such role in the system")}
+
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
+
+                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+
+                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        orgs = roles_organizations[role_name]
+                        for orgid in orgs:
+                            org = DBSession.query(Organization).filter_by(id=orgid).first()
+                            if org:
                                 if org not in group.organizations:
                                     group.organizations.append(org)
-                    request.response.status = HTTPOk.code
-                    return response
-                else:
-                    request.response.status = HTTPNotFound.code
-                    return {'error': str("No such organization in the system")}
+
+                request.response.status = HTTPOk.code
+                return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -865,71 +875,81 @@ def delete_dictionary_roles(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     req = request.json_body
-    user_id = None
-    if 'user_id' in req:
-        user_id = req['user_id']
-    organization_id = None
-    if 'organization_id' in req:
-        organization_id = req['organization_id']
-
-    role_names = req['role_names']
+    roles_users = None
+    if 'roles_users' in req:
+        roles_users = req['roles_users']
+    roles_organizations = None
+    if 'roles_organizations' in req:
+        roles_organizations = req['roles_organizations']
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            if user_id:
-                user = DBSession.query(User).filter_by(id=user_id).first()
-                if user:
-                    for role_name in role_names:
-                        base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
-                        if not base:
-                            request.response.status = HTTPNotFound.code
-                            return {'error': str("No such role in the system")}
+            if roles_users:
+                for role_name in roles_users:
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'error': str("No such role in the system")}
 
-                        group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                                 subject_object_id=object_id,
-                                                                 subject_client_id=client_id).first()
-                        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                        userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
-                        if userlogged in group.users:
-                            if user in group.users:
-                                group.users.remove(user)
-                        else:
-                            for org in userlogged.organizations:
-                                if org in group.organizations:
-                                    if user  in group.users:
-                                        group.users.remove(user)
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
 
-                    request.response.status = HTTPOk.code
-                    return response
-                else:
-                    request.response.status = HTTPNotFound.code
-                    return {'error': str("No such user in the system")}
-            if organization_id:
-                org = DBSession.query(Organization).filter_by(id=organization_id).first()
-                if org:
-                    for role_name in role_names:
-                        base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
-                        if not base:
-                            request.response.status = HTTPNotFound.code
-                            return {'error': str("No such role in the system")}
+                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
-                        group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                                 subject_object_id=object_id,
-                                                                 subject_client_id=client_id).first()
-                        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-                        userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
-                        if userlogged in group.users:
+                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
                             if org in group.organizations:
-                                group.organizations.remove(org)
-                        else:
-                            for org in userlogged.organizations:
-                                if org in group.organizations:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        users = roles_users[role_name]
+                        for userid in users:
+                            user = DBSession.query(User).filter_by(id=userid).first()
+                            if user:
+                                if user in group.users:
+                                    group.users.remove(user)
+
+            if roles_organizations:
+                for role_name in roles_organizations:
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, dictionary_default=True).first()
+                    if not base:
+                        request.response.status = HTTPNotFound.code
+                        return {'error': str("No such role in the system")}
+
+                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                             subject_object_id=object_id,
+                                                             subject_client_id=client_id).first()
+
+                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+
+                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
+                    if userlogged in group.users:
+                        permitted = True
+                    if not permitted:
+                        for org in userlogged.organizations:
+                            if org in group.organizations:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        orgs = roles_organizations[role_name]
+                        for orgid in orgs:
+                            org = DBSession.query(Organization).filter_by(id=orgid).first()
+                            if org:
+                                if org  in group.organizations:
                                     group.organizations.remove(org)
-                    request.response.status = HTTPOk.code
-                    return response
-                else:
-                    request.response.status = HTTPNotFound.code
-                    return {'error': str("No such organization in the system")}
+
+                request.response.status = HTTPOk.code
+                return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -981,15 +1001,13 @@ def edit_perspective_roles(request):
     object_id = request.matchdict.get('perspective_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
-    user_id = None
     req = request.json_body
-    if 'user_id' in req:
-        user_id = req['user_id']
-    organization_id = None
-    if 'organization_id' in req:
-        organization_id = req['organization_id']
-
-    role_names = req['role_names']
+    roles_users = None
+    if 'roles_users' in req:
+        roles_users = req['roles_users']
+    roles_organizations = None
+    if 'roles_organizations' in req:
+        roles_organizations = req['roles_organizations']
 
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
@@ -998,13 +1016,8 @@ def edit_perspective_roles(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
-        if user_id:
-            user = DBSession.query(User).filter_by(id=user_id).first()
-            if user:
-                for role_name in role_names:
+            if roles_users:
+                for role_name in roles_users:
                     base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
@@ -1013,29 +1026,31 @@ def edit_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
                     if userlogged in group.users:
-                        if user not in group.users:
-                            group.users.append(user)
-                    else:
+                        permitted = True
+                    if not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        users = roles_users[role_name]
+                        for userid in users:
+                            user = DBSession.query(User).filter_by(id=userid).first()
+                            if user:
                                 if user not in group.users:
                                     group.users.append(user)
 
-                request.response.status = HTTPOk.code
-                return response
-            else:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such user in the system")}
-        if organization_id:
-            org = DBSession.query(Organization).filter_by(id=organization_id).first()
-            if org:
-                for role_name in role_names:
-                    base = DBSession.query(BaseGroup)\
-                        .filter_by(translation_string=role_name, perspective_default=True)\
-                        .first()
+            if roles_organizations:
+                for role_name in roles_organizations:
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -1043,20 +1058,30 @@ def edit_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
                     if userlogged in group.users:
-                        if org not in group.organizations:
-                            group.organizations.append(org)
-                    else:
+                        permitted = True
+                    if not permitted:
                         for org in userlogged.organizations:
-                            if org not in group.organizations:
-                                group.organizations.append(org)
+                            if org in group.organizations:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        orgs = roles_organizations[role_name]
+                        for orgid in orgs:
+                            org = DBSession.query(Organization).filter_by(id=orgid).first()
+                            if org:
+                                if org not in group.organizations:
+                                    group.organizations.append(org)
+
                 request.response.status = HTTPOk.code
                 return response
-            else:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such organization in the system")}
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
@@ -1068,15 +1093,13 @@ def delete_perspective_roles(request):
     object_id = request.matchdict.get('perspective_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
-    user_id = None
     req = request.json_body
-    if 'user_id' in req:
-        user_id = req['user_id']
-    organization_id = None
-    if 'organization_id' in req:
-        organization_id = req['organization_id']
-
-    role_names = req['role_names']
+    roles_users = None
+    if 'roles_users' in req:
+        roles_users = req['roles_users']
+    roles_organizations = None
+    if 'roles_organizations' in req:
+        roles_organizations = req['roles_organizations']
 
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
@@ -1085,13 +1108,8 @@ def delete_perspective_roles(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
-        if user_id:
-            user = DBSession.query(User).filter_by(id=user_id).first()
-            if user:
-                for role_name in role_names:
+            if roles_users:
+                for role_name in roles_users:
                     base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
@@ -1100,29 +1118,31 @@ def delete_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
                     if userlogged in group.users:
-                        if user  in group.users:
-                            group.users.remove(user)
-                    else:
+                        permitted = True
+                    if not permitted:
                         for org in userlogged.organizations:
                             if org in group.organizations:
-                                if user  in group.users:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        users = roles_users[role_name]
+                        for userid in users:
+                            user = DBSession.query(User).filter_by(id=userid).first()
+                            if user:
+                                if user in group.users:
                                     group.users.remove(user)
 
-                request.response.status = HTTPOk.code
-                return response
-            else:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such user in the system")}
-        if organization_id:
-            org = DBSession.query(Organization).filter_by(id=organization_id).first()
-            if org:
-                for role_name in role_names:
-                    base = DBSession.query(BaseGroup)\
-                        .filter_by(translation_string=role_name, perspective_default=True)\
-                        .first()
+            if roles_organizations:
+                for role_name in roles_organizations:
+                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -1130,20 +1150,30 @@ def delete_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+
+                    permitted = False
                     if userlogged in group.users:
-                        if org  in group.organizations:
-                            group.organizations.remove(org)
-                    else:
+                        permitted = True
+                    if not permitted:
                         for org in userlogged.organizations:
-                            if org  in group.organizations:
-                                group.organizations.remove(org)
+                            if org in group.organizations:
+                                permitted = True
+                                break
+
+                    if permitted:
+                        orgs = roles_organizations[role_name]
+                        for orgid in orgs:
+                            org = DBSession.query(Organization).filter_by(id=orgid).first()
+                            if org:
+                                if org in group.organizations:
+                                    group.organizations.remove(org)
+
                 request.response.status = HTTPOk.code
                 return response
-            else:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such organization in the system")}
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
