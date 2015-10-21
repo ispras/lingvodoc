@@ -1333,7 +1333,6 @@ def participated_clients_list(dictionary, request):
             subreq = Request.blank(path)
             subreq.method = 'GET'
             subreq.headers = request.headers
-            print('STATES', dictionary.state, persp.state)
             resp = request.invoke_subrequest(subreq)
             if not 'error' in resp.json:
                 for entry in resp.json['lexical_entries']:
@@ -1653,45 +1652,47 @@ def view_perspective_fields(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         fields = []
-        for field in perspective.dictionaryperspectivefield:
+        db_fields = DBSession.query(DictionaryPerspectiveField)\
+            .filter_by(parent=perspective, marked_for_deletion=False)\
+            .order_by('position')
+        for field in db_fields:
 
             data = dict()
-            if not field.marked_for_deletion:
-                if field.level == 'leveloneentity' or field.level == 'groupingentity':
-                    ent_type = field.get_entity_type(request)
-                    data['entity_type'] = ent_type['translation_string']
-                    data['entity_type_translation'] = ent_type['translation']
-                    data_type = field.get_data_type(request)
-                    data['data_type'] = data_type['translation_string']
-                    data['data_type_translation'] = data_type['translation']
-                    data['position'] = field.position
-                    data['status'] = field.state
-                    data['level'] = field.level
-                    contains = []
-                    if field.dictionaryperspectivefield:
-                        for field2 in field.dictionaryperspectivefield:
-                            if not field2.marked_for_deletion:
-                                data2 = dict()
-                                ent_type = field2.get_entity_type(request)
-                                data2['entity_type'] = ent_type['translation_string']
-                                data2['entity_type_translation'] = ent_type['translation']
-                                data_type = field2.get_data_type(request)
-                                data2['data_type'] = data_type['translation_string']
-                                data2['data_type_translation'] = data_type['translation']
-                                data2['status'] = field2.state
-                                data2['position'] = field2.position
-                                data2['level'] = field2.level
-                                data2['client_id'] = field2.client_id
-                                data2['object_id'] = field2.object_id
-                                contains += [data2]
-                    data['contains'] = contains
-                    if field.group:
-                        group = field.get_group(request)
-                        data['group'] = group['translation_string']
-                        data['group_translation'] = group['translation']
-                    data['client_id'] = field.client_id
-                    data['object_id'] = field.object_id
-                    fields += [data]
+            if field.level == 'leveloneentity' or field.level == 'groupingentity':
+                ent_type = field.get_entity_type(request)
+                data['entity_type'] = ent_type['translation_string']
+                data['entity_type_translation'] = ent_type['translation']
+                data_type = field.get_data_type(request)
+                data['data_type'] = data_type['translation_string']
+                data['data_type_translation'] = data_type['translation']
+                data['position'] = field.position
+                data['status'] = field.state
+                data['level'] = field.level
+                contains = []
+                if field.dictionaryperspectivefield:
+                    for field2 in field.dictionaryperspectivefield:
+                        if not field2.marked_for_deletion:
+                            data2 = dict()
+                            ent_type = field2.get_entity_type(request)
+                            data2['entity_type'] = ent_type['translation_string']
+                            data2['entity_type_translation'] = ent_type['translation']
+                            data_type = field2.get_data_type(request)
+                            data2['data_type'] = data_type['translation_string']
+                            data2['data_type_translation'] = data_type['translation']
+                            data2['status'] = field2.state
+                            data2['position'] = field2.position
+                            data2['level'] = field2.level
+                            data2['client_id'] = field2.client_id
+                            data2['object_id'] = field2.object_id
+                            contains += [data2]
+                data['contains'] = contains
+                if field.group:
+                    group = field.get_group(request)
+                    data['group'] = group['translation_string']
+                    data['group_translation'] = group['translation']
+                data['client_id'] = field.client_id
+                data['object_id'] = field.object_id
+                fields += [data]
         response['fields'] = fields
         request.response.status = HTTPOk.code
         return response
@@ -3213,7 +3214,6 @@ def merge_perspectives_api(request):
             for lex in lexes:
                 metadata = dict()
                 if lex.additional_metadata:
-                    print('what', lex.additional_metadata, type(lex.additional_metadata))
                     metadata = json.loads(lex.additional_metadata)
                 metadata['came_from'] = {'client_id': lex.parent_client_id, 'object_id': lex.parent_object_id}
                 lex.additional_metadata = json.dumps(metadata)
@@ -3445,7 +3445,6 @@ def delete_organization(request):
 
 
 def user_counter(entry, result, starting_date, ending_date, types):
-    resulttmp = None
     empty = False
     if entry['level'] == 'lexicalentry':
         if 'contains' not in entry:
@@ -3456,12 +3455,13 @@ def user_counter(entry, result, starting_date, ending_date, types):
         if entry['contains']:
             for ent in entry['contains']:
                 result = user_counter(ent, result, starting_date, ending_date, types)
-    if starting_date:
-        if datetime.datetime(entry['created_at']) < starting_date:
-            empty = True
-    if ending_date:
-        if datetime.datetime(entry['created_at']) > ending_date:
-            empty = True
+    if 'created_at' in entry:
+        if starting_date:
+            if datetime.datetime(entry['created_at']).date() < starting_date:
+                empty = True
+        if ending_date:
+            if datetime.datetime(entry['created_at']).date() > ending_date:
+                empty = True
     if empty:
         return result
 
@@ -3477,7 +3477,6 @@ def user_counter(entry, result, starting_date, ending_date, types):
                 result[user.id] = counters
             user_count = result[user.id]
             if entry['level'] == 'lexicalentry':
-                print('there')
                 user_count['lexical_entry'] += 1
             else:
                 if 'entity_type' in entry:
@@ -3494,7 +3493,7 @@ def perspective_info(request):
     parent_object_id = request.matchdict.get('dictionary_object_id')
     starting_date = request.GET.get('starting_date')
     if starting_date:
-        starting_date = datetime.datetime(starting_date)
+        starting_date = datetime.datetime.strptime(starting_date, "%d%m%Y").date()
     ending_date = request.GET.get('ending_date')
     if ending_date:
         ending_date = datetime.datetime(ending_date)
@@ -3530,7 +3529,6 @@ def perspective_info(request):
                             types.append(entity_type)
 
             for lex in perspective.lexicalentry:
-                print('here')
                 result = user_counter(lex.track(True), result, starting_date, ending_date, types)
 
             response['count'] = result
