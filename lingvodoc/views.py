@@ -1474,7 +1474,6 @@ def dictionaries_list(request):
         # else:
         #     dicts = dicts.filter_by(state!='Published')
     if user_created:
-        log.error('WHAT %s' % user_created)
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
         response['clients'] = cli
@@ -1521,7 +1520,7 @@ def dictionaries_list(request):
             lang = DBSession.query(Language).filter_by(object_id=lan['object_id'], client_id=lan['client_id']).first()
             langs += all_languages(lang)
         if langs:
-            prevdicts = DBSession.query(Dictionary).filter_(sqlalchemy.sql.false())
+            prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
             for lan in langs:
                 prevdicts = prevdicts.subquery().select()
                 prevdicts = dicts.filter_by(parent_client_id=lan['client_id'], parent_object_id=lan['object_id']).union_all(prevdicts)
