@@ -134,7 +134,8 @@
                     <div ng-if="field.data_type == 'grouping_tag'">
 
                         <button type="button" class="btn btn-default btn-sm"
-                                ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)">
+                                ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)"
+                                ng-if="fieldValues.length > 0">
                             <span class="glyphicon glyphicon-list">View</span>
                         </button>
 

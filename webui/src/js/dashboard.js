@@ -71,7 +71,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
 
         $modal.open({
             animation: true,
-            templateUrl: 'editDictionaryRolesModal.html',
+            templateUrl: 'editRolesModal.html',
             controller: 'editDictionaryRolesController',
             size: 'lg',
             backdrop: 'static',
@@ -90,7 +90,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
 
         $modal.open({
             animation: true,
-            templateUrl: 'editDictionaryRolesModal.html',
+            templateUrl: 'editRolesModal.html',
             controller: 'editPerspectiveRolesController',
             size: 'lg',
             backdrop: 'static',
@@ -137,28 +137,44 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
         });
     };
 
+
+    $scope.loadMyDictionaries = function() {
+
+        var dictionaryQuery = {
+            'author': userId
+        };
+
+        dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
+            $scope.dictionaries = dictionaries;
+        }, function(reason) {
+
+        });
+    };
+
+    $scope.loadAvailableDictionaries = function() {
+
+        var dictionaryQuery = {
+            'user_created': [userId]
+        };
+
+        dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
+            $scope.dictionaries = dictionaries;
+        }, function(reason) {
+
+        });
+    };
+
     var dictionaryQuery = {
         'user_created': [userId]
         //'user_participated': [userId]
     };
 
+    dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
+        $scope.dictionaries = dictionaries;
+        $log.info(dictionaries);
 
-    $http.post(dictionariesUrl, dictionaryQuery).success(function (data, status, headers, config) {
-        $scope.dictionaries = data.dictionaries;
-        for (var i = 0; i < $scope.dictionaries.length; i++) {
-            var dictionary = $scope.dictionaries[i];
-            var getPerspectivesUrl = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspectives';
-            $http.get(getPerspectivesUrl).success((function (index) {
-                return function (data, status, headers, config) {
-                    $scope.dictionaries[index]['perspectives'] = data.perspectives;
-                    $scope.dictionaries[index]['selectedPerspectiveId'] =  -1;
-                };
-            })(i)).error(function (data, status, headers, config) {
-                // error handling
-            });
-        }
-    }).error(function (data, status, headers, config) {
-        // error handling
+    }, function(reason) {
+
     });
 }]);
 
@@ -242,7 +258,6 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     };
 
     $scope.removeField = function(field) {
-        $scope.perspective.fields
 
         for(var i = $scope.perspective.fields.length-1; i >= 0; i--) {
             if($scope.perspective.fields[i].client_id == field.client_id &&
@@ -286,26 +301,59 @@ app.controller('editDictionaryRolesController', ['$scope', '$http', '$q', '$moda
     $scope.userTable = [];
 
     $scope.ok = function() {
-
         var result = { 'roles_users': {} };
+        var addRoles = { 'roles_users': {} };
+        var deleteRoles = { 'roles_users': {} };
         var roles = getRoles();
+        $log.info(roles);
+
         angular.forEach(roles, function(role) {
+            result.roles_users[role] = [];
             angular.forEach($scope.userTable, function(u) {
                 if (u.roles.indexOf(role) >= 0) {
-                    if (typeof result[role] != 'undefined') {
-                        result.roles_users[role].push(u.id);
-                    } else {
-                        result.roles_users[role] = [u.id];
-                    }
+                    result.roles_users[role].push(u);
                 }
             });
         });
 
-        dictionaryService.setDictionaryRoles($scope.dictionary, result).then(function() {
-            $modalInstance.close();
-        }, function(reason) {
-            $log.error(reason);
+        angular.forEach(result.roles_users, function(v, role) {
+
+            var newUsers = result.roles_users[role].map(function(u) {
+                return u.id;
+            });
+
+            var oldUsers = $scope.roles[role].map(function(u) {
+                return u.id;
+            });
+
+            addRoles.roles_users[role] = [];
+            angular.forEach(newUsers, function(id) {
+                if (oldUsers.indexOf(id) < 0) {
+                    addRoles.roles_users[role].push(id);
+                }
+            });
+
+            deleteRoles.roles_users[role] = [];
+            angular.forEach(oldUsers, function(id) {
+                if (newUsers.indexOf(id) < 0) {
+                    deleteRoles.roles_users[role].push(id);
+                }
+            });
         });
+
+        var promises = [];
+        if (Object.keys(addRoles.roles_users).length > 0) {
+            promises.push(dictionaryService.addDictionaryRoles($scope.dictionary, addRoles));
+        }
+
+        if (Object.keys(deleteRoles.roles_users).length > 0) {
+            promises.push(dictionaryService.deleteDictionaryRoles($scope.dictionary, deleteRoles));
+        }
+
+        $q.all(promises).then(function() {
+            $modalInstance.close();
+        });
+
     };
 
     $scope.cancel = function() {
@@ -323,6 +371,17 @@ app.controller('editDictionaryRolesController', ['$scope', '$http', '$q', '$moda
             }
         });
         return result;
+    };
+
+    $scope.addUser = function(user) {
+
+        user['roles'] = [];
+        var m = $scope.userTable.filter(function(u) {
+            return u.id == user.id;
+        });
+        if (m.length == 0) {
+            $scope.userTable.push(user);
+        }
     };
 
 
@@ -343,15 +402,7 @@ app.controller('editDictionaryRolesController', ['$scope', '$http', '$q', '$moda
 
 
     var getRoles = function() {
-        var roles = [];
-        angular.forEach($scope.userTable, function(u) {
-            angular.forEach(u.roles, function(role) {
-                if (roles.indexOf(role) < 0) {
-                    roles.push(role);
-                }
-            });
-        });
-        return roles;
+        return Object.keys($scope.roles);
     };
 
 
@@ -377,6 +428,19 @@ app.controller('editDictionaryRolesController', ['$scope', '$http', '$q', '$moda
 
         return usersTable;
     };
+
+    $scope.$watch('searchQuery', function(query) {
+        if (query && query.length >= 3) {
+            $scope.suggestedUsers = [];
+            dictionaryService.searchUsers(query).then(function(users) {
+                $scope.suggestedUsers = users.map(function(u) {
+                    return lingvodoc.User.fromJS(u);
+                });
+            }, function(reason) {
+
+            });
+        }
+    });
 
     dictionaryService.getDictionaryRoles($scope.dictionary).then(function(roles) {
         $scope.roles = roles;
@@ -393,28 +457,63 @@ app.controller('editPerspectiveRolesController', ['$scope', '$http', '$q', '$mod
 
     $scope.roles = {};
     $scope.userTable = [];
+    $scope.searchQuery = '';
+    $scope.suggestedUsers = [];
 
     $scope.ok = function() {
-
         var result = { 'roles_users': {} };
+        var addRoles = { 'roles_users': {} };
+        var deleteRoles = { 'roles_users': {} };
         var roles = getRoles();
+        $log.info(roles);
+
         angular.forEach(roles, function(role) {
+            result.roles_users[role] = [];
             angular.forEach($scope.userTable, function(u) {
                 if (u.roles.indexOf(role) >= 0) {
-                    if (typeof result[role] != 'undefined') {
-                        result.roles_users[role].push(u.id);
-                    } else {
-                        result.roles_users[role] = [u.id];
-                    }
+                    result.roles_users[role].push(u);
                 }
             });
         });
 
-        dictionaryService.setPerspectiveRoles(params.dictionary, params.perspective, result).then(function() {
-            $modalInstance.close();
-        }, function(reason) {
-            $log.error(reason);
+        angular.forEach(result.roles_users, function(v, role) {
+
+            var newUsers = result.roles_users[role].map(function(u) {
+                return u.id;
+            });
+
+            var oldUsers = $scope.roles[role].map(function(u) {
+                return u.id;
+            });
+
+            addRoles.roles_users[role] = [];
+            angular.forEach(newUsers, function(id) {
+                if (oldUsers.indexOf(id) < 0) {
+                    addRoles.roles_users[role].push(id);
+                }
+            });
+
+            deleteRoles.roles_users[role] = [];
+            angular.forEach(oldUsers, function(id) {
+                if (newUsers.indexOf(id) < 0) {
+                    deleteRoles.roles_users[role].push(id);
+                }
+            });
         });
+
+        var promises = [];
+        if (Object.keys(addRoles.roles_users).length > 0) {
+            promises.push(dictionaryService.addPerspectiveRoles(params.dictionary, params.perspective, addRoles));
+        }
+
+        if (Object.keys(deleteRoles.roles_users).length > 0) {
+            promises.push(dictionaryService.deletePerspectiveRoles(params.dictionary, params.perspective, deleteRoles));
+        }
+
+        $q.all(promises).then(function() {
+            $modalInstance.close();
+        });
+
     };
 
     $scope.cancel = function() {
@@ -432,6 +531,17 @@ app.controller('editPerspectiveRolesController', ['$scope', '$http', '$q', '$mod
             }
         });
         return result;
+    };
+
+    $scope.addUser = function(user) {
+
+        user['roles'] = [];
+        var m = $scope.userTable.filter(function(u) {
+            return u.id == user.id;
+        });
+        if (m.length == 0) {
+            $scope.userTable.push(user);
+        }
     };
 
 
@@ -486,6 +596,19 @@ app.controller('editPerspectiveRolesController', ['$scope', '$http', '$q', '$mod
 
         return usersTable;
     };
+
+    $scope.$watch('searchQuery', function(query) {
+        if (query.length >= 3) {
+            $scope.suggestedUsers = [];
+            dictionaryService.searchUsers(query).then(function(users) {
+                $scope.suggestedUsers = users.map(function(u) {
+                    return lingvodoc.User.fromJS(u);
+                });
+            }, function(reason) {
+
+            });
+        }
+    });
 
     dictionaryService.getPerspectiveRoles(params.dictionary, params.perspective).then(function(roles) {
         $scope.roles = roles;
