@@ -141,7 +141,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
     $scope.loadMyDictionaries = function() {
 
         var dictionaryQuery = {
-            'author': userId
+            'user_created': [userId]
         };
 
         dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
@@ -154,7 +154,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
     $scope.loadAvailableDictionaries = function() {
 
         var dictionaryQuery = {
-            'user_created': [userId]
+            'author': userId
         };
 
         dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
@@ -165,8 +165,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
     };
 
     var dictionaryQuery = {
-        'user_created': [userId]
-        //'user_participated': [userId]
+        'author': userId
     };
 
     dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
