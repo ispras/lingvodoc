@@ -30,6 +30,14 @@
 
 <div class="container" ng-controller="DashboardController" ng-cloak>
 
+
+    <div class="panel">
+        <button type="button" class="btn btn-primary" ng-click="loadMyDictionaries()">My dictionaries</button>
+        <button type="button" class="btn btn-primary" ng-click="loadAvailableDictionaries()">Avaliable dictionaries</button>
+    </div>
+    <br>
+
+
     <div ng-if="dictionaries.length > 0">
         <div ng-repeat="dictionary in dictionaries">
             <div>
@@ -276,7 +284,7 @@
 </script>
 
 
-<script type="text/ng-template" id="editDictionaryRolesModal.html">
+<script type="text/ng-template" id="editRolesModal.html">
 
     <div class="modal-header">
         <h3 class="modal-title"></h3>
@@ -304,6 +312,36 @@
                 </tbody>
             </table>
         </div>
+
+        <div>
+            <h4>Add new user</h4>
+            <label for="userLogin"></label>
+            <input id="userLogin" class="form-control" type="text" placeholder="Search user" ng-model="searchQuery">
+
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <td>User</td>
+                    <td>Name</td>
+                    <td></td>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr ng-repeat="user in suggestedUsers">
+                    <td>{{ user.login }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>
+                        <button class="btn btn-primary" ng-click="addUser(user)">
+                            <span class="glyphicon glyphicon-plus-sign"></span>
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+
     </div>
 
     <div class="modal-footer">
