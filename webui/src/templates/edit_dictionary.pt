@@ -221,8 +221,7 @@
                     <div ng-if="field.data_type == 'grouping_tag'">
 
                         <button type="button" class="btn btn-default btn-sm"
-                                ng-click="editGroupingTag(lexicalEntry, field, fieldValues)"
-                                ng-if="fieldValues.length > 0">
+                                ng-click="editGroupingTag(lexicalEntry, field, fieldValues)">
                             <span class="glyphicon glyphicon-list">Edit</span>
                         </button>
 
