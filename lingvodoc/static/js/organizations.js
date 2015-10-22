@@ -27233,7 +27233,6 @@ var lingvodoc = {};
 lingvodoc.Object = function(clientId, objectId) {
     this.client_id = clientId;
     this.object_id = objectId;
-    this.type = "abstract";
     this.getId = function() {
         return this.client_id + "" + this.object_id;
     };
@@ -27294,6 +27293,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.translation_string = translation_string;
     this.status = status;
     this.marked_for_deletion = marked_for_deletion;
+    this.fields = [];
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
@@ -27633,6 +27633,16 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("An error  occurred while trying to set perspective status");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
         });
         return deferred.promise;
     };
@@ -28091,6 +28101,7 @@ function lingvodocAPI($http, $q) {
         setPerspectiveStatus: setPerspectiveStatus,
         getPerspectiveFields: getPerspectiveFields,
         setPerspectiveFields: setPerspectiveFields,
+        getPerspectiveFieldsNew: getPerspectiveFieldsNew,
         getUserInfo: getUserInfo,
         setUserInfo: setUserInfo,
         getOrganizations: getOrganizations,

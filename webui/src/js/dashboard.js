@@ -67,6 +67,34 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
         });
     };
 
+    $scope.createPerspective = function(dictionary) {
+
+        var modalInstance = $modal.open({
+            animation: true,
+            templateUrl: 'createPerspectiveModal.html',
+            controller: 'createPerspectiveController',
+            size: 'lg',
+            backdrop: 'static',
+            keyboard: false,
+            resolve: {
+                'params': function() {
+                    return {
+                        'dictionary': dictionary
+                    };
+                }
+            }
+        });
+
+
+        modalInstance.result.then(function(createdPerspective) {
+            //dictionary.perspectives.push(createdPerspective);
+
+        }, function() {
+
+        });
+    };
+
+
     $scope.editDictionaryRoles = function(dictionary) {
 
         $modal.open({
@@ -176,6 +204,103 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
 
     });
 }]);
+
+
+
+app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+
+    $scope.dictionary = params.dictionary;
+    $scope.perspective = { 'fields': [] };
+
+    $scope.addField = function () {
+        $scope.perspective.fields.push({'entity_type': '', 'entity_type_translation': '', 'data_type': 'text', 'data_type_translation': 'text', 'status': 'enabled'});
+    };
+
+    $scope.enableGroup = function (fieldIndex) {
+        if (typeof $scope.perspective.fields[fieldIndex].group === 'undefined') {
+            $scope.perspective.fields[fieldIndex].group = '';
+        } else {
+            delete $scope.perspective.fields[fieldIndex].group;
+        }
+    };
+
+    $scope.enableLinkedField = function (fieldIndex) {
+        if (typeof $scope.perspective.fields[fieldIndex].contains === 'undefined') {
+            $scope.perspective.fields[fieldIndex].contains = [{
+                'entity_type': '',
+                'entity_type_translation': '',
+                'data_type': 'markup',
+                'data_type_translation': 'markup',
+                'status': 'enabled'
+            }];
+        } else {
+            delete $scope.perspective.fields[fieldIndex].contains;
+        }
+    };
+
+    $scope.ok = function() {
+
+        if (!$scope.perspectiveName) {
+            return;
+        }
+
+        var createPerspectiveUrl = '/dictionary/' + encodeURIComponent($scope.dictionary.client_id) + '/' + encodeURIComponent($scope.dictionary.object_id) + '/' + 'perspective';
+        var perspectiveObj = {
+            'translation_string': $scope.perspectiveName,
+            'translation': $scope.perspectiveName
+        };
+
+        $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
+
+            if (data.object_id && data.client_id) {
+                $scope.perspective.client_id = data.client_id;
+                $scope.perspective.object_id = data.object_id;
+                $scope.translation_string = $scope.perspectiveName;
+                $scope.translation = $scope.perspectiveName;
+
+                var setFieldsUrl = '/dictionary/' + encodeURIComponent($scope.dictionary.client_id) + '/' + encodeURIComponent($scope.dictionary.object_id) + '/perspective/' + encodeURIComponent(data.client_id) + '/' + encodeURIComponent(data.object_id) + '/fields';
+                $http.post(setFieldsUrl, exportPerspective($scope.perspective)).success(function(data, status, headers, config) {
+                    $modalInstance.close($scope.perspective);
+                }).error(function(data, status, headers, config) {
+                    alert('Failed to create perspective!');
+                });
+
+            } else {
+                alert('Failed to create perspective!');
+            }
+
+        }).error(function(data, status, headers, config) {
+            alert('Failed to create perspective!');
+        });
+    };
+
+    $scope.cancel = function() {
+        $modalInstance.dismiss('cancel');
+    };
+
+    $scope.$watch('perspectiveId', function (id) {
+        if (typeof id == 'string') {
+            for (var i = 0; i < $scope.dictionary.perspectives.length; i++) {
+                if ($scope.dictionary.perspectives[i].getId() == id) {
+                    $scope.perspective = $scope.dictionary.perspectives[i];
+
+                    dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
+                        $scope.perspective.fields = fields;
+                    }, function(reason) {
+                        $log.error(reason);
+                    });
+                    break;
+                }
+            }
+        }
+    });
+}]);
+
+
+
+
+
+
 
 app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
 
