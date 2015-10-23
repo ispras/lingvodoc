@@ -31409,6 +31409,8 @@ function lingvodocAPI($http, $q) {
                 $q.all(r).then(function(results) {
                     deferred.resolve(results);
                 });
+            } else {
+                deferred.resolve([]);
             }
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to fetch merge suggestions");

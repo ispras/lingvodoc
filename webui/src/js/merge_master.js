@@ -195,7 +195,7 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 $scope.master.selectedSourceDictionary1,
                 $scope.master.selectedSourceDictionary2
             ).then(function(result) {
-                    $log.info(result);
+                    $state.go('merge.perspectiveFinished');
                 }, function(reason) {
                     $log.error(reason);
                 });
@@ -244,6 +244,11 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
 
     $scope.commitPerspective = function() {
 
+        if (!$scope.master.perspectiveName) {
+            alert('Please, specify perspective name.');
+            return;
+        }
+
         var updateFields1 = unwrapFields($scope.master.fields1);
         var updateFields2 = unwrapFields($scope.master.fields2);
 
@@ -274,7 +279,7 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 $scope.master.mergedPerspectiveFields = fields;
 
                 dictionaryService.mergeSuggestions(obj).then(function(suggestions) {
-
+                    
                     if (suggestions.length > 0) {
                         $scope.master.suggestions = suggestions;
                         $scope.master.suggestedLexicalEntries = $scope.master.suggestions[0].suggestion;

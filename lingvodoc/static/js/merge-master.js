@@ -28808,6 +28808,8 @@ function lingvodocAPI($http, $q) {
                 $q.all(r).then(function(results) {
                     deferred.resolve(results);
                 });
+            } else {
+                deferred.resolve([]);
             }
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to fetch merge suggestions");
@@ -29244,7 +29246,7 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
         }
         if ($scope.master.selectedSourceDictionary1 instanceof lingvodoc.Dictionary && $scope.master.selectedSourceDictionary2 instanceof lingvodoc.Dictionary) {
             dictionaryService.mergeDictionaries($scope.master.mergedDictionaryName, $scope.master.mergedDictionaryName, $scope.master.selectedSourceDictionary1, $scope.master.selectedSourceDictionary2).then(function(result) {
-                $log.info(result);
+                $state.go("merge.perspectiveFinished");
             }, function(reason) {
                 $log.error(reason);
             });
@@ -29273,6 +29275,10 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
         }
     };
     $scope.commitPerspective = function() {
+        if (!$scope.master.perspectiveName) {
+            alert("Please, specify perspective name.");
+            return;
+        }
         var updateFields1 = unwrapFields($scope.master.fields1);
         var updateFields2 = unwrapFields($scope.master.fields2);
         var req = {
