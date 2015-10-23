@@ -548,6 +548,7 @@ def view_perspective(request):
             response['translation'] = translation_string['translation']
             response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
+            response['is_template'] = perspective.is_template
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -583,6 +584,9 @@ def edit_perspective(request):
                     perspective.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     perspective.parent_object_id = req['parent_object_id']
+                is_template = req.get('is_template')
+                if is_template is not None:
+                    perspective.is_template = is_template
                 request.response.status = HTTPOk.code
                 return response
         else:
@@ -656,6 +660,7 @@ def create_perspective(request):
             req = json.loads(request.json_body)
         else:
             req = request.json_body
+        is_template = req.get('is_template')
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -673,6 +678,8 @@ def create_perspective(request):
                                             parent=parent,
                                             import_source=req.get('import_source'),
                                             import_hash=req.get('import_hash'))
+        if is_template is not None:
+            perspective.is_template = is_template
         perspective.set_translation(request)
         DBSession.add(perspective)
         DBSession.flush()
@@ -1587,7 +1594,7 @@ def perspectives_list(request):
     response = dict()
     is_template = None
     try:
-        is_template = request.params.get('istemplate')
+        is_template = request.params.get('is_template')
     except:
         pass
     state = None
@@ -3644,7 +3651,7 @@ try it again.
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = dict()
-    return
+    return False is None
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
