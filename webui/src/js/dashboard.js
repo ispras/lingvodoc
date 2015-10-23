@@ -85,10 +85,8 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
             }
         });
 
-
         modalInstance.result.then(function(createdPerspective) {
-            //dictionary.perspectives.push(createdPerspective);
-
+            dictionary.perspectives.push(createdPerspective);
         }, function() {
 
         });
@@ -198,8 +196,6 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
 
     dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
         $scope.dictionaries = dictionaries;
-        $log.info(dictionaries);
-
     }, function(reason) {
 
     });
@@ -210,6 +206,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
 app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
 
     $scope.dictionary = params.dictionary;
+    $scope.perspectives = [];
     $scope.perspective = { 'fields': [] };
 
     $scope.addField = function () {
@@ -249,28 +246,11 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
             'translation_string': $scope.perspectiveName,
             'translation': $scope.perspectiveName
         };
-
-        $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
-
-            if (data.object_id && data.client_id) {
-                $scope.perspective.client_id = data.client_id;
-                $scope.perspective.object_id = data.object_id;
-                $scope.translation_string = $scope.perspectiveName;
-                $scope.translation = $scope.perspectiveName;
-
-                var setFieldsUrl = '/dictionary/' + encodeURIComponent($scope.dictionary.client_id) + '/' + encodeURIComponent($scope.dictionary.object_id) + '/perspective/' + encodeURIComponent(data.client_id) + '/' + encodeURIComponent(data.object_id) + '/fields';
-                $http.post(setFieldsUrl, exportPerspective($scope.perspective)).success(function(data, status, headers, config) {
-                    $modalInstance.close($scope.perspective);
-                }).error(function(data, status, headers, config) {
-                    alert('Failed to create perspective!');
-                });
-
-            } else {
-                alert('Failed to create perspective!');
-            }
-
-        }).error(function(data, status, headers, config) {
-            alert('Failed to create perspective!');
+        var fields = exportPerspective($scope.perspective);
+        dictionaryService.createPerspective($scope.dictionary, perspectiveObj, fields).then(function(perspective) {
+            $modalInstance.close(perspective);
+        }, function(reason) {
+            $log.error(reason);
         });
     };
 
@@ -280,9 +260,9 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
 
     $scope.$watch('perspectiveId', function (id) {
         if (typeof id == 'string') {
-            for (var i = 0; i < $scope.dictionary.perspectives.length; i++) {
-                if ($scope.dictionary.perspectives[i].getId() == id) {
-                    $scope.perspective = $scope.dictionary.perspectives[i];
+            for (var i = 0; i < $scope.perspectives.length; i++) {
+                if ($scope.perspectives[i].getId() == id) {
+                    $scope.perspective = $scope.perspectives[i];
 
                     dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
                         $scope.perspective.fields = fields;
@@ -293,6 +273,12 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
                 }
             }
         }
+    });
+
+    dictionaryService.getAllPerspectives().then(function(perspectives) {
+        $scope.perspectives = perspectives;
+    }, function(reason) {
+        $log.error(reason);
     });
 }]);
 
@@ -429,7 +415,6 @@ app.controller('editDictionaryRolesController', ['$scope', '$http', '$q', '$moda
         var addRoles = { 'roles_users': {} };
         var deleteRoles = { 'roles_users': {} };
         var roles = getRoles();
-        $log.info(roles);
 
         angular.forEach(roles, function(role) {
             result.roles_users[role] = [];
@@ -589,7 +574,6 @@ app.controller('editPerspectiveRolesController', ['$scope', '$http', '$q', '$mod
         var addRoles = { 'roles_users': {} };
         var deleteRoles = { 'roles_users': {} };
         var roles = getRoles();
-        $log.info(roles);
 
         angular.forEach(roles, function(role) {
             result.roles_users[role] = [];
