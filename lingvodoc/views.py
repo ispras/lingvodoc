@@ -555,6 +555,74 @@ def view_perspective(request):
     return {'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='perspective_tree', renderer='json', request_method='GET')
+@view_config(route_name='perspective_outside_tree', renderer='json', request_method='GET')
+def view_perspective_tree(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = None
+    if parent_client_id and parent_object_id:
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective:
+        if not perspective.marked_for_deletion:
+            tree = []
+            translation_string = perspective.get_translation(request)
+            tree.append({'type': 'perspective',
+                         'translation_string': translation_string['translation_string'],
+                         'translation':translation_string['translation'],
+                         'client_id': client_id,
+                         'object_id': object_id
+                         })
+            dictionary = perspective.parent
+            path = request.route_url('dictionary',
+                                 client_id=dictionary.client_id,
+                                 object_id=dictionary.object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            resp = request.invoke_subrequest(subreq)
+            if 'error' not in resp.json:
+                tree.append({'type': 'dictionary',
+                             'translation_string': resp.json['translation_string'],
+                             'translation': resp.json['translation'],
+                             'client_id': resp.json['client_id'],
+                             'object_id': resp.json['object_id']
+                             })
+            parent = dictionary.parent
+            while parent:
+                path = request.route_url('language',
+                                     client_id=parent.client_id,
+                                     object_id=parent.object_id)
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                parent = parent.parent
+                if 'error' not in resp.json:
+                    tree.append({'type': 'language',
+                                 'translation_string': resp.json['translation_string'],
+                                 'translation': resp.json['translation'],
+                                 'client_id': resp.json['client_id'],
+                                 'object_id': resp.json['object_id']
+                                 })
+                else:
+                    parent = None
+
+                request.response.status = HTTPOk.code
+                return tree
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
 @view_config(route_name='perspective', renderer='json', request_method='PUT', permission='edit')
 def edit_perspective(request):
     try:
@@ -3650,8 +3718,16 @@ try it again.
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    response = dict()
-    return False is None
+    lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = 2, parent_object_id = 1).all())
+    lexes_1 = []
+    lexes_2 = []
+    if not lexes:
+        return json.dumps({})
+    # first_persp = json.loads(lexes[0].additional_metadata)['came_from']
+    lexes_1 = [o.track(False) for o in lexes]
+    remove_deleted(lexes_1)
+    lexes_2 = list(lexes_1)
+    return {'list_1':lexes_1, 'list_2':lexes_2}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
@@ -3933,6 +4009,20 @@ def merge_suggestions_old(request):
     return json.dumps(results)
 
 
+def remove_deleted(lst):
+    entries = []
+    if lst:
+        for entry in lst:
+            entries += [entry]
+        for entry in entries:
+            if entry['marked_for_deletion']:
+                lst.remove(entry)
+            else:
+                if 'contains' in entry:
+                    remove_deleted(entry['contains'])
+    return
+
+
 @view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
 def merge_suggestions(request):
     req = request.json
@@ -3947,8 +4037,9 @@ def merge_suggestions(request):
     lexes_2 = []
     if not lexes:
         return json.dumps({})
-    first_persp = json.loads(lexes[0].additional_metadata)['came_from']
+    # first_persp = json.loads(lexes[0].additional_metadata)['came_from']
     lexes_1 = [o.track(False) for o in lexes]
+    remove_deleted(lexes_1)
     lexes_2 = list(lexes_1)
     def parse_response(elem):
         words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
