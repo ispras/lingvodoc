@@ -551,7 +551,7 @@
                                 <span class="glyphicon glyphicon-minus"></span>
                             </button>
                         </td>
-                        
+
                         <td ng-repeat="field in fieldsValues[$index]"
                             ng-if="fieldsIdx[$index].data_type!='grouping_tag' && !fieldsIdx[$index].isGroup">
 

@@ -1,5 +1,7 @@
 var app = angular.module('CreateDictionaryModule', ['ui.router', 'ngAnimate', 'ui.bootstrap', 'autocomplete']);
 
+app.service('dictionaryService', lingvodocAPI);
+
 app.config(function ($stateProvider, $urlRouterProvider) {
 
     $stateProvider
@@ -28,7 +30,7 @@ app.config(function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/create/step1');
 });
 
-app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$location', '$log', function ($scope, $http, $modal, $interval, $state, $location, $log) {
+app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$location', '$log', 'dictionaryService', function ($scope, $http, $modal, $interval, $state, $location, $log, dictionaryService) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -84,7 +86,8 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     $scope.dictionaryData = {
         'languageId': -1,
         'perspectiveName': '',
-        'perspectiveId': -1
+        'perspectiveId': -1,
+        'isTemplate': false
 
     };
     // current perspective
@@ -210,7 +213,8 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         var createPerspectiveUrl = '/dictionary/' + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + '/' + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + '/' + 'perspective';
         var perspectiveObj = {
             'translation_string': $scope.dictionaryData.perspectiveName,
-            'translation': $scope.dictionaryData.perspectiveName
+            'translation': $scope.dictionaryData.perspectiveName,
+            'is_template': $scope.dictionaryData.isTemplate
         };
 
         $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
@@ -271,37 +275,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         });
     };
 
-    var loadPerspectives = function() {
-        var perspectives = [];
-        $http.get(allPerspectivesUrl).success(function(data, status, headers, config) {
-            for (var i = 0; i < data.perspectives.length; i++) {
-
-                var perspective = data.perspectives[i];
-                var url = '/dictionary/' + perspective.parent_client_id + '/' + perspective.parent_object_id + '/perspective/' + perspective.client_id + '/' + perspective.object_id + '/fields';
-
-                $http.get(url).success((function (perspective) {
-                    return function(data, status, headers, config) {
-                        var p = { };
-                        p.translation = perspective.translation;
-                        p.translation_string = perspective.translation_string;
-                        p.object_id = perspective.object_id;
-                        p.client_id = perspective.client_id;
-                        p.fields = data.fields;
-
-                        var wrappedPerspective = wrapPerspective(p);
-                        if (wrappedPerspective) {
-                            $scope.perspectives.push(wrappedPerspective);
-                        }
-                    }
-                })(perspective)).error(function(data, status, headers, config) {
-                    $log.error('Failed to load perspectives!');
-                });
-            }
-        }).error(function(data, status, headers, config) {
-            $log.error('Failed to load perspectives!');
-        });
-    };
-
 
     var loadBlobs = function() {
         $http.get(listBlobsUrl).success(function (data, status, headers, config) {
@@ -326,20 +299,30 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 
 
     $scope.$watch('dictionaryData.perspectiveId', function (id) {
-
         if (typeof id == 'string') {
-            var ids = id.split('_');
             for (var i = 0; i < $scope.perspectives.length; i++) {
-                if ($scope.perspectives[i].client_id == ids[0] && $scope.perspectives[i].object_id == ids[1]) {
+                if ($scope.perspectives[i].getId() == id) {
                     $scope.perspective = $scope.perspectives[i];
+
+                    dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
+                        $scope.perspective.fields = fields;
+                    }, function(reason) {
+                        $log.error(reason);
+                    });
                     break;
                 }
             }
         }
     });
 
+    dictionaryService.getAllPerspectives().then(function(perspectives) {
+        $scope.perspectives = perspectives;
+    }, function(reason) {
+        $log.error(reason);
+    });
+
+
     loadLanguages();
-    loadPerspectives();
     loadBlobs();
 }]);
 

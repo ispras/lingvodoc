@@ -28339,13 +28339,14 @@ lingvodoc.Dictionary.prototype = new lingvodoc.Object();
 
 lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
 
-lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id, translation, translation_string, status, marked_for_deletion) {
+lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id, translation, translation_string, status, is_template, marked_for_deletion) {
     lingvodoc.Object.call(this, client_id, object_id);
     this.parent_client_id = parent_client_id;
     this.parent_object_id = parent_object_id;
     this.translation = translation;
     this.translation_string = translation_string;
     this.status = status;
+    this.is_template = is_template;
     this.marked_for_deletion = marked_for_deletion;
     this.fields = [];
     this.equals = function(obj) {
@@ -28354,7 +28355,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
 };
 
 lingvodoc.Perspective.fromJS = function(js) {
-    return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.marked_for_deletion);
+    return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.is_template, js.marked_for_deletion);
 };
 
 lingvodoc.Perspective.prototype = new lingvodoc.Object();
@@ -28690,6 +28691,16 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var setPerspectiveProperties = function(dictionary, perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + dictionary.client_id + "/" + dictionary.object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id;
+        $http.put(url, perspective).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to update perspective properties");
+        });
+        return deferred.promise;
+    };
     var getPerspectiveFieldsNew = function(perspective) {
         var deferred = $q.defer();
         var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
@@ -28807,6 +28818,52 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(dictionaries);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to fetch dictionaries list");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveById = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "perspective/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.Perspective.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspective");
+        });
+        return deferred.promise;
+    };
+    var createPerspective = function(dictionary, perspective, fields) {
+        var deferred = $q.defer();
+        var createPerspectiveUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/" + "perspective";
+        $http.post(createPerspectiveUrl, perspective).success(function(data, status, headers, config) {
+            if (data.object_id && data.client_id) {
+                var perspective_client_id = data.client_id;
+                var perspective_object_id = data.object_id;
+                var setFieldsUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(data.client_id) + "/" + encodeURIComponent(data.object_id) + "/fields";
+                $http.post(setFieldsUrl, fields).success(function(data, status, headers, config) {
+                    getPerspectiveById(perspective_client_id, perspective_object_id).then(function(perspective) {
+                        deferred.resolve(perspective);
+                    }, function(reason) {
+                        deferred.reject(reason);
+                    });
+                }).error(function(data, status, headers, config) {
+                    deferred.reject("Failed to create perspective fields");
+                });
+            } else {
+                deferred.reject("Failed to create perspective");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to create perspective");
+        });
+        return deferred.promise;
+    };
+    var getAllPerspectives = function() {
+        var deferred = $q.defer();
+        $http.get("/perspectives").success(function(data, status, headers, config) {
+            deferred.resolve(data.perspectives.map(function(p) {
+                return lingvodoc.Perspective.fromJS(p);
+            }));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspectives list");
         });
         return deferred.promise;
     };
@@ -29153,6 +29210,7 @@ function lingvodocAPI($http, $q) {
         getLanguages: getLanguages,
         setDictionaryStatus: setDictionaryStatus,
         setPerspectiveStatus: setPerspectiveStatus,
+        setPerspectiveProperties: setPerspectiveProperties,
         getPerspectiveFields: getPerspectiveFields,
         setPerspectiveFields: setPerspectiveFields,
         getPerspectiveFieldsNew: getPerspectiveFieldsNew,
@@ -29164,6 +29222,9 @@ function lingvodocAPI($http, $q) {
         editOrganization: editOrganization,
         searchUsers: searchUsers,
         getDictionaries: getDictionaries,
+        getAllPerspectives: getAllPerspectives,
+        getPerspectiveById: getPerspectiveById,
+        createPerspective: createPerspective,
         getDictionaryPerspectives: getDictionaryPerspectives,
         getDictionariesWithPerspectives: getDictionariesWithPerspectives,
         mergeDictionaries: mergeDictionaries,
@@ -29256,7 +29317,9 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
                 }
             }
         });
-        modalInstance.result.then(function(createdPerspective) {}, function() {});
+        modalInstance.result.then(function(createdPerspective) {
+            dictionary.perspectives.push(createdPerspective);
+        }, function() {});
     };
     $scope.editDictionaryRoles = function(dictionary) {
         $modal.open({
@@ -29340,15 +29403,16 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
     };
     dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
         $scope.dictionaries = dictionaries;
-        $log.info(dictionaries);
     }, function(reason) {});
 } ]);
 
 app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
     $scope.dictionary = params.dictionary;
+    $scope.perspectives = [];
     $scope.perspective = {
         fields: []
     };
+    $scope.isTemplate = false;
     $scope.addField = function() {
         $scope.perspective.fields.push({
             entity_type: "",
@@ -29382,28 +29446,16 @@ app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modal
         if (!$scope.perspectiveName) {
             return;
         }
-        var createPerspectiveUrl = "/dictionary/" + encodeURIComponent($scope.dictionary.client_id) + "/" + encodeURIComponent($scope.dictionary.object_id) + "/" + "perspective";
         var perspectiveObj = {
             translation_string: $scope.perspectiveName,
-            translation: $scope.perspectiveName
+            translation: $scope.perspectiveName,
+            is_template: $scope.isTemplate
         };
-        $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
-            if (data.object_id && data.client_id) {
-                $scope.perspective.client_id = data.client_id;
-                $scope.perspective.object_id = data.object_id;
-                $scope.translation_string = $scope.perspectiveName;
-                $scope.translation = $scope.perspectiveName;
-                var setFieldsUrl = "/dictionary/" + encodeURIComponent($scope.dictionary.client_id) + "/" + encodeURIComponent($scope.dictionary.object_id) + "/perspective/" + encodeURIComponent(data.client_id) + "/" + encodeURIComponent(data.object_id) + "/fields";
-                $http.post(setFieldsUrl, exportPerspective($scope.perspective)).success(function(data, status, headers, config) {
-                    $modalInstance.close($scope.perspective);
-                }).error(function(data, status, headers, config) {
-                    alert("Failed to create perspective!");
-                });
-            } else {
-                alert("Failed to create perspective!");
-            }
-        }).error(function(data, status, headers, config) {
-            alert("Failed to create perspective!");
+        var fields = exportPerspective($scope.perspective);
+        dictionaryService.createPerspective($scope.dictionary, perspectiveObj, fields).then(function(perspective) {
+            $modalInstance.close(perspective);
+        }, function(reason) {
+            $log.error(reason);
         });
     };
     $scope.cancel = function() {
@@ -29411,9 +29463,9 @@ app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modal
     };
     $scope.$watch("perspectiveId", function(id) {
         if (typeof id == "string") {
-            for (var i = 0; i < $scope.dictionary.perspectives.length; i++) {
-                if ($scope.dictionary.perspectives[i].getId() == id) {
-                    $scope.perspective = $scope.dictionary.perspectives[i];
+            for (var i = 0; i < $scope.perspectives.length; i++) {
+                if ($scope.perspectives[i].getId() == id) {
+                    $scope.perspective = $scope.perspectives[i];
                     dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
                         $scope.perspective.fields = fields;
                     }, function(reason) {
@@ -29423,6 +29475,12 @@ app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modal
                 }
             }
         }
+    });
+    dictionaryService.getAllPerspectives().then(function(perspectives) {
+        $scope.perspectives = perspectives;
+        $log.info(perspectives);
+    }, function(reason) {
+        $log.error(reason);
     });
 } ]);
 
@@ -29485,6 +29543,7 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
 } ]);
 
 app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+    $scope.dictionary = params.dictionary;
     $scope.perspective = {};
     $scope.addField = function() {
         $scope.perspective.fields.push({
@@ -29500,13 +29559,14 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
             }
         }
     };
-    $scope.publish = function() {
-        dictionaryService.setPerspectiveStatus(params.dictionary, $scope.perspective, "Published");
-    };
     $scope.ok = function() {
-        var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/perspective/" + encodeURIComponent(params.perspective.client_id) + "/" + encodeURIComponent(params.perspective.object_id) + "/fields";
-        dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
-            $modalInstance.close();
+        dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
+            var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/perspective/" + encodeURIComponent(params.perspective.client_id) + "/" + encodeURIComponent(params.perspective.object_id) + "/fields";
+            dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
+                $modalInstance.close();
+            }, function(reason) {
+                $log.error(reason);
+            });
         }, function(reason) {
             $log.error(reason);
         });
@@ -29538,7 +29598,6 @@ app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$mod
             roles_users: {}
         };
         var roles = getRoles();
-        $log.info(roles);
         angular.forEach(roles, function(role) {
             result.roles_users[role] = [];
             angular.forEach($scope.userTable, function(u) {
@@ -29666,7 +29725,6 @@ app.controller("editPerspectiveRolesController", [ "$scope", "$http", "$q", "$mo
             roles_users: {}
         };
         var roles = getRoles();
-        $log.info(roles);
         angular.forEach(roles, function(role) {
             result.roles_users[role] = [];
             angular.forEach($scope.userTable, function(u) {
