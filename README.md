@@ -24,7 +24,13 @@ Running the project for development
 
 - cd <directory containing this file>
 
+- create development.ini from production.ini (change sqlalchemy.url)
+
+- create alembic.ini from alembic_base.ini (change sqlalchemy.url)
+
 - $VENV/bin/python setup.py develop
+
+- alembic upgrade head
 
 - $VENV/bin/initialize_lingvodoc_db development.ini
 
