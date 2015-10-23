@@ -70,7 +70,7 @@ lingvodoc.Dictionary.prototype = new lingvodoc.Object();
 lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
 
 lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id,
-    translation, translation_string, status, marked_for_deletion) {
+    translation, translation_string, status, is_template, marked_for_deletion) {
 
     lingvodoc.Object.call(this, client_id, object_id);
 
@@ -79,6 +79,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.translation = translation;
     this.translation_string = translation_string;
     this.status = status;
+    this.is_template = is_template;
     this.marked_for_deletion = marked_for_deletion;
     this.fields = [];
 
@@ -89,7 +90,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
 };
 lingvodoc.Perspective.fromJS = function (js) {
     return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id,
-        js.translation, js.translation_string, js.status, js.marked_for_deletion);
+        js.translation, js.translation_string, js.status, js.is_template, js.marked_for_deletion);
 };
 lingvodoc.Perspective.prototype = new lingvodoc.Object();
 lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
@@ -685,15 +686,11 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
-
-
-
     var getAllPerspectives = function() {
         var deferred = $q.defer();
-        var perspectives = [];
         $http.get('/perspectives').success(function(data, status, headers, config) {
             deferred.resolve(data.perspectives.map(function(p) {
-                perspectives.push(lingvodoc.Perspective.fromJS(p));
+                return lingvodoc.Perspective.fromJS(p);
             }));
         }).error(function (data, status, headers, config) {
             deferred.reject('Failed to fetch perspectives list');
@@ -701,8 +698,6 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-
-
 
     var getDictionaryPerspectives = function(dictionary) {
         var deferred = $q.defer();

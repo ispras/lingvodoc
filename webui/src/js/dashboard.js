@@ -208,6 +208,7 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
     $scope.dictionary = params.dictionary;
     $scope.perspectives = [];
     $scope.perspective = { 'fields': [] };
+    $scope.isTemplate = false;
 
     $scope.addField = function () {
         $scope.perspective.fields.push({'entity_type': '', 'entity_type_translation': '', 'data_type': 'text', 'data_type_translation': 'text', 'status': 'enabled'});
@@ -241,10 +242,10 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
             return;
         }
 
-        var createPerspectiveUrl = '/dictionary/' + encodeURIComponent($scope.dictionary.client_id) + '/' + encodeURIComponent($scope.dictionary.object_id) + '/' + 'perspective';
         var perspectiveObj = {
             'translation_string': $scope.perspectiveName,
-            'translation': $scope.perspectiveName
+            'translation': $scope.perspectiveName,
+            'is_template': $scope.isTemplate
         };
         var fields = exportPerspective($scope.perspective);
         dictionaryService.createPerspective($scope.dictionary, perspectiveObj, fields).then(function(perspective) {
@@ -277,6 +278,9 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
 
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = perspectives;
+
+        $log.info(perspectives);
+
     }, function(reason) {
         $log.error(reason);
     });
@@ -375,10 +379,6 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
                 $scope.perspective.fields.splice(i, 1);
             }
         }
-    };
-
-    $scope.publish = function() {
-        dictionaryService.setPerspectiveStatus(params.dictionary, $scope.perspective, 'Published');
     };
 
     $scope.ok = function() {
@@ -556,10 +556,6 @@ app.controller('editDictionaryRolesController', ['$scope', '$http', '$q', '$moda
         $scope.userTable = createUsersTable(roles);
     });
 }]);
-
-
-
-
 
 
 app.controller('editPerspectiveRolesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {

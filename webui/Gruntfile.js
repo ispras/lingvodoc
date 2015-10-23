@@ -118,6 +118,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-animate/angular-animate.js',
                     'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/util.js',
+                    'src/js/api.js',
                     'src/js/create_dictionary.js'
                 ],
                 dest: '../lingvodoc/static/js/create-dictionary.js'

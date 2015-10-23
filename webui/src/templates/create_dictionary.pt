@@ -102,19 +102,25 @@
     <div>
         <label for="perspective">Import perspective</label>
         <select id="perspective" class="form-control" ng-model="dictionaryData.perspectiveId"
-                ng-options="getLanguageId(p) as p.translation for p in perspectives track by getLanguageId(p)">
+                ng-options="p.getId() as p.translation_string for p in perspectives track by p.getId()">
         </select>
 
         <hr>
-
-
         <div>
+            <div class="form-group">
+                <label for="perspectiveName">Perspective name</label>
+                <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
+                       ng-model="dictionaryData.perspectiveName">
+            </div>
 
-            <label for="perspectiveName">Perspective name</label>
-            <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
-                   ng-model="dictionaryData.perspectiveName">
+            <div class="form-group">
+                <label for="isTemplate">I want to share this perspective as template</label>
+                <input type="checkbox" id="isTemplate" ng-model="dictionaryData.isTemplate">
+            </div>
 
-            <span class="glyphicon glyphicon-plus-sign" ng-click="addField()"></span>
+            <div class="form-group">
+                <span class="glyphicon glyphicon-plus-sign" ng-click="addField()"></span>
+            </div>
 
             <table class="table">
                 <thead>
