@@ -199,7 +199,7 @@
         </div>
         <div class="panel-body">
 
-            <label for="perspectiveName"></label>
+            <label for="perspectiveName">Perspective name</label>
             <input id="perspectiveName" type="text" ng-model="master.perspectiveName">
 
             <div class="row">
