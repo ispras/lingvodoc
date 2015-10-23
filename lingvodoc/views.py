@@ -617,7 +617,7 @@ def view_perspective_tree(request):
                     parent = None
 
                 request.response.status = HTTPOk.code
-                return tree
+            return tree
 
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
