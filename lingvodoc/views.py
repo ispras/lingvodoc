@@ -518,23 +518,27 @@ def real_delete_dictionary(request):
 
 
 @view_config(route_name='perspective', renderer='json', request_method='GET')
+@view_config(route_name='perspective_outside', renderer='json', request_method='GET')
 def view_perspective(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    if not parent:
-        request.response.status = HTTPNotFound.code
-        return {'error': str("No such dictionary in the system")}
+    parent = None
+    if parent_client_id and parent_object_id:
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
+            if parent:
+                if perspective.parent != parent:
+                    request.response.status = HTTPNotFound.code
+                    return {'error': str("No such pair of dictionary/perspective in the system")}
             response['parent_client_id'] = perspective.parent_client_id
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
@@ -544,6 +548,7 @@ def view_perspective(request):
             response['translation'] = translation_string['translation']
             response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
+            response['is_template'] = perspective.is_template
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -579,6 +584,9 @@ def edit_perspective(request):
                     perspective.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     perspective.parent_object_id = req['parent_object_id']
+                is_template = req.get('is_template')
+                if is_template is not None:
+                    perspective.is_template = is_template
                 request.response.status = HTTPOk.code
                 return response
         else:
@@ -652,6 +660,7 @@ def create_perspective(request):
             req = json.loads(request.json_body)
         else:
             req = request.json_body
+        is_template = req.get('is_template')
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -669,6 +678,8 @@ def create_perspective(request):
                                             parent=parent,
                                             import_source=req.get('import_source'),
                                             import_hash=req.get('import_hash'))
+        if is_template is not None:
+            perspective.is_template = is_template
         perspective.set_translation(request)
         DBSession.add(perspective)
         DBSession.flush()
@@ -1583,7 +1594,7 @@ def perspectives_list(request):
     response = dict()
     is_template = None
     try:
-        is_template = request.params.get('istemplate')
+        is_template = request.params.get('is_template')
     except:
         pass
     state = None
@@ -3297,25 +3308,39 @@ def move_lexical_entry(request):
     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
     if entry and parent:
-        if not entry.marked_for_deletion and not parent.marked_for_deletion:
-            groupoverride = DBSession.query(Group)\
-                .filter_by(subject_override=True)\
-                .join(BaseGroup)\
-                .filter_by(subject='lexical_entries_and_entities')\
-                .first()
-            group = DBSession.query(Group)\
-                .filter_by(subject_client_id=parent.parent_client_id, subject_object_id=parent.parent_object_id)\
-                .join(BaseGroup)\
-                .filter_by(subject='lexical_entries_and_entities')\
-                .first()
-            if user not in groupoverride.users:
-                if user not in group.users:
-                    raise CommonException("You should only move to lexical entires you own")
+        groupoverride = DBSession.query(Group)\
+            .filter_by(subject_override=True)\
+            .join(BaseGroup)\
+            .filter_by(subject='lexical_entries_and_entities')\
+            .first()
+        group = DBSession.query(Group)\
+            .filter_by(subject_client_id=parent.parent_client_id, subject_object_id=parent.parent_object_id)\
+            .join(BaseGroup)\
+            .filter_by(subject='lexical_entries_and_entities')\
+            .first()
+        if user not in groupoverride.users:
+            if user not in group.users:
+                raise CommonException("You should only move to lexical entires you own")
+        if parent.moved_to:
+            path = request.route_url('lexical_entry',
+                                     client_id=cli_id,
+                                     )
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            resp = request.invoke_subrequest(subreq)
+        if entry.moved_to is None:
 
-            if entry.moved_to is None and parent.moved_to is None:
+            if not entry.marked_for_deletion and not parent.marked_for_deletion:
                 l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
                 for entity in l1e:
+                    ent = DBSession.query(LevelOneEntity)\
+                        .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
+                        .first()
+                    if ent:
+                        entity.marked_for_deletion = True
                     entity.parent = parent
+
                     for publent in entity.publishleveloneentity:
                         publent.marked_for_deletion = True
                         publent.parent = parent
@@ -3626,7 +3651,7 @@ try it again.
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = dict()
-    return
+    return False is None
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
