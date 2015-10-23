@@ -365,6 +365,7 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
 
 app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
 
+    $scope.dictionary = params.dictionary;
     $scope.perspective = {};
 
     $scope.addField = function () {
@@ -382,9 +383,13 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     };
 
     $scope.ok = function() {
-        var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
-        dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
-            $modalInstance.close();
+        dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
+            var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
+            dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
+                $modalInstance.close();
+            }, function(reason) {
+                $log.error(reason);
+            });
         }, function(reason) {
             $log.error(reason);
         });

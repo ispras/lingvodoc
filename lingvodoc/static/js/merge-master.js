@@ -28537,6 +28537,16 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var setPerspectiveProperties = function(dictionary, perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + dictionary.client_id + "/" + dictionary.object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id;
+        $http.put(url, perspective).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to update perspective properties");
+        });
+        return deferred.promise;
+    };
     var getPerspectiveFieldsNew = function(perspective) {
         var deferred = $q.defer();
         var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
@@ -29046,6 +29056,7 @@ function lingvodocAPI($http, $q) {
         getLanguages: getLanguages,
         setDictionaryStatus: setDictionaryStatus,
         setPerspectiveStatus: setPerspectiveStatus,
+        setPerspectiveProperties: setPerspectiveProperties,
         getPerspectiveFields: getPerspectiveFields,
         setPerspectiveFields: setPerspectiveFields,
         getPerspectiveFieldsNew: getPerspectiveFieldsNew,
