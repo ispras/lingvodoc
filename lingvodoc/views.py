@@ -555,6 +555,74 @@ def view_perspective(request):
     return {'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='perspective_tree', renderer='json', request_method='GET')
+@view_config(route_name='perspective_outside_tree', renderer='json', request_method='GET')
+def view_perspective_tree(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = None
+    if parent_client_id and parent_object_id:
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective:
+        if not perspective.marked_for_deletion:
+            tree = []
+            translation_string = perspective.get_translation(request)
+            tree.append({'type': 'perspective',
+                         'translation_string': translation_string['translation_string'],
+                         'translation':translation_string['translation'],
+                         'client_id': client_id,
+                         'object_id': object_id
+                         })
+            dictionary = perspective.parent
+            path = request.route_url('dictionary',
+                                 client_id=dictionary.client_id,
+                                 object_id=dictionary.object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            resp = request.invoke_subrequest(subreq)
+            if 'error' not in resp.json:
+                tree.append({'type': 'dictionary',
+                             'translation_string': resp.json['translation_string'],
+                             'translation': resp.json['translation'],
+                             'client_id': resp.json['client_id'],
+                             'object_id': resp.json['object_id']
+                             })
+            parent = dictionary.parent
+            while parent:
+                path = request.route_url('language',
+                                     client_id=parent.client_id,
+                                     object_id=parent.object_id)
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                parent = parent.parent
+                if 'error' not in resp.json:
+                    tree.append({'type': 'language',
+                                 'translation_string': resp.json['translation_string'],
+                                 'translation': resp.json['translation'],
+                                 'client_id': resp.json['client_id'],
+                                 'object_id': resp.json['object_id']
+                                 })
+                else:
+                    parent = None
+
+                request.response.status = HTTPOk.code
+                return tree
+
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
 @view_config(route_name='perspective', renderer='json', request_method='PUT', permission='edit')
 def edit_perspective(request):
     try:

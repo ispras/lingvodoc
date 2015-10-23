@@ -160,6 +160,14 @@ def configure_routes(config):
                      factory='lingvodoc.models.PerspectiveAcl')
     config.add_route(name='perspective_outside',
                      pattern='perspective/{perspective_client_id}/{perspective_id}',
+                     factory='lingvodoc.models.PerspectiveAcl')
+
+    config.add_route(name='perspective_tree',
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'perspective/{perspective_client_id}/{perspective_id}/tree',
+                     factory='lingvodoc.models.PerspectiveAcl')
+    config.add_route(name='perspective_outside_tree',
+                     pattern='perspective/{perspective_client_id}/{perspective_id}/tree',
                      factory='lingvodoc.models.PerspectiveAcl') # 100% ready
 
 
