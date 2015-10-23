@@ -116,12 +116,12 @@
 
 
                 <label for="dictionarySelect1">Select dictionary 1</label>
-                <select id="dictionarySelect1" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in master.dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId1">
+                <select id="dictionarySelect1" class="form-control" ng-options="dictionary.getId() as dictionary.translation_string for dictionary in master.dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId1">
                     <option></option>
                 </select>
 
                 <label for="dictionarySelect2">Select dictionary 2</label>
-                <select id="dictionarySelect2" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in master.suggestedDictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId2">
+                <select id="dictionarySelect2" class="form-control" ng-options="dictionary.getId() as dictionary.translation_string for dictionary in master.suggestedDictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId2">
                     <option></option>
                 </select>
 
@@ -156,19 +156,19 @@
 
             <div>
                 <label for="dictionarySelect">Select dictionary</label>
-                <select id="dictionarySelect" class="form-control" ng-options="dictionary.getId() as dictionary.translation for dictionary in master.dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId">
+                <select id="dictionarySelect" class="form-control" ng-options="dictionary.getId() as dictionary.translation_string for dictionary in master.dictionaries track by dictionary.getId()" ng-model="master.selectedSourceDictionaryId">
                     <option></option>
                 </select>
 
                 <div>
 
                     <label for="perspectiveSelect1">Select 1st perspective</label>
-                    <select id="perspectiveSelect1" class="form-control" ng-options="p.getId() as p.translation for p in master.selectedSourceDictionary.perspectives track by p.getId()" ng-model="master.perspectiveId1">
+                    <select id="perspectiveSelect1" class="form-control" ng-options="p.getId() as p.translation_string for p in master.selectedSourceDictionary.perspectives track by p.getId()" ng-model="master.perspectiveId1">
                         <option></option>
                     </select>
 
                     <label for="perspectiveSelect2">Select 2nd perspective</label>
-                    <select id="perspectiveSelect2" class="form-control" ng-options="p.getId() as p.translation for p in master.selectedSourceDictionary.perspectives track by p.getId()" ng-model="master.perspectiveId2">
+                    <select id="perspectiveSelect2" class="form-control" ng-options="p.getId() as p.translation_string for p in master.selectedSourceDictionary.perspectives track by p.getId()" ng-model="master.perspectiveId2">
                         <option></option>
                     </select>
 

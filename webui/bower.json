@@ -13,6 +13,7 @@
     "tests"
   ],
   "dependencies": {
+    "underscore": "~1.8.3",
     "angular": "~1.4.6",
     "autocomplete": "git://github.com/JustGoscha/allmighty-autocomplete",
     "bootstrap-sass": "bootstrap-sass-official#~3.3.5",

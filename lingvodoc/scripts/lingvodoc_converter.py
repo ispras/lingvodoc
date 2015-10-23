@@ -154,7 +154,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
 
     create_perspective_fields_request = session.get(server_url + 'dictionary/1/1/perspective/1/1/fields')
     perspective_fields_create_url = perspective_create_url + '/%s/%s/fields' % (perspective['client_id'], perspective['object_id'])
-    status = session.post(perspective_fields_create_url, data=create_perspective_fields_request.text)
+    status = session.post(perspective_fields_create_url, json=create_perspective_fields_request.text)
 
     get_all_ids = sqconn.cursor()
     get_all_ids.execute("select id from dictionary where is_a_regular_form=1")

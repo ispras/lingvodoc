@@ -4,7 +4,7 @@ lingvodoc.Object = function(clientId, objectId) {
 
     this.client_id = clientId;
     this.object_id = objectId;
-    this.type = 'abstract';
+    //this.type = 'abstract';
 
     this.getId = function() {
         return this.client_id + '' + this.object_id;
@@ -42,12 +42,14 @@ lingvodoc.Language.fromJS = function (js) {
 lingvodoc.Language.prototype = new lingvodoc.Object();
 lingvodoc.Language.prototype.constructor = lingvodoc.Language;
 
-lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation) {
+lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation, translation_string, status) {
 
     lingvodoc.Object.call(this, clientId, objectId);
     this.parent_client_id = parentClientId;
     this.parent_object_id = parentObjectId;
     this.translation = translation;
+    this.translation_string = translation_string;
+    this.status = status;
     this.perspectives = [];
 
     this.equals = function(obj) {
@@ -60,7 +62,9 @@ lingvodoc.Dictionary.fromJS = function (js) {
         js.object_id,
         js.parent_client_id,
         js.parent_object_id,
-        js.translation_string);
+        js.translation,
+        js.translation_string,
+        js.status);
 };
 lingvodoc.Dictionary.prototype = new lingvodoc.Object();
 lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
@@ -76,6 +80,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.translation_string = translation_string;
     this.status = status;
     this.marked_for_deletion = marked_for_deletion;
+    this.fields = [];
 
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) &&
@@ -475,6 +480,19 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject('An error  occurred while trying to set perspective status');
+        });
+
+        return deferred.promise;
+    };
+
+
+    var getPerspectiveFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + perspective.parent_client_id + '/' + perspective.parent_object_id + '/perspective/' + perspective.client_id + '/' + perspective.object_id + '/fields';
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to load perspective fields');
         });
 
         return deferred.promise;
@@ -932,14 +950,33 @@ function lingvodocAPI($http, $q) {
         return getRoles(url);
     };
 
-    var setDictionaryRoles = function(dictionary, roles) {
+    var addDictionaryRoles = function(dictionary, roles) {
         var deferred = $q.defer();
         var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles';
 
         $http.post(url, roles).success(function(data, status, headers, config) {
             deferred.resolve();
         }).error(function(data, status, headers, config) {
-            deferred.reject('Failed to update roles');
+            deferred.reject('Failed to add roles');
+        });
+        return deferred.promise;
+    };
+
+    var deleteDictionaryRoles = function(dictionary, roles) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/roles';
+
+        var config = {
+            method: 'DELETE',
+            url: url,
+            data: roles,
+            headers: {'Content-Type': 'application/json;charset=utf-8'}
+        };
+
+        $http(config).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to delete roles');
         });
         return deferred.promise;
     };
@@ -950,7 +987,7 @@ function lingvodocAPI($http, $q) {
     };
 
 
-    var setPerspectiveRoles = function(dictionary, perspective, roles) {
+    var addPerspectiveRoles = function(dictionary, perspective, roles) {
         var deferred = $q.defer();
         var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/roles';
         $http.post(url, roles).success(function(data, status, headers, config) {
@@ -960,6 +997,25 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+
+    var deletePerspectiveRoles = function(dictionary, perspective, roles) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/roles';
+        var config = {
+            method: 'DELETE',
+            url: url,
+            data: roles,
+            headers: {'Content-Type': 'application/json;charset=utf-8'}
+        };
+
+        $http(config).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to update roles');
+        });
+        return deferred.promise;
+    };
+
 
 
 
@@ -983,6 +1039,7 @@ function lingvodocAPI($http, $q) {
         'setPerspectiveStatus': setPerspectiveStatus,
         'getPerspectiveFields': getPerspectiveFields,
         'setPerspectiveFields': setPerspectiveFields,
+        'getPerspectiveFieldsNew': getPerspectiveFieldsNew,
         'getUserInfo': getUserInfo,
         'setUserInfo': setUserInfo,
         'getOrganizations': getOrganizations,
@@ -1001,8 +1058,10 @@ function lingvodocAPI($http, $q) {
         'getLanguagesFull': getLanguagesFull,
         'getPublishedDictionaries': getPublishedDictionaries,
         'getDictionaryRoles': getDictionaryRoles,
-        'setDictionaryRoles': setDictionaryRoles,
+        'addDictionaryRoles': addDictionaryRoles,
+        'deleteDictionaryRoles': deleteDictionaryRoles,
         'getPerspectiveRoles': getPerspectiveRoles,
-        'setPerspectiveRoles': setPerspectiveRoles
+        'addPerspectiveRoles': addPerspectiveRoles,
+        'deletePerspectiveRoles': deletePerspectiveRoles
     });
 };
