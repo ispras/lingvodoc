@@ -3718,8 +3718,16 @@ try it again.
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    response = dict()
-    return False is None
+    lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = 2, parent_object_id = 1).all())
+    lexes_1 = []
+    lexes_2 = []
+    if not lexes:
+        return json.dumps({})
+    # first_persp = json.loads(lexes[0].additional_metadata)['came_from']
+    lexes_1 = [o.track(False) for o in lexes]
+    remove_deleted(lexes_1)
+    lexes_2 = list(lexes_1)
+    return {'list_1':lexes_1, 'list_2':lexes_2}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
@@ -4001,6 +4009,20 @@ def merge_suggestions_old(request):
     return json.dumps(results)
 
 
+def remove_deleted(lst):
+    entries = []
+    if lst:
+        for entry in lst:
+            entries += [entry]
+        for entry in entries:
+            if entry['marked_for_deletion']:
+                lst.remove(entry)
+            else:
+                if 'contains' in entry:
+                    remove_deleted(entry['contains'])
+    return
+
+
 @view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
 def merge_suggestions(request):
     req = request.json
@@ -4015,8 +4037,9 @@ def merge_suggestions(request):
     lexes_2 = []
     if not lexes:
         return json.dumps({})
-    first_persp = json.loads(lexes[0].additional_metadata)['came_from']
+    # first_persp = json.loads(lexes[0].additional_metadata)['came_from']
     lexes_1 = [o.track(False) for o in lexes]
+    remove_deleted(lexes_1)
     lexes_2 = list(lexes_1)
     def parse_response(elem):
         words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
