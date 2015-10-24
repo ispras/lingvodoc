@@ -106,16 +106,17 @@ def basic_search(request):
     results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%')).all()
     results = []
     for item in results_cursor:
-        result = dict()
-        result['client_id'] = item.parent_client_id
-        result['object_id'] = item.parent_object_id
-        result['origin_perspective_client_id'] = item.parent.parent.client_id
-        result['origin_perspective_object_id'] = item.parent.parent.object_id
-        result['origin_perspective_name'] = item.parent.parent.translation_string
-        result['origin_dictionary_client_id'] = item.parent.parent.parent.client_id
-        result['origin_dictionary_object_id'] = item.parent.parent.parent.object_id
-        result['origin_dictionary_name'] = item.parent.parent.parent.translation_string
-        results.append(result)
+        entry = item.parent
+        if not entry.marked_for_deletion:
+            result = dict()
+            result['lexical_entry'] = entry.track(False)
+            result['origin_perspective_client_id'] = entry.parent_client_id
+            result['origin_perspective_object_id'] = entry.parent_object_id
+            result['origin_perspective_name'] = entry.parent.translation_string
+            result['origin_dictionary_client_id'] = entry.parent.parent_client_id
+            result['origin_dictionary_object_id'] = entry.parent.parent_object_id
+            result['origin_dictionary_name'] = entry.parent.parent.translation_string
+            results.append(result)
     return results
 
 #TODO: make it normal, it's just a test
