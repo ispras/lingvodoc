@@ -28508,7 +28508,7 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
         };
         $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.fields);
     }, true);
-    dictionaryService.getPerspectiveFields($("#getPerspectiveFieldsUrl").data("lingvodoc")).then(function(fields) {
+    dictionaryService.getPerspectiveDictionaryFields($("#getPerspectiveFieldsUrl").data("lingvodoc")).then(function(fields) {
         $scope.fields = fields;
         dictionaryService.getLexicalEntries($("#allLexicalEntriesUrl").data("lingvodoc"), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
             $scope.lexicalEntries = lexicalEntries;

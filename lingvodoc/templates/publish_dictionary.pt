@@ -164,7 +164,8 @@
                         <div ng-if="field.isGroup">
 
                             <button type="button" class="btn btn-default btn-sm"
-                                    ng-click="viewGroup(lexicalEntry, field, fieldValues)">
+                                    ng-click="viewGroup(lexicalEntry, field, fieldValues)"
+                                    ng-if="fieldValues.length > 0">
                                 <span class="glyphicon glyphicon-list">View</span>
                             </button>
 
