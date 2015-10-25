@@ -2360,9 +2360,13 @@ def view_connected_words(request):
                 subreq = Request.blank(path)
                 subreq.method = 'GET'
                 subreq.headers = request.headers
-                resp = request.invoke_subrequest(subreq)
-                if resp.json not in words:
-                    words += [resp.json]
+                print(lex[0], lex[1])
+                try:
+                    resp = request.invoke_subrequest(subreq)
+                    if resp.json not in words:
+                        words += [resp.json]
+                except:
+                    pass
             response['words'] = words
             request.response.status = HTTPOk.code
             return response
