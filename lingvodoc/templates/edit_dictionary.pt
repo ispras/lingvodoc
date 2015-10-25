@@ -544,7 +544,17 @@
 
                     <tbody>
 
-                    <tr ng-repeat="entry in fieldsValues">
+                    <tr ng-repeat-start="entry in fieldsValues">
+                        <td colspan="{{ fields.length }}">
+                            <span ng-repeat-start="e in connectedEntries[$index].origin.slice().reverse()">
+                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation_string }}</a>
+                                <span ng-if="e.type != 'perspective'">{{ e.translation_string }}</span>
+                            </span>
+                            <span ng-repeat-end="" ng-if="$index < (connectedEntries[$parent.$index].origin.length-1)">&gt;&gt;</span>
+                        </td>
+                    </tr>
+
+                    <tr ng-repeat-end="">
 
                         <td>
                             <button type="button" class="btn btn-default" ng-click="unlinkEntry($index)">
@@ -633,7 +643,19 @@
 
                     <tbody>
 
-                    <tr ng-repeat="entry in suggestedFieldsValues">
+                    <tr ng-repeat-start="entry in suggestedFieldsValues">
+                        <td colspan="{{ fields.length }}">
+                            <span ng-repeat-start="e in suggestedEntries[$index].origin.slice().reverse()">
+                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation_string }}</a>
+                                <span ng-if="e.type != 'perspective'">{{ e.translation_string }}</span>
+                            </span>
+                            <span ng-repeat-end="" ng-if="$index < (suggestedEntries[$parent.$index].origin.length-1)">&gt;&gt;</span>
+                        </td>
+                    </tr>
+
+
+
+                    <tr ng-repeat-end="">
 
                         <td>
                             <button type="button" class="btn btn-default" ng-click="linkEntries(suggestedEntries[$index])">

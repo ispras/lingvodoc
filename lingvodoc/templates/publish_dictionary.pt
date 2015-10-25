@@ -165,7 +165,7 @@
 
                             <button type="button" class="btn btn-default btn-sm"
                                     ng-click="viewGroup(lexicalEntry, field, fieldValues)">
-                                <span class="glyphicon glyphicon-list">Edit</span>
+                                <span class="glyphicon glyphicon-list">View</span>
                             </button>
 
                         </div>
@@ -177,7 +177,7 @@
                         <button type="button" class="btn btn-default btn-sm"
                                 ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)"
                                 ng-if="fieldValues.length > 0">
-                            <span class="glyphicon glyphicon-list">Edit</span>
+                            <span class="glyphicon glyphicon-list">View</span>
                         </button>
 
                     </div>
@@ -455,7 +455,19 @@
 
                     <tbody>
 
-                    <tr ng-repeat="entry in fieldsValues">
+
+                    <tr ng-repeat-start="entry in fieldsValues">
+                        <td colspan="{{ fields.length }}">
+                            <span ng-repeat-start="e in connectedEntries[$index].origin.slice().reverse()">
+                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation_string }}</a>
+                                <span ng-if="e.type != 'perspective'">{{ e.translation_string }}</span>
+                            </span>
+                            <span ng-repeat-end="" ng-if="$index < (connectedEntries[$parent.$index].origin.length-1)">&gt;&gt;</span>
+                        </td>
+                    </tr>
+
+
+                    <tr ng-repeat-end="">
 
                         <td>
                             <button type="button" class="btn btn-default" ng-click="unlinkEntry($index)">

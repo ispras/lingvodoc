@@ -386,7 +386,18 @@
 
                     <tbody>
 
-                    <tr ng-repeat="entry in fieldsValues">
+
+                    <tr ng-repeat-start="entry in fieldsValues">
+                        <td colspan="{{ fields.length }}">
+                            <span ng-repeat-start="e in connectedEntries[$index].origin.slice().reverse()">
+                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation_string }}</a>
+                                <span ng-if="e.type != 'perspective'">{{ e.translation_string }}</span>
+                            </span>
+                            <span ng-repeat-end="" ng-if="$index < (connectedEntries[$parent.$index].origin.length-1)">&gt;&gt;</span>
+                        </td>
+                    </tr>
+
+                    <tr ng-repeat-end="">
 
                         <td ng-repeat="field in fieldsValues[$index]"
                             ng-if="fieldsIdx[$index].data_type!='grouping_tag' && !fieldsIdx[$index].isGroup">
