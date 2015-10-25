@@ -72,6 +72,13 @@
                 <span class="glyphicon glyphicon-plus"></span>
             </button>
         </div>
+
+        <div class="col-md-1">
+            <button type="button" class="btn btn-default" ng-click="mergeEntries()">
+                <span class="glyphicon glyphicon-dashboard">Merge entries</span>
+            </button>
+        </div>
+
     </div>
 
 
@@ -714,6 +721,106 @@
 
 
 </script>
+
+
+<script type="text/ng-template" id="mergeEntriesModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">Merge lexical entries</h3>
+    </div>
+
+
+    <div class="modal-body">
+
+        <div ng-if="mergeComplete">
+            No entries to merge!
+        </div>
+
+
+        <table class="table table-striped table-bordered" ng-if="!mergeComplete">
+            <thead>
+            <tr>
+                <td ng-repeat="field in perspective.fields">{{ field.entity_type }}</td>
+                <td> <!-- action --></td>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr ng-repeat="entryFields in dictionaryTable">
+
+                <td ng-repeat="fieldValues in entryFields"
+                    ng-init="lexicalEntry=suggestedLexicalEntries[$parent.$index]; field=perspective.fields[$index]">
+
+
+                    <div ng-if="field.data_type == 'text'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                {{ fieldValue.content }}
+                            </li>
+                        </ul>
+
+                    </div>
+
+
+                    <div ng-if="field.data_type == 'image'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
+                            </li>
+                        </ul>
+
+                    </div>
+
+                    <div ng-if="field.data_type == 'sound'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="play(fieldValue.content)">
+                                    <span class="glyphicon glyphicon-play">Play sound</span>
+                                </button>
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-if="fieldValue.contains && fieldValue.contains.length > 0"
+                                        ng-click="annotate(fieldValue, fieldValue.contains[0])">
+                                    <span class="glyphicon glyphicon-list">View markup</span>
+                                </button>
+
+                            </li>
+                        </ul>
+
+                    </div>
+
+                </td>
+
+                <td> <!-- action --> </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+    </div>
+
+    <div class="modal-footer">
+
+        <a class="btn btn-danger" ng-click="close()">
+            Close <span class="glyphicon glyphicon-stop"></span>
+        </a>
+
+        <a class="btn btn-warning" ng-click="skipSuggestion()" ng-if="!mergeComplete">
+            Skip <span class="glyphicon glyphicon-remove"></span>
+        </a>
+
+        <a class="btn btn-primary" ng-click="approveSuggestion()" ng-if="!mergeComplete">
+            Approve <span class="glyphicon glyphicon-ok"></span>
+        </a>
+    </div>
+
+</script>
+
+
 
 
 </body>
