@@ -848,6 +848,10 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             return values;
         };
 
+        $scope.getPerspectiveLink = function(p) {
+            return '/dictionary/' + encodeURIComponent(p.parent_client_id) + '/' + encodeURIComponent(p.parent_object_id) + '/perspective/' + encodeURIComponent(p.client_id) + '/' + encodeURIComponent(p.object_id) + '/view';
+        };
+
         $scope.linkEntries = function(entry) {
 
             dictionaryService.linkEntries(groupParams.entry, entry, 'Etymology').then(function(data) {
@@ -861,7 +865,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         $scope.unlinkEntry = function(index) {
             $scope.connectedEntries.splice(index);
         };
-
 
         $scope.ok = function() {
             $modalInstance.close();
@@ -889,7 +892,9 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
             $scope.suggestedEntries = [];
             dictionaryService.search(updatedQuery).then(function(suggestedEntries) {
+
                 $scope.suggestedEntries = suggestedEntries;
+
             }, function(reason) {
                 $log.error(reason);
             });
@@ -898,8 +903,18 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
         dictionaryService.getConnectedWords(groupParams.entry.client_id, groupParams.entry.object_id).then(function(entries) {
 
-            angular.forEach(entries, function(entry) {
-                $scope.connectedEntries.push(entry.lexical_entry);
+            var r = entries.map(function(entry) {
+                var lexicalEntry = entry.lexical_entry;
+                return dictionaryService.getPerspectiveOriginById(lexicalEntry.parent_client_id, lexicalEntry.parent_object_id);
+            });
+
+            $q.all(r).then(function(paths) {
+                angular.forEach(entries, function(entry, i) {
+                    entry.lexical_entry['origin'] = paths[i];
+                    $scope.connectedEntries.push(entry.lexical_entry);
+                });
+            }, function(reason) {
+
             });
 
         }, function(reason) {

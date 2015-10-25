@@ -28133,6 +28133,7 @@ var lingvodoc = {};
 lingvodoc.Object = function(clientId, objectId) {
     this.client_id = clientId;
     this.object_id = objectId;
+    this.type = "abstract";
     this.getId = function() {
         return this.client_id + "" + this.object_id;
     };
@@ -28147,6 +28148,7 @@ lingvodoc.Object.prototype.equals = function(obj) {
 
 lingvodoc.Language = function(clientId, objectId, translation, translation_string) {
     lingvodoc.Object.call(this, clientId, objectId);
+    this.type = "language";
     this.translation = translation;
     this.translation_string = translation_string;
     this.languages = [];
@@ -28166,6 +28168,7 @@ lingvodoc.Language.prototype.constructor = lingvodoc.Language;
 
 lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation, translation_string, status) {
     lingvodoc.Object.call(this, clientId, objectId);
+    this.type = "dictionary";
     this.parent_client_id = parentClientId;
     this.parent_object_id = parentObjectId;
     this.translation = translation;
@@ -28187,6 +28190,7 @@ lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
 
 lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id, translation, translation_string, status, is_template, marked_for_deletion) {
     lingvodoc.Object.call(this, client_id, object_id);
+    this.type = "perspective";
     this.parent_client_id = parent_client_id;
     this.parent_object_id = parent_object_id;
     this.translation = translation;
@@ -28412,28 +28416,19 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
         var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
         $http.get(url).success(function(data, status, headers, config) {
-            var urls = [];
-            for (var i = 0; i < data.length; i++) {
-                var entr = data[i];
-                var getEntryUrl = "/dictionary/" + encodeURIComponent(entr.origin_dictionary_client_id) + "/" + encodeURIComponent(entr.origin_dictionary_object_id) + "/perspective/" + encodeURIComponent(entr.origin_perspective_client_id) + "/" + encodeURIComponent(entr.origin_perspective_object_id) + "/lexical_entry/" + encodeURIComponent(entr.client_id) + "/" + encodeURIComponent(entr.object_id);
-                urls.push(getEntryUrl);
-            }
-            var uniqueUrls = urls.filter(function(item, pos) {
-                return urls.indexOf(item) == pos;
+            var r = data.map(function(e) {
+                var perspective = lingvodoc.Perspective.fromJS(e);
+                return getPerspectiveOriginById(perspective.client_id, perspective.object_id);
             });
-            var requests = [];
-            for (var j = 0; j < uniqueUrls.length; j++) {
-                var r = $http.get(uniqueUrls[j]);
-                requests.push(r);
-            }
-            $q.all(requests).then(function(results) {
-                var suggestedEntries = [];
-                for (var k = 0; k < results.length; k++) {
-                    if (results[k].data) {
-                        suggestedEntries.push(results[k].data.lexical_entry);
-                    }
-                }
-                deferred.resolve(suggestedEntries);
+            $q.all(r).then(function(paths) {
+                var out = [];
+                angular.forEach(data, function(entry, i) {
+                    entry.lexical_entry["origin"] = paths[i];
+                    out.push(entry.lexical_entry);
+                });
+                deferred.resolve(out);
+            }, function(reason) {
+                deferred.reject("An error  occurred while doing basic search");
             });
         }).error(function(data, status, headers, config) {
             deferred.reject("An error  occurred while doing basic search");
@@ -28790,6 +28785,36 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getPerspectiveOriginById = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "/perspective/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id) + "/tree";
+        $http.get(url).success(function(data, status, headers, config) {
+            var path = data.map(function(e) {
+                var r = null;
+                switch (e.type) {
+                  case "dictionary":
+                    r = lingvodoc.Dictionary.fromJS(e);
+                    break;
+
+                  case "perspective":
+                    r = lingvodoc.Perspective.fromJS(e);
+                    break;
+
+                  case "language":
+                    r = lingvodoc.Language.fromJS(e);
+                    break;
+
+                  default:
+                    r = null;
+                }
+                return r;
+            });
+            deferred.resolve(path);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get perspective origin");
+        });
+        return deferred.promise;
+    };
     var mergeSuggestions = function(perspective) {
         var deferred = $q.defer();
         var body = {
@@ -29078,6 +29103,7 @@ function lingvodocAPI($http, $q) {
         mergeDictionaries: mergeDictionaries,
         mergePerspectives: mergePerspectives,
         mergeSuggestions: mergeSuggestions,
+        getPerspectiveOriginById: getPerspectiveOriginById,
         getLexicalEntry: getLexicalEntry,
         moveLexicalEntry: moveLexicalEntry,
         getLanguagesFull: getLanguagesFull,
