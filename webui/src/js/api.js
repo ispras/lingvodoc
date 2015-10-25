@@ -835,7 +835,7 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
 
         var body = {
-            'entity_type_primary': 'Word',
+            'entity_type_primary': 'Translation',
             'entity_type_secondary': 'Transcription',
             'threshold': 0.6,
             'levenstein' : 3,

@@ -28972,7 +28972,7 @@ function lingvodocAPI($http, $q) {
     var mergeSuggestions = function(perspective) {
         var deferred = $q.defer();
         var body = {
-            entity_type_primary: "Word",
+            entity_type_primary: "Translation",
             entity_type_secondary: "Transcription",
             threshold: .6,
             levenstein: 3,
