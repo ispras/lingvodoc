@@ -2310,11 +2310,11 @@ def view_connected_words(request):
     lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if lexical_entry:
         if not lexical_entry.marked_for_deletion:
-            old_tags = set()
-            tags = set(DBSession.query(GroupingEntity.content).filter_by(parent = lexical_entry).all())
-            while old_tags != tags:
-                new_tags = set()
-                lexes = set()
+            tags = DBSession.query(GroupingEntity.content).filter_by(parent = lexical_entry).all()
+            equal = False
+            while not equal:
+                new_tags = []
+                lexes = []
                 for tag in tags:
                     entity = DBSession.query(GroupingEntity).filter_by(content = tag).first()
                     path = request.route_url('get_group_entity',
@@ -2325,16 +2325,21 @@ def view_connected_words(request):
                     subreq.headers = request.headers
                     resp = request.invoke_subrequest(subreq)
                     for lex in resp.json['connections']:
-                        lexes.add((lex['client_id'], lex['object_id']))
+                        if lex not in lexes:
+                            lexes.append((lex['client_id'], lex['object_id']))
                 for lex in lexes:
-                    tags = set(DBSession.query(GroupingEntity.content)
+                    tags = DBSession.query(GroupingEntity.content)\
                                .filter_by(parent_client_id=lex[0],
-                                          parent_object_id=lex[1]).all())
+                                          parent_object_id=lex[1]).all()
                     for tag in tags:
-                        new_tags.add(tag)
-                old_tags = tags
-                tags = new_tags
-            lexes = set()
+                        if tag not in new_tags:
+                            new_tags.append(tag)
+
+                old_tags = list(tags)
+                tags = list(new_tags)
+                if set(old_tags) == set(tags):
+                    equal = True
+            lexes = list()
             for tag in tags:
                 entity = DBSession.query(GroupingEntity).filter_by(content = tag).first()
                 path = request.route_url('get_group_entity',
@@ -2345,7 +2350,8 @@ def view_connected_words(request):
                 subreq.headers = request.headers
                 resp = request.invoke_subrequest(subreq)
                 for lex in resp.json['connections']:
-                        lexes.add((lex['client_id'], lex['object_id']))
+                    if lex not in lexes:
+                        lexes.append((lex['client_id'], lex['object_id']))
             words = []
             for lex in lexes:
                 path = request.route_url('lexical_entry',
