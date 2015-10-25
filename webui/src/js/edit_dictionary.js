@@ -328,6 +328,30 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             });
         };
 
+
+        $scope.mergeEntries = function() {
+
+            var modalInstance = $modal.open({
+                animation: true,
+                templateUrl: 'mergeEntriesModal.html',
+                controller: 'mergeEntriesController',
+                size: 'lg',
+                resolve: {
+                    'params': function() {
+                        return {
+                            'perspective': $scope.perspective
+                        };
+                    }
+                }
+            });
+
+            modalInstance.result.then(function(value) {
+
+            }, function() {
+
+            });
+        };
+
         $scope.annotate = function(soundEntity, markupEntity) {
 
             var modalInstance = $modal.open({
@@ -404,6 +428,13 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 $log.error(reason);
             });
 
+            dictionaryService.getPerspectiveById(perspectiveClientId, perspectiveId).then(function(p) {
+                $scope.perspective = p;
+                $scope.perspective['fields'] = fields;
+            }, function(reason) {
+                $log.error(reason);
+            });
+
         }, function(reason) {
             $log.error(reason);
         });
@@ -413,6 +444,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         }, function(reason) {
             $log.error(reason);
         });
+
 
     }])
 
@@ -921,4 +953,102 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
         });
 
+    }])
+    .controller('mergeEntriesController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'params', function($scope, $http, $modalInstance, $q, $log, dictionaryService, params) {
+
+        $scope.perspective = params.perspective;
+        $scope.suggestions = [];
+        $scope.suggestedLexicalEntries = [];
+        $scope.mergeComplete = false;
+
+        var nextSuggestedEntries = function() {
+            if ($scope.suggestions.length > 0) {
+                $scope.suggestedLexicalEntries = $scope.suggestions[0].suggestion;
+                $scope.suggestions.splice(0, 1);
+            } else {
+                $scope.mergeComplete = true;
+            }
+        };
+
+        $scope.approveSuggestion = function () {
+
+            var entry1 = $scope.suggestedLexicalEntries[0];
+            var entry2 = $scope.suggestedLexicalEntries[1];
+
+            dictionaryService.moveLexicalEntry(entry1.client_id, entry1.object_id, entry2.client_id, entry2.object_id)
+                .then(function (r) {
+                    nextSuggestedEntries();
+                }, function (reason) {
+                    $log.error(reason);
+                });
+        };
+
+        $scope.skipSuggestion = function() {
+            nextSuggestedEntries();
+        };
+
+        $scope.close = function() {
+            $modalInstance.close();
+        };
+
+        $scope.$watch('suggestedLexicalEntries', function(updatedEntries) {
+
+            var getFieldValues = function(entry, field) {
+
+                var value;
+                var values = [];
+                if (entry && entry.contains) {
+
+                    if (field.isGroup) {
+
+                        for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                            var subField = field.contains[fieldIndex];
+
+                            for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                                value = entry.contains[valueIndex];
+                                if (value.entity_type == subField.entity_type) {
+                                    values.push(value);
+                                }
+                            }
+                        }
+                    } else {
+                        for (var i = 0; i < entry.contains.length; i++) {
+                            value = entry.contains[i];
+                            if (value.entity_type == field.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                }
+                return values;
+            };
+
+            var mapFieldValues = function(allEntries, allFields) {
+                var result = [];
+                for (var i = 0; i < allEntries.length; i++) {
+                    var entryRow = [];
+                    for (var j = 0; j < allFields.length; j++) {
+                        entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+                    }
+                    result.push(entryRow);
+                }
+                return result;
+            };
+
+            $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.perspective.fields);
+
+        }, true);
+
+
+        dictionaryService.mergeSuggestions(params.perspective).then(function(suggestions) {
+            $scope.suggestions = suggestions;
+            nextSuggestedEntries();
+        }, function(reason) {
+            $log.error(reason);
+        });
+
     }]);
+
+
+
+

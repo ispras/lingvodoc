@@ -28818,7 +28818,7 @@ function lingvodocAPI($http, $q) {
     };
     var getPerspectiveById = function(client_id, object_id) {
         var deferred = $q.defer();
-        var url = "perspective/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
+        var url = "/perspective/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
         $http.get(url).success(function(data, status, headers, config) {
             deferred.resolve(lingvodoc.Perspective.fromJS(data));
         }).error(function(data, status, headers, config) {
