@@ -587,9 +587,14 @@ def view_perspective_tree(request):
             translation_string = perspective.get_translation(request)
             tree.append({'type': 'perspective',
                          'translation_string': translation_string['translation_string'],
-                         'translation':translation_string['translation'],
-                         'client_id': client_id,
-                         'object_id': object_id
+                         'translation': translation_string['translation'],
+                         'client_id': perspective.client_id,
+                         'object_id': perspective.object_id,
+                         'parent_client_id': perspective.parent_client_id,
+                         'parent_object_id': perspective.parent_object_id,
+                         'is_template': perspective.is_template,
+                         'marked_for_deletion': perspective.marked_for_deletion,
+                         'status': perspective.state
                          })
             dictionary = perspective.parent
             path = request.route_url('dictionary',
@@ -600,12 +605,9 @@ def view_perspective_tree(request):
             subreq.headers = request.headers
             resp = request.invoke_subrequest(subreq)
             if 'error' not in resp.json:
-                tree.append({'type': 'dictionary',
-                             'translation_string': resp.json['translation_string'],
-                             'translation': resp.json['translation'],
-                             'client_id': resp.json['client_id'],
-                             'object_id': resp.json['object_id']
-                             })
+                elem = resp.json.copy()
+                elem.update({'type': 'dictionary'})
+                tree.append(elem)
             parent = dictionary.parent
             while parent:
                 path = request.route_url('language',
@@ -617,12 +619,9 @@ def view_perspective_tree(request):
                 resp = request.invoke_subrequest(subreq)
                 parent = parent.parent
                 if 'error' not in resp.json:
-                    tree.append({'type': 'language',
-                                 'translation_string': resp.json['translation_string'],
-                                 'translation': resp.json['translation'],
-                                 'client_id': resp.json['client_id'],
-                                 'object_id': resp.json['object_id']
-                                 })
+                    elem = resp.json.copy()
+                    elem.update({'type': 'language'})
+                    tree.append(elem)
                 else:
                     parent = None
 
