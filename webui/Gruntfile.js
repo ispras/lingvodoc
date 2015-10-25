@@ -133,6 +133,8 @@ module.exports = function(grunt) {
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
                     'src/js/model.js',
                     'src/js/elan.js',
+                    'src/js/util.js',
+                    'src/js/api.js',
                     'src/js/view_dictionary.js',
                     'src/js/lingvowave.js'
                 ],
