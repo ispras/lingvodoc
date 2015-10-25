@@ -105,17 +105,26 @@ def basic_search(request):
     searchstring = request.params.get('leveloneentity')
     results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%')).all()
     results = []
+    entries = set()
     for item in results_cursor:
-        entry = item.parent
+        entries.add(item.parent)
+    for entry in entries:
         if not entry.marked_for_deletion:
             result = dict()
             result['lexical_entry'] = entry.track(False)
-            result['origin_perspective_client_id'] = entry.parent_client_id
-            result['origin_perspective_object_id'] = entry.parent_object_id
-            result['origin_perspective_name'] = entry.parent.translation_string
-            result['origin_dictionary_client_id'] = entry.parent.parent_client_id
-            result['origin_dictionary_object_id'] = entry.parent.parent_object_id
-            result['origin_dictionary_name'] = entry.parent.parent.translation_string
+            result['client_id'] = entry.parent_client_id
+            result['object_id'] = entry.parent_object_id
+            perspective_tr = entry.parent.get_translation(request)
+            result['translation_string'] = perspective_tr['translation_string']
+            result['translation'] = perspective_tr['translation']
+            result['is_template'] = entry.parent.is_template
+            result['status'] = entry.parent.state
+            result['marked_for_deletion'] = entry.parent.marked_for_deletion
+            result['parent_client_id'] = entry.parent.parent_client_id
+            result['parent_object_id'] = entry.parent.parent_object_id
+            dict_tr = entry.parent.parent.get_translation(request)
+            result['parent_translation_string'] = dict_tr['translation_string']
+            result['parent_translation'] = dict_tr['translation']
             results.append(result)
     return results
 
