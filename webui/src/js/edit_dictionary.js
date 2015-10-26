@@ -445,6 +445,11 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             $log.error(reason);
         });
 
+        dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
+            $scope.path = path;
+        }, function(reason) {
+            $log.error(reason);
+        });
 
     }])
 

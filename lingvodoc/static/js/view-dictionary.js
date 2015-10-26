@@ -28489,6 +28489,11 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     }, function(reason) {
         $log.error(reason);
     });
+    dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
+        $scope.path = path;
+    }, function(reason) {
+        $log.error(reason);
+    });
 } ]).controller("AnnotationController", [ "$scope", "$http", "soundUrl", "annotationUrl", function($scope, $http, soundUrl, annotationUrl) {
     var activeUrl = null;
     var createRegions = function(annotaion) {
