@@ -49,7 +49,8 @@ from pyramid.security import (
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import (
     func,
-    or_
+    or_,
+    and_
 )
 from sqlalchemy.orm import joinedload, subqueryload, noload, join, joinedload_all
 
@@ -127,6 +128,53 @@ def basic_search(request):
             result['parent_translation'] = dict_tr['translation']
             results.append(result)
     return results
+
+
+@view_config(route_name='basic_search_new', renderer='json', request_method='GET')
+def basic_search_new(request):
+    searchstring = request.params.get('leveloneentity')
+    results_cursor = None
+    group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
+            .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
+            .join(User, Group.users).join(Client)\
+            .filter(Client.id == request.authenticated_userid).first()
+    if group:
+        print(group.id)
+        results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%')).all()
+    else:
+        results_cursor = DBSession.query(LevelOneEntity)\
+            .join(LexicalEntry)\
+            .join(DictionaryPerspective)\
+            .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.client_id == Group.subject_client_id ))\
+            .join(BaseGroup)\
+            .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
+            .join(User, Group.users)\
+            .join(Client)\
+            .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%')).all()
+    results = []
+    entries = set()
+    for item in results_cursor:
+        entries.add(item.parent)
+    for entry in entries:
+        if not entry.marked_for_deletion:
+            result = dict()
+            result['lexical_entry'] = entry.track(False)
+            result['client_id'] = entry.parent_client_id
+            result['object_id'] = entry.parent_object_id
+            perspective_tr = entry.parent.get_translation(request)
+            result['translation_string'] = perspective_tr['translation_string']
+            result['translation'] = perspective_tr['translation']
+            result['is_template'] = entry.parent.is_template
+            result['status'] = entry.parent.state
+            result['marked_for_deletion'] = entry.parent.marked_for_deletion
+            result['parent_client_id'] = entry.parent.parent_client_id
+            result['parent_object_id'] = entry.parent.parent_object_id
+            dict_tr = entry.parent.parent.get_translation(request)
+            result['parent_translation_string'] = dict_tr['translation_string']
+            result['parent_translation'] = dict_tr['translation']
+            results.append(result)
+    return results
+
 
 #TODO: make it normal, it's just a test
 @view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
@@ -2360,7 +2408,6 @@ def view_connected_words(request):
                 subreq = Request.blank(path)
                 subreq.method = 'GET'
                 subreq.headers = request.headers
-                print(lex[0], lex[1])
                 try:
                     resp = request.invoke_subrequest(subreq)
                     if resp.json not in words:
