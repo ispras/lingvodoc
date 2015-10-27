@@ -101,8 +101,8 @@ class CommonException(Exception):
         return repr(self.value)
 
 
-@view_config(route_name='basic_search', renderer='json', request_method='GET')
-def basic_search(request):
+@view_config(route_name='basic_search_old', renderer='json', request_method='GET')
+def basic_search_old(request):
     searchstring = request.params.get('leveloneentity')
     results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%')).all()
     results = []
@@ -130,50 +130,62 @@ def basic_search(request):
     return results
 
 
-@view_config(route_name='basic_search_new', renderer='json', request_method='GET')
-def basic_search_new(request):
+@view_config(route_name='basic_search', renderer='json', request_method='GET')
+def basic_search(request):
+    can_add_tags = request.params.get('can_add_tags')
+    print(can_add_tags)
     searchstring = request.params.get('leveloneentity')
-    results_cursor = None
-    group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
-            .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
-            .join(User, Group.users).join(Client)\
-            .filter(Client.id == request.authenticated_userid).first()
-    if group:
-        print(group.id)
-        results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%')).all()
-    else:
-        results_cursor = DBSession.query(LevelOneEntity)\
-            .join(LexicalEntry)\
-            .join(DictionaryPerspective)\
-            .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.client_id == Group.subject_client_id ))\
-            .join(BaseGroup)\
-            .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
-            .join(User, Group.users)\
-            .join(Client)\
-            .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%')).all()
-    results = []
-    entries = set()
-    for item in results_cursor:
-        entries.add(item.parent)
-    for entry in entries:
-        if not entry.marked_for_deletion:
-            result = dict()
-            result['lexical_entry'] = entry.track(False)
-            result['client_id'] = entry.parent_client_id
-            result['object_id'] = entry.parent_object_id
-            perspective_tr = entry.parent.get_translation(request)
-            result['translation_string'] = perspective_tr['translation_string']
-            result['translation'] = perspective_tr['translation']
-            result['is_template'] = entry.parent.is_template
-            result['status'] = entry.parent.state
-            result['marked_for_deletion'] = entry.parent.marked_for_deletion
-            result['parent_client_id'] = entry.parent.parent_client_id
-            result['parent_object_id'] = entry.parent.parent_object_id
-            dict_tr = entry.parent.parent.get_translation(request)
-            result['parent_translation_string'] = dict_tr['translation_string']
-            result['parent_translation'] = dict_tr['translation']
-            results.append(result)
-    return results
+    if searchstring:
+        if len(searchstring) >= 2:
+            searchstring = request.params.get('leveloneentity')
+            group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
+                    .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
+                    .join(User, Group.users).join(Client)\
+                    .filter(Client.id == request.authenticated_userid).first()
+            if group:
+                results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
+            else:
+                results_cursor = DBSession.query(LevelOneEntity)\
+                    .join(LexicalEntry)\
+                    .join(DictionaryPerspective)\
+                    .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+                    .join(BaseGroup)\
+                    .join(User, Group.users)\
+                    .join(Client)\
+                    .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
+            results = []
+            entries = set()
+            if can_add_tags:
+                results_cursor = results_cursor\
+                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
+                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+                    .group_by(LevelOneEntity).having(func.count('*') == 2)
+            else:
+                results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
+            for item in results_cursor:
+                entries.add(item.parent)
+            for entry in entries:
+                if not entry.marked_for_deletion:
+                    result = dict()
+                    result['lexical_entry'] = entry.track(False)
+                    result['client_id'] = entry.parent_client_id
+                    result['object_id'] = entry.parent_object_id
+                    perspective_tr = entry.parent.get_translation(request)
+                    result['translation_string'] = perspective_tr['translation_string']
+                    result['translation'] = perspective_tr['translation']
+                    result['is_template'] = entry.parent.is_template
+                    result['status'] = entry.parent.state
+                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
+                    result['parent_client_id'] = entry.parent.parent_client_id
+                    result['parent_object_id'] = entry.parent.parent_object_id
+                    dict_tr = entry.parent.parent.get_translation(request)
+                    result['parent_translation_string'] = dict_tr['translation_string']
+                    result['parent_translation'] = dict_tr['translation']
+                    results.append(result)
+            request.response.status = HTTPOk.code
+            return results
+    request.response.status = HTTPBadRequest.code
+    return {'error': 'search is too short'}
 
 
 #TODO: make it normal, it's just a test
