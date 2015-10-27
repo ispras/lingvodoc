@@ -522,8 +522,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
         $scope.connectedEntries = [];
         $scope.suggestedEntries = [];
 
-        $scope.searchQuery = '';
-
         $scope.fieldsIdx = [];
         for (var k = 0; k < $scope.fields.length; k++) {
             $scope.fieldsIdx.push($scope.fields[k]);

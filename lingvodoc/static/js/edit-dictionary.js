@@ -27585,9 +27585,9 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var search = function(query) {
+    var search = function(query, tagsOnly) {
         var deferred = $q.defer();
-        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent((!!tagsOnly).toString());
         $http.get(url).success(function(data, status, headers, config) {
             var r = data.map(function(e) {
                 var perspective = lingvodoc.Perspective.fromJS(e);
@@ -28985,7 +28985,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             return;
         }
         $scope.suggestedEntries = [];
-        dictionaryService.search(updatedQuery).then(function(suggestedEntries) {
+        dictionaryService.search(updatedQuery, true).then(function(suggestedEntries) {
             $scope.suggestedEntries = suggestedEntries;
         }, function(reason) {
             $log.error(reason);

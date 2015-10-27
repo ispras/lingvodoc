@@ -928,7 +928,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             }
 
             $scope.suggestedEntries = [];
-            dictionaryService.search(updatedQuery).then(function(suggestedEntries) {
+            dictionaryService.search(updatedQuery, true).then(function(suggestedEntries) {
 
                 $scope.suggestedEntries = suggestedEntries;
 
