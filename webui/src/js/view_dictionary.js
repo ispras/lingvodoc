@@ -245,6 +245,12 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
             $log.error(reason);
         });
 
+
+        dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
+            $scope.path = path;
+        }, function(reason) {
+            $log.error(reason);
+        });
     }])
 
 
@@ -515,8 +521,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
         $scope.fields = groupParams.fields;
         $scope.connectedEntries = [];
         $scope.suggestedEntries = [];
-
-        $scope.searchQuery = '';
 
         $scope.fieldsIdx = [];
         for (var k = 0; k < $scope.fields.length; k++) {

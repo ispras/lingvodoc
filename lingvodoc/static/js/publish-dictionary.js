@@ -27585,9 +27585,9 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var search = function(query) {
+    var search = function(query, tagsOnly) {
         var deferred = $q.defer();
-        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent((!!tagsOnly).toString());
         $http.get(url).success(function(data, status, headers, config) {
             var r = data.map(function(e) {
                 var perspective = lingvodoc.Perspective.fromJS(e);
@@ -28523,6 +28523,11 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
     }, function(reason) {
         $log.error(reason);
     });
+    dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
+        $scope.path = path;
+    }, function(reason) {
+        $log.error(reason);
+    });
 } ]).controller("AnnotationController", [ "$scope", "$http", "soundUrl", "annotationUrl", function($scope, $http, soundUrl, annotationUrl) {
     var activeUrl = null;
     var createRegions = function(annotaion) {
@@ -28714,7 +28719,6 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
     $scope.fields = groupParams.fields;
     $scope.connectedEntries = [];
     $scope.suggestedEntries = [];
-    $scope.searchQuery = "";
     $scope.fieldsIdx = [];
     for (var k = 0; k < $scope.fields.length; k++) {
         $scope.fieldsIdx.push($scope.fields[k]);

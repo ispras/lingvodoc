@@ -445,6 +445,11 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             $log.error(reason);
         });
 
+        dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
+            $scope.path = path;
+        }, function(reason) {
+            $log.error(reason);
+        });
 
     }])
 
@@ -923,7 +928,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             }
 
             $scope.suggestedEntries = [];
-            dictionaryService.search(updatedQuery).then(function(suggestedEntries) {
+            dictionaryService.search(updatedQuery, true).then(function(suggestedEntries) {
 
                 $scope.suggestedEntries = suggestedEntries;
 
