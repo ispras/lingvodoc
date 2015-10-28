@@ -11,6 +11,8 @@ from .models import (
 
 from pyramid.security import forget
 
+from sqlalchemy.orm import joinedload
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -20,7 +22,10 @@ def groupfinder(client_id, request):
         return None
     try:
         client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        user = DBSession.query(User)\
+            .options(joinedload('groups').joinedload('BaseGroup'))\
+            .options(joinedload('organizations').joinedload('groups').joinedload('BaseGroup'))\
+            .filter_by(id=client.user_id).first()
     except AttributeError as e:
         forget(request)
         return None
@@ -31,7 +36,7 @@ def groupfinder(client_id, request):
     if user.id == 1:
         grouplist.append('Admin')
     for group in user.groups:
-        base_group = DBSession.query(BaseGroup).filter(BaseGroup.id == group.base_group_id).first()
+        base_group = group.BaseGroup
         if group.subject_override:
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
@@ -44,7 +49,7 @@ def groupfinder(client_id, request):
         grouplist.append(group_name)
     for org in user.organizations:
         for group in org.groups:
-            base_group = DBSession.query(BaseGroup).filter(BaseGroup.id == group.base_group_id).first()
+            base_group = group.BaseGroup
             if group.subject_override:
                 group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
             else:
