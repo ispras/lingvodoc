@@ -28217,13 +28217,49 @@ function lingvodocAPI($http, $q) {
     };
 }
 
+function responseHandler($timeout, $modal) {
+    function show(status, message, t) {
+        var timeout = t || 2e3;
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.ok = function() {
+                $modalInstance.close();
+            };
+        };
+        var inst = $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerModal.html",
+            controller: controller,
+            size: "sm",
+            backdrop: "static",
+            keyboard: false
+        });
+        $timeout(function() {
+            inst.dismiss();
+        }, timeout);
+    }
+    function success(message) {
+        show("success", message, 500);
+    }
+    function error(message) {
+        show("error", message, 5e3);
+    }
+    return {
+        success: success,
+        error: error
+    };
+}
+
 "use strict";
 
 var app = angular.module("OrganizationsModule", [ "ui.bootstrap" ]);
 
 app.service("dictionaryService", lingvodocAPI);
 
-app.controller("OrganizationsController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", function($scope, $http, $q, $modal, $log, dictionaryService) {
+app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
+
+app.controller("OrganizationsController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
     var userId = $("#userId").data("lingvodoc");
     var clientId = $("#clientId").data("lingvodoc");
     $scope.create = function() {
@@ -28261,11 +28297,11 @@ app.controller("OrganizationsController", [ "$scope", "$http", "$q", "$modal", "
     dictionaryService.getOrganizations().then(function(organizations) {
         $scope.organizations = organizations;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 } ]);
 
-app.controller("createOrganizationController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $modalInstance, $log, dictionaryService, params) {
+app.controller("createOrganizationController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.name = "";
     $scope.about = "";
     $scope.ok = function() {
@@ -28284,7 +28320,7 @@ app.controller("createOrganizationController", [ "$scope", "$http", "$modalInsta
     };
 } ]);
 
-app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $modalInstance, $log, dictionaryService, params) {
+app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.organization = {};
     $scope.searchQuery = "";
     $scope.users = [];
@@ -28303,7 +28339,6 @@ app.controller("editOrganizationController", [ "$scope", "$http", "$modalInstanc
                 return u.id;
             })
         };
-        $log.info(orgObj);
         dictionaryService.editOrganization(orgObj).then(function(data) {
             $modalInstance.close();
         }, function(reason) {

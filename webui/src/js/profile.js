@@ -4,7 +4,9 @@ var app = angular.module('ProfileModule', ['ui.bootstrap']);
 
 app.service('dictionaryService', lingvodocAPI);
 
-app.controller('ProfileController', ['$scope', '$http', '$q', '$modal', '$log', 'dictionaryService', function ($scope, $http, $q, $modal, $log, dictionaryService) {
+app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
+
+app.controller('ProfileController', ['$scope', '$http', '$q', '$modal', '$log', 'dictionaryService', 'responseHandler', function ($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
 
     var userId = $('#userId').data('lingvodoc');
     var clientId = $('#clientId').data('lingvodoc');
@@ -30,7 +32,7 @@ app.controller('ProfileController', ['$scope', '$http', '$q', '$modal', '$log', 
         }
 
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
 

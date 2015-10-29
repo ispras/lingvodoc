@@ -39,8 +39,9 @@ app.config(function ($stateProvider, $urlRouterProvider) {
 
 app.service('dictionaryService', lingvodocAPI);
 
+app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
 
-app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval', '$state', '$log', 'dictionaryService', function ($scope, $http, $modal, $interval, $state, $log, dictionaryService) {
+app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval', '$state', '$log', 'dictionaryService', 'responseHandler', function ($scope, $http, $modal, $interval, $state, $log, dictionaryService, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -197,7 +198,7 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             ).then(function(result) {
                     $state.go('merge.perspectiveFinished');
                 }, function(reason) {
-                    $log.error(reason);
+                    responseHandler.error(reason);
                 });
 
         }
@@ -290,11 +291,11 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                     }
 
                 }, function(reason) {
-                    $log.error(reason);
+                    responseHandler.error(reason);
                 });
 
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
 
 
@@ -323,7 +324,7 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             .then(function (r) {
                 nextSuggestedEntries();
             }, function (reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
     };
 
@@ -334,13 +335,13 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
     dictionaryService.getDictionariesWithPerspectives({'user_created': [userId]}).then(function(dictionaries) {
         $scope.master.dictionaries = dictionaries;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
     dictionaryService.getLanguagesFull().then(function(langs) {
         $scope.master.languagesTree = langs;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
     $scope.$watch('master.selectedSourceDictionaryId', function (id) {
@@ -490,8 +491,5 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
         $scope.master.dictionaryTable = mapFieldValues(updatedEntries, $scope.master.mergedPerspectiveFields);
 
     }, true);
-
-
-
 
 }]);

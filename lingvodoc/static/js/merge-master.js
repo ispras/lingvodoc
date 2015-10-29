@@ -29117,6 +29117,40 @@ function lingvodocAPI($http, $q) {
     };
 }
 
+function responseHandler($timeout, $modal) {
+    function show(status, message, t) {
+        var timeout = t || 2e3;
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.ok = function() {
+                $modalInstance.close();
+            };
+        };
+        var inst = $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerModal.html",
+            controller: controller,
+            size: "sm",
+            backdrop: "static",
+            keyboard: false
+        });
+        $timeout(function() {
+            inst.dismiss();
+        }, timeout);
+    }
+    function success(message) {
+        show("success", message, 500);
+    }
+    function error(message) {
+        show("error", message, 5e3);
+    }
+    return {
+        success: success,
+        error: error
+    };
+}
+
 var app = angular.module("MergeMasterModule", [ "ui.router", "ui.bootstrap" ]);
 
 app.config(function($stateProvider, $urlRouterProvider) {
@@ -29151,7 +29185,9 @@ app.config(function($stateProvider, $urlRouterProvider) {
 
 app.service("dictionaryService", lingvodocAPI);
 
-app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interval", "$state", "$log", "dictionaryService", function($scope, $http, $modal, $interval, $state, $log, dictionaryService) {
+app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
+
+app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interval", "$state", "$log", "dictionaryService", "responseHandler", function($scope, $http, $modal, $interval, $state, $log, dictionaryService, responseHandler) {
     var clientId = $("#clientId").data("lingvodoc");
     var userId = $("#userId").data("lingvodoc");
     $scope.master = {
@@ -29274,7 +29310,7 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
             dictionaryService.mergeDictionaries($scope.master.mergedDictionaryName, $scope.master.mergedDictionaryName, $scope.master.selectedSourceDictionary1, $scope.master.selectedSourceDictionary2).then(function(result) {
                 $state.go("merge.perspectiveFinished");
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         }
     };
@@ -29337,10 +29373,10 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
                         $state.go("merge.perspectiveFinished");
                     }
                 }, function(reason) {
-                    $log.error(reason);
+                    responseHandler.error(reason);
                 });
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         }, function(reason) {});
     };
@@ -29359,7 +29395,7 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
         dictionaryService.moveLexicalEntry(entry1.client_id, entry1.object_id, entry2.client_id, entry2.object_id).then(function(r) {
             nextSuggestedEntries();
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
     $scope.skipSuggestion = function() {
@@ -29370,12 +29406,12 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
     }).then(function(dictionaries) {
         $scope.master.dictionaries = dictionaries;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
     dictionaryService.getLanguagesFull().then(function(langs) {
         $scope.master.languagesTree = langs;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
     $scope.$watch("master.selectedSourceDictionaryId", function(id) {
         $scope.master.selectedSourceDictionary = {};

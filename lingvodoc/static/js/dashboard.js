@@ -29271,13 +29271,49 @@ function lingvodocAPI($http, $q) {
     };
 }
 
+function responseHandler($timeout, $modal) {
+    function show(status, message, t) {
+        var timeout = t || 2e3;
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.ok = function() {
+                $modalInstance.close();
+            };
+        };
+        var inst = $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerModal.html",
+            controller: controller,
+            size: "sm",
+            backdrop: "static",
+            keyboard: false
+        });
+        $timeout(function() {
+            inst.dismiss();
+        }, timeout);
+    }
+    function success(message) {
+        show("success", message, 500);
+    }
+    function error(message) {
+        show("error", message, 5e3);
+    }
+    return {
+        success: success,
+        error: error
+    };
+}
+
 "use strict";
 
 var app = angular.module("DashboardModule", [ "ui.bootstrap" ]);
 
 app.service("dictionaryService", lingvodocAPI);
 
-app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", function($scope, $http, $q, $modal, $log, dictionaryService) {
+app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
+
+app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
     var userId = $("#userId").data("lingvodoc");
     var languagesUrl = $("#languagesUrl").data("lingvodoc");
     var dictionariesUrl = $("#dictionariesUrl").data("lingvodoc");
@@ -29400,14 +29436,14 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
         dictionaryService.setPerspectiveStatus(dictionary, perspective, status).then(function(data) {
             perspective.status = status;
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
     $scope.setDictionaryStatus = function(dictionary, status) {
         dictionaryService.setDictionaryStatus(dictionary, status).then(function(data) {
             dictionary.status = status;
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
     $scope.loadMyDictionaries = function() {
@@ -29416,7 +29452,9 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
         };
         dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
             $scope.dictionaries = dictionaries;
-        }, function(reason) {});
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     };
     $scope.loadAvailableDictionaries = function() {
         var dictionaryQuery = {
@@ -29424,17 +29462,21 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
         };
         dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
             $scope.dictionaries = dictionaries;
-        }, function(reason) {});
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     };
     var dictionaryQuery = {
         author: userId
     };
     dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
         $scope.dictionaries = dictionaries;
-    }, function(reason) {});
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
 } ]);
 
-app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.dictionary = params.dictionary;
     $scope.perspectives = [];
     $scope.perspective = {
@@ -29483,7 +29525,7 @@ app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modal
         dictionaryService.createPerspective($scope.dictionary, perspectiveObj, fields).then(function(perspective) {
             $modalInstance.close(perspective);
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
     $scope.cancel = function() {
@@ -29497,7 +29539,7 @@ app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modal
                     dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
                         $scope.perspective.fields = fields;
                     }, function(reason) {
-                        $log.error(reason);
+                        responseHandler.error(reason);
                     });
                     break;
                 }
@@ -29506,13 +29548,12 @@ app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modal
     });
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = perspectives;
-        $log.info(perspectives);
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 } ]);
 
-app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.data = {};
     $scope.dictionaryProperties = {};
     $scope.languages = [];
@@ -29534,10 +29575,10 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
             $scope.dictionaryProperties = dictionaryProperties;
             $scope.data.selectedLanguage = selectedLanguageCompositeId;
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
     var getSelectedLanguage = function() {
         for (var i = 0; i < $scope.languages.length; i++) {
@@ -29570,7 +29611,7 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
     };
 } ]);
 
-app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.dictionary = params.dictionary;
     $scope.perspective = {};
     $scope.addField = function() {
@@ -29593,10 +29634,10 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
             dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
                 $modalInstance.close();
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
     $scope.cancel = function() {
@@ -29607,11 +29648,11 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
         params.perspective["fields"] = fields;
         $scope.perspective = wrapPerspective(params.perspective);
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 } ]);
 
-app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.dictionary = params.dictionary;
     $scope.roles = {};
     $scope.userTable = [];
@@ -29734,10 +29775,12 @@ app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$mod
     dictionaryService.getDictionaryRoles($scope.dictionary).then(function(roles) {
         $scope.roles = roles;
         $scope.userTable = createUsersTable(roles);
+    }, function(reason) {
+        responseHandler.error(reason);
     });
 } ]);
 
-app.controller("editPerspectiveRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editPerspectiveRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.roles = {};
     $scope.userTable = [];
     $scope.searchQuery = "";
@@ -29869,5 +29912,7 @@ app.controller("editPerspectiveRolesController", [ "$scope", "$http", "$q", "$mo
     dictionaryService.getPerspectiveRoles(params.dictionary, params.perspective).then(function(roles) {
         $scope.roles = roles;
         $scope.userTable = createUsersTable(roles);
+    }, function(reason) {
+        responseHandler.error(reason);
     });
 } ]);

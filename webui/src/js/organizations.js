@@ -4,7 +4,9 @@ var app = angular.module('OrganizationsModule', ['ui.bootstrap']);
 
 app.service('dictionaryService', lingvodocAPI);
 
-app.controller('OrganizationsController', ['$scope', '$http', '$q', '$modal', '$log', 'dictionaryService', function ($scope, $http, $q, $modal, $log, dictionaryService) {
+app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
+
+app.controller('OrganizationsController', ['$scope', '$http', '$q', '$modal', '$log', 'dictionaryService', 'responseHandler', function ($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
 
     var userId = $('#userId').data('lingvodoc');
     var clientId = $('#clientId').data('lingvodoc');
@@ -56,13 +58,13 @@ app.controller('OrganizationsController', ['$scope', '$http', '$q', '$modal', '$
     dictionaryService.getOrganizations().then(function(organizations) {
         $scope.organizations = organizations;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
 }]);
 
 
-app.controller('createOrganizationController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'params', function($scope, $http, $modalInstance, $log, dictionaryService, params) {
+app.controller('createOrganizationController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, params) {
 
     $scope.name = '';
     $scope.about = '';
@@ -88,7 +90,7 @@ app.controller('createOrganizationController', ['$scope', '$http', '$modalInstan
 
 }]);
 
-app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'params', function($scope, $http, $modalInstance, $log, dictionaryService, params) {
+app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, params) {
 
     $scope.organization = {};
 
@@ -109,8 +111,6 @@ app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance
             'add_users': addedUsers.map(function(u) { return u.id }),
             'delete_users': removedUsers.map(function(u) { return u.id })
         };
-
-        $log.info(orgObj);
 
         dictionaryService.editOrganization(orgObj).then(function(data) {
             $modalInstance.close();
