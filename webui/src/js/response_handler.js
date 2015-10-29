@@ -27,12 +27,12 @@ function responseHandler($timeout, $modal) {
         }, timeout);
     }
 
-    function success(status, message) {
-        show(status, message, 500);
+    function success(message) {
+        show('success', message, 500);
     }
 
-    function error(status, message) {
-        show(status, message, 5000);
+    function error(message) {
+        show('error', message, 5000);
     }
 
     return {

@@ -27298,11 +27298,11 @@ function responseHandler($timeout, $modal) {
             inst.dismiss();
         }, timeout);
     }
-    function success(status, message) {
-        show(status, message, 500);
+    function success(message) {
+        show("success", message, 500);
     }
-    function error(status, message) {
-        show(status, message, 5e3);
+    function error(message) {
+        show("error", message, 5e3);
     }
     return {
         success: success,

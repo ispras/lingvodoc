@@ -29293,11 +29293,11 @@ function responseHandler($timeout, $modal) {
             inst.dismiss();
         }, timeout);
     }
-    function success(status, message) {
-        show(status, message, 500);
+    function success(message) {
+        show("success", message, 500);
     }
-    function error(status, message) {
-        show(status, message, 5e3);
+    function error(message) {
+        show("error", message, 5e3);
     }
     return {
         success: success,
@@ -29313,7 +29313,7 @@ app.service("dictionaryService", lingvodocAPI);
 
 app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
 
-app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", function($scope, $http, $q, $modal, $log, dictionaryService) {
+app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
     var userId = $("#userId").data("lingvodoc");
     var languagesUrl = $("#languagesUrl").data("lingvodoc");
     var dictionariesUrl = $("#dictionariesUrl").data("lingvodoc");
@@ -29452,7 +29452,9 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
         };
         dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
             $scope.dictionaries = dictionaries;
-        }, function(reason) {});
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     };
     $scope.loadAvailableDictionaries = function() {
         var dictionaryQuery = {
@@ -29460,17 +29462,21 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
         };
         dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
             $scope.dictionaries = dictionaries;
-        }, function(reason) {});
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     };
     var dictionaryQuery = {
         author: userId
     };
     dictionaryService.getDictionariesWithPerspectives(dictionaryQuery).then(function(dictionaries) {
         $scope.dictionaries = dictionaries;
-    }, function(reason) {});
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
 } ]);
 
-app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.dictionary = params.dictionary;
     $scope.perspectives = [];
     $scope.perspective = {
@@ -29547,7 +29553,7 @@ app.controller("createPerspectiveController", [ "$scope", "$http", "$q", "$modal
     });
 } ]);
 
-app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.data = {};
     $scope.dictionaryProperties = {};
     $scope.languages = [];
@@ -29605,7 +29611,7 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
     };
 } ]);
 
-app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.dictionary = params.dictionary;
     $scope.perspective = {};
     $scope.addField = function() {
@@ -29646,7 +29652,7 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
     });
 } ]);
 
-app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.dictionary = params.dictionary;
     $scope.roles = {};
     $scope.userTable = [];
@@ -29769,10 +29775,12 @@ app.controller("editDictionaryRolesController", [ "$scope", "$http", "$q", "$mod
     dictionaryService.getDictionaryRoles($scope.dictionary).then(function(roles) {
         $scope.roles = roles;
         $scope.userTable = createUsersTable(roles);
+    }, function(reason) {
+        responseHandler.error(reason);
     });
 } ]);
 
-app.controller("editPerspectiveRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, params) {
+app.controller("editPerspectiveRolesController", [ "$scope", "$http", "$q", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.roles = {};
     $scope.userTable = [];
     $scope.searchQuery = "";
@@ -29904,5 +29912,7 @@ app.controller("editPerspectiveRolesController", [ "$scope", "$http", "$q", "$mo
     dictionaryService.getPerspectiveRoles(params.dictionary, params.perspective).then(function(roles) {
         $scope.roles = roles;
         $scope.userTable = createUsersTable(roles);
+    }, function(reason) {
+        responseHandler.error(reason);
     });
 } ]);
