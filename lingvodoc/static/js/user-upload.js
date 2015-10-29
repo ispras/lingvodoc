@@ -26947,6 +26947,40 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
     }
 });
 
+function responseHandler($timeout, $modal) {
+    function show(status, message, t) {
+        var timeout = t || 2e3;
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.ok = function() {
+                $modalInstance.close();
+            };
+        };
+        var inst = $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerModal.html",
+            controller: controller,
+            size: "sm",
+            backdrop: "static",
+            keyboard: false
+        });
+        $timeout(function() {
+            inst.dismiss();
+        }, timeout);
+    }
+    function success(status, message) {
+        show(status, message, 500);
+    }
+    function error(status, message) {
+        show(status, message, 5e3);
+    }
+    return {
+        success: success,
+        error: error
+    };
+}
+
 "use strict";
 
 angular.module("UserUploadModule", [ "ui.bootstrap" ]).directive("onReadFile", function($parse) {
@@ -26966,7 +27000,7 @@ angular.module("UserUploadModule", [ "ui.bootstrap" ]).directive("onReadFile", f
             });
         }
     };
-}).controller("UserUploadController", [ "$scope", "$http", "$modal", "$log", "$timeout", function($scope, $http, $modal, $log, $timeout) {
+}).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("UserUploadController", [ "$scope", "$http", "responseHandler", function($scope, $http, responseHandler) {
     var listBlobsUrl = $("#listBlobsUrl").data("lingvodoc");
     $scope.files = [];
     $scope.uploadMsg = false;
@@ -26983,12 +27017,16 @@ angular.module("UserUploadModule", [ "ui.bootstrap" ]).directive("onReadFile", f
         }).success(function() {
             loadBlobs();
             window.location = "/create_dictionary";
-        }).error(function() {});
+        }).error(function() {
+            responseHandler.error(reason);
+        });
     };
     var loadBlobs = function() {
         $http.get(listBlobsUrl).success(function(data, status, headers, config) {
             $scope.files = data;
-        }).error(function(data, status, headers, config) {});
+        }).error(function(data, status, headers, config) {
+            responseHandler.error(reason);
+        });
     };
     loadBlobs();
 } ]);

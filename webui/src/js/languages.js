@@ -2,7 +2,9 @@
 
 var app = angular.module('LanguagesModule', ['ui.bootstrap']);
 
-app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval', '$log', function($scope, $http, $modal, $interval, $log) {
+app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
+
+app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval', '$log', 'responseHandler', function($scope, $http, $modal, $interval, $log, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -28,11 +30,11 @@ app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval',
             $http.get(languagesUrl).success(function (data, status, headers, config) {
                 $scope.languages = data.languages;
             }).error(function (data, status, headers, config) {
-                // error handling
+                responseHandler.error(data);
             });
 
         }).error(function(data, status, headers, config) {
-            // error handling
+            responseHandler.error(data);
         });
     };
 
@@ -40,12 +42,11 @@ app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval',
     $http.get(languagesUrl).success(function(data, status, headers, config) {
         $scope.languages = data.languages;
 
-
         $interval(function() {
             $http.get(languagesUrl).success(function(data, status, headers, config) {
                 $scope.languages = data.languages;
             }).error(function(data, status, headers, config) {
-                // error handling
+                responseHandler.error(data);
             });
 
         }, 30000);
@@ -69,7 +70,7 @@ app.controller('LanguagesController', ['$scope', '$http', '$modal', '$interval',
     };
 }]);
 
-app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$modalInstance', function ($scope, $http, $interval, $modalInstance) {
+app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$modalInstance', 'responseHandler', function ($scope, $http, $interval, $modalInstance, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -137,7 +138,7 @@ app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$mo
     $http.get(languagesUrl).success(function (data, status, headers, config) {
         $scope.languages = flatLanguages(data.languages);
     }).error(function (data, status, headers, config) {
-        // error handling
+        responseHandler.error(data);
     });
 }]);
 

@@ -4,6 +4,8 @@ var app = angular.module('DashboardModule', ['ui.bootstrap']);
 
 app.service('dictionaryService', lingvodocAPI);
 
+app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
+
 app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log', 'dictionaryService', function ($scope, $http, $q, $modal, $log, dictionaryService) {
 
     var userId = $('#userId').data('lingvodoc');
@@ -151,7 +153,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
         dictionaryService.setPerspectiveStatus(dictionary, perspective, status).then(function(data) {
             perspective.status = status;
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
 
@@ -159,7 +161,7 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
         dictionaryService.setDictionaryStatus(dictionary, status).then(function(data) {
             dictionary.status = status;
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
 
@@ -251,7 +253,7 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
         dictionaryService.createPerspective($scope.dictionary, perspectiveObj, fields).then(function(perspective) {
             $modalInstance.close(perspective);
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
 
@@ -268,7 +270,7 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
                     dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
                         $scope.perspective.fields = fields;
                     }, function(reason) {
-                        $log.error(reason);
+                        responseHandler.error(reason);
                     });
                     break;
                 }
@@ -278,11 +280,8 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
 
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = perspectives;
-
-        $log.info(perspectives);
-
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 }]);
 
@@ -319,10 +318,10 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
             $scope.dictionaryProperties = dictionaryProperties;
             $scope.data.selectedLanguage = selectedLanguageCompositeId;
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
 
@@ -388,10 +387,10 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
             dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
                 $modalInstance.close();
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
     };
 
@@ -404,7 +403,7 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
         params.perspective['fields'] = fields;
         $scope.perspective = wrapPerspective(params.perspective);
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 }]);
 

@@ -77,6 +77,8 @@
 
 </div>
 
+<div metal:use-macro="load: response_handler.pt"></div>
+
 </body>
 
 </html>

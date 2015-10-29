@@ -5,6 +5,8 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
     .service('dictionaryService', lingvodocAPI)
 
+    .factory('responseHandler', ['$timeout', '$modal', responseHandler])
+
     .directive('wavesurfer', function() {
         return {
             restrict: 'E',
@@ -51,7 +53,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         };
     })
 
-    .controller('EditDictionaryController', ['$scope', '$http', '$window', '$modal', '$log', 'dictionaryService', function($scope, $http, $window, $modal, $log, dictionaryService) {
+    .controller('EditDictionaryController', ['$scope', '$http', '$window', '$modal', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $window, $modal, $log, dictionaryService, responseHandler) {
 
         var currentClientId = $('#clientId').data('lingvodoc');
         var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
@@ -110,7 +112,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 dictionaryService.getLexicalEntries($('#allLexicalEntriesUrl').data('lingvodoc'), (pageNumber - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
                     $scope.lexicalEntries = lexicalEntries;
                 }, function(reason) {
-                    $log.error(reason);
+                    responseHandler.error(reason);
                 });
             }
         };
@@ -178,7 +180,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 });
 
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -225,7 +227,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 $scope.disableInput(entry.client_id, entry.object_id, field.entity_type);
 
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -249,7 +251,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 }
 
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -425,36 +427,36 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             dictionaryService.getLexicalEntries($('#allLexicalEntriesUrl').data('lingvodoc'), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
                 $scope.lexicalEntries = lexicalEntries;
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
 
             dictionaryService.getPerspectiveById(perspectiveClientId, perspectiveId).then(function(p) {
                 $scope.perspective = p;
                 $scope.perspective['fields'] = fields;
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
 
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
 
         dictionaryService.getLexicalEntriesCount($('#allLexicalEntriesCountUrl').data('lingvodoc')).then(function(totalEntriesCount) {
             $scope.pageCount = Math.ceil(totalEntriesCount / $scope.pageSize);
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
 
         dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
             $scope.path = path;
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
 
     }])
 
 
-    .controller('AnnotationController', ['$scope', '$http', 'soundUrl', 'annotationUrl', function($scope, $http, soundUrl, annotationUrl) {
+    .controller('AnnotationController', ['$scope', '$http', 'responseHandler', 'soundUrl', 'annotationUrl', function($scope, $http, responseHandler, soundUrl, annotationUrl) {
 
         var activeUrl = null;
 
@@ -573,7 +575,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
     }])
 
 
-    .controller('editGroupController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'groupParams', function($scope, $http, $modalInstance, $log, dictionaryService, groupParams) {
+    .controller('editGroupController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
 
         var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
         var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
@@ -782,7 +784,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 $scope.disableInput(entry.client_id, entry.row_id, field.entity_type);
 
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -805,7 +807,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 }
 
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -819,7 +821,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
     }])
 
-    .controller('editGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, groupParams) {
+    .controller('editGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
 
         var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
         var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
@@ -894,7 +896,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             dictionaryService.linkEntries(groupParams.entry, entry, 'Etymology').then(function(data) {
                 $scope.connectedEntries.push(entry);
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -933,7 +935,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 $scope.suggestedEntries = suggestedEntries;
 
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
 
         }, true);
@@ -959,7 +961,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         });
 
     }])
-    .controller('mergeEntriesController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'params', function($scope, $http, $modalInstance, $q, $log, dictionaryService, params) {
+    .controller('mergeEntriesController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, params) {
 
         $scope.perspective = params.perspective;
         $scope.suggestions = [];
@@ -984,7 +986,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 .then(function (r) {
                     nextSuggestedEntries();
                 }, function (reason) {
-                    $log.error(reason);
+                    responseHandler.error(reason);
                 });
         };
 
@@ -1049,7 +1051,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             $scope.suggestions = suggestions;
             nextSuggestedEntries();
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
 
     }]);
