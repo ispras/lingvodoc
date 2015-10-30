@@ -2647,7 +2647,7 @@ def lexical_entries_all(request):
                 .filter(LexicalEntry.parent == parent) \
                 .group_by(LexicalEntry) \
                 .join(LevelOneEntity) \
-                .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, u"\u9999")], else_=LevelOneEntity.content))) \
+                .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
                 .offset(start_from).limit(count)
 
             result = deque()
@@ -2698,6 +2698,7 @@ def lexical_entries_published(request):
     if parent:
         if not parent.marked_for_deletion:
             # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
+            # NOTE: IMPORTANT: 'яяяяя' is a hack - something wrong with postgres collation if we use \uffff
             lexes = DBSession.query(LexicalEntry) \
                 .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
                 .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
@@ -2706,14 +2707,14 @@ def lexical_entries_published(request):
                 .options(joinedload('publishleveltwoentity')) \
                 .options(joinedload('publishgroupingentity')) \
                 .filter(LexicalEntry.parent == parent) \
-                .group_by(LexicalEntry) \
+                .group_by(LexicalEntry, LevelOneEntity.content) \
                 .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
                                            LevelOneEntity.parent_object_id == LexicalEntry.object_id,
                                            LevelOneEntity.marked_for_deletion == False)) \
-                .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.parent_client_id == LevelOneEntity.client_id,
+                .outerjoin(PublishLevelOneEntity, and_(PublishLevelOneEntity.parent_client_id == LevelOneEntity.client_id,
                                                   PublishLevelOneEntity.parent_object_id == LevelOneEntity.object_id,
                                                   PublishLevelOneEntity.marked_for_deletion == False)) \
-                .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, u"\u9999")], else_=LevelOneEntity.content))) \
+                .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
                 .offset(start_from).limit(count)
 
             result = deque()
