@@ -4,7 +4,7 @@ from pyramid.view import view_config
 
 from sqlalchemy.exc import DBAPIError
 
-from .scripts.lingvodoc_converter import convert_one
+from .scripts.lingvodoc_converter_new import convert_one, get_dict_attributes
 
 from .models import (
     DBSession,
@@ -99,6 +99,37 @@ class CommonException(Exception):
 
     def __str__(self):
         return repr(self.value)
+
+
+@view_config(route_name='entity_metadata_search', renderer='json', request_method='GET')
+def entity_metadata_search(request):
+    # TODO: add same check for permission as in basic_search
+    # TODO: add filters to search in only one perspective
+    searchstring = request.params.get('searchstring')
+    searchtype = request.params.get('searchtype')
+    client_id = request.params.get('perspective_client_id')
+    object_id = request.params.get('perspective_object_id')
+    results_cursor = DBSession.query(LevelOneEntity)\
+        .filter(LevelOneEntity.entity_type == searchtype,
+                LevelOneEntity.additional_metadata.like('%'+searchstring+'%'))\
+        .all()
+    results_cursor += DBSession.query(LevelTwoEntity)\
+        .filter(LevelTwoEntity.entity_type == searchtype,
+                LevelTwoEntity.additional_metadata.like('%'+searchstring+'%'))\
+        .all()
+    results = []
+    entries = set()
+    for item in results_cursor:
+        entries.add(item)
+    for entry in entries:
+        if not entry.marked_for_deletion:
+            result = dict()
+            result['level'] = str(type(entry)).lower()
+            result['client_id'] = entry.client_id
+            result['object_id'] = entry.object_id
+            result['additional_metadata'] = entry.additional_metadata
+            results.append(result)
+    return results
 
 
 @view_config(route_name='basic_search_old', renderer='json', request_method='GET')
@@ -215,6 +246,83 @@ def convert_dictionary(request):
                                                           user.password.hash,
                                                           parent_client_id,
                                                           parent_object_id))
+    log.debug("Conversion started")
+    p.start()
+    request.response.status = HTTPOk.code
+    return {"status": "Your dictionary is being converted."
+                      " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
+
+
+@view_config(route_name='convert_dictionary_check', renderer='json', request_method='POST')
+def convert_dictionary_check(request):
+    import sqlite3
+    req = request.json_body
+
+    client_id = req['blob_client_id']
+    object_id = req['blob_object_id']
+    # parent_client_id = req['parent_client_id']
+    # parent_object_id = req['parent_object_id']
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    user = client.user
+
+    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+    filename = blob.real_storage_path
+    sqconn = sqlite3.connect(filename)
+    res = get_dict_attributes(sqconn)
+    dialeqt_id = res['dialeqt_id']
+    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.import_hash == dialeqt_id).all()
+    perspectives = []
+    for perspective in persps:
+        path = request.route_url('perspective',
+                                 dictionary_client_id=perspective.parent_client_id,
+                                 dictionary_object_id=perspective.parent_object_id,
+                                 perspective_client_id=perspective.client_id,
+                                 perspective_id=perspective.object_id)
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            perspectives += [resp.json]
+    request.response.status = HTTPOk.code
+    return perspectives
+
+
+#TODO: make it normal, it's just a test
+@view_config(route_name='convert_dictionary_new', renderer='json', request_method='POST')
+def convert_dictionary_new(request):
+    req = request.json_body
+
+    client_id = req['blob_client_id']
+    object_id = req['blob_object_id']
+    parent_client_id = req['parent_client_id']
+    parent_object_id = req['parent_object_id']
+    dictionary_client_id = req.get('dictionary_client_id')
+    dictionary_object_id = req.get('dictionary_object_id')
+    perspective_client_id = req.get('perspective_client_id')
+    perspective_object_id = req.get('perspective_object_id')
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    user = client.user
+
+    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+
+    # convert_one(blob.real_storage_path,
+    #             user.login,
+    #             user.password.hash,
+    #             parent_client_id,
+    #             parent_object_id)
+
+    # NOTE: doesn't work on Mac OS otherwise
+
+    p = multiprocessing.Process(target=convert_one, args=(blob.real_storage_path,
+                                                          user.login,
+                                                          user.password.hash,
+                                                          parent_client_id,
+                                                          parent_object_id,
+                                                          dictionary_client_id,
+                                                          dictionary_object_id,
+                                                          perspective_client_id,
+                                                          perspective_object_id))
     log.debug("Conversion started")
     p.start()
     request.response.status = HTTPOk.code
