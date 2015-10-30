@@ -304,6 +304,10 @@ def configure_routes(config):
     # like
     config.add_route(name='basic_search', pattern='/basic_search')
 
+    # API #GET
+    # like
+    config.add_route(name='basic_search_old', pattern='/basic_search_old')
+
 
     # API #POST
     # no parameters needed.

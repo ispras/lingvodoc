@@ -27170,7 +27170,9 @@ app.directive("suggestion", function() {
 
 var app = angular.module("LanguagesModule", [ "ui.bootstrap" ]);
 
-app.controller("LanguagesController", [ "$scope", "$http", "$modal", "$interval", "$log", function($scope, $http, $modal, $interval, $log) {
+app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
+
+app.controller("LanguagesController", [ "$scope", "$http", "$modal", "$interval", "$log", "responseHandler", function($scope, $http, $modal, $interval, $log, responseHandler) {
     var clientId = $("#clientId").data("lingvodoc");
     var userId = $("#userId").data("lingvodoc");
     var languagesUrl = $("#languagesUrl").data("lingvodoc");
@@ -27191,8 +27193,12 @@ app.controller("LanguagesController", [ "$scope", "$http", "$modal", "$interval"
         $http.post(createLanguageUrl, lang).success(function(data, status, headers, config) {
             $http.get(languagesUrl).success(function(data, status, headers, config) {
                 $scope.languages = data.languages;
-            }).error(function(data, status, headers, config) {});
-        }).error(function(data, status, headers, config) {});
+            }).error(function(data, status, headers, config) {
+                responseHandler.error(data);
+            });
+        }).error(function(data, status, headers, config) {
+            responseHandler.error(data);
+        });
     };
     $scope.languages = [];
     $http.get(languagesUrl).success(function(data, status, headers, config) {
@@ -27200,7 +27206,9 @@ app.controller("LanguagesController", [ "$scope", "$http", "$modal", "$interval"
         $interval(function() {
             $http.get(languagesUrl).success(function(data, status, headers, config) {
                 $scope.languages = data.languages;
-            }).error(function(data, status, headers, config) {});
+            }).error(function(data, status, headers, config) {
+                responseHandler.error(data);
+            });
         }, 3e4);
     }).error(function(data, status, headers, config) {});
     $scope.createLanguage = function() {
@@ -27216,7 +27224,7 @@ app.controller("LanguagesController", [ "$scope", "$http", "$modal", "$interval"
     };
 } ]);
 
-app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$modalInstance", function($scope, $http, $interval, $modalInstance) {
+app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$modalInstance", "responseHandler", function($scope, $http, $interval, $modalInstance, responseHandler) {
     var clientId = $("#clientId").data("lingvodoc");
     var userId = $("#userId").data("lingvodoc");
     var languagesUrl = $("#languagesUrl").data("lingvodoc");
@@ -27270,5 +27278,41 @@ app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$m
     };
     $http.get(languagesUrl).success(function(data, status, headers, config) {
         $scope.languages = flatLanguages(data.languages);
-    }).error(function(data, status, headers, config) {});
+    }).error(function(data, status, headers, config) {
+        responseHandler.error(data);
+    });
 } ]);
+
+function responseHandler($timeout, $modal) {
+    function show(status, message, t) {
+        var timeout = t || 2e3;
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.ok = function() {
+                $modalInstance.close();
+            };
+        };
+        var inst = $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerModal.html",
+            controller: controller,
+            size: "sm",
+            backdrop: "static",
+            keyboard: false
+        });
+        $timeout(function() {
+            inst.dismiss();
+        }, timeout);
+    }
+    function success(message) {
+        show("success", message, 500);
+    }
+    function error(message) {
+        show("error", message, 5e3);
+    }
+    return {
+        success: success,
+        error: error
+    };
+}

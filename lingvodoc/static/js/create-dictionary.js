@@ -31013,9 +31013,9 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var search = function(query) {
+    var search = function(query, tagsOnly) {
         var deferred = $q.defer();
-        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query);
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent((!!tagsOnly).toString());
         $http.get(url).success(function(data, status, headers, config) {
             var r = data.map(function(e) {
                 var perspective = lingvodoc.Perspective.fromJS(e);
@@ -31718,6 +31718,40 @@ function lingvodocAPI($http, $q) {
     };
 }
 
+function responseHandler($timeout, $modal) {
+    function show(status, message, t) {
+        var timeout = t || 2e3;
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.ok = function() {
+                $modalInstance.close();
+            };
+        };
+        var inst = $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerModal.html",
+            controller: controller,
+            size: "sm",
+            backdrop: "static",
+            keyboard: false
+        });
+        $timeout(function() {
+            inst.dismiss();
+        }, timeout);
+    }
+    function success(message) {
+        show("success", message, 500);
+    }
+    function error(message) {
+        show("error", message, 5e3);
+    }
+    return {
+        success: success,
+        error: error
+    };
+}
+
 var app = angular.module("CreateDictionaryModule", [ "ui.router", "ngAnimate", "ui.bootstrap", "autocomplete" ]);
 
 app.service("dictionaryService", lingvodocAPI);
@@ -31740,7 +31774,9 @@ app.config(function($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise("/create/step1");
 });
 
-app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$interval", "$state", "$location", "$log", "dictionaryService", function($scope, $http, $modal, $interval, $state, $location, $log, dictionaryService) {
+app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
+
+app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$interval", "$state", "$location", "$log", "dictionaryService", "responseHandler", function($scope, $http, $modal, $interval, $state, $location, $log, dictionaryService, responseHandler) {
     var clientId = $("#clientId").data("lingvodoc");
     var userId = $("#userId").data("lingvodoc");
     var languagesUrl = $("#languagesUrl").data("lingvodoc");
@@ -31947,7 +31983,7 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
                     dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
                         $scope.perspective.fields = fields;
                     }, function(reason) {
-                        $log.error(reason);
+                        responseHandler.error(reason);
                     });
                     break;
                 }
@@ -31957,13 +31993,13 @@ app.controller("CreateDictionaryController", [ "$scope", "$http", "$modal", "$in
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = perspectives;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
     loadLanguages();
     loadBlobs();
 } ]);
 
-app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$modalInstance", function($scope, $http, $interval, $modalInstance) {
+app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$modalInstance", "responseHandler", function($scope, $http, $interval, $modalInstance, responseHandler) {
     var clientId = $("#clientId").data("lingvodoc");
     var userId = $("#userId").data("lingvodoc");
     var languagesUrl = $("#languagesUrl").data("lingvodoc");

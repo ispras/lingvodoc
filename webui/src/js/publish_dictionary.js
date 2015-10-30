@@ -2,6 +2,8 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
 
     .service('dictionaryService', lingvodocAPI)
 
+    .factory('responseHandler', ['$timeout', '$modal', responseHandler])
+
     .directive('wavesurfer', function() {
         return {
             restrict: 'E',
@@ -48,7 +50,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
         };
     })
 
-    .controller('PublishDictionaryController', ['$scope', '$window', '$http', '$modal', '$location', '$log', 'dictionaryService', function($scope, $window, $http, $modal, $location, $log, dictionaryService) {
+    .controller('PublishDictionaryController', ['$scope', '$window', '$http', '$modal', '$location', '$log', 'dictionaryService', 'responseHandler', function($scope, $window, $http, $modal, $location, $log, dictionaryService, responseHandler) {
 
 
         var currentClientId = $('#clientId').data('lingvodoc');
@@ -106,7 +108,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
                 dictionaryService.getLexicalEntries($('#allLexicalEntriesUrl').data('lingvodoc'), (pageNumber - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
                     $scope.lexicalEntries = lexicalEntries;
                 }, function(reason) {
-                    $log.error(reason);
+                    responseHandler.error(reason);
                 });
             }
         };
@@ -134,7 +136,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
             dictionaryService.approve(url, { 'entities': [obj] }, approved).then(function(data) {
                 fieldValue['published'] = approved;
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -157,7 +159,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
                     window.location = '/dashboard';
 
                 }, function(reason) {
-                    $log.error(reason);
+                    responseHandler.error(reason);
                 });
 
                 alert('Approval is in progress. Please, don\'t close the page until it is complete. You will be redirected automatically.');
@@ -277,23 +279,29 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
             dictionaryService.getLexicalEntries($('#allLexicalEntriesUrl').data('lingvodoc'), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
                 $scope.lexicalEntries = lexicalEntries;
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
 
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
 
         dictionaryService.getLexicalEntriesCount($('#allLexicalEntriesCountUrl').data('lingvodoc')).then(function(totalEntriesCount) {
             $scope.pageCount = Math.ceil(totalEntriesCount / $scope.pageSize);
         }, function(reason) {
-            $log.error(reason);
+            responseHandler.error(reason);
         });
 
+
+        dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
+            $scope.path = path;
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     }])
 
 
-    .controller('AnnotationController', ['$scope', '$http', 'soundUrl', 'annotationUrl', function($scope, $http, soundUrl, annotationUrl) {
+    .controller('AnnotationController', ['$scope', '$http', 'soundUrl', 'responseHandler', 'annotationUrl', function($scope, $http, soundUrl, responseHandler, annotationUrl) {
 
         var activeUrl = null;
 
@@ -412,7 +420,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
     }])
 
 
-    .controller('viewGroupController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'groupParams', function($scope, $http, $modalInstance, $log, dictionaryService, groupParams) {
+    .controller('viewGroupController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
 
         var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
         var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
@@ -525,7 +533,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
             dictionaryService.approve(url, { 'entities': [obj] }, approved).then(function(data) {
                 fieldValue['published'] = approved;
             }, function(reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
         };
 
@@ -548,7 +556,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
 
     }])
 
-    .controller('viewGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, groupParams) {
+    .controller('viewGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
 
         var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
         var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
@@ -560,8 +568,6 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
         $scope.fields = groupParams.fields;
         $scope.connectedEntries = [];
         $scope.suggestedEntries = [];
-
-        $scope.searchQuery = '';
 
         $scope.fieldsIdx = [];
         for (var k = 0; k < $scope.fields.length; k++) {

@@ -30,7 +30,9 @@ app.config(function ($stateProvider, $urlRouterProvider) {
     $urlRouterProvider.otherwise('/create/step1');
 });
 
-app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$location', '$log', 'dictionaryService', function ($scope, $http, $modal, $interval, $state, $location, $log, dictionaryService) {
+app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
+
+app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$location', '$log', 'dictionaryService', 'responseHandler', function ($scope, $http, $modal, $interval, $state, $location, $log, dictionaryService, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -40,8 +42,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     var allPerspectivesUrl = $('#allPerspectivesUrl').data('lingvodoc');
     var perspectiveFieldsUrl = '/dictionary';
     var listBlobsUrl = $('#listBlobsUrl').data('lingvodoc');
-
-
 
     $scope.wizard = {
         'mode': 'create',
@@ -307,7 +307,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                     dictionaryService.getPerspectiveFieldsNew($scope.perspective).then(function(fields) {
                         $scope.perspective.fields = fields;
                     }, function(reason) {
-                        $log.error(reason);
+                        responseHandler.error(reason);
                     });
                     break;
                 }
@@ -318,7 +318,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = perspectives;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
 
@@ -327,7 +327,7 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
 }]);
 
 
-app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$modalInstance', function ($scope, $http, $interval, $modalInstance) {
+app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$modalInstance', 'responseHandler', function ($scope, $http, $interval, $modalInstance, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');

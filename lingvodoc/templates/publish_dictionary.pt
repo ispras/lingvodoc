@@ -45,6 +45,16 @@
 
 <div class="container-fluid" style="padding-top: 20px" ng-controller="PublishDictionaryController" ng-cloak>
 
+    <div class="row">
+        <h4>
+            <span ng-repeat-start="e in path.slice().reverse()">
+                <span>{{ e.translation_string }}</span>
+            </span>
+            <span ng-repeat-end="" ng-if="$index < (path.length-1)">&gt;&gt;</span>
+        </h4>
+    </div>
+
+
     <br>
 
     <div class="row" style="margin: 30px 0">
@@ -547,6 +557,8 @@
     </div>
 
 </script>
+
+<div metal:use-macro="load: response_handler.pt"></div>
 
 </body>
 </html>
