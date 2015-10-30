@@ -12,8 +12,6 @@ from .acl import (
     groupfinder
 )
 
-from .acl import DummyDeny
-
 from configparser import ConfigParser
 
 def configure_routes(config):

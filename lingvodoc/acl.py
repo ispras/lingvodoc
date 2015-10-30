@@ -1,12 +1,10 @@
-from pyramid.security import Allow, Deny, Authenticated, Everyone
+from pyramid.security import Allow, Deny, Everyone
 
 from .models import (
     DBSession,
-    Dictionary,
     User,
     Client,
     Group,
-    BaseGroup
     )
 
 from pyramid.security import forget
@@ -63,32 +61,5 @@ def groupfinder(client_id, request):
                 group_name = base_group.action + ":" + base_group.subject \
                              + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
             grouplist.append(group_name)
-    log.error("GROUPLIST: %d, %s", len(grouplist), grouplist)
+    log.debug("GROUPLIST: %d, %s", len(grouplist), grouplist)
     return grouplist
-
-
-class DummyDeny(object):
-    def __init__(self, request):
-        try:
-            client_id = request.authenticated_userid
-            if not client_id:
-                print("Not authorized")
-                return
-            client = DBSession.query(Client).filter_by(id=client_id).first()
-            user = DBSession.query(User).filter_by(id=client.user_id).first()
-            dictionary_client_id = request.matchdict['client_id']
-            dictionary_id = request.matchdict['dictionary_id']
-            self.__acl__ = [
-                (Allow, 'can_add_words:' + str(dictionary_id) + ':' + str(dictionary_client_id), 'edit'),
-                (Deny, Everyone, 'edit')
-            ]
-        except KeyError as e:
-            print("Not authorized", str(e))
-
-
-# class Article(object):
-#     def __init__(self, request):
-#         matchdict = request.matchdict
-#         article = matchdict.get('article', None)
-#         if article == '1':
-#             self.__acl__ = [ (Allow, 'editor', 'view') ]
