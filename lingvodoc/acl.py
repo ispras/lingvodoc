@@ -20,22 +20,29 @@ log = logging.getLogger(__name__)
 def groupfinder(client_id, request):
     if not client_id:
         return None
+
     try:
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        user = DBSession.query(User)\
-            .options(joinedload('groups').joinedload('BaseGroup'))\
-            .options(joinedload('organizations').joinedload('groups').joinedload('BaseGroup'))\
-            .filter_by(id=client.user_id).first()
+        user = DBSession.query(User) \
+                        .options(joinedload('groups').joinedload('BaseGroup')) \
+                        .options(joinedload('organizations').joinedload('groups').joinedload('BaseGroup')) \
+                        .join(Client) \
+                        .filter(Client.id == client_id).first()
+
+        groups = DBSession.query(Group)\
+            .options(joinedload('BaseGroup')) \
+            .filter(Group.users.contains(user)).all()
+
     except AttributeError as e:
-        forget(request)
-        return None
+            forget(request)
+            return None
+
     if not user:
         return None
 
     grouplist = []
     if user.id == 1:
         grouplist.append('Admin')
-    for group in user.groups:
+    for group in groups:
         base_group = group.BaseGroup
         if group.subject_override:
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
@@ -56,7 +63,7 @@ def groupfinder(client_id, request):
                 group_name = base_group.action + ":" + base_group.subject \
                              + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
             grouplist.append(group_name)
-    log.debug("GROUPLIST: %s", grouplist)
+    log.error("GROUPLIST: %d, %s", len(grouplist), grouplist)
     return grouplist
 
 
