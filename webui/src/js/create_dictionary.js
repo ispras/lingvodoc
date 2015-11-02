@@ -77,7 +77,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         }
     };
 
-
     // Data loaded from backend
     $scope.languages = [];
     $scope.perspectives = [];
@@ -93,6 +92,12 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     // current perspective
     $scope.perspective = {
         fields: []
+    };
+
+    $scope.controls = {
+        'createDictionary': true,
+        'createPerspective': true,
+        'saveDictionary': true
     };
 
     // Event handlers
@@ -164,18 +169,23 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                 'translation': $scope.dictionaryData.name
             };
 
+            $scope.controls.createDictionary = false;
+
             $http.post(createDictionaryUrl, dictionaryObj).success(function (data, status, headers, config) {
 
                 if (data.object_id && data.client_id) {
                     $scope.dictionaryData.dictionary_client_id = data.client_id;
                     $scope.dictionaryData.dictionary_object_id = data.object_id;
+                    $scope.controls.createDictionary = true;
                     $state.go('create.step2');
                 } else {
-                    alert('Failed to create dictionary!');
+                    responseHandler.error('Failed to create dictionary!');
                 }
+                $scope.controls.createDictionary = true;
 
             }).error(function (data, status, headers, config) {
-                alert('Failed to create dictionary!');
+                $scope.controls.createDictionary = true;
+                responseHandler.error('Failed to create dictionary!');
             });
         }
 
@@ -183,6 +193,8 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         if ($scope.wizard.mode == 'import') {
 
             if (typeof $scope.wizard.importedDictionaryId == 'string') {
+
+                $scope.controls.createDictionary = false;
 
                 var ids = $scope.wizard.importedDictionaryId.split('_');
                 var url = $('#convertUrl').data('lingvodoc');
@@ -193,11 +205,12 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                     'parent_object_id': language.object_id
                 };
 
-
                 $http.post(url, convertObject).success(function (data, status, headers, config) {
-                    alert(data.status);
+                    $scope.controls.createDictionary = true;
+                    responseHandler.success(data.status);
                 }).error(function (data, status, headers, config) {
-
+                    $scope.controls.createDictionary = true;
+                    responseHandler.error(data);
                 });
             }
         }
@@ -217,6 +230,8 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
             'is_template': $scope.dictionaryData.isTemplate
         };
 
+        $scope.controls.createPerspective = false;
+
         $http.post(createPerspectiveUrl, perspectiveObj).success(function(data, status, headers, config) {
 
             if (data.object_id && data.client_id) {
@@ -225,17 +240,21 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
                 var setFieldsUrl = '/dictionary/' + encodeURIComponent($scope.dictionaryData.dictionary_client_id) + '/' + encodeURIComponent($scope.dictionaryData.dictionary_object_id) + '/perspective/' + encodeURIComponent($scope.dictionaryData.perspective_client_id) + '/' + encodeURIComponent($scope.dictionaryData.perspective_object_id) + '/fields';
 
                 $http.post(setFieldsUrl, exportPerspective($scope.perspective)).success(function(data, status, headers, config) {
+                    $scope.controls.createPerspective = true;
                     window.location = '/dashboard';
                 }).error(function(data, status, headers, config) {
-                    alert('Failed to create perspective!');
+                    $scope.controls.createPerspective = true;
+                    responseHandler.error('Failed to create perspective!');
                 });
 
             } else {
-                alert('Failed to create perspective!');
+                $scope.controls.createPerspective = true;
+                responseHandler.error('Failed to create perspective!');
             }
 
         }).error(function(data, status, headers, config) {
-            alert('Failed to create perspective!');
+            $scope.controls.createPerspective = true;
+            responseHandler.error('Failed to create perspective!');
         });
 
     };

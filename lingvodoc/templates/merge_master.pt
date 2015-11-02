@@ -90,9 +90,9 @@
                 <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
             </a>
 
-            <a href="#" class="btn btn-primary" ng-click="selectSource()">
+            <button class="btn btn-primary" ng-click="selectSource()">
                 Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
-            </a>
+            </button>
 
         </div>
     </div>
@@ -135,9 +135,9 @@
                 <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
             </a>
 
-            <a class="btn btn-primary" ng-click="startMergeDictionaries()">
+            <button class="btn btn-primary" ng-click="startMergeDictionaries()" ng-disabled="!master.controls.startMergeDictionaries">
                 Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
-            </a>
+            </button>
         </div>
     </div>
 
@@ -183,9 +183,9 @@
                 <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
             </a>
 
-            <a class="btn btn-primary" ng-click="startMergePerspectives()">
+            <button class="btn btn-primary" ng-click="startMergePerspectives()" ng-click="!master.controls.startMergePerspectives">
                 Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
-            </a>
+            </button>
         </div>
     </div>
 
@@ -330,9 +330,9 @@
                 <span class="glyphicon glyphicon-circle-arrow-left"></span> Back
             </a>
 
-            <a class="btn btn-primary" ng-click="commitPerspective()">
+            <button class="btn btn-primary" ng-click="commitPerspective()" ng-disabled="!master.controls.commitPerspective">
                 Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
-            </a>
+            </button>
         </div>
     </div>
 

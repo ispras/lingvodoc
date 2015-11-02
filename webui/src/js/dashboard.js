@@ -212,6 +212,10 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
     $scope.perspective = { 'fields': [] };
     $scope.isTemplate = false;
 
+    $scope.controls = {
+        'ok': true
+    };
+
     $scope.addField = function () {
         $scope.perspective.fields.push({'entity_type': '', 'entity_type_translation': '', 'data_type': 'text', 'data_type_translation': 'text', 'status': 'enabled'});
     };
@@ -249,10 +253,14 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
             'translation': $scope.perspectiveName,
             'is_template': $scope.isTemplate
         };
+
+        $scope.controls.ok = false;
         var fields = exportPerspective($scope.perspective);
         dictionaryService.createPerspective($scope.dictionary, perspectiveObj, fields).then(function(perspective) {
+            $scope.controls.ok = true;
             $modalInstance.close(perspective);
         }, function(reason) {
+            $scope.controls.ok = true;
             responseHandler.error(reason);
         });
     };
@@ -367,6 +375,10 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     $scope.dictionary = params.dictionary;
     $scope.perspective = {};
 
+    $scope.controls = {
+        'ok': true
+    };
+
     $scope.addField = function () {
         $scope.perspective.fields.push({'entity_type': '', 'data_type': 'text', 'status': 'enabled'});
     };
@@ -382,14 +394,18 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     };
 
     $scope.ok = function() {
+        $scope.controls.ok = false;
         dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
             var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
             dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
+                $scope.controls.ok = true;
                 $modalInstance.close();
             }, function(reason) {
+                $scope.controls.ok = true;
                 responseHandler.error(reason);
             });
         }, function(reason) {
+            $scope.controls.ok = true;
             responseHandler.error(reason);
         });
     };

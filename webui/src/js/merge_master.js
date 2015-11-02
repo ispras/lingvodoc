@@ -72,6 +72,12 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
         'suggestedLexicalEntries': []
     };
 
+    $scope.master.controls = {
+        'startMergeDictionaries': true,
+        'startMergePerspectives': true,
+        'commitPerspective': true
+    };
+
 
     var wrapFields = function(fields) {
         angular.forEach(fields, function(field) {
@@ -188,6 +194,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             return;
         }
 
+        $scope.master.controls.startMergeDictionaries = false;
+
         if ($scope.master.selectedSourceDictionary1 instanceof lingvodoc.Dictionary &&
             $scope.master.selectedSourceDictionary2 instanceof lingvodoc.Dictionary) {
 
@@ -196,8 +204,10 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 $scope.master.selectedSourceDictionary1,
                 $scope.master.selectedSourceDictionary2
             ).then(function(result) {
+                    $scope.master.controls.startMergeDictionaries = true;
                     $state.go('merge.perspectiveFinished');
                 }, function(reason) {
+                    $scope.master.controls.startMergeDictionaries = true;
                     responseHandler.error(reason);
                 });
 
@@ -213,6 +223,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 return;
             }
 
+            $scope.master.controls.startMergePerspectives = false;
+
             var p1 = $scope.master.perspective1;
             var url1 = '/dictionary/' + p1.parent_client_id + '/' + p1.parent_object_id + '/perspective/' + p1.client_id + '/' + p1.object_id + '/fields';
             var p2 = $scope.master.perspective2;
@@ -222,6 +234,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
 
                 dictionaryService.getPerspectiveFields(url2).then(function(fields2) {
 
+                    $scope.master.controls.startMergePerspectives = true;
+
                     $scope.master.fields1 = wrapFields(fields1);
                     $scope.master.fields2 = wrapFields(fields2);
 
@@ -230,11 +244,13 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                     $state.go('merge.perspectives');
 
                 }, function(reason) {
-
+                    responseHandler.error(reason);
+                    $scope.master.controls.startMergePerspectives = true;
                 });
 
             }, function(reason) {
-
+                responseHandler.error(reason);
+                $scope.master.controls.startMergePerspectives = true;
             });
 
 
@@ -249,6 +265,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             alert('Please, specify perspective name.');
             return;
         }
+
+        $scope.master.controls.commitPerspective = false;
 
         var updateFields1 = unwrapFields($scope.master.fields1);
         var updateFields2 = unwrapFields($scope.master.fields2);
@@ -272,6 +290,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             ]
         };
 
+        $scope.master.controls.commitPerspective = false;
+
         dictionaryService.mergePerspectives(req).then(function(obj) {
             $scope.master.mergedPerspectiveObject = obj;
 
@@ -280,6 +300,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 $scope.master.mergedPerspectiveFields = fields;
 
                 dictionaryService.mergeSuggestions(obj).then(function(suggestions) {
+
+                    $scope.master.controls.commitPerspective = true;
 
                     if (suggestions.length > 0) {
                         $scope.master.suggestions = suggestions;
@@ -291,16 +313,18 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                     }
 
                 }, function(reason) {
+                    $scope.master.controls.commitPerspective = true;
                     responseHandler.error(reason);
                 });
 
             }, function(reason) {
+                $scope.master.controls.commitPerspective = true;
                 responseHandler.error(reason);
             });
 
-
         }, function(reason) {
-
+            $scope.master.controls.commitPerspective = true;
+            responseHandler.error(reason);
         });
     };
 

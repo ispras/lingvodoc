@@ -29213,6 +29213,11 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
         suggestions: [],
         suggestedLexicalEntries: []
     };
+    $scope.master.controls = {
+        startMergeDictionaries: true,
+        startMergePerspectives: true,
+        commitPerspective: true
+    };
     var wrapFields = function(fields) {
         angular.forEach(fields, function(field) {
             field._statusEnabled = field.status == "enabled";
@@ -29306,10 +29311,13 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
             alert("Please, specify new dictionary name!");
             return;
         }
+        $scope.master.controls.startMergeDictionaries = false;
         if ($scope.master.selectedSourceDictionary1 instanceof lingvodoc.Dictionary && $scope.master.selectedSourceDictionary2 instanceof lingvodoc.Dictionary) {
             dictionaryService.mergeDictionaries($scope.master.mergedDictionaryName, $scope.master.mergedDictionaryName, $scope.master.selectedSourceDictionary1, $scope.master.selectedSourceDictionary2).then(function(result) {
+                $scope.master.controls.startMergeDictionaries = true;
                 $state.go("merge.perspectiveFinished");
             }, function(reason) {
+                $scope.master.controls.startMergeDictionaries = true;
                 responseHandler.error(reason);
             });
         }
@@ -29320,18 +29328,26 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
                 alert("Please, select 2 different perspectives");
                 return;
             }
+            $scope.master.controls.startMergePerspectives = false;
             var p1 = $scope.master.perspective1;
             var url1 = "/dictionary/" + p1.parent_client_id + "/" + p1.parent_object_id + "/perspective/" + p1.client_id + "/" + p1.object_id + "/fields";
             var p2 = $scope.master.perspective2;
             var url2 = "/dictionary/" + p2.parent_client_id + "/" + p2.parent_object_id + "/perspective/" + p2.client_id + "/" + p2.object_id + "/fields";
             dictionaryService.getPerspectiveFields(url1).then(function(fields1) {
                 dictionaryService.getPerspectiveFields(url2).then(function(fields2) {
+                    $scope.master.controls.startMergePerspectives = true;
                     $scope.master.fields1 = wrapFields(fields1);
                     $scope.master.fields2 = wrapFields(fields2);
                     createPreview($scope.master.fields1, $scope.master.fields2);
                     $state.go("merge.perspectives");
-                }, function(reason) {});
-            }, function(reason) {});
+                }, function(reason) {
+                    responseHandler.error(reason);
+                    $scope.master.controls.startMergePerspectives = true;
+                });
+            }, function(reason) {
+                responseHandler.error(reason);
+                $scope.master.controls.startMergePerspectives = true;
+            });
         } else {
             $log.error("");
         }
@@ -29341,6 +29357,7 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
             alert("Please, specify perspective name.");
             return;
         }
+        $scope.master.controls.commitPerspective = false;
         var updateFields1 = unwrapFields($scope.master.fields1);
         var updateFields2 = unwrapFields($scope.master.fields2);
         var req = {
@@ -29358,12 +29375,14 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
                 fields: updateFields2
             } ]
         };
+        $scope.master.controls.commitPerspective = false;
         dictionaryService.mergePerspectives(req).then(function(obj) {
             $scope.master.mergedPerspectiveObject = obj;
             var url = "/dictionary/" + $scope.master.selectedSourceDictionary.client_id + "/" + $scope.master.selectedSourceDictionary.object_id + "/perspective/" + obj.client_id + "/" + obj.object_id + "/fields";
             dictionaryService.getPerspectiveDictionaryFields(url).then(function(fields) {
                 $scope.master.mergedPerspectiveFields = fields;
                 dictionaryService.mergeSuggestions(obj).then(function(suggestions) {
+                    $scope.master.controls.commitPerspective = true;
                     if (suggestions.length > 0) {
                         $scope.master.suggestions = suggestions;
                         $scope.master.suggestedLexicalEntries = $scope.master.suggestions[0].suggestion;
@@ -29373,12 +29392,17 @@ app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interva
                         $state.go("merge.perspectiveFinished");
                     }
                 }, function(reason) {
+                    $scope.master.controls.commitPerspective = true;
                     responseHandler.error(reason);
                 });
             }, function(reason) {
+                $scope.master.controls.commitPerspective = true;
                 responseHandler.error(reason);
             });
-        }, function(reason) {});
+        }, function(reason) {
+            $scope.master.controls.commitPerspective = true;
+            responseHandler.error(reason);
+        });
     };
     var nextSuggestedEntries = function() {
         if ($scope.master.suggestions.length > 0) {
