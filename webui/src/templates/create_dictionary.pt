@@ -90,9 +90,9 @@
 
     </div>
 
-    <a href="#" class="btn btn-block btn-info" ng-click="createDictionary()">
+    <button href="#" class="btn btn-block btn-info" ng-click="createDictionary()" ng-disabled="!controls.createDictionary">
         Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
-    </a>
+    </button>
 
 </script>
 
@@ -236,9 +236,9 @@
 
     </div>
 
-    <a class="btn btn-block btn-warning" ng-click="createPerspective()">
+    <button class="btn btn-block btn-warning" ng-click="createPerspective()" ng-disabled="!controls.createPerspective">
         Complete <span class="glyphicon glyphicon-ok-sign"></span>
-    </a>
+    </button>
 
 </script>
 
@@ -295,9 +295,9 @@
 
 
 
-    <a class="btn btn-block btn-warning" ng-click="saveDictionary()">
+    <button class="btn btn-block btn-warning" ng-click="saveDictionary()" ng-disabled="!controls.saveDictionary">
         Complete <span class="glyphicon glyphicon-ok-sign"></span>
-    </a>
+    </button>
 </script>
 
 
