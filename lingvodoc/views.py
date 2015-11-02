@@ -3554,7 +3554,7 @@ def delete_organization(request):
     return {'error': str("No such organization in the system")}
 
 
-def user_counter(entry, result, starting_date, ending_date, types):
+def user_counter(entry, result, starting_date, ending_date, types, clients_to_users_dict):
     empty = False
     if entry['level'] == 'lexicalentry':
         if 'contains' not in entry:
@@ -3564,7 +3564,7 @@ def user_counter(entry, result, starting_date, ending_date, types):
     if 'contains' in entry:
         if entry['contains']:
             for ent in entry['contains']:
-                result = user_counter(ent, result, starting_date, ending_date, types)
+                result = user_counter(ent, result, starting_date, ending_date, types, clients_to_users_dict)
     if 'created_at' in entry:
         if starting_date:
             if datetime.datetime(entry['created_at']).date() < starting_date:
@@ -3575,23 +3575,33 @@ def user_counter(entry, result, starting_date, ending_date, types):
     if empty:
         return result
 
-    client = DBSession.query(Client).filter_by(id=entry['client_id']).first()
-    if client:
-        user = DBSession.query(Client).filter_by(id=client.user_id).first()
-        if user:
-            if not result.get(user.id):
-                counters = dict()
-                for entity_type in types:
-                    counters[entity_type] = 0
-                counters['lexical_entry'] = 0
-                result[user.id] = counters
-            user_count = result[user.id]
-            if entry['level'] == 'lexicalentry':
-                user_count['lexical_entry'] += 1
-            else:
-                if 'entity_type' in entry:
-                    user_count[entry['entity_type']] += 1
+    user = clients_to_users_dict.get(entry['client_id'])
+    if user:
+        if not result.get(user['id']):
+            counters = dict()
+            for entity_type in types:
+                counters[entity_type] = 0
+            counters['lexical_entry'] = 0
+            result[user['id']] = counters
+        user_count = result[user['id']]
+        if entry['level'] == 'lexicalentry':
+            user_count['lexical_entry'] += 1
+        else:
+            if 'entity_type' in entry:
+                user_count[entry['entity_type']] += 1
     return result
+
+
+def cache_clients():
+    clients_to_users_dict = dict()
+    clients = DBSession.query(Client) \
+        .options(joinedload('user')).all()
+    for client in clients:
+        clients_to_users_dict[client.id] = {'id': client.user.id,
+                                            'login': client.user.login,
+                                            'name': client.user.name,
+                                            'intl_name': client.user.intl_name}
+    return clients_to_users_dict
 
 
 @view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='edit')
@@ -3612,7 +3622,15 @@ def perspective_info(request):
         request.response.status = HTTPNotFound.code
         return {'error': str("No such dictionary in the system")}
 
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    perspective = DBSession.query(DictionaryPerspective) \
+        .options(joinedload('lexicalentry').joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
+        .options(joinedload('lexicalentry').joinedload('leveloneentity').joinedload('publishleveloneentity')) \
+        .options(joinedload('lexicalentry').joinedload('groupingentity').joinedload('publishgroupingentity')) \
+        .options(joinedload('lexicalentry').joinedload('publishleveloneentity')) \
+        .options(joinedload('lexicalentry').joinedload('publishleveltwoentity')) \
+        .options(joinedload('lexicalentry').joinedload('publishgroupingentity')) \
+        .filter_by(client_id=client_id, object_id=object_id).first()
+
     if perspective:
         if not perspective.marked_for_deletion:
             result = dict()
@@ -3638,8 +3656,10 @@ def perspective_info(request):
                         if entity_type not in types:
                             types.append(entity_type)
 
+            clients_to_users_dict = cache_clients()
+
             for lex in perspective.lexicalentry:
-                result = user_counter(lex.track(True), result, starting_date, ending_date, types)
+                result = user_counter(lex.track(True), result, starting_date, ending_date, types, clients_to_users_dict)
 
             response['count'] = result
             request.response.status = HTTPOk.code
@@ -3664,9 +3684,10 @@ def dictionary_info(request):
     result = dict()
     if dictionary:
         if not dictionary.marked_for_deletion:
+            clients_to_users_dict = cache_clients()
             for perspective in dictionary.dictionaryperspective:
                 for lex in perspective.lexicalentry:
-                    user_counter(lex.track(True), result, starting_date, ending_date)
+                    user_counter(lex.track(True), result, starting_date, ending_date, clients_to_users_dict)
 
             response['count'] = result
             request.response.status = HTTPOk.code
