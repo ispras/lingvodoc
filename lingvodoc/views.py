@@ -3572,6 +3572,10 @@ def user_counter(entry, result, starting_date, ending_date, types, clients_to_us
         if ending_date:
             if datetime.datetime(entry['created_at']).date() > ending_date:
                 empty = True
+    if 'content' in entry:
+        if entry['content'] == '':
+            empty = True
+
     if empty:
         return result
 
