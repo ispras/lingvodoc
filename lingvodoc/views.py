@@ -3573,7 +3573,7 @@ def user_counter(entry, result, starting_date, ending_date, types, clients_to_us
             if datetime.datetime(entry['created_at']).date() > ending_date:
                 empty = True
     if 'content' in entry:
-        if entry['content'] == '':
+        if not entry['content'] or entry['content'].isspace():
             empty = True
 
     if empty:
