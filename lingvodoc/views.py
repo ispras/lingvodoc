@@ -1922,16 +1922,16 @@ def create_perspective_fields(request):
             field.level = entry['level']
             field.position = entry['position']
             if 'contains' in entry:
-                for ent in entry['contains']:
+                for entry in entry['contains']:
                     field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
                                                         client_id=variables['auth'],
-                                                        entity_type=ent['entity_type'],
-                                                        data_type=ent['data_type'],
+                                                        entity_type=entry['entity_type'],
+                                                        data_type=entry['data_type'],
                                                         level='leveltwoentity',
                                                         parent=perspective,
                                                         parent_entity=field,
                                                         state=entry['status'])
-                    field2.position = ent['position']
+                    field2.position = entry['position']
 
 
                     translation = entry['data_type']
@@ -1942,8 +1942,8 @@ def create_perspective_fields(request):
                     if 'entity_type_translation' in entry:
                         translation = entry['entity_type_translation']
                     field2.set_entity_type(request, translation, entry['entity_type'])
-                    if 'group' in ent:
-                        field2.set_group(request, ent['group_translation'], ent['group'])
+                    if 'group' in entry:
+                        field2.set_group(request, entry['group_translation'], entry['group'])
                     DBSession.add(field2)
                     DBSession.flush()
             DBSession.add(field)
