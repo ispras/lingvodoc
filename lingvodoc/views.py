@@ -3604,7 +3604,7 @@ def cache_clients():
     return clients_to_users_dict
 
 
-@view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='edit')
+@view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='view')
 def perspective_info(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -3669,7 +3669,7 @@ def perspective_info(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='dictionary_info', renderer='json', request_method='GET', permission='edit')
+@view_config(route_name='dictionary_info', renderer='json', request_method='GET', permission='view')
 def dictionary_info(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
