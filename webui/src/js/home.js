@@ -5,7 +5,9 @@ angular.module('HomeModule', ['ui.bootstrap'], function($rootScopeProvider) {
 })
     .service('dictionaryService', lingvodocAPI)
 
-    .controller('HomeController', ['$scope', '$http', '$modal', '$q', '$log', 'dictionaryService', function($scope, $http, $modal, $q, $log, dictionaryService) {
+    .factory('responseHandler', ['$timeout', '$modal', responseHandler])
+
+    .controller('HomeController', ['$scope', '$http', '$modal', '$q', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $modal, $q, $log, dictionaryService, responseHandler) {
 
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
     var dictionariesUrl = $('#dictionariesUrl').data('lingvodoc');
@@ -48,10 +50,8 @@ angular.module('HomeModule', ['ui.bootstrap'], function($rootScopeProvider) {
     dictionaryService.getPublishedDictionaries().then(function(languages) {
         $scope.languages = languages;
         setPerspectives($scope.languages);
-
-
-
-
+    }, function(reason) {
+        responseHandler.error(reason);
     });
 
 }]);

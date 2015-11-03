@@ -18,7 +18,7 @@ module.exports = function(grunt) {
                     '../lingvodoc/static/css/lingvodoc.css': 'src/sass/lingvodoc.scss'
                 }
 
-            },
+            }
 
         },
         watch: {
@@ -44,8 +44,8 @@ module.exports = function(grunt) {
                         dest: '../lingvodoc/templates/',
                         filter: 'isFile'
                     }
-                ],
-            },
+                ]
+            }
         },
         uglify: {
             options: {
@@ -60,7 +60,8 @@ module.exports = function(grunt) {
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
-                    'bower_components/bootstrap-validator/dist/validator.js'
+                    'bower_components/bootstrap-validator/dist/validator.js',
+                    'src/js/response_handler.js'
                 ],
                 dest: '../lingvodoc/static/js/login.js'
             },
@@ -73,6 +74,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/home.js'
                 ],
                 dest: '../lingvodoc/static/js/home.js'
@@ -89,6 +91,7 @@ module.exports = function(grunt) {
                     'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/dashboard.js'
                 ],
                 dest: '../lingvodoc/static/js/dashboard.js'
@@ -102,7 +105,8 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
                     'bower_components/autocomplete/script/autocomplete.js',
-                    'src/js/languages.js'
+                    'src/js/languages.js',
+                    'src/js/response_handler.js'
                 ],
                 dest: '../lingvodoc/static/js/languages.js'
             },
@@ -119,6 +123,7 @@ module.exports = function(grunt) {
                     'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/create_dictionary.js'
                 ],
                 dest: '../lingvodoc/static/js/create-dictionary.js'
@@ -135,6 +140,7 @@ module.exports = function(grunt) {
                     'src/js/elan.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/view_dictionary.js',
                     'src/js/lingvowave.js'
                 ],
@@ -152,6 +158,7 @@ module.exports = function(grunt) {
                     'src/js/elan.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/publish_dictionary.js',
                     'src/js/lingvowave.js'
                 ],
@@ -169,6 +176,7 @@ module.exports = function(grunt) {
                     'src/js/elan.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/edit_dictionary.js',
                     'src/js/lingvowave.js'
                 ],
@@ -182,6 +190,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'src/js/response_handler.js',
                     'src/js/user_upload.js'
                 ],
                 dest: '../lingvodoc/static/js/user-upload.js'
@@ -197,6 +206,7 @@ module.exports = function(grunt) {
                     'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/profile.js'
                 ],
                 dest: '../lingvodoc/static/js/profile.js'
@@ -212,6 +222,7 @@ module.exports = function(grunt) {
                     'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/organizations.js'
                 ],
                 dest: '../lingvodoc/static/js/organizations.js'
@@ -226,6 +237,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-ui-router/release/angular-ui-router.js',
                     'src/js/util.js',
                     'src/js/api.js',
+                    'src/js/response_handler.js',
                     'src/js/merge_master.js'
                 ],
                 dest: '../lingvodoc/static/js/merge-master.js'

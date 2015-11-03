@@ -39,8 +39,9 @@ app.config(function ($stateProvider, $urlRouterProvider) {
 
 app.service('dictionaryService', lingvodocAPI);
 
+app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
 
-app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval', '$state', '$log', 'dictionaryService', function ($scope, $http, $modal, $interval, $state, $log, dictionaryService) {
+app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval', '$state', '$log', 'dictionaryService', 'responseHandler', function ($scope, $http, $modal, $interval, $state, $log, dictionaryService, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -69,6 +70,12 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
         'mergedPerspectiveFields': [],
         'suggestions': [],
         'suggestedLexicalEntries': []
+    };
+
+    $scope.master.controls = {
+        'startMergeDictionaries': true,
+        'startMergePerspectives': true,
+        'commitPerspective': true
     };
 
 
@@ -187,6 +194,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             return;
         }
 
+        $scope.master.controls.startMergeDictionaries = false;
+
         if ($scope.master.selectedSourceDictionary1 instanceof lingvodoc.Dictionary &&
             $scope.master.selectedSourceDictionary2 instanceof lingvodoc.Dictionary) {
 
@@ -195,9 +204,11 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 $scope.master.selectedSourceDictionary1,
                 $scope.master.selectedSourceDictionary2
             ).then(function(result) {
+                    $scope.master.controls.startMergeDictionaries = true;
                     $state.go('merge.perspectiveFinished');
                 }, function(reason) {
-                    $log.error(reason);
+                    $scope.master.controls.startMergeDictionaries = true;
+                    responseHandler.error(reason);
                 });
 
         }
@@ -212,6 +223,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 return;
             }
 
+            $scope.master.controls.startMergePerspectives = false;
+
             var p1 = $scope.master.perspective1;
             var url1 = '/dictionary/' + p1.parent_client_id + '/' + p1.parent_object_id + '/perspective/' + p1.client_id + '/' + p1.object_id + '/fields';
             var p2 = $scope.master.perspective2;
@@ -221,6 +234,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
 
                 dictionaryService.getPerspectiveFields(url2).then(function(fields2) {
 
+                    $scope.master.controls.startMergePerspectives = true;
+
                     $scope.master.fields1 = wrapFields(fields1);
                     $scope.master.fields2 = wrapFields(fields2);
 
@@ -229,11 +244,13 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                     $state.go('merge.perspectives');
 
                 }, function(reason) {
-
+                    responseHandler.error(reason);
+                    $scope.master.controls.startMergePerspectives = true;
                 });
 
             }, function(reason) {
-
+                responseHandler.error(reason);
+                $scope.master.controls.startMergePerspectives = true;
             });
 
 
@@ -248,6 +265,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             alert('Please, specify perspective name.');
             return;
         }
+
+        $scope.master.controls.commitPerspective = false;
 
         var updateFields1 = unwrapFields($scope.master.fields1);
         var updateFields2 = unwrapFields($scope.master.fields2);
@@ -271,6 +290,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             ]
         };
 
+        $scope.master.controls.commitPerspective = false;
+
         dictionaryService.mergePerspectives(req).then(function(obj) {
             $scope.master.mergedPerspectiveObject = obj;
 
@@ -279,6 +300,8 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                 $scope.master.mergedPerspectiveFields = fields;
 
                 dictionaryService.mergeSuggestions(obj).then(function(suggestions) {
+
+                    $scope.master.controls.commitPerspective = true;
 
                     if (suggestions.length > 0) {
                         $scope.master.suggestions = suggestions;
@@ -290,16 +313,18 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
                     }
 
                 }, function(reason) {
-                    $log.error(reason);
+                    $scope.master.controls.commitPerspective = true;
+                    responseHandler.error(reason);
                 });
 
             }, function(reason) {
-                $log.error(reason);
+                $scope.master.controls.commitPerspective = true;
+                responseHandler.error(reason);
             });
 
-
         }, function(reason) {
-
+            $scope.master.controls.commitPerspective = true;
+            responseHandler.error(reason);
         });
     };
 
@@ -323,7 +348,7 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
             .then(function (r) {
                 nextSuggestedEntries();
             }, function (reason) {
-                $log.error(reason);
+                responseHandler.error(reason);
             });
     };
 
@@ -334,13 +359,13 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
     dictionaryService.getDictionariesWithPerspectives({'user_created': [userId]}).then(function(dictionaries) {
         $scope.master.dictionaries = dictionaries;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
     dictionaryService.getLanguagesFull().then(function(langs) {
         $scope.master.languagesTree = langs;
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 
     $scope.$watch('master.selectedSourceDictionaryId', function (id) {
@@ -490,8 +515,5 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
         $scope.master.dictionaryTable = mapFieldValues(updatedEntries, $scope.master.mergedPerspectiveFields);
 
     }, true);
-
-
-
 
 }]);

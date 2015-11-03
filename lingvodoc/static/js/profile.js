@@ -28217,13 +28217,49 @@ function lingvodocAPI($http, $q) {
     };
 }
 
+function responseHandler($timeout, $modal) {
+    function show(status, message, t) {
+        var timeout = t || 2e3;
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.ok = function() {
+                $modalInstance.close();
+            };
+        };
+        var inst = $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerModal.html",
+            controller: controller,
+            size: "sm",
+            backdrop: "static",
+            keyboard: false
+        });
+        $timeout(function() {
+            inst.dismiss();
+        }, timeout);
+    }
+    function success(message) {
+        show("success", message, 500);
+    }
+    function error(message) {
+        show("error", message, 5e3);
+    }
+    return {
+        success: success,
+        error: error
+    };
+}
+
 "use strict";
 
 var app = angular.module("ProfileModule", [ "ui.bootstrap" ]);
 
 app.service("dictionaryService", lingvodocAPI);
 
-app.controller("ProfileController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", function($scope, $http, $q, $modal, $log, dictionaryService) {
+app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
+
+app.controller("ProfileController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
     var userId = $("#userId").data("lingvodoc");
     var clientId = $("#clientId").data("lingvodoc");
     $scope.userInfo = {};
@@ -28239,6 +28275,6 @@ app.controller("ProfileController", [ "$scope", "$http", "$q", "$modal", "$log",
             $scope.birthdayDay = dateSplit[2];
         }
     }, function(reason) {
-        $log.error(reason);
+        responseHandler.error(reason);
     });
 } ]);
