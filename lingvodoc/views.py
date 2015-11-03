@@ -1900,7 +1900,7 @@ def create_perspective_fields(request):
                                                                        object_id=parent_object_id).first()
         if not perspective:
             request.response.status = HTTPNotFound.code
-            return {'error': str("No such dictionary in the system")}
+            return {'error': str("No such perspective in the system")}
         for field in perspective.dictionaryperspectivefield:
             field.marked_for_deletion = True
 
@@ -1922,28 +1922,26 @@ def create_perspective_fields(request):
             field.level = entry['level']
             field.position = entry['position']
             if 'contains' in entry:
-                for entry in entry['contains']:
+                for subentry in entry['contains']:
                     field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
                                                         client_id=variables['auth'],
-                                                        entity_type=entry['entity_type'],
-                                                        data_type=entry['data_type'],
+                                                        entity_type=subentry['entity_type'],
+                                                        data_type=subentry['data_type'],
                                                         level='leveltwoentity',
                                                         parent=perspective,
                                                         parent_entity=field,
-                                                        state=entry['status'])
-                    field2.position = entry['position']
-
-
-                    translation = entry['data_type']
-                    if 'data_type_translation' in entry:
+                                                        state=subentry['status'])
+                    field2.position = subentry['position']
+                    translation = subentry['data_type']
+                    if 'data_type_translation' in subentry:
                         translation = entry['data_type_translation']
-                    field2.set_data_type(request, translation, entry['data_type'])
-                    translation = entry['entity_type']
-                    if 'entity_type_translation' in entry:
-                        translation = entry['entity_type_translation']
-                    field2.set_entity_type(request, translation, entry['entity_type'])
-                    if 'group' in entry:
-                        field2.set_group(request, entry['group_translation'], entry['group'])
+                    field2.set_data_type(request, translation, subentry['data_type'])
+                    translation = subentry['entity_type']
+                    if 'entity_type_translation' in subentry:
+                        translation = subentry['entity_type_translation']
+                    field2.set_entity_type(request, translation, subentry['entity_type'])
+                    if 'group' in subentry:
+                        field2.set_group(request, subentry['group_translation'], subentry['group'])
                     DBSession.add(field2)
                     DBSession.flush()
             DBSession.add(field)
