@@ -39,7 +39,6 @@ def upload_audio(upload_url, audio_sequence, markup_sequence, session):
 
 
 def upload_markup(upload_url, search_url, markup_sequence, session):
-    print('I was here. True story')
     log = logging.getLogger(__name__)
     for entry in markup_sequence:
         audio_hash = entry[0]
@@ -82,10 +81,11 @@ def upload_audio_simple(session, ids_mapping, sound_and_markup_cursor, upload_ur
                              "parent_object_id": ids_mapping[int(word_id)][1],
                              "content": base64.urlsafe_b64encode(audio).decode()}
             if not is_a_regular_form:
-                audio_element['additional_metadata'] = '{"hash": %s, "client_id": %s, "row_id": %s}' % \
-                                                       (audio_hash, client_id, cursor[4])
+                audio_element['additional_metadata'] = json.dumps({"hash": audio_hash,
+                                                                   "client_id": client_id,
+                                                                   "row_id": cursor[4]})
             else:
-                audio_element['additional_metadata'] = '{"hash": %s}' % audio_hash
+                audio_element['additional_metadata'] = json.dumps({"hash":  audio_hash })
             audio_sequence.append(audio_element)
             if len(audio_sequence) > 50:
                 upload_audio(upload_url, audio_sequence, None, session)
@@ -121,10 +121,11 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
                              "parent_object_id": ids_mapping[int(word_id)][1],
                              "content": base64.urlsafe_b64encode(audio).decode()}
             if not is_a_regular_form:
-                audio_element['additional_metadata'] = '{"hash": %s, "client_id": %s, "row_id": %s}'\
-                                                       % (audio_hash, client_id, cursor[5])
+                audio_element['additional_metadata'] = json.dumps({"hash": audio_hash,
+                                                                   "client_id": client_id,
+                                                                   "row_id": cursor[5]})
             else:
-                audio_element['additional_metadata'] = '{"hash": %s}' % audio_hash
+                audio_element['additional_metadata'] = json.dumps({"hash":  audio_hash })
             audio_sequence.append(audio_element)
 
 
@@ -138,20 +139,20 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
                 # need to set after push "parent_client_id": ids_mapping[int(word_id)][0],
                 # need to set after push "parent_object_id": ids_mapping[int(word_id)][1],
                 "content": base64.urlsafe_b64encode(markup).decode(),
-                "additional_metadata": '{"hash": %s}' % markup_hash}
+                "additional_metadata": json.dumps({"hash":  markup_hash})}
             markup_sequence.append(markup_element)
         else:
             if markup_hash not in markup_hashes:
 
                 markup_hashes.add(markup_hash)
                 markup_element = {
-                "locale_id": locale_id,
-                "level": "leveltwoentity",
-                "data_type": "markup",
-                "filename": common_name + ".TextGrid",
-                "entity_type": entity_types[1],
-                "content": base64.urlsafe_b64encode(markup).decode(),
-                "additional_metadata": '{"hash": %s}' % markup_hash}
+                    "locale_id": locale_id,
+                    "level": "leveltwoentity",
+                    "data_type": "markup",
+                    "filename": common_name + ".TextGrid",
+                    "entity_type": entity_types[1],
+                    "content": base64.urlsafe_b64encode(markup).decode(),
+                    "additional_metadata": json.dumps({"hash":  markup_hash})}
                 markup__without_audio_sequence.append((audio_hash, markup_element))
                 if len(markup__without_audio_sequence) > 50:
                     markup__without_audio_sequence = upload_markup(upload_url, search_url,
@@ -324,7 +325,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                 hsh = meta.get('hash')
                 if hsh:
                     if entry['entity_type'] in sound_types:
-                        audio_hashes += [hsh]
+                        audio_hashes.add(hsh)
             if entry.get('contains'):
                 for ent in entry['contains']:
                     meta = entry.get('additional_metadata')
@@ -333,7 +334,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                         hsh = meta.get('hash')
                         if hsh:
                             if ent['entity_type'] in markup_types:
-                                markup_types += [hsh]
+                                markup_hashes.add(hsh)
     print(audio_hashes)
     print(markup_hashes)
     entity_types = ['Sound', 'Praat markup']

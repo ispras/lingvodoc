@@ -2209,9 +2209,11 @@ def create_l1_entity(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
+
         additional_metadata=req.get('additional_metadata')
         if additional_metadata:
-            additional_metadata = json.dumps(additional_metadata)
+            if type(additional_metadata) != str:
+                additional_metadata = json.dumps(additional_metadata)
         entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
                                 locale_id=req['locale_id'], additional_metadata=additional_metadata,
                                 parent=parent)
@@ -2262,8 +2264,6 @@ def create_entities_bulk(request):
         inserted_items = []
         for item in req:
             if item['level'] == 'leveloneentity':
-                if 'sound' in item['entity_type'].lower():
-                    print(item.get('additional_metadata'))
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
                 entity = LevelOneEntity(client_id=client.id,
                                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
@@ -4213,8 +4213,8 @@ def remove_deleted(lst):
 @view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
 def merge_suggestions(request):
     req = request.json
-    entity_type_primary = req['entity_type_primary'] or 'Word'
-    entity_type_secondary = req['entity_type_secondary'] or 'Transcription'
+    entity_type_primary = req.get('entity_type_primary') or 'Transcription'
+    entity_type_secondary = req.get('entity_type_secondary') or 'Translation'
     threshold = req['threshold'] or 0.2
     levenstein = req['levenstein'] or 1
     client_id = req['client_id']
