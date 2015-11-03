@@ -308,6 +308,10 @@ def configure_routes(config):
 
     # API #GET
     # like
+    config.add_route(name='entity_metadata_search', pattern='/meta_search')
+
+    # API #GET
+    # like
     config.add_route(name='basic_search_old', pattern='/basic_search_old')
 
 

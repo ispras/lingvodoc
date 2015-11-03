@@ -80,7 +80,7 @@ def recursive_content(self, publish):
                     additional_metadata = None
                     if hasattr(xx, "additional_metadata"):
                         if xx.additional_metadata:
-                            additional_metadata = json.loads(xx.additional_metadata)
+                            additional_metadata = xx.additional_metadata
                     locale_id = None
                     if hasattr(xx, "locale_id"):
                         locale_id = xx.locale_id

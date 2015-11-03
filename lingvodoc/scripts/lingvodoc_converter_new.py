@@ -84,6 +84,8 @@ def upload_audio_simple(session, ids_mapping, sound_and_markup_cursor, upload_ur
             if not is_a_regular_form:
                 audio_element['additional_metadata'] = '{"hash": %s, "client_id": %s, "row_id": %s}' % \
                                                        (audio_hash, client_id, cursor[4])
+            else:
+                audio_element['additional_metadata'] = '{"hash": %s}' % audio_hash
             audio_sequence.append(audio_element)
             if len(audio_sequence) > 50:
                 upload_audio(upload_url, audio_sequence, None, session)
@@ -121,7 +123,10 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
             if not is_a_regular_form:
                 audio_element['additional_metadata'] = '{"hash": %s, "client_id": %s, "row_id": %s}'\
                                                        % (audio_hash, client_id, cursor[5])
+            else:
+                audio_element['additional_metadata'] = '{"hash": %s}' % audio_hash
             audio_sequence.append(audio_element)
+
 
             markup_hashes.add(markup_hash)
             markup_element = {
@@ -132,9 +137,8 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
                 "entity_type": entity_types[1],
                 # need to set after push "parent_client_id": ids_mapping[int(word_id)][0],
                 # need to set after push "parent_object_id": ids_mapping[int(word_id)][1],
-                "content": base64.urlsafe_b64encode(markup).decode()}
-            if not is_a_regular_form:
-                audio_element['additional_metadata'] = '{"client_id": %s, "row_id": %s}' % (client_id, cursor[5])
+                "content": base64.urlsafe_b64encode(markup).decode(),
+                "additional_metadata": '{"hash": %s}' % markup_hash}
             markup_sequence.append(markup_element)
         else:
             if markup_hash not in markup_hashes:
@@ -167,7 +171,7 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
         markup_sequence = []
 
     if len(markup__without_audio_sequence) != 0:
-        upload_markup(upload_url, markup__without_audio_sequence, session)
+        upload_markup(upload_url, search_url, markup__without_audio_sequence, session)
         markup__without_audio_sequence = []
 
 
@@ -309,23 +313,29 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                                                                         perspective['object_id'])
     search_url = server_url + 'meta_search'
     status = session.get(perspective_search)
-    lexes = json.loads(status.text)
+    lexes = json.loads(status.text)['lexical_entries']
     sound_types = ['Sound', 'Paradigm sound']
     markup_types = ['Praat markup', "Paradigm Praat markup"]
     for lex in lexes:
         for entry in lex['contains']:
-            meta = json.loads(entry['additional_metadata'])
-            hsh = meta.get('hash')
-            if hsh:
-                if entry['entity_type'] in sound_types:
-                    audio_hashes += [hsh]
-            for ent in entry['contains']:
-                meta = json.loads(ent['additional_metadata'])
+            meta = entry.get('additional_metadata')
+            if meta:
+                meta = json.loads(meta)
                 hsh = meta.get('hash')
                 if hsh:
-                    if ent['entity_type'] in markup_types:
-                        markup_types += [hsh]
-
+                    if entry['entity_type'] in sound_types:
+                        audio_hashes += [hsh]
+            if entry.get('contains'):
+                for ent in entry['contains']:
+                    meta = entry.get('additional_metadata')
+                    if meta:
+                        meta = json.loads(meta)
+                        hsh = meta.get('hash')
+                        if hsh:
+                            if ent['entity_type'] in markup_types:
+                                markup_types += [hsh]
+    print(audio_hashes)
+    print(markup_hashes)
     entity_types = ['Sound', 'Praat markup']
     upload_audio_with_markup(session, ids_mapping, sound_and_markup_word_cursor, create_entities_url, search_url,
                              audio_hashes, markup_hashes, entity_types, client_id, True, locale_id)

@@ -164,7 +164,6 @@ def basic_search_old(request):
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
 def basic_search(request):
     can_add_tags = request.params.get('can_add_tags')
-    print(can_add_tags)
     searchstring = request.params.get('leveloneentity')
     if searchstring:
         if len(searchstring) >= 2:
@@ -2263,6 +2262,8 @@ def create_entities_bulk(request):
         inserted_items = []
         for item in req:
             if item['level'] == 'leveloneentity':
+                if 'sound' in item['entity_type'].lower():
+                    print(item.get('additional_metadata'))
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
                 entity = LevelOneEntity(client_id=client.id,
                                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
