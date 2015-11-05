@@ -2212,9 +2212,8 @@ def create_l1_entity(request):
             return {'error': str("No such lexical entry in the system")}
 
         additional_metadata=req.get('additional_metadata')
-        if additional_metadata:
-            if type(additional_metadata) != str:
-                additional_metadata = json.dumps(additional_metadata)
+        if type(additional_metadata) != str:
+            additional_metadata = json.dumps(additional_metadata)
         entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
                                 locale_id=req['locale_id'], additional_metadata=additional_metadata,
                                 parent=parent)
@@ -3498,6 +3497,8 @@ def move_lexical_entry(request):
     client_id = request.matchdict.get('client_id')
     cli_id = req['client_id']
     obj_id = req['object_id']
+    real_delete = req['real_delete']  # With great power comes great responsibility
+    # Maybe there needs to be check for permission of some sort (can really delete only when updating dictionary)
     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
     if entry and parent:
@@ -3514,41 +3515,39 @@ def move_lexical_entry(request):
         if user not in groupoverride.users:
             if user not in group.users:
                 raise CommonException("You should only move to lexical entires you own")
-        if parent.moved_to:
-            path = request.route_url('lexical_entry',
-                                     client_id=cli_id,
-                                     )
-            subreq = Request.blank(path)
-            subreq.method = 'GET'
-            subreq.headers = request.headers
-            resp = request.invoke_subrequest(subreq)
-        if entry.moved_to is None:
+        if parent.moved_to is None:
+            if entry.moved_to is None:
 
-            if not entry.marked_for_deletion and not parent.marked_for_deletion:
-                l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
-                for entity in l1e:
-                    ent = DBSession.query(LevelOneEntity)\
-                        .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
-                        .first()
-                    if ent:
-                        entity.marked_for_deletion = True
-                    entity.parent = parent
+                if not entry.marked_for_deletion and not parent.marked_for_deletion:
+                    l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                    for entity in l1e:
+                        ent = DBSession.query(LevelOneEntity)\
+                            .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
+                            .first()
+                        if ent:
+                            entity.marked_for_deletion = True
+                            if real_delete:
+                                for publent in entity.publishleveloneentity:
+                                    DBSession.delete(publent)
+                                DBSession.delete(entity)
+                                continue
+                        entity.parent = parent
 
-                    for publent in entity.publishleveloneentity:
-                        publent.marked_for_deletion = True
-                        publent.parent = parent
-                    DBSession.flush()
-                ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
-                for entity in ge:
-                    entity.parent = parent
-                    for publent in entity.publishgroupingentity:
-                        publent.marked_for_deletion = True
-                        publent.parent = parent
-                    DBSession.flush()
-                entry.moved_to = str(cli_id) + '/' + str(obj_id)
-                entry.marked_for_deletion = True
-                request.response.status = HTTPOk.code
-                return {}
+                        for publent in entity.publishleveloneentity:
+                            publent.marked_for_deletion = True
+                            publent.parent = parent
+                        DBSession.flush()
+                    ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                    for entity in ge:
+                        entity.parent = parent
+                        for publent in entity.publishgroupingentity:
+                            publent.marked_for_deletion = True
+                            publent.parent = parent
+                        DBSession.flush()
+                    entry.moved_to = str(cli_id) + '/' + str(obj_id)
+                    entry.marked_for_deletion = True
+                    request.response.status = HTTPOk.code
+                    return {}
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
 
@@ -4211,6 +4210,7 @@ def merge_suggestions(request):
     if (not tuples_1) or (not tuples_2):
         return {}
     results = [get_dict(i) for i in mergeDicts(tuples_1, tuples_2, float(threshold), int(levenstein))]
+    results = sorted(results, key=lambda k: k['confidence'])
     return results
 
 @view_config(route_name='profile', renderer='templates/profile.pt', request_method='GET')

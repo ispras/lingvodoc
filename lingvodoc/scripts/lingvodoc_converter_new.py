@@ -265,7 +265,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                        "parent_object_id": parent_object_id,
                        "content": content}
             if not is_a_regular_form:
-                element['additional_metadata'] = '{"client_id": %s, "row_id": %s}' % (client_id, ld_cursor[2])
+                element['additional_metadata'] = json.dumps({"client_id": client_id, "row_id": ld_cursor[2]})
             push_list.append(element)
         return push_list
 
@@ -321,7 +321,6 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
         for entry in lex['contains']:
             meta = entry.get('additional_metadata')
             if meta:
-                meta = json.loads(meta)
                 hsh = meta.get('hash')
                 if hsh:
                     if entry['entity_type'] in sound_types:
@@ -330,13 +329,10 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                 for ent in entry['contains']:
                     meta = entry.get('additional_metadata')
                     if meta:
-                        meta = json.loads(meta)
                         hsh = meta.get('hash')
                         if hsh:
                             if ent['entity_type'] in markup_types:
                                 markup_hashes.add(hsh)
-    print(audio_hashes)
-    print(markup_hashes)
     entity_types = ['Sound', 'Praat markup']
     upload_audio_with_markup(session, ids_mapping, sound_and_markup_word_cursor, create_entities_url, search_url,
                              audio_hashes, markup_hashes, entity_types, client_id, True, locale_id)
@@ -414,13 +410,33 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                 "connections": [{"client_id": client_id, "object_id": object_id}]}
         status = session.post(connect_url, json=item)
         log.debug(status.text)
+    suggestions_url = server_url + 'merge/suggestions'
+
+    suggestions_params = {'threshold': 1.0,
+                          'levenstein': 0,
+                          'client_id': perspective['client_id'],
+                          'object_id': perspective['object_id']}
+    status = session.post(suggestions_url, json=suggestions_params)
+    for entry in json.loads(status.text):
+        if entry['confidence'] >= 1.0:
+            first_entry = entry['suggestion'][0]
+            second_entry = entry['suggestion'][1]
+            lex_move_url = server_url + 'lexical_entry/%d/%d/move' % (second_entry['lexical_entry_client_id'],
+                                                                       second_entry['lexical_entry_object_id'])
+            move_params = {'client_id': first_entry['lexical_entry_client_id'],
+                           'object_id': first_entry['lexical_entry_object_id'],
+                           'real_delete': True}
+            status = session.patch(lex_move_url, json=move_params)
+
+        else:
+            break
 
     change_dict_status(session, converting_status_url, 'Converted 100%')
 
     change_dict_status(session, converting_status_url, 'Published')
     change_dict_status(session, converting_perspective_status_url, 'Published')
-
     return dictionary
+
 
 def convert_one(filename, login, password_hash, language_client_id, language_object_id,
                 dictionary_client_id, dictionary_object_id, perspective_client_id, perspective_object_id,
