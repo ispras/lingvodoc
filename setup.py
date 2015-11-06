@@ -21,11 +21,14 @@ requires = [
     'passlib',
     'py-bcrypt',
     'requests',
-    'simplejson'
+    'simplejson',
+    'nltk',
+    'python-keystoneclient',
+    'python-swiftclient'
     ]
 
 setup(name='lingvodoc',
-      version='0.0',
+      version='0.8',
       description='lingvodoc',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[

@@ -1,4 +1,5 @@
-from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS
+
+from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS, Everyone
 
 
 from sqlalchemy.orm import (
@@ -34,6 +35,7 @@ from sqlalchemy.engine import (
     Engine
 )
 
+
 from zope.sqlalchemy import ZopeTransactionExtension
 
 from passlib.hash import bcrypt
@@ -45,6 +47,9 @@ import json
 from sqlalchemy.inspection import inspect
 
 from sqlalchemy.ext.compiler import compiles
+
+import logging
+log = logging.getLogger(__name__)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
@@ -64,29 +69,108 @@ def bi_c(element, compiler, **kw):
     return compiler.visit_BIGINT(element, **kw)
 
 
-def recursive_content(self):
+from collections import deque
+
+# NOT DONE
+# def new_recursive_content(self, publish):
+#     vec = []
+#     # This code may be much faster.
+#     first_stack = deque()
+#     second_stack = deque()
+#     root = self
+#     first_stack.append(root)
+#     while len(first_stack) > 0:
+#         current = first_stack.pop()
+#         second_stack.append(current)
+#         relationships = inspect(type(current)).relationships
+#         for (name, relation) in relationships.items():
+#             if relation.direction.name == "ONETOMANY" and hasattr(current, str(name)):
+#                 child_list = getattr(current, str(name))
+#                 for x in child_list:
+#                     first_stack.append(x)
+#
+#     while len(second_stack) > 0:
+#         node = second_stack.pop()
+#         locale_id = None
+#         additional_metadata = None
+#         if hasattr(node, "additional_metadata"):
+#             if node.additional_metadata:
+#                 additional_metadata = json.loads(node.additional_metadata)
+#         if hasattr(node, "locale_id"):
+#             locale_id = node.locale_id
+#         if hasattr(node, "content"):
+#             content = node.content
+#         if hasattr(node, "entity_type"):
+#             entity_type = node.entity_type
+#
+#         vec.append({'level': node.__tablename__,
+#                     'content': content,
+#                     'object_id': node.object_id,
+#                     'client_id': node.client_id,
+#                     'parent_object_id': node.parent_object_id,
+#                     'parent_client_id': node.parent_client_id,
+#                     'entity_type': entity_type,
+#                     'marked_for_deletion': node.marked_for_deletion,
+#                     'locale_id': locale_id,
+#                     'additional_metadata': additional_metadata})
+#     return vec
+
+
+def recursive_content(self, publish):
     vec = []
-    for entry in dir(self):
-        if entry in inspect(type(self)).relationships:
-            i = inspect(self.__class__).relationships[entry]
-            if i.direction.name == "ONETOMANY":
-                x = getattr(self, str(entry))
-                for xx in x:
-                    additional_metadata = None
+    # This code may IS much faster.
+    m = inspect(type(self)).relationships
+    for (name, relationship) in m.items():
+        if relationship.direction.name == "ONETOMANY" and hasattr(self, str(name)):
+            x = getattr(self, str(name))
+            for xx in x:
+                additional_metadata = None
+                if hasattr(xx, "additional_metadata"):
                     if xx.additional_metadata:
                         additional_metadata = json.loads(xx.additional_metadata)
-                    vec += [{'level': xx.__tablename__,
-                             'content': xx.content,
-                             'object_id': xx.object_id,
-                             'client_id': xx.client_id,
-                             'parent_object_id': xx.parent_object_id,
-                             'parent_client_id': xx.parent_client_id,
-                             'entity_type': xx.entity_type,
-                             'marked_for_deletion': xx.marked_for_deletion,
-                             'locale_id': xx.locale_id,
-                             'additional_metadata': additional_metadata,
-                             'contains': recursive_content(xx) or None}]
-                    # vec += recursive_content(xx)
+                locale_id = None
+                if hasattr(xx, "locale_id"):
+                    locale_id = xx.locale_id
+                info = {'level': xx.__tablename__,
+                        'content': xx.content,
+                        'object_id': xx.object_id,
+                        'client_id': xx.client_id,
+                        'parent_object_id': xx.parent_object_id,
+                        'parent_client_id': xx.parent_client_id,
+                        'entity_type': xx.entity_type,
+                        'marked_for_deletion': xx.marked_for_deletion,
+                        'locale_id': locale_id,
+                        'additional_metadata': additional_metadata,
+                        'contains': recursive_content(xx, publish) or None}
+                published = False
+                if info['contains']:
+                    log.debug(info['contains'])
+                    ents = []
+                    for ent in info['contains']:
+                        ents += [ent]
+                        # log.debug('CONTAINS', ent)
+                    for ent in ents:
+                        try:
+                            if 'publish' in ent['level']:
+                                if not ent['marked_for_deletion']:
+                                    published = True
+                                    if not publish:
+                                        break
+                                if publish:
+                                    info['contains'].remove(ent)
+                        except TypeError:
+                            log.debug('IDK: %s' % str(ent))
+                if publish:
+                    if not published:
+                        if 'publish' in info['level']:
+                            res = dict()
+                            res['level'] = info['level']
+                            res['marked_for_deletion'] = info['marked_for_deletion']
+                            info = res
+                        else:
+                            continue
+                info['published'] = published
+                vec += [info]
     return vec
 
 
@@ -108,7 +192,6 @@ class TableNameMixin(object):
     """
     Look forward to:
     http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-
     It's used for automatically set tables names based on class names. Use it everywhere.
     """
     @declared_attr
@@ -171,10 +254,73 @@ class RelationshipPublishingMixin(RelationshipMixin):
     @declared_attr
     def entity(cls):
         return relationship(cls.__entityname__,
-                            backref=backref(cls.__tablename__.lower()))
+                            backref=backref(cls.__tablename__.lower())
+                            )
 
 
-class Language(Base, TableNameMixin):
+def find_by_translation_string(locale_id, translation_string):
+        trstr = DBSession.query(UserEntitiesTranslationString).\
+            filter_by(locale_id=locale_id, translation_string=translation_string).first()
+        if not trstr:
+            trstr = DBSession.query(UserEntitiesTranslationString).\
+                filter_by(locale_id=1, translation_string=translation_string).first()
+        if not trstr:
+            return {'translation_string': translation_string, 'translation': translation_string}
+        return {'translation_string': translation_string, 'translation': trstr.translation}
+
+
+def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
+        if not translation:
+            translation = translation_string
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
+                                                                        translation_string=translation_string).first()
+        if not uets:
+            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
+                                                 client_id=client.id,
+                                                 locale_id=locale_id,
+                                                 translation_string=translation_string,
+                                                 translation=translation)
+            DBSession.add(uets)
+            DBSession.flush()
+        else:
+            uets.translation = translation
+
+
+def find_locale_id(request):
+    try:
+        return int(request.cookies['locale_id'])
+    except:
+        return 1
+
+
+class TranslationStringMixin(object):
+
+    def get_translation(cls, request):
+        return find_by_translation_string(find_locale_id(request), cls.translation_string)
+
+    def set_translation(cls, request):
+
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
+
+        translation = req.get('translation_string')
+        if 'translation' in req:
+            translation = req['translation']
+        translation_string = req.get('translation_string')
+        if cls.translation_string:
+            translation_string = cls.translation_string
+        add_translation_to_translation_string(find_locale_id(request),
+                                              translation,
+                                              translation_string,
+                                              request.authenticated_userid)
+        cls.translation_string = translation_string
+        return
+
+
+class Language(Base, TableNameMixin, TranslationStringMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -223,7 +369,7 @@ class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     translation = Column(UnicodeText)
 
 
-class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
+class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -235,12 +381,13 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
-    name = Column(UnicodeText)
+    authors = Column(UnicodeText)
+    translation_string = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    # about = Column(UnicodeText)
 
 
-
-class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
+class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -256,8 +403,11 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    name = Column(UnicodeText)
+    translation_string = Column(UnicodeText)
     is_template = Column(Boolean, default=False)
+    import_source = Column(UnicodeText)
+    import_hash = Column(UnicodeText)
+    # about = Column(UnicodeText)
 
 
 class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
@@ -287,6 +437,40 @@ class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, Relatio
     marked_for_deletion = Column(Boolean, default=False)
     state = Column(UnicodeText)
     position = Column(BigInteger)
+
+    def set_entity_type(self, request, translation, translation_string):
+        add_translation_to_translation_string(find_locale_id(request),
+                                              translation,
+                                              translation_string,
+                                              request.authenticated_userid)
+        self.entity_type = translation_string
+        return
+
+    def get_entity_type(self, request):
+        return find_by_translation_string(find_locale_id(request), self.entity_type)
+
+    def set_data_type(self, request, translation, translation_string):
+        add_translation_to_translation_string(find_locale_id(request),
+                                              translation,
+                                              translation_string,
+                                              request.authenticated_userid)
+        self.data_type = translation_string
+        return
+
+    def get_data_type(self, request):
+        return find_by_translation_string(find_locale_id(request), self.data_type)
+
+    def set_group(self, request, translation, translation_string):
+        add_translation_to_translation_string(find_locale_id(request),
+                                              translation,
+                                              translation_string,
+                                              request.authenticated_userid)
+        self.group = translation_string
+        return
+
+    def get_group(self, request):
+        return find_by_translation_string(find_locale_id(request), self.group)
+
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
                                                                      DictionaryPerspectiveField.object_id],
@@ -307,11 +491,40 @@ class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
     parent_client_id = Column(BigInteger)
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    additional_metadata = Column(UnicodeText)
 
-    def track(self):
+    def track(self, publish):
         vec = []
-        vec += recursive_content(self)
-        response = {"client_id": self.client_id, "object_id": self.object_id, "contains": vec}
+        vec += recursive_content(self, publish)
+        published = False
+        if vec:
+            ents = []
+            for ent in vec:
+                ents += [ent]
+            for ent in ents:
+                try:
+                    if 'publish' in ent['level']:
+                            if not ent['marked_for_deletion']:
+                                published = True
+                                if not publish:
+                                    break
+                            if publish:
+                                vec.remove(ent)
+                except:
+                    log.debug('IDK: %s' % ent)
+        came_from = None
+        meta = None
+        if self.additional_metadata:
+            meta = json.loads(self.additional_metadata)
+        if meta:
+            if 'came_from' in meta:
+                came_from = meta['came_from']
+        response = {"level": self.__tablename__,
+                    "client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
+                    "parent_client_id": self.parent_client_id,
+                    "parent_object_id": self.parent_object_id,
+                    "marked_for_deletion": self.marked_for_deletion,
+                    "came_from": came_from}
         return response
 
 
@@ -319,7 +532,6 @@ class EntityMixin(object):
     """
     Look forward to:
     http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
@@ -335,7 +547,7 @@ class EntityMixin(object):
     marked_for_deletion = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-    def track(self):
+    def track(self, publish):
         dictionary = {'level': self.__tablename__,
                       'content': self.content,
                       'object_id': self.object_id,
@@ -344,20 +556,18 @@ class EntityMixin(object):
                       'parent_client_id': self.parent_client_id,
                       'entity_type': self.entity_type,
                       'marked_for_deletion': self.marked_for_deletion,
-                      'locale_id': self.locale_id,
+                      'locale_id': self.locale_id
                       }
-        children = recursive_content(self)
+        children = recursive_content(self, publish)
         if children:
             dictionary['contains'] = children
         return dictionary
-
 
 
 class PublishingEntityMixin(object):
     """
     Look forward to:
     http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
@@ -413,10 +623,8 @@ class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):  # R
               differs, you should create all the GroupingEntries for each different content fields for both words.
         2. We shall provide an ability to define "content" field explicitly. If it is provided, we shall accept it
            and check the 1c case after it. It will be an often case during dictionaries conversion.
-
     Note: (1c) case will be rather frequent when desktop clients will appear. But moreover it will be a result of
           Dialeqt desktop databases conversion.
-
     Parent: LexicalEntry.
     """
     __parentname__ = 'LexicalEntry'
@@ -525,6 +733,7 @@ class Organization(Base, TableNameMixin, IdMixin):
     name = Column(UnicodeText)
     users = relationship("User", secondary=user_to_organization_association, backref=backref("organizations"))
     about = Column(UnicodeText)
+    marked_for_deletion = Column(Boolean, default=False)
     # locale_id = Column(ForeignKey("locale.id"))
 
 
@@ -570,10 +779,20 @@ class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
 
 
 def acl_by_groups(object_id, client_id, subject):
-    acls = [] #TODO DANGER if acls do not work -- incomment string below
-    acls += [(Allow, Authenticated, ALL_PERMISSIONS)]
+    acls = [] #DANGER if acls do not work -- uncomment string below
+    # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
-
+    if client_id and object_id:
+        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
+            persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+            if persp:
+                if persp.state == 'Published':
+                    acls += [(Allow, Everyone, 'view')]
+        elif subject in ['dictionary', 'other dictionary subjects']:
+            dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
+            if dict:
+                if dict.state == 'Published':
+                    acls += [(Allow, Everyone, 'view')]
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
@@ -584,13 +803,13 @@ def acl_by_groups(object_id, client_id, subject):
             group_name = base_group.action + ":" + base_group.subject \
                      + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
-    #print("ACLS", acls)
+    log.debug("ACLS: %s", acls)
     return acls
 
 
 def acl_by_groups_single_id(object_id, subject):
-    acls = [] #TODO DANGER if acls do not work -- incomment string below
-    acls += [(Allow, Authenticated, ALL_PERMISSIONS)]
+    acls = [] #DANGER if acls do not work -- uncomment string below
+    # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
@@ -600,8 +819,9 @@ def acl_by_groups_single_id(object_id, subject):
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \
-                     + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
+                     + ":"  + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
+    log.debug("ACLS: %s", acls)
     return acls
 
 
@@ -624,20 +844,48 @@ class LanguageAcl(object):
         return acls + acl_by_groups(object_id, client_id, 'language')
 
 
+class AdminAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = [(Allow, 'Admin', ALL_PERMISSIONS)]
+        return acls
+
+
 class PerspectiveAcl(object):
     def __init__(self, request):
         self.request = request
 
     def __acl__(self):
         acls = []
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
         object_id=None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
+        return acls + acl_by_groups(object_id, client_id, 'perspective')
+
+
+class PerspectiveCreateAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
         client_id=None
         try:
-            client_id = self.request.matchdict['perspective_client_id']
+            client_id = self.request.matchdict['dictionary_client_id']
+        except:
+            pass
+        object_id=None
+        try:
+            object_id = self.request.matchdict['dictionary_object_id']
         except:
             pass
         return acls + acl_by_groups(object_id, client_id, 'perspective')
@@ -649,17 +897,12 @@ class OrganizationAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        organization_id=None
         try:
-            object_id = self.request.matchdict['perspective_id']
+            organization_id = self.request.matchdict['organization_id']
         except:
             pass
-        client_id=None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'organization')
+        return acls + acl_by_groups_single_id(organization_id, 'organization')
 
 
 class DictionaryAcl(object):
@@ -717,25 +960,6 @@ class DictionaryRolesAcl(object):
         except:
             pass
         return acls + acl_by_groups(object_id, client_id, 'dictionary_role')
-
-
-class CreatePerspectiveAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id=None
-        try:
-            object_id = self.request.matchdict['dictionary_perspective_id']
-        except:
-            pass
-        client_id=None
-        try:
-            client_id = self.request.matchdict['dictionary_perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'dictionary')
 
 
 class PerspectiveRolesAcl(object):
@@ -812,8 +1036,8 @@ class PerspectiveEntityOneAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        perspective = levoneent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectiveEntityTwoAcl(object):
@@ -833,29 +1057,29 @@ class PerspectiveEntityTwoAcl(object):
         except:
             pass
         levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        perspective = levoneent.parent.parent.parent
+        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
-class PerspectiveEntityGroupAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id=None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id=None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
-        levoneent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+# class PerspectiveEntityGroupAcl(object):
+#     def __init__(self, request):
+#         self.request = request
+#
+#     def __acl__(self):
+#         acls = []
+#         object_id=None
+#         try:
+#             object_id = self.request.matchdict['object_id']
+#         except:
+#             pass
+#         client_id=None
+#         try:
+#             client_id = self.request.matchdict['client_id']
+#         except:
+#             pass
+#         group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+#         perspective = group_ent.parent.parent
+#         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 class PerspectivePublishAcl(object):
@@ -876,3 +1100,42 @@ class PerspectivePublishAcl(object):
             pass
         return acls + acl_by_groups(object_id, client_id, 'approve_entities')
 
+
+class PerspectiveLexicalViewAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['perspective_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['perspective_client_id']
+        except:
+            pass
+        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
+
+
+class LexicalViewAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        acls = []
+        object_id=None
+        try:
+            object_id = self.request.matchdict['object_id']
+        except:
+            pass
+        client_id=None
+        try:
+            client_id = self.request.matchdict['client_id']
+        except:
+            pass
+        lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id,object_id=object_id).first()
+        parent = lex.parent
+        return acls + acl_by_groups(parent.object_id, parent.client_id, 'lexical_entries_and_entities')

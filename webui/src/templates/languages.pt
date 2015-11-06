@@ -25,49 +25,16 @@
 <div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
 
 
-<nav class="lingvodoc-navbar">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="${request.route_url('home')}">Lingvodoc</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
-                <li class="active"><a href="${request.route_url('languages')}">Languages</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#about">About</a></li>
-            </ul>
-
-            <ul class="nav navbar-nav navbar-right">
-
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">${user.name}<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="#">Profile</a></li>
-                        <li><a href="${request.route_url('blob_upload')}">Manage files</a></li>
-                        <li><a href="#">Sign out</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
+<div metal:use-macro="load: nav.pt"></div>
 
 <div class="container" ng-controller="LanguagesController" ng-cloak>
 
+    <button class="btn btn-primary" ng-click="createLanguage();">Create language...</button>
+
 
     <div ng-if="languages.length > 0">
-        <ul ng-repeat="language in languages">
-            <li>
-                {{ language.translation_string }}
-            </li>
+        <ul>
+            <li ng-repeat="language in languages" ng-include="'languageTemplate.html'"></li>
         </ul>
     </div>
 
@@ -75,9 +42,6 @@
     <div ng-if="languages.length == 0">
         <span>No languages</span>
     </div>
-    
-
-    <button class="btn btn-primary" ng-click="createLanguage();">Create language...</button>
 
 </div>
 
@@ -91,23 +55,32 @@
 
         <!-- parent language -->
         <label for="parentLanguage">Parent language</label>
-        <select id="parentLanguage" class="form-control" ng-model="parentLanguageId" ng-options="language.object_id as language.translation_string for language in languages track by language.object_id">
+        <select id="parentLanguage" class="form-control" ng-model="parentLanguageId"
+                ng-options="getLanguageId(language) as language.translation_string for language in languages track by getLanguageId(language)">
 
         </select>
 
         <label for="translation">Translation</label>
-        <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus ng-model="translation">
-        <!--?<label for="translationString">Translation string</label>-->
-        <!--?<input type="text" id="translationString" name="translationString" class="form-control" placeholder="" required ng-model="translationString">-->
-
+        <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus
+               ng-model="translation">
     </div>
 
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
     </div>
 
 </script>
+
+<script type="text/ng-template" id="languageTemplate.html">
+    <h4>{{ language.translation }}</h4>
+
+    <ul ng-if="language.contains">
+        <li ng-repeat="language in language.contains" ng-include="'languageTemplate.html'">
+        </li>
+    </ul>
+</script>
+
+<div metal:use-macro="load: response_handler.pt"></div>
 
 </body>
 </html>

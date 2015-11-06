@@ -18,63 +18,34 @@
 
 <body ng-app="ViewDictionaryModule">
 
-<div id="clientId" data-lingvodoc="${client_id}"></div>
-<div id="userId" data-lingvodoc="${user.id}"></div>
-
 <div id="dictionaryClientId" data-lingvodoc="${dictionary_client_id}"></div>
 <div id="dictionaryObjectId" data-lingvodoc="${dictionary_object_id}"></div>
 <div id="perspectiveClientId" data-lingvodoc="${perspective_client_id}"></div>
 <div id="perspectiveId" data-lingvodoc="${perspective_id}"></div>
 
 
-<div id="allLexicalEntriesUrl"
-     data-lingvodoc="${request.route_url('lexical_entries_all', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
-<div id="allLexicalEntriesCountUrl"
-     data-lingvodoc="${request.route_url('lexical_entries_all_count', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
+<div id="allPublishedEntriesUrl"
+     data-lingvodoc="${request.route_url('lexical_entries_published', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
+<div id="allPublishedEntriesCountUrl"
+     data-lingvodoc="${request.route_url('lexical_entries_published_count', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
 <div id="getPerspectiveFieldsUrl"
      data-lingvodoc="${request.route_url('perspective_fields', dictionary_client_id=dictionary_client_id, dictionary_object_id=dictionary_object_id, perspective_client_id=perspective_client_id, perspective_id=perspective_id)}"></div>
 
 
 
-<nav class="lingvodoc-navbar">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
-                    aria-expanded="false" aria-controls="navbar">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="${request.route_url('home')}">Lingvodoc</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li class="active"><a href="${request.route_url('dashboard')}">Dictionaries</a></li>
-                <li><a href="${request.route_url('languages')}">Languages</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#about">About</a></li>
-            </ul>
-
-            <ul class="nav navbar-nav navbar-right">
-
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false">${user.name}<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>
-                        <li><a href="${request.route_url('blob_upload')}">Manage files</a></li>
-                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
+<div metal:use-macro="load: nav.pt"></div>
 <br>
 
 <div class="container-fluid" style="padding-top: 20px" ng-controller="ViewDictionaryController" ng-cloak>
+
+    <div class="row">
+        <h4>
+            <span ng-repeat-start="e in path.slice().reverse()">
+                <span>{{ e.translation_string }}</span>
+            </span>
+            <span ng-repeat-end="" ng-if="$index < (path.length-1)">&gt;&gt;</span>
+        </h4>
+    </div>
 
     <br>
 
@@ -105,13 +76,13 @@
             <thead>
             <tr>
                 <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                <td> <!-- action --> </td>
             </tr>
             </thead>
 
             <tbody>
 
-
-            <tr ng-repeat="entryFields in dictionaryMatrix">
+            <tr ng-repeat="entryFields in dictionaryTable">
 
                 <td ng-repeat="fieldValues in entryFields"
                     ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
@@ -119,8 +90,7 @@
 
                     <div ng-if="field.data_type == 'text'">
                         <ul class="entries_list">
-                            <li ng-repeat="fieldValue in fieldValues"
-                                ng-class="{removed: fieldValue.marked_for_deletion}">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
                                 {{ fieldValue.content }}
                             </li>
                         </ul>
@@ -131,11 +101,10 @@
                     <div ng-if="field.data_type == 'image'">
                         <ul class="entries_list">
                             <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
-
-                                <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View markup</span></a>
-
+                                <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
                             </li>
                         </ul>
+
                     </div>
 
                     <div ng-if="field.data_type == 'sound'">
@@ -155,24 +124,37 @@
 
                             </li>
                         </ul>
+
                     </div>
 
                     <div ng-if="field.isGroup">
                         <div ng-if="field.isGroup">
+
                             <button type="button" class="btn btn-default btn-sm"
-                                    ng-click="viewGroup(lexicalEntry, field, fieldValues)" ng-if="fieldValues.length > 0">
+                                    ng-click="viewGroup(lexicalEntry, field, fieldValues)"
+                                    ng-if="fieldValues.length > 0">
                                 <span class="glyphicon glyphicon-list">View</span>
                             </button>
+
                         </div>
+
                     </div>
 
                     <div ng-if="field.data_type == 'grouping_tag'">
+
                         <button type="button" class="btn btn-default btn-sm"
-                                ng-click="viewGroupingTag(lexicalEntry.client_id, lexicalEntry.object_id, field, fieldValues)" ng-if="false">
+                                ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)"
+                                ng-if="fieldValues.length > 0">
                             <span class="glyphicon glyphicon-list">View</span>
                         </button>
+
                     </div>
+
+
                 </td>
+
+                <td> <!-- action --> </td>
+
             </tr>
 
             </tbody>
@@ -303,6 +285,7 @@
                     <thead>
                     <tr>
                         <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                        <td> <!-- action --> </td>
                     </tr>
                     </thead>
 
@@ -316,12 +299,11 @@
 
                             <div ng-if="field.data_type == 'text'">
                                 <ul class="entries_list">
-                                    <li ng-repeat="fieldValue in fieldValues" ng-class="{removed: fieldValue.marked_for_deletion}">
+                                    <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
                                         {{ fieldValue.content }}
                                     </li>
                                 </ul>
                             </div>
-
 
                             <div ng-if="field.data_type == 'image'">
                                 <ul class="entries_list">
@@ -347,10 +329,17 @@
                                         </button>
                                     </li>
                                 </ul>
+
                             </div>
+
                         </td>
+
+                        <td> <!-- action --> </td>
+
                     </tr>
+
                     </tbody>
+
                 </table>
             </div>
         </div>
@@ -406,7 +395,18 @@
 
                     <tbody>
 
-                    <tr ng-repeat="entry in fieldsValues">
+
+                    <tr ng-repeat-start="entry in fieldsValues">
+                        <td colspan="{{ fields.length }}">
+                            <span ng-repeat-start="e in connectedEntries[$index].origin.slice().reverse()">
+                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation_string }}</a>
+                                <span ng-if="e.type != 'perspective'">{{ e.translation_string }}</span>
+                            </span>
+                            <span ng-repeat-end="" ng-if="$index < (connectedEntries[$parent.$index].origin.length-1)">&gt;&gt;</span>
+                        </td>
+                    </tr>
+
+                    <tr ng-repeat-end="">
 
                         <td ng-repeat="field in fieldsValues[$index]"
                             ng-if="fieldsIdx[$index].data_type!='grouping_tag' && !fieldsIdx[$index].isGroup">
@@ -419,6 +419,7 @@
                                 </ul>
 
                             </div>
+
 
                             <div ng-if="fieldsIdx[$index].data_type == 'image'">
                                 <ul class="entries_list">
@@ -439,10 +440,15 @@
                                         </button>
                                     </li>
                                 </ul>
+
                             </div>
+
                         </td>
+
                     </tr>
+
                     </tbody>
+
                 </table>
 
             </div>
@@ -454,6 +460,8 @@
     </div>
 
 </script>
+
+<div metal:use-macro="load: response_handler.pt"></div>
 
 </body>
 </html>

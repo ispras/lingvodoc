@@ -1,262 +1,77 @@
-'use strict';
+angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
-var model = {};
+    .service('dictionaryService', lingvodocAPI)
 
-model.Value = function() {
-    this.export = function() {
-        return {};
-    }
-};
+    .factory('responseHandler', ['$timeout', '$modal', responseHandler])
 
-model.TextValue = function(content) {
-    this.content = content;
-    this.export = function() {
+    .directive('wavesurfer', function() {
         return {
-            'content': content,
-            'data_type': 'text'
-        }
-    };
-};
-model.TextValue.prototype = new model.Value();
+            restrict: 'E',
 
-model.SoundValue = function(name, mime, content) {
-    this.name = name;
-    this.mime = mime;
-    this.content = content;
+            link: function($scope, $element, $attrs) {
+                $element.css('display', 'block');
 
-    this.export = function() {
-        return {
-            'content': content,
-            'filename': name,
-            'data_type': 'sound'
-        }
-    };
-};
-model.SoundValue.prototype = new model.Value();
+                var options = angular.extend({container: $element[0]}, $attrs);
+                var wavesurfer = WaveSurfer.create(options);
 
-model.ImageValue = function(name, mime, content) {
-    this.name = name;
-    this.mime = mime;
-    this.content = content;
+                if ($attrs.url) {
+                    wavesurfer.load($attrs.url, $attrs.data || null);
+                }
 
-    this.export = function() {
-        return {
-            'content': content,
-            'filename': name,
-            'data_type': 'image'
-        }
-    };
-};
-model.ImageValue.prototype = new model.Value();
-
-
-model.MarkupValue = function(name, mime, content) {
-    this.name = name;
-    this.mime = mime;
-    this.content = content;
-
-    this.export = function() {
-        return {
-            'content': content,
-            'filename': name,
-            'data_type': 'markup'
-        }
-    };
-};
-model.MarkupValue.prototype = new model.Value();
-
-
-var app = angular.module('ViewDictionaryModule', ['ui.bootstrap']);
-
-app.directive('wavesurfer', function() {
-    return {
-        restrict: 'E',
-
-        link: function($scope, $element, $attrs) {
-            $element.css('display', 'block');
-
-            var options = angular.extend({container: $element[0]}, $attrs);
-            var wavesurfer = WaveSurfer.create(options);
-
-            if ($attrs.url) {
-                wavesurfer.load($attrs.url, $attrs.data || null);
+                $scope.$emit('wavesurferInit', wavesurfer);
             }
+        };
+    })
 
-            $scope.$emit('wavesurferInit', wavesurfer);
-        }
-    };
-});
+    .directive('onReadFile', function($parse) {
+        return {
+            restrict: 'A',
+            scope: false,
+            link: function(scope, element, attrs) {
+                var fn = $parse(attrs.onReadFile);
 
+                element.on('change', function(onChangeEvent) {
+                    var reader = new FileReader();
+                    var file = (onChangeEvent.srcElement || onChangeEvent.target).files[0];
 
-app.directive('onReadFile', function($parse) {
-    return {
-        restrict: 'A',
-        scope: false,
-        link: function(scope, element, attrs) {
-            var fn = $parse(attrs.onReadFile);
-
-            element.on('change', function(onChangeEvent) {
-                var reader = new FileReader();
-                var file = (onChangeEvent.srcElement || onChangeEvent.target).files[0];
-
-                reader.onload = function(onLoadEvent) {
-                    scope.$apply(function() {
-                        var b64file = btoa(onLoadEvent.target.result);
-                        fn(scope, {
-                            $fileName: file.name,
-                            $fileType: file.type,
-                            $fileContent: b64file
+                    reader.onload = function(onLoadEvent) {
+                        scope.$apply(function() {
+                            var b64file = btoa(onLoadEvent.target.result);
+                            fn(scope, {
+                                $fileName: file.name,
+                                $fileType: file.type,
+                                $fileContent: b64file
+                            });
                         });
-                    });
-                };
-                reader.readAsBinaryString(file);
-            });
-        }
-    };
-});
-
-
-app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', '$log', '$timeout', function($scope, $http, $modal, $log, $timeout) {
-
-
-    var currentClientId = $('#clientId').data('lingvodoc');
-    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
-    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
-    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
-    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
-
-    WaveSurferController.call(this, $scope);
-
-    $scope.perspective = {
-        'fields': []
-    };
-
-    $scope.fields = [];
-    $scope.lexicalEntries = [];
-    $scope.dictionaryMatrix = [];
-
-    $scope.pageIndex = 1;
-    $scope.pageSize = 50;
-    $scope.pageCount = 1;
-
-    $scope.getFieldValues = function (entry, field) {
-
-        var value;
-        var values = [];
-        if (entry && entry.contains) {
-
-            if (field.isGroup) {
-
-                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                    var subField = field.contains[fieldIndex];
-
-                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                        value = entry.contains[valueIndex];
-                        if (value.entity_type == subField.entity_type) {
-                            values.push(value);
-                        }
-                    }
-                }
-            } else {
-                for (var i = 0; i < entry.contains.length; i++) {
-                    value = entry.contains[i];
-                    if (value.entity_type == field.entity_type) {
-                        values.push(value);
-                    }
-                }
-            }
-        }
-        return values;
-    };
-
-    $scope.annotate = function(soundEntity, markupEntity) {
-
-        var modalInstance = $modal.open({
-            animation: true,
-            templateUrl: 'annotationModal.html',
-            controller: 'AnnotationController',
-            size: 'lg',
-            resolve: {
-                soundUrl: function() {
-                    return soundEntity.content;
-                },
-                annotationUrl: function() {
-                    return markupEntity.content;
-                }
-            }
-        });
-    };
-
-    $scope.getPage = function(pageNumber) {
-        if (pageNumber > 0 && pageNumber <= $scope.pageCount) {
-            $scope.pageIndex = pageNumber;
-            loadEntries();
-        }
-    };
-
-
-    $scope.range = function(min, max, step) {
-        step = step || 1;
-        var input = [];
-        for (var i = min; i <= max; i += step) {
-            input.push(i);
-        }
-        return input;
-    };
-
-    $scope.viewGroup = function(entry, field, values) {
-
-        var modalInstance = $modal.open({
-            animation: true,
-            templateUrl: 'viewGroupModal.html',
-            controller: 'viewGroupController',
-            size: 'lg',
-            resolve: {
-                'groupParams': function() {
-                    return {
-                        'entry': entry,
-                        'field': field,
-                        'values': values
                     };
-                }
+                    reader.readAsBinaryString(file);
+                });
             }
-        });
+        };
+    })
 
-        modalInstance.result.then(function (value) {
+    .controller('ViewDictionaryController', ['$scope', '$window', '$http', '$modal', '$log', 'dictionaryService', 'responseHandler', function($scope, $window, $http, $modal, $log, dictionaryService, responseHandler) {
 
-        }, function () {
 
-        });
-    };
+        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
+        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
+        var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
+        var perspectiveId = $('#perspectiveId').data('lingvodoc');
 
-    $scope.viewGroupingTag = function(entry, field, values) {
+        WaveSurferController.call(this, $scope);
 
-        var modalInstance = $modal.open({
-            animation: true,
-            templateUrl: 'viewGroupingTagModal.html',
-            controller: 'viewGroupingTagController',
-            size: 'lg',
-            resolve: {
-                'groupParams': function() {
-                    return {
-                        'clientId': entry.client_id,
-                        'objectId': entry.object_id,
-                        'fields': $scope.fields
-                    };
-                }
-            }
-        });
+        $scope.perspectiveFields = [];
+        $scope.lexicalEntries = [];
 
-        modalInstance.result.then(function (value) {
+        $scope.fields = [];
+        $scope.dictionaryTable = [];
 
-        }, function () {
+        // pagination
+        $scope.pageIndex = 1;
+        $scope.pageSize = 20;
+        $scope.pageCount = 1;
 
-        });
-    };
-
-    $scope.$watch('lexicalEntries', function (updatedEntries) {
-
-        var getFieldValues = function (entry, field) {
+        $scope.getFieldValues = function(entry, field) {
 
             var value;
             var values = [];
@@ -286,107 +101,162 @@ app.controller('ViewDictionaryController', ['$scope', '$http', '$modal', '$log',
             return values;
         };
 
-        var mapFieldValues = function(allEntries, allFields) {
-            var result = [];
-            for (var i = 0; i < allEntries.length; i++) {
-                var entryRow = [];
-                for (var j = 0; j < allFields.length; j++) {
-                    entryRow.push(getFieldValues(allEntries[i], allFields[j]));
-                }
-                result.push(entryRow);
+        $scope.getPage = function(pageNumber) {
+            if (pageNumber > 0 && pageNumber <= $scope.pageCount) {
+                $scope.pageIndex = pageNumber;
+                dictionaryService.getLexicalEntries($('#allPublishedEntriesUrl').data('lingvodoc'), (pageNumber - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
+                    $scope.lexicalEntries = lexicalEntries;
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
             }
-            return result;
         };
 
-        $scope.dictionaryMatrix = mapFieldValues(updatedEntries, $scope.fields);
+        $scope.range = function(min, max, step) {
+            step = step || 1;
+            var input = [];
+            for (var i = min; i <= max; i += step) {
+                input.push(i);
+            }
+            return input;
+        };
 
-    }, true);
 
+        $scope.viewGroup = function(entry, field, values) {
 
-    var addUrlParameter = function(url, key, value) {
-        return url + (url.indexOf('?') >= 0 ? "&" : '?') + encodeURIComponent(key) + "=" + encodeURIComponent(value);
-    };
-
-    var perspectiveToDictionaryFields = function(perspective) {
-        var fields = [];
-        for (var i = 0; i < perspective.fields.length; i++) {
-            var field = perspective.fields[i];
-            if (typeof field.group == 'string') {
-
-                var createNewGroup = true;
-                for (var j = 0; j < fields.length; j++) {
-                    if (fields[j].entity_type == field.group && fields[j].isGroup) {
-                        fields[j].contains.push(field);
-                        createNewGroup = false;
-                        break;
+            $modal.open({
+                animation: true,
+                templateUrl: 'viewGroupModal.html',
+                controller: 'viewGroupController',
+                size: 'lg',
+                backdrop: 'static',
+                keyboard: false,
+                resolve: {
+                    'groupParams': function() {
+                        return {
+                            'entry': entry,
+                            'field': field,
+                            'values': values
+                        };
                     }
                 }
+            });
+        };
 
-                if (createNewGroup) {
-                    fields.push({
-                        'entity_type': field.group,
-                        'isGroup': true,
-                        'contains': [field]
-                    });
+        $scope.viewGroupingTag = function(entry, field, values) {
+
+            $modal.open({
+                animation: true,
+                templateUrl: 'viewGroupingTagModal.html',
+                controller: 'viewGroupingTagController',
+                size: 'lg',
+                resolve: {
+                    'groupParams': function() {
+                        return {
+                            'entry': entry,
+                            'fields': $scope.fields
+                        };
+                    }
                 }
+            });
+        };
 
-            } else {
-                fields.push(field);
-            }
-        }
+        $scope.annotate = function(soundEntity, markupEntity) {
 
-        return fields;
-    };
+            var modalInstance = $modal.open({
+                animation: true,
+                templateUrl: 'annotationModal.html',
+                controller: 'AnnotationController',
+                size: 'lg',
+                resolve: {
+                    soundUrl: function() {
+                        return soundEntity.content;
+                    },
+                    annotationUrl: function() {
+                        return markupEntity.content;
+                    }
+                }
+            });
+        };
 
-    var getDictStats = function() {
-        var getDictStatsUrl = $('#allLexicalEntriesCountUrl').data('lingvodoc');
-        $http.get(getDictStatsUrl).success(function(data, status, headers, config) {
-            var totalEntries = data.count;
-            $scope.pageCount = Math.ceil(totalEntries / $scope.pageSize);
-            loadEntries();
-        }).error(function(data, status, headers, config) {
-            $log.error('Failed to load dictionary size!');
 
-            $scope.pageCount = Math.ceil(5000 / $scope.pageSize);
-            loadEntries();
+        $scope.$watch('lexicalEntries', function(updatedEntries) {
 
+            var getFieldValues = function(entry, field) {
+
+                var value;
+                var values = [];
+                if (entry && entry.contains) {
+
+                    if (field.isGroup) {
+
+                        for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                            var subField = field.contains[fieldIndex];
+
+                            for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                                value = entry.contains[valueIndex];
+                                if (value.entity_type == subField.entity_type) {
+                                    values.push(value);
+                                }
+                            }
+                        }
+                    } else {
+                        for (var i = 0; i < entry.contains.length; i++) {
+                            value = entry.contains[i];
+                            if (value.entity_type == field.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                }
+                return values;
+            };
+
+            var mapFieldValues = function(allEntries, allFields) {
+                var result = [];
+                for (var i = 0; i < allEntries.length; i++) {
+                    var entryRow = [];
+                    for (var j = 0; j < allFields.length; j++) {
+                        entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+                    }
+                    result.push(entryRow);
+                }
+                return result;
+            };
+
+            $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.fields);
+
+        }, true);
+
+        dictionaryService.getPerspectiveDictionaryFields($('#getPerspectiveFieldsUrl').data('lingvodoc')).then(function(fields) {
+
+            $scope.fields = fields;
+            dictionaryService.getLexicalEntries($('#allPublishedEntriesUrl').data('lingvodoc'), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
+                $scope.lexicalEntries = lexicalEntries;
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+
+        }, function(reason) {
+            responseHandler.error(reason);
         });
-    };
 
-
-    var loadEntries = function() {
-        var allLexicalEntriesUrl  = $('#allLexicalEntriesUrl').data('lingvodoc');
-        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, 'start_from', ($scope.pageIndex - 1) * $scope.pageSize);
-        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, 'count', $scope.pageSize);
-        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
-            $scope.lexicalEntries = data.lexical_entries;
-        }).error(function(data, status, headers, config) {
-            $log.error('Failed to load entries!');
+        dictionaryService.getLexicalEntriesCount($('#allPublishedEntriesCountUrl').data('lingvodoc')).then(function(totalEntriesCount) {
+            $scope.pageCount = Math.ceil(totalEntriesCount / $scope.pageSize);
+        }, function(reason) {
+            responseHandler.error(reason);
         });
-    };
 
-    var loadPerspective = function() {
-        var getFieldsUrl = $('#getPerspectiveFieldsUrl').data('lingvodoc');
-        $http.get(getFieldsUrl).success(function(data, status, headers, config) {
 
-            $scope.perspective['fields'] = data.fields;
-            $scope.fields = perspectiveToDictionaryFields($scope.perspective);
-
-            getDictStats();
-
-        }).error(function(data, status, headers, config) {
-            $log.error('Failed to load perspective!');
+        dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
+            $scope.path = path;
+        }, function(reason) {
+            responseHandler.error(reason);
         });
-    };
-
-    loadPerspective();
-
-}]);
+    }])
 
 
-
-app.controller('AnnotationController',
-    ['$scope', '$http', 'soundUrl', 'annotationUrl', function($scope, $http, soundUrl, annotationUrl) {
+    .controller('AnnotationController', ['$scope', '$http', 'soundUrl', 'annotationUrl', 'responseHandler', function($scope, $http, soundUrl, annotationUrl, responseHandler) {
 
         var activeUrl = null;
 
@@ -415,7 +285,7 @@ app.controller('AnnotationController',
             $http.get(url).success(function(data, status, headers, config) {
 
                 try {
-                    var xml = (new DOMParser()).parseFromString(data, "application/xml");
+                    var xml = (new DOMParser()).parseFromString(data, 'application/xml');
                     var annotation = new elan.Document();
                     annotation.importXML(xml);
                     $scope.annotation = annotation;
@@ -423,10 +293,11 @@ app.controller('AnnotationController',
                     createRegions(annotation);
 
                 } catch (e) {
-                    alert('Failed to parse ELAN annotation: ' + e);
+                    responseHandler.error('Failed to parse ELAN annotation: ' + e);
                 }
 
             }).error(function(data, status, headers, config) {
+                responseHandler.error(data);
             });
         };
 
@@ -502,260 +373,238 @@ app.controller('AnnotationController',
             $scope.wavesurfer.destroy();
         });
 
-    }]);
+    }])
 
 
-app.controller('viewGroupController', ['$scope', '$http', '$modalInstance', '$log', 'groupParams', function($scope, $http, $modalInstance, $log, groupParams) {
+    .controller('viewGroupController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
 
-    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
-    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
-    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
-    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
+        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
+        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
+        var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
+        var perspectiveId = $('#perspectiveId').data('lingvodoc');
 
-    var enabledInputs = [];
+        WaveSurferController.call(this, $scope);
 
-    WaveSurferController.call(this, $scope);
+        $scope.title = groupParams.field.entity_type;
+        $scope.fields = groupParams.field.contains;
+        $scope.parentEntry = groupParams.entry;
 
-    $scope.title = groupParams.field.entity_type;
-    $scope.fields = groupParams.field.contains;
-    $scope.parentEntry = groupParams.entry;
+        var createVirtualEntries = function(values) {
+            var virtualEntries = [];
 
-    var createVirtualEntries = function(values) {
-        var virtualEntries = [];
+            var addValue = function(value, entries) {
 
-        var addValue = function(value, entries) {
+                var createNewEntry = true;
+                if (value.additional_metadata) {
+                    for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+                        var currentEntry = entries[entryIndex];
 
-            var createNewEntry = true;
-            if (value.additional_metadata) {
-                for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
-                    var currentEntry = entries[entryIndex];
-
-                    if (entries[entryIndex].client_id == value.client_id &&
-                        entries[entryIndex].row_id == value.additional_metadata.row_id) {
-                        entries[entryIndex].contains.push(value);
-                        return;
+                        if (entries[entryIndex].client_id == value.client_id &&
+                            entries[entryIndex].row_id == value.additional_metadata.row_id) {
+                            entries[entryIndex].contains.push(value);
+                            return;
+                        }
                     }
+
+                    entries.push(
+                        {
+                            'client_id': $scope.parentEntry.client_id,
+                            'object_id': $scope.parentEntry.object_id,
+                            'row_id': value.additional_metadata.row_id,
+                            'contains': [value]
+                        }
+                    );
                 }
+            };
 
-                entries.push(
-                    {
-                        'client_id': $scope.parentEntry.client_id,
-                        'object_id': $scope.parentEntry.object_id,
-                        'row_id': value.additional_metadata.row_id,
-                        'contains': [value]
-                    }
-                );
+            for (var i = 0; i < values.length; i++) {
+                var value = values[i];
+                addValue(value, virtualEntries);
+            }
+
+            return virtualEntries;
+        };
+
+        $scope.entries = createVirtualEntries(groupParams.values);
+
+        $scope.fieldsIdx = [];
+        $scope.fieldsValues = [];
+        $scope.mapFieldValues = function(allEntries, allFields) {
+            $scope.fieldsValues = [];
+            $scope.fieldsIdx = [];
+
+            for (var i = 0; i < allEntries.length; i++) {
+                var entryRow = [];
+                for (var j = 0; j < allFields.length; j++) {
+                    entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+                }
+                $scope.fieldsValues.push(entryRow);
+            }
+
+            for (var k = 0; k < allFields.length; k++) {
+                $scope.fieldsIdx.push(allFields[k]);
             }
         };
 
-        for (var i = 0; i < values.length; i++) {
-            var value = values[i];
-            addValue(value, virtualEntries);
-        }
+        $scope.getFieldValues = function(entry, field) {
 
-        return virtualEntries;
-    };
+            var value;
+            var values = [];
+            if (entry && entry.contains) {
 
-    $scope.entries = createVirtualEntries(groupParams.values);
+                if (field.isGroup) {
 
-    $scope.fieldsIdx = [];
-    $scope.fieldsValues = [];
-    $scope.mapFieldValues = function(allEntries, allFields) {
-        $scope.fieldsValues = [];
+                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                        var subField = field.contains[fieldIndex];
+
+                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                            value = entry.contains[valueIndex];
+                            if (value.entity_type == subField.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < entry.contains.length; i++) {
+                        value = entry.contains[i];
+                        if (value.entity_type == field.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            }
+            return values;
+        };
+
+        $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
+
+            var url = $('#approveEntityUrl').data('lingvodoc');
+
+            var obj = {
+                'type': field.level,
+                'client_id': fieldValue.client_id,
+                'object_id': fieldValue.object_id
+            };
+
+            dictionaryService.approve(url, { 'entities': [obj] }, approved).then(function(data) {
+                fieldValue['published'] = approved;
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+        };
+
+        $scope.approved = function(lexicalEntry, field, fieldValue) {
+
+            if (!fieldValue.published) {
+                return false;
+            }
+
+            return !!fieldValue.published;
+        };
+
+        $scope.ok = function() {
+            $modalInstance.close($scope.entries);
+        };
+
+        $scope.$watch('entries', function(updatedEntries) {
+            $scope.mapFieldValues(updatedEntries, $scope.fields);
+        }, true);
+
+    }])
+
+    .controller('viewGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
+
+        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
+        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
+        var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
+        var perspectiveId = $('#perspectiveId').data('lingvodoc');
+
+        WaveSurferController.call(this, $scope);
+
+        $scope.fields = groupParams.fields;
+        $scope.connectedEntries = [];
+        $scope.suggestedEntries = [];
+
         $scope.fieldsIdx = [];
-
-        for (var i = 0; i < allEntries.length; i++) {
-            var entryRow = [];
-            for (var j = 0; j < allFields.length; j++) {
-                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
-            }
-            $scope.fieldsValues.push(entryRow);
+        for (var k = 0; k < $scope.fields.length; k++) {
+            $scope.fieldsIdx.push($scope.fields[k]);
         }
 
-        for (var k = 0; k < allFields.length; k++) {
-            $scope.fieldsIdx.push(allFields[k]);
-        }
-    };
-
-    $scope.getFieldValues = function(entry, field) {
-
-        var value;
-        var values = [];
-        if (entry && entry.contains) {
-
-            if (field.isGroup) {
-
-                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                    var subField = field.contains[fieldIndex];
-
-                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                        value = entry.contains[valueIndex];
-                        if (value.entity_type == subField.entity_type) {
-                            values.push(value);
-                        }
-                    }
-                }
-            } else {
-                for (var i = 0; i < entry.contains.length; i++) {
-                    value = entry.contains[i];
-                    if (value.entity_type == field.entity_type) {
-                        values.push(value);
-                    }
-                }
-            }
-        }
-        return values;
-    };
-
-    $scope.ok = function () {
-        $modalInstance.close();
-    };
-
-    $scope.$watch('entries', function (updatedEntries) {
-        $scope.mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
-
-}]);
-
-
-
-app.controller('viewGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'groupParams', function($scope, $http, $modalInstance, $q, $log, groupParams) {
-
-    var dictionaryClientId  = $('#dictionaryClientId').data('lingvodoc');
-    var dictionaryObjectId  = $('#dictionaryObjectId').data('lingvodoc');
-    var perspectiveClientId  = $('#perspectiveClientId').data('lingvodoc');
-    var perspectiveId  = $('#perspectiveId').data('lingvodoc');
-
-    var enabledInputs = [];
-
-    WaveSurferController.call(this, $scope);
-
-    $scope.fields = groupParams.fields;
-    $scope.connectedEntries = [];
-    $scope.suggestedEntries = [];
-
-    $scope.searchQuery = '';
-
-    $scope.fieldsIdx = [];
-    for (var k = 0; k < $scope.fields.length; k++) {
-        $scope.fieldsIdx.push($scope.fields[k]);
-    }
-
-    $scope.fieldsValues = [];
-    $scope.suggestedFieldsValues = [];
-    $scope.mapFieldValues = function(allEntries, allFields) {
-
-        var result = [];
         $scope.fieldsValues = [];
-        for (var i = 0; i < allEntries.length; i++) {
-            var entryRow = [];
-            for (var j = 0; j < allFields.length; j++) {
-                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+        $scope.suggestedFieldsValues = [];
+        $scope.mapFieldValues = function(allEntries, allFields) {
+
+            var result = [];
+            for (var i = 0; i < allEntries.length; i++) {
+                var entryRow = [];
+                for (var j = 0; j < allFields.length; j++) {
+                    entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+                }
+                result.push(entryRow);
             }
-            result.push(entryRow);
-        }
-        return result;
-    };
+            return result;
+        };
 
-    $scope.getFieldValues = function (entry, field) {
+        $scope.getFieldValues = function(entry, field) {
 
-        var value;
-        var values = [];
-        if (entry && entry.contains) {
+            var value;
+            var values = [];
+            if (entry && entry.contains) {
 
-            if (field.isGroup) {
+                if (field.isGroup) {
 
-                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                    var subField = field.contains[fieldIndex];
+                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                        var subField = field.contains[fieldIndex];
 
-                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                        value = entry.contains[valueIndex];
-                        if (value.entity_type == subField.entity_type) {
+                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                            value = entry.contains[valueIndex];
+                            if (value.entity_type == subField.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < entry.contains.length; i++) {
+                        value = entry.contains[i];
+                        if (value.entity_type == field.entity_type) {
                             values.push(value);
                         }
                     }
                 }
-            } else {
-                for (var i = 0; i < entry.contains.length; i++) {
-                    value = entry.contains[i];
-                    if (value.entity_type == field.entity_type) {
-                        values.push(value);
-                    }
-                }
             }
-        }
-        return values;
-    };
+            return values;
+        };
 
-    $scope.ok = function () {
-        $modalInstance.close();
-    };
+        $scope.getPerspectiveLink = function(p) {
+            return '/dictionary/' + encodeURIComponent(p.parent_client_id) + '/' + encodeURIComponent(p.parent_object_id) + '/perspective/' + encodeURIComponent(p.client_id) + '/' + encodeURIComponent(p.object_id) + '/view';
+        };
 
+        $scope.ok = function() {
+            $modalInstance.close();
+        };
 
+        $scope.$watch('connectedEntries', function(updatedEntries) {
+            $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
+        }, true);
 
-    $scope.$watch('connectedEntries', function (updatedEntries) {
-        $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
+        dictionaryService.getConnectedWords(groupParams.entry.client_id, groupParams.entry.object_id).then(function(entries) {
 
-
-    $scope.$watch('suggestedEntries', function (updatedEntries) {
-        $scope.suggestedFieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
-
-
-    $scope.$watch('searchQuery', function (updatedQuery) {
-
-        if (!updatedQuery || updatedQuery.length < 3) {
-            return;
-        }
-
-        var url = '/basic_search?leveloneentity=' + encodeURIComponent(updatedQuery);
-        $http.get(url).success(function(data, status, headers, config) {
-            $scope.suggestedEntries = [];
-
-            var urls = [];
-            for (var i = 0; i < data.length; i++) {
-                var entr = data[i];
-                var getEntryUrl = '/dictionary/' + encodeURIComponent(entr.origin_dictionary_client_id) +'/'+ encodeURIComponent(entr.origin_dictionary_object_id) + '/perspective/' + encodeURIComponent(entr.origin_perspective_client_id) +  '/' + encodeURIComponent(entr.origin_perspective_object_id) + '/lexical_entry/' + encodeURIComponent(entr.client_id) + '/' + encodeURIComponent(entr.object_id);
-                urls.push(getEntryUrl);
-            }
-
-            var uniqueUrls = urls.filter(function(item, pos) {
-                return urls.indexOf(item) == pos;
+            var r = entries.map(function(entry) {
+                var lexicalEntry = entry.lexical_entry;
+                return dictionaryService.getPerspectiveOriginById(lexicalEntry.parent_client_id, lexicalEntry.parent_object_id);
             });
 
-            var requests = [];
-            for (var j = 0; j < uniqueUrls.length; j++) {
-                var r = $http.get(uniqueUrls[j]);
-                requests.push(r);
-            }
-
-            $q.all(requests).then(function(results) {
-                for (var k = 0; k < results.length; k++) {
-                    if (results[k].data) {
-                        $scope.suggestedEntries.push(results[k].data.lexical_entry);
-                    }
-                }
+            $q.all(r).then(function(paths) {
+                angular.forEach(entries, function(entry, i) {
+                    entry.lexical_entry['origin'] = paths[i];
+                    $scope.connectedEntries.push(entry.lexical_entry);
+                });
+            }, function(reason) {
+                responseHandler.error(reason);
             });
 
-
-
-        }).error(function(data, status, headers, config) {
-
+        }, function(reason) {
+            responseHandler.error(reason);
         });
 
-    }, true);
-
-    var loadConnectedWords = function() {
-        var url = '/lexical_entry/' + encodeURIComponent(groupParams.clientId) + '/' + encodeURIComponent(groupParams.objectId) + '/connected';
-        $http.get(url).success(function(data, status, headers, config) {
-
-        }).error(function(data, status, headers, config) {
-
-        });
-
-    };
-    loadConnectedWords();
-}]);
-
-
+    }]);

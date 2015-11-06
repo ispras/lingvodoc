@@ -46,7 +46,7 @@ def main(argv=sys.argv):
     engine = engine_from_config(settings, 'sqlalchemy.')
 
     DBSession.configure(bind=engine)
-    Base.metadata.create_all(engine)
+    # Base.metadata.create_all(engine)
     with transaction.manager:
         # Creating global administrator
         admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
@@ -129,6 +129,14 @@ def main(argv=sys.argv):
         base_groups.append(BaseGroup(translation_string="Can delete languages",
                                      subject="language",
                                      action="delete"))
+        base_groups.append(BaseGroup(translation_string="Can delete dictionary",  # not really sure if it is needed
+                                     subject="dictionary",
+                                     action="delete",
+                                     dictionary_default=True))
+        base_groups.append(BaseGroup(translation_string="Can delete perspective",  # not really sure if it is needed
+                                     subject="perspective",
+                                     action="delete",
+                                     perspective_default=True))
         base_groups.append(BaseGroup(translation_string="Can edit user",
                                      subject="edit_user",
                                      action="edit"))
@@ -168,8 +176,7 @@ def main(argv=sys.argv):
                                      dictionary_default=True))
         base_groups.append(BaseGroup(translation_string="Can edit organization",
                                      subject="organization",
-                                     action="edit",
-                                     perspective_default=True))
+                                     action="edit"))
         base_groups.append(BaseGroup(translation_string="Can create perspectives",
                                      subject="perspective",
                                      action="create",
@@ -182,6 +189,14 @@ def main(argv=sys.argv):
                                      subject="lexical_entries_and_entities",
                                      action="create",
                                      perspective_default=True))
+        base_groups.append(BaseGroup(translation_string="Can delete lexical entries",
+                                     subject="lexical_entries_and_entities",
+                                     action="delete",
+                                     perspective_default=True))
+        # base_groups.append(BaseGroup(translation_string="Can delete lexical entries",
+        #                              subject="lexical_entries_and_entities",
+        #                              action="delete",
+        #                              perspective_default=True))
         base_groups.append(BaseGroup(translation_string="Can view unpublished lexical entries",
                                      subject="lexical_entries_and_entities",
                                      action="view",
@@ -197,7 +212,7 @@ def main(argv=sys.argv):
         base_groups.append(BaseGroup(translation_string="Can merge dictionaries and perspectives",
                                      subject="merge",
                                      action="create",
-                                     perspective_default=True))
+                                     dictionary_default=True))
 
         for base_group in base_groups:
             DBSession.add(base_group)
@@ -210,12 +225,13 @@ def main(argv=sys.argv):
             adm_group_list.append(Group(base_group_id=base_group.id, subject_override=True))
             for adm_group in adm_group_list:
                 DBSession.add(adm_group)
-                admin_account.groups.append(adm_group)
+                if not adm_group in admin_account.groups:
+                    admin_account.groups.append(adm_group)
         DBSession.flush()
 
         fake_dictionary = Dictionary(client_id=client.id,
                                      #object_id=1,
-                                     name="Fake dictionary",
+                                     translation_string="Fake dictionary",
                                      state="Service")
         DBSession.add(fake_dictionary)
         DBSession.flush()
@@ -226,7 +242,7 @@ def main(argv=sys.argv):
                                                  parent_object_id=fake_dictionary.object_id,
                                                  is_template=True,
                                                  state="Service",
-                                                 name="Lingvodoc desktop version")
+                                                 translation_string="Lingvodoc desktop version")
         DBSession.add(dialeqt_template)
         DBSession.flush()
 
@@ -316,7 +332,7 @@ def main(argv=sys.argv):
                                                             parent_object_id=fake_dictionary.object_id,
                                                             is_template=True,
                                                             state="Service",
-                                                            name="Regular dictionary")
+                                                            translation_string="Regular dictionary")
         DBSession.add(regular_dictionary_template)
         DBSession.flush()
 
@@ -477,7 +493,7 @@ def main(argv=sys.argv):
                                            parent_object_id=fake_dictionary.object_id,
                                            is_template=True,
                                            state="Service",
-                                           name="Morhological dictionary")
+                                           translation_string="Morhological dictionary")
         DBSession.add(morphodict)
         DBSession.flush()
 
