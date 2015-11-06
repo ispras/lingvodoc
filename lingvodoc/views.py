@@ -3579,13 +3579,19 @@ def user_counter(entry, result, starting_date, ending_date, types, clients_to_us
 
     user = clients_to_users_dict.get(entry['client_id'])
     if user:
-        if not result.get(user['id']):
+        user_exist = next((item for item in result if item['id'] == user['id']), None)
+        # user_exist = [item for item in result if item["id"] == user['id']]
+        if not user_exist:
             counters = dict()
             for entity_type in types:
                 counters[entity_type] = 0
             counters['lexical_entry'] = 0
-            result[user['id']] = counters
-        user_count = result[user['id']]
+            user['counters'] = counters
+            result += [user]
+            user_exist = user
+        # else:
+        #     user_exist = user_exist[0]
+        user_count = user_exist['counters']
         if entry['level'] == 'lexicalentry':
             user_count['lexical_entry'] += 1
         else:
@@ -3635,7 +3641,7 @@ def perspective_info(request):
 
     if perspective:
         if not perspective.marked_for_deletion:
-            result = dict()
+            result = []
             path = request.route_url('perspective_fields',
                                      dictionary_client_id=perspective.parent_client_id,
                                      dictionary_object_id=perspective.parent_object_id,
@@ -3683,7 +3689,7 @@ def dictionary_info(request):
     if ending_date:
         ending_date = datetime.datetime(ending_date)
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    result = dict()
+    result = []
     if dictionary:
         if not dictionary.marked_for_deletion:
             clients_to_users_dict = cache_clients()
