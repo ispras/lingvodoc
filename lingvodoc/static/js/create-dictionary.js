@@ -31741,7 +31741,7 @@ function responseHandler($timeout, $modal) {
         }, timeout);
     }
     function success(message) {
-        show("success", message, 500);
+        show("success", message, 5e3);
     }
     function error(message) {
         show("error", message, 5e3);
