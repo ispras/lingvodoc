@@ -4,7 +4,7 @@ from pyramid.view import view_config
 
 from sqlalchemy.exc import DBAPIError
 
-from .scripts.lingvodoc_converter_new import convert_one, get_dict_attributes
+from .scripts.lingvodoc_converter import convert_one, get_dict_attributes
 
 from .models import (
     DBSession,
@@ -222,8 +222,8 @@ def basic_search(request):
 
 
 #TODO: make it normal, it's just a test
-@view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
-def convert_dictionary(request):
+@view_config(route_name='convert_dictionary_old', renderer='json', request_method='POST')
+def convert_dictionary_old(request):
     req = request.json_body
 
     client_id = req['blob_client_id']
@@ -291,8 +291,8 @@ def convert_dictionary_check(request):
 
 
 #TODO: make it normal, it's just a test
-@view_config(route_name='convert_dictionary_new', renderer='json', request_method='POST')
-def convert_dictionary_new(request):
+@view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
+def convert_dictionary(request):
     req = request.json_body
 
     client_id = req['blob_client_id']
@@ -4181,15 +4181,16 @@ def merge_suggestions(request):
     levenstein = req['levenstein'] or 1
     client_id = req['client_id']
     object_id = req['object_id']
-    lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = client_id, parent_object_id = object_id).all())
-    lexes_1 = []
-    lexes_2 = []
+    lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id=client_id,
+                                                         parent_object_id=object_id,
+                                                         marked_for_deletion=False).all())
     if not lexes:
-        return json.dumps({})
+        return json.dumps([])
     # first_persp = json.loads(lexes[0].additional_metadata)['came_from']
     lexes_1 = [o.track(False) for o in lexes]
     remove_deleted(lexes_1)
     lexes_2 = list(lexes_1)
+
     def parse_response(elem):
         words = filter(lambda x: x['entity_type'] == entity_type_primary and not x['marked_for_deletion'], elem['contains'])
         words = map(lambda x: x['content'], words)
@@ -4197,6 +4198,7 @@ def merge_suggestions(request):
         trans = map(lambda x: x['content'], trans)
         tuples_res = [(i_word, i_trans, (elem['client_id'], elem['object_id'])) for i_word in words for i_trans in trans]
         return tuples_res
+
     tuples_1 = [parse_response(i) for i in lexes_1]
     tuples_1 = [item for sublist in tuples_1 for item in sublist]
     tuples_2 = [parse_response(i) for i in lexes_2]

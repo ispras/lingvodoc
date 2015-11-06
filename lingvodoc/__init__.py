@@ -517,7 +517,7 @@ def configure_routes(config):
     # {"blob_client_id": <id>, "blob_object_id": <id>, "parent_client_id": <language_client_id>, "parent_object_id": <language_object_id>}
     config.add_route(name='convert_dictionary', pattern='/convert')
     config.add_route(name='convert_dictionary_check', pattern='/convert_check')
-    config.add_route(name='convert_dictionary_new', pattern='/convert_new')
+    config.add_route(name='convert_dictionary_old', pattern='/convert_old')
 
 
 def main(global_config, **settings):
