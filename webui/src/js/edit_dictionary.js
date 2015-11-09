@@ -66,6 +66,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         $scope.perspectiveFields = [];
         $scope.lexicalEntries = [];
 
+
         $scope.fields = [];
         $scope.dictionaryTable = [];
 
@@ -73,6 +74,10 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         $scope.pageIndex = 1;
         $scope.pageSize = 20;
         $scope.pageCount = 1;
+
+        $scope.filterQuery = '';
+        $scope.filterEntries = [];
+        $scope.originalEntries = [];
 
         var enabledInputs = [];
 
@@ -421,11 +426,30 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
         }, true);
 
+        $scope.$watch('filterQuery', function(q) {
+
+            if (!q || q.length == 0) {
+                $scope.lexicalEntries = $scope.originalEntries;
+                return;
+            }
+
+            if (!q || q.length < 3) {
+                return;
+            }
+
+            dictionaryService.search(q, true).then(function(filterEntries) {
+                $scope.lexicalEntries = filterEntries;
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+        }, false);
+
         dictionaryService.getPerspectiveDictionaryFields($('#getPerspectiveFieldsUrl').data('lingvodoc')).then(function(fields) {
 
             $scope.fields = fields;
             dictionaryService.getLexicalEntries($('#allLexicalEntriesUrl').data('lingvodoc'), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
                 $scope.lexicalEntries = lexicalEntries;
+                $scope.originalEntries = lexicalEntries;
             }, function(reason) {
                 responseHandler.error(reason);
             });
@@ -452,7 +476,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         }, function(reason) {
             responseHandler.error(reason);
         });
-
     }])
 
 
@@ -571,7 +594,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             $scope.wavesurfer.stop();
             $scope.wavesurfer.destroy();
         });
-
     }])
 
 
