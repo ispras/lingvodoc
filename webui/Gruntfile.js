@@ -87,8 +87,6 @@ module.exports = function(grunt) {
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
-                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
-                    'bower_components/autocomplete/script/autocomplete.js',
                     'src/js/util.js',
                     'src/js/api.js',
                     'src/js/response_handler.js',
@@ -167,6 +165,7 @@ module.exports = function(grunt) {
             editdictionary: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/underscore/underscore.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',

@@ -77,16 +77,21 @@
 
     <div class="row">
         <div class="col-md-1">
-            <button type="button" class="btn btn-default" ng-click="addNewLexicalEntry()">
+            <button type="button" class="btn btn-primary" ng-click="addNewLexicalEntry()">
                 <span class="glyphicon glyphicon-plus"></span>
             </button>
         </div>
 
         <div class="col-md-1">
-            <button type="button" class="btn btn-default" ng-click="mergeEntries()">
-                <span class="glyphicon glyphicon-dashboard">Merge entries</span>
+            <button type="button" class="btn btn-primary" ng-click="detectDuplicates()">
+                <span class="glyphicon glyphicon-dashboard">Detect duplicates</span>
             </button>
         </div>
+
+        <div class="col-md-1">
+            <button type="button" class="btn btn-primary" ng-click="mergeEntries()" ng-disabled="selectedEntries.length < 2">Merge</button>
+        </div>
+
 
         <div class="col-md-4">
             <input type="text" class="form-control" placeholder="Filter..." ng-model="filterQuery">
@@ -99,6 +104,7 @@
         <table class="table table-striped table-bordered">
             <thead>
             <tr>
+                <td> <!-- select --> </td>
                 <td ng-repeat="field in fields">{{ field.entity_type }}</td>
                 <td> <!-- action --> </td>
             </tr>
@@ -107,6 +113,11 @@
             <tbody>
 
             <tr ng-repeat="entryFields in dictionaryTable">
+
+                <td>
+                    <input type="checkbox" ng-checked="isEntrySelected(lexicalEntries[$index])" ng-click="toggleSelect($event, lexicalEntries[$index])">
+                </td>
+
 
                 <td ng-repeat="fieldValues in entryFields"
                     ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
@@ -736,7 +747,7 @@
 </script>
 
 
-<script type="text/ng-template" id="mergeEntriesModal.html">
+<script type="text/ng-template" id="detectDuplicatesModal.html">
 
     <div class="modal-header">
         <h3 class="modal-title">Merge lexical entries</h3>
