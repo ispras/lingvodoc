@@ -1721,7 +1721,7 @@ def dictionaries_list(request):
         else:
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
     # TODO: fix
-    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation_string':o.translation_string, 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
+    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
 
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code

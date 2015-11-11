@@ -53,7 +53,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         };
     })
 
-    .controller('EditDictionaryController', ['$scope', '$http', '$window', '$modal', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $window, $modal, $log, dictionaryService, responseHandler) {
+    .controller('EditDictionaryController', ['$scope', '$http', '$q', '$modal', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
 
         var currentClientId = $('#clientId').data('lingvodoc');
         var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
@@ -78,6 +78,8 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         $scope.filterQuery = '';
         $scope.filterEntries = [];
         $scope.originalEntries = [];
+
+        $scope.selectedEntries = [];
 
         var enabledInputs = [];
 
@@ -129,6 +131,57 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 input.push(i);
             }
             return input;
+        };
+
+        $scope.isEntrySelected = function(lexicalEntry) {
+            return -1 !== _.findIndex($scope.selectedEntries, function(e) {
+                return e.client_id == lexicalEntry.clientd_id && e.object_id == lexicalEntry.object_id;
+            });
+        };
+
+        $scope.toggleSelect = function($event, lexicalEntry) {
+            var checkbox = $event.target;
+            var idx = _.findIndex($scope.selectedEntries, function(e) {
+                return e.client_id == lexicalEntry.client_id && e.object_id == lexicalEntry.object_id;
+            });
+
+            if (checkbox.checked && idx === -1) {
+                $scope.selectedEntries.push(lexicalEntry);
+            }
+
+            if (!checkbox.checked && idx !== -1) {
+                $scope.selectedEntries.splice(idx, 1);
+            }
+        };
+
+        $scope.mergeEntries = function() {
+
+            if (_.size($scope.selectedEntries) >= 2) {
+                var mainEntry = _.first($scope.selectedEntries);
+                var tailEntries = _.rest($scope.selectedEntries);
+                var reqs = _.map(tailEntries, function(e) {
+                    return dictionaryService.moveLexicalEntry(mainEntry.client_id, mainEntry.object_id, e.client_id, e.object_id);
+                });
+
+                $q.all(reqs).then(function() {
+                    _.forEach(tailEntries, function(entry) {
+                        _.forEach(e.contains, function(entity) {
+                            mainEntry.contains.push(entity);
+                        });
+
+                        var idx = _.findIndex($scope.lexicalEntries, function(e) {
+                            return e.client_id == entry.client_id && e.object_id == entry.object_id;
+                        });
+
+                        $scope.lexicalEntries.splice(idx, 1);
+                    });
+
+                    $scope.selectedEntries = [];
+
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            }
         };
 
         $scope.enableInput = function(clientId, objectId, entityType) {
@@ -214,9 +267,8 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         $scope.saveValue = function(entry, field, value, parent) {
 
             var entryObject = value.export();
-            // TODO: get locale_id from cookies
             entryObject['entity_type'] = field.entity_type;
-            entryObject['locale_id'] = 1;
+            entryObject['locale_id'] = getCookie('locale_id');
 
             dictionaryService.saveValue(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveId, entry, field, entryObject, parent).then(function(data) {
 
@@ -336,12 +388,12 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         };
 
 
-        $scope.mergeEntries = function() {
+        $scope.detectDuplicates = function() {
 
             var modalInstance = $modal.open({
                 animation: true,
-                templateUrl: 'mergeEntriesModal.html',
-                controller: 'mergeEntriesController',
+                templateUrl: 'detectDuplicatesModal.html',
+                controller: 'detectDuplicatesController',
                 size: 'lg',
                 resolve: {
                     'params': function() {
@@ -983,7 +1035,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         });
 
     }])
-    .controller('mergeEntriesController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, params) {
+    .controller('detectDuplicatesController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, params) {
 
         $scope.perspective = params.perspective;
         $scope.suggestions = [];
