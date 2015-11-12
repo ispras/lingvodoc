@@ -3478,46 +3478,58 @@ def move_lexical_entry_bulk(request):
         cli_id = par['client_id']
         obj_id = par['object_id']
         parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
-        if not override:
-            if {'client_id': parent.parent_client_id, 'object_id': parent.parent_object_id} in ids:
+        can = True
+        if parent:
+            if not override:
+                if {'client_id': parent.parent_client_id, 'object_id': parent.parent_object_id} not in ids:
+                    can = False
+            if can:
                 for ent in par['lexical_entries']:
+                    can = True
                     object_id = ent['object_id']
                     client_id = ent['client_id']
                     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-                    if not override:
-                        if {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id} in ids:
-                            if entry and parent:
-                                if parent.moved_to is None:
-                                    if entry.moved_to is None:
+                    if entry:
+                        if not override:
+                            if {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id} not in ids:
+                                can = False
 
-                                        if not entry.marked_for_deletion and not parent.marked_for_deletion:
-                                            l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
-                                            for entity in l1e:
-                                                ent = DBSession.query(LevelOneEntity)\
-                                                    .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
-                                                    .first()
-                                                if ent:
-                                                    entity.marked_for_deletion = True
-                                                    if real_delete:
-                                                        for publent in entity.publishleveloneentity:
-                                                            DBSession.delete(publent)
-                                                        DBSession.delete(entity)
-                                                        continue
-                                                entity.parent = parent
+                        if can:
+                                if entry:
+                                    if parent.moved_to is None:
+                                        if entry.moved_to is None:
 
-                                                for publent in entity.publishleveloneentity:
-                                                    publent.marked_for_deletion = True
-                                                    publent.parent = parent
-                                                DBSession.flush()
-                                            ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
-                                            for entity in ge:
-                                                entity.parent = parent
-                                                for publent in entity.publishgroupingentity:
-                                                    publent.marked_for_deletion = True
-                                                    publent.parent = parent
-                                                DBSession.flush()
-                                            entry.moved_to = str(cli_id) + '/' + str(obj_id)
-                                            entry.marked_for_deletion = True
+                                            if not entry.marked_for_deletion and not parent.marked_for_deletion:
+                                                l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                                                for entity in l1e:
+                                                    ent = DBSession.query(LevelOneEntity)\
+                                                        .filter_by(parent=parent,
+                                                                   entity_type=entity.entity_type,
+                                                                   content = entity.content)\
+                                                        .first()
+                                                    if ent:
+                                                        entity.marked_for_deletion = True
+                                                        if real_delete:
+                                                            for publent in entity.publishleveloneentity:
+                                                                DBSession.delete(publent)
+                                                            DBSession.delete(entity)
+                                                            continue
+                                                    entity.parent = parent
+
+                                                    for publent in entity.publishleveloneentity:
+                                                        publent.marked_for_deletion = True
+                                                        publent.parent = parent
+                                                    DBSession.flush()
+                                                ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                                                for entity in ge:
+                                                    entity.parent = parent
+                                                    for publent in entity.publishgroupingentity:
+                                                        publent.marked_for_deletion = True
+                                                        publent.parent = parent
+                                                    DBSession.flush()
+                                                entry.moved_to = str(cli_id) + '/' + str(obj_id)
+                                                entry.marked_for_deletion = True
+                                                print(client_id, object_id)
     request.response.status = HTTPOk.code
     return {}
 
