@@ -86,8 +86,8 @@ def configure_routes(config):
     # API #GET
     # Perspective list
     # 1. Filter by:
-    #    a) template
-    #    b) state
+    #    a) template (param is_template=true/false)
+    #    b) state  (param state=<state>)
     config.add_route('all_perspectives', '/perspectives')
     config.add_route('users', '/users')
 

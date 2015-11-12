@@ -53,7 +53,7 @@ from sqlalchemy import (
     and_
 )
 from sqlalchemy.orm import joinedload, subqueryload, noload, join, joinedload_all
-from sqlalchemy.sql.expression import case
+from sqlalchemy.sql.expression import case, true, false
 
 from collections import deque
 
@@ -1743,10 +1743,15 @@ def perspectives_list(request):
     except:
         pass
     persps = DBSession.query(DictionaryPerspective)
-    if is_template:
-        persps = persps.filter(DictionaryPerspective).filter_by(is_template=is_template)
+    if is_template is not None:
+        if type(is_template) == str:
+            if is_template.lower() == 'true':
+                is_template = True
+            else:
+                is_template = False
+        persps = persps.filter(DictionaryPerspective.is_template == is_template)
     if state:
-        persps = persps.filter(DictionaryPerspective).filter_by(state=state)
+        persps = persps.filter(DictionaryPerspective.state==state)
     perspectives = []
     for perspective in persps:
         path = request.route_url('perspective',
