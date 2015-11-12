@@ -472,9 +472,17 @@ def configure_routes(config):
         '{levenstein}')
 
     # API #PATCH
-    # {'client_id':<client_id>, 'object_id':<object_id>}  id's of entry where moving to
+    # {'client_id':<client_id>, 'object_id':<object_id>, 'real_delete':true/false}  id's of entry where moving to
     config.add_route(name='move_lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}/move',
                      factory='lingvodoc.models.LexicalViewAcl')
+
+    # {real_delete':true/false,
+    #  'move_list':[{'client_id': <where_to_client_id>,
+    #               'object_id': <where_to_object_id>,
+    #               'lexical_entries': [{'client_id': <where_from_client_id>, 'object_id': <where_from_object_id>}, ]}
+    #              ,]
+    # }
+    config.add_route(name='move_lexical_entry_bulk', pattern='/move/lexical_entries')
 
     # web-view
     config.add_route(name='merge_master', pattern='/dashboard/merge')

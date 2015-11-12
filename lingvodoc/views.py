@@ -3389,6 +3389,8 @@ def move_lexical_entry(request):
     client_id = request.matchdict.get('client_id')
     cli_id = req['client_id']
     obj_id = req['object_id']
+    real_delete = req.get('real_delete')   # With great power comes great responsibility
+    # Maybe there needs to be check for permission of some sort (can really delete only when updating dictionary)
     entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
     if entry and parent:
@@ -3405,43 +3407,119 @@ def move_lexical_entry(request):
         if user not in groupoverride.users:
             if user not in group.users:
                 raise CommonException("You should only move to lexical entires you own")
-        if parent.moved_to:
-            path = request.route_url('lexical_entry',
-                                     client_id=cli_id,
-                                     )
-            subreq = Request.blank(path)
-            subreq.method = 'GET'
-            subreq.headers = request.headers
-            resp = request.invoke_subrequest(subreq)
-        if entry.moved_to is None:
+        if parent.moved_to is None:
+            if entry.moved_to is None:
 
-            if not entry.marked_for_deletion and not parent.marked_for_deletion:
-                l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
-                for entity in l1e:
-                    ent = DBSession.query(LevelOneEntity)\
-                        .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
-                        .first()
-                    if ent:
-                        entity.marked_for_deletion = True
-                    entity.parent = parent
+                if not entry.marked_for_deletion and not parent.marked_for_deletion:
+                    l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                    for entity in l1e:
+                        ent = DBSession.query(LevelOneEntity)\
+                            .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
+                            .first()
+                        if ent:
+                            entity.marked_for_deletion = True
+                            if real_delete:
+                                for publent in entity.publishleveloneentity:
+                                    DBSession.delete(publent)
+                                DBSession.delete(entity)
+                                continue
+                        entity.parent = parent
 
-                    for publent in entity.publishleveloneentity:
-                        publent.marked_for_deletion = True
-                        publent.parent = parent
-                    DBSession.flush()
-                ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
-                for entity in ge:
-                    entity.parent = parent
-                    for publent in entity.publishgroupingentity:
-                        publent.marked_for_deletion = True
-                        publent.parent = parent
-                    DBSession.flush()
-                entry.moved_to = str(cli_id) + '/' + str(obj_id)
-                entry.marked_for_deletion = True
-                request.response.status = HTTPOk.code
-                return {}
+                        for publent in entity.publishleveloneentity:
+                            publent.marked_for_deletion = True
+                            publent.parent = parent
+                        DBSession.flush()
+                    ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                    for entity in ge:
+                        entity.parent = parent
+                        for publent in entity.publishgroupingentity:
+                            publent.marked_for_deletion = True
+                            publent.parent = parent
+                        DBSession.flush()
+                    entry.moved_to = str(cli_id) + '/' + str(obj_id)
+                    entry.marked_for_deletion = True
+                    request.response.status = HTTPOk.code
+                    return {}
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
+
+
+@view_config(route_name='move_lexical_entry_bulk', renderer='json', request_method='PATCH')
+def move_lexical_entry_bulk(request):
+    req = request.json_body
+    real_delete = req.get('real_delete')  # With great power comes great responsibility
+    # Maybe there needs to be check for permission of some sort (can really delete only when updating dictionary)
+    variables = {'auth': request.authenticated_userid}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                       variables['auth'])
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+    groups = DBSession.query(Group)\
+        .join(BaseGroup, BaseGroup.id == Group.base_group_id)\
+        .filter(BaseGroup.subject == 'lexical_entries_and_entities')\
+        .filter(BaseGroup.action == 'create')\
+        .join(User, Group.users)\
+        .filter(User.id == user.id)\
+        .group_by(Group)\
+        .order_by('subject_override')\
+        .all()
+
+    wat = [o for o in groups]
+    override = False
+    ids = [{'client_id': o.subject_client_id,'object_id': o.subject_object_id} for o in groups]
+    for group in groups:
+        if group.subject_override:
+            override = True
+            break
+    for par in req['move_list']:
+        cli_id = par['client_id']
+        obj_id = par['object_id']
+        parent = DBSession.query(LexicalEntry).filter_by(client_id=cli_id, object_id=obj_id).first()
+        if not override:
+            if {'client_id': parent.parent_client_id, 'object_id': parent.parent_object_id} in ids:
+                for ent in par['lexical_entries']:
+                    object_id = ent['object_id']
+                    client_id = ent['client_id']
+                    entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
+                    if not override:
+                        if {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id} in ids:
+                            if entry and parent:
+                                if parent.moved_to is None:
+                                    if entry.moved_to is None:
+
+                                        if not entry.marked_for_deletion and not parent.marked_for_deletion:
+                                            l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                                            for entity in l1e:
+                                                ent = DBSession.query(LevelOneEntity)\
+                                                    .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
+                                                    .first()
+                                                if ent:
+                                                    entity.marked_for_deletion = True
+                                                    if real_delete:
+                                                        for publent in entity.publishleveloneentity:
+                                                            DBSession.delete(publent)
+                                                        DBSession.delete(entity)
+                                                        continue
+                                                entity.parent = parent
+
+                                                for publent in entity.publishleveloneentity:
+                                                    publent.marked_for_deletion = True
+                                                    publent.parent = parent
+                                                DBSession.flush()
+                                            ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                                            for entity in ge:
+                                                entity.parent = parent
+                                                for publent in entity.publishgroupingentity:
+                                                    publent.marked_for_deletion = True
+                                                    publent.parent = parent
+                                                DBSession.flush()
+                                            entry.moved_to = str(cli_id) + '/' + str(obj_id)
+                                            entry.marked_for_deletion = True
+    request.response.status = HTTPOk.code
+    return {}
 
 
 @view_config(route_name='organization_list', renderer='json', request_method='GET')
