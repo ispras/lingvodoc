@@ -138,8 +138,8 @@ def basic_search(request):
     can_add_tags = request.params.get('can_add_tags')
     print(can_add_tags)
     searchstring = request.params.get('leveloneentity')
-    perspective_client_id =  request.params.get('perspective_client_id')
-    perspective_object_id =  request.params.get('perspective_object_id')
+    perspective_client_id = request.params.get('perspective_client_id')
+    perspective_object_id = request.params.get('perspective_object_id')
     if searchstring:
         if len(searchstring) >= 2:
             searchstring = request.params.get('leveloneentity')
@@ -645,7 +645,7 @@ def view_perspective(request):
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
             response['additional_metadata'] = perspective.additional_metadata
-            meta = perspective.additional_metadata
+            meta = json.loads(perspective.additional_metadata)
             if meta:
                 if 'latitude' in meta:
                     response['latitude'] = meta['latitude']
@@ -867,7 +867,9 @@ def create_perspective(request):
         additional_metadata = req.get('additional_metadata')
         if additional_metadata:
             additional_metadata.update(coord)
-            additional_metadata = json.dumps(additional_metadata)
+        else:
+            additional_metadata = coord
+        additional_metadata = json.dumps(additional_metadata)
 
         perspective = DictionaryPerspective(object_id=DBSession.query(DictionaryPerspective).filter_by(client_id=client.id).count() + 1,
                                             client_id=variables['auth'],

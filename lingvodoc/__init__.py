@@ -302,7 +302,7 @@ def configure_routes(config):
 
     # API #GET
     # like
-    # perspective_client_id 
+    # perspective_client_id
     # perspective_object_id
     config.add_route(name='basic_search', pattern='/basic_search')
 
