@@ -384,6 +384,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, Tran
     authors = Column(UnicodeText)
     translation_string = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    additional_metadata = Column(UnicodeText)
     # about = Column(UnicodeText)
 
 
@@ -407,6 +408,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     is_template = Column(Boolean, default=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
+    additional_metadata = Column(UnicodeText)
     # about = Column(UnicodeText)
 
 
@@ -798,6 +800,7 @@ def acl_by_groups(object_id, client_id, subject):
     for group in groups:
         base_group = group.parent
         if group.subject_override:
+            group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \
