@@ -400,6 +400,7 @@ def view_dictionary(request):
             response['translation_string'] = translation_string['translation_string']
             response['translation'] = translation_string['translation']
             response['status'] = dictionary.state
+            response['additional_metadata'] = dictionary.additional_metadata
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -425,9 +426,16 @@ def edit_dictionary(request):
                     dictionary.parent_object_id = req['parent_object_id']
                 if 'translation' in req:
                     dictionary.set_translation(request)
+                additional_metadata = req.get('additional_metadata')
+                if additional_metadata:
+                    # additional_metadata = json.dumps(additional_metadata)
+
+                    old_meta = json.loads(dictionary.additional_metadata)
+                    old_meta.update(additional_metadata)
+                    new_meta = json.dumps(old_meta)
+                    dictionary.additional_metadata = new_meta
                 request.response.status = HTTPOk.code
                 return response
-
         request.response.status = HTTPNotFound.code
         return {'error': str("No such dictionary in the system")}
     except KeyError as e:
@@ -469,11 +477,15 @@ def create_dictionary(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        additional_metadata = req.get('additional_metadata')
+        if additional_metadata:
+            additional_metadata = json.dumps(additional_metadata)
 
         dictionary = Dictionary(object_id=DBSession.query(Dictionary).filter_by(client_id=client.id).count() + 1,
                                 client_id=variables['auth'],
                                 state='WiP',
-                                parent=parent)
+                                parent=parent,
+                                additional_metadata=additional_metadata)
         dictionary.set_translation(request)
         DBSession.add(dictionary)
         DBSession.flush()
@@ -622,6 +634,12 @@ def view_perspective(request):
             response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
+            response['additional_metadata'] = perspective.additional_metadata
+            meta = perspective.additional_metadata
+            if 'latitude' in meta:
+                response['latitude'] = meta['latitude']
+            if 'longitude' in meta:
+                response['longitude'] = meta['longitude']
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -718,12 +736,28 @@ def edit_perspective(request):
                     request.response.status = HTTPNotFound.code
                     return {'error': str("No such pair of dictionary/perspective in the system")}
                 req = request.json_body
+
+                old_meta = json.loads(perspective.additional_metadata)
+                additional_metadata = req.get('additional_metadata')
+                if additional_metadata:
+                    # additional_metadata = json.dumps(additional_metadata)
+                    old_meta.update(additional_metadata)
+                latitude = req.get('latitude')
+                longitude = req.get('longitude')
+                if latitude:
+                    old_meta.update({'latitude':latitude})
+                if longitude:
+                    old_meta.update({'longitude':longitude})
                 if 'translation' in req:
                     perspective.set_translation(request)
                 if 'parent_client_id' in req:
                     perspective.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     perspective.parent_object_id = req['parent_object_id']
+
+                new_meta = json.dumps(old_meta)
+                perspective.additional_metadata = new_meta
+
                 is_template = req.get('is_template')
                 if is_template is not None:
                     perspective.is_template = is_template
@@ -812,12 +846,25 @@ def create_perspective(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such dictionary in the system")}
+        coord = {}
+        latitude = req.get('latitude')
+        longitude = req.get('longitude')
+        if latitude:
+            coord['latitude']=latitude
+        if longitude:
+            coord['longitude']=longitude
+        additional_metadata = req.get('additional_metadata')
+        if additional_metadata:
+            additional_metadata.update(coord)
+            additional_metadata = json.dumps(additional_metadata)
+
         perspective = DictionaryPerspective(object_id=DBSession.query(DictionaryPerspective).filter_by(client_id=client.id).count() + 1,
                                             client_id=variables['auth'],
                                             state='WiP',
                                             parent=parent,
                                             import_source=req.get('import_source'),
-                                            import_hash=req.get('import_hash'))
+                                            import_hash=req.get('import_hash'),
+                                            additional_metadata=additional_metadata)
         if is_template is not None:
             perspective.is_template = is_template
         perspective.set_translation(request)
@@ -2108,7 +2155,7 @@ def create_l1_entity(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
-        additional_metadata=req.get('additional_metadata')
+        additional_metadata = req.get('additional_metadata')
         if additional_metadata:
             additional_metadata = json.dumps(additional_metadata)
         entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
@@ -2166,7 +2213,7 @@ def create_entities_bulk(request):
                                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
                                         locale_id=item['locale_id'],
-                                        additional_metadata=item.get('additional_metadata'),
+                                        additional_metadata=json.dumps(item.get('additional_metadata')),
                                         parent=parent)
             elif item['level'] == 'groupingentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
@@ -2174,7 +2221,7 @@ def create_entities_bulk(request):
                                         object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
                                         locale_id=item['locale_id'],
-                                        additional_metadata=item.get('additional_metadata'),
+                                        additional_metadata=json.dumps(item.get('additional_metadata')),
                                         parent=parent)
             elif item['level'] == 'leveltwoentity':
                 parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
@@ -2182,7 +2229,7 @@ def create_entities_bulk(request):
                                         object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
                                         locale_id=item['locale_id'],
-                                        additional_metadata=item.get('additional_metadata'),
+                                        additional_metadata=json.dumps(item.get('additional_metadata')),
                                         parent=parent)
             DBSession.add(entity)
             DBSession.flush()
@@ -2308,7 +2355,7 @@ def create_l2_entity(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("No such level one entity in the system")}
         entity = LevelTwoEntity(client_id=client.id, object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
-                                locale_id=req['locale_id'], additional_metadata=req.get('additional_metadata'),
+                                locale_id=req['locale_id'], additional_metadata=json.dumps(req.get('additional_metadata')),
                                 parent=parent)
         DBSession.add(entity)
         DBSession.flush()
@@ -3860,16 +3907,13 @@ try it again.
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    lexes = list(DBSession.query(LexicalEntry).filter_by(parent_client_id = 2, parent_object_id = 1).all())
-    lexes_1 = []
-    lexes_2 = []
-    if not lexes:
-        return json.dumps({})
-    # first_persp = json.loads(lexes[0].additional_metadata)['came_from']
-    lexes_1 = [o.track(False) for o in lexes]
-    remove_deleted(lexes_1)
-    lexes_2 = list(lexes_1)
-    return {'list_1':lexes_1, 'list_2':lexes_2}
+    d1 = {1: 1, 2: 2}
+    d2 = {2: 'ha!', 3: 3}
+    d12 = dict(d1)
+    d12.update(d2)
+    d21 = dict(d2)
+    d21.update(d1)
+    return {'d1':d1,'d2':d2,'d12':d12,'d21':d21}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
