@@ -27403,6 +27403,24 @@ lingvodoc.User.fromJS = function(js) {
     return new lingvodoc.User(js.id, js.login, js.name, js.email, js.intl_name, js.about, js.signup_date, js.organizations);
 };
 
+lingvodoc.Blob = function(clientId, objectId, name, data_type) {
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.type = "blob";
+    this.name = name;
+    this.data_type = data_type;
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.name == obj.name;
+    };
+};
+
+lingvodoc.Blob.fromJS = function(js) {
+    return new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
+};
+
+lingvodoc.Blob.prototype = new lingvodoc.Object();
+
+lingvodoc.Blob.prototype.constructor = lingvodoc.Blob;
+
 function lingvodocAPI($http, $q) {
     var addUrlParameter = function(url, key, value) {
         return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
@@ -28239,6 +28257,41 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getUserBlobs = function() {
+        var deferred = $q.defer();
+        $http.get("/blobs").success(function(data, status, headers, config) {
+            var blobs = _.map(data, lingvodoc.Blob.fromJS);
+            deferred.resolve(blobs);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert dictionary");
+        });
+        return deferred.promise;
+    };
+    var checkDictionaryBlob = function(blob, parent) {
+        var deferred = $q.defer();
+        var query = {
+            blob_client_id: blob.client_id,
+            blob_object_id: blob.object_id,
+            parent_client_id: parent.client_id,
+            parent_object_id: parent.object_id
+        };
+        $http.post("/convert_check", query).success(function(data, status, headers, config) {
+            var perspectives = _.map(data, lingvodoc.Perspective.fromJS);
+            deferred.resolve(perspectives);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert dictionary");
+        });
+        return deferred.promise;
+    };
+    var convertDictionary = function(req) {
+        var deferred = $q.defer();
+        $http.post("/convert", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert dictionary");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -28286,7 +28339,10 @@ function lingvodocAPI($http, $q) {
         deleteDictionaryRoles: deleteDictionaryRoles,
         getPerspectiveRoles: getPerspectiveRoles,
         addPerspectiveRoles: addPerspectiveRoles,
-        deletePerspectiveRoles: deletePerspectiveRoles
+        deletePerspectiveRoles: deletePerspectiveRoles,
+        getUserBlobs: getUserBlobs,
+        checkDictionaryBlob: checkDictionaryBlob,
+        convertDictionary: convertDictionary
     };
 }
 
@@ -28313,7 +28369,7 @@ function responseHandler($timeout, $modal) {
         }, timeout);
     }
     function success(message) {
-        show("success", message, 500);
+        show("success", message, 5e3);
     }
     function error(message) {
         show("error", message, 5e3);

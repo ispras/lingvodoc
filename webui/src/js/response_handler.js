@@ -28,7 +28,7 @@ function responseHandler($timeout, $modal) {
     }
 
     function success(message) {
-        show('success', message, 500);
+        show('success', message, 5000);
     }
 
     function error(message) {

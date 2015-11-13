@@ -243,7 +243,7 @@ def configure_routes(config):
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
-                     pattern="/blobs/")
+                     pattern="/blobs")
 
 # TODO: LOCALES!
     # API #GET && DELETE
