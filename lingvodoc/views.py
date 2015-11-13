@@ -138,6 +138,8 @@ def basic_search(request):
     can_add_tags = request.params.get('can_add_tags')
     print(can_add_tags)
     searchstring = request.params.get('leveloneentity')
+    perspective_client_id =  request.params.get('perspective_client_id')
+    perspective_object_id =  request.params.get('perspective_object_id')
     if searchstring:
         if len(searchstring) >= 2:
             searchstring = request.params.get('leveloneentity')
@@ -147,11 +149,19 @@ def basic_search(request):
                     .filter(Client.id == request.authenticated_userid).first()
             if group:
                 results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
+                if perspective_client_id and perspective_object_id:
+                    results_cursor = results_cursor.join(LexicalEntry)\
+                        .join(DictionaryPerspective)\
+                        .filter(DictionaryPerspective.client_id == perspective_client_id,
+                                DictionaryPerspective.object_id == perspective_object_id)
             else:
                 results_cursor = DBSession.query(LevelOneEntity)\
                     .join(LexicalEntry)\
-                    .join(DictionaryPerspective)\
-                    .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+                    .join(DictionaryPerspective)
+                if perspective_client_id and perspective_object_id:
+                    results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
+                                DictionaryPerspective.object_id == perspective_object_id)
+                results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
                     .join(BaseGroup)\
                     .join(User, Group.users)\
                     .join(Client)\
@@ -636,10 +646,11 @@ def view_perspective(request):
             response['is_template'] = perspective.is_template
             response['additional_metadata'] = perspective.additional_metadata
             meta = perspective.additional_metadata
-            if 'latitude' in meta:
-                response['latitude'] = meta['latitude']
-            if 'longitude' in meta:
-                response['longitude'] = meta['longitude']
+            if meta:
+                if 'latitude' in meta:
+                    response['latitude'] = meta['latitude']
+                if 'longitude' in meta:
+                    response['longitude'] = meta['longitude']
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
