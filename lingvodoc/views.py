@@ -645,8 +645,8 @@ def view_perspective(request):
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
             response['additional_metadata'] = perspective.additional_metadata
-            meta = json.loads(perspective.additional_metadata)
-            if meta:
+            if perspective.additional_metadata:
+                meta = json.loads(perspective.additional_metadata)
                 if 'latitude' in meta:
                     response['latitude'] = meta['latitude']
                 if 'longitude' in meta:
