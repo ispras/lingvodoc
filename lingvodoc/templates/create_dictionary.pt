@@ -82,11 +82,12 @@
 
         <div ng-if="wizard.mode == 'import'">
             <label for="selectFile">Select uploaded file</label> (<a href="${request.route_url('blob_upload')}">Upload dictionary</a>)
-            <select id="selectFile" class="form-control" ng-model="wizard.importedDictionaryId" ng-options="d.id as d.data.name for d in uploadedDictionaries track by d.id">
 
+            <select id="selectFile" class="form-control" ng-options="p.getId() as p.name for p in uploadedDictionaries track by p.getId()" ng-model="wizard.importedDictionaryId">
+                <option></option>
             </select>
-        </div>
 
+        </div>
 
     </div>
 
@@ -326,6 +327,68 @@
     </div>
 
 </script>
+
+
+<script type="text/ng-template" id="importModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">Import mode</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <div>
+            <!-- -->
+        </div>
+
+
+        <ol>
+            <li><label><input type="radio" name="mode" ng-model="mode" value="create"> Create new dictionary</label></li>
+            <li><label><input type="radio" name="mode" ng-model="mode" value="import"> Import into existing dictionary</label></li>
+        </ol>
+
+        <div ng-if="mode=='import'">
+
+            <div>
+                <select id="dictionary" class="form-control" ng-options="d.getId() as d.translation for d in dictionaries track by d.getId()" ng-model="import.dictionaryId">
+                </select>
+            </div>
+
+            <div>
+                <select id="perspective" class="form-control" ng-options="p.getId() as p.translation for p in perspectives track by p.getId()" ng-model="import.perspectiveId" ng-if="!import.createNewPerspective">
+                </select>
+            </div>
+
+            <div>
+                <label for="createNewPerspective">or create a new perspective</label>
+                <input id="createNewPerspective" type="checkbox" ng-model="import.createNewPerspective">
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary btn-info" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-primary btn-danger" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <div metal:use-macro="load: response_handler.pt"></div>
 

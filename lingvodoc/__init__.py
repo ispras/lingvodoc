@@ -243,7 +243,7 @@ def configure_routes(config):
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
-                     pattern="/blobs/")
+                     pattern="/blobs")
 
 # TODO: LOCALES!
     # API #GET && DELETE
@@ -305,6 +305,10 @@ def configure_routes(config):
     # perspective_client_id
     # perspective_object_id
     config.add_route(name='basic_search', pattern='/basic_search')
+
+    # API #GET
+    # like
+    config.add_route(name='entity_metadata_search', pattern='/meta_search')
 
     # API #GET
     # like
@@ -522,6 +526,8 @@ def configure_routes(config):
     # params:
     # {"blob_client_id": <id>, "blob_object_id": <id>, "parent_client_id": <language_client_id>, "parent_object_id": <language_object_id>}
     config.add_route(name='convert_dictionary', pattern='/convert')
+    config.add_route(name='convert_dictionary_check', pattern='/convert_check')
+    config.add_route(name='convert_dictionary_old', pattern='/convert_old')
 
 
 def main(global_config, **settings):
