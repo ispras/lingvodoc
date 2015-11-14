@@ -2333,7 +2333,7 @@ def create_entities_bulk(request):
                                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
                                         locale_id=item['locale_id'],
-                                        additional_metadata=json.dumps(item.get('additional_metadata')),
+                                        additional_metadata=item.get('additional_metadata'),
                                         parent=parent)
             elif item['level'] == 'groupingentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
@@ -2341,7 +2341,7 @@ def create_entities_bulk(request):
                                         object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
                                         locale_id=item['locale_id'],
-                                        additional_metadata=json.dumps(item.get('additional_metadata')),
+                                        additional_metadata=item.get('additional_metadata'),
                                         parent=parent)
             elif item['level'] == 'leveltwoentity':
                 parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
@@ -2349,7 +2349,7 @@ def create_entities_bulk(request):
                                         object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
                                         entity_type=item['entity_type'],
                                         locale_id=item['locale_id'],
-                                        additional_metadata=json.dumps(item.get('additional_metadata')),
+                                        additional_metadata=item.get('additional_metadata'),
                                         parent=parent)
             DBSession.add(entity)
             DBSession.flush()
