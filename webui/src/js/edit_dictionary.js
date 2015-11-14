@@ -832,7 +832,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
             var entryObject = value.export();
 
-            // TODO: get locale_id from cookies
             entryObject['entity_type'] = field.entity_type;
             entryObject['locale_id'] = getCookie('locale_id');
 
