@@ -32,7 +32,7 @@ app.config(function($stateProvider, $urlRouterProvider) {
 
 app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
 
-app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$location', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $modal, $interval, $state, $location, $log, dictionaryService, responseHandler) {
+app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$window', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $modal, $interval, $state, $window, $log, dictionaryService, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
     var userId = $('#userId').data('lingvodoc');
@@ -161,6 +161,9 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
     var convert = function(req) {
         dictionaryService.convertDictionary(req).then(function(response) {
             responseHandler.success(response);
+            $window.location.href = '/dashboard';
+
+
         }, function(reason) {
             responseHandler.error(reason);
         });
