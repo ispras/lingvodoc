@@ -110,10 +110,10 @@ def entity_metadata_search(request):
     searchstring = request.params.get('searchstring')
     if type(searchstring) != str:
         searchstring = str(searchstring)
-
     searchtype = request.params.get('searchtype')
     perspective_client_id = request.params.get('perspective_client_id')
     perspective_object_id = request.params.get('perspective_object_id')
+    print('trying to search', searchstring)
     results_cursor = DBSession.query(LevelOneEntity)\
         .filter(LevelOneEntity.entity_type == searchtype,
                 LevelOneEntity.additional_metadata.like('%'+searchstring+'%'))
@@ -165,6 +165,73 @@ def basic_search_old(request):
 
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
 def basic_search(request):
+    can_add_tags = request.params.get('can_add_tags')
+    searchstring = request.params.get('leveloneentity')
+    perspective_client_id = request.params.get('perspective_client_id')
+    perspective_object_id = request.params.get('perspective_object_id')
+    if searchstring:
+        if len(searchstring) >= 2:
+            searchstring = request.params.get('leveloneentity')
+            group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
+                    .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
+                    .join(User, Group.users).join(Client)\
+                    .filter(Client.id == request.authenticated_userid).first()
+            if group:
+                results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
+                if perspective_client_id and perspective_object_id:
+                    results_cursor = results_cursor.join(LexicalEntry)\
+                        .join(DictionaryPerspective)\
+                        .filter(DictionaryPerspective.client_id == perspective_client_id,
+                                DictionaryPerspective.object_id == perspective_object_id)
+            else:
+                results_cursor = DBSession.query(LevelOneEntity)\
+                    .join(LexicalEntry)\
+                    .join(DictionaryPerspective)
+                if perspective_client_id and perspective_object_id:
+                    results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
+                                DictionaryPerspective.object_id == perspective_object_id)
+                results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+                    .join(BaseGroup)\
+                    .join(User, Group.users)\
+                    .join(Client)\
+                    .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
+            results = []
+            entries = set()
+            if can_add_tags:
+                results_cursor = results_cursor\
+                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
+                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+                    .group_by(LevelOneEntity).having(func.count('*') == 2)
+            else:
+                results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
+            for item in results_cursor:
+                entries.add(item.parent)
+            for entry in entries:
+                if not entry.marked_for_deletion:
+                    result = dict()
+                    result['lexical_entry'] = entry.track(False)
+                    result['client_id'] = entry.parent_client_id
+                    result['object_id'] = entry.parent_object_id
+                    perspective_tr = entry.parent.get_translation(request)
+                    result['translation_string'] = perspective_tr['translation_string']
+                    result['translation'] = perspective_tr['translation']
+                    result['is_template'] = entry.parent.is_template
+                    result['status'] = entry.parent.state
+                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
+                    result['parent_client_id'] = entry.parent.parent_client_id
+                    result['parent_object_id'] = entry.parent.parent_object_id
+                    dict_tr = entry.parent.parent.get_translation(request)
+                    result['parent_translation_string'] = dict_tr['translation_string']
+                    result['parent_translation'] = dict_tr['translation']
+                    results.append(result)
+            request.response.status = HTTPOk.code
+            return results
+    request.response.status = HTTPBadRequest.code
+    return {'error': 'search is too short'}
+
+
+@view_config(route_name='advanced_search', renderer='json', request_method='POST')
+def advanced_search_search(request):
     can_add_tags = request.params.get('can_add_tags')
     searchstring = request.params.get('leveloneentity')
     perspective_client_id = request.params.get('perspective_client_id')
@@ -753,10 +820,8 @@ def view_perspective(request):
             response['additional_metadata'] = perspective.additional_metadata
             if perspective.additional_metadata:
                 meta = json.loads(perspective.additional_metadata)
-                if 'latitude' in meta:
-                    response['latitude'] = meta['latitude']
-                if 'longitude' in meta:
-                    response['longitude'] = meta['longitude']
+                if 'location' in meta:
+                    response['location'] = meta['location']
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -828,6 +893,105 @@ def view_perspective_tree(request):
 
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='perspective_meta', renderer='json', request_method='PUT', permission='edit')
+def edit_perspective_meta(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective:
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'error': str("No such pair of dictionary/perspective in the system")}
+            req = request.json_body
+
+            old_meta = json.loads(perspective.additional_metadata)
+            new_meta = req
+            old_meta.update(new_meta)
+            perspective.additional_metadata = json.dumps(old_meta)
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='perspective_meta', renderer='json', request_method='DELETE', permission='edit')
+def delete_perspective_meta(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective:
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'error': str("No such pair of dictionary/perspective in the system")}
+            req = request.json_body
+
+            old_meta = json.loads(perspective.additional_metadata)
+            new_meta = req
+            for entry in new_meta:
+                if entry in old_meta:
+                    del old_meta[entry]
+            perspective.additional_metadata = json.dumps(old_meta)
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='perspective_meta', renderer='json', request_method='GET', permission='edit')
+def view_perspective_meta(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective:
+        if not perspective.marked_for_deletion:
+            if perspective.parent != parent:
+                request.response.status = HTTPNotFound.code
+                return {'error': str("No such pair of dictionary/perspective in the system")}
+
+            old_meta = json.loads(perspective.additional_metadata)
+            response = old_meta
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
 
 
 @view_config(route_name='perspective', renderer='json', request_method='PUT', permission='edit')
