@@ -162,8 +162,6 @@ app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$int
         dictionaryService.convertDictionary(req).then(function(response) {
             responseHandler.success(response);
             $window.location.href = '/dashboard';
-
-
         }, function(reason) {
             responseHandler.error(reason);
         });
