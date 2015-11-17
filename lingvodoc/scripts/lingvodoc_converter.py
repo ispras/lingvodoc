@@ -43,18 +43,19 @@ def upload_markup(upload_url, search_url, markup_sequence, session):
     for entry in markup_sequence:
         audio_hash = entry[0]
         markup_element = entry[1]
-        entity_metadata_search = search_url + '?hash=%s' % audio_hash  # add filters by perspective. Maybe where search_url is created
+        entity_metadata_search = search_url + '&searchstring=%s' % audio_hash  # add filters by perspective. Maybe where search_url is created
         status = session.get(entity_metadata_search)
         ents = json.loads(status.text)
         if 'error' not in ents:
             if type(ents) == list and len(ents) >= 1:
                 existing_entity = ents[0]
-                parent_client_id = existing_entity['client_id']
-                parent_object_id = existing_entity['object_id']
-                markup_element["parent_client_id"] = parent_client_id
-                markup_element["parent_object_id"] = parent_object_id
-    new_markup_sequence = [o[1] for o in markup_sequence if o[1].get["parent_client_id"]]
-    result = [o for o in markup_sequence if o[1].get["parent_client_id"] is None]
+                if existing_entity:
+                    parent_client_id = existing_entity['client_id']
+                    parent_object_id = existing_entity['object_id']
+                    markup_element["parent_client_id"] = parent_client_id
+                    markup_element["parent_object_id"] = parent_object_id
+    new_markup_sequence = [o[1] for o in markup_sequence if o[1].get("parent_client_id")]
+    result = [o for o in markup_sequence if o[1].get("parent_client_id") is None]
     status = session.post(upload_url, json=new_markup_sequence)
     log.debug(status.text)
     return result
@@ -143,6 +144,7 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
             markup_sequence.append(markup_element)
         else:
             if markup_hash not in markup_hashes:
+                print('sound exists, but markup doesn\'t')
 
                 markup_hashes.add(markup_hash)
                 markup_element = {
@@ -172,8 +174,8 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
         markup_sequence = []
 
     if len(markup__without_audio_sequence) != 0:
-        upload_markup(upload_url, search_url, markup__without_audio_sequence, session)
-        markup__without_audio_sequence = []
+        markup__without_audio_sequence = upload_markup(upload_url, search_url, markup__without_audio_sequence, session)
+
 
 
 def change_dict_status(session, converting_status_url, status):
@@ -312,7 +314,9 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                                                                         dictionary['object_id'],
                                                                                         perspective['client_id'],
                                                                                         perspective['object_id'])
-    search_url = server_url + 'meta_search'
+    search_url = server_url + 'meta_search' \
+                              '?perspective_client_id=%d&perspective_object_id=%d' % (perspective['client_id'],
+                                                                                      perspective['object_id'])
     status = session.get(perspective_search)
     lexes = json.loads(status.text)['lexical_entries']
     sound_types = ['Sound', 'Paradigm sound']

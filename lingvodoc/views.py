@@ -107,19 +107,19 @@ class CommonException(Exception):
 @view_config(route_name='entity_metadata_search', renderer='json', request_method='GET')
 def entity_metadata_search(request):
     # TODO: add same check for permission as in basic_search
-    # TODO: add filters to search in only one perspective
     searchstring = request.params.get('searchstring')
+    if type(searchstring) != str:
+        searchstring = str(searchstring)
+
     searchtype = request.params.get('searchtype')
-    client_id = request.params.get('perspective_client_id')
-    object_id = request.params.get('perspective_object_id')
+    perspective_client_id = request.params.get('perspective_client_id')
+    perspective_object_id = request.params.get('perspective_object_id')
     results_cursor = DBSession.query(LevelOneEntity)\
         .filter(LevelOneEntity.entity_type == searchtype,
-                LevelOneEntity.additional_metadata.like('%'+searchstring+'%'))\
-        .all()
-    results_cursor += DBSession.query(LevelTwoEntity)\
-        .filter(LevelTwoEntity.entity_type == searchtype,
-                LevelTwoEntity.additional_metadata.like('%'+searchstring+'%'))\
-        .all()
+                LevelOneEntity.additional_metadata.like('%'+searchstring+'%'))
+    if perspective_client_id and perspective_object_id:
+        results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
+                                               DictionaryPerspective.object_id == perspective_object_id)
     results = []
     entries = set()
     for item in results_cursor:
@@ -127,7 +127,6 @@ def entity_metadata_search(request):
     for entry in entries:
         if not entry.marked_for_deletion:
             result = dict()
-            result['level'] = str(type(entry)).lower()
             result['client_id'] = entry.client_id
             result['object_id'] = entry.object_id
             result['additional_metadata'] = entry.additional_metadata
