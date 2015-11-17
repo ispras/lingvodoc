@@ -1,6 +1,6 @@
 'use strict';
 
-var app = angular.module('DashboardModule', ['ui.bootstrap']);
+var app = angular.module('DashboardModule', ['ui.bootstrap', 'ngMap']);
 
 app.service('dictionaryService', lingvodocAPI);
 
@@ -370,7 +370,7 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
 }]);
 
 
-app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
+app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', '$modal', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'params', function ($scope, $http, $q, $modal, $modalInstance, $log, dictionaryService, responseHandler, params) {
 
     $scope.dictionary = params.dictionary;
     $scope.perspective = {};
@@ -392,6 +392,28 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
             }
         }
     };
+
+    $scope.editGeoLabels = function() {
+
+        $modal.open({
+            animation: true,
+            templateUrl: 'perspectiveGeoLabelsModal.html',
+            controller: 'perspectiveGeoLabelsController',
+            size: 'lg',
+            backdrop: 'static',
+            keyboard: false,
+            resolve: {
+                'params': function() {
+                    return {
+                        'dictionary': params.dictionary,
+                        'perspective': params.perspective
+                    };
+                }
+            }
+        });
+    };
+
+
 
     $scope.ok = function() {
         $scope.controls.ok = false;
@@ -744,14 +766,44 @@ app.controller('editPerspectiveRolesController', ['$scope', '$http', '$q', '$mod
     });
 }]);
 
+app.controller('perspectiveGeoLabelsController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'NgMap', 'dictionaryService', 'responseHandler', 'params', function ($scope, $http, $q, $modalInstance, $log, NgMap, dictionaryService, responseHandler, params) {
+
+    var key = 'AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk';
+    $scope.googleMapsUrl = 'http://maps.google.com/maps/api/js?v=3.20&key=' + encodeURIComponent(key);
+
+    $scope.positions = [];
+
+    // resize map to match parent modal's size
+    $modalInstance.opened.then(function() {
+        NgMap.getMap().then(function(map) {
+            google.maps.event.trigger(map, 'resize');
+        });
+    });
 
 
+    $scope.addMarker = function(event) {
+        if ($scope.positions.length > 0) {
+            return;
+        }
+        var latLng = event.latLng;
+        $scope.positions.push({'lat': latLng.lat(), 'lng': latLng.lng()});
+    };
 
+    $scope.removeMarker = function(marker) {
+        _.remove($scope.positions, function(e) {
+            var p = new google.maps.LatLng(e.lat, e.lng);
+            return p.equals(marker.latLng);
+        });
+    };
 
+    $scope.ok = function() {
 
+    };
 
-
-
+    $scope.cancel = function() {
+        $modalInstance.dismiss();
+    };
+}]);
 
 
 

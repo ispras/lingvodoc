@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/maps.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="MapsModule">
+
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="userId" data-lingvodoc="${user.id}"></div>
+
+<div metal:use-macro="load: nav.pt"></div>
+
+<div class="container" ng-controller="MapsController" ng-cloak>
+
+    <div class="row">
+        <div class="col-md-6">
+            <input type="text" placeholder="Search...">
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12" map-lazy-load="http://maps.google.com/maps/api/js"
+             map-lazy-load-params="{{googleMapsUrl}}">
+            <ng-map center="41,-87" zoom="3" style="height: 600px;"></ng-map>
+        </div>
+    </div>
+
+
+</div>
+
+<div metal:use-macro="load: response_handler.pt"></div>
+
+</body>
+
+</html>
