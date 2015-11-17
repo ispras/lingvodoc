@@ -41,19 +41,20 @@ def upload_audio(upload_url, audio_sequence, markup_sequence, session):
 def upload_markup(upload_url, search_url, markup_sequence, session):
     log = logging.getLogger(__name__)
     for entry in markup_sequence:
+        print('in upload markup')
         audio_hash = entry[0]
         markup_element = entry[1]
         entity_metadata_search = search_url + '&searchstring=%s' % audio_hash  # add filters by perspective. Maybe where search_url is created
         status = session.get(entity_metadata_search)
         ents = json.loads(status.text)
-        if 'error' not in ents:
-            if type(ents) == list and len(ents) >= 1:
-                existing_entity = ents[0]
-                if existing_entity:
-                    parent_client_id = existing_entity['client_id']
-                    parent_object_id = existing_entity['object_id']
-                    markup_element["parent_client_id"] = parent_client_id
-                    markup_element["parent_object_id"] = parent_object_id
+        if ents:
+            existing_entity = ents[0]
+            if existing_entity:
+                parent_client_id = existing_entity['client_id']
+                parent_object_id = existing_entity['object_id']
+                print('parent_client_id', parent_client_id, 'parent_object_id', parent_object_id)
+                markup_element["parent_client_id"] = parent_client_id
+                markup_element["parent_object_id"] = parent_object_id
     new_markup_sequence = [o[1] for o in markup_sequence if o[1].get("parent_client_id")]
     result = [o for o in markup_sequence if o[1].get("parent_client_id") is None]
     status = session.post(upload_url, json=new_markup_sequence)

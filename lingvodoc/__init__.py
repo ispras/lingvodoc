@@ -159,6 +159,13 @@ def configure_routes(config):
     config.add_route(name='perspective_outside',
                      pattern='perspective/{perspective_client_id}/{perspective_id}',
                      factory='lingvodoc.models.PerspectiveAcl')
+    # API #GET && PUT && DELETE
+    # {<some_data_name>:{"type""<datatype>, "content":<content>},}
+    # for geo: {"location":{"type":"location", "content":{"lat":<lat>, "lng":<lng>}}}
+    config.add_route(name='perspective_meta',
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'perspective/{perspective_client_id}/{perspective_id}/meta',
+                     factory='lingvodoc.models.PerspectiveAcl')
 
     config.add_route(name='perspective_tree',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
@@ -305,6 +312,9 @@ def configure_routes(config):
     # perspective_client_id
     # perspective_object_id
     config.add_route(name='basic_search', pattern='/basic_search')
+
+    # API #POST
+    config.add_route(name='advanced_search', pattern='/advanced_search')
 
     # API #GET
     # like
