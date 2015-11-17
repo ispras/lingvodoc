@@ -95,6 +95,7 @@ import json
 import logging
 log = logging.getLogger(__name__)
 
+from sqlalchemy import tuple_
 
 class CommonException(Exception):
     def __init__(self, value):
@@ -231,46 +232,47 @@ def basic_search(request):
 
 
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
-def advanced_search_search(request):
-    can_add_tags = request.params.get('can_add_tags')
-    searchstring = request.params.get('leveloneentity')
-    perspective_client_id = request.params.get('perspective_client_id')
-    perspective_object_id = request.params.get('perspective_object_id')
+def advanced_search(request):
+    req = request.json
+    # can_add_tags = req.get('can_add_tags')
+    dictionaries = req.get('dictionaries')
+    searchstring = req.get('leveloneentity')
+    entity_type = req.get('entity_type')
     if searchstring:
         if len(searchstring) >= 2:
-            searchstring = request.params.get('leveloneentity')
+            if dictionaries:
+                dictionaries = [(o["client_id"],o["object_id"]) for o in dictionaries]
+                results_cursor = DBSession.query(LevelOneEntity).join(LexicalEntry).join(DictionaryPerspective)\
+                .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
+            else:
+                results_cursor = DBSession.query(LevelOneEntity)
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
                     .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
             if group:
-                results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
-                if perspective_client_id and perspective_object_id:
-                    results_cursor = results_cursor.join(LexicalEntry)\
-                        .join(DictionaryPerspective)\
-                        .filter(DictionaryPerspective.client_id == perspective_client_id,
-                                DictionaryPerspective.object_id == perspective_object_id)
+                results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'))
             else:
-                results_cursor = DBSession.query(LevelOneEntity)\
+                results_cursor = results_cursor\
                     .join(LexicalEntry)\
                     .join(DictionaryPerspective)
-                if perspective_client_id and perspective_object_id:
-                    results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
-                                DictionaryPerspective.object_id == perspective_object_id)
-                results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+                results_cursor = results_cursor.join(Dictionary, and_())\
+                    .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
                     .join(BaseGroup)\
                     .join(User, Group.users)\
                     .join(Client)\
                     .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
+            if entity_type:
+                results_cursor = results_cursor.filter(LevelOneEntity.entity_type == entity_type)
             results = []
             entries = set()
-            if can_add_tags:
-                results_cursor = results_cursor\
-                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
-                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
-                    .group_by(LevelOneEntity).having(func.count('*') == 2)
-            else:
-                results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
+            # if can_add_tags:
+            #     results_cursor = results_cursor\
+            #         .filter(BaseGroup.subject=='lexical_entries_and_entities',
+            #                 or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+            #         .group_by(LevelOneEntity).having(func.count('*') == 2)
+            # else:
+            #     results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
             for item in results_cursor:
                 entries.add(item.parent)
             for entry in entries:
@@ -4189,13 +4191,13 @@ try it again.
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    d1 = {1: 1, 2: 2}
-    d2 = {2: 'ha!', 3: 3}
-    d12 = dict(d1)
-    d12.update(d2)
-    d21 = dict(d2)
-    d21.update(d1)
-    return {'d1':d1,'d2':d2,'d12':d12,'d21':d21}
+    from sqlalchemy import tuple_
+    req = request.json
+    dicts = req
+    dicts = [(o[0], o[1]) for o in dicts]
+    dictis = DBSession.query(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dicts))
+    res = [(o.object_id, o.client_id) for o in dictis]
+    return res
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
