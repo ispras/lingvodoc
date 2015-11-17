@@ -317,6 +317,10 @@ def configure_routes(config):
     config.add_route(name='basic_search', pattern='/basic_search')
 
     # API #POST
+    # {"leveloneentity":<search_string>,
+    #  "entity_type":"<entity_type>,
+    #  "dictionaries":[{"client_id":<dict_client_id>,"object_id":<dict_object_id>},
+    #                 ]}
     config.add_route(name='advanced_search', pattern='/advanced_search')
 
     # API #GET
