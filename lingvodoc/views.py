@@ -113,12 +113,11 @@ def entity_metadata_search(request):
     searchtype = request.params.get('searchtype')
     perspective_client_id = request.params.get('perspective_client_id')
     perspective_object_id = request.params.get('perspective_object_id')
-    print('trying to search', searchstring)
     results_cursor = DBSession.query(LevelOneEntity)\
-        .filter(LevelOneEntity.entity_type == searchtype,
+        .filter(LevelOneEntity.entity_type.like('%'+searchtype+'%'),
                 LevelOneEntity.additional_metadata.like('%'+searchstring+'%'))
     if perspective_client_id and perspective_object_id:
-        results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
+        results_cursor = results_cursor.join(LexicalEntry).join(DictionaryPerspective).filter(DictionaryPerspective.client_id == perspective_client_id,
                                                DictionaryPerspective.object_id == perspective_object_id)
     results = []
     entries = set()
@@ -131,6 +130,7 @@ def entity_metadata_search(request):
             result['object_id'] = entry.object_id
             result['additional_metadata'] = entry.additional_metadata
             results.append(result)
+
     return results
 
 
@@ -3864,7 +3864,6 @@ def move_lexical_entry_bulk(request):
                                                     DBSession.flush()
                                                 entry.moved_to = str(cli_id) + '/' + str(obj_id)
                                                 entry.marked_for_deletion = True
-                                                print(client_id, object_id)
     request.response.status = HTTPOk.code
     return {}
 

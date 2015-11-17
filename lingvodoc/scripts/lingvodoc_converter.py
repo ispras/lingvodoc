@@ -41,10 +41,9 @@ def upload_audio(upload_url, audio_sequence, markup_sequence, session):
 def upload_markup(upload_url, search_url, markup_sequence, session):
     log = logging.getLogger(__name__)
     for entry in markup_sequence:
-        print('in upload markup')
         audio_hash = entry[0]
         markup_element = entry[1]
-        entity_metadata_search = search_url + '&searchstring=%s' % audio_hash  # add filters by perspective. Maybe where search_url is created
+        entity_metadata_search = search_url + '&searchstring=%s&searchtype=ound'% audio_hash  # TODO: change ound to sound, when found how to do lowercase like
         status = session.get(entity_metadata_search)
         ents = json.loads(status.text)
         if ents:
@@ -52,7 +51,6 @@ def upload_markup(upload_url, search_url, markup_sequence, session):
             if existing_entity:
                 parent_client_id = existing_entity['client_id']
                 parent_object_id = existing_entity['object_id']
-                print('parent_client_id', parent_client_id, 'parent_object_id', parent_object_id)
                 markup_element["parent_client_id"] = parent_client_id
                 markup_element["parent_object_id"] = parent_object_id
     new_markup_sequence = [o[1] for o in markup_sequence if o[1].get("parent_client_id")]
@@ -145,7 +143,6 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
             markup_sequence.append(markup_element)
         else:
             if markup_hash not in markup_hashes:
-                print('sound exists, but markup doesn\'t')
 
                 markup_hashes.add(markup_hash)
                 markup_element = {
@@ -176,7 +173,6 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
 
     if len(markup__without_audio_sequence) != 0:
         markup__without_audio_sequence = upload_markup(upload_url, search_url, markup__without_audio_sequence, session)
-
 
 
 def change_dict_status(session, converting_status_url, status):
@@ -214,7 +210,6 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
         perspective = json.loads(status.text)
     else:
         perspective = {'client_id': perspective_client_id, 'object_id': perspective_object_id}
-
     converting_perspective_status_url = server_url + 'dictionary/%s/%s/perspective/%s/%s/state' % \
                                                      (dictionary['client_id'], dictionary['object_id'],
                                                       perspective['client_id'], perspective['object_id'])
