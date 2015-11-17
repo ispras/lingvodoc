@@ -32807,13 +32807,21 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.is_template = is_template;
     this.marked_for_deletion = marked_for_deletion;
     this.fields = [];
+    this.location = null;
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
 };
 
 lingvodoc.Perspective.fromJS = function(js) {
-    return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.is_template, js.marked_for_deletion);
+    var perspective = new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.is_template, js.marked_for_deletion);
+    if (_.has(js, "location") && _.has(js.location, "content")) {
+        perspective["location"] = {
+            lat: js.location.content.lat,
+            lng: js.location.content.lng
+        };
+    }
+    return perspective;
 };
 
 lingvodoc.Perspective.prototype = new lingvodoc.Object();
@@ -33727,6 +33735,44 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getPerspectiveMeta = function(dictionary, perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/meta";
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get perspective meta data!");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveMeta = function(dictionary, perspective, meta) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/meta";
+        $http.put(url, meta).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to set perspective meta data!");
+        });
+        return deferred.promise;
+    };
+    var removePerspectiveMeta = function(dictionary, perspective, meta) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/meta";
+        var config = {
+            method: "DELETE",
+            url: url,
+            data: meta,
+            headers: {
+                "Content-Type": "application/json;charset=utf-8"
+            }
+        };
+        $http(config).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to remove perspective meta data!");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -33777,7 +33823,10 @@ function lingvodocAPI($http, $q) {
         deletePerspectiveRoles: deletePerspectiveRoles,
         getUserBlobs: getUserBlobs,
         checkDictionaryBlob: checkDictionaryBlob,
-        convertDictionary: convertDictionary
+        convertDictionary: convertDictionary,
+        getPerspectiveMeta: getPerspectiveMeta,
+        setPerspectiveMeta: setPerspectiveMeta,
+        removePerspectiveMeta: removePerspectiveMeta
     };
 }
 

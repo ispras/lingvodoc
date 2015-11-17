@@ -770,7 +770,6 @@ app.controller('perspectiveGeoLabelsController', ['$scope', '$http', '$q', '$mod
 
     var key = 'AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk';
     $scope.googleMapsUrl = 'http://maps.google.com/maps/api/js?v=3.20&key=' + encodeURIComponent(key);
-
     $scope.positions = [];
 
     // resize map to match parent modal's size
@@ -780,29 +779,62 @@ app.controller('perspectiveGeoLabelsController', ['$scope', '$http', '$q', '$mod
         });
     });
 
-
     $scope.addMarker = function(event) {
         if ($scope.positions.length > 0) {
             return;
         }
         var latLng = event.latLng;
-        $scope.positions.push({'lat': latLng.lat(), 'lng': latLng.lng()});
+
+        var meta = {
+            'location': {
+                'type': 'location',
+                'content': {
+                    'lat': latLng.lat(),
+                    'lng': latLng.lng()
+                }
+            }
+        };
+
+        dictionaryService.setPerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+            $scope.positions.push({'lat': latLng.lat(), 'lng': latLng.lng()});
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     };
 
     $scope.removeMarker = function(marker) {
-        _.remove($scope.positions, function(e) {
-            var p = new google.maps.LatLng(e.lat, e.lng);
-            return p.equals(marker.latLng);
+
+        var meta = {
+            'location': {
+                'type': 'location',
+                'content': {
+                    'lat': marker.latLng.lat(),
+                    'lng': marker.latLng.lng()
+                }
+            }
+        };
+
+        dictionaryService.removePerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+            _.remove($scope.positions, function(e) {
+                var p = new google.maps.LatLng(e.lat, e.lng);
+                return p.equals(marker.latLng);
+            });
+        }, function(reason) {
+            responseHandler.error(reason);
         });
     };
 
     $scope.ok = function() {
-
+        $modalInstance.close();
     };
 
-    $scope.cancel = function() {
-        $modalInstance.dismiss();
-    };
+    dictionaryService.getPerspectiveMeta(params.dictionary, params.perspective).then(function(data) {
+        $scope.positions = [];
+        if (!_.isEmpty(data) && _.has(data, 'location')) {
+            $scope.positions.push(data.location.content);
+        }
+    });
+
 }]);
 
 
