@@ -4563,3 +4563,13 @@ def merge_master_get(request):
         return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user }
     return render_to_response('templates/merge_master.pt', variables, request=request)
+
+@view_config(route_name='maps', renderer='templates/maps.pt', request_method='GET')
+def maps_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+    variables = {'client_id': client_id, 'user': user }
+    return render_to_response('templates/maps.pt', variables, request=request)

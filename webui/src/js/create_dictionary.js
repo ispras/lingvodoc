@@ -1,4 +1,4 @@
-var app = angular.module('CreateDictionaryModule', ['ui.router', 'ngAnimate', 'ui.bootstrap', 'autocomplete']);
+var app = angular.module('CreateDictionaryModule', ['ui.router', 'ui.bootstrap']);
 
 app.service('dictionaryService', lingvodocAPI);
 

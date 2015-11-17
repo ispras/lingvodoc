@@ -5391,7 +5391,7 @@
                 }
                 return match;
             });
-            message += "\nhttp://errors.angularjs.org/1.4.6/" + (module ? module + "/" : "") + code;
+            message += "\nhttp://errors.angularjs.org/1.4.7/" + (module ? module + "/" : "") + code;
             for (i = SKIP_INDEXES, paramPrefix = "?"; i < templateArgs.length; i++, paramPrefix = "&") {
                 message += paramPrefix + "p" + (i - SKIP_INDEXES) + "=" + encodeURIComponent(toDebugString(templateArgs[i]));
             }
@@ -6210,11 +6210,11 @@
         return obj;
     }
     var version = {
-        full: "1.4.6",
+        full: "1.4.7",
         major: 1,
         minor: 4,
-        dot: 6,
-        codeName: "multiplicative-elevation"
+        dot: 7,
+        codeName: "dark-luminescence"
     };
     function publishExternalAPI(angular) {
         extend(angular, {
@@ -6323,6 +6323,7 @@
                 $httpParamSerializer: $HttpParamSerializerProvider,
                 $httpParamSerializerJQLike: $HttpParamSerializerJQLikeProvider,
                 $httpBackend: $HttpBackendProvider,
+                $xhrFactory: $xhrFactoryProvider,
                 $location: $LocationProvider,
                 $log: $LogProvider,
                 $parse: $ParseProvider,
@@ -6368,10 +6369,10 @@
             return offset ? letter.toUpperCase() : letter;
         }).replace(MOZ_HACK_REGEXP, "Moz$1");
     }
-    var SINGLE_TAG_REGEXP = /^<(\w+)\s*\/?>(?:<\/\1>|)$/;
+    var SINGLE_TAG_REGEXP = /^<([\w-]+)\s*\/?>(?:<\/\1>|)$/;
     var HTML_REGEXP = /<|&#?\w+;/;
-    var TAG_NAME_REGEXP = /<([\w:]+)/;
-    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/gi;
+    var TAG_NAME_REGEXP = /<([\w:-]+)/;
+    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:-]+)[^>]*)\/>/gi;
     var wrapMap = {
         option: [ 1, '<select multiple="multiple">', "</select>" ],
         thead: [ 1, "<table>", "</table>" ],
@@ -7614,6 +7615,9 @@
                 }
             };
             return function(element, options) {
+                if (options.cleanupStyles) {
+                    options.from = options.to = null;
+                }
                 if (options.from) {
                     element.css(options.from);
                     options.from = null;
@@ -8879,7 +8883,7 @@
                     compile: function() {
                         return {
                             pre: function attrInterpolatePreLinkFn(scope, element, attr) {
-                                var $$observers = attr.$$observers || (attr.$$observers = {});
+                                var $$observers = attr.$$observers || (attr.$$observers = createMap());
                                 if (EVENT_HANDLER_ATTR_REGEXP.test(name)) {
                                     throw $compileMinErr("nodomevents", "Interpolations for HTML DOM event attributes are disallowed.  Please use the " + "ng- versions (such as ng-click instead of onclick) instead.");
                                 }
@@ -9542,12 +9546,16 @@
             }
         } ];
     }
-    function createXhr() {
-        return new window.XMLHttpRequest();
+    function $xhrFactoryProvider() {
+        this.$get = function() {
+            return function createXhr() {
+                return new window.XMLHttpRequest();
+            };
+        };
     }
     function $HttpBackendProvider() {
-        this.$get = [ "$browser", "$window", "$document", function($browser, $window, $document) {
-            return createHttpBackend($browser, createXhr, $browser.defer, $window.angular.callbacks, $document[0]);
+        this.$get = [ "$browser", "$window", "$document", "$xhrFactory", function($browser, $window, $document, $xhrFactory) {
+            return createHttpBackend($browser, $xhrFactory, $browser.defer, $window.angular.callbacks, $document[0]);
         } ];
     }
     function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDocument) {
@@ -9565,7 +9573,7 @@
                     callbacks[callbackId] = noop;
                 });
             } else {
-                var xhr = createXhr();
+                var xhr = createXhr(method, url);
                 xhr.open(method, url, true);
                 forEach(headers, function(value, key) {
                     if (isDefined(value)) {
@@ -10273,9 +10281,15 @@
     }
     var $parseMinErr = minErr("$parse");
     function ensureSafeMemberName(name, fullExpression) {
-        name = isObject(name) && name.toString ? name.toString() : name;
         if (name === "__defineGetter__" || name === "__defineSetter__" || name === "__lookupGetter__" || name === "__lookupSetter__" || name === "__proto__") {
             throw $parseMinErr("isecfld", "Attempting to access a disallowed field in Angular expressions! " + "Expression: {0}", fullExpression);
+        }
+        return name;
+    }
+    function getStringValue(name, fullExpression) {
+        name = name + "";
+        if (!isString(name)) {
+            throw $parseMinErr("iseccst", "Cannot convert object to primitive value! " + "Expression: {0}", fullExpression);
         }
         return name;
     }
@@ -10302,6 +10316,13 @@
                 throw $parseMinErr("isecfn", "Referencing Function in Angular expressions is disallowed! Expression: {0}", fullExpression);
             } else if (obj === CALL || obj === APPLY || obj === BIND) {
                 throw $parseMinErr("isecff", "Referencing call, apply or bind in Angular expressions is disallowed! Expression: {0}", fullExpression);
+            }
+        }
+    }
+    function ensureSafeAssignContext(obj, fullExpression) {
+        if (obj) {
+            if (obj === 0..constructor || obj === false.constructor || obj === "".constructor || obj === {}.constructor || obj === [].constructor || obj === Function.constructor) {
+                throw $parseMinErr("isecaf", "Assigning to a constructor is disallowed! Expression: {0}", fullExpression);
             }
         }
     }
@@ -11053,7 +11074,7 @@
             this.stage = "main";
             this.recurse(ast);
             var fnString = '"' + this.USE + " " + this.STRICT + '";\n' + this.filterPrefix() + "var fn=" + this.generateFunction("fn", "s,l,a,i") + extra + this.watchFns() + "return fn;";
-            var fn = new Function("$filter", "ensureSafeMemberName", "ensureSafeObject", "ensureSafeFunction", "ifDefined", "plus", "text", fnString)(this.$filter, ensureSafeMemberName, ensureSafeObject, ensureSafeFunction, ifDefined, plusFn, expression);
+            var fn = new Function("$filter", "ensureSafeMemberName", "ensureSafeObject", "ensureSafeFunction", "getStringValue", "ensureSafeAssignContext", "ifDefined", "plus", "text", fnString)(this.$filter, ensureSafeMemberName, ensureSafeObject, ensureSafeFunction, getStringValue, ensureSafeAssignContext, ifDefined, plusFn, expression);
             this.state = this.stage = undefined;
             fn.literal = isLiteral(ast);
             fn.constant = isConstant(ast);
@@ -11190,6 +11211,7 @@
                         if (ast.computed) {
                             right = self.nextId();
                             self.recurse(ast.property, right);
+                            self.getStringValue(right);
                             self.addEnsureSafeMemberName(right);
                             if (create && create !== 1) {
                                 self.if_(self.not(self.computedMember(left, right)), self.lazyAssign(self.computedMember(left, right), "{}"));
@@ -11275,6 +11297,7 @@
                     self.if_(self.notNull(left.context), function() {
                         self.recurse(ast.right, right);
                         self.addEnsureSafeObject(self.member(left.context, left.name, left.computed));
+                        self.addEnsureSafeAssignContext(left.context);
                         expression = self.member(left.context, left.name, left.computed) + ast.operator + right;
                         self.assign(intoId, expression);
                         recursionFn(intoId || expression);
@@ -11385,6 +11408,9 @@
         addEnsureSafeFunction: function(item) {
             this.current().body.push(this.ensureSafeFunction(item), ";");
         },
+        addEnsureSafeAssignContext: function(item) {
+            this.current().body.push(this.ensureSafeAssignContext(item), ";");
+        },
         ensureSafeObject: function(item) {
             return "ensureSafeObject(" + item + ",text)";
         },
@@ -11393,6 +11419,12 @@
         },
         ensureSafeFunction: function(item) {
             return "ensureSafeFunction(" + item + ",text)";
+        },
+        getStringValue: function(item) {
+            this.assign(item, "getStringValue(" + item + ",text)");
+        },
+        ensureSafeAssignContext: function(item) {
+            return "ensureSafeAssignContext(" + item + ",text)";
         },
         lazyRecurse: function(ast, intoId, nameId, recursionFn, create, skipWatchIdCheck) {
             var self = this;
@@ -11561,6 +11593,7 @@
                     var lhs = left(scope, locals, assign, inputs);
                     var rhs = right(scope, locals, assign, inputs);
                     ensureSafeObject(lhs.value, self.expression);
+                    ensureSafeAssignContext(lhs.context);
                     lhs.context[lhs.name] = rhs;
                     return context ? {
                         value: rhs
@@ -11818,6 +11851,7 @@
                 var value;
                 if (lhs != null) {
                     rhs = right(scope, locals, assign, inputs);
+                    rhs = getStringValue(rhs);
                     ensureSafeMemberName(rhs, expression);
                     if (create && create !== 1 && lhs && !lhs[rhs]) {
                         lhs[rhs] = {};
@@ -13500,6 +13534,7 @@
             if (fractionSize > 0 && number < 1) {
                 formatedText = number.toFixed(fractionSize);
                 number = parseFloat(formatedText);
+                formatedText = formatedText.replace(DECIMAL_SEP, decimalSep);
             }
         }
         if (number === 0) {
@@ -15517,11 +15552,11 @@
                 function updateOptionElement(option, element) {
                     option.element = element;
                     element.disabled = option.disabled;
-                    if (option.value !== element.value) element.value = option.selectValue;
                     if (option.label !== element.label) {
                         element.label = option.label;
                         element.textContent = option.label;
                     }
+                    if (option.value !== element.value) element.value = option.selectValue;
                 }
                 function addOrReuseElement(parent, current, type, templateElement) {
                     var element;
@@ -15549,7 +15584,7 @@
                     var emptyOption_ = emptyOption && emptyOption[0];
                     var unknownOption_ = unknownOption && unknownOption[0];
                     if (emptyOption_ || unknownOption_) {
-                        while (current && (current === emptyOption_ || current === unknownOption_)) {
+                        while (current && (current === emptyOption_ || current === unknownOption_ || emptyOption_ && emptyOption_.nodeType === NODE_TYPE_COMMENT)) {
                             current = current.nextSibling;
                         }
                     }
@@ -26248,6 +26283,8 @@ var WaveSurfer = {
         audioRate: 1,
         interact: !0,
         splitChannels: !1,
+        mediaContainer: null,
+        mediaControls: !1,
         renderer: "Canvas",
         backend: "WebAudio",
         mediaType: "audio"
@@ -26255,7 +26292,7 @@ var WaveSurfer = {
     init: function(a) {
         if (this.params = WaveSurfer.util.extend({}, this.defaultParams, a), this.container = "string" == typeof a.container ? document.querySelector(this.params.container) : this.params.container, 
         !this.container) throw new Error("Container element not found");
-        if ("undefined" == typeof this.params.mediaContainer ? this.mediaContainer = this.container : "string" == typeof this.params.mediaContainer ? this.mediaContainer = document.querySelector(this.params.mediaContainer) : this.mediaContainer = this.params.mediaContainer, 
+        if (null == this.params.mediaContainer ? this.mediaContainer = this.container : "string" == typeof this.params.mediaContainer ? this.mediaContainer = document.querySelector(this.params.mediaContainer) : this.mediaContainer = this.params.mediaContainer, 
         !this.mediaContainer) throw new Error("Media Container element not found");
         this.savedVolume = 0, this.isMuted = !1, this.tmpEvents = [], this.createDrawer(), 
         this.createBackend();
@@ -26351,7 +26388,8 @@ var WaveSurfer = {
         this.drawer.drawPeaks(d, c), this.fireEvent("redraw", d, c);
     },
     zoom: function(a) {
-        this.params.minPxPerSec = a, this.params.scrollParent = !0, this.drawBuffer(), this.seekAndCenter(this.getCurrentTime() / this.getDuration());
+        this.params.minPxPerSec = a, this.params.scrollParent = !0, this.drawBuffer(), this.seekAndCenter(this.getCurrentTime() / this.getDuration()), 
+        this.fireEvent("zoom", a);
     },
     loadArrayBuffer: function(a) {
         this.decodeArrayBuffer(a, function(a) {
@@ -26682,7 +26720,8 @@ WaveSurfer.util.extend(WaveSurfer.MediaElement, {
     },
     load: function(a, b, c) {
         var d = this, e = document.createElement(this.mediaType);
-        e.controls = !1, e.autoplay = !1, e.preload = "auto", e.src = a, e.addEventListener("error", function() {
+        e.controls = this.params.mediaControls, e.autoplay = !1, e.preload = "auto", e.src = a, 
+        e.style.width = "100%", e.addEventListener("error", function() {
             d.fireEvent("error", "Error loading media element");
         }), e.addEventListener("canplay", function() {
             d.fireEvent("canplay");
@@ -26895,11 +26934,11 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
         this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), 
         [ this.waveCc, this.progressCc ].forEach(function(b) {
             if (b) if (this.params.reflection) for (var c = 0; e > c; c += l) {
-                var f = Math.round(a[2 * c * p] / m * h);
+                var f = Math.round(a[Math.floor(2 * c * p)] / m * h);
                 b.fillRect(c + d, h - f + g, j + d, 2 * f);
             } else {
                 for (var c = 0; e > c; c += l) {
-                    var f = Math.round(a[2 * c * p] / m * h);
+                    var f = Math.round(a[Math.floor(2 * c * p)] / m * h);
                     b.fillRect(c + d, h - f + g, j + d, f);
                 }
                 for (var c = 0; e > c; c += l) {
@@ -26945,226 +26984,23 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
             width: b + "px"
         });
     }
-});
-
-var app = angular.module("autocomplete", []);
-
-app.directive("autocomplete", function() {
-    var index = -1;
-    return {
-        restrict: "E",
-        scope: {
-            searchParam: "=ngModel",
-            suggestions: "=data",
-            onType: "=onType",
-            onSelect: "=onSelect",
-            autocompleteRequired: "="
-        },
-        controller: [ "$scope", function($scope) {
-            $scope.selectedIndex = -1;
-            $scope.initLock = true;
-            $scope.setIndex = function(i) {
-                $scope.selectedIndex = parseInt(i);
-            };
-            this.setIndex = function(i) {
-                $scope.setIndex(i);
-                $scope.$apply();
-            };
-            $scope.getIndex = function(i) {
-                return $scope.selectedIndex;
-            };
-            var watching = true;
-            $scope.completing = false;
-            $scope.$watch("searchParam", function(newValue, oldValue) {
-                if (oldValue === newValue || !oldValue && $scope.initLock) {
-                    return;
-                }
-                if (watching && typeof $scope.searchParam !== "undefined" && $scope.searchParam !== null) {
-                    $scope.completing = true;
-                    $scope.searchFilter = $scope.searchParam;
-                    $scope.selectedIndex = -1;
-                }
-                if ($scope.onType) $scope.onType($scope.searchParam);
-            });
-            this.preSelect = function(suggestion) {
-                watching = false;
-                $scope.$apply();
-                watching = true;
-            };
-            $scope.preSelect = this.preSelect;
-            this.preSelectOff = function() {
-                watching = true;
-            };
-            $scope.preSelectOff = this.preSelectOff;
-            $scope.select = function(suggestion) {
-                if (suggestion) {
-                    $scope.searchParam = suggestion;
-                    $scope.searchFilter = suggestion;
-                    if ($scope.onSelect) $scope.onSelect(suggestion);
-                }
-                watching = false;
-                $scope.completing = false;
-                setTimeout(function() {
-                    watching = true;
-                }, 1e3);
-                $scope.setIndex(-1);
-            };
-        } ],
-        link: function(scope, element, attrs) {
-            setTimeout(function() {
-                scope.initLock = false;
-                scope.$apply();
-            }, 250);
-            var attr = "";
-            scope.attrs = {
-                placeholder: "start typing...",
-                "class": "",
-                id: "",
-                inputclass: "",
-                inputid: ""
-            };
-            for (var a in attrs) {
-                attr = a.replace("attr", "").toLowerCase();
-                if (a.indexOf("attr") === 0) {
-                    scope.attrs[attr] = attrs[a];
-                }
-            }
-            if (attrs.clickActivation) {
-                element[0].onclick = function(e) {
-                    if (!scope.searchParam) {
-                        setTimeout(function() {
-                            scope.completing = true;
-                            scope.$apply();
-                        }, 200);
-                    }
-                };
-            }
-            var key = {
-                left: 37,
-                up: 38,
-                right: 39,
-                down: 40,
-                enter: 13,
-                esc: 27,
-                tab: 9
-            };
-            document.addEventListener("keydown", function(e) {
-                var keycode = e.keyCode || e.which;
-                switch (keycode) {
-                  case key.esc:
-                    scope.select();
-                    scope.setIndex(-1);
-                    scope.$apply();
-                    e.preventDefault();
-                }
-            }, true);
-            document.addEventListener("blur", function(e) {
-                setTimeout(function() {
-                    scope.select();
-                    scope.setIndex(-1);
-                    scope.$apply();
-                }, 150);
-            }, true);
-            element[0].addEventListener("keydown", function(e) {
-                var keycode = e.keyCode || e.which;
-                var l = angular.element(this).find("li").length;
-                if (!scope.completing || l == 0) return;
-                switch (keycode) {
-                  case key.up:
-                    index = scope.getIndex() - 1;
-                    if (index < -1) {
-                        index = l - 1;
-                    } else if (index >= l) {
-                        index = -1;
-                        scope.setIndex(index);
-                        scope.preSelectOff();
-                        break;
-                    }
-                    scope.setIndex(index);
-                    if (index !== -1) scope.preSelect(angular.element(angular.element(this).find("li")[index]).text());
-                    scope.$apply();
-                    break;
-
-                  case key.down:
-                    index = scope.getIndex() + 1;
-                    if (index < -1) {
-                        index = l - 1;
-                    } else if (index >= l) {
-                        index = -1;
-                        scope.setIndex(index);
-                        scope.preSelectOff();
-                        scope.$apply();
-                        break;
-                    }
-                    scope.setIndex(index);
-                    if (index !== -1) scope.preSelect(angular.element(angular.element(this).find("li")[index]).text());
-                    break;
-
-                  case key.left:
-                    break;
-
-                  case key.right:
-                  case key.enter:
-                  case key.tab:
-                    index = scope.getIndex();
-                    if (index !== -1) {
-                        scope.select(angular.element(angular.element(this).find("li")[index]).text());
-                        if (keycode == key.enter) {
-                            e.preventDefault();
-                        }
-                    } else {
-                        if (keycode == key.enter) {
-                            scope.select();
-                        }
-                    }
-                    scope.setIndex(-1);
-                    scope.$apply();
-                    break;
-
-                  case key.esc:
-                    scope.select();
-                    scope.setIndex(-1);
-                    scope.$apply();
-                    e.preventDefault();
-                    break;
-
-                  default:
-                    return;
-                }
-            });
-        },
-        template: '        <div class="autocomplete {{ attrs.class }}" id="{{ attrs.id }}">          <input            type="text"            ng-model="searchParam"            placeholder="{{ attrs.placeholder }}"            class="{{ attrs.inputclass }}"            id="{{ attrs.inputid }}"            ng-required="{{ autocompleteRequired }}" />          <ul ng-show="completing && (suggestions | filter:searchFilter).length > 0">            <li              suggestion              ng-repeat="suggestion in suggestions | filter:searchFilter | orderBy:\'toString()\' track by $index"              index="{{ $index }}"              val="{{ suggestion }}"              ng-class="{ active: ($index === selectedIndex) }"              ng-click="select(suggestion)"              ng-bind-html="suggestion | highlight:searchParam"></li>          </ul>        </div>'
+}), function() {
+    var a = function() {
+        var a = document.querySelectorAll("wavesurfer");
+        Array.prototype.forEach.call(a, function(a) {
+            var b = WaveSurfer.util.extend({
+                container: a,
+                backend: "MediaElement",
+                mediaControls: !0
+            }, a.dataset);
+            a.style.display = "block";
+            var c = WaveSurfer.create(b);
+            if (a.dataset.peaks) var d = JSON.parse(a.dataset.peaks);
+            c.load(a.dataset.url, d);
+        });
     };
-});
-
-app.filter("highlight", [ "$sce", function($sce) {
-    return function(input, searchParam) {
-        if (typeof input === "function") return "";
-        if (searchParam) {
-            var words = "(" + searchParam.split(/\ /).join(" |") + "|" + searchParam.split(/\ /).join("|") + ")", exp = new RegExp(words, "gi");
-            if (words.length) {
-                input = input.replace(exp, '<span class="highlight">$1</span>');
-            }
-        }
-        return $sce.trustAsHtml(input);
-    };
-} ]);
-
-app.directive("suggestion", function() {
-    return {
-        restrict: "A",
-        require: "^autocomplete",
-        link: function(scope, element, attrs, autoCtrl) {
-            element.bind("mouseenter", function() {
-                autoCtrl.preSelect(attrs.val);
-                autoCtrl.setIndex(attrs.index);
-            });
-            element.bind("mouseleave", function() {
-                autoCtrl.preSelectOff();
-            });
-        }
-    };
-});
+    "complete" === document.readyState ? a() : window.addEventListener("load", a);
+}();
 
 "use strict";
 
