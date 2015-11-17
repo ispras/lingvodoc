@@ -31913,8 +31913,6 @@ var WaveSurfer = {
         audioRate: 1,
         interact: !0,
         splitChannels: !1,
-        mediaContainer: null,
-        mediaControls: !1,
         renderer: "Canvas",
         backend: "WebAudio",
         mediaType: "audio"
@@ -31922,7 +31920,7 @@ var WaveSurfer = {
     init: function(a) {
         if (this.params = WaveSurfer.util.extend({}, this.defaultParams, a), this.container = "string" == typeof a.container ? document.querySelector(this.params.container) : this.params.container, 
         !this.container) throw new Error("Container element not found");
-        if (null == this.params.mediaContainer ? this.mediaContainer = this.container : "string" == typeof this.params.mediaContainer ? this.mediaContainer = document.querySelector(this.params.mediaContainer) : this.mediaContainer = this.params.mediaContainer, 
+        if ("undefined" == typeof this.params.mediaContainer ? this.mediaContainer = this.container : "string" == typeof this.params.mediaContainer ? this.mediaContainer = document.querySelector(this.params.mediaContainer) : this.mediaContainer = this.params.mediaContainer, 
         !this.mediaContainer) throw new Error("Media Container element not found");
         this.savedVolume = 0, this.isMuted = !1, this.tmpEvents = [], this.createDrawer(), 
         this.createBackend();
@@ -32018,8 +32016,7 @@ var WaveSurfer = {
         this.drawer.drawPeaks(d, c), this.fireEvent("redraw", d, c);
     },
     zoom: function(a) {
-        this.params.minPxPerSec = a, this.params.scrollParent = !0, this.drawBuffer(), this.seekAndCenter(this.getCurrentTime() / this.getDuration()), 
-        this.fireEvent("zoom", a);
+        this.params.minPxPerSec = a, this.params.scrollParent = !0, this.drawBuffer(), this.seekAndCenter(this.getCurrentTime() / this.getDuration());
     },
     loadArrayBuffer: function(a) {
         this.decodeArrayBuffer(a, function(a) {
@@ -32350,8 +32347,7 @@ WaveSurfer.util.extend(WaveSurfer.MediaElement, {
     },
     load: function(a, b, c) {
         var d = this, e = document.createElement(this.mediaType);
-        e.controls = this.params.mediaControls, e.autoplay = !1, e.preload = "auto", e.src = a, 
-        e.style.width = "100%", e.addEventListener("error", function() {
+        e.controls = !1, e.autoplay = !1, e.preload = "auto", e.src = a, e.addEventListener("error", function() {
             d.fireEvent("error", "Error loading media element");
         }), e.addEventListener("canplay", function() {
             d.fireEvent("canplay");
@@ -32564,11 +32560,11 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
         this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), 
         [ this.waveCc, this.progressCc ].forEach(function(b) {
             if (b) if (this.params.reflection) for (var c = 0; e > c; c += l) {
-                var f = Math.round(a[Math.floor(2 * c * p)] / m * h);
+                var f = Math.round(a[2 * c * p] / m * h);
                 b.fillRect(c + d, h - f + g, j + d, 2 * f);
             } else {
                 for (var c = 0; e > c; c += l) {
-                    var f = Math.round(a[Math.floor(2 * c * p)] / m * h);
+                    var f = Math.round(a[2 * c * p] / m * h);
                     b.fillRect(c + d, h - f + g, j + d, f);
                 }
                 for (var c = 0; e > c; c += l) {
@@ -32614,23 +32610,7 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
             width: b + "px"
         });
     }
-}), function() {
-    var a = function() {
-        var a = document.querySelectorAll("wavesurfer");
-        Array.prototype.forEach.call(a, function(a) {
-            var b = WaveSurfer.util.extend({
-                container: a,
-                backend: "MediaElement",
-                mediaControls: !0
-            }, a.dataset);
-            a.style.display = "block";
-            var c = WaveSurfer.create(b);
-            if (a.dataset.peaks) var d = JSON.parse(a.dataset.peaks);
-            c.load(a.dataset.url, d);
-        });
-    };
-    "complete" === document.readyState ? a() : window.addEventListener("load", a);
-}();
+});
 
 function WaveSurferController($scope) {
     var activeUrl = null;
