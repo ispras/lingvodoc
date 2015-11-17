@@ -54,8 +54,8 @@ def upload_markup(upload_url, search_url, markup_sequence, session):
                     parent_object_id = existing_entity['object_id']
                     markup_element["parent_client_id"] = parent_client_id
                     markup_element["parent_object_id"] = parent_object_id
-    new_markup_sequence = [o[1] for o in markup_sequence if o[1].get["parent_client_id"]]
-    result = [o for o in markup_sequence if o[1].get["parent_client_id"] is None]
+    new_markup_sequence = [o[1] for o in markup_sequence if o[1].get("parent_client_id")]
+    result = [o for o in markup_sequence if o[1].get("parent_client_id") is None]
     status = session.post(upload_url, json=new_markup_sequence)
     log.debug(status.text)
     return result
