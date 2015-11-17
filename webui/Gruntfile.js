@@ -56,6 +56,7 @@ module.exports = function(grunt) {
             login: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -68,6 +69,7 @@ module.exports = function(grunt) {
             home: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -98,6 +100,7 @@ module.exports = function(grunt) {
             languages: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -131,6 +134,7 @@ module.exports = function(grunt) {
             viewdictionary: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -149,6 +153,7 @@ module.exports = function(grunt) {
             publishdictionary: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -186,6 +191,7 @@ module.exports = function(grunt) {
             userupload: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -199,6 +205,7 @@ module.exports = function(grunt) {
             profile: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -215,6 +222,7 @@ module.exports = function(grunt) {
             organizations: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
@@ -231,6 +239,7 @@ module.exports = function(grunt) {
             merge_master: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
                     'bower_components/angular/angular.js',
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
