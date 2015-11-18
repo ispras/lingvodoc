@@ -328,8 +328,10 @@ def configure_routes(config):
     # API #POST
     # {"leveloneentity":<search_string>,
     #  "entity_type":"<entity_type>,
-    #  "dictionaries":[{"client_id":<dict_client_id>,"object_id":<dict_object_id>},
-    #                 ]}
+    #  "perspectives":[{"client_id":<persp_client_id>,"object_id":<persp_object_id>},
+    #                 ]
+    #   "adopted":True/False,
+    #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>}
     config.add_route(name='advanced_search', pattern='/advanced_search')
 
     # API #GET
