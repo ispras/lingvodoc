@@ -39,7 +39,7 @@ from .merge_perspectives import (
     mergeDicts
     )
 
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, aliased
 from pyramid.security import (
     Everyone,
     Allow,
@@ -237,20 +237,28 @@ def basic_search(request):
 def advanced_search(request):
     req = request.json
     can_add_tags = req.get('can_add_tags')
-    dictionaries = req.get('dictionaries')
+    # dictionaries = req.get('dictionaries')
+    perspectives = req.get('perspectives')
     searchstring = req.get('leveloneentity')
-    entity_type = req.get('entity_type')
+    entity_type = req.get('entity_type') or 'Translation'
     adopted = req.get('adopted')
+    adopted_type = req.get('adopted_type') or 'Word'
     if searchstring:
         if len(searchstring) >= 2:
-            if dictionaries:
-                dictionaries = [(o["client_id"],o["object_id"]) for o in dictionaries]
-                results_cursor = DBSession.query(LevelOneEntity).join(LexicalEntry).join(DictionaryPerspective)\
-                    .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
-            else:
-                results_cursor = DBSession.query(LevelOneEntity)
+            # if dictionaries:
+            #     dictionaries = [(o["client_id"],o["object_id"]) for o in dictionaries]
+            #     results_cursor = DBSession.query(LevelOneEntity).join(LexicalEntry).join(DictionaryPerspective)\
+            #         .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
+            # else:
+            #     results_cursor = DBSession.query(LevelOneEntity)
+            results_cursor = DBSession.query(LevelOneEntity).join(PublishLevelOneEntity)\
+                    .filter(PublishLevelOneEntity.marked_for_deletion == False)
+            if perspectives:
+                perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
+                results_cursor = results_cursor.join(LexicalEntry).join(DictionaryPerspective)\
+                    .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
-                    .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
+                    .filter(BaseGroup.subject == 'lexical_entries_and_entities', BaseGroup.action == 'view')\
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
             if group:
@@ -268,10 +276,19 @@ def advanced_search(request):
             if entity_type:
                 results_cursor = results_cursor.filter(LevelOneEntity.entity_type == entity_type)
             if adopted is not None:
+                LexicalEntryAlias = aliased(LexicalEntry)
+                LevelOneEntityAlias = aliased(LevelOneEntity)
                 if adopted:
-                    results_cursor = results_cursor.filter(LevelOneEntity.content.like('%заим.%'))
+                    results_cursor = results_cursor.join(LexicalEntryAlias).join(LevelOneEntityAlias, and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
+                                                  LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
+                                                  LevelOneEntityAlias.content.like('%заим.%'),
+                                                  LevelOneEntityAlias.entity_type == adopted_type))
                 else:
-                    results_cursor = results_cursor.filter(not_(LevelOneEntity.content.like('%заим.%')))
+                    results_cursor = results_cursor.join(LexicalEntryAlias).join(LevelOneEntityAlias, and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
+                                                  LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
+                                                  not_(LevelOneEntityAlias.content.like('%заим.%')),
+                                                  LevelOneEntityAlias.entity_type == adopted_type))
+
             results = []
             entries = set()
             # if can_add_tags:
@@ -286,7 +303,7 @@ def advanced_search(request):
             for entry in entries:
                 if not entry.marked_for_deletion:
                     result = dict()
-                    result['lexical_entry'] = entry.track(False)
+                    result['lexical_entry'] = entry.track(True)
                     result['client_id'] = entry.parent_client_id
                     result['object_id'] = entry.parent_object_id
                     perspective_tr = entry.parent.get_translation(request)
