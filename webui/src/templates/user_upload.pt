@@ -73,7 +73,15 @@
 
 
     <span class="btn btn-default btn-file">
-        Upload <input type="file" on-read-file="upload($file)"></span>
+        Upload <input type="file" on-read-file="upload($file)" ng-disabled="!dataType"></span>
+
+
+    <select ng-model="dataType">
+        <option value="dialeqt_dictionary">dialeqt_dictionary</option>
+        <option value="pdf">pdf</option>
+    </select>
+
+
 
 </div>
 
