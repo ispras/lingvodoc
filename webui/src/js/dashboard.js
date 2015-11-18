@@ -374,6 +374,8 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
 
     $scope.dictionary = params.dictionary;
     $scope.perspective = {};
+    $scope.blobs = [];
+    $scope.blobId = '';
 
     $scope.controls = {
         'ok': true
@@ -413,6 +415,58 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
         });
     };
 
+    $scope.addBlob = function() {
+
+        var blob = _.find($scope.blobs, function(b) {
+            return b.getId() == $scope.blobId;
+        });
+
+
+        if (blob) {
+
+            var blobs = $scope.perspective.blobs.map(function(b) {
+                return {
+                    'info': {
+                        'type': 'blob',
+                        'content': {
+                            'client_id': b.client_id,
+                            'object_id': b.object_id
+                        }
+                    }
+                }
+            });
+
+            blobs.push({
+                'info': {
+                    'type': 'blob',
+                    'content': {
+                        'client_id': blob.client_id,
+                        'object_id': blob.object_id
+                    }
+                }
+            });
+
+
+            var meta = {
+                'info': {
+                    'type': 'list',
+                    'content': blobs
+                }
+            };
+
+            dictionaryService.setPerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+                $scope.perspective.blobs.push(blob);
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+
+
+
+
+
+        }
+
+    };
 
 
     $scope.ok = function() {
@@ -440,6 +494,20 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     dictionaryService.getPerspectiveFields(url).then(function(fields) {
         params.perspective['fields'] = fields;
         $scope.perspective = wrapPerspective(params.perspective);
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
+
+
+
+
+    dictionaryService.getUserBlobs().then(function(blobs) {
+        $scope.blobs = blobs.filter(function(b) {
+            return b.data_type != 'dialeqt_dictionary';
+        });
+
+        $log.info($scope.blobs);
+
     }, function(reason) {
         responseHandler.error(reason);
     });

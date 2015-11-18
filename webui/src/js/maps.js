@@ -25,7 +25,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
         };
     })
 
-    .controller('MapsController', ['$scope', '$http', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $log, dictionaryService, responseHandler) {
+    .controller('MapsController', ['$scope', '$http', '$log', '$modal', 'NgMap', 'dictionaryService', 'responseHandler', function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
 
         WaveSurferController.call(this, $scope);
 
@@ -57,7 +57,11 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
         };
 
         $scope.info = function(event, perspective) {
-            
+            var self = this;
+            $scope.selectedPerspective = perspective;
+            NgMap.getMap().then(function(map) {
+                map.showInfoWindow('bar', self);
+            });
         };
 
         $scope.toggle = function(event, perspective) {
@@ -69,6 +73,29 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
                 });
             }
         };
+
+        $scope.showBlob = function(blob) {
+            $modal.open({
+                animation: true,
+                templateUrl: 'blobModal.html',
+                controller: 'BlobController',
+                size: 'lg',
+                backdrop: 'static',
+                keyboard: false,
+                resolve: {
+                    'params': function() {
+                        return {
+                            'blob': blob
+                        };
+                    }
+                }
+            }).result.then(function(req) {
+
+                }, function() {
+
+                });
+        };
+
 
         $scope.$watch('entries', function(updatedEntries) {
 
@@ -123,7 +150,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
                 return;
             }
 
-            dictionaryService.advancedSearch(q, '', $scope.activePerspectives).then(function(entries) {
+            dictionaryService.advancedSearch(q, 'Translation', $scope.activePerspectives).then(function(entries) {
 
                 if (!_.isEmpty(entries)) {
 
@@ -154,6 +181,17 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
         }, function(reason) {
 
         });
+    }])
+
+    .controller('BlobController', ['$scope', '$http', '$log', '$modal', '$modalInstance', 'NgMap', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $log, $modal, $modalInstance, NgMap, dictionaryService, responseHandler, params) {
+
+        $scope.blob = params.blob;
+
+        $scope.ok = function() {
+            $modalInstance.close();
+        };
+
+
     }]);
 
 
