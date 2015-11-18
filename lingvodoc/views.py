@@ -851,6 +851,24 @@ def view_perspective(request):
                     response['location'] = meta['location']
                 if 'info' in meta:
                     response['info'] = meta['info']
+                    remove_list = []
+                    info_list = response['info']['content']
+                    for info in info_list:
+                        content = info['info']['content']
+                        path = request.route_url('get_user_blob',
+                                 client_id=content['client_id'],
+                                 object_id=content['object_id'])
+                        subreq = Request.blank(path)
+                        subreq.method = 'GET'
+                        subreq.headers = request.headers
+                        resp = request.invoke_subrequest(subreq)
+                        if 'error' not in resp.json:
+                            info['info']['content'] = resp.json
+                        else:
+                            if info not in remove_list:
+                                remove_list.append(info)
+                    for info in remove_list:
+                        info_list.remove(info)
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -946,11 +964,13 @@ def edit_perspective_meta(request):
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
             req = request.json_body
-
-            old_meta = json.loads(perspective.additional_metadata)
-            new_meta = req
-            old_meta.update(new_meta)
-            perspective.additional_metadata = json.dumps(old_meta)
+            if perspective.additional_metadata:
+                old_meta = json.loads(perspective.additional_metadata)
+                new_meta = req
+                old_meta.update(new_meta)
+                perspective.additional_metadata = json.dumps(old_meta)
+            else:
+                perspective.additional_metadata = json.dumps(req)
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -2430,10 +2450,13 @@ def get_user_blob(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
-    response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
-                 'client_id': blob.client_id, 'object_id': blob.object_id}
-    return response
-
+    if blob:
+        response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                     'client_id': blob.client_id, 'object_id': blob.object_id}
+        request.response.status = HTTPOk.code
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such blob in the system")}
 
 # seems to be redundant
 # @view_config(route_name='get_user_blob', request_method='GET')
