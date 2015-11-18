@@ -243,10 +243,11 @@ def configure_routes(config):
                      pattern="/blob")
 
     # seems to be redundant
+    # not anymore
     # API #GET
     # no params, returns file
-    #config.add_route(name="get_user_blob",
-    #                 pattern="/blobs/{client_id}/{object_id}")
+    config.add_route(name="get_user_blob",
+                    pattern="/blobs/{client_id}/{object_id}")
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
