@@ -39,7 +39,7 @@ from .merge_perspectives import (
     mergeDicts
     )
 
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, aliased
 from pyramid.security import (
     Everyone,
     Allow,
@@ -50,7 +50,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import (
     func,
     or_,
-    and_
+    and_,
+    tuple_,
+    not_
 )
 from sqlalchemy.orm import joinedload, subqueryload, noload, join, joinedload_all
 from sqlalchemy.sql.expression import case, true, false
@@ -234,20 +236,29 @@ def basic_search(request):
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
 def advanced_search(request):
     req = request.json
-    # can_add_tags = req.get('can_add_tags')
-    dictionaries = req.get('dictionaries')
+    can_add_tags = req.get('can_add_tags')
+    # dictionaries = req.get('dictionaries')
+    perspectives = req.get('perspectives')
     searchstring = req.get('leveloneentity')
-    entity_type = req.get('entity_type')
+    entity_type = req.get('entity_type') or 'Translation'
+    adopted = req.get('adopted')
+    adopted_type = req.get('adopted_type') or 'Word'
     if searchstring:
         if len(searchstring) >= 2:
-            if dictionaries:
-                dictionaries = [(o["client_id"],o["object_id"]) for o in dictionaries]
-                results_cursor = DBSession.query(LevelOneEntity).join(LexicalEntry).join(DictionaryPerspective)\
-                .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
-            else:
-                results_cursor = DBSession.query(LevelOneEntity)
+            # if dictionaries:
+            #     dictionaries = [(o["client_id"],o["object_id"]) for o in dictionaries]
+            #     results_cursor = DBSession.query(LevelOneEntity).join(LexicalEntry).join(DictionaryPerspective)\
+            #         .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
+            # else:
+            #     results_cursor = DBSession.query(LevelOneEntity)
+            results_cursor = DBSession.query(LevelOneEntity).join(PublishLevelOneEntity)\
+                    .filter(PublishLevelOneEntity.marked_for_deletion == False)
+            if perspectives:
+                perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
+                results_cursor = results_cursor.join(LexicalEntry).join(DictionaryPerspective)\
+                    .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
-                    .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
+                    .filter(BaseGroup.subject == 'lexical_entries_and_entities', BaseGroup.action == 'view')\
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
             if group:
@@ -264,6 +275,20 @@ def advanced_search(request):
                     .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
             if entity_type:
                 results_cursor = results_cursor.filter(LevelOneEntity.entity_type == entity_type)
+            if adopted is not None:
+                LexicalEntryAlias = aliased(LexicalEntry)
+                LevelOneEntityAlias = aliased(LevelOneEntity)
+                if adopted:
+                    results_cursor = results_cursor.join(LexicalEntryAlias).join(LevelOneEntityAlias, and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
+                                                  LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
+                                                  LevelOneEntityAlias.content.like('%заим.%'),
+                                                  LevelOneEntityAlias.entity_type == adopted_type))
+                else:
+                    results_cursor = results_cursor.join(LexicalEntryAlias).join(LevelOneEntityAlias, and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
+                                                  LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
+                                                  not_(LevelOneEntityAlias.content.like('%заим.%')),
+                                                  LevelOneEntityAlias.entity_type == adopted_type))
+
             results = []
             entries = set()
             # if can_add_tags:
@@ -278,7 +303,7 @@ def advanced_search(request):
             for entry in entries:
                 if not entry.marked_for_deletion:
                     result = dict()
-                    result['lexical_entry'] = entry.track(False)
+                    result['lexical_entry'] = entry.track(True)
                     result['client_id'] = entry.parent_client_id
                     result['object_id'] = entry.parent_object_id
                     perspective_tr = entry.parent.get_translation(request)
@@ -824,6 +849,8 @@ def view_perspective(request):
                 meta = json.loads(perspective.additional_metadata)
                 if 'location' in meta:
                     response['location'] = meta['location']
+                if 'info' in meta:
+                    response['info'] = meta['info']
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -2394,6 +2421,17 @@ def upload_user_blob(request):
     DBSession.add(current_user)
     request.response.status = HTTPOk.code
     response = {"client_id": blob.client_id, "object_id": blob.object_id, "content": blob_object.content}
+    return response
+
+@view_config(route_name='get_user_blob', renderer='json', request_method='GET')
+def get_user_blob(request):
+    variables = {'auth': authenticated_userid(request)}
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+    response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                 'client_id': blob.client_id, 'object_id': blob.object_id}
     return response
 
 
@@ -4191,7 +4229,6 @@ try it again.
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    from sqlalchemy import tuple_
     req = request.json
     dicts = req
     dicts = [(o[0], o[1]) for o in dicts]

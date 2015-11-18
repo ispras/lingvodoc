@@ -165,6 +165,14 @@ def configure_routes(config):
     # API #GET && PUT && DELETE
     # {<some_data_name>:{"type""<datatype>, "content":<content>},}
     # for geo: {"location":{"type":"location", "content":{"lat":<lat>, "lng":<lng>}}}
+    # for info:{"info":{"type":"list",
+    #           "content":[{"info":{"type":"blob",
+    #                               "content":{"client_id":<client_id>, "object_id":<object_id>}
+    #                              }
+    #                      },
+    #                     ]
+    #                  }
+    #          }
     config.add_route(name='perspective_meta',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}/meta',
@@ -246,10 +254,11 @@ def configure_routes(config):
                      pattern="/blob")
 
     # seems to be redundant
+    # not anymore
     # API #GET
     # no params, returns file
-    #config.add_route(name="get_user_blob",
-    #                 pattern="/blobs/{client_id}/{object_id}")
+    config.add_route(name="get_user_blob",
+                    pattern="/blobs/{client_id}/{object_id}")
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
@@ -319,8 +328,10 @@ def configure_routes(config):
     # API #POST
     # {"leveloneentity":<search_string>,
     #  "entity_type":"<entity_type>,
-    #  "dictionaries":[{"client_id":<dict_client_id>,"object_id":<dict_object_id>},
-    #                 ]}
+    #  "perspectives":[{"client_id":<persp_client_id>,"object_id":<persp_object_id>},
+    #                 ]
+    #   "adopted":True/False,
+    #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>}
     config.add_route(name='advanced_search', pattern='/advanced_search')
 
     # API #GET
