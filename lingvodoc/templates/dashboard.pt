@@ -304,7 +304,38 @@
             </table>
         </div>
 
-        <button type="button" class="btn btn-primary" ng-click="editGeoLabels()">Geo...</button>
+        <div class="panel">
+            <div class="panel-header">
+                Files
+            </div>
+            <div class="panel-body">
+                <table class="table table-bordered">
+                    <tr ng-repeat="blob in perspective.blobs">
+                        <td>{{ blob.name }}</td>
+                    </tr>
+                </table>
+
+                <select id="blob" class="form-control" ng-model="blobId" ng-options="blob.getId() as blob.name for blob in blobs track by blob.getId()">
+                    <option></option>
+                </select>
+
+                <button type="button" class="btn btn-primary" ng-click="addBlob()">Add</button>
+            </div>
+
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                Location
+            </div>
+            <div class="panel-body">
+                <button type="button" class="btn btn-primary" ng-click="editGeoLabels()">Location...</button>
+            </div>
+        </div>
+
+
+
+
 
     </div>
 
@@ -526,7 +557,6 @@
             </table>
 
         </div>
-
     </div>
 
     <div class="modal-footer">

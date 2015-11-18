@@ -30983,7 +30983,7 @@ angular.module("UserUploadModule", [ "ui.bootstrap" ]).directive("onReadFile", f
     $scope.upload = function(file) {
         var fd = new FormData();
         fd.append("blob", file);
-        fd.append("data_type", "dialeqt_dictionary");
+        fd.append("data_type", $scope.dataType);
         $scope.uploadMsg = true;
         $http.post("/blob", fd, {
             transformRequest: angular.identity,

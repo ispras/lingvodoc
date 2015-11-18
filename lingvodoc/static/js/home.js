@@ -30270,7 +30270,7 @@ lingvodoc.Object = function(clientId, objectId) {
     this.object_id = objectId;
     this.type = "abstract";
     this.getId = function() {
-        return this.client_id + "" + this.object_id;
+        return this.client_id + "_" + this.object_id;
     };
     this.export = function() {
         return {};
@@ -30335,6 +30335,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.marked_for_deletion = marked_for_deletion;
     this.fields = [];
     this.location = null;
+    this.blobs = [];
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
@@ -30347,6 +30348,15 @@ lingvodoc.Perspective.fromJS = function(js) {
             lat: js.location.content.lat,
             lng: js.location.content.lng
         };
+    }
+    if (_.has(js, "info") && js.info.type == "list") {
+        if (_.isArray(js.info.content)) {
+            perspective["blobs"] = _.map(js.info.content, function(e) {
+                var blob = new lingvodoc.Blob(e.info.content.client_id, e.info.content.object_id, e.info.content.name, e.info.content.data_type);
+                blob.url = e.info.content.content;
+                return blob;
+            });
+        }
     }
     return perspective;
 };
@@ -30378,6 +30388,7 @@ lingvodoc.Blob = function(clientId, objectId, name, data_type) {
     this.type = "blob";
     this.name = name;
     this.data_type = data_type;
+    this.url = null;
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.name == obj.name;
     };
@@ -30452,6 +30463,21 @@ function lingvodocAPI($http, $q) {
     };
     var getPerspectiveDictionaryFields = function(url) {
         var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
         $http.get(url).success(function(data, status, headers, config) {
             if (angular.isArray(data.fields)) {
                 var fields = perspectiveToDictionaryFields(data.fields);
@@ -31300,10 +31326,49 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var advancedSearch = function(query, type, where) {
+        var deferred = $q.defer();
+        var url = "/advanced_search";
+        var perspectives = where.map(function(o) {
+            if (o.type == "perspective") {
+                return {
+                    client_id: o.client_id,
+                    object_id: o.object_id
+                };
+            }
+        }).filter(function(o) {
+            return typeof o !== "undefined";
+        });
+        var req = {
+            leveloneentity: query,
+            entity_type: type,
+            perspectives: perspectives
+        };
+        $http.post(url, req).success(function(data, status, headers, config) {
+            var r = data.map(function(e) {
+                var perspective = lingvodoc.Perspective.fromJS(e);
+                return getPerspectiveOriginById(perspective.client_id, perspective.object_id);
+            });
+            $q.all(r).then(function(paths) {
+                var out = [];
+                _.each(data, function(entry, i) {
+                    entry.lexical_entry["origin"] = paths[i];
+                    out.push(entry.lexical_entry);
+                });
+                deferred.resolve(out);
+            }, function(reason) {
+                deferred.reject("An error  occurred while doing basic search");
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing advanced search");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
         getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
+        getPerspectiveDictionaryFieldsNew: getPerspectiveDictionaryFieldsNew,
         addNewLexicalEntry: addNewLexicalEntry,
         saveValue: saveValue,
         removeValue: removeValue,
@@ -31353,7 +31418,8 @@ function lingvodocAPI($http, $q) {
         convertDictionary: convertDictionary,
         getPerspectiveMeta: getPerspectiveMeta,
         setPerspectiveMeta: setPerspectiveMeta,
-        removePerspectiveMeta: removePerspectiveMeta
+        removePerspectiveMeta: removePerspectiveMeta,
+        advancedSearch: advancedSearch
     };
 }
 

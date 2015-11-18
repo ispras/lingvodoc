@@ -31959,7 +31959,7 @@ lingvodoc.Object = function(clientId, objectId) {
     this.object_id = objectId;
     this.type = "abstract";
     this.getId = function() {
-        return this.client_id + "" + this.object_id;
+        return this.client_id + "_" + this.object_id;
     };
     this.export = function() {
         return {};
@@ -32024,6 +32024,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.marked_for_deletion = marked_for_deletion;
     this.fields = [];
     this.location = null;
+    this.blobs = [];
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
@@ -32036,6 +32037,15 @@ lingvodoc.Perspective.fromJS = function(js) {
             lat: js.location.content.lat,
             lng: js.location.content.lng
         };
+    }
+    if (_.has(js, "info") && js.info.type == "list") {
+        if (_.isArray(js.info.content)) {
+            perspective["blobs"] = _.map(js.info.content, function(e) {
+                var blob = new lingvodoc.Blob(e.info.content.client_id, e.info.content.object_id, e.info.content.name, e.info.content.data_type);
+                blob.url = e.info.content.content;
+                return blob;
+            });
+        }
     }
     return perspective;
 };
@@ -32067,6 +32077,7 @@ lingvodoc.Blob = function(clientId, objectId, name, data_type) {
     this.type = "blob";
     this.name = name;
     this.data_type = data_type;
+    this.url = null;
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.name == obj.name;
     };
@@ -32141,6 +32152,21 @@ function lingvodocAPI($http, $q) {
     };
     var getPerspectiveDictionaryFields = function(url) {
         var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
         $http.get(url).success(function(data, status, headers, config) {
             if (angular.isArray(data.fields)) {
                 var fields = perspectiveToDictionaryFields(data.fields);
@@ -32989,10 +33015,49 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var advancedSearch = function(query, type, where) {
+        var deferred = $q.defer();
+        var url = "/advanced_search";
+        var perspectives = where.map(function(o) {
+            if (o.type == "perspective") {
+                return {
+                    client_id: o.client_id,
+                    object_id: o.object_id
+                };
+            }
+        }).filter(function(o) {
+            return typeof o !== "undefined";
+        });
+        var req = {
+            leveloneentity: query,
+            entity_type: type,
+            perspectives: perspectives
+        };
+        $http.post(url, req).success(function(data, status, headers, config) {
+            var r = data.map(function(e) {
+                var perspective = lingvodoc.Perspective.fromJS(e);
+                return getPerspectiveOriginById(perspective.client_id, perspective.object_id);
+            });
+            $q.all(r).then(function(paths) {
+                var out = [];
+                _.each(data, function(entry, i) {
+                    entry.lexical_entry["origin"] = paths[i];
+                    out.push(entry.lexical_entry);
+                });
+                deferred.resolve(out);
+            }, function(reason) {
+                deferred.reject("An error  occurred while doing basic search");
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing advanced search");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
         getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
+        getPerspectiveDictionaryFieldsNew: getPerspectiveDictionaryFieldsNew,
         addNewLexicalEntry: addNewLexicalEntry,
         saveValue: saveValue,
         removeValue: removeValue,
@@ -33042,7 +33107,8 @@ function lingvodocAPI($http, $q) {
         convertDictionary: convertDictionary,
         getPerspectiveMeta: getPerspectiveMeta,
         setPerspectiveMeta: setPerspectiveMeta,
-        removePerspectiveMeta: removePerspectiveMeta
+        removePerspectiveMeta: removePerspectiveMeta,
+        advancedSearch: advancedSearch
     };
 }
 
@@ -33395,6 +33461,8 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
 app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q", "$modal", "$modalInstance", "$log", "dictionaryService", "responseHandler", "params", function($scope, $http, $q, $modal, $modalInstance, $log, dictionaryService, responseHandler, params) {
     $scope.dictionary = params.dictionary;
     $scope.perspective = {};
+    $scope.blobs = [];
+    $scope.blobId = "";
     $scope.controls = {
         ok: true
     };
@@ -33430,6 +33498,44 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
             }
         });
     };
+    $scope.addBlob = function() {
+        var blob = _.find($scope.blobs, function(b) {
+            return b.getId() == $scope.blobId;
+        });
+        if (blob) {
+            var blobs = $scope.perspective.blobs.map(function(b) {
+                return {
+                    info: {
+                        type: "blob",
+                        content: {
+                            client_id: b.client_id,
+                            object_id: b.object_id
+                        }
+                    }
+                };
+            });
+            blobs.push({
+                info: {
+                    type: "blob",
+                    content: {
+                        client_id: blob.client_id,
+                        object_id: blob.object_id
+                    }
+                }
+            });
+            var meta = {
+                info: {
+                    type: "list",
+                    content: blobs
+                }
+            };
+            dictionaryService.setPerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+                $scope.perspective.blobs.push(blob);
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+        }
+    };
     $scope.ok = function() {
         $scope.controls.ok = false;
         dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
@@ -33453,6 +33559,14 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
     dictionaryService.getPerspectiveFields(url).then(function(fields) {
         params.perspective["fields"] = fields;
         $scope.perspective = wrapPerspective(params.perspective);
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
+    dictionaryService.getUserBlobs().then(function(blobs) {
+        $scope.blobs = blobs.filter(function(b) {
+            return b.data_type != "dialeqt_dictionary";
+        });
+        $log.info($scope.blobs);
     }, function(reason) {
         responseHandler.error(reason);
     });

@@ -32723,7 +32723,7 @@ lingvodoc.Object = function(clientId, objectId) {
     this.object_id = objectId;
     this.type = "abstract";
     this.getId = function() {
-        return this.client_id + "" + this.object_id;
+        return this.client_id + "_" + this.object_id;
     };
     this.export = function() {
         return {};
@@ -32788,6 +32788,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.marked_for_deletion = marked_for_deletion;
     this.fields = [];
     this.location = null;
+    this.blobs = [];
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
@@ -32800,6 +32801,15 @@ lingvodoc.Perspective.fromJS = function(js) {
             lat: js.location.content.lat,
             lng: js.location.content.lng
         };
+    }
+    if (_.has(js, "info") && js.info.type == "list") {
+        if (_.isArray(js.info.content)) {
+            perspective["blobs"] = _.map(js.info.content, function(e) {
+                var blob = new lingvodoc.Blob(e.info.content.client_id, e.info.content.object_id, e.info.content.name, e.info.content.data_type);
+                blob.url = e.info.content.content;
+                return blob;
+            });
+        }
     }
     return perspective;
 };
@@ -32831,6 +32841,7 @@ lingvodoc.Blob = function(clientId, objectId, name, data_type) {
     this.type = "blob";
     this.name = name;
     this.data_type = data_type;
+    this.url = null;
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.name == obj.name;
     };
@@ -32905,6 +32916,21 @@ function lingvodocAPI($http, $q) {
     };
     var getPerspectiveDictionaryFields = function(url) {
         var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
         $http.get(url).success(function(data, status, headers, config) {
             if (angular.isArray(data.fields)) {
                 var fields = perspectiveToDictionaryFields(data.fields);
@@ -33753,10 +33779,49 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var advancedSearch = function(query, type, where) {
+        var deferred = $q.defer();
+        var url = "/advanced_search";
+        var perspectives = where.map(function(o) {
+            if (o.type == "perspective") {
+                return {
+                    client_id: o.client_id,
+                    object_id: o.object_id
+                };
+            }
+        }).filter(function(o) {
+            return typeof o !== "undefined";
+        });
+        var req = {
+            leveloneentity: query,
+            entity_type: type,
+            perspectives: perspectives
+        };
+        $http.post(url, req).success(function(data, status, headers, config) {
+            var r = data.map(function(e) {
+                var perspective = lingvodoc.Perspective.fromJS(e);
+                return getPerspectiveOriginById(perspective.client_id, perspective.object_id);
+            });
+            $q.all(r).then(function(paths) {
+                var out = [];
+                _.each(data, function(entry, i) {
+                    entry.lexical_entry["origin"] = paths[i];
+                    out.push(entry.lexical_entry);
+                });
+                deferred.resolve(out);
+            }, function(reason) {
+                deferred.reject("An error  occurred while doing basic search");
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing advanced search");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
         getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
+        getPerspectiveDictionaryFieldsNew: getPerspectiveDictionaryFieldsNew,
         addNewLexicalEntry: addNewLexicalEntry,
         saveValue: saveValue,
         removeValue: removeValue,
@@ -33806,7 +33871,8 @@ function lingvodocAPI($http, $q) {
         convertDictionary: convertDictionary,
         getPerspectiveMeta: getPerspectiveMeta,
         setPerspectiveMeta: setPerspectiveMeta,
-        removePerspectiveMeta: removePerspectiveMeta
+        removePerspectiveMeta: removePerspectiveMeta,
+        advancedSearch: advancedSearch
     };
 }
 
@@ -33846,7 +33912,146 @@ function responseHandler($timeout, $modal) {
 
 "use strict";
 
-angular.module("MapsModule", [ "ui.bootstrap", "ngMap" ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("MapsController", [ "$scope", "$http", "$log", "responseHandler", function($scope, $http, $log, responseHandler) {
+angular.module("MapsModule", [ "ui.bootstrap", "ngMap" ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).factory("dictionaryService", [ "$http", "$q", lingvodocAPI ]).directive("wavesurfer", function() {
+    return {
+        restrict: "E",
+        link: function($scope, $element, $attrs) {
+            $element.css("display", "block");
+            var options = angular.extend({
+                container: $element[0]
+            }, $attrs);
+            var wavesurfer = WaveSurfer.create(options);
+            if ($attrs.url) {
+                wavesurfer.load($attrs.url, $attrs.data || null);
+            }
+            $scope.$emit("wavesurferInit", wavesurfer);
+        }
+    };
+}).controller("MapsController", [ "$scope", "$http", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
+    WaveSurferController.call(this, $scope);
     var key = "AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk";
     $scope.googleMapsUrl = "http://maps.google.com/maps/api/js?v=3.20&key=" + encodeURIComponent(key);
+    $scope.perspectives = [];
+    $scope.activePerspectives = [];
+    $scope.query = "";
+    $scope.entries = [];
+    $scope.fields = [];
+    $scope.fieldsIdx = [];
+    $scope.fieldsValues = [];
+    $scope.getPerspectivesWithLocation = function() {
+        return _.filter($scope.perspectives, function(p) {
+            return _.has(p, "location") && !_.isEmpty(p, "location") && _.has(p.location, "lat") && _.has(p.location, "lng");
+        });
+    };
+    $scope.isPerspectiveActive = function(perspective) {
+        return !!_.find($scope.activePerspectives, function(p) {
+            return p.equals(perspective);
+        });
+    };
+    $scope.info = function(event, perspective) {
+        var self = this;
+        $scope.selectedPerspective = perspective;
+        NgMap.getMap().then(function(map) {
+            map.showInfoWindow("bar", self);
+        });
+    };
+    $scope.toggle = function(event, perspective) {
+        if (!_.find($scope.activePerspectives, function(p) {
+            return p.equals(perspective);
+        })) {
+            $scope.activePerspectives.push(perspective);
+        } else {
+            _.remove($scope.activePerspectives, function(p) {
+                return p.equals(perspective);
+            });
+        }
+    };
+    $scope.showBlob = function(blob) {
+        $modal.open({
+            animation: true,
+            templateUrl: "blobModal.html",
+            controller: "BlobController",
+            size: "lg",
+            backdrop: "static",
+            keyboard: false,
+            resolve: {
+                params: function() {
+                    return {
+                        blob: blob
+                    };
+                }
+            }
+        }).result.then(function(req) {}, function() {});
+    };
+    $scope.$watch("entries", function(updatedEntries) {
+        var getFieldValues = function(entry, field) {
+            var value;
+            var values = [];
+            if (entry && entry.contains) {
+                if (field.isGroup) {
+                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                        var subField = field.contains[fieldIndex];
+                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                            value = entry.contains[valueIndex];
+                            if (value.entity_type == subField.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < entry.contains.length; i++) {
+                        value = entry.contains[i];
+                        if (value.entity_type == field.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            }
+            return values;
+        };
+        var mapFieldValues = function(allEntries, allFields) {
+            var result = [];
+            for (var i = 0; i < allEntries.length; i++) {
+                var entryRow = [];
+                for (var j = 0; j < allFields.length; j++) {
+                    entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+                }
+                result.push(entryRow);
+            }
+            return result;
+        };
+        $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+    $scope.$watch("query", function(q) {
+        if (!q || q.length < 3) {
+            return;
+        }
+        dictionaryService.advancedSearch(q, "Translation", $scope.activePerspectives).then(function(entries) {
+            if (!_.isEmpty(entries)) {
+                var p = _.find(_.first(entries)["origin"], function(o) {
+                    return o.type == "perspective";
+                });
+                dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
+                    $scope.fields = fields;
+                    $scope.entries = entries;
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            } else {
+                $scope.fields = [];
+                $scope.entries = [];
+            }
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    }, false);
+    dictionaryService.getAllPerspectives().then(function(perspectives) {
+        $scope.perspectives = _.clone(perspectives);
+        $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
+    }, function(reason) {});
+} ]).controller("BlobController", [ "$scope", "$http", "$log", "$modal", "$modalInstance", "NgMap", "dictionaryService", "responseHandler", "params", function($scope, $http, $log, $modal, $modalInstance, NgMap, dictionaryService, responseHandler, params) {
+    $scope.blob = params.blob;
+    $scope.ok = function() {
+        $modalInstance.close();
+    };
 } ]);
