@@ -50,7 +50,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import (
     func,
     or_,
-    and_
+    and_,
+    tuple_,
+    not_
 )
 from sqlalchemy.orm import joinedload, subqueryload, noload, join, joinedload_all
 from sqlalchemy.sql.expression import case, true, false
@@ -265,11 +267,11 @@ def advanced_search(request):
                     .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
             if entity_type:
                 results_cursor = results_cursor.filter(LevelOneEntity.entity_type == entity_type)
-            # if adopted is not None:
-            #     if adopted:
-            #         results_cursor = results_cursor.filter(LevelOneEntity.content.like('%заим.%'))
-            #     else:
-            #         results_cursor = results_cursor.filter(not LevelOneEntity.content.like('%заим.%'))
+            if adopted is not None:
+                if adopted:
+                    results_cursor = results_cursor.filter(LevelOneEntity.content.like('%заим.%'))
+                else:
+                    results_cursor = results_cursor.filter(not_(LevelOneEntity.content.like('%заим.%')))
             results = []
             entries = set()
             # if can_add_tags:
@@ -830,6 +832,8 @@ def view_perspective(request):
                 meta = json.loads(perspective.additional_metadata)
                 if 'location' in meta:
                     response['location'] = meta['location']
+                if 'info' in meta:
+                    response['info'] = meta['info']
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -4208,7 +4212,6 @@ try it again.
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    from sqlalchemy import tuple_
     req = request.json
     dicts = req
     dicts = [(o[0], o[1]) for o in dicts]

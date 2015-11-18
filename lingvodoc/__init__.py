@@ -165,6 +165,14 @@ def configure_routes(config):
     # API #GET && PUT && DELETE
     # {<some_data_name>:{"type""<datatype>, "content":<content>},}
     # for geo: {"location":{"type":"location", "content":{"lat":<lat>, "lng":<lng>}}}
+    # for info:{"info":{"type":"list",
+    #           "content":[{"info":{"type":"blob",
+    #                               "content":{"client_id":<client_id>, "object_id":<object_id>}
+    #                              }
+    #                      },
+    #                     ]
+    #                  }
+    #          }
     config.add_route(name='perspective_meta',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}/meta',
