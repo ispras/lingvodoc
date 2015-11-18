@@ -257,24 +257,23 @@ def advanced_search(request):
                 perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
                 results_cursor = results_cursor.join(LexicalEntry).join(DictionaryPerspective)\
                     .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
-            group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
-                    .filter(BaseGroup.subject == 'lexical_entries_and_entities', BaseGroup.action == 'view')\
-                    .join(User, Group.users).join(Client)\
-                    .filter(Client.id == request.authenticated_userid).first()
-            if group:
-                results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'))
-            else:
-                results_cursor = results_cursor\
-                    .join(LexicalEntry)\
-                    .join(DictionaryPerspective)
-                results_cursor = results_cursor.join(Dictionary, and_())\
-                    .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
-                    .join(BaseGroup)\
-                    .join(User, Group.users)\
-                    .join(Client)\
-                    .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
-            if entity_type:
-                results_cursor = results_cursor.filter(LevelOneEntity.entity_type == entity_type)
+            # group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
+            #         .filter(BaseGroup.subject == 'lexical_entries_and_entities', BaseGroup.action == 'view')\
+            #         .join(User, Group.users).join(Client)\
+            #         .filter(Client.id == request.authenticated_userid).first()
+            # if group:
+            #     results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'))
+            # else:
+            #     results_cursor = results_cursor\
+            #         .join(LexicalEntry)\
+            #         .join(DictionaryPerspective)
+            #     results_cursor = results_cursor.join(Dictionary, and_())\
+            #         .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+            #         .join(BaseGroup)\
+            #         .join(User, Group.users)\
+            #         .join(Client)\
+            #         .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
+            results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'), LevelOneEntity.entity_type == entity_type)
             if adopted is not None:
                 LexicalEntryAlias = aliased(LexicalEntry)
                 LevelOneEntityAlias = aliased(LevelOneEntity)
