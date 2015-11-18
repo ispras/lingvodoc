@@ -234,16 +234,17 @@ def basic_search(request):
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
 def advanced_search(request):
     req = request.json
-    # can_add_tags = req.get('can_add_tags')
+    can_add_tags = req.get('can_add_tags')
     dictionaries = req.get('dictionaries')
     searchstring = req.get('leveloneentity')
     entity_type = req.get('entity_type')
+    adopted = req.get('adopted')
     if searchstring:
         if len(searchstring) >= 2:
             if dictionaries:
                 dictionaries = [(o["client_id"],o["object_id"]) for o in dictionaries]
                 results_cursor = DBSession.query(LevelOneEntity).join(LexicalEntry).join(DictionaryPerspective)\
-                .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
+                    .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
             else:
                 results_cursor = DBSession.query(LevelOneEntity)
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
@@ -264,6 +265,11 @@ def advanced_search(request):
                     .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
             if entity_type:
                 results_cursor = results_cursor.filter(LevelOneEntity.entity_type == entity_type)
+            # if adopted is not None:
+            #     if adopted:
+            #         results_cursor = results_cursor.filter(LevelOneEntity.content.like('%заим.%'))
+            #     else:
+            #         results_cursor = results_cursor.filter(not LevelOneEntity.content.like('%заим.%'))
             results = []
             entries = set()
             # if can_add_tags:
@@ -2394,6 +2400,17 @@ def upload_user_blob(request):
     DBSession.add(current_user)
     request.response.status = HTTPOk.code
     response = {"client_id": blob.client_id, "object_id": blob.object_id, "content": blob_object.content}
+    return response
+
+@view_config(route_name='get_user_blob', renderer='json', request_method='GET')
+def get_user_blob(request):
+    variables = {'auth': authenticated_userid(request)}
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+    response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                 'client_id': blob.client_id, 'object_id': blob.object_id}
     return response
 
 
