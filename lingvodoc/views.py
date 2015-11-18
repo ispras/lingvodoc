@@ -832,6 +832,8 @@ def view_perspective(request):
                 meta = json.loads(perspective.additional_metadata)
                 if 'location' in meta:
                     response['location'] = meta['location']
+                if 'info' in meta:
+                    response['info'] = meta['info']
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
