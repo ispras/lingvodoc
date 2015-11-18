@@ -33779,7 +33779,7 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var advancedSearch = function(query, type, where) {
+    var advancedSearch = function(query, type, where, adopted) {
         var deferred = $q.defer();
         var url = "/advanced_search";
         var perspectives = where.map(function(o) {
@@ -33797,6 +33797,9 @@ function lingvodocAPI($http, $q) {
             entity_type: type,
             perspectives: perspectives
         };
+        if (_.isBoolean(adopted)) {
+            req.adopted = adopted;
+        }
         $http.post(url, req).success(function(data, status, headers, config) {
             var r = data.map(function(e) {
                 var perspective = lingvodoc.Perspective.fromJS(e);
@@ -33927,13 +33930,57 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngMap" ]).factory("responseHandl
             $scope.$emit("wavesurferInit", wavesurfer);
         }
     };
-}).controller("MapsController", [ "$scope", "$http", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
+}).directive("indeterminate", [ function() {
+    return {
+        require: "?ngModel",
+        link: function(scope, el, attrs, ctrl) {
+            ctrl.$formatters = [];
+            ctrl.$parsers = [];
+            ctrl.$render = function() {
+                var d = ctrl.$viewValue;
+                el.data("checked", d);
+                switch (d) {
+                  case true:
+                    el.prop("indeterminate", false);
+                    el.prop("checked", true);
+                    break;
+
+                  case false:
+                    el.prop("indeterminate", false);
+                    el.prop("checked", false);
+                    break;
+
+                  default:
+                    el.prop("indeterminate", true);
+                }
+            };
+            el.bind("click", function() {
+                var d;
+                switch (el.data("checked")) {
+                  case false:
+                    d = true;
+                    break;
+
+                  case true:
+                    d = null;
+                    break;
+
+                  default:
+                    d = false;
+                }
+                ctrl.$setViewValue(d);
+                scope.$apply(ctrl.$render);
+            });
+        }
+    };
+} ]).controller("MapsController", [ "$scope", "$http", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
     WaveSurferController.call(this, $scope);
     var key = "AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk";
     $scope.googleMapsUrl = "http://maps.google.com/maps/api/js?v=3.20&key=" + encodeURIComponent(key);
     $scope.perspectives = [];
     $scope.activePerspectives = [];
     $scope.query = "";
+    $scope.searchMode = null;
     $scope.entries = [];
     $scope.fields = [];
     $scope.fieldsIdx = [];
@@ -34026,7 +34073,7 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngMap" ]).factory("responseHandl
         if (!q || q.length < 3) {
             return;
         }
-        dictionaryService.advancedSearch(q, "Translation", $scope.activePerspectives).then(function(entries) {
+        dictionaryService.advancedSearch(q, "Translation", $scope.activePerspectives, $scope.searchMode).then(function(entries) {
             if (!_.isEmpty(entries)) {
                 var p = _.find(_.first(entries)["origin"], function(o) {
                     return o.type == "perspective";

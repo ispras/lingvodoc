@@ -1245,7 +1245,7 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
-    var advancedSearch = function(query, type, where) {
+    var advancedSearch = function(query, type, where, adopted) {
         var deferred = $q.defer();
         var url = '/advanced_search';
 
@@ -1262,6 +1262,11 @@ function lingvodocAPI($http, $q) {
             'entity_type': type,
             'perspectives': perspectives
         };
+
+        if (_.isBoolean(adopted)) {
+            req.adopted = adopted;
+        }
+
 
         $http.post(url, req).success(function(data, status, headers, config) {
             var r = data.map(function(e) {

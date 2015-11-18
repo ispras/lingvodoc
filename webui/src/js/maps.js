@@ -25,6 +25,47 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
         };
     })
 
+    .directive('indeterminate', [function() {
+        return {
+            require: '?ngModel',
+            link: function(scope, el, attrs, ctrl) {
+                ctrl.$formatters = [];
+                ctrl.$parsers = [];
+                ctrl.$render = function() {
+                    var d = ctrl.$viewValue;
+                    el.data('checked', d);
+                    switch(d){
+                        case true:
+                            el.prop('indeterminate', false);
+                            el.prop('checked', true);
+                            break;
+                        case false:
+                            el.prop('indeterminate', false);
+                            el.prop('checked', false);
+                            break;
+                        default:
+                            el.prop('indeterminate', true);
+                    }
+                };
+                el.bind('click', function() {
+                    var d;
+                    switch(el.data('checked')){
+                        case false:
+                            d = true;
+                            break;
+                        case true:
+                            d = null;
+                            break;
+                        default:
+                            d = false;
+                    }
+                    ctrl.$setViewValue(d);
+                    scope.$apply(ctrl.$render);
+                });
+            }
+        };
+    }])
+
     .controller('MapsController', ['$scope', '$http', '$log', '$modal', 'NgMap', 'dictionaryService', 'responseHandler', function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
 
         WaveSurferController.call(this, $scope);
@@ -36,6 +77,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
         $scope.activePerspectives = [];
 
         $scope.query = '';
+        $scope.searchMode = null;
 
         $scope.entries = [];
         $scope.fields = [];
@@ -150,7 +192,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
                 return;
             }
 
-            dictionaryService.advancedSearch(q, 'Translation', $scope.activePerspectives).then(function(entries) {
+            dictionaryService.advancedSearch(q, 'Translation', $scope.activePerspectives, $scope.searchMode).then(function(entries) {
 
                 if (!_.isEmpty(entries)) {
 
