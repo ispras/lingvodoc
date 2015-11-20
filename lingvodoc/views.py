@@ -323,38 +323,59 @@ def advanced_search(request):
     return {'error': 'search is too short'}
 
 
-#TODO: make it normal, it's just a test
-@view_config(route_name='convert_dictionary_old', renderer='json', request_method='POST')
-def convert_dictionary_old(request):
-    req = request.json_body
-
-    client_id = req['blob_client_id']
-    object_id = req['blob_object_id']
-    parent_client_id = req['parent_client_id']
-    parent_object_id = req['parent_object_id']
-    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
-    user = client.user
-
-    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
-
-    # convert_one(blob.real_storage_path,
-    #             user.login,
-    #             user.password.hash,
-    #             parent_client_id,
-    #             parent_object_id)
-
-    # NOTE: doesn't work on Mac OS otherwise
-
-    p = multiprocessing.Process(target=convert_one, args=(blob.real_storage_path,
-                                                          user.login,
-                                                          user.password.hash,
-                                                          parent_client_id,
-                                                          parent_object_id))
-    log.debug("Conversion started")
-    p.start()
-    request.response.status = HTTPOk.code
-    return {"status": "Your dictionary is being converted."
-                      " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
+@view_config(route_name='advanced_search_new', renderer='json', request_method='POST')
+def advanced_search_new(request):
+    req = request.json
+    can_add_tags = req.get('can_add_tags')
+    perspectives = req.get('perspectives')
+    searchstring = req.get('leveloneentity')
+    entity_type = req.get('entity_type') or 'Translation'
+    adopted = req.get('adopted')
+    adopted_type = req.get('adopted_type') or 'Word'
+    count = req.get('count') or False
+    state = 'Published'
+    results = []
+    if searchstring:
+        if len(searchstring) >= 2:
+            results_cursor = DBSession.query(LexicalEntry)\
+                .join(DictionaryPerspective, and_(LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+                                              LexicalEntry.parent_object_id == DictionaryPerspective.object_id))\
+                .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+                                       LevelOneEntity.parent_object_id == LexicalEntry.object_id))\
+                .join(PublishLevelOneEntity,
+                      and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+                .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                        DictionaryPerspective.state == 'Published')
+            if adopted is not None:
+                if adopted:
+                    pass
+            # return {'result': str(results_cursor.statement)}
+            entries = set()
+            for item in results_cursor:
+                entries.add(item)
+            for entry in entries:
+                if not entry.marked_for_deletion:
+                    result = dict()
+                    result['lexical_entry'] = entry.track(True)
+                    result['client_id'] = entry.parent_client_id
+                    result['object_id'] = entry.parent_object_id
+                    perspective_tr = entry.parent.get_translation(request)
+                    result['translation_string'] = perspective_tr['translation_string']
+                    result['translation'] = perspective_tr['translation']
+                    result['is_template'] = entry.parent.is_template
+                    result['status'] = entry.parent.state
+                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
+                    result['parent_client_id'] = entry.parent.parent_client_id
+                    result['parent_object_id'] = entry.parent.parent_object_id
+                    dict_tr = entry.parent.parent.get_translation(request)
+                    result['parent_translation_string'] = dict_tr['translation_string']
+                    result['parent_translation'] = dict_tr['translation']
+                    results.append(result)
+            request.response.status = HTTPOk.code
+            return results
+    request.response.status = HTTPBadRequest.code
+    return {'error': 'search is too short'}
 
 
 @view_config(route_name='convert_dictionary_check', renderer='json', request_method='POST')
@@ -392,7 +413,6 @@ def convert_dictionary_check(request):
     return perspectives
 
 
-#TODO: make it normal, it's just a test
 @view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
 def convert_dictionary(request):
     req = request.json_body
@@ -1066,26 +1086,12 @@ def edit_perspective(request):
                     return {'error': str("No such pair of dictionary/perspective in the system")}
                 req = request.json_body
 
-                old_meta = json.loads(perspective.additional_metadata)
-                additional_metadata = req.get('additional_metadata')
-                if additional_metadata:
-                    # additional_metadata = json.dumps(additional_metadata)
-                    old_meta.update(additional_metadata)
-                latitude = req.get('latitude')
-                longitude = req.get('longitude')
-                if latitude:
-                    old_meta.update({'latitude':latitude})
-                if longitude:
-                    old_meta.update({'longitude':longitude})
                 if 'translation' in req:
                     perspective.set_translation(request)
                 if 'parent_client_id' in req:
                     perspective.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     perspective.parent_object_id = req['parent_object_id']
-
-                new_meta = json.dumps(old_meta)
-                perspective.additional_metadata = new_meta
 
                 is_template = req.get('is_template')
                 if is_template is not None:
@@ -2849,7 +2855,7 @@ def delete_group_entity(request):
 
 
 @view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
-@view_config(route_name='add_group_entity', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='add_group_entity', renderer='json', request_method='POST')
 def create_group_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -3481,7 +3487,7 @@ def get_translations(request):
     return response
 
 
-@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
 def merge_dictionaries(request):
     try:
         req = request.json_body
@@ -3609,7 +3615,7 @@ def merge_dictionaries(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')
 def merge_perspectives_api(request):
     try:
         req = request.json_body
