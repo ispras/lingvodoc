@@ -341,7 +341,7 @@
 
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="ok()" ng-disabled="!controls.ok">OK</button>
-        <button class="btn btn-danger" type="button" ng-click="cancel()">Cancel</button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()" ng-disabled="!controls.cancel">Cancel</button>
     </div>
 
 </script>

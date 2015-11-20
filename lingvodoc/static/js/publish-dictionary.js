@@ -31277,6 +31277,12 @@ var cloneObject = function(oldObject) {
     return JSON.parse(JSON.stringify(oldObject));
 };
 
+var enableControls = function(controls, enabled) {
+    _.each(controls, function(value, key) {
+        controls[key] = enabled;
+    });
+};
+
 var lingvodoc = {};
 
 lingvodoc.Object = function(clientId, objectId) {
