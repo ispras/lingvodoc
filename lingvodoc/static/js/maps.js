@@ -30201,6 +30201,1695 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
 
 !angular.$$csp() && angular.element(document).find("head").prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
 
+angular.module("ngMap", []);
+
+(function() {
+    "use strict";
+    var Attr2MapOptions;
+    var __MapController = function($scope, $element, $attrs, $parse, _Attr2MapOptions_, NgMap) {
+        Attr2MapOptions = _Attr2MapOptions_;
+        var vm = this;
+        vm.mapOptions;
+        vm.mapEvents;
+        vm.ngMapDiv;
+        vm.addObject = function(groupName, obj) {
+            if (vm.map) {
+                vm.map[groupName] = vm.map[groupName] || {};
+                var len = Object.keys(vm.map[groupName]).length;
+                vm.map[groupName][obj.id || len] = obj;
+                if (groupName != "infoWindows" && obj.setMap) {
+                    obj.setMap && obj.setMap(vm.map);
+                }
+                if (obj.centered && obj.position) {
+                    vm.map.setCenter(obj.position);
+                }
+                groupName == "markers" && vm.objectChanged("markers");
+                groupName == "customMarkers" && vm.objectChanged("customMarkers");
+            }
+        };
+        vm.deleteObject = function(groupName, obj) {
+            if (obj.map) {
+                var objs = obj.map[groupName];
+                for (var name in objs) {
+                    objs[name] === obj && delete objs[name];
+                }
+                obj.map && obj.setMap && obj.setMap(null);
+                groupName == "markers" && vm.objectChanged("markers");
+                groupName == "customMarkers" && vm.objectChanged("customMarkers");
+            }
+        };
+        vm.observeAttrSetObj = function(orgAttrs, attrs, obj) {
+            if (attrs.noWatcher) {
+                return false;
+            }
+            var attrsToObserve = Attr2MapOptions.getAttrsToObserve(orgAttrs);
+            for (var i = 0; i < attrsToObserve.length; i++) {
+                var attrName = attrsToObserve[i];
+                attrs.$observe(attrName, NgMap.observeAndSet(attrName, obj));
+            }
+        };
+        vm.zoomToIncludeMarkers = function() {
+            var bounds = new google.maps.LatLngBounds();
+            for (var k1 in vm.map.markers) {
+                bounds.extend(vm.map.markers[k1].getPosition());
+            }
+            for (var k2 in vm.map.customMarkers) {
+                bounds.extend(vm.map.customMarkers[k2].getPosition());
+            }
+            vm.map.fitBounds(bounds);
+        };
+        vm.objectChanged = function(group) {
+            if ((group == "markers" || group == "customMarkers") && vm.map.zoomToIncludeMarkers == "auto") {
+                vm.zoomToIncludeMarkers();
+            }
+        };
+        vm.initializeMap = function() {
+            var mapOptions = vm.mapOptions, mapEvents = vm.mapEvents, ngMapDiv = vm.ngMapDiv;
+            vm.map = new google.maps.Map(ngMapDiv, {});
+            mapOptions.zoom = mapOptions.zoom || 15;
+            var center = mapOptions.center;
+            if (!mapOptions.center || typeof center === "string" && center.match(/\{\{.*\}\}/)) {
+                mapOptions.center = new google.maps.LatLng(0, 0);
+            } else if (!(center instanceof google.maps.LatLng)) {
+                var geoCenter = mapOptions.center;
+                delete mapOptions.center;
+                NgMap.getGeoLocation(geoCenter, mapOptions.geoLocationOptions).then(function(latlng) {
+                    vm.map.setCenter(latlng);
+                    var geoCallback = mapOptions.geoCallback;
+                    geoCallback && $parse(geoCallback)($scope);
+                }, function() {
+                    if (mapOptions.geoFallbackCenter) {
+                        vm.map.setCenter(mapOptions.geoFallbackCenter);
+                    }
+                });
+            }
+            vm.map.setOptions(mapOptions);
+            for (var eventName in mapEvents) {
+                google.maps.event.addListener(vm.map, eventName, mapEvents[eventName]);
+            }
+            vm.observeAttrSetObj(orgAttrs, $attrs, vm.map);
+            vm.singleInfoWindow = mapOptions.singleInfoWindow;
+            google.maps.event.addListenerOnce(vm.map, "idle", function() {
+                NgMap.addMap(vm);
+                if (mapOptions.zoomToIncludeMarkers) {
+                    vm.zoomToIncludeMarkers();
+                }
+                $scope.map = vm.map;
+                $scope.$emit("mapInitialized", vm.map);
+                if ($attrs.mapInitialized) {
+                    $parse($attrs.mapInitialized)($scope, {
+                        map: vm.map
+                    });
+                }
+            });
+        };
+        $scope.google = google;
+        var orgAttrs = Attr2MapOptions.orgAttributes($element);
+        var filtered = Attr2MapOptions.filter($attrs);
+        var options = Attr2MapOptions.getOptions(filtered);
+        var controlOptions = Attr2MapOptions.getControlOptions(filtered);
+        var mapOptions = angular.extend(options, controlOptions);
+        var mapEvents = Attr2MapOptions.getEvents($scope, filtered);
+        void 0;
+        vm.mapOptions = mapOptions;
+        vm.mapEvents = mapEvents;
+        vm.ngMapDiv = NgMap.getNgMapDiv($element[0]);
+        $element.append(vm.ngMapDiv);
+        if (options.lazyInit) {
+            vm.map = {
+                id: $attrs.id
+            };
+            NgMap.addMap(vm);
+        } else {
+            vm.initializeMap();
+        }
+        $element.bind("$destroy", function() {
+            NgMap.deleteMap(vm);
+        });
+    };
+    __MapController.$inject = [ "$scope", "$element", "$attrs", "$parse", "Attr2MapOptions", "NgMap" ];
+    angular.module("ngMap").controller("__MapController", __MapController);
+})();
+
+(function() {
+    "use strict";
+    var parser;
+    var linkFunc = function(scope, element, attrs, mapController) {
+        mapController = mapController[0] || mapController[1];
+        var orgAttrs = parser.orgAttributes(element);
+        var filtered = parser.filter(attrs);
+        var options = parser.getOptions(filtered);
+        var events = parser.getEvents(scope, filtered);
+        void 0;
+        var layer = getLayer(options, events);
+        mapController.addObject("bicyclingLayers", layer);
+        mapController.observeAttrSetObj(orgAttrs, attrs, layer);
+        element.bind("$destroy", function() {
+            mapController.deleteObject("bicyclingLayers", layer);
+        });
+    };
+    var getLayer = function(options, events) {
+        var layer = new google.maps.BicyclingLayer(options);
+        for (var eventName in events) {
+            google.maps.event.addListener(layer, eventName, events[eventName]);
+        }
+        return layer;
+    };
+    var bicyclingLayer = function(Attr2MapOptions) {
+        parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    bicyclingLayer.$inject = [ "Attr2MapOptions" ];
+    angular.module("ngMap").directive("bicyclingLayer", bicyclingLayer);
+})();
+
+(function() {
+    "use strict";
+    var parser, $compile, NgMap;
+    var linkFunc = function(scope, element, attrs, mapController) {
+        mapController = mapController[0] || mapController[1];
+        var filtered = parser.filter(attrs);
+        var options = parser.getOptions(filtered);
+        var events = parser.getEvents(scope, filtered);
+        void 0;
+        var customControlEl = element[0].parentElement.removeChild(element[0]);
+        $compile(customControlEl.innerHTML.trim())(scope);
+        for (var eventName in events) {
+            google.maps.event.addDomListener(customControlEl, eventName, events[eventName]);
+        }
+        mapController.addObject("customControls", customControlEl);
+        NgMap.getMap().then(function(map) {
+            var position = options.position;
+            map.controls[google.maps.ControlPosition[position]].push(customControlEl);
+        });
+    };
+    var customControl = function(Attr2MapOptions, _$compile_, _NgMap_) {
+        parser = Attr2MapOptions, $compile = _$compile_, NgMap = _NgMap_;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    customControl.$inject = [ "Attr2MapOptions", "$compile", "NgMap" ];
+    angular.module("ngMap").directive("customControl", customControl);
+})();
+
+(function() {
+    "use strict";
+    var parser, $timeout, $compile, NgMap;
+    var CustomMarker = function(options) {
+        options = options || {};
+        this.el = document.createElement("div");
+        this.el.style.display = "inline-block";
+        this.visible = true;
+        for (var key in options) {
+            this[key] = options[key];
+        }
+    };
+    var setCustomMarker = function() {
+        CustomMarker.prototype = new google.maps.OverlayView();
+        CustomMarker.prototype.setContent = function(html, scope) {
+            this.el.innerHTML = html;
+            this.el.style.position = "absolute";
+            if (scope) {
+                $compile(angular.element(this.el).contents())(scope);
+            }
+        };
+        CustomMarker.prototype.getDraggable = function() {
+            return this.draggable;
+        };
+        CustomMarker.prototype.setDraggable = function(draggable) {
+            this.draggable = draggable;
+        };
+        CustomMarker.prototype.getPosition = function() {
+            return this.position;
+        };
+        CustomMarker.prototype.setPosition = function(position) {
+            position && (this.position = position);
+            if (this.getProjection() && typeof this.position.lng == "function") {
+                var posPixel = this.getProjection().fromLatLngToDivPixel(this.position);
+                var x = Math.round(posPixel.x - this.el.offsetWidth / 2);
+                var y = Math.round(posPixel.y - this.el.offsetHeight - 10);
+                this.el.style.left = x + "px";
+                this.el.style.top = y + "px";
+            }
+        };
+        CustomMarker.prototype.setZIndex = function(zIndex) {
+            zIndex && (this.zIndex = zIndex);
+            this.el.style.zIndex = this.zIndex;
+        };
+        CustomMarker.prototype.setVisible = function(visible) {
+            this.el.style.display = visible ? "inline-block" : "none";
+            this.visible = visible;
+        };
+        CustomMarker.prototype.addClass = function(className) {
+            var classNames = this.el.className.trim().split(" ");
+            classNames.indexOf(className) == -1 && classNames.push(className);
+            this.el.className = classNames.join(" ");
+        };
+        CustomMarker.prototype.removeClass = function(className) {
+            var classNames = this.el.className.split(" ");
+            var index = classNames.indexOf(className);
+            index > -1 && classNames.splice(index, 1);
+            this.el.className = classNames.join(" ");
+        };
+        CustomMarker.prototype.onAdd = function() {
+            this.getPanes().overlayMouseTarget.appendChild(this.el);
+        };
+        CustomMarker.prototype.draw = function() {
+            this.setPosition();
+            this.setZIndex(this.zIndex);
+            this.setVisible(this.visible);
+        };
+        CustomMarker.prototype.onRemove = function() {
+            this.el.parentNode.removeChild(this.el);
+        };
+    };
+    var linkFunc = function(orgHtml, varsToWatch) {
+        return function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered, scope);
+            var events = parser.getEvents(scope, filtered);
+            var removedEl = element[0].parentElement.removeChild(element[0]);
+            void 0;
+            var customMarker = new CustomMarker(options);
+            $timeout(function() {
+                scope.$watch("[" + varsToWatch.join(",") + "]", function() {
+                    customMarker.setContent(orgHtml, scope);
+                });
+                customMarker.setContent(removedEl.innerHTML, scope);
+                var classNames = removedEl.firstElementChild.className;
+                customMarker.addClass("custom-marker");
+                customMarker.addClass(classNames);
+                void 0;
+                if (!(options.position instanceof google.maps.LatLng)) {
+                    NgMap.getGeoLocation(options.position).then(function(latlng) {
+                        customMarker.setPosition(latlng);
+                    });
+                }
+            });
+            void 0;
+            for (var eventName in events) {
+                google.maps.event.addDomListener(customMarker.el, eventName, events[eventName]);
+            }
+            mapController.addObject("customMarkers", customMarker);
+            mapController.observeAttrSetObj(orgAttrs, attrs, customMarker);
+            element.bind("$destroy", function() {
+                mapController.deleteObject("customMarkers", customMarker);
+            });
+        };
+    };
+    var customMarkerDirective = function(_$timeout_, _$compile_, Attr2MapOptions, _NgMap_) {
+        parser = Attr2MapOptions;
+        $timeout = _$timeout_;
+        $compile = _$compile_;
+        NgMap = _NgMap_;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            compile: function(element) {
+                setCustomMarker();
+                element[0].style.display = "none";
+                var orgHtml = element.html();
+                var matches = orgHtml.match(/{{([^}]+)}}/g);
+                var varsToWatch = [];
+                (matches || []).forEach(function(match) {
+                    var toWatch = match.replace("{{", "").replace("}}", "");
+                    if (match.indexOf("::") == -1 && match.indexOf("this.") == -1 && varsToWatch.indexOf(toWatch) == -1) {
+                        varsToWatch.push(match.replace("{{", "").replace("}}", ""));
+                    }
+                });
+                return linkFunc(orgHtml, varsToWatch);
+            }
+        };
+    };
+    customMarkerDirective.$inject = [ "$timeout", "$compile", "Attr2MapOptions", "NgMap" ];
+    angular.module("ngMap").directive("customMarker", customMarkerDirective);
+})();
+
+(function() {
+    "use strict";
+    var NgMap, $timeout, NavigatorGeolocation;
+    var getDirectionsRenderer = function(options, events) {
+        if (options.panel) {
+            options.panel = document.getElementById(options.panel) || document.querySelector(options.panel);
+        }
+        var renderer = new google.maps.DirectionsRenderer(options);
+        for (var eventName in events) {
+            google.maps.event.addListener(renderer, eventName, events[eventName]);
+        }
+        return renderer;
+    };
+    var updateRoute = function(renderer, options) {
+        var directionsService = new google.maps.DirectionsService();
+        var request = options;
+        request.travelMode = request.travelMode || "DRIVING";
+        var validKeys = [ "origin", "destination", "travelMode", "transitOptions", "unitSystem", "durationInTraffic", "waypoints", "optimizeWaypoints", "provideRouteAlternatives", "avoidHighways", "avoidTolls", "region" ];
+        for (var key in request) {
+            validKeys.indexOf(key) === -1 && delete request[key];
+        }
+        if (request.waypoints) {
+            if (request.waypoints == "[]" || request.waypoints === "") {
+                delete request.waypoints;
+            }
+        }
+        var showDirections = function(request) {
+            directionsService.route(request, function(response, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    $timeout(function() {
+                        renderer.setDirections(response);
+                    });
+                }
+            });
+        };
+        if (request.origin && request.destination) {
+            if (request.origin == "current-location") {
+                NavigatorGeolocation.getCurrentPosition().then(function(ll) {
+                    request.origin = new google.maps.LatLng(ll.coords.latitude, ll.coords.longitude);
+                    showDirections(request);
+                });
+            } else if (request.destination == "current-location") {
+                NavigatorGeolocation.getCurrentPosition().then(function(ll) {
+                    request.destination = new google.maps.LatLng(ll.coords.latitude, ll.coords.longitude);
+                    showDirections(request);
+                });
+            } else {
+                showDirections(request);
+            }
+        }
+    };
+    var directions = function(Attr2MapOptions, _$timeout_, _NavigatorGeolocation_, _NgMap_) {
+        var parser = Attr2MapOptions;
+        NgMap = _NgMap_;
+        $timeout = _$timeout_;
+        NavigatorGeolocation = _NavigatorGeolocation_;
+        var linkFunc = function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var events = parser.getEvents(scope, filtered);
+            var attrsToObserve = parser.getAttrsToObserve(orgAttrs);
+            var renderer = getDirectionsRenderer(options, events);
+            mapController.addObject("directionsRenderers", renderer);
+            attrsToObserve.forEach(function(attrName) {
+                (function(attrName) {
+                    attrs.$observe(attrName, function(val) {
+                        if (attrName == "panel") {
+                            $timeout(function() {
+                                var panel = document.getElementById(val) || document.querySelector(val);
+                                void 0;
+                                panel && renderer.setPanel(panel);
+                            });
+                        } else if (options[attrName] !== val) {
+                            var optionValue = parser.toOptionValue(val, {
+                                key: attrName
+                            });
+                            void 0;
+                            options[attrName] = optionValue;
+                            updateRoute(renderer, options);
+                        }
+                    });
+                })(attrName);
+            });
+            NgMap.getMap().then(function() {
+                updateRoute(renderer, options);
+            });
+            element.bind("$destroy", function() {
+                mapController.deleteObject("directionsRenderers", renderer);
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    directions.$inject = [ "Attr2MapOptions", "$timeout", "NavigatorGeolocation", "NgMap" ];
+    angular.module("ngMap").directive("directions", directions);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("drawingManager", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var controlOptions = parser.getControlOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var drawingManager = new google.maps.drawing.DrawingManager({
+                    drawingMode: options.drawingmode,
+                    drawingControl: options.drawingcontrol,
+                    drawingControlOptions: controlOptions.drawingControlOptions,
+                    circleOptions: options.circleoptions,
+                    markerOptions: options.markeroptions,
+                    polygonOptions: options.polygonoptions,
+                    polylineOptions: options.polylineoptions,
+                    rectangleOptions: options.rectangleoptions
+                });
+                for (var eventName in events) {
+                    google.maps.event.addListener(drawingManager, eventName, events[eventName]);
+                }
+                mapController.addObject("mapDrawingManager", drawingManager);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("dynamicMapsEngineLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getDynamicMapsEngineLayer = function(options, events) {
+            var layer = new google.maps.visualization.DynamicMapsEngineLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                var layer = getDynamicMapsEngineLayer(options, events);
+                mapController.addObject("mapsEngineLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("fusionTablesLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getLayer = function(options, events) {
+            var layer = new google.maps.FusionTablesLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                var layer = getLayer(options, events);
+                mapController.addObject("fusionTablesLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("heatmapLayer", [ "Attr2MapOptions", "$window", function(Attr2MapOptions, $window) {
+        var parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                options.data = $window[attrs.data] || scope[attrs.data];
+                if (options.data instanceof Array) {
+                    options.data = new google.maps.MVCArray(options.data);
+                } else {
+                    throw "invalid heatmap data";
+                }
+                var layer = new google.maps.visualization.HeatmapLayer(options);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                mapController.addObject("heatmapLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var infoWindow = function(Attr2MapOptions, $compile, $timeout, $parse, NgMap) {
+        var parser = Attr2MapOptions;
+        var getInfoWindow = function(options, events, element) {
+            var infoWindow;
+            if (options.position && !(options.position instanceof google.maps.LatLng)) {
+                delete options.position;
+            }
+            infoWindow = new google.maps.InfoWindow(options);
+            if (Object.keys(events).length > 0) {
+                void 0;
+            }
+            for (var eventName in events) {
+                if (eventName) {
+                    google.maps.event.addListener(infoWindow, eventName, events[eventName]);
+                }
+            }
+            var template = element.html().trim();
+            if (angular.element(template).length != 1) {
+                throw "info-window working as a template must have a container";
+            }
+            infoWindow.__template = template.replace(/\s?ng-non-bindable[='"]+/, "");
+            infoWindow.__open = function(map, scope, anchor) {
+                $timeout(function() {
+                    anchor && (scope.anchor = anchor);
+                    var el = $compile(infoWindow.__template)(scope);
+                    infoWindow.setContent(el[0]);
+                    scope.$apply();
+                    if (anchor && anchor.getPosition) {
+                        infoWindow.open(map, anchor);
+                    } else if (anchor && anchor instanceof google.maps.LatLng) {
+                        infoWindow.open(map);
+                        infoWindow.setPosition(anchor);
+                    } else {
+                        infoWindow.open(map);
+                    }
+                });
+            };
+            return infoWindow;
+        };
+        var linkFunc = function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            element.css("display", "none");
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var events = parser.getEvents(scope, filtered);
+            void 0;
+            var address;
+            if (options.position && !(options.position instanceof google.maps.LatLng)) {
+                address = options.position;
+            }
+            var infoWindow = getInfoWindow(options, events, element);
+            if (address) {
+                NgMap.getGeoLocation(address).then(function(latlng) {
+                    infoWindow.setPosition(latlng);
+                    infoWindow.__open(mapController.map, scope, latlng);
+                    var geoCallback = attrs.geoCallback;
+                    geoCallback && $parse(geoCallback)(scope);
+                });
+            }
+            mapController.addObject("infoWindows", infoWindow);
+            mapController.observeAttrSetObj(orgAttrs, attrs, infoWindow);
+            NgMap.getMap().then(function(map) {
+                infoWindow.visible && infoWindow.__open(map, scope);
+                if (infoWindow.visibleOnMarker) {
+                    var markerId = infoWindow.visibleOnMarker;
+                    infoWindow.__open(map, scope, map.markers[markerId]);
+                }
+                map.showInfoWindow = map.showInfoWindow || function(p1, p2, p3) {
+                    var id = typeof p1 == "string" ? p1 : p2;
+                    var marker = typeof p1 == "string" ? p2 : p3;
+                    var infoWindow = mapController.map.infoWindows[id];
+                    var anchor = marker ? marker : this.getPosition ? this : null;
+                    infoWindow.__open(mapController.map, scope, anchor);
+                    if (mapController.singleInfoWindow) {
+                        if (mapController.lastInfoWindow) {
+                            scope.hideInfoWindow(mapController.lastInfoWindow);
+                        }
+                        mapController.lastInfoWindow = id;
+                    }
+                };
+                map.hideInfoWindow = scope.hideInfoWindow || function(p1, p2) {
+                    var id = typeof p1 == "string" ? p1 : p2;
+                    var infoWindow = mapController.map.infoWindows[id];
+                    infoWindow.close();
+                };
+                scope.showInfoWindow = map.showInfoWindow;
+                scope.hideInfoWindow = map.hideInfoWindow;
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    infoWindow.$inject = [ "Attr2MapOptions", "$compile", "$timeout", "$parse", "NgMap" ];
+    angular.module("ngMap").directive("infoWindow", infoWindow);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("kmlLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getKmlLayer = function(options, events) {
+            var kmlLayer = new google.maps.KmlLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(kmlLayer, eventName, events[eventName]);
+            }
+            return kmlLayer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var orgAttrs = parser.orgAttributes(element);
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var kmlLayer = getKmlLayer(options, events);
+                mapController.addObject("kmlLayers", kmlLayer);
+                mapController.observeAttrSetObj(orgAttrs, attrs, kmlLayer);
+                element.bind("$destroy", function() {
+                    mapController.deleteObject("kmlLayers", kmlLayer);
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("mapData", [ "Attr2MapOptions", "NgMap", function(Attr2MapOptions, NgMap) {
+        var parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs) {
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                NgMap.getMap().then(function(map) {
+                    for (var key in options) {
+                        var val = options[key];
+                        if (typeof scope[val] === "function") {
+                            map.data[key](scope[val]);
+                        } else {
+                            map.data[key](val);
+                        }
+                    }
+                    for (var eventName in events) {
+                        map.data.addListener(eventName, events[eventName]);
+                    }
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var $timeout, $compile, src, savedHtml;
+    var preLinkFunc = function(scope, element, attrs) {
+        var mapsUrl = attrs.mapLazyLoadParams || attrs.mapLazyLoad;
+        window.lazyLoadCallback = function() {
+            void 0;
+            $timeout(function() {
+                element.html(savedHtml);
+                $compile(element.contents())(scope);
+            }, 100);
+        };
+        if (window.google === undefined || window.google.maps === undefined) {
+            var scriptEl = document.createElement("script");
+            void 0;
+            scriptEl.src = mapsUrl + (mapsUrl.indexOf("?") > -1 ? "&" : "?") + "callback=lazyLoadCallback";
+            document.body.appendChild(scriptEl);
+        } else {
+            element.html(savedHtml);
+            $compile(element.contents())(scope);
+        }
+    };
+    var compileFunc = function(tElement, tAttrs) {
+        !tAttrs.mapLazyLoad && void 0;
+        savedHtml = tElement.html();
+        src = tAttrs.mapLazyLoad;
+        if (document.querySelector('script[src="' + src + (src.indexOf("?") > -1 ? "&" : "?") + 'callback=lazyLoadCallback"]')) {
+            return false;
+        }
+        tElement.html("");
+        return {
+            pre: preLinkFunc
+        };
+    };
+    var mapLazyLoad = function(_$compile_, _$timeout_) {
+        $compile = _$compile_, $timeout = _$timeout_;
+        return {
+            compile: compileFunc
+        };
+    };
+    mapLazyLoad.$inject = [ "$compile", "$timeout" ];
+    angular.module("ngMap").directive("mapLazyLoad", mapLazyLoad);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("mapType", [ "$parse", "NgMap", function($parse, NgMap) {
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var mapTypeName = attrs.name, mapTypeObject;
+                if (!mapTypeName) {
+                    throw "invalid map-type name";
+                }
+                mapTypeObject = $parse(attrs.object)(scope);
+                if (!mapTypeObject) {
+                    throw "invalid map-type object";
+                }
+                NgMap.getMap().then(function(map) {
+                    map.mapTypes.set(mapTypeName, mapTypeObject);
+                });
+                mapController.addObject("mapTypes", mapTypeObject);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var mapDirective = function() {
+        return {
+            restrict: "AE",
+            controller: "__MapController",
+            conrollerAs: "ngmap"
+        };
+    };
+    angular.module("ngMap").directive("map", [ mapDirective ]);
+    angular.module("ngMap").directive("ngMap", [ mapDirective ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("mapsEngineLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getMapsEngineLayer = function(options, events) {
+            var layer = new google.maps.visualization.MapsEngineLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                var layer = getMapsEngineLayer(options, events);
+                mapController.addObject("mapsEngineLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var parser, $parse, NgMap;
+    var getMarker = function(options, events) {
+        var marker;
+        if (NgMap.defaultOptions.marker) {
+            for (var key in NgMap.defaultOptions.marker) {
+                if (typeof options[key] == "undefined") {
+                    void 0;
+                    options[key] = NgMap.defaultOptions.marker[key];
+                }
+            }
+        }
+        if (!(options.position instanceof google.maps.LatLng)) {
+            options.position = new google.maps.LatLng(0, 0);
+        }
+        marker = new google.maps.Marker(options);
+        if (Object.keys(events).length > 0) {
+            void 0;
+        }
+        for (var eventName in events) {
+            if (eventName) {
+                google.maps.event.addListener(marker, eventName, events[eventName]);
+            }
+        }
+        return marker;
+    };
+    var linkFunc = function(scope, element, attrs, mapController) {
+        mapController = mapController[0] || mapController[1];
+        var orgAttrs = parser.orgAttributes(element);
+        var filtered = parser.filter(attrs);
+        var markerOptions = parser.getOptions(filtered, scope);
+        var markerEvents = parser.getEvents(scope, filtered);
+        void 0;
+        var address;
+        if (!(markerOptions.position instanceof google.maps.LatLng)) {
+            address = markerOptions.position;
+        }
+        var marker = getMarker(markerOptions, markerEvents);
+        mapController.addObject("markers", marker);
+        if (address) {
+            NgMap.getGeoLocation(address).then(function(latlng) {
+                marker.setPosition(latlng);
+                markerOptions.centered && marker.map.setCenter(latlng);
+                var geoCallback = attrs.geoCallback;
+                geoCallback && $parse(geoCallback)(scope);
+            });
+        }
+        mapController.observeAttrSetObj(orgAttrs, attrs, marker);
+        element.bind("$destroy", function() {
+            mapController.deleteObject("markers", marker);
+        });
+    };
+    var marker = function(Attr2MapOptions, _$parse_, _NgMap_) {
+        parser = Attr2MapOptions;
+        $parse = _$parse_;
+        NgMap = _NgMap_;
+        return {
+            restrict: "E",
+            require: [ "^?map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    marker.$inject = [ "Attr2MapOptions", "$parse", "NgMap" ];
+    angular.module("ngMap").directive("marker", marker);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("overlayMapType", [ "NgMap", function(NgMap) {
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var initMethod = attrs.initMethod || "insertAt";
+                var overlayMapTypeObject = scope[attrs.object];
+                NgMap.getMap().then(function(map) {
+                    if (initMethod == "insertAt") {
+                        var index = parseInt(attrs.index, 10);
+                        map.overlayMapTypes.insertAt(index, overlayMapTypeObject);
+                    } else if (initMethod == "push") {
+                        map.overlayMapTypes.push(overlayMapTypeObject);
+                    }
+                });
+                mapController.addObject("overlayMapTypes", overlayMapTypeObject);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var placesAutoComplete = function(Attr2MapOptions, $timeout) {
+        var parser = Attr2MapOptions;
+        var linkFunc = function(scope, element, attrs, ngModelCtrl) {
+            if (attrs.placesAutoComplete === "false") {
+                return false;
+            }
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var events = parser.getEvents(scope, filtered);
+            void 0;
+            var autocomplete = new google.maps.places.Autocomplete(element[0], options);
+            for (var eventName in events) {
+                google.maps.event.addListener(autocomplete, eventName, events[eventName]);
+            }
+            var updateModel = function() {
+                $timeout(function() {
+                    ngModelCtrl && ngModelCtrl.$setViewValue(element.val());
+                }, 100);
+            };
+            google.maps.event.addListener(autocomplete, "place_changed", updateModel);
+            element[0].addEventListener("change", updateModel);
+            attrs.$observe("types", function(val) {
+                if (val) {
+                    void 0;
+                    var optionValue = parser.toOptionValue(val, {
+                        key: "types"
+                    });
+                    void 0;
+                    autocomplete.setTypes(optionValue);
+                }
+            });
+        };
+        return {
+            restrict: "A",
+            require: "?ngModel",
+            link: linkFunc
+        };
+    };
+    placesAutoComplete.$inject = [ "Attr2MapOptions", "$timeout" ];
+    angular.module("ngMap").directive("placesAutoComplete", placesAutoComplete);
+})();
+
+(function() {
+    "use strict";
+    var getShape = function(options, events) {
+        var shape;
+        var shapeName = options.name;
+        delete options.name;
+        void 0;
+        switch (shapeName) {
+          case "circle":
+            if (!(options.center instanceof google.maps.LatLng)) {
+                options.center = new google.maps.LatLng(0, 0);
+            }
+            shape = new google.maps.Circle(options);
+            break;
+
+          case "polygon":
+            shape = new google.maps.Polygon(options);
+            break;
+
+          case "polyline":
+            shape = new google.maps.Polyline(options);
+            break;
+
+          case "rectangle":
+            shape = new google.maps.Rectangle(options);
+            break;
+
+          case "groundOverlay":
+          case "image":
+            var url = options.url;
+            var opts = {
+                opacity: options.opacity,
+                clickable: options.clickable,
+                id: options.id
+            };
+            shape = new google.maps.GroundOverlay(url, options.bounds, opts);
+            break;
+        }
+        for (var eventName in events) {
+            if (events[eventName]) {
+                google.maps.event.addListener(shape, eventName, events[eventName]);
+            }
+        }
+        return shape;
+    };
+    var shape = function(Attr2MapOptions, $parse, NgMap) {
+        var parser = Attr2MapOptions;
+        var linkFunc = function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var shapeOptions = parser.getOptions(filtered);
+            var shapeEvents = parser.getEvents(scope, filtered);
+            var address, shapeType;
+            shapeType = shapeOptions.name;
+            if (!(shapeOptions.center instanceof google.maps.LatLng)) {
+                address = shapeOptions.center;
+            }
+            var shape = getShape(shapeOptions, shapeEvents);
+            mapController.addObject("shapes", shape);
+            if (address && shapeType == "circle") {
+                NgMap.getGeoLocation(address).then(function(latlng) {
+                    shape.setCenter(latlng);
+                    shape.centered && shape.map.setCenter(latlng);
+                    var geoCallback = attrs.geoCallback;
+                    geoCallback && $parse(geoCallback)(scope);
+                });
+            }
+            mapController.observeAttrSetObj(orgAttrs, attrs, shape);
+            element.bind("$destroy", function() {
+                mapController.deleteObject("shapes", shape);
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    shape.$inject = [ "Attr2MapOptions", "$parse", "NgMap" ];
+    angular.module("ngMap").directive("shape", shape);
+})();
+
+(function() {
+    "use strict";
+    var streetViewPanorama = function(Attr2MapOptions, NgMap) {
+        var parser = Attr2MapOptions;
+        var getStreetViewPanorama = function(map, options, events) {
+            var svp, container;
+            if (options.container) {
+                container = document.getElementById(options.container);
+                container = container || document.querySelector(options.container);
+            }
+            if (container) {
+                svp = new google.maps.StreetViewPanorama(container, options);
+            } else {
+                svp = map.getStreetView();
+                svp.setOptions(options);
+            }
+            for (var eventName in events) {
+                eventName && google.maps.event.addListener(svp, eventName, events[eventName]);
+            }
+            return svp;
+        };
+        var linkFunc = function(scope, element, attrs) {
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var controlOptions = parser.getControlOptions(filtered);
+            var svpOptions = angular.extend(options, controlOptions);
+            var svpEvents = parser.getEvents(scope, filtered);
+            void 0;
+            NgMap.getMap().then(function(map) {
+                var svp = getStreetViewPanorama(map, svpOptions, svpEvents);
+                map.setStreetView(svp);
+                !svp.getPosition() && svp.setPosition(map.getCenter());
+                google.maps.event.addListener(svp, "position_changed", function() {
+                    if (svp.getPosition() !== map.getCenter()) {
+                        map.setCenter(svp.getPosition());
+                    }
+                });
+                var listener = google.maps.event.addListener(map, "center_changed", function() {
+                    svp.setPosition(map.getCenter());
+                    google.maps.event.removeListener(listener);
+                });
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    streetViewPanorama.$inject = [ "Attr2MapOptions", "NgMap" ];
+    angular.module("ngMap").directive("streetViewPanorama", streetViewPanorama);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("trafficLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getLayer = function(options, events) {
+            var layer = new google.maps.TrafficLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var orgAttrs = parser.orgAttributes(element);
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var layer = getLayer(options, events);
+                mapController.addObject("trafficLayers", layer);
+                mapController.observeAttrSetObj(orgAttrs, attrs, layer);
+                element.bind("$destroy", function() {
+                    mapController.deleteObject("trafficLayers", layer);
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("transitLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getLayer = function(options, events) {
+            var layer = new google.maps.TransitLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var orgAttrs = parser.orgAttributes(element);
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var layer = getLayer(options, events);
+                mapController.addObject("transitLayers", layer);
+                mapController.observeAttrSetObj(orgAttrs, attrs, layer);
+                element.bind("$destroy", function() {
+                    mapController.deleteObject("transitLayers", layer);
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var SPECIAL_CHARS_REGEXP = /([\:\-\_]+(.))/g;
+    var MOZ_HACK_REGEXP = /^moz([A-Z])/;
+    var camelCaseFilter = function() {
+        return function(name) {
+            return name.replace(SPECIAL_CHARS_REGEXP, function(_, separator, letter, offset) {
+                return offset ? letter.toUpperCase() : letter;
+            }).replace(MOZ_HACK_REGEXP, "Moz$1");
+        };
+    };
+    angular.module("ngMap").filter("camelCase", camelCaseFilter);
+})();
+
+(function() {
+    "use strict";
+    var jsonizeFilter = function() {
+        return function(str) {
+            try {
+                JSON.parse(str);
+                return str;
+            } catch (e) {
+                return str.replace(/([\$\w]+)\s*:/g, function(_, $1) {
+                    return '"' + $1 + '":';
+                }).replace(/'([^']+)'/g, function(_, $1) {
+                    return '"' + $1 + '"';
+                });
+            }
+        };
+    };
+    angular.module("ngMap").filter("jsonize", jsonizeFilter);
+})();
+
+(function() {
+    "use strict";
+    var isoDateRE = /^(\d{4}\-\d\d\-\d\d([tT][\d:\.]*)?)([zZ]|([+\-])(\d\d):?(\d\d))?$/;
+    var Attr2MapOptions = function($parse, $timeout, $log, NavigatorGeolocation, GeoCoder, camelCaseFilter, jsonizeFilter) {
+        var orgAttributes = function(el) {
+            el.length > 0 && (el = el[0]);
+            var orgAttributes = {};
+            for (var i = 0; i < el.attributes.length; i++) {
+                var attr = el.attributes[i];
+                orgAttributes[attr.name] = attr.value;
+            }
+            return orgAttributes;
+        };
+        var getJSON = function(input) {
+            var re = /^[\+\-]?[0-9\.]+,[ ]*\ ?[\+\-]?[0-9\.]+$/;
+            if (input.match(re)) {
+                input = "[" + input + "]";
+            }
+            return JSON.parse(jsonizeFilter(input));
+        };
+        var getLatLng = function(input) {
+            var output = input;
+            if (input[0].constructor == Array) {
+                output = input.map(function(el) {
+                    return new google.maps.LatLng(el[0], el[1]);
+                });
+            } else if (!isNaN(parseFloat(input[0])) && isFinite(input[0])) {
+                output = new google.maps.LatLng(output[0], output[1]);
+            }
+            return output;
+        };
+        var toOptionValue = function(input, options) {
+            var output;
+            try {
+                output = getNumber(input);
+            } catch (err) {
+                try {
+                    var output = getJSON(input);
+                    if (output instanceof Array) {
+                        if (output[0].constructor == Object) {
+                            output = output;
+                        } else {
+                            output = getLatLng(output);
+                        }
+                    } else if (output === Object(output)) {
+                        var newOptions = options;
+                        newOptions.doNotConverStringToNumber = true;
+                        output = getOptions(output, newOptions);
+                    }
+                } catch (err2) {
+                    if (input.match(/^[A-Z][a-zA-Z0-9]+\(.*\)$/)) {
+                        try {
+                            var exp = "new google.maps." + input;
+                            output = eval(exp);
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else if (input.match(/^([A-Z][a-zA-Z0-9]+)\.([A-Z]+)$/)) {
+                        try {
+                            var matches = input.match(/^([A-Z][a-zA-Z0-9]+)\.([A-Z]+)$/);
+                            output = google.maps[matches[1]][matches[2]];
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else if (input.match(/^[A-Z]+$/)) {
+                        try {
+                            var capitalizedKey = options.key.charAt(0).toUpperCase() + options.key.slice(1);
+                            if (options.key.match(/temperatureUnit|windSpeedUnit|labelColor/)) {
+                                capitalizedKey = capitalizedKey.replace(/s$/, "");
+                                output = google.maps.weather[capitalizedKey][input];
+                            } else {
+                                output = google.maps[capitalizedKey][input];
+                            }
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else if (input.match(isoDateRE)) {
+                        try {
+                            output = new Date(input);
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else {
+                        output = input;
+                    }
+                }
+            }
+            if (options.key == "bounds" && output instanceof Array) {
+                output = new google.maps.LatLngBounds(output[0], output[1]);
+            }
+            if (options.key == "icons" && output instanceof Array) {
+                for (var i = 0; i < output.length; i++) {
+                    var el = output[i];
+                    if (el.icon.path.match(/^[A-Z_]+$/)) {
+                        el.icon.path = google.maps.SymbolPath[el.icon.path];
+                    }
+                }
+            }
+            if (options.key == "icon" && output instanceof Object) {
+                if (("" + output.path).match(/^[A-Z_]+$/)) {
+                    output.path = google.maps.SymbolPath[output.path];
+                }
+                for (var key in output) {
+                    var arr = output[key];
+                    if (key == "anchor" || key == "origin") {
+                        output[key] = new google.maps.Point(arr[0], arr[1]);
+                    } else if (key == "size" || key == "scaledSize") {
+                        output[key] = new google.maps.Size(arr[0], arr[1]);
+                    }
+                }
+            }
+            return output;
+        };
+        var getAttrsToObserve = function(attrs) {
+            var attrsToObserve = [];
+            if (!attrs.noWatcher) {
+                for (var attrName in attrs) {
+                    var attrValue = attrs[attrName];
+                    void 0;
+                    if (attrValue && attrValue.match(/\{\{.*\}\}/)) {
+                        void 0;
+                        attrsToObserve.push(camelCaseFilter(attrName));
+                    }
+                }
+            }
+            return attrsToObserve;
+        };
+        var filter = function(attrs) {
+            var options = {};
+            for (var key in attrs) {
+                if (key.match(/^\$/) || key.match(/^ng[A-Z]/)) {
+                    void 0;
+                } else {
+                    options[key] = attrs[key];
+                }
+            }
+            return options;
+        };
+        var getOptions = function(attrs, params) {
+            var options = {};
+            for (var key in attrs) {
+                if (attrs[key] || attrs[key] === 0) {
+                    if (key.match(/^on[A-Z]/)) {
+                        continue;
+                    } else if (key.match(/ControlOptions$/)) {
+                        continue;
+                    } else {
+                        if (typeof attrs[key] !== "string") {
+                            options[key] = attrs[key];
+                        } else {
+                            if (params && params.doNotConverStringToNumber && attrs[key].match(/^[0-9]+$/)) {
+                                options[key] = attrs[key];
+                            } else {
+                                options[key] = toOptionValue(attrs[key], {
+                                    key: key
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            return options;
+        };
+        var getEvents = function(scope, attrs) {
+            var events = {};
+            var toLowercaseFunc = function($1) {
+                return "_" + $1.toLowerCase();
+            };
+            var EventFunc = function(attrValue) {
+                var matches = attrValue.match(/([^\(]+)\(([^\)]*)\)/);
+                var funcName = matches[1];
+                var argsStr = matches[2].replace(/event[ ,]*/, "");
+                var argsExpr = $parse("[" + argsStr + "]");
+                return function(event) {
+                    var args = argsExpr(scope);
+                    function index(obj, i) {
+                        return obj[i];
+                    }
+                    var f = funcName.split(".").reduce(index, scope);
+                    f && f.apply(this, [ event ].concat(args));
+                    $timeout(function() {
+                        scope.$apply();
+                    });
+                };
+            };
+            for (var key in attrs) {
+                if (attrs[key]) {
+                    if (!key.match(/^on[A-Z]/)) {
+                        continue;
+                    }
+                    var eventName = key.replace(/^on/, "");
+                    eventName = eventName.charAt(0).toLowerCase() + eventName.slice(1);
+                    eventName = eventName.replace(/([A-Z])/g, toLowercaseFunc);
+                    var attrValue = attrs[key];
+                    events[eventName] = new EventFunc(attrValue);
+                }
+            }
+            return events;
+        };
+        var getControlOptions = function(filtered) {
+            var controlOptions = {};
+            if (typeof filtered != "object") {
+                return false;
+            }
+            for (var attr in filtered) {
+                if (filtered[attr]) {
+                    if (!attr.match(/(.*)ControlOptions$/)) {
+                        continue;
+                    }
+                    var orgValue = filtered[attr];
+                    var newValue = orgValue.replace(/'/g, '"');
+                    newValue = newValue.replace(/([^"]+)|("[^"]+")/g, function($0, $1, $2) {
+                        if ($1) {
+                            return $1.replace(/([a-zA-Z0-9]+?):/g, '"$1":');
+                        } else {
+                            return $2;
+                        }
+                    });
+                    try {
+                        var options = JSON.parse(newValue);
+                        for (var key in options) {
+                            if (options[key]) {
+                                var value = options[key];
+                                if (typeof value === "string") {
+                                    value = value.toUpperCase();
+                                } else if (key === "mapTypeIds") {
+                                    value = value.map(function(str) {
+                                        if (str.match(/^[A-Z]+$/)) {
+                                            return google.maps.MapTypeId[str.toUpperCase()];
+                                        } else {
+                                            return str;
+                                        }
+                                    });
+                                }
+                                if (key === "style") {
+                                    var str = attr.charAt(0).toUpperCase() + attr.slice(1);
+                                    var objName = str.replace(/Options$/, "") + "Style";
+                                    options[key] = google.maps[objName][value];
+                                } else if (key === "position") {
+                                    options[key] = google.maps.ControlPosition[value];
+                                } else {
+                                    options[key] = value;
+                                }
+                            }
+                        }
+                        controlOptions[attr] = options;
+                    } catch (e) {
+                        void 0;
+                    }
+                }
+            }
+            return controlOptions;
+        };
+        return {
+            filter: filter,
+            getOptions: getOptions,
+            getEvents: getEvents,
+            getControlOptions: getControlOptions,
+            toOptionValue: toOptionValue,
+            getAttrsToObserve: getAttrsToObserve,
+            orgAttributes: orgAttributes
+        };
+    };
+    Attr2MapOptions.$inject = [ "$parse", "$timeout", "$log", "NavigatorGeolocation", "GeoCoder", "camelCaseFilter", "jsonizeFilter" ];
+    angular.module("ngMap").service("Attr2MapOptions", Attr2MapOptions);
+})();
+
+(function() {
+    "use strict";
+    var $q;
+    var geocodeFunc = function(options) {
+        var deferred = $q.defer();
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode(options, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                deferred.resolve(results);
+            } else {
+                deferred.reject(status);
+            }
+        });
+        return deferred.promise;
+    };
+    var GeoCoder = function(_$q_) {
+        $q = _$q_;
+        return {
+            geocode: geocodeFunc
+        };
+    };
+    GeoCoder.$inject = [ "$q" ];
+    angular.module("ngMap").service("GeoCoder", GeoCoder);
+})();
+
+(function() {
+    "use strict";
+    var $q;
+    var getCurrentPosition = function(geoLocationOptions) {
+        var deferred = $q.defer();
+        if (navigator.geolocation) {
+            if (geoLocationOptions === undefined) {
+                geoLocationOptions = {
+                    timeout: 5e3
+                };
+            } else if (geoLocationOptions.timeout === undefined) {
+                geoLocationOptions.timeout = 5e3;
+            }
+            navigator.geolocation.getCurrentPosition(function(position) {
+                deferred.resolve(position);
+            }, function(evt) {
+                void 0;
+                deferred.reject(evt);
+            }, geoLocationOptions);
+        } else {
+            deferred.reject("Browser Geolocation service failed.");
+        }
+        return deferred.promise;
+    };
+    var NavigatorGeolocation = function(_$q_) {
+        $q = _$q_;
+        return {
+            getCurrentPosition: getCurrentPosition
+        };
+    };
+    NavigatorGeolocation.$inject = [ "$q" ];
+    angular.module("ngMap").service("NavigatorGeolocation", NavigatorGeolocation);
+})();
+
+(function() {
+    "use strict";
+    var $window, $document, $q;
+    var NavigatorGeolocation, Attr2MapOptions, GeoCoder, camelCaseFilter;
+    var mapControllers = {};
+    var initMap = function(id) {
+        var ctrl = mapControllers[id || 0];
+        ctrl.initializeMap();
+    };
+    var getMap = function(options) {
+        options = options || {};
+        var deferred = $q.defer();
+        var id = options.id || 0;
+        var timeout = options.timeout || 2e3;
+        function waitForMap(timeElapsed) {
+            if (mapControllers[id]) {
+                deferred.resolve(mapControllers[id].map);
+            } else if (timeElapsed > timeout) {
+                deferred.reject("could not find map");
+            } else {
+                $window.setTimeout(function() {
+                    waitForMap(timeElapsed + 100);
+                }, 100);
+            }
+        }
+        waitForMap(0);
+        return deferred.promise;
+    };
+    var addMap = function(mapCtrl) {
+        var len = Object.keys(mapControllers).length;
+        mapControllers[mapCtrl.map.id || len] = mapCtrl;
+    };
+    var deleteMap = function(mapCtrl) {
+        var len = Object.keys(mapControllers).length - 1;
+        delete mapControllers[mapCtrl.map.id || len];
+    };
+    var getStyle = function(el, styleProp) {
+        var y;
+        if (el.currentStyle) {
+            y = el.currentStyle[styleProp];
+        } else if ($window.getComputedStyle) {
+            y = $document.defaultView.getComputedStyle(el, null).getPropertyValue(styleProp);
+        }
+        return y;
+    };
+    var getNgMapDiv = function(ngMapEl) {
+        var el = $document.createElement("div");
+        var defaultStyle = ngMapEl.getAttribute("default-style");
+        el.style.width = "100%";
+        el.style.height = "100%";
+        if (defaultStyle == "true") {
+            ngMapEl.style.display = "block";
+            ngMapEl.style.height = "300px";
+        } else {
+            if (getStyle(ngMapEl, "display") != "block") {
+                ngMapEl.style.display = "block";
+            }
+            if (getStyle(ngMapEl, "height").match(/^(0|auto)/)) {
+                ngMapEl.style.height = "300px";
+            }
+        }
+        el.addEventListener("dragstart", function(event) {
+            event.preventDefault();
+            return false;
+        });
+        return el;
+    };
+    var getGeoLocation = function(string, options) {
+        var deferred = $q.defer();
+        if (!string || string.match(/^current/i)) {
+            NavigatorGeolocation.getCurrentPosition(options).then(function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                var latLng = new google.maps.LatLng(lat, lng);
+                deferred.resolve(latLng);
+            }, function(error) {
+                deferred.reject(error);
+            });
+        } else {
+            GeoCoder.geocode({
+                address: string
+            }).then(function(results) {
+                deferred.resolve(results[0].geometry.location);
+            }, function(error) {
+                deferred.reject(error);
+            });
+        }
+        return deferred.promise;
+    };
+    var observeAndSet = function(attrName, object) {
+        return function(val) {
+            if (val) {
+                void 0;
+                var setMethod = camelCaseFilter("set-" + attrName);
+                var optionValue = Attr2MapOptions.toOptionValue(val, {
+                    key: attrName
+                });
+                void 0;
+                if (object[setMethod]) {
+                    if (attrName.match(/center|position/) && typeof optionValue == "string") {
+                        getGeoLocation(optionValue).then(function(latlng) {
+                            object[setMethod](latlng);
+                        });
+                    } else {
+                        object[setMethod](optionValue);
+                    }
+                }
+            }
+        };
+    };
+    angular.module("ngMap").provider("NgMap", function() {
+        var defaultOptions = {};
+        var useTinfoilShielding = false;
+        this.setDefaultOptions = function(options) {
+            defaultOptions = options;
+        };
+        var NgMap = function(_$window_, _$document_, _$q_, _NavigatorGeolocation_, _Attr2MapOptions_, _GeoCoder_, _camelCaseFilter_) {
+            $window = _$window_;
+            $document = _$document_[0];
+            $q = _$q_;
+            NavigatorGeolocation = _NavigatorGeolocation_;
+            Attr2MapOptions = _Attr2MapOptions_;
+            GeoCoder = _GeoCoder_;
+            camelCaseFilter = _camelCaseFilter_;
+            return {
+                defaultOptions: defaultOptions,
+                addMap: addMap,
+                deleteMap: deleteMap,
+                getMap: getMap,
+                initMap: initMap,
+                getStyle: getStyle,
+                getNgMapDiv: getNgMapDiv,
+                getGeoLocation: getGeoLocation,
+                observeAndSet: observeAndSet
+            };
+        };
+        NgMap.$inject = [ "$window", "$document", "$q", "NavigatorGeolocation", "Attr2MapOptions", "GeoCoder", "camelCaseFilter" ];
+        this.$get = NgMap;
+    });
+})();
+
+(function() {
+    "use strict";
+    var $q;
+    var getPanorama = function(map, latlng) {
+        latlng = latlng || map.getCenter();
+        var deferred = $q.defer();
+        var svs = new google.maps.StreetViewService();
+        svs.getPanoramaByLocation(latlng || map.getCenter, 100, function(data, status) {
+            if (status === google.maps.StreetViewStatus.OK) {
+                deferred.resolve(data.location.pano);
+            } else {
+                deferred.resolve(false);
+            }
+        });
+        return deferred.promise;
+    };
+    var setPanorama = function(map, panoId) {
+        var svp = new google.maps.StreetViewPanorama(map.getDiv(), {
+            enableCloseButton: true
+        });
+        svp.setPano(panoId);
+    };
+    var StreetView = function(_$q_) {
+        $q = _$q_;
+        return {
+            getPanorama: getPanorama,
+            setPanorama: setPanorama
+        };
+    };
+    StreetView.$inject = [ "$q" ];
+    angular.module("ngMap").service("StreetView", StreetView);
+})();
+
 "use strict";
 
 var WaveSurfer = {
@@ -30923,122 +32612,1272 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
     }
 });
 
-"use strict";
-
-var app = angular.module("LanguagesModule", [ "ui.bootstrap" ]);
-
-app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
-
-app.controller("LanguagesController", [ "$scope", "$http", "$modal", "$interval", "$log", "responseHandler", function($scope, $http, $modal, $interval, $log, responseHandler) {
-    var clientId = $("#clientId").data("lingvodoc");
-    var userId = $("#userId").data("lingvodoc");
-    var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var createLanguageUrl = $("#createLanguageUrl").data("lingvodoc");
-    var flatLanguages = function(languages) {
-        var flat = [];
-        for (var i = 0; i < languages.length; i++) {
-            var language = languages[i];
-            flat.push(languages[i]);
-            if (language.contains && language.contains.length > 0) {
-                var childLangs = flatLanguages(language.contains);
-                flat = flat.concat(childLangs);
-            }
-        }
-        return flat;
-    };
-    var createLanguage = function(lang) {
-        $http.post(createLanguageUrl, lang).success(function(data, status, headers, config) {
-            $http.get(languagesUrl).success(function(data, status, headers, config) {
-                $scope.languages = data.languages;
-            }).error(function(data, status, headers, config) {
-                responseHandler.error(data);
-            });
-        }).error(function(data, status, headers, config) {
-            responseHandler.error(data);
-        });
-    };
-    $scope.languages = [];
-    $http.get(languagesUrl).success(function(data, status, headers, config) {
-        $scope.languages = data.languages;
-        $interval(function() {
-            $http.get(languagesUrl).success(function(data, status, headers, config) {
-                $scope.languages = data.languages;
-            }).error(function(data, status, headers, config) {
-                responseHandler.error(data);
-            });
-        }, 3e4);
-    }).error(function(data, status, headers, config) {});
-    $scope.createLanguage = function() {
-        var modalInstance = $modal.open({
-            animation: true,
-            templateUrl: "createLanguageModal.html",
-            controller: "CreateLanguageController",
-            size: "lg"
-        });
-        modalInstance.result.then(function(languageObj) {
-            createLanguage(languageObj);
-        }, function() {});
-    };
-} ]);
-
-app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$modalInstance", "responseHandler", function($scope, $http, $interval, $modalInstance, responseHandler) {
-    var clientId = $("#clientId").data("lingvodoc");
-    var userId = $("#userId").data("lingvodoc");
-    var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var createLanguageUrl = $("#createLanguageUrl").data("lingvodoc");
-    $scope.languages = [];
-    $scope.parentLanguageId = -1;
-    $scope.translation = "";
-    $scope.translationString = "";
-    var getLanguageById = function(id) {
-        var ids = id.split("_");
-        for (var i = 0; i < $scope.languages.length; i++) {
-            if ($scope.languages[i].client_id == ids[0] && $scope.languages[i].object_id == ids[1]) return $scope.languages[i];
-        }
-    };
-    var flatLanguages = function(languages) {
-        var flat = [];
-        for (var i = 0; i < languages.length; i++) {
-            var language = languages[i];
-            flat.push(languages[i]);
-            if (language.contains && language.contains.length > 0) {
-                var childLangs = flatLanguages(language.contains);
-                flat = flat.concat(childLangs);
-            }
-        }
-        return flat;
-    };
-    $scope.getLanguageId = function(language) {
-        if (language) {
-            return language.client_id + "_" + language.object_id;
-        }
-    };
-    $scope.ok = function() {
-        if (!$scope.translation) {
+function WaveSurferController($scope) {
+    var activeUrl = null;
+    $scope.play = function(url) {
+        if (!$scope.wavesurfer) {
             return;
         }
-        var languageObj = {
-            translation: $scope.translation,
-            translation_string: $scope.translation
-        };
-        if ($scope.parentLanguageId != "-1") {
-            var parentLanguage = getLanguageById($scope.parentLanguageId);
-            if (parentLanguage) {
-                languageObj["parent_client_id"] = parentLanguage.client_id;
-                languageObj["parent_object_id"] = parentLanguage.object_id;
+        activeUrl = url;
+        $scope.wavesurfer.once("ready", function() {
+            $scope.wavesurfer.play();
+            $scope.$apply();
+        });
+        $scope.wavesurfer.load(activeUrl);
+    };
+    $scope.playPause = function() {
+        $scope.wavesurfer.playPause();
+    };
+    $scope.isPlaying = function(url) {
+        return url == activeUrl;
+    };
+    $scope.isMediaFileAvailable = function() {
+        return activeUrl != null;
+    };
+    $scope.$on("wavesurferInit", function(e, wavesurfer) {
+        $scope.wavesurfer = wavesurfer;
+        $scope.wavesurfer.on("play", function() {
+            $scope.paused = false;
+        });
+        $scope.wavesurfer.on("pause", function() {
+            $scope.paused = true;
+        });
+        $scope.wavesurfer.on("finish", function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+    });
+    $scope.$on("modal.closing", function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
+}
+
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(";");
+    for (var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == " ") c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+var wrapPerspective = function(perspective) {
+    if (typeof perspective.fields == "undefined") {
+        return;
+    }
+    for (var i = 0; i < perspective.fields.length; i++) {
+        if (typeof perspective.fields[i].group !== "undefined") {
+            perspective.fields[i]._groupEnabled = true;
+        }
+        if (typeof perspective.fields[i].contains !== "undefined") {
+            perspective.fields[i]._containsEnabled = true;
+        }
+    }
+    return perspective;
+};
+
+var exportPerspective = function(perspective) {
+    var jsPerspective = {
+        fields: []
+    };
+    var positionCount = 1;
+    for (var i = 0; i < perspective.fields.length; i++) {
+        var field = JSON.parse(JSON.stringify(perspective.fields[i]));
+        field["position"] = positionCount;
+        positionCount += 1;
+        if (field.data_type !== "grouping_tag") {
+            field["level"] = "leveloneentity";
+        } else {
+            field["level"] = "groupingentity";
+        }
+        if (field._groupEnabled) {
+            delete field._groupEnabled;
+        }
+        if (field._containsEnabled) {
+            delete field._containsEnabled;
+        }
+        if (field.contains) {
+            for (var j = 0; j < field.contains.length; j++) {
+                field.contains[j].level = "leveltwoentity";
+                field.contains[j].position = positionCount;
+                positionCount += 1;
             }
         }
-        $modalInstance.close(languageObj);
+        jsPerspective.fields.push(field);
+    }
+    return jsPerspective;
+};
+
+var cloneObject = function(oldObject) {
+    return JSON.parse(JSON.stringify(oldObject));
+};
+
+var lingvodoc = {};
+
+lingvodoc.Object = function(clientId, objectId) {
+    this.client_id = clientId;
+    this.object_id = objectId;
+    this.type = "abstract";
+    this.getId = function() {
+        return this.client_id + "_" + this.object_id;
     };
-    $scope.cancel = function() {
-        $modalInstance.dismiss("cancel");
+    this.export = function() {
+        return {};
     };
-    $http.get(languagesUrl).success(function(data, status, headers, config) {
-        $scope.languages = flatLanguages(data.languages);
-    }).error(function(data, status, headers, config) {
-        responseHandler.error(data);
-    });
-} ]);
+};
+
+lingvodoc.Object.prototype.equals = function(obj) {
+    return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
+};
+
+lingvodoc.Language = function(clientId, objectId, translation, translation_string) {
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.type = "language";
+    this.translation = translation;
+    this.translation_string = translation_string;
+    this.languages = [];
+    this.dictionaries = [];
+    this.equals = function(obj) {
+        return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
+    };
+};
+
+lingvodoc.Language.fromJS = function(js) {
+    return new lingvodoc.Language(js.client_id, js.object_id, js.translation, js.translation_string);
+};
+
+lingvodoc.Language.prototype = new lingvodoc.Object();
+
+lingvodoc.Language.prototype.constructor = lingvodoc.Language;
+
+lingvodoc.Dictionary = function(clientId, objectId, parentClientId, parentObjectId, translation, translation_string, status) {
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.type = "dictionary";
+    this.parent_client_id = parentClientId;
+    this.parent_object_id = parentObjectId;
+    this.translation = translation;
+    this.translation_string = translation_string;
+    this.status = status;
+    this.perspectives = [];
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
+    };
+};
+
+lingvodoc.Dictionary.fromJS = function(js) {
+    return new lingvodoc.Dictionary(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status);
+};
+
+lingvodoc.Dictionary.prototype = new lingvodoc.Object();
+
+lingvodoc.Dictionary.prototype.constructor = lingvodoc.Dictionary;
+
+lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_object_id, translation, translation_string, status, is_template, marked_for_deletion) {
+    lingvodoc.Object.call(this, client_id, object_id);
+    this.type = "perspective";
+    this.parent_client_id = parent_client_id;
+    this.parent_object_id = parent_object_id;
+    this.translation = translation;
+    this.translation_string = translation_string;
+    this.status = status;
+    this.is_template = is_template;
+    this.marked_for_deletion = marked_for_deletion;
+    this.fields = [];
+    this.location = null;
+    this.blobs = [];
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
+    };
+};
+
+lingvodoc.Perspective.fromJS = function(js) {
+    var perspective = new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id, js.translation, js.translation_string, js.status, js.is_template, js.marked_for_deletion);
+    if (_.has(js, "location") && _.has(js.location, "content")) {
+        perspective["location"] = {
+            lat: js.location.content.lat,
+            lng: js.location.content.lng
+        };
+    }
+    if (_.has(js, "info") && js.info.type == "list") {
+        if (_.isArray(js.info.content)) {
+            perspective["blobs"] = _.map(js.info.content, function(e) {
+                var blob = new lingvodoc.Blob(e.info.content.client_id, e.info.content.object_id, e.info.content.name, e.info.content.data_type);
+                blob.url = e.info.content.content;
+                return blob;
+            });
+        }
+    }
+    return perspective;
+};
+
+lingvodoc.Perspective.prototype = new lingvodoc.Object();
+
+lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
+
+lingvodoc.User = function(id, login, name, email, intl_name, about, signup_date, organizations) {
+    this.id = id;
+    this.login = login;
+    this.name = name;
+    this.email = email;
+    this.intl_name = intl_name;
+    this.about = about;
+    this.signup_date = signup_date;
+    this.organizations = organizations;
+    this.equals = function(obj) {
+        return this.id == obj.id;
+    };
+};
+
+lingvodoc.User.fromJS = function(js) {
+    return new lingvodoc.User(js.id, js.login, js.name, js.email, js.intl_name, js.about, js.signup_date, js.organizations);
+};
+
+lingvodoc.Blob = function(clientId, objectId, name, data_type) {
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.type = "blob";
+    this.name = name;
+    this.data_type = data_type;
+    this.url = null;
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && this.name == obj.name;
+    };
+};
+
+lingvodoc.Blob.fromJS = function(js) {
+    return new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
+};
+
+lingvodoc.Blob.prototype = new lingvodoc.Object();
+
+lingvodoc.Blob.prototype.constructor = lingvodoc.Blob;
+
+function lingvodocAPI($http, $q) {
+    var addUrlParameter = function(url, key, value) {
+        return url + (url.indexOf("?") >= 0 ? "&" : "?") + encodeURIComponent(key) + "=" + encodeURIComponent(value);
+    };
+    var perspectiveToDictionaryFields = function(perspectiveFields) {
+        var fields = [];
+        angular.forEach(perspectiveFields, function(field, index) {
+            if (typeof field.group == "string") {
+                var createNewGroup = true;
+                for (var j = 0; j < fields.length; j++) {
+                    if (fields[j].entity_type == field.group && fields[j].isGroup) {
+                        fields[j].contains.push(field);
+                        createNewGroup = false;
+                        break;
+                    }
+                }
+                if (createNewGroup) {
+                    fields.push({
+                        entity_type: field.group,
+                        isGroup: true,
+                        contains: [ field ]
+                    });
+                }
+            } else {
+                fields.push(field);
+            }
+        });
+        return fields;
+    };
+    var getLexicalEntries = function(url, offset, count) {
+        var deferred = $q.defer();
+        var allLexicalEntriesUrl = url;
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "start_from", offset);
+        allLexicalEntriesUrl = addUrlParameter(allLexicalEntriesUrl, "count", count);
+        $http.get(allLexicalEntriesUrl).success(function(data, status, headers, config) {
+            if (data.lexical_entries && angular.isArray(data.lexical_entries)) {
+                deferred.resolve(data.lexical_entries);
+            } else {
+                deferred.reject("An error occured while fetching lexical entries!");
+            }
+        }).error(function() {
+            deferred.reject("An error occured while fetching lexical entries!");
+        });
+        return deferred.promise;
+    };
+    var getLexicalEntriesCount = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            var totalEntries = parseInt(data.count);
+            if (!isNaN(totalEntries)) {
+                deferred.resolve(totalEntries);
+            } else {
+                deferred.reject("An error occurred while fetching dictionary stats");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching dictionary stats");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveDictionaryFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject("An error occurred while fetching perspective fields");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while fetching perspective fields");
+        });
+        return deferred.promise;
+    };
+    var removeValue = function(entry, field, fieldValue, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                break;
+
+              case "leveltwoentity":
+                if (parentClientId && parentObjectId) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveId) + "/lexical_entry/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity/" + encodeURIComponent(fieldValue.client_id) + "/" + encodeURIComponent(fieldValue.object_id);
+                } else {
+                    deferred.reject("Attempting to delete Level2 entry with no Level1 entry.");
+                    return deferred.promise;
+                }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.delete(url).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while removing value");
+            });
+        } else {
+            deferred.reject("An error  occurred while removing value");
+        }
+        return deferred.promise;
+    };
+    var saveValue = function(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveObjectId, entry, field, value, parent) {
+        var deferred = $q.defer();
+        var url;
+        if (field.level) {
+            switch (field.level) {
+              case "leveloneentity":
+                url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity";
+                break;
+
+              case "leveltwoentity":
+                if (parent.client_id && parent.object_id) {
+                    url = "/dictionary/" + encodeURIComponent(dictionaryClientId) + "/" + encodeURIComponent(dictionaryObjectId) + "/perspective/" + encodeURIComponent(perspectiveClientId) + "/" + encodeURIComponent(perspectiveObjectId) + "/lexical_entry/" + encodeURIComponent(entry.client_id) + "/" + encodeURIComponent(entry.object_id) + "/leveloneentity/" + encodeURIComponent(parent.client_id) + "/" + encodeURIComponent(parent.object_id) + "/leveltwoentity";
+                } else {
+                    deferred.reject("Attempting to save Level2 entry with no Level1 entry.");
+                    return deferred.promise;
+                }
+                break;
+
+              default:
+                deferred.reject("Unknown level.");
+                return deferred.promise;
+            }
+            $http.post(url, value).success(function(data, status, headers, config) {
+                value.client_id = data.client_id;
+                value.object_id = data.object_id;
+                deferred.resolve(value);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while saving value");
+            });
+        } else {
+            deferred.reject("An error  occurred while saving value");
+        }
+        return deferred.promise;
+    };
+    var addNewLexicalEntry = function(url) {
+        var deferred = $q.defer();
+        $http.post(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while creating a new lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getConnectedWords = function(clientId, objectId) {
+        var deferred = $q.defer();
+        var url = "/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/connected";
+        $http.get(url).success(function(data, status, headers, config) {
+            if (angular.isArray(data.words)) {
+                deferred.resolve(data.words);
+            } else {
+                deferred.reject("An error  occurred while fetching connected words");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while fetching connected words");
+        });
+        return deferred.promise;
+    };
+    var linkEntries = function(e1, e2, entityType) {
+        var deferred = $q.defer();
+        var linkObject = {
+            entity_type: entityType,
+            connections: [ {
+                client_id: e1.client_id,
+                object_id: e1.object_id
+            }, {
+                client_id: e2.client_id,
+                object_id: e2.object_id
+            } ]
+        };
+        var url = "/group_entity";
+        $http.post(url, linkObject).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while connecting 2 entries");
+        });
+        return deferred.promise;
+    };
+    var search = function(query, tagsOnly) {
+        var deferred = $q.defer();
+        var url = "/basic_search?leveloneentity=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent((!!tagsOnly).toString());
+        $http.get(url).success(function(data, status, headers, config) {
+            var r = data.map(function(e) {
+                var perspective = lingvodoc.Perspective.fromJS(e);
+                return getPerspectiveOriginById(perspective.client_id, perspective.object_id);
+            });
+            $q.all(r).then(function(paths) {
+                var out = [];
+                angular.forEach(data, function(entry, i) {
+                    entry.lexical_entry["origin"] = paths[i];
+                    out.push(entry.lexical_entry);
+                });
+                deferred.resolve(out);
+            }, function(reason) {
+                deferred.reject("An error  occurred while doing basic search");
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing basic search");
+        });
+        return deferred.promise;
+    };
+    var approve = function(url, entity, status) {
+        var deferred = $q.defer();
+        if (status) {
+            $http.patch(url, entity).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        } else {
+            var config = {
+                method: "DELETE",
+                url: url,
+                data: entity,
+                headers: {
+                    "Content-Type": "application/json;charset=utf-8"
+                }
+            };
+            $http(config).success(function(data, status, headers, config) {
+                deferred.resolve(data);
+            }).error(function(data, status, headers, config) {
+                deferred.reject("An error  occurred while trying to change approval status ");
+            });
+        }
+        return deferred.promise;
+    };
+    var approveAll = function(url) {
+        var deferred = $q.defer();
+        $http.patch(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to change approval status ");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryProperties = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryProperties = function(url, properties) {
+        var deferred = $q.defer();
+        $http.put(url, properties).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var getLanguages = function(url) {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(languages[i]);
+                if (language.contains && language.contains.length > 0) {
+                    var childLangs = flatLanguages(language.contains);
+                    flat = flat.concat(childLangs);
+                }
+            }
+            return flat;
+        };
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(flatLanguages(data.languages));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
+    var setDictionaryStatus = function(dictionary, status) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + dictionary.client_id + "/" + dictionary.object_id + "/state";
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set dictionary status");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveStatus = function(dictionary, perspective, status) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + dictionary.client_id + "/" + dictionary.object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/state";
+        $http.put(url, {
+            status: status
+        }).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to set perspective status");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveProperties = function(dictionary, perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + dictionary.client_id + "/" + dictionary.object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id;
+        $http.put(url, perspective).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to update perspective properties");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveFields = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to load perspective fields");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveFields = function(url, fields) {
+        var deferred = $q.defer();
+        $http.post(url, fields).success(function(data, status, headers, config) {
+            deferred.resolve(data.fields);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to save perspective fields");
+        });
+        return deferred.promise;
+    };
+    var getUserInfo = function(userId, clientId) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get user info");
+        });
+        return deferred.promise;
+    };
+    var setUserInfo = function(userId, clientId, userInfo) {
+        var deferred = $q.defer();
+        var url = "/user" + "?client_id= " + encodeURIComponent(clientId) + "&user_id= " + encodeURIComponent(userId);
+        $http.post(url, userInfo).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to set user info");
+        });
+        return deferred.promise;
+    };
+    var getOrganizations = function() {
+        var deferred = $q.defer();
+        $http.get("/organization_list").success(function(data, status, headers, config) {
+            deferred.resolve(data.organizations);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch list of organizations");
+        });
+        return deferred.promise;
+    };
+    var createOrganization = function(org) {
+        var deferred = $q.defer();
+        $http.post("/organization", org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to create organization");
+        });
+        return deferred.promise;
+    };
+    var getOrganization = function(orgId) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(orgId);
+        $http.get(url).success(function(data, status, headers, config) {
+            var requests = [];
+            var users = [];
+            var promises = data.users.map(function(userId) {
+                return $http.get("/user" + "?user_id= " + encodeURIComponent(userId));
+            });
+            $q.all(promises).then(function(results) {
+                angular.forEach(results, function(result) {
+                    users.push(result.data);
+                });
+                data.users = users;
+                deferred.resolve(data);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get information about organization");
+        });
+        return deferred.promise;
+    };
+    var editOrganization = function(org) {
+        var deferred = $q.defer();
+        var url = "/organization/" + encodeURIComponent(org.organization_id);
+        $http.put(url, org).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to change information about organization");
+        });
+        return deferred.promise;
+    };
+    var searchUsers = function(query) {
+        var deferred = $q.defer();
+        $http.get("/users?search=" + encodeURIComponent(query)).success(function(data, status, headers, config) {
+            deferred.resolve(data.users);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to search for users");
+        });
+        return deferred.promise;
+    };
+    var getDictionaries = function(query) {
+        var deferred = $q.defer();
+        var dictionaries = [];
+        $http.post("/dictionaries", query).success(function(data, status, headers, config) {
+            for (var i = 0; i < data.dictionaries.length; i++) {
+                var dictionary = data.dictionaries[i];
+                dictionaries.push(lingvodoc.Dictionary.fromJS(dictionary));
+            }
+            deferred.resolve(dictionaries);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch dictionaries list");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveById = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "/perspective/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.Perspective.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspective");
+        });
+        return deferred.promise;
+    };
+    var createPerspective = function(dictionary, perspective, fields) {
+        var deferred = $q.defer();
+        var createPerspectiveUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/" + "perspective";
+        $http.post(createPerspectiveUrl, perspective).success(function(data, status, headers, config) {
+            if (data.object_id && data.client_id) {
+                var perspective_client_id = data.client_id;
+                var perspective_object_id = data.object_id;
+                var setFieldsUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(data.client_id) + "/" + encodeURIComponent(data.object_id) + "/fields";
+                $http.post(setFieldsUrl, fields).success(function(data, status, headers, config) {
+                    getPerspectiveById(perspective_client_id, perspective_object_id).then(function(perspective) {
+                        deferred.resolve(perspective);
+                    }, function(reason) {
+                        deferred.reject(reason);
+                    });
+                }).error(function(data, status, headers, config) {
+                    deferred.reject("Failed to create perspective fields");
+                });
+            } else {
+                deferred.reject("Failed to create perspective");
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to create perspective");
+        });
+        return deferred.promise;
+    };
+    var getAllPerspectives = function() {
+        var deferred = $q.defer();
+        $http.get("/perspectives").success(function(data, status, headers, config) {
+            deferred.resolve(data.perspectives.map(function(p) {
+                return lingvodoc.Perspective.fromJS(p);
+            }));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspectives list");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryPerspectives = function(dictionary) {
+        var deferred = $q.defer();
+        var perspectives = [];
+        var getPerspectivesUrl = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspectives";
+        $http.get(getPerspectivesUrl).success(function(data, status, headers, config) {
+            angular.forEach(data.perspectives, function(jspers) {
+                perspectives.push(lingvodoc.Perspective.fromJS(jspers));
+            });
+            deferred.resolve(perspectives);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch perspectives list");
+        });
+        return deferred.promise;
+    };
+    var getDictionariesWithPerspectives = function(query) {
+        var deferred = $q.defer();
+        getDictionaries(query).then(function(dictionaries) {
+            var r = dictionaries.map(function(d) {
+                return getDictionaryPerspectives(d);
+            });
+            $q.all(r).then(function(results) {
+                angular.forEach(dictionaries, function(dictionary, index) {
+                    dictionary.perspectives = results[index];
+                });
+                deferred.resolve(dictionaries);
+            });
+        }, function() {});
+        return deferred.promise;
+    };
+    var mergeDictionaries = function(tranlation, translation_string, d1, d2) {
+        var deferred = $q.defer();
+        var req = {
+            translation: tranlation,
+            translation_string: translation_string,
+            language_client_id: d1.parent_client_id,
+            language_object_id: d1.parent_object_id,
+            dictionaries: [ {
+                client_id: d1.client_id,
+                object_id: d1.object_id
+            }, {
+                client_id: d2.client_id,
+                object_id: d2.object_id
+            } ]
+        };
+        $http.post("/merge/dictionaries", req).success(function(data, status, headers, config) {
+            console.log(data);
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to merge dictionaries");
+        });
+        return deferred.promise;
+    };
+    var mergePerspectives = function(req) {
+        var deferred = $q.defer();
+        $http.post("/merge/perspectives", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to merge perspectives");
+        });
+        return deferred.promise;
+    };
+    var getSuggestionLexicalEntry = function(entry) {
+        var deferred = $q.defer();
+        getLexicalEntry(entry.suggestion[0].lexical_entry_client_id, entry.suggestion[0].lexical_entry_object_id).then(function(e1) {
+            getLexicalEntry(entry.suggestion[1].lexical_entry_client_id, entry.suggestion[1].lexical_entry_object_id).then(function(e2) {
+                deferred.resolve({
+                    confidence: entry.confidence,
+                    suggestion: [ e1, e2 ]
+                });
+            }, function(reason) {
+                deferred.reject("Failed to fetch lexical entry: " + reason);
+            });
+        }, function(reason) {
+            deferred.reject("Failed to fetch lexical entry: " + reason);
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveOriginById = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "/perspective/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id) + "/tree";
+        $http.get(url).success(function(data, status, headers, config) {
+            var path = data.map(function(e) {
+                var r = null;
+                switch (e.type) {
+                  case "dictionary":
+                    r = lingvodoc.Dictionary.fromJS(e);
+                    break;
+
+                  case "perspective":
+                    r = lingvodoc.Perspective.fromJS(e);
+                    break;
+
+                  case "language":
+                    r = lingvodoc.Language.fromJS(e);
+                    break;
+
+                  default:
+                    r = null;
+                }
+                return r;
+            });
+            deferred.resolve(path);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get perspective origin");
+        });
+        return deferred.promise;
+    };
+    var mergeSuggestions = function(perspective) {
+        var deferred = $q.defer();
+        var body = {
+            entity_type_primary: "Translation",
+            entity_type_secondary: "Transcription",
+            threshold: .6,
+            levenstein: 3,
+            client_id: perspective.client_id,
+            object_id: perspective.object_id
+        };
+        $http.post("/merge/suggestions", body).success(function(data, status, headers, config) {
+            if (angular.isArray(data)) {
+                var r = data.map(function(e) {
+                    return getSuggestionLexicalEntry(e);
+                });
+                $q.all(r).then(function(results) {
+                    deferred.resolve(results);
+                });
+            } else {
+                deferred.resolve([]);
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch merge suggestions");
+        });
+        return deferred.promise;
+    };
+    var getLexicalEntry = function(clientId, objectId) {
+        var deferred = $q.defer();
+        $http.get("/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId)).success(function(data, status, headers, config) {
+            deferred.resolve(data.lexical_entry);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch lexical entry");
+        });
+        return deferred.promise;
+    };
+    var moveLexicalEntry = function(clientId, objectId, toClientId, toObjectId) {
+        var deferred = $q.defer();
+        var req = {
+            client_id: toClientId,
+            object_id: toObjectId
+        };
+        $http.patch("/lexical_entry/" + encodeURIComponent(clientId) + "/" + encodeURIComponent(objectId) + "/move", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getDictionariesByLanguage = function(language) {
+        var deferred = $q.defer();
+        var req = {
+            languages: [ {
+                client_id: language.client_id,
+                object_id: language.object_id
+            } ]
+        };
+        $http.post("/dictionaries", req).success(function(data, status, headers, config) {
+            var dictionaries = [];
+            if (angular.isArray(data.dictionaries)) {
+                angular.forEach(data.dictionaries, function(jsdict) {
+                    var dictionary = lingvodoc.Dictionary.fromJS(jsdict);
+                    if (language.client_id == dictionary.parent_client_id && language.object_id == dictionary.parent_object_id) {
+                        dictionaries.push(dictionary);
+                    }
+                });
+            }
+            deferred.resolve(dictionaries);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getLanguagesFull = function() {
+        var deferred = $q.defer();
+        var flatLanguages = function(languages) {
+            var flat = [];
+            for (var i = 0; i < languages.length; i++) {
+                var language = languages[i];
+                flat.push(language);
+                if (language.languages.length > 0) {
+                    var childLangs = flatLanguages(language.languages);
+                    flat = flat.concat(childLangs);
+                }
+            }
+            return flat;
+        };
+        var setDictionaries = function(language, languages, dictionaries) {
+            for (var i = 0; i < languages.length; ++i) {
+                var lang = languages[i];
+                if (language.equals(lang)) {
+                    language.dictionaries = dictionaries;
+                    return true;
+                } else {
+                    if (setDictionaries(language, lang.languages, dictionaries)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        var parseResponse = function(langs) {
+            var responseLangs = [];
+            angular.forEach(langs, function(lang) {
+                var responseLang = lingvodoc.Language.fromJS(lang);
+                if (angular.isArray(lang.contains)) {
+                    responseLang.languages = parseResponse(lang.contains);
+                }
+                responseLangs.push(responseLang);
+            });
+            return responseLangs;
+        };
+        $http.get("/languages").success(function(data, status, headers, config) {
+            var languages = [];
+            if (angular.isArray(data.languages)) {
+                languages = parseResponse(data.languages);
+            }
+            var flat = flatLanguages(languages);
+            var reqs = flat.map(function(l) {
+                return getDictionariesByLanguage(l);
+            });
+            $q.all(reqs).then(function(allLangsDictionaries) {
+                angular.forEach(allLangsDictionaries, function(dictionaries, index) {
+                    setDictionaries(flat[index], languages, dictionaries);
+                });
+                deferred.resolve(languages);
+            }, function(reason) {
+                deferred.reject(reason);
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while trying to get languages");
+        });
+        return deferred.promise;
+    };
+    var getPublishedDictionaries = function() {
+        var deferred = $q.defer();
+        var req = {
+            group_by_lang: true,
+            group_by_org: false
+        };
+        $http.post("/published_dictionaries", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getUser = function(id) {
+        var deferred = $q.defer();
+        $http.get("/user" + "?user_id=" + encodeURIComponent(id)).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.User.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to move lexical entry");
+        });
+        return deferred.promise;
+    };
+    var getRoles = function(url) {
+        var deferred = $q.defer();
+        $http.get(url).success(function(data, status, headers, config) {
+            var userIds = [];
+            angular.forEach(data.roles_users, function(role) {
+                angular.forEach(role, function(userId) {
+                    if (userIds.indexOf(userId) < 0) {
+                        userIds.push(userId);
+                    }
+                });
+            });
+            var reqs = userIds.map(function(id) {
+                return getUser(id);
+            });
+            $q.all(reqs).then(function(users) {
+                var resultRoles = {};
+                angular.forEach(data.roles_users, function(roleUsers, roleName) {
+                    resultRoles[roleName] = roleUsers.map(function(userId) {
+                        return users.filter(function(u) {
+                            return u.id == userId;
+                        })[0];
+                    });
+                });
+                deferred.resolve(resultRoles);
+            }, function(reason) {
+                deferred.reject("An error occurred while trying to get dictionary roles");
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error occurred while trying to get dictionary roles");
+        });
+        return deferred.promise;
+    };
+    var getDictionaryRoles = function(dictionary) {
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/roles";
+        return getRoles(url);
+    };
+    var addDictionaryRoles = function(dictionary, roles) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/roles";
+        $http.post(url, roles).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to add roles");
+        });
+        return deferred.promise;
+    };
+    var deleteDictionaryRoles = function(dictionary, roles) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/roles";
+        var config = {
+            method: "DELETE",
+            url: url,
+            data: roles,
+            headers: {
+                "Content-Type": "application/json;charset=utf-8"
+            }
+        };
+        $http(config).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to delete roles");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveRoles = function(dictionary, perspective, roles) {
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/roles";
+        return getRoles(url);
+    };
+    var addPerspectiveRoles = function(dictionary, perspective, roles) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/roles";
+        $http.post(url, roles).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to update roles");
+        });
+        return deferred.promise;
+    };
+    var deletePerspectiveRoles = function(dictionary, perspective, roles) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/roles";
+        var config = {
+            method: "DELETE",
+            url: url,
+            data: roles,
+            headers: {
+                "Content-Type": "application/json;charset=utf-8"
+            }
+        };
+        $http(config).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to update roles");
+        });
+        return deferred.promise;
+    };
+    var getUserBlobs = function() {
+        var deferred = $q.defer();
+        $http.get("/blobs").success(function(data, status, headers, config) {
+            var blobs = _.map(data, lingvodoc.Blob.fromJS);
+            deferred.resolve(blobs);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert dictionary");
+        });
+        return deferred.promise;
+    };
+    var checkDictionaryBlob = function(blob, parent) {
+        var deferred = $q.defer();
+        var query = {
+            blob_client_id: blob.client_id,
+            blob_object_id: blob.object_id,
+            parent_client_id: parent.client_id,
+            parent_object_id: parent.object_id
+        };
+        $http.post("/convert_check", query).success(function(data, status, headers, config) {
+            var perspectives = _.map(data, lingvodoc.Perspective.fromJS);
+            deferred.resolve(perspectives);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert dictionary");
+        });
+        return deferred.promise;
+    };
+    var convertDictionary = function(req) {
+        var deferred = $q.defer();
+        $http.post("/convert", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert dictionary");
+        });
+        return deferred.promise;
+    };
+    var getPerspectiveMeta = function(dictionary, perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/meta";
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get perspective meta data!");
+        });
+        return deferred.promise;
+    };
+    var setPerspectiveMeta = function(dictionary, perspective, meta) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/meta";
+        $http.put(url, meta).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to set perspective meta data!");
+        });
+        return deferred.promise;
+    };
+    var removePerspectiveMeta = function(dictionary, perspective, meta) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/meta";
+        var config = {
+            method: "DELETE",
+            url: url,
+            data: meta,
+            headers: {
+                "Content-Type": "application/json;charset=utf-8"
+            }
+        };
+        $http(config).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to remove perspective meta data!");
+        });
+        return deferred.promise;
+    };
+    var advancedSearch = function(query, type, where, adopted) {
+        var deferred = $q.defer();
+        var url = "/advanced_search";
+        var perspectives = where.map(function(o) {
+            if (o.type == "perspective") {
+                return {
+                    client_id: o.client_id,
+                    object_id: o.object_id
+                };
+            }
+        }).filter(function(o) {
+            return typeof o !== "undefined";
+        });
+        var req = {
+            leveloneentity: query,
+            entity_type: type,
+            perspectives: perspectives
+        };
+        if (_.isBoolean(adopted)) {
+            req.adopted = adopted;
+        }
+        $http.post(url, req).success(function(data, status, headers, config) {
+            var r = data.map(function(e) {
+                var perspective = lingvodoc.Perspective.fromJS(e);
+                return getPerspectiveOriginById(perspective.client_id, perspective.object_id);
+            });
+            $q.all(r).then(function(paths) {
+                var out = [];
+                _.each(data, function(entry, i) {
+                    entry.lexical_entry["origin"] = paths[i];
+                    out.push(entry.lexical_entry);
+                });
+                deferred.resolve(out);
+            }, function(reason) {
+                deferred.reject("An error  occurred while doing basic search");
+            });
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while doing advanced search");
+        });
+        return deferred.promise;
+    };
+    return {
+        getLexicalEntries: getLexicalEntries,
+        getLexicalEntriesCount: getLexicalEntriesCount,
+        getPerspectiveDictionaryFields: getPerspectiveDictionaryFields,
+        getPerspectiveDictionaryFieldsNew: getPerspectiveDictionaryFieldsNew,
+        addNewLexicalEntry: addNewLexicalEntry,
+        saveValue: saveValue,
+        removeValue: removeValue,
+        getConnectedWords: getConnectedWords,
+        linkEntries: linkEntries,
+        search: search,
+        approve: approve,
+        approveAll: approveAll,
+        getDictionaryProperties: getDictionaryProperties,
+        setDictionaryProperties: setDictionaryProperties,
+        getLanguages: getLanguages,
+        setDictionaryStatus: setDictionaryStatus,
+        setPerspectiveStatus: setPerspectiveStatus,
+        setPerspectiveProperties: setPerspectiveProperties,
+        getPerspectiveFields: getPerspectiveFields,
+        setPerspectiveFields: setPerspectiveFields,
+        getPerspectiveFieldsNew: getPerspectiveFieldsNew,
+        getUserInfo: getUserInfo,
+        setUserInfo: setUserInfo,
+        getOrganizations: getOrganizations,
+        createOrganization: createOrganization,
+        getOrganization: getOrganization,
+        editOrganization: editOrganization,
+        searchUsers: searchUsers,
+        getDictionaries: getDictionaries,
+        getAllPerspectives: getAllPerspectives,
+        getPerspectiveById: getPerspectiveById,
+        createPerspective: createPerspective,
+        getDictionaryPerspectives: getDictionaryPerspectives,
+        getDictionariesWithPerspectives: getDictionariesWithPerspectives,
+        mergeDictionaries: mergeDictionaries,
+        mergePerspectives: mergePerspectives,
+        mergeSuggestions: mergeSuggestions,
+        getPerspectiveOriginById: getPerspectiveOriginById,
+        getLexicalEntry: getLexicalEntry,
+        moveLexicalEntry: moveLexicalEntry,
+        getLanguagesFull: getLanguagesFull,
+        getPublishedDictionaries: getPublishedDictionaries,
+        getDictionaryRoles: getDictionaryRoles,
+        addDictionaryRoles: addDictionaryRoles,
+        deleteDictionaryRoles: deleteDictionaryRoles,
+        getPerspectiveRoles: getPerspectiveRoles,
+        addPerspectiveRoles: addPerspectiveRoles,
+        deletePerspectiveRoles: deletePerspectiveRoles,
+        getUserBlobs: getUserBlobs,
+        checkDictionaryBlob: checkDictionaryBlob,
+        convertDictionary: convertDictionary,
+        getPerspectiveMeta: getPerspectiveMeta,
+        setPerspectiveMeta: setPerspectiveMeta,
+        removePerspectiveMeta: removePerspectiveMeta,
+        advancedSearch: advancedSearch
+    };
+}
 
 function responseHandler($timeout, $modal) {
     function show(status, message, t) {
@@ -31073,3 +33912,408 @@ function responseHandler($timeout, $modal) {
         error: error
     };
 }
+
+"use strict";
+
+angular.module("MapsModule", [ "ui.bootstrap", "ngMap" ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).factory("dictionaryService", [ "$http", "$q", lingvodocAPI ]).directive("wavesurfer", function() {
+    return {
+        restrict: "E",
+        link: function($scope, $element, $attrs) {
+            $element.css("display", "block");
+            var options = angular.extend({
+                container: $element[0]
+            }, $attrs);
+            var wavesurfer = WaveSurfer.create(options);
+            if ($attrs.url) {
+                wavesurfer.load($attrs.url, $attrs.data || null);
+            }
+            $scope.$emit("wavesurferInit", wavesurfer);
+        }
+    };
+}).directive("indeterminate", [ function() {
+    return {
+        require: "?ngModel",
+        link: function(scope, el, attrs, ctrl) {
+            ctrl.$formatters = [];
+            ctrl.$parsers = [];
+            ctrl.$render = function() {
+                var d = ctrl.$viewValue;
+                el.data("checked", d);
+                switch (d) {
+                  case true:
+                    el.prop("indeterminate", false);
+                    el.prop("checked", true);
+                    break;
+
+                  case false:
+                    el.prop("indeterminate", false);
+                    el.prop("checked", false);
+                    break;
+
+                  default:
+                    el.prop("indeterminate", true);
+                }
+            };
+            el.bind("click", function() {
+                var d;
+                switch (el.data("checked")) {
+                  case false:
+                    d = true;
+                    break;
+
+                  case true:
+                    d = null;
+                    break;
+
+                  default:
+                    d = false;
+                }
+                ctrl.$setViewValue(d);
+                scope.$apply(ctrl.$render);
+            });
+        }
+    };
+} ]).controller("MapsController", [ "$scope", "$http", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
+    WaveSurferController.call(this, $scope);
+    var key = "AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk";
+    $scope.googleMapsUrl = "http://maps.google.com/maps/api/js?v=3.20&key=" + encodeURIComponent(key);
+    $scope.perspectives = [];
+    $scope.activePerspectives = [];
+    $scope.query = "";
+    $scope.searchMode = null;
+    $scope.entries = [];
+    $scope.fields = [];
+    $scope.fieldsIdx = [];
+    $scope.fieldsValues = [];
+    $scope.getPerspectivesWithLocation = function() {
+        return _.filter($scope.perspectives, function(p) {
+            return _.has(p, "location") && !_.isEmpty(p, "location") && _.has(p.location, "lat") && _.has(p.location, "lng");
+        });
+    };
+    $scope.isPerspectiveActive = function(perspective) {
+        return !!_.find($scope.activePerspectives, function(p) {
+            return p.equals(perspective);
+        });
+    };
+    $scope.info = function(event, perspective) {
+        var self = this;
+        $scope.selectedPerspective = perspective;
+        NgMap.getMap().then(function(map) {
+            map.showInfoWindow("bar", self);
+        });
+    };
+    $scope.toggle = function(event, perspective) {
+        if (!_.find($scope.activePerspectives, function(p) {
+            return p.equals(perspective);
+        })) {
+            $scope.activePerspectives.push(perspective);
+        } else {
+            _.remove($scope.activePerspectives, function(p) {
+                return p.equals(perspective);
+            });
+        }
+    };
+    $scope.showBlob = function(blob) {
+        $modal.open({
+            animation: true,
+            templateUrl: "blobModal.html",
+            controller: "BlobController",
+            size: "lg",
+            backdrop: "static",
+            keyboard: false,
+            resolve: {
+                params: function() {
+                    return {
+                        blob: blob
+                    };
+                }
+            }
+        }).result.then(function(req) {}, function() {});
+    };
+    $scope.viewGroup = function(entry, field, values) {
+        $modal.open({
+            animation: true,
+            templateUrl: "viewGroupModal.html",
+            controller: "viewGroupController",
+            size: "lg",
+            backdrop: "static",
+            keyboard: false,
+            resolve: {
+                groupParams: function() {
+                    return {
+                        entry: entry,
+                        field: field,
+                        values: values
+                    };
+                }
+            }
+        });
+    };
+    $scope.viewGroupingTag = function(entry, field, values) {
+        $modal.open({
+            animation: true,
+            templateUrl: "viewGroupingTagModal.html",
+            controller: "viewGroupingTagController",
+            size: "lg",
+            resolve: {
+                groupParams: function() {
+                    return {
+                        entry: entry,
+                        fields: $scope.fields
+                    };
+                }
+            }
+        });
+    };
+    $scope.$watch("entries", function(updatedEntries) {
+        var getFieldValues = function(entry, field) {
+            var value;
+            var values = [];
+            if (entry && entry.contains) {
+                if (field.isGroup) {
+                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                        var subField = field.contains[fieldIndex];
+                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                            value = entry.contains[valueIndex];
+                            if (value.entity_type == subField.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < entry.contains.length; i++) {
+                        value = entry.contains[i];
+                        if (value.entity_type == field.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            }
+            return values;
+        };
+        var mapFieldValues = function(allEntries, allFields) {
+            var result = [];
+            for (var i = 0; i < allEntries.length; i++) {
+                var entryRow = [];
+                for (var j = 0; j < allFields.length; j++) {
+                    entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+                }
+                result.push(entryRow);
+            }
+            return result;
+        };
+        $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+    $scope.$watch("query", function(q) {
+        if (!q || q.length < 3) {
+            return;
+        }
+        dictionaryService.advancedSearch(q, "Translation", $scope.activePerspectives, $scope.searchMode).then(function(entries) {
+            if (!_.isEmpty(entries)) {
+                var p = _.find(_.first(entries)["origin"], function(o) {
+                    return o.type == "perspective";
+                });
+                dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
+                    $scope.fields = fields;
+                    $scope.entries = entries;
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            } else {
+                $scope.fields = [];
+                $scope.entries = [];
+            }
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    }, false);
+    dictionaryService.getAllPerspectives().then(function(perspectives) {
+        $scope.perspectives = _.clone(perspectives);
+        $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
+    }, function(reason) {});
+} ]).controller("viewGroupController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
+    var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
+    var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
+    var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
+    var perspectiveId = $("#perspectiveId").data("lingvodoc");
+    WaveSurferController.call(this, $scope);
+    $scope.title = groupParams.field.entity_type;
+    $scope.fields = groupParams.field.contains;
+    $scope.parentEntry = groupParams.entry;
+    var createVirtualEntries = function(values) {
+        var virtualEntries = [];
+        var addValue = function(value, entries) {
+            var createNewEntry = true;
+            if (value.additional_metadata) {
+                for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+                    var currentEntry = entries[entryIndex];
+                    if (entries[entryIndex].client_id == value.client_id && entries[entryIndex].row_id == value.additional_metadata.row_id) {
+                        entries[entryIndex].contains.push(value);
+                        return;
+                    }
+                }
+                entries.push({
+                    client_id: $scope.parentEntry.client_id,
+                    object_id: $scope.parentEntry.object_id,
+                    row_id: value.additional_metadata.row_id,
+                    contains: [ value ]
+                });
+            }
+        };
+        for (var i = 0; i < values.length; i++) {
+            var value = values[i];
+            addValue(value, virtualEntries);
+        }
+        return virtualEntries;
+    };
+    $scope.entries = createVirtualEntries(groupParams.values);
+    $scope.fieldsIdx = [];
+    $scope.fieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+        $scope.fieldsValues = [];
+        $scope.fieldsIdx = [];
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            $scope.fieldsValues.push(entryRow);
+        }
+        for (var k = 0; k < allFields.length; k++) {
+            $scope.fieldsIdx.push(allFields[k]);
+        }
+    };
+    $scope.getFieldValues = function(entry, field) {
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+            if (field.isGroup) {
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+    $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
+        var url = $("#approveEntityUrl").data("lingvodoc");
+        var obj = {
+            type: field.level,
+            client_id: fieldValue.client_id,
+            object_id: fieldValue.object_id
+        };
+        dictionaryService.approve(url, {
+            entities: [ obj ]
+        }, approved).then(function(data) {
+            fieldValue["published"] = approved;
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    };
+    $scope.approved = function(lexicalEntry, field, fieldValue) {
+        if (!fieldValue.published) {
+            return false;
+        }
+        return !!fieldValue.published;
+    };
+    $scope.ok = function() {
+        $modalInstance.close($scope.entries);
+    };
+    $scope.$watch("entries", function(updatedEntries) {
+        $scope.mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+} ]).controller("viewGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
+    var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
+    var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
+    var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
+    var perspectiveId = $("#perspectiveId").data("lingvodoc");
+    WaveSurferController.call(this, $scope);
+    $scope.fields = groupParams.fields;
+    $scope.connectedEntries = [];
+    $scope.suggestedEntries = [];
+    $scope.fieldsIdx = [];
+    for (var k = 0; k < $scope.fields.length; k++) {
+        $scope.fieldsIdx.push($scope.fields[k]);
+    }
+    $scope.fieldsValues = [];
+    $scope.suggestedFieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+        var result = [];
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            result.push(entryRow);
+        }
+        return result;
+    };
+    $scope.getFieldValues = function(entry, field) {
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+            if (field.isGroup) {
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+    $scope.getPerspectiveLink = function(p) {
+        return "/dictionary/" + encodeURIComponent(p.parent_client_id) + "/" + encodeURIComponent(p.parent_object_id) + "/perspective/" + encodeURIComponent(p.client_id) + "/" + encodeURIComponent(p.object_id) + "/view";
+    };
+    $scope.ok = function() {
+        $modalInstance.close();
+    };
+    $scope.$watch("connectedEntries", function(updatedEntries) {
+        $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+    dictionaryService.getConnectedWords(groupParams.entry.client_id, groupParams.entry.object_id).then(function(entries) {
+        var r = entries.map(function(entry) {
+            var lexicalEntry = entry.lexical_entry;
+            return dictionaryService.getPerspectiveOriginById(lexicalEntry.parent_client_id, lexicalEntry.parent_object_id);
+        });
+        $q.all(r).then(function(paths) {
+            angular.forEach(entries, function(entry, i) {
+                entry.lexical_entry["origin"] = paths[i];
+                $scope.connectedEntries.push(entry.lexical_entry);
+            });
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
+} ]).controller("BlobController", [ "$scope", "$http", "$log", "$modal", "$modalInstance", "NgMap", "dictionaryService", "responseHandler", "params", function($scope, $http, $log, $modal, $modalInstance, NgMap, dictionaryService, responseHandler, params) {
+    $scope.blob = params.blob;
+    $scope.ok = function() {
+        $modalInstance.close();
+    };
+} ]);

@@ -257,24 +257,23 @@ def advanced_search(request):
                 perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
                 results_cursor = results_cursor.join(LexicalEntry).join(DictionaryPerspective)\
                     .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
-            group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
-                    .filter(BaseGroup.subject == 'lexical_entries_and_entities', BaseGroup.action == 'view')\
-                    .join(User, Group.users).join(Client)\
-                    .filter(Client.id == request.authenticated_userid).first()
-            if group:
-                results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'))
-            else:
-                results_cursor = results_cursor\
-                    .join(LexicalEntry)\
-                    .join(DictionaryPerspective)
-                results_cursor = results_cursor.join(Dictionary, and_())\
-                    .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
-                    .join(BaseGroup)\
-                    .join(User, Group.users)\
-                    .join(Client)\
-                    .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
-            if entity_type:
-                results_cursor = results_cursor.filter(LevelOneEntity.entity_type == entity_type)
+            # group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
+            #         .filter(BaseGroup.subject == 'lexical_entries_and_entities', BaseGroup.action == 'view')\
+            #         .join(User, Group.users).join(Client)\
+            #         .filter(Client.id == request.authenticated_userid).first()
+            # if group:
+            #     results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'))
+            # else:
+            #     results_cursor = results_cursor\
+            #         .join(LexicalEntry)\
+            #         .join(DictionaryPerspective)
+            #     results_cursor = results_cursor.join(Dictionary, and_())\
+            #         .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+            #         .join(BaseGroup)\
+            #         .join(User, Group.users)\
+            #         .join(Client)\
+            #         .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
+            results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'), LevelOneEntity.entity_type == entity_type)
             if adopted is not None:
                 LexicalEntryAlias = aliased(LexicalEntry)
                 LevelOneEntityAlias = aliased(LevelOneEntity)
@@ -891,6 +890,24 @@ def view_perspective(request):
                     response['location'] = meta['location']
                 if 'info' in meta:
                     response['info'] = meta['info']
+                    remove_list = []
+                    info_list = response['info']['content']
+                    for info in info_list:
+                        content = info['info']['content']
+                        path = request.route_url('get_user_blob',
+                                 client_id=content['client_id'],
+                                 object_id=content['object_id'])
+                        subreq = Request.blank(path)
+                        subreq.method = 'GET'
+                        subreq.headers = request.headers
+                        resp = request.invoke_subrequest(subreq)
+                        if 'error' not in resp.json:
+                            info['info']['content'] = resp.json
+                        else:
+                            if info not in remove_list:
+                                remove_list.append(info)
+                    for info in remove_list:
+                        info_list.remove(info)
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -986,11 +1003,13 @@ def edit_perspective_meta(request):
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
             req = request.json_body
-
-            old_meta = json.loads(perspective.additional_metadata)
-            new_meta = req
-            old_meta.update(new_meta)
-            perspective.additional_metadata = json.dumps(old_meta)
+            if perspective.additional_metadata:
+                old_meta = json.loads(perspective.additional_metadata)
+                new_meta = req
+                old_meta.update(new_meta)
+                perspective.additional_metadata = json.dumps(old_meta)
+            else:
+                perspective.additional_metadata = json.dumps(req)
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -2470,10 +2489,13 @@ def get_user_blob(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
-    response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
-                 'client_id': blob.client_id, 'object_id': blob.object_id}
-    return response
-
+    if blob:
+        response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                     'client_id': blob.client_id, 'object_id': blob.object_id}
+        request.response.status = HTTPOk.code
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such blob in the system")}
 
 # seems to be redundant
 # @view_config(route_name='get_user_blob', request_method='GET')
@@ -4642,3 +4664,13 @@ def merge_master_get(request):
         return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user }
     return render_to_response('templates/merge_master.pt', variables, request=request)
+
+@view_config(route_name='maps', renderer='templates/maps.pt', request_method='GET')
+def maps_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+    variables = {'client_id': client_id, 'user': user }
+    return render_to_response('templates/maps.pt', variables, request=request)

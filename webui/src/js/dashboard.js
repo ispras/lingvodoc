@@ -1,6 +1,6 @@
 'use strict';
 
-var app = angular.module('DashboardModule', ['ui.bootstrap']);
+var app = angular.module('DashboardModule', ['ui.bootstrap', 'ngMap']);
 
 app.service('dictionaryService', lingvodocAPI);
 
@@ -370,10 +370,12 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
 }]);
 
 
-app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
+app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', '$modal', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'params', function ($scope, $http, $q, $modal, $modalInstance, $log, dictionaryService, responseHandler, params) {
 
     $scope.dictionary = params.dictionary;
     $scope.perspective = {};
+    $scope.blobs = [];
+    $scope.blobId = '';
 
     $scope.controls = {
         'ok': true
@@ -392,6 +394,80 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
             }
         }
     };
+
+    $scope.editGeoLabels = function() {
+
+        $modal.open({
+            animation: true,
+            templateUrl: 'perspectiveGeoLabelsModal.html',
+            controller: 'perspectiveGeoLabelsController',
+            size: 'lg',
+            backdrop: 'static',
+            keyboard: false,
+            resolve: {
+                'params': function() {
+                    return {
+                        'dictionary': params.dictionary,
+                        'perspective': params.perspective
+                    };
+                }
+            }
+        });
+    };
+
+    $scope.addBlob = function() {
+
+        var blob = _.find($scope.blobs, function(b) {
+            return b.getId() == $scope.blobId;
+        });
+
+
+        if (blob) {
+
+            var blobs = $scope.perspective.blobs.map(function(b) {
+                return {
+                    'info': {
+                        'type': 'blob',
+                        'content': {
+                            'client_id': b.client_id,
+                            'object_id': b.object_id
+                        }
+                    }
+                }
+            });
+
+            blobs.push({
+                'info': {
+                    'type': 'blob',
+                    'content': {
+                        'client_id': blob.client_id,
+                        'object_id': blob.object_id
+                    }
+                }
+            });
+
+
+            var meta = {
+                'info': {
+                    'type': 'list',
+                    'content': blobs
+                }
+            };
+
+            dictionaryService.setPerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+                $scope.perspective.blobs.push(blob);
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+
+
+
+
+
+        }
+
+    };
+
 
     $scope.ok = function() {
         $scope.controls.ok = false;
@@ -418,6 +494,20 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     dictionaryService.getPerspectiveFields(url).then(function(fields) {
         params.perspective['fields'] = fields;
         $scope.perspective = wrapPerspective(params.perspective);
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
+
+
+
+
+    dictionaryService.getUserBlobs().then(function(blobs) {
+        $scope.blobs = blobs.filter(function(b) {
+            return b.data_type != 'dialeqt_dictionary';
+        });
+
+        $log.info($scope.blobs);
+
     }, function(reason) {
         responseHandler.error(reason);
     });
@@ -744,14 +834,76 @@ app.controller('editPerspectiveRolesController', ['$scope', '$http', '$q', '$mod
     });
 }]);
 
+app.controller('perspectiveGeoLabelsController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'NgMap', 'dictionaryService', 'responseHandler', 'params', function ($scope, $http, $q, $modalInstance, $log, NgMap, dictionaryService, responseHandler, params) {
 
+    var key = 'AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk';
+    $scope.googleMapsUrl = 'http://maps.google.com/maps/api/js?v=3.20&key=' + encodeURIComponent(key);
+    $scope.positions = [];
 
+    // resize map to match parent modal's size
+    $modalInstance.opened.then(function() {
+        NgMap.getMap().then(function(map) {
+            google.maps.event.trigger(map, 'resize');
+        });
+    });
 
+    $scope.addMarker = function(event) {
+        if ($scope.positions.length > 0) {
+            return;
+        }
+        var latLng = event.latLng;
 
+        var meta = {
+            'location': {
+                'type': 'location',
+                'content': {
+                    'lat': latLng.lat(),
+                    'lng': latLng.lng()
+                }
+            }
+        };
 
+        dictionaryService.setPerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+            $scope.positions.push({'lat': latLng.lat(), 'lng': latLng.lng()});
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    };
 
+    $scope.removeMarker = function(marker) {
 
+        var meta = {
+            'location': {
+                'type': 'location',
+                'content': {
+                    'lat': marker.latLng.lat(),
+                    'lng': marker.latLng.lng()
+                }
+            }
+        };
 
+        dictionaryService.removePerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+            _.remove($scope.positions, function(e) {
+                var p = new google.maps.LatLng(e.lat, e.lng);
+                return p.equals(marker.latLng);
+            });
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    };
+
+    $scope.ok = function() {
+        $modalInstance.close();
+    };
+
+    dictionaryService.getPerspectiveMeta(params.dictionary, params.perspective).then(function(data) {
+        $scope.positions = [];
+        if (!_.isEmpty(data) && _.has(data, 'location')) {
+            $scope.positions.push(data.location.content);
+        }
+    });
+
+}]);
 
 
 
