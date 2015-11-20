@@ -323,8 +323,8 @@ def advanced_search(request):
     return {'error': 'search is too short'}
 
 
-@view_config(route_name='advanced_search_in_test', renderer='json', request_method='POST')
-def advanced_search_in_test(request):
+@view_config(route_name='advanced_search_new', renderer='json', request_method='POST')
+def advanced_search_new(request):
     req = request.json
     can_add_tags = req.get('can_add_tags')
     perspectives = req.get('perspectives')
@@ -333,46 +333,26 @@ def advanced_search_in_test(request):
     adopted = req.get('adopted')
     adopted_type = req.get('adopted_type') or 'Word'
     count = req.get('count') or False
+    state = 'Published'
+    results = []
     if searchstring:
         if len(searchstring) >= 2:
             results_cursor = DBSession.query(LexicalEntry)\
-                .join(DictionaryPerspective, (LexicalEntry.parent == DictionaryPerspective))\
-                .join(LevelOneEntity, (LevelOneEntity.parent == LexicalEntry))\
-                .join(PublishLevelOneEntity, (PublishLevelOneEntity.entity == LevelOneEntity))\
+                .join(DictionaryPerspective, and_(LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+                                              LexicalEntry.parent_object_id == DictionaryPerspective.object_id))\
+                .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+                                       LevelOneEntity.parent_object_id == LexicalEntry.object_id))\
+                .join(PublishLevelOneEntity,
+                      and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
                 .filter(PublishLevelOneEntity.marked_for_deletion == False,
                         DictionaryPerspective.state == 'Published')
-            if perspectives:
-                perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
-                results_cursor = results_cursor\
-                    .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
-            results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'),
-                                                   LevelOneEntity.entity_type == entity_type)
             if adopted is not None:
-                LexicalEntryAlias = aliased(LexicalEntry)
-                LevelOneEntityAlias = aliased(LevelOneEntity)
                 if adopted:
-                    results_cursor = results_cursor\
-                        .join(LexicalEntryAlias)\
-                        .join(LevelOneEntityAlias,
-                              and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
-                                   LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
-                                   LevelOneEntityAlias.content.like('%заим.%'),
-                                   LevelOneEntityAlias.entity_type == adopted_type))
-                else:
-                    results_cursor = results_cursor\
-                        .join(LexicalEntryAlias)\
-                        .join(LevelOneEntityAlias,
-                              and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
-                                   LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
-                                   not_(LevelOneEntityAlias.content.like('%заим.%')),
-                                   LevelOneEntityAlias.entity_type == adopted_type))
-
-            results = []
+                    pass
+            # return {'result': str(results_cursor.statement)}
             entries = set()
-            if count:
-                return {"count": results_cursor.group_by(LexicalEntry).count()}  # TODO: What? This is obviously will not work
             for item in results_cursor:
-                print(item)
                 entries.add(item)
             for entry in entries:
                 if not entry.marked_for_deletion:
@@ -1106,26 +1086,12 @@ def edit_perspective(request):
                     return {'error': str("No such pair of dictionary/perspective in the system")}
                 req = request.json_body
 
-                old_meta = json.loads(perspective.additional_metadata)
-                additional_metadata = req.get('additional_metadata')
-                if additional_metadata:
-                    # additional_metadata = json.dumps(additional_metadata)
-                    old_meta.update(additional_metadata)
-                latitude = req.get('latitude')
-                longitude = req.get('longitude')
-                if latitude:
-                    old_meta.update({'latitude':latitude})
-                if longitude:
-                    old_meta.update({'longitude':longitude})
                 if 'translation' in req:
                     perspective.set_translation(request)
                 if 'parent_client_id' in req:
                     perspective.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     perspective.parent_object_id = req['parent_object_id']
-
-                new_meta = json.dumps(old_meta)
-                perspective.additional_metadata = new_meta
 
                 is_template = req.get('is_template')
                 if is_template is not None:

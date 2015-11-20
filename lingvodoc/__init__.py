@@ -342,7 +342,7 @@ def configure_routes(config):
     #   "adopted":True/False,
     #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>
     #   "count":True/False}
-    config.add_route(name='advanced_search_in_test', pattern='/advanced_search_in_test')
+    config.add_route(name='advanced_search_new', pattern='/advanced_search_new')
 
     # API #GET
     # like
