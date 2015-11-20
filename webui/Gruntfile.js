@@ -260,6 +260,7 @@ module.exports = function(grunt) {
                     'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/angular-animate/angular-animate.js',
                     'bower_components/ngmap/build/scripts/ng-map.js',
                     'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
                     'src/js/lingvowave.js',
