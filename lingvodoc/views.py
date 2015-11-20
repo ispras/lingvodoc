@@ -324,38 +324,79 @@ def advanced_search(request):
     return {'error': 'search is too short'}
 
 
-#TODO: make it normal, it's just a test
-@view_config(route_name='convert_dictionary_old', renderer='json', request_method='POST')
-def convert_dictionary_old(request):
-    req = request.json_body
+@view_config(route_name='advanced_search_in_test', renderer='json', request_method='POST')
+def advanced_search_in_test(request):
+    req = request.json
+    can_add_tags = req.get('can_add_tags')
+    perspectives = req.get('perspectives')
+    searchstring = req.get('leveloneentity')
+    entity_type = req.get('entity_type') or 'Translation'
+    adopted = req.get('adopted')
+    adopted_type = req.get('adopted_type') or 'Word'
+    count = req.get('count') or False
+    if searchstring:
+        if len(searchstring) >= 2:
+            results_cursor = DBSession.query(LexicalEntry)\
+                .join(DictionaryPerspective, (LexicalEntry.parent == DictionaryPerspective))\
+                .join(LevelOneEntity, (LevelOneEntity.parent == LexicalEntry))\
+                .join(PublishLevelOneEntity, (PublishLevelOneEntity.entity == LevelOneEntity))\
+                .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                        DictionaryPerspective.state == 'Published')
+            if perspectives:
+                perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
+                results_cursor = results_cursor\
+                    .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
+            results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'),
+                                                   LevelOneEntity.entity_type == entity_type)
+            if adopted is not None:
+                LexicalEntryAlias = aliased(LexicalEntry)
+                LevelOneEntityAlias = aliased(LevelOneEntity)
+                if adopted:
+                    results_cursor = results_cursor\
+                        .join(LexicalEntryAlias)\
+                        .join(LevelOneEntityAlias,
+                              and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
+                                   LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
+                                   LevelOneEntityAlias.content.like('%заим.%'),
+                                   LevelOneEntityAlias.entity_type == adopted_type))
+                else:
+                    results_cursor = results_cursor\
+                        .join(LexicalEntryAlias)\
+                        .join(LevelOneEntityAlias,
+                              and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
+                                   LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
+                                   not_(LevelOneEntityAlias.content.like('%заим.%')),
+                                   LevelOneEntityAlias.entity_type == adopted_type))
 
-    client_id = req['blob_client_id']
-    object_id = req['blob_object_id']
-    parent_client_id = req['parent_client_id']
-    parent_object_id = req['parent_object_id']
-    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
-    user = client.user
-
-    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
-
-    # convert_one(blob.real_storage_path,
-    #             user.login,
-    #             user.password.hash,
-    #             parent_client_id,
-    #             parent_object_id)
-
-    # NOTE: doesn't work on Mac OS otherwise
-
-    p = multiprocessing.Process(target=convert_one, args=(blob.real_storage_path,
-                                                          user.login,
-                                                          user.password.hash,
-                                                          parent_client_id,
-                                                          parent_object_id))
-    log.debug("Conversion started")
-    p.start()
-    request.response.status = HTTPOk.code
-    return {"status": "Your dictionary is being converted."
-                      " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
+            results = []
+            entries = set()
+            if count:
+                return {"count": results_cursor.group_by(LexicalEntry).count()}  # TODO: What? This is obviously will not work
+            for item in results_cursor:
+                print(item)
+                entries.add(item)
+            for entry in entries:
+                if not entry.marked_for_deletion:
+                    result = dict()
+                    result['lexical_entry'] = entry.track(True)
+                    result['client_id'] = entry.parent_client_id
+                    result['object_id'] = entry.parent_object_id
+                    perspective_tr = entry.parent.get_translation(request)
+                    result['translation_string'] = perspective_tr['translation_string']
+                    result['translation'] = perspective_tr['translation']
+                    result['is_template'] = entry.parent.is_template
+                    result['status'] = entry.parent.state
+                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
+                    result['parent_client_id'] = entry.parent.parent_client_id
+                    result['parent_object_id'] = entry.parent.parent_object_id
+                    dict_tr = entry.parent.parent.get_translation(request)
+                    result['parent_translation_string'] = dict_tr['translation_string']
+                    result['parent_translation'] = dict_tr['translation']
+                    results.append(result)
+            request.response.status = HTTPOk.code
+            return results
+    request.response.status = HTTPBadRequest.code
+    return {'error': 'search is too short'}
 
 
 @view_config(route_name='convert_dictionary_check', renderer='json', request_method='POST')
@@ -393,7 +434,6 @@ def convert_dictionary_check(request):
     return perspectives
 
 
-#TODO: make it normal, it's just a test
 @view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
 def convert_dictionary(request):
     req = request.json_body
@@ -2827,7 +2867,7 @@ def delete_group_entity(request):
 
 
 @view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
-@view_config(route_name='add_group_entity', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='add_group_entity', renderer='json', request_method='POST')
 def create_group_entity(request):
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -3459,7 +3499,7 @@ def get_translations(request):
     return response
 
 
-@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
 def merge_dictionaries(request):
     try:
         req = request.json_body
@@ -3587,7 +3627,7 @@ def merge_dictionaries(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='merge_perspectives', renderer='json', request_method='POST')
 def merge_perspectives_api(request):
     try:
         req = request.json_body

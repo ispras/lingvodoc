@@ -331,6 +331,16 @@ def configure_routes(config):
     #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>}
     config.add_route(name='advanced_search', pattern='/advanced_search')
 
+    # API #POST
+    # {"leveloneentity":<search_string>,
+    #  "entity_type":"<entity_type>,
+    #  "perspectives":[{"client_id":<persp_client_id>,"object_id":<persp_object_id>},
+    #                 ]
+    #   "adopted":True/False,
+    #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>
+    #   "count":True/False}
+    config.add_route(name='advanced_search_in_test', pattern='/advanced_search_in_test')
+
     # API #GET
     # like
     config.add_route(name='entity_metadata_search', pattern='/meta_search')
@@ -552,7 +562,6 @@ def configure_routes(config):
     # {"blob_client_id": <id>, "blob_object_id": <id>, "parent_client_id": <language_client_id>, "parent_object_id": <language_object_id>}
     config.add_route(name='convert_dictionary', pattern='/convert')
     config.add_route(name='convert_dictionary_check', pattern='/convert_check')
-    config.add_route(name='convert_dictionary_old', pattern='/convert_old')
 
 
 def main(global_config, **settings):
