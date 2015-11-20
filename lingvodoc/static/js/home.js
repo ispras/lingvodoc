@@ -30336,6 +30336,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.fields = [];
     this.location = null;
     this.blobs = [];
+    this.additional_metadata = {};
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
@@ -30358,6 +30359,7 @@ lingvodoc.Perspective.fromJS = function(js) {
             });
         }
     }
+    perspective.additional_metadata = js.additional_metadata;
     return perspective;
 };
 
@@ -31464,18 +31466,21 @@ function responseHandler($timeout, $modal) {
 
 angular.module("HomeModule", [ "ui.bootstrap" ], function($rootScopeProvider) {
     $rootScopeProvider.digestTtl(1e3);
-}).service("dictionaryService", lingvodocAPI).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("HomeController", [ "$scope", "$http", "$modal", "$q", "$log", "dictionaryService", "responseHandler", function($scope, $http, $modal, $q, $log, dictionaryService, responseHandler) {
-    var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var dictionariesUrl = $("#dictionariesUrl").data("lingvodoc");
-    var getUserInfoUrl = $("#getUserInfoUrl").data("lingvodoc");
+}).factory("dictionaryService", [ "$http", "$q", lingvodocAPI ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("HomeController", [ "$scope", "$http", "$log", "dictionaryService", "responseHandler", function($scope, $http, $log, dictionaryService, responseHandler) {
     $scope.languages = [];
     $scope.getPerspectiveLink = function(dictionary, perspective) {
         return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/view";
     };
+    $scope.getPerspectiveAuthors = function(perspective) {
+        var meta = JSON.parse(perspective.additional_metadata);
+        if (_.has(meta, "authors") && _.has(meta.authors, "content") && _.isString(meta.authors.content)) {
+            return meta.authors.content;
+        }
+    };
     var getPublishedPerspectives = function(dictionary) {
         dictionaryService.getDictionaryPerspectives(dictionary).then(function(perspectives) {
             var published = [];
-            angular.forEach(perspectives, function(perspective) {
+            _.forEach(perspectives, function(perspective) {
                 if (perspective.status.toUpperCase() == "published".toUpperCase()) {
                     published.push(perspective);
                 }
@@ -31486,10 +31491,10 @@ angular.module("HomeModule", [ "ui.bootstrap" ], function($rootScopeProvider) {
     var setPerspectives = function(languages) {
         for (var i = 0; i < languages.length; ++i) {
             var lang = languages[i];
-            angular.forEach(lang.dicts, function(dict) {
+            _.forEach(lang.dicts, function(dict) {
                 getPublishedPerspectives(dict);
             });
-            if (angular.isArray(lang.contains)) {
+            if (_.isArray(lang.contains)) {
                 setPerspectives(lang.contains);
             }
         }

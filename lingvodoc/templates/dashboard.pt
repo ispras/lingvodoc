@@ -177,6 +177,10 @@
                 <label for="perspectiveName">Perspective name</label>
                 <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
                        ng-model="perspective.translation" ng-change="perspective.translation_string=perspective.translation">
+
+                <label for="perspectiveAuthors">Authors</label>
+                <input type="text" id="perspectiveAuthors" class="form-control" placeholder="" required autofocus
+                       ng-model="authors">
             </div>
 
             <div class="form-group">
@@ -332,10 +336,6 @@
                 <button type="button" class="btn btn-primary" ng-click="editGeoLabels()">Location...</button>
             </div>
         </div>
-
-
-
-
 
     </div>
 

@@ -32177,6 +32177,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.fields = [];
     this.location = null;
     this.blobs = [];
+    this.additional_metadata = {};
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
@@ -32199,6 +32200,7 @@ lingvodoc.Perspective.fromJS = function(js) {
             });
         }
     }
+    perspective.additional_metadata = js.additional_metadata;
     return perspective;
 };
 

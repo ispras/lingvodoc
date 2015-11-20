@@ -32025,6 +32025,7 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.fields = [];
     this.location = null;
     this.blobs = [];
+    this.additional_metadata = {};
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) && this.translation == obj.translation;
     };
@@ -32047,6 +32048,7 @@ lingvodoc.Perspective.fromJS = function(js) {
             });
         }
     }
+    perspective.additional_metadata = js.additional_metadata;
     return perspective;
 };
 
@@ -33160,17 +33162,7 @@ app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
 app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
     var userId = $("#userId").data("lingvodoc");
     var languagesUrl = $("#languagesUrl").data("lingvodoc");
-    var dictionariesUrl = $("#dictionariesUrl").data("lingvodoc");
-    var getUserInfoUrl = $("#getUserInfoUrl").data("lingvodoc");
     $scope.dictionaries = [];
-    var getObjectByCompositeKey = function(id, arr) {
-        if (typeof id == "string") {
-            var ids = id.split("_");
-            for (var i = 0; i < arr.length; i++) {
-                if (arr[i].client_id == ids[0] && arr[i].object_id == ids[1]) return arr[i];
-            }
-        }
-    };
     $scope.getActionLink = function(dictionary, perspective, action) {
         return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/" + action;
     };
@@ -33263,18 +33255,6 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
                 }
             }
         });
-    };
-    $scope.follow = function(link) {
-        if (!link) {
-            alert("Please, select perspective first.");
-            return;
-        }
-        window.location = link;
-    };
-    $scope.getCompositeKey = function(object) {
-        if (object) {
-            return object.client_id + "_" + object.object_id;
-        }
     };
     $scope.setPerspectiveStatus = function(dictionary, perspective, status) {
         dictionaryService.setPerspectiveStatus(dictionary, perspective, status).then(function(data) {
@@ -33469,6 +33449,7 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
     $scope.controls = {
         ok: true
     };
+    $scope.authors = "";
     $scope.addField = function() {
         $scope.perspective.fields.push({
             entity_type: "",
@@ -33541,11 +33522,22 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
     };
     $scope.ok = function() {
         $scope.controls.ok = false;
-        dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
-            var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/perspective/" + encodeURIComponent(params.perspective.client_id) + "/" + encodeURIComponent(params.perspective.object_id) + "/fields";
-            dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
-                $scope.controls.ok = true;
-                $modalInstance.close();
+        var meta = {
+            authors: {
+                type: "authors",
+                content: $scope.authors
+            }
+        };
+        dictionaryService.setPerspectiveMeta($scope.dictionary, $scope.perspective, meta).then(function(response) {
+            dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
+                var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id) + "/perspective/" + encodeURIComponent(params.perspective.client_id) + "/" + encodeURIComponent(params.perspective.object_id) + "/fields";
+                dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
+                    $scope.controls.ok = true;
+                    $modalInstance.close();
+                }, function(reason) {
+                    $scope.controls.ok = true;
+                    responseHandler.error(reason);
+                });
             }, function(reason) {
                 $scope.controls.ok = true;
                 responseHandler.error(reason);
@@ -33569,7 +33561,13 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
         $scope.blobs = blobs.filter(function(b) {
             return b.data_type != "dialeqt_dictionary";
         });
-        $log.info($scope.blobs);
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
+    dictionaryService.getPerspectiveMeta(params.dictionary, params.perspective).then(function(meta) {
+        if (_.has(meta, "authors") && _.has(meta.authors, "content") && _.isString(meta.authors.content)) {
+            $scope.authors = meta.authors.content;
+        }
     }, function(reason) {
         responseHandler.error(reason);
     });
