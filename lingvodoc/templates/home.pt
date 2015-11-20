@@ -131,8 +131,8 @@
 
     <ul>
         <li ng-repeat="dictionary in language.dicts">
-            {{ dictionary.translation }} <span ng-repeat="perspective in dictionary.perspectives">
-                <a ng-attr-href=" {{ getPerspectiveLink(dictionary, perspective) }}">{{ perspective.translation }}</a>
+            {{ dictionary.translation }} <span ng-repeat="perspective in dictionary.perspectives" ng-init="authors=getPerspectiveAuthors(perspective)">
+                <a ng-attr-href=" {{ getPerspectiveLink(dictionary, perspective) }}">{{ perspective.translation }} <small ng-if="authors">({{ authors }})</small></a>
         </span>
 
         </li>

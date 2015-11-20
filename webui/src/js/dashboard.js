@@ -10,25 +10,12 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
 
     var userId = $('#userId').data('lingvodoc');
     var languagesUrl = $('#languagesUrl').data('lingvodoc');
-    var dictionariesUrl = $('#dictionariesUrl').data('lingvodoc');
-    var getUserInfoUrl = $('#getUserInfoUrl').data('lingvodoc');
 
     $scope.dictionaries = [];
-
-    var getObjectByCompositeKey = function (id, arr) {
-        if (typeof id == 'string') {
-            var ids = id.split('_');
-            for (var i = 0; i < arr.length; i++) {
-                if (arr[i].client_id == ids[0] && arr[i].object_id == ids[1])
-                    return arr[i];
-            }
-        }
-    };
 
     $scope.getActionLink = function (dictionary, perspective, action) {
         return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/' + action;
     };
-
 
     $scope.editDictionaryProperties = function(dictionary) {
         var modalInstance = $modal.open({
@@ -47,7 +34,6 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
             }
         });
     };
-
 
     $scope.editPerspectiveProperties = function(dictionary, perspective) {
 
@@ -134,21 +120,6 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
         });
     };
 
-
-    $scope.follow = function(link) {
-        if (!link) {
-            alert('Please, select perspective first.');
-            return;
-        }
-        window.location = link;
-    };
-
-    $scope.getCompositeKey = function (object) {
-        if (object) {
-            return object.client_id + '_' + object.object_id;
-        }
-    };
-
     $scope.setPerspectiveStatus = function(dictionary, perspective, status) {
         dictionaryService.setPerspectiveStatus(dictionary, perspective, status).then(function(data) {
             perspective.status = status;
@@ -213,8 +184,10 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
     $scope.isTemplate = false;
 
     $scope.controls = {
-        'ok': true
+        'ok': true,
+        'cancel': true
     };
+
 
     $scope.addField = function () {
         $scope.perspective.fields.push({'entity_type': '', 'entity_type_translation': '', 'data_type': 'text', 'data_type_translation': 'text', 'status': 'enabled'});
@@ -254,13 +227,13 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
             'is_template': $scope.isTemplate
         };
 
-        $scope.controls.ok = false;
+        enableControls($scope.controls, false);
         var fields = exportPerspective($scope.perspective);
         dictionaryService.createPerspective($scope.dictionary, perspectiveObj, fields).then(function(perspective) {
-            $scope.controls.ok = true;
+            enableControls($scope.controls, true);
             $modalInstance.close(perspective);
         }, function(reason) {
-            $scope.controls.ok = true;
+            enableControls($scope.controls, true);
             responseHandler.error(reason);
         });
     };
@@ -292,12 +265,6 @@ app.controller('createPerspectiveController', ['$scope', '$http', '$q', '$modalI
         responseHandler.error(reason);
     });
 }]);
-
-
-
-
-
-
 
 app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'params', function ($scope, $http, $q, $modalInstance, $log, dictionaryService, responseHandler, params) {
 
@@ -378,8 +345,11 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
     $scope.blobId = '';
 
     $scope.controls = {
-        'ok': true
+        'ok': true,
+        'cancel': true
     };
+
+    $scope.authors = '';
 
     $scope.addField = function () {
         $scope.perspective.fields.push({'entity_type': '', 'data_type': 'text', 'status': 'enabled'});
@@ -421,9 +391,8 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
             return b.getId() == $scope.blobId;
         });
 
-
         if (blob) {
-
+            // already existing blobs
             var blobs = $scope.perspective.blobs.map(function(b) {
                 return {
                     'info': {
@@ -436,6 +405,7 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
                 }
             });
 
+            // add new blob
             blobs.push({
                 'info': {
                     'type': 'blob',
@@ -445,7 +415,6 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
                     }
                 }
             });
-
 
             var meta = {
                 'info': {
@@ -459,29 +428,35 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
             }, function(reason) {
                 responseHandler.error(reason);
             });
-
-
-
-
-
         }
-
     };
 
-
     $scope.ok = function() {
-        $scope.controls.ok = false;
-        dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
-            var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
-            dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
-                $scope.controls.ok = true;
-                $modalInstance.close();
+        enableControls($scope.controls, false);
+
+        var meta = {
+            'authors': {
+                'type': 'authors',
+                'content': $scope.authors
+            }
+        };
+
+        dictionaryService.setPerspectiveMeta($scope.dictionary, $scope.perspective, meta).then(function(response) {
+            dictionaryService.setPerspectiveProperties($scope.dictionary, $scope.perspective).then(function(data) {
+                var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id) + '/perspective/' + encodeURIComponent(params.perspective.client_id) + '/' + encodeURIComponent(params.perspective.object_id) + '/fields';
+                dictionaryService.setPerspectiveFields(url, exportPerspective($scope.perspective)).then(function(fields) {
+                    enableControls($scope.controls, true);
+                    $modalInstance.close();
+                }, function(reason) {
+                    enableControls($scope.controls, true);
+                    responseHandler.error(reason);
+                });
             }, function(reason) {
-                $scope.controls.ok = true;
+                enableControls($scope.controls, true);
                 responseHandler.error(reason);
             });
         }, function(reason) {
-            $scope.controls.ok = true;
+            enableControls($scope.controls, true);
             responseHandler.error(reason);
         });
     };
@@ -498,15 +473,20 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
         responseHandler.error(reason);
     });
 
-
-
-
     dictionaryService.getUserBlobs().then(function(blobs) {
         $scope.blobs = blobs.filter(function(b) {
             return b.data_type != 'dialeqt_dictionary';
         });
 
-        $log.info($scope.blobs);
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
+
+    dictionaryService.getPerspectiveMeta(params.dictionary, params.perspective).then(function(meta) {
+
+        if (_.has(meta, 'authors') && _.has(meta.authors, 'content') && _.isString(meta.authors.content)) {
+            $scope.authors = meta.authors.content;
+        }
 
     }, function(reason) {
         responseHandler.error(reason);
@@ -904,7 +884,3 @@ app.controller('perspectiveGeoLabelsController', ['$scope', '$http', '$q', '$mod
     });
 
 }]);
-
-
-
-
