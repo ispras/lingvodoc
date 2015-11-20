@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
+angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
 
     .factory('responseHandler', ['$timeout', '$modal', responseHandler])
 
@@ -84,6 +84,48 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
 
         $scope.fieldsIdx = [];
         $scope.fieldsValues = [];
+
+        $scope.searchComplete = true;
+
+        var mapFieldValues = function(allEntries, allFields) {
+            var result = [];
+            var getFieldValues = function(entry, field) {
+                var value;
+                var values = [];
+                if (entry && entry.contains) {
+
+                    if (field.isGroup) {
+
+                        for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                            var subField = field.contains[fieldIndex];
+                            for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                                value = entry.contains[valueIndex];
+                                if (value.entity_type == subField.entity_type) {
+                                    values.push(value);
+                                }
+                            }
+                        }
+                    } else {
+                        for (var i = 0; i < entry.contains.length; i++) {
+                            value = entry.contains[i];
+                            if (value.entity_type == field.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                }
+                return values;
+            };
+
+            for (var i = 0; i < allEntries.length; i++) {
+                var entryRow = [];
+                for (var j = 0; j < allFields.length; j++) {
+                    entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+                }
+                result.push(entryRow);
+            }
+            return result;
+        };
 
 
         $scope.getPerspectivesWithLocation = function() {
@@ -177,77 +219,65 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
             });
         };
 
-        $scope.$watch('entries', function(updatedEntries) {
-
-            var getFieldValues = function(entry, field) {
-
-                var value;
-                var values = [];
-                if (entry && entry.contains) {
-
-                    if (field.isGroup) {
-
-                        for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                            var subField = field.contains[fieldIndex];
-
-                            for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                                value = entry.contains[valueIndex];
-                                if (value.entity_type == subField.entity_type) {
-                                    values.push(value);
-                                }
-                            }
-                        }
-                    } else {
-                        for (var i = 0; i < entry.contains.length; i++) {
-                            value = entry.contains[i];
-                            if (value.entity_type == field.entity_type) {
-                                values.push(value);
-                            }
-                        }
-                    }
-                }
-                return values;
-            };
-
-            var mapFieldValues = function(allEntries, allFields) {
-                var result = [];
-                for (var i = 0; i < allEntries.length; i++) {
-                    var entryRow = [];
-                    for (var j = 0; j < allFields.length; j++) {
-                        entryRow.push(getFieldValues(allEntries[i], allFields[j]));
-                    }
-                    result.push(entryRow);
-                }
-                return result;
-            };
-
-            $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.fields);
-
-        }, true);
-
         $scope.$watch('query', function(q) {
             if (!q || q.length < 3) {
                 return;
             }
 
+            $scope.searchComplete = false;
             dictionaryService.advancedSearch(q, 'Translation', $scope.activePerspectives, $scope.searchMode).then(function(entries) {
 
+                $scope.searchComplete = true;
                 if (!_.isEmpty(entries)) {
 
                     var p = _.find(_.first(entries)['origin'], function(o) {
                         return o.type == 'perspective';
                     });
 
+                    // group entries by dictionary and perspective
+                    var groups = [];
+                    var ge = _.groupBy(entries, function(e) {
+
+                        var entryDictionary = _.find(e['origin'], function(o) {
+                            return o.type == 'dictionary';
+                        });
+
+                        var entryPerspective = _.find(e['origin'], function(o) {
+                            return o.type == 'perspective';
+                        });
+
+                        var i = _.findIndex(groups, function(g) {
+                            return g.perspective.equals(entryPerspective) && g.dictionary.equals(entryDictionary);
+                        });
+
+                        if (i < 0) {
+                            groups.push({
+                                'dictionary': entryDictionary,
+                                'perspective': entryPerspective,
+                                'origin': e['origin']
+                            });
+                            return (_.size(groups) - 1);
+                        }
+                        return i;
+                    });
+
                     dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
                         $scope.fields = fields;
                         $scope.entries = entries;
+
+                        _.each(groups, function(g, i) {
+                            g['matrix'] = mapFieldValues(ge[i], fields);
+                        });
+
+                        $scope.groups = groups;
+
                     }, function(reason) {
                         responseHandler.error(reason);
                     });
 
                 } else {
                     $scope.fields = [];
-                    $scope.entries = [];
+                    $scope.groups = [];
                 }
 
             }, function(reason) {
@@ -265,11 +295,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
 
     .controller('viewGroupController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
 
-        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
-        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
-        var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
-        var perspectiveId = $('#perspectiveId').data('lingvodoc');
-
         WaveSurferController.call(this, $scope);
 
         $scope.title = groupParams.field.entity_type;
@@ -281,11 +306,8 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
 
             var addValue = function(value, entries) {
 
-                var createNewEntry = true;
                 if (value.additional_metadata) {
                     for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
-                        var currentEntry = entries[entryIndex];
-
                         if (entries[entryIndex].client_id == value.client_id &&
                             entries[entryIndex].row_id == value.additional_metadata.row_id) {
                             entries[entryIndex].contains.push(value);
@@ -363,32 +385,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
             return values;
         };
 
-        $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
-
-            var url = $('#approveEntityUrl').data('lingvodoc');
-
-            var obj = {
-                'type': field.level,
-                'client_id': fieldValue.client_id,
-                'object_id': fieldValue.object_id
-            };
-
-            dictionaryService.approve(url, { 'entities': [obj] }, approved).then(function(data) {
-                fieldValue['published'] = approved;
-            }, function(reason) {
-                responseHandler.error(reason);
-            });
-        };
-
-        $scope.approved = function(lexicalEntry, field, fieldValue) {
-
-            if (!fieldValue.published) {
-                return false;
-            }
-
-            return !!fieldValue.published;
-        };
-
         $scope.ok = function() {
             $modalInstance.close($scope.entries);
         };
@@ -400,11 +396,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
     }])
 
     .controller('viewGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
-
-        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
-        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
-        var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
-        var perspectiveId = $('#perspectiveId').data('lingvodoc');
 
         WaveSurferController.call(this, $scope);
 
@@ -498,14 +489,10 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngMap'])
 
 
     .controller('BlobController', ['$scope', '$http', '$log', '$modal', '$modalInstance', 'NgMap', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $log, $modal, $modalInstance, NgMap, dictionaryService, responseHandler, params) {
-
         $scope.blob = params.blob;
-
         $scope.ok = function() {
             $modalInstance.close();
         };
-
-
     }]);
 
 

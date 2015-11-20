@@ -32513,8 +32513,6 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         }
     };
 }).controller("ViewDictionaryController", [ "$scope", "$window", "$http", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $window, $http, $modal, $log, dictionaryService, responseHandler) {
-    var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
-    var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
     var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
     var perspectiveId = $("#perspectiveId").data("lingvodoc");
     WaveSurferController.call(this, $scope);
@@ -32759,10 +32757,6 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         $scope.wavesurfer.destroy();
     });
 } ]).controller("viewGroupController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
-    var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
-    var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
-    var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
-    var perspectiveId = $("#perspectiveId").data("lingvodoc");
     WaveSurferController.call(this, $scope);
     $scope.title = groupParams.field.entity_type;
     $scope.fields = groupParams.field.contains;
@@ -32770,10 +32764,8 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     var createVirtualEntries = function(values) {
         var virtualEntries = [];
         var addValue = function(value, entries) {
-            var createNewEntry = true;
             if (value.additional_metadata) {
                 for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
-                    var currentEntry = entries[entryIndex];
                     if (entries[entryIndex].client_id == value.client_id && entries[entryIndex].row_id == value.additional_metadata.row_id) {
                         entries[entryIndex].contains.push(value);
                         return;
@@ -32835,27 +32827,6 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         }
         return values;
     };
-    $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
-        var url = $("#approveEntityUrl").data("lingvodoc");
-        var obj = {
-            type: field.level,
-            client_id: fieldValue.client_id,
-            object_id: fieldValue.object_id
-        };
-        dictionaryService.approve(url, {
-            entities: [ obj ]
-        }, approved).then(function(data) {
-            fieldValue["published"] = approved;
-        }, function(reason) {
-            responseHandler.error(reason);
-        });
-    };
-    $scope.approved = function(lexicalEntry, field, fieldValue) {
-        if (!fieldValue.published) {
-            return false;
-        }
-        return !!fieldValue.published;
-    };
     $scope.ok = function() {
         $modalInstance.close($scope.entries);
     };
@@ -32863,10 +32834,6 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         $scope.mapFieldValues(updatedEntries, $scope.fields);
     }, true);
 } ]).controller("viewGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
-    var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
-    var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
-    var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
-    var perspectiveId = $("#perspectiveId").data("lingvodoc");
     WaveSurferController.call(this, $scope);
     $scope.fields = groupParams.fields;
     $scope.connectedEntries = [];
