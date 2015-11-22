@@ -326,23 +326,15 @@ def configure_routes(config):
     config.add_route(name='basic_search', pattern='/basic_search')
 
     # API #POST
-    # {"leveloneentity":<search_string>,
-    #  "entity_type":"<entity_type>,
+    # {"searchstrings":[{"searchstring":<searchstring>, "entity_type":<entity_type>, "search_by_or":true/false},
+    #                  ],
     #  "perspectives":[{"client_id":<persp_client_id>,"object_id":<persp_object_id>},
     #                 ]
     #   "adopted":True/False,
-    #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>}
+    #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>,
+    #   "count":True/False,
+    #   "with_etimology":True/False}
     config.add_route(name='advanced_search', pattern='/advanced_search')
-
-    # API #POST
-    # {"leveloneentity":<search_string>,
-    #  "entity_type":"<entity_type>,
-    #  "perspectives":[{"client_id":<persp_client_id>,"object_id":<persp_object_id>},
-    #                 ]
-    #   "adopted":True/False,
-    #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>
-    #   "count":True/False}
-    config.add_route(name='advanced_search_new', pattern='/advanced_search_new')
 
     # API #GET
     # like

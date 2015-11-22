@@ -236,107 +236,12 @@ def basic_search(request):
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
 def advanced_search(request):
     req = request.json
-    can_add_tags = req.get('can_add_tags')
-    # dictionaries = req.get('dictionaries')
     perspectives = req.get('perspectives')
-    searchstring = req.get('leveloneentity')
-    entity_type = req.get('entity_type') or 'Translation'
-    adopted = req.get('adopted')
-    adopted_type = req.get('adopted_type') or 'Word'
-    if searchstring:
-        if len(searchstring) >= 2:
-            # if dictionaries:
-            #     dictionaries = [(o["client_id"],o["object_id"]) for o in dictionaries]
-            #     results_cursor = DBSession.query(LevelOneEntity).join(LexicalEntry).join(DictionaryPerspective)\
-            #         .join(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictionaries))
-            # else:
-            #     results_cursor = DBSession.query(LevelOneEntity)
-            results_cursor = DBSession.query(LevelOneEntity).join(PublishLevelOneEntity)\
-                    .filter(PublishLevelOneEntity.marked_for_deletion == False)
-            if perspectives:
-                perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
-                results_cursor = results_cursor.join(LexicalEntry).join(DictionaryPerspective)\
-                    .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
-            # group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
-            #         .filter(BaseGroup.subject == 'lexical_entries_and_entities', BaseGroup.action == 'view')\
-            #         .join(User, Group.users).join(Client)\
-            #         .filter(Client.id == request.authenticated_userid).first()
-            # if group:
-            #     results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'))
-            # else:
-            #     results_cursor = results_cursor\
-            #         .join(LexicalEntry)\
-            #         .join(DictionaryPerspective)
-            #     results_cursor = results_cursor.join(Dictionary, and_())\
-            #         .join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
-            #         .join(BaseGroup)\
-            #         .join(User, Group.users)\
-            #         .join(Client)\
-            #         .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
-            results_cursor = results_cursor.filter(LevelOneEntity.content.like('%'+searchstring+'%'), LevelOneEntity.entity_type == entity_type)
-            if adopted is not None:
-                LexicalEntryAlias = aliased(LexicalEntry)
-                LevelOneEntityAlias = aliased(LevelOneEntity)
-                if adopted:
-                    results_cursor = results_cursor.join(LexicalEntryAlias).join(LevelOneEntityAlias, and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
-                                                  LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
-                                                  LevelOneEntityAlias.content.like('%заим.%'),
-                                                  LevelOneEntityAlias.entity_type == adopted_type))
-                else:
-                    results_cursor = results_cursor.join(LexicalEntryAlias).join(LevelOneEntityAlias, and_(LevelOneEntityAlias.parent_client_id == LexicalEntryAlias.client_id,
-                                                  LevelOneEntityAlias.parent_object_id == LexicalEntryAlias.object_id,
-                                                  not_(LevelOneEntityAlias.content.like('%заим.%')),
-                                                  LevelOneEntityAlias.entity_type == adopted_type))
-
-            results = []
-            entries = set()
-            # if can_add_tags:
-            #     results_cursor = results_cursor\
-            #         .filter(BaseGroup.subject=='lexical_entries_and_entities',
-            #                 or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
-            #         .group_by(LevelOneEntity).having(func.count('*') == 2)
-            # else:
-            #     results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
-            for item in results_cursor:
-                entries.add(item.parent)
-            for entry in entries:
-                if not entry.marked_for_deletion:
-                    result = dict()
-                    result['lexical_entry'] = entry.track(True)
-                    result['client_id'] = entry.parent_client_id
-                    result['object_id'] = entry.parent_object_id
-                    perspective_tr = entry.parent.get_translation(request)
-                    result['translation_string'] = perspective_tr['translation_string']
-                    result['translation'] = perspective_tr['translation']
-                    result['is_template'] = entry.parent.is_template
-                    result['status'] = entry.parent.state
-                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
-                    result['parent_client_id'] = entry.parent.parent_client_id
-                    result['parent_object_id'] = entry.parent.parent_object_id
-                    dict_tr = entry.parent.parent.get_translation(request)
-                    result['parent_translation_string'] = dict_tr['translation_string']
-                    result['parent_translation'] = dict_tr['translation']
-                    results.append(result)
-            request.response.status = HTTPOk.code
-            return results
-    request.response.status = HTTPBadRequest.code
-    return {'error': 'search is too short'}
-
-
-@view_config(route_name='advanced_search_new', renderer='json', request_method='POST')
-def advanced_search_new(request):
-    req = request.json
-    can_add_tags = req.get('can_add_tags')
-    perspectives = req.get('perspectives')
-    # searchstring = req.get('leveloneentity')
-    # entity_type = req.get('entity_type') or 'Translation'
-    #
     searchstrings = req.get('searchstrings') or []
     adopted = req.get('adopted')
     adopted_type = req.get('adopted_type') or 'Word'
     with_etimology = req.get('with_etimology')
     count = req.get('count') or False
-    state = 'Published'
     results = []
     results_cursor = DBSession.query(LexicalEntry)\
         .join(DictionaryPerspective, and_(LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
@@ -347,7 +252,19 @@ def advanced_search_new(request):
               and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
                PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
         .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.marked_for_deletion == False,
                 DictionaryPerspective.state == 'Published')
+    if perspectives:
+        perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
+        results_cursor = results_cursor\
+            .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
+    if searchstrings == []:
+        request.response.status = HTTPBadRequest.code
+        return {'error': 'No search'}
+    length_search = [len(o['searchstring']) for o in searchstrings if len(o['searchstring']) >= 2]
+    if length_search == []:
+        request.response.status = HTTPBadRequest.code
+        return {'error': 'search is too short'}
     if adopted is not None:
         if adopted:
             sub = results_cursor.subquery()
@@ -359,6 +276,7 @@ def advanced_search_new(request):
               and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
                PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
         .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.marked_for_deletion == False,
                 LevelOneEntity.content.like('%заим.%'),
                 LevelOneEntity.entity_type == adopted_type)
         else:
@@ -371,6 +289,7 @@ def advanced_search_new(request):
               and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
                PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
         .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.marked_for_deletion == False,
                 LevelOneEntity.content.like('%заим.%'),
                 LevelOneEntity.entity_type == adopted_type)
             results_cursor = results_cursor.except_(wronglexes)
@@ -381,7 +300,8 @@ def advanced_search_new(request):
                PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
             .join(LexicalEntry,  and_(GroupingEntity.parent_client_id == LexicalEntry.client_id,
                                GroupingEntity.parent_object_id == LexicalEntry.object_id))\
-            .filter(PublishGroupingEntity.marked_for_deletion == False)\
+            .filter(PublishGroupingEntity.marked_for_deletion == False,
+                GroupingEntity.marked_for_deletion == False)\
             .group_by(GroupingEntity.content)\
             .having(func.count(tuple_(LexicalEntry.client_id, LexicalEntry.object_id)) >= 2).all()
         grouping_tags = [o.content for o in grouping_tags]
@@ -395,6 +315,7 @@ def advanced_search_new(request):
               and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
                PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
         .filter(PublishGroupingEntity.marked_for_deletion == False,
+                GroupingEntity.marked_for_deletion == False,
                 GroupingEntity.content.in_(grouping_tags))
         else:
             sub = results_cursor.subquery()
@@ -406,13 +327,73 @@ def advanced_search_new(request):
               and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
                PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
         .filter(PublishGroupingEntity.marked_for_deletion == False,
+                GroupingEntity.marked_for_deletion == False,
                 GroupingEntity.content.in_(grouping_tags))
             results_cursor = results_cursor.except_(wronglexes)
 
-
-    # for search in searchstrings:
-    #     pass
+    sub = results_cursor.subquery()
+    sublexes = aliased(LexicalEntry, sub)
+    new_results_cursor = DBSession.query(LexicalEntry).filter(False)
+    for search in searchstrings:
+        new_results_cursor = new_results_cursor.subquery().select()
+        search_by_or = search.get('search_by_or')
+        searchstring = search.get('searchstring')
+        entity_type = search.get('entity_type')
+        if searchstring:
+            if len(searchstring) >= 2:
+                searchstring = searchstring.split(' ')
+                if entity_type:
+                    if search_by_or:
+                        new_results_cursor = DBSession.query(sublexes)\
+                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
+                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
+                    .join(PublishLevelOneEntity,
+                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                            LevelOneEntity.marked_for_deletion == False,
+                            or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]),
+                            LevelOneEntity.entity_type == entity_type).union_all(new_results_cursor)
+                        # .filter(or_(*[MyTable.my_column.like(name) for name in foo]))
+                    else:
+                        new_results_cursor = DBSession.query(sublexes)\
+                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
+                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
+                    .join(PublishLevelOneEntity,
+                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.marked_for_deletion == False,
+                            and_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]),
+                            LevelOneEntity.entity_type == entity_type).union_all(new_results_cursor)
+                else:
+                    if search_by_or:
+                        new_results_cursor = DBSession.query(sublexes)\
+                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
+                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
+                    .join(PublishLevelOneEntity,
+                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.marked_for_deletion == False,
+                            or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring])).union_all(new_results_cursor)
+                        # .filter(or_(*[MyTable.my_column.like(name) for name in foo]))
+                    else:
+                        new_results_cursor = DBSession.query(sublexes)\
+                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
+                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
+                    .join(PublishLevelOneEntity,
+                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.marked_for_deletion == False,
+                            and_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring])).union_all(new_results_cursor)
+    results_cursor = new_results_cursor
+    results_cursor = results_cursor.group_by(LexicalEntry)
     # return {'result': str(results_cursor.statement)}
+    if count:
+        request.response.status = HTTPOk.code
+        return{'count': results_cursor.count()}
     entries = set()
     for item in results_cursor:
         entries.add(item)
@@ -434,6 +415,7 @@ def advanced_search_new(request):
             result['parent_translation_string'] = dict_tr['translation_string']
             result['parent_translation'] = dict_tr['translation']
             results.append(result)
+    # results = {'results': results, 'sql': str(results_cursor.statement)} # TODO: REMOVE THIS
     request.response.status = HTTPOk.code
     return results
 
