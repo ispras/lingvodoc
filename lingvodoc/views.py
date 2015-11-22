@@ -328,54 +328,114 @@ def advanced_search_new(request):
     req = request.json
     can_add_tags = req.get('can_add_tags')
     perspectives = req.get('perspectives')
-    searchstring = req.get('leveloneentity')
-    entity_type = req.get('entity_type') or 'Translation'
+    # searchstring = req.get('leveloneentity')
+    # entity_type = req.get('entity_type') or 'Translation'
+    #
+    searchstrings = req.get('searchstrings') or []
     adopted = req.get('adopted')
     adopted_type = req.get('adopted_type') or 'Word'
+    with_etimology = req.get('with_etimology')
     count = req.get('count') or False
     state = 'Published'
     results = []
-    if searchstring:
-        if len(searchstring) >= 2:
-            results_cursor = DBSession.query(LexicalEntry)\
-                .join(DictionaryPerspective, and_(LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
-                                              LexicalEntry.parent_object_id == DictionaryPerspective.object_id))\
-                .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-                                       LevelOneEntity.parent_object_id == LexicalEntry.object_id))\
-                .join(PublishLevelOneEntity,
-                      and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-                .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                        DictionaryPerspective.state == 'Published')
-            if adopted is not None:
-                if adopted:
-                    pass
-            # return {'result': str(results_cursor.statement)}
-            entries = set()
-            for item in results_cursor:
-                entries.add(item)
-            for entry in entries:
-                if not entry.marked_for_deletion:
-                    result = dict()
-                    result['lexical_entry'] = entry.track(True)
-                    result['client_id'] = entry.parent_client_id
-                    result['object_id'] = entry.parent_object_id
-                    perspective_tr = entry.parent.get_translation(request)
-                    result['translation_string'] = perspective_tr['translation_string']
-                    result['translation'] = perspective_tr['translation']
-                    result['is_template'] = entry.parent.is_template
-                    result['status'] = entry.parent.state
-                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
-                    result['parent_client_id'] = entry.parent.parent_client_id
-                    result['parent_object_id'] = entry.parent.parent_object_id
-                    dict_tr = entry.parent.parent.get_translation(request)
-                    result['parent_translation_string'] = dict_tr['translation_string']
-                    result['parent_translation'] = dict_tr['translation']
-                    results.append(result)
-            request.response.status = HTTPOk.code
-            return results
-    request.response.status = HTTPBadRequest.code
-    return {'error': 'search is too short'}
+    results_cursor = DBSession.query(LexicalEntry)\
+        .join(DictionaryPerspective, and_(LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
+                                      LexicalEntry.parent_object_id == DictionaryPerspective.object_id))\
+        .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+                               LevelOneEntity.parent_object_id == LexicalEntry.object_id))\
+        .join(PublishLevelOneEntity,
+              and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+               PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+        .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                DictionaryPerspective.state == 'Published')
+    if adopted is not None:
+        if adopted:
+            sub = results_cursor.subquery()
+            sublexes = aliased(LexicalEntry, sub)
+            results_cursor = DBSession.query(sublexes)\
+        .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
+                               LevelOneEntity.parent_object_id == sublexes.object_id))\
+        .join(PublishLevelOneEntity,
+              and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+               PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+        .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.content.like('%заим.%'),
+                LevelOneEntity.entity_type == adopted_type)
+        else:
+            sub = results_cursor.subquery()
+            sublexes = aliased(LexicalEntry, sub)
+            wronglexes = DBSession.query(sublexes)\
+        .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
+                               LevelOneEntity.parent_object_id == sublexes.object_id))\
+        .join(PublishLevelOneEntity,
+              and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+               PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
+        .filter(PublishLevelOneEntity.marked_for_deletion == False,
+                LevelOneEntity.content.like('%заим.%'),
+                LevelOneEntity.entity_type == adopted_type)
+            results_cursor = results_cursor.except_(wronglexes)
+    if with_etimology is not None:
+        grouping_tags = DBSession.query(GroupingEntity.content,func.count(tuple_(LexicalEntry.client_id, LexicalEntry.object_id)) )\
+            .join(PublishGroupingEntity,
+              and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
+               PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
+            .join(LexicalEntry,  and_(GroupingEntity.parent_client_id == LexicalEntry.client_id,
+                               GroupingEntity.parent_object_id == LexicalEntry.object_id))\
+            .filter(PublishGroupingEntity.marked_for_deletion == False)\
+            .group_by(GroupingEntity.content)\
+            .having(func.count(tuple_(LexicalEntry.client_id, LexicalEntry.object_id)) >= 2).all()
+        grouping_tags = [o.content for o in grouping_tags]
+        if with_etimology:
+            sub = results_cursor.subquery()
+            sublexes = aliased(LexicalEntry, sub)
+            results_cursor = DBSession.query(sublexes)\
+        .join(GroupingEntity,  and_(GroupingEntity.parent_client_id == sublexes.client_id,
+                               GroupingEntity.parent_object_id == sublexes.object_id))\
+        .join(PublishGroupingEntity,
+              and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
+               PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
+        .filter(PublishGroupingEntity.marked_for_deletion == False,
+                GroupingEntity.content.in_(grouping_tags))
+        else:
+            sub = results_cursor.subquery()
+            sublexes = aliased(LexicalEntry, sub)
+            wronglexes = DBSession.query(sublexes)\
+        .join(GroupingEntity,  and_(GroupingEntity.parent_client_id == sublexes.client_id,
+                               GroupingEntity.parent_object_id == sublexes.object_id))\
+        .join(PublishGroupingEntity,
+              and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
+               PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
+        .filter(PublishGroupingEntity.marked_for_deletion == False,
+                GroupingEntity.content.in_(grouping_tags))
+            results_cursor = results_cursor.except_(wronglexes)
+
+
+    # for search in searchstrings:
+    #     pass
+    # return {'result': str(results_cursor.statement)}
+    entries = set()
+    for item in results_cursor:
+        entries.add(item)
+    for entry in entries:
+        if not entry.marked_for_deletion:
+            result = dict()
+            result['lexical_entry'] = entry.track(True)
+            result['client_id'] = entry.parent_client_id
+            result['object_id'] = entry.parent_object_id
+            perspective_tr = entry.parent.get_translation(request)
+            result['translation_string'] = perspective_tr['translation_string']
+            result['translation'] = perspective_tr['translation']
+            result['is_template'] = entry.parent.is_template
+            result['status'] = entry.parent.state
+            result['marked_for_deletion'] = entry.parent.marked_for_deletion
+            result['parent_client_id'] = entry.parent.parent_client_id
+            result['parent_object_id'] = entry.parent.parent_object_id
+            dict_tr = entry.parent.parent.get_translation(request)
+            result['parent_translation_string'] = dict_tr['translation_string']
+            result['parent_translation'] = dict_tr['translation']
+            results.append(result)
+    request.response.status = HTTPOk.code
+    return results
 
 
 @view_config(route_name='convert_dictionary_check', renderer='json', request_method='POST')
