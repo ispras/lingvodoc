@@ -32184,8 +32184,8 @@ function lingvodocAPI($http, $q) {
         };
         $http.post("/dictionaries", req).success(function(data, status, headers, config) {
             var dictionaries = [];
-            if (angular.isArray(data.dictionaries)) {
-                angular.forEach(data.dictionaries, function(jsdict) {
+            if (_.isArray(data.dictionaries)) {
+                _.forEach(data.dictionaries, function(jsdict) {
                     var dictionary = lingvodoc.Dictionary.fromJS(jsdict);
                     if (language.client_id == dictionary.parent_client_id && language.object_id == dictionary.parent_object_id) {
                         dictionaries.push(dictionary);
@@ -32194,7 +32194,7 @@ function lingvodocAPI($http, $q) {
             }
             deferred.resolve(dictionaries);
         }).error(function(data, status, headers, config) {
-            deferred.reject("Failed to move lexical entry");
+            deferred.reject("Failed to fetch list of dictionaries");
         });
         return deferred.promise;
     };
