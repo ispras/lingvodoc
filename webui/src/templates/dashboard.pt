@@ -316,6 +316,7 @@
                 <table class="table table-bordered">
                     <tr ng-repeat="blob in perspective.blobs">
                         <td>{{ blob.name }}</td>
+                        <td> <span class="glyphicon glyphicon-remove" ng-click="removeBlob(blob)"></span> </td>
                     </tr>
                 </table>
 

@@ -33528,6 +33528,35 @@ app.controller("editPerspectivePropertiesController", [ "$scope", "$http", "$q",
             });
         }
     };
+    $scope.removeBlob = function(blob) {
+        var blobs = _.filter($scope.perspective.blobs, function(b) {
+            return !b.equals(blob);
+        });
+        var blobsMeta = blobs.map(function(b) {
+            return {
+                info: {
+                    type: "blob",
+                    content: {
+                        client_id: b.client_id,
+                        object_id: b.object_id
+                    }
+                }
+            };
+        });
+        var meta = {
+            info: {
+                type: "list",
+                content: blobsMeta
+            }
+        };
+        dictionaryService.setPerspectiveMeta(params.dictionary, params.perspective, meta).then(function(response) {
+            _.remove($scope.perspective.blobs, function(b) {
+                return b.equals(blob);
+            });
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    };
     $scope.ok = function() {
         enableControls($scope.controls, false);
         var meta = {
