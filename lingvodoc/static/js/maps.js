@@ -34753,6 +34753,107 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
     }
 });
 
+"use strict";
+
+WaveSurfer.Spectrogram = {
+    init: function(a) {
+        this.params = a;
+        var b = this.wavesurfer = a.wavesurfer;
+        if (!this.wavesurfer) throw Error("No WaveSurfer instance provided");
+        this.frequenciesDataUrl = a.frequenciesDataUrl;
+        var c = this.drawer = this.wavesurfer.drawer;
+        if (this.buffer = this.wavesurfer.backend.buffer, this.container = "string" == typeof a.container ? document.querySelector(a.container) : a.container, 
+        !this.container) throw Error("No container for WaveSurfer spectrogram");
+        this.width = c.width, this.pixelRatio = this.params.pixelRatio || b.params.pixelRatio, 
+        this.fftSamples = this.params.fftSamples || b.params.fftSamples || 512, this.height = this.fftSamples / 2, 
+        this.createWrapper(), this.createCanvas(), this.render(), b.drawer.wrapper.onscroll = this.updateScroll.bind(this), 
+        b.on("destroy", this.destroy.bind(this));
+    },
+    destroy: function() {
+        this.unAll(), this.wrapper && (this.wrapper.parentNode.removeChild(this.wrapper), 
+        this.wrapper = null);
+    },
+    createWrapper: function() {
+        var a = this.container.querySelector("spectrogram");
+        a && this.container.removeChild(a);
+        var b = this.wavesurfer.params;
+        this.wrapper = this.container.appendChild(document.createElement("spectrogram")), 
+        this.drawer.style(this.wrapper, {
+            display: "block",
+            position: "relative",
+            userSelect: "none",
+            webkitUserSelect: "none",
+            height: this.height + "px"
+        }), (b.fillParent || b.scrollParent) && this.drawer.style(this.wrapper, {
+            width: "100%",
+            overflowX: "hidden",
+            overflowY: "hidden"
+        });
+        var c = this;
+        this.wrapper.addEventListener("click", function(a) {
+            a.preventDefault();
+            var b = "offsetX" in a ? a.offsetX : a.layerX;
+            c.fireEvent("click", b / c.scrollWidth || 0);
+        });
+    },
+    createCanvas: function() {
+        var a = this.canvas = this.wrapper.appendChild(document.createElement("canvas"));
+        this.spectrCc = a.getContext("2d"), this.wavesurfer.drawer.style(a, {
+            position: "absolute",
+            zIndex: 4
+        });
+    },
+    render: function() {
+        this.updateCanvasStyle(), this.frequenciesDataUrl ? this.loadFrequenciesData(this.frequenciesDataUrl) : this.getFrequencies(this.drawSpectrogram);
+    },
+    updateCanvasStyle: function() {
+        var a = Math.round(this.width / this.pixelRatio) + "px";
+        this.canvas.width = this.width, this.canvas.height = this.height, this.canvas.style.width = a;
+    },
+    drawSpectrogram: function(a, b) {
+        for (var c = (b.spectrCc, b.wavesurfer.backend.getDuration(), b.height), d = b.resample(a), e = 2 / b.buffer.numberOfChannels, f = 0; f < d.length; f++) for (var g = 0; g < d[f].length; g++) {
+            var h = 255 - d[f][g];
+            b.spectrCc.fillStyle = "rgb(" + h + ", " + h + ", " + h + ")", b.spectrCc.fillRect(f, c - g * e, 1, 1 * e);
+        }
+    },
+    getFrequencies: function(a) {
+        var b = this.fftSamples, c = this.buffer, d = [], e = new window.OfflineAudioContext(1, c.length, c.sampleRate), f = e.createBufferSource(), g = e.createScriptProcessor(0, 1, 1), h = e.createAnalyser();
+        h.fftSize = b, h.smoothingTimeConstant = this.width / c.duration < 10 ? .75 : .25, 
+        f.buffer = c, f.connect(h), h.connect(g), g.connect(e.destination), g.onaudioprocess = function() {
+            var a = new Uint8Array(h.frequencyBinCount);
+            h.getByteFrequencyData(a), d.push(a);
+        }, f.start(0), e.startRendering();
+        var i = this;
+        e.oncomplete = function() {
+            a(d, i);
+        };
+    },
+    loadFrequenciesData: function(a) {
+        var b = this, c = WaveSurfer.util.ajax({
+            url: a
+        });
+        return c.on("success", function(a) {
+            b.drawSpectrogram(JSON.parse(a), b);
+        }), c.on("error", function(a) {
+            b.fireEvent("error", "XHR error: " + a.target.statusText);
+        }), c;
+    },
+    updateScroll: function(a) {
+        this.wrapper.scrollLeft = a.target.scrollLeft;
+    },
+    resample: function(a, b) {
+        for (var b = this.width, c = [], d = 1 / a.length, e = 1 / b, f = 0; b > f; f++) {
+            for (var g = new Array(a[0].length), h = 0; h < a.length; h++) {
+                var i = h * d, j = i + d, k = f * e, l = k + e, m = k >= j || i >= l ? 0 : Math.min(Math.max(j, k), Math.max(l, i)) - Math.max(Math.min(j, k), Math.min(l, i));
+                if (m > 0) for (var n = 0; n < a[0].length; n++) null == g[n] && (g[n] = 0), g[n] += m / e * a[h][n];
+            }
+            for (var o = new Uint8Array(a[0].length), n = 0; n < a[0].length; n++) o[n] = g[n];
+            c.push(o);
+        }
+        return c;
+    }
+}, WaveSurfer.util.extend(WaveSurfer.Spectrogram, WaveSurfer.Observer);
+
 function WaveSurferController($scope) {
     var activeUrl = null;
     $scope.play = function(url) {
@@ -34775,7 +34876,7 @@ function WaveSurferController($scope) {
     $scope.isMediaFileAvailable = function() {
         return activeUrl != null;
     };
-    $scope.$on("wavesurferInit", function(e, wavesurfer) {
+    $scope.$on("wavesurferInit", function(e, wavesurfer, container) {
         $scope.wavesurfer = wavesurfer;
         $scope.wavesurfer.on("play", function() {
             $scope.paused = false;
@@ -35081,7 +35182,7 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
         var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
         $http.get(url).success(function(data, status, headers, config) {
-            if (angular.isArray(data.fields)) {
+            if (_.isArray(data.fields)) {
                 var fields = perspectiveToDictionaryFields(data.fields);
                 deferred.resolve(fields);
             } else {
@@ -35862,7 +35963,7 @@ function lingvodocAPI($http, $q) {
             var blobs = _.map(data, lingvodoc.Blob.fromJS);
             deferred.resolve(blobs);
         }).error(function(data, status, headers, config) {
-            deferred.reject("Failed to convert dictionary");
+            deferred.reject("Failed to fetch list of available blobs");
         });
         return deferred.promise;
     };
@@ -35929,7 +36030,7 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var advancedSearch = function(query, type, where, adopted) {
+    var advancedSearch = function(query, where, adopted, etymology) {
         var deferred = $q.defer();
         var url = "/advanced_search";
         var perspectives = where.map(function(o) {
@@ -35943,12 +36044,14 @@ function lingvodocAPI($http, $q) {
             return typeof o !== "undefined";
         });
         var req = {
-            leveloneentity: query,
-            entity_type: type,
+            searchstrings: query,
             perspectives: perspectives
         };
         if (_.isBoolean(adopted)) {
             req.adopted = adopted;
+        }
+        if (_.isBoolean(etymology)) {
+            req.with_etimology = etymology;
         }
         $http.post(url, req).success(function(data, status, headers, config) {
             var r = data.map(function(e) {
@@ -36077,7 +36180,7 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
             if ($attrs.url) {
                 wavesurfer.load($attrs.url, $attrs.data || null);
             }
-            $scope.$emit("wavesurferInit", wavesurfer);
+            $scope.$emit("wavesurferInit", wavesurfer, $element);
         }
     };
 }).directive("indeterminate", [ function() {
@@ -36123,18 +36226,25 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
             });
         }
     };
-} ]).controller("MapsController", [ "$scope", "$http", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
+} ]).controller("MapsController", [ "$scope", "$http", "$q", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $q, $log, $modal, NgMap, dictionaryService, responseHandler) {
     WaveSurferController.call(this, $scope);
     var key = "AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk";
     $scope.googleMapsUrl = "http://maps.google.com/maps/api/js?v=3.20&key=" + encodeURIComponent(key);
     $scope.perspectives = [];
     $scope.activePerspectives = [];
-    $scope.query = "";
-    $scope.searchMode = null;
+    $scope.adoptedSearch = null;
+    $scope.etymologySearch = null;
     $scope.entries = [];
     $scope.fields = [];
+    $scope.allFields = [];
+    $scope.searchFields = [];
     $scope.fieldsIdx = [];
     $scope.fieldsValues = [];
+    $scope.search = [ {
+        query: "",
+        type: "",
+        orFlag: true
+    } ];
     $scope.searchComplete = true;
     var mapFieldValues = function(allEntries, allFields) {
         var result = [];
@@ -36178,14 +36288,44 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
         });
     };
     $scope.getDictionary = function(perspective) {
-        var dictionary = _.find($scope.dictionaries, function(d) {
+        return _.find($scope.dictionaries, function(d) {
             return d.client_id == perspective.parent_client_id && d.object_id == perspective.parent_object_id;
         });
-        return dictionary;
     };
     $scope.isPerspectiveActive = function(perspective) {
         return !!_.find($scope.activePerspectives, function(p) {
             return p.equals(perspective);
+        });
+    };
+    $scope.getSearchFields = function() {
+        if (_.size($scope.searchFields) > 0) {
+            return $scope.searchFields;
+        }
+        var fields = _.reduce($scope.allFields, function(acc, perspectiveFields) {
+            var fields = [];
+            _.each(perspectiveFields, function(f) {
+                if (f.level === "leveloneentity") {
+                    fields.push(f);
+                }
+            });
+            return acc.concat(fields);
+        }, []);
+        var names = [];
+        var removed = _.remove(fields, function(f) {
+            if (_.indexOf(names, f.entity_type) >= 0) {
+                return true;
+            }
+            names.push(f.entity_type);
+            return false;
+        });
+        $scope.searchFields = fields;
+        return $scope.searchFields;
+    };
+    $scope.addSearchField = function() {
+        $scope.search.push({
+            query: "",
+            type: "",
+            orFlag: false
         });
     };
     $scope.info = function(event, perspective) {
@@ -36259,12 +36399,19 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
             }
         });
     };
-    $scope.$watch("query", function(q) {
-        if (!q || q.length < 3) {
-            return;
-        }
+    $scope.doSearch = function() {
+        var q = _.map($scope.search, function(s) {
+            return {
+                searchstring: s.query,
+                entity_type: s.type.entity_type,
+                search_by_or: s.orFlag
+            };
+        });
+        _.remove(q, function(s) {
+            _.isEmpty(s.searchstring) || _.isUndefined(s.entity_type);
+        });
         $scope.searchComplete = false;
-        dictionaryService.advancedSearch(q, "Translation", $scope.activePerspectives, $scope.searchMode).then(function(entries) {
+        dictionaryService.advancedSearch(q, $scope.activePerspectives, $scope.adoptedSearch, $scope.etymologySearch).then(function(entries) {
             $scope.searchComplete = true;
             if (!_.isEmpty(entries)) {
                 var p = _.find(_.first(entries)["origin"], function(o) {
@@ -36308,10 +36455,18 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
         }, function(reason) {
             responseHandler.error(reason);
         });
-    }, false);
+    };
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = _.clone(perspectives);
         $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
+        var reqs = _.map($scope.perspectives, function(p) {
+            return dictionaryService.getPerspectiveDictionaryFieldsNew(p);
+        });
+        $q.all(reqs).then(function(allFields) {
+            $scope.allFields = allFields;
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     }, function(reason) {
         responseHandler.error(reason);
     });

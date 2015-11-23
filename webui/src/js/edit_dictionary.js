@@ -21,7 +21,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                     wavesurfer.load($attrs.url, $attrs.data || null);
                 }
 
-                $scope.$emit('wavesurferInit', wavesurfer);
+                $scope.$emit('wavesurferInit', wavesurfer, $element);
             }
         };
     })
@@ -600,7 +600,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         $scope.$on('wavesurferInit', function(e, wavesurfer) {
 
             $scope.wavesurfer = wavesurfer;
-
 
             if ($scope.wavesurfer.enableDragSelection) {
                 $scope.wavesurfer.enableDragSelection({

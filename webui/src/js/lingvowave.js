@@ -36,7 +36,7 @@ function WaveSurferController($scope) {
     };
 
     // signal handlers
-    $scope.$on('wavesurferInit', function(e, wavesurfer) {
+    $scope.$on('wavesurferInit', function(e, wavesurfer, container) {
 
         $scope.wavesurfer = wavesurfer;
 
@@ -53,6 +53,23 @@ function WaveSurferController($scope) {
             $scope.wavesurfer.seekTo(0);
             $scope.$apply();
         });
+
+        //$scope.wavesurfer.on('ready', function () {
+        //
+        //    var spectrogramContainer =_.find(container[0].parentElement.children, function(e) {
+        //        return e.tagName.toUpperCase() == 'WAVESURFER-SPECTROGRAM';
+        //    });
+        //
+        //    if (spectrogramContainer) {
+        //        var spectrogram = Object.create(WaveSurfer.Spectrogram);
+        //        spectrogram.init({
+        //            wavesurfer: $scope.wavesurfer,
+        //            container: spectrogramContainer,
+        //            fftSamples: 128
+        //        });
+        //    }
+        //});
+
     });
 
     $scope.$on('modal.closing', function(e) {

@@ -32176,7 +32176,7 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
         var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
         $http.get(url).success(function(data, status, headers, config) {
-            if (angular.isArray(data.fields)) {
+            if (_.isArray(data.fields)) {
                 var fields = perspectiveToDictionaryFields(data.fields);
                 deferred.resolve(fields);
             } else {
@@ -32957,7 +32957,7 @@ function lingvodocAPI($http, $q) {
             var blobs = _.map(data, lingvodoc.Blob.fromJS);
             deferred.resolve(blobs);
         }).error(function(data, status, headers, config) {
-            deferred.reject("Failed to convert dictionary");
+            deferred.reject("Failed to fetch list of available blobs");
         });
         return deferred.promise;
     };
@@ -33024,7 +33024,7 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var advancedSearch = function(query, type, where, adopted) {
+    var advancedSearch = function(query, where, adopted, etymology) {
         var deferred = $q.defer();
         var url = "/advanced_search";
         var perspectives = where.map(function(o) {
@@ -33038,12 +33038,14 @@ function lingvodocAPI($http, $q) {
             return typeof o !== "undefined";
         });
         var req = {
-            leveloneentity: query,
-            entity_type: type,
+            searchstrings: query,
             perspectives: perspectives
         };
         if (_.isBoolean(adopted)) {
             req.adopted = adopted;
+        }
+        if (_.isBoolean(etymology)) {
+            req.with_etimology = etymology;
         }
         $http.post(url, req).success(function(data, status, headers, config) {
             var r = data.map(function(e) {

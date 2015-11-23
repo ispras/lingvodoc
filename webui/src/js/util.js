@@ -51,7 +51,6 @@ var exportPerspective = function(perspective) {
             delete field._groupEnabled;
         }
 
-
         if (field._containsEnabled) {
             delete field._containsEnabled;
         }
