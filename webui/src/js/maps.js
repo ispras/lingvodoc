@@ -134,6 +134,13 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
             });
         };
 
+        $scope.getDictionary = function(perspective) {
+            var dictionary = _.find($scope.dictionaries, function(d) {
+                return d.client_id == perspective.parent_client_id && d.object_id == perspective.parent_object_id;
+            });
+            return dictionary;
+        };
+
         $scope.isPerspectiveActive = function(perspective) {
             return !!_.find($scope.activePerspectives, function(p) {
                 return p.equals(perspective);
@@ -143,6 +150,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         $scope.info = function(event, perspective) {
             var self = this;
             $scope.selectedPerspective = perspective;
+            $log.info(perspective);
             NgMap.getMap().then(function(map) {
                 map.showInfoWindow('bar', self);
             });
@@ -289,7 +297,13 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
             $scope.perspectives = _.clone(perspectives);
             $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
         }, function(reason) {
+            responseHandler.error(reason);
+        });
 
+        dictionaryService.getDictionaries({}).then(function(dictionaries) {
+            $scope.dictionaries = dictionaries;
+        }, function(reason) {
+            responseHandler.error(reason);
         });
     }])
 

@@ -35439,13 +35439,14 @@ function lingvodocAPI($http, $q) {
     };
     var getDictionaries = function(query) {
         var deferred = $q.defer();
-        var dictionaries = [];
         $http.post("/dictionaries", query).success(function(data, status, headers, config) {
-            for (var i = 0; i < data.dictionaries.length; i++) {
-                var dictionary = data.dictionaries[i];
-                dictionaries.push(lingvodoc.Dictionary.fromJS(dictionary));
+            if (_.isArray(data.dictionaries)) {
+                deferred.resolve(_.map(data.dictionaries, function(d) {
+                    return lingvodoc.Dictionary.fromJS(d);
+                }));
+            } else {
+                deferred.reject("Failed to fetch dictionaries list. Malformed response.");
             }
-            deferred.resolve(dictionaries);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to fetch dictionaries list");
         });
@@ -36176,6 +36177,12 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
             return _.has(p, "location") && !_.isEmpty(p, "location") && _.has(p.location, "lat") && _.has(p.location, "lng");
         });
     };
+    $scope.getDictionary = function(perspective) {
+        var dictionary = _.find($scope.dictionaries, function(d) {
+            return d.client_id == perspective.parent_client_id && d.object_id == perspective.parent_object_id;
+        });
+        return dictionary;
+    };
     $scope.isPerspectiveActive = function(perspective) {
         return !!_.find($scope.activePerspectives, function(p) {
             return p.equals(perspective);
@@ -36184,6 +36191,7 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
     $scope.info = function(event, perspective) {
         var self = this;
         $scope.selectedPerspective = perspective;
+        $log.info(perspective);
         NgMap.getMap().then(function(map) {
             map.showInfoWindow("bar", self);
         });
@@ -36304,7 +36312,14 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = _.clone(perspectives);
         $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
-    }, function(reason) {});
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
+    dictionaryService.getDictionaries({}).then(function(dictionaries) {
+        $scope.dictionaries = dictionaries;
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
 } ]).controller("viewGroupController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
     WaveSurferController.call(this, $scope);
     $scope.title = groupParams.field.entity_type;

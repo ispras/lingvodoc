@@ -692,17 +692,16 @@ function lingvodocAPI($http, $q) {
     };
 
     var getDictionaries = function(query) {
-
         var deferred = $q.defer();
-        var dictionaries = [];
         $http.post('/dictionaries', query).success(function (data, status, headers, config) {
-
-            for (var i = 0; i < data.dictionaries.length; i++) {
-                var dictionary = data.dictionaries[i];
-                dictionaries.push(lingvodoc.Dictionary.fromJS(dictionary));
+            if (_.isArray(data.dictionaries)) {
+                deferred.resolve(_.map(data.dictionaries, function(d) {
+                    return lingvodoc.Dictionary.fromJS(d);
+                }));
+            } else {
+                deferred.reject('Failed to fetch dictionaries list. Malformed response.');
             }
 
-            deferred.resolve(dictionaries);
         }).error(function (data, status, headers, config) {
             deferred.reject('Failed to fetch dictionaries list');
         });
