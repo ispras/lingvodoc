@@ -121,6 +121,9 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
         $scope.viewGroup = function(entry, field, values) {
 
+            $log.info(entry);
+            $log.info(values);
+
             $modal.open({
                 animation: true,
                 templateUrl: 'viewGroupModal.html',
@@ -385,6 +388,7 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
             var virtualEntries = [];
 
             var addValue = function(value, entries) {
+
                 if (value.additional_metadata) {
                     for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
 

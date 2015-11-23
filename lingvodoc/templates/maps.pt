@@ -107,7 +107,7 @@
 
             <div ng-show="searchComplete">
                 <accordion close-others="false">
-                    <accordion-group ng-repeat="group in groups">
+                    <accordion-group ng-repeat="group in groups" ng-init="groupIndex=$index">
                         <!-- group title -->
                         <accordion-heading>
                             <span ng-repeat-start="e in group.origin.slice().reverse()">
@@ -127,11 +127,9 @@
 
                             <tbody>
 
-                            <tr ng-repeat="entryFields in group.matrix">
+                            <tr ng-repeat="entryFields in group.matrix" ng-init="lexicalEntry=ge[groupIndex][$index]">
 
-                                <td ng-repeat="fieldValues in entryFields"
-                                    ng-init="lexicalEntry=entries[$parent.$index]; field=fields[$index]">
-
+                                <td ng-repeat="fieldValues in entryFields" ng-init="field=fields[$index]">
 
                                     <div ng-if="field.data_type == 'text'">
                                         <ul class="entries_list">
