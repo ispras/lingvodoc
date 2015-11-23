@@ -82,6 +82,8 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
 
         $scope.entries = [];
         $scope.fields = [];
+        $scope.groups = [];
+        $scope.ge = [];
 
         $scope.allFields = [];
         $scope.searchFields = [];
@@ -96,7 +98,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                 'orFlag': true
             }
         ];
-
 
         $scope.searchComplete = true;
 
@@ -160,9 +161,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         };
 
         $scope.getSearchFields = function() {
-            //if (_.size($scope.searchFields) > 0) {
-            //    return $scope.searchFields;
-            //}
 
             var activeFields = _.clone($scope.allFields);
             _.remove(activeFields, function(f, i) {
@@ -190,10 +188,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                 return acc.concat(fields);
             }, []);
 
-
-            $log.info(fields);
-
-
             // remove duplicates
             var names = [];
             var removed = _.remove(fields, function(f) {
@@ -219,7 +213,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         $scope.info = function(event, perspective) {
             var self = this;
             $scope.selectedPerspective = perspective;
-            $log.info(perspective);
             NgMap.getMap().then(function(map) {
                 map.showInfoWindow('bar', self);
             });
@@ -348,7 +341,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                             }
                             return i;
                         });
-
+                        
                         dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
                             $scope.fields = fields;
                             $scope.entries = entries;
@@ -358,6 +351,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                             });
 
                             $scope.groups = groups;
+                            $scope.ge = ge;
 
                         }, function(reason) {
                             responseHandler.error(reason);
@@ -366,6 +360,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                     } else {
                         $scope.fields = [];
                         $scope.groups = [];
+                        $scope.ge = [];
                     }
 
                 }, function(reason) {
@@ -504,15 +499,12 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                 }
             };
 
-            for (var i = 0; i < values.length; i++) {
-                var value = values[i];
-                addValue(value, virtualEntries);
-            }
+            _.forEach(values, function(v) {
+                addValue(v, virtualEntries);
+            });
 
             return virtualEntries;
         };
-
-        $scope.entries = createVirtualEntries(groupParams.values);
 
         $scope.fieldsIdx = [];
         $scope.fieldsValues = [];
@@ -567,10 +559,8 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
             $modalInstance.close($scope.entries);
         };
 
-        $scope.$watch('entries', function(updatedEntries) {
-            $scope.mapFieldValues(updatedEntries, $scope.fields);
-        }, true);
-
+        $scope.entries = createVirtualEntries(groupParams.values);
+        $scope.mapFieldValues($scope.entries, $scope.fields);
     }])
 
     .controller('viewGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {

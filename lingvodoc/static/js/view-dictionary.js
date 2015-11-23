@@ -32679,6 +32679,8 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         return input;
     };
     $scope.viewGroup = function(entry, field, values) {
+        $log.info(entry);
+        $log.info(values);
         $modal.open({
             animation: true,
             templateUrl: "viewGroupModal.html",
