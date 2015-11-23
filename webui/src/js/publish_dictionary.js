@@ -18,7 +18,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
                     wavesurfer.load($attrs.url, $attrs.data || null);
                 }
 
-                $scope.$emit('wavesurferInit', wavesurfer);
+                $scope.$emit('wavesurferInit', wavesurfer, $element);
             }
         };
     })

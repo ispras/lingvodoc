@@ -20,7 +20,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                     wavesurfer.load($attrs.url, $attrs.data || null);
                 }
 
-                $scope.$emit('wavesurferInit', wavesurfer);
+                $scope.$emit('wavesurferInit', wavesurfer, $element);
             }
         };
     })

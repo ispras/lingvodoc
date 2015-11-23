@@ -60,6 +60,7 @@
     <div class="row" style="margin: 30px 0">
         <div class="col-sm-10">
             <wavesurfer url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
+                       <wavesurfer-spectrogram></wavesurfer-spectrogram>
         </div>
 
         <div class="col-sm-2">
@@ -233,6 +234,7 @@
         <div class="row" style="margin: 30px 0">
             <div class="col-sm-10">
                 <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
+                           <wavesurfer-spectrogram></wavesurfer-spectrogram>
             </div>
 
             <div class="col-sm-2">
@@ -305,6 +307,7 @@
         <div class="row" style="margin: 30px 0">
             <div class="col-sm-10">
                 <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
+                           <wavesurfer-spectrogram></wavesurfer-spectrogram>
             </div>
 
             <div class="col-sm-2">
@@ -433,6 +436,7 @@
         <div class="row" style="margin: 30px 0">
             <div class="col-sm-10">
                 <wavesurfer id url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
+                           <wavesurfer-spectrogram></wavesurfer-spectrogram>
             </div>
 
             <div class="col-sm-2">
