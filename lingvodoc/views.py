@@ -340,7 +340,7 @@ def advanced_search(request):
         searchstring = search.get('searchstring')
         entity_type = search.get('entity_type')
         if searchstring:
-            if len(searchstring) >= 2:
+            if len(searchstring) >= 1:
                 searchstring = searchstring.split(' ')
                 if entity_type:
                     if search_by_or:
