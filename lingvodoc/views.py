@@ -261,7 +261,7 @@ def advanced_search(request):
     if searchstrings == []:
         request.response.status = HTTPBadRequest.code
         return {'error': 'No search'}
-    length_search = [len(o['searchstring']) for o in searchstrings if len(o['searchstring']) >= 2]
+    length_search = [len(o['searchstring']) for o in searchstrings if len(o['searchstring']) >= 1]
     if length_search == []:
         request.response.status = HTTPBadRequest.code
         return {'error': 'search is too short'}
