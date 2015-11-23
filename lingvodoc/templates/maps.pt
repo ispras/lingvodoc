@@ -38,6 +38,7 @@
 
                 <info-window id="bar">
                     <div ng-non-bindable="">
+                        <h4>{{ getDictionary(selectedPerspective).translation }}</h4>
                         <ul>
                             <li ng-repeat="blob in selectedPerspective.blobs">
                                 <a href="#" ng-click="showBlob(blob)">{{ blob.name }}</a>

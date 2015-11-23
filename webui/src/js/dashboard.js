@@ -387,6 +387,12 @@ app.controller('editPerspectivePropertiesController', ['$scope', '$http', '$q', 
 
     $scope.addBlob = function() {
 
+        var b1 = _.find($scope.perspective.blobs, function(b) { return b.getId() == $scope.blobId; });
+        $log.info(b1);
+        if (!!b1) {
+            return;
+        }
+
         var blob = _.find($scope.blobs, function(b) {
             return b.getId() == $scope.blobId;
         });
