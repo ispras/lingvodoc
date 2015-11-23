@@ -160,19 +160,38 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         };
 
         $scope.getSearchFields = function() {
-            if (_.size($scope.searchFields) > 0) {
-                return $scope.searchFields;
-            }
+            //if (_.size($scope.searchFields) > 0) {
+            //    return $scope.searchFields;
+            //}
 
-            var fields = _.reduce($scope.allFields, function(acc, perspectiveFields) {
+            var activeFields = _.clone($scope.allFields);
+            _.remove(activeFields, function(f, i) {
+                var perspective = $scope.perspectives[i];
+                return !_.find($scope.activePerspectives, function(p) {
+                    return p.equals(perspective);
+                });
+            });
+
+            var fields = _.reduce(activeFields, function(acc, perspectiveFields) {
                 var fields = [];
                 _.each(perspectiveFields, function(f) {
-                    if (f.level === 'leveloneentity') {
+                    if (f.level === 'leveloneentity' && f.data_type === 'text') {
                         fields.push(f);
+                    }
+
+                    if (_.isArray(f.contains)) {
+                        _.each(f.contains, function(cf) {
+                            if (cf.level === 'leveloneentity' && cf.data_type === 'text') {
+                                fields.push(cf);
+                            }
+                        });
                     }
                 });
                 return acc.concat(fields);
             }, []);
+
+
+            $log.info(fields);
 
 
             // remove duplicates
