@@ -27,9 +27,24 @@
 
     <div class="row">
         <div class="col-md-6">
-            <input type="text" placeholder="Search..." ng-model="query"> Заим. <input type="checkbox" ng-model='searchMode' indeterminate />
+
+            Adoptions <input type="checkbox" ng-model='adoptedSearch' indeterminate />
+            Etymology <input type="checkbox" ng-model='etymologySearch' indeterminate />
+
+            <div ng-repeat="searchField in search">
+                <input type="text" placeholder="" ng-model="searchField.query">
+                <select ng-model="searchField.type" ng-options="field as field.entity_type for field in getSearchFields() track by field.entity_type">
+                    <option></option>
+                </select>
+                /OR <input type="checkbox" ng-checked="searchField.orFlag" ng-model="searchField.orFlag">
+                <span class="glyphicon glyphicon-plus-sign" ng-if="$index == (search.length - 1)" ng-click="addSearchField()"></span>
+            </div>
+
+            <button type="button" class="btn btn-primary" ng-click="doSearch()">Search</button>
+
         </div>
     </div>
+
 
     <div class="row">
         <div class="col-md-12" map-lazy-load="http://maps.google.com/maps/api/js"

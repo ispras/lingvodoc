@@ -66,7 +66,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         };
     }])
 
-    .controller('MapsController', ['$scope', '$http', '$log', '$modal', 'NgMap', 'dictionaryService', 'responseHandler', function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
+    .controller('MapsController', ['$scope', '$http', '$q', '$log', '$modal', 'NgMap', 'dictionaryService', 'responseHandler', function($scope, $http, $q, $log, $modal, NgMap, dictionaryService, responseHandler) {
 
         WaveSurferController.call(this, $scope);
 
@@ -76,14 +76,27 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         $scope.perspectives = [];
         $scope.activePerspectives = [];
 
-        $scope.query = '';
-        $scope.searchMode = null;
+
+        $scope.adoptedSearch = null;
+        $scope.etymologySearch = null;
 
         $scope.entries = [];
         $scope.fields = [];
 
+        $scope.allFields = [];
+        $scope.searchFields = [];
+
         $scope.fieldsIdx = [];
         $scope.fieldsValues = [];
+
+        $scope.search = [
+            {
+                'query': '',
+                'type': '',
+                'orFlag': true
+            }
+        ];
+
 
         $scope.searchComplete = true;
 
@@ -135,15 +148,52 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         };
 
         $scope.getDictionary = function(perspective) {
-            var dictionary = _.find($scope.dictionaries, function(d) {
+            return _.find($scope.dictionaries, function(d) {
                 return d.client_id == perspective.parent_client_id && d.object_id == perspective.parent_object_id;
             });
-            return dictionary;
         };
 
         $scope.isPerspectiveActive = function(perspective) {
             return !!_.find($scope.activePerspectives, function(p) {
                 return p.equals(perspective);
+            });
+        };
+
+        $scope.getSearchFields = function() {
+            if (_.size($scope.searchFields) > 0) {
+                return $scope.searchFields;
+            }
+
+            var fields = _.reduce($scope.allFields, function(acc, perspectiveFields) {
+                var fields = [];
+                _.each(perspectiveFields, function(f) {
+                    if (f.level === 'leveloneentity') {
+                        fields.push(f);
+                    }
+                });
+                return acc.concat(fields);
+            }, []);
+
+
+            // remove duplicates
+            var names = [];
+            var removed = _.remove(fields, function(f) {
+                if (_.indexOf(names, f.entity_type) >= 0) {
+                    return true;
+                }
+                names.push(f.entity_type);
+                return false;
+            });
+
+            $scope.searchFields = fields;
+            return $scope.searchFields;
+        };
+
+        $scope.addSearchField = function() {
+            $scope.search.push({
+                'query': '',
+                'type': '',
+                'orFlag': false
             });
         };
 
@@ -227,75 +277,170 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
             });
         };
 
-        $scope.$watch('query', function(q) {
-            if (!q || q.length < 3) {
-                return;
-            }
+        $scope.doSearch = function() {
+
+
+            var q = _.map($scope.search, function(s) {
+                return {
+                    'searchstring': s.query,
+                    'entity_type': s.type.entity_type,
+                    'search_by_or': s.orFlag
+                };
+            });
+
+            // remove empty string
+            _.remove(q, function(s) {
+                _.isEmpty(s.searchstring) || _.isUndefined(s.entity_type);
+            });
 
             $scope.searchComplete = false;
-            dictionaryService.advancedSearch(q, 'Translation', $scope.activePerspectives, $scope.searchMode).then(function(entries) {
+                dictionaryService.advancedSearch(q, $scope.activePerspectives, $scope.adoptedSearch, $scope.etymologySearch).then(function(entries) {
 
-                $scope.searchComplete = true;
-                if (!_.isEmpty(entries)) {
+                    $scope.searchComplete = true;
+                    if (!_.isEmpty(entries)) {
 
-                    var p = _.find(_.first(entries)['origin'], function(o) {
-                        return o.type == 'perspective';
-                    });
-
-                    // group entries by dictionary and perspective
-                    var groups = [];
-                    var ge = _.groupBy(entries, function(e) {
-
-                        var entryDictionary = _.find(e['origin'], function(o) {
-                            return o.type == 'dictionary';
-                        });
-
-                        var entryPerspective = _.find(e['origin'], function(o) {
+                        var p = _.find(_.first(entries)['origin'], function(o) {
                             return o.type == 'perspective';
                         });
 
-                        var i = _.findIndex(groups, function(g) {
-                            return g.perspective.equals(entryPerspective) && g.dictionary.equals(entryDictionary);
-                        });
+                        // group entries by dictionary and perspective
+                        var groups = [];
+                        var ge = _.groupBy(entries, function(e) {
 
-                        if (i < 0) {
-                            groups.push({
-                                'dictionary': entryDictionary,
-                                'perspective': entryPerspective,
-                                'origin': e['origin']
+                            var entryDictionary = _.find(e['origin'], function(o) {
+                                return o.type == 'dictionary';
                             });
-                            return (_.size(groups) - 1);
-                        }
-                        return i;
-                    });
 
-                    dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
-                        $scope.fields = fields;
-                        $scope.entries = entries;
+                            var entryPerspective = _.find(e['origin'], function(o) {
+                                return o.type == 'perspective';
+                            });
 
-                        _.each(groups, function(g, i) {
-                            g['matrix'] = mapFieldValues(ge[i], fields);
+                            var i = _.findIndex(groups, function(g) {
+                                return g.perspective.equals(entryPerspective) && g.dictionary.equals(entryDictionary);
+                            });
+
+                            if (i < 0) {
+                                groups.push({
+                                    'dictionary': entryDictionary,
+                                    'perspective': entryPerspective,
+                                    'origin': e['origin']
+                                });
+                                return (_.size(groups) - 1);
+                            }
+                            return i;
                         });
 
-                        $scope.groups = groups;
+                        dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
+                            $scope.fields = fields;
+                            $scope.entries = entries;
 
-                    }, function(reason) {
-                        responseHandler.error(reason);
-                    });
+                            _.each(groups, function(g, i) {
+                                g['matrix'] = mapFieldValues(ge[i], fields);
+                            });
 
-                } else {
-                    $scope.fields = [];
-                    $scope.groups = [];
-                }
+                            $scope.groups = groups;
 
-            }, function(reason) {
-                responseHandler.error(reason);
-            });
-        }, false);
+                        }, function(reason) {
+                            responseHandler.error(reason);
+                        });
+
+                    } else {
+                        $scope.fields = [];
+                        $scope.groups = [];
+                    }
+
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+
+
+
+
+        };
+
+
+        //$scope.$watch('query', function(q) {
+        //    if (!q || q.length < 3) {
+        //        return;
+        //    }
+        //
+        //    $scope.searchComplete = false;
+        //    dictionaryService.advancedSearch(q, 'Translation', $scope.activePerspectives, $scope.searchMode).then(function(entries) {
+        //
+        //        $scope.searchComplete = true;
+        //        if (!_.isEmpty(entries)) {
+        //
+        //            var p = _.find(_.first(entries)['origin'], function(o) {
+        //                return o.type == 'perspective';
+        //            });
+        //
+        //            // group entries by dictionary and perspective
+        //            var groups = [];
+        //            var ge = _.groupBy(entries, function(e) {
+        //
+        //                var entryDictionary = _.find(e['origin'], function(o) {
+        //                    return o.type == 'dictionary';
+        //                });
+        //
+        //                var entryPerspective = _.find(e['origin'], function(o) {
+        //                    return o.type == 'perspective';
+        //                });
+        //
+        //                var i = _.findIndex(groups, function(g) {
+        //                    return g.perspective.equals(entryPerspective) && g.dictionary.equals(entryDictionary);
+        //                });
+        //
+        //                if (i < 0) {
+        //                    groups.push({
+        //                        'dictionary': entryDictionary,
+        //                        'perspective': entryPerspective,
+        //                        'origin': e['origin']
+        //                    });
+        //                    return (_.size(groups) - 1);
+        //                }
+        //                return i;
+        //            });
+        //
+        //            dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
+        //                $scope.fields = fields;
+        //                $scope.entries = entries;
+        //
+        //                _.each(groups, function(g, i) {
+        //                    g['matrix'] = mapFieldValues(ge[i], fields);
+        //                });
+        //
+        //                $scope.groups = groups;
+        //
+        //            }, function(reason) {
+        //                responseHandler.error(reason);
+        //            });
+        //
+        //        } else {
+        //            $scope.fields = [];
+        //            $scope.groups = [];
+        //        }
+        //
+        //    }, function(reason) {
+        //        responseHandler.error(reason);
+        //    });
+        //}, false);
 
         dictionaryService.getAllPerspectives().then(function(perspectives) {
             $scope.perspectives = _.clone(perspectives);
             $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
+
+            var reqs = _.map($scope.perspectives, function(p) {
+                return dictionaryService.getPerspectiveDictionaryFieldsNew(p);
+            });
+
+            $q.all(reqs).then(function(allFields) {
+
+                $scope.allFields = allFields;
+
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+
         }, function(reason) {
             responseHandler.error(reason);
         });

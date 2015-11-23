@@ -35081,7 +35081,7 @@ function lingvodocAPI($http, $q) {
         var deferred = $q.defer();
         var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id + "/fields";
         $http.get(url).success(function(data, status, headers, config) {
-            if (angular.isArray(data.fields)) {
+            if (_.isArray(data.fields)) {
                 var fields = perspectiveToDictionaryFields(data.fields);
                 deferred.resolve(fields);
             } else {
@@ -35862,7 +35862,7 @@ function lingvodocAPI($http, $q) {
             var blobs = _.map(data, lingvodoc.Blob.fromJS);
             deferred.resolve(blobs);
         }).error(function(data, status, headers, config) {
-            deferred.reject("Failed to convert dictionary");
+            deferred.reject("Failed to fetch list of available blobs");
         });
         return deferred.promise;
     };
@@ -35929,7 +35929,7 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var advancedSearch = function(query, type, where, adopted) {
+    var advancedSearch = function(query, where, adopted, etymology) {
         var deferred = $q.defer();
         var url = "/advanced_search";
         var perspectives = where.map(function(o) {
@@ -35943,12 +35943,14 @@ function lingvodocAPI($http, $q) {
             return typeof o !== "undefined";
         });
         var req = {
-            leveloneentity: query,
-            entity_type: type,
+            searchstrings: query,
             perspectives: perspectives
         };
         if (_.isBoolean(adopted)) {
             req.adopted = adopted;
+        }
+        if (_.isBoolean(etymology)) {
+            req.with_etimology = etymology;
         }
         $http.post(url, req).success(function(data, status, headers, config) {
             var r = data.map(function(e) {
@@ -36123,18 +36125,25 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
             });
         }
     };
-} ]).controller("MapsController", [ "$scope", "$http", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $log, $modal, NgMap, dictionaryService, responseHandler) {
+} ]).controller("MapsController", [ "$scope", "$http", "$q", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $q, $log, $modal, NgMap, dictionaryService, responseHandler) {
     WaveSurferController.call(this, $scope);
     var key = "AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk";
     $scope.googleMapsUrl = "http://maps.google.com/maps/api/js?v=3.20&key=" + encodeURIComponent(key);
     $scope.perspectives = [];
     $scope.activePerspectives = [];
-    $scope.query = "";
-    $scope.searchMode = null;
+    $scope.adoptedSearch = null;
+    $scope.etymologySearch = null;
     $scope.entries = [];
     $scope.fields = [];
+    $scope.allFields = [];
+    $scope.searchFields = [];
     $scope.fieldsIdx = [];
     $scope.fieldsValues = [];
+    $scope.search = [ {
+        query: "",
+        type: "",
+        orFlag: true
+    } ];
     $scope.searchComplete = true;
     var mapFieldValues = function(allEntries, allFields) {
         var result = [];
@@ -36178,14 +36187,44 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
         });
     };
     $scope.getDictionary = function(perspective) {
-        var dictionary = _.find($scope.dictionaries, function(d) {
+        return _.find($scope.dictionaries, function(d) {
             return d.client_id == perspective.parent_client_id && d.object_id == perspective.parent_object_id;
         });
-        return dictionary;
     };
     $scope.isPerspectiveActive = function(perspective) {
         return !!_.find($scope.activePerspectives, function(p) {
             return p.equals(perspective);
+        });
+    };
+    $scope.getSearchFields = function() {
+        if (_.size($scope.searchFields) > 0) {
+            return $scope.searchFields;
+        }
+        var fields = _.reduce($scope.allFields, function(acc, perspectiveFields) {
+            var fields = [];
+            _.each(perspectiveFields, function(f) {
+                if (f.level === "leveloneentity") {
+                    fields.push(f);
+                }
+            });
+            return acc.concat(fields);
+        }, []);
+        var names = [];
+        var removed = _.remove(fields, function(f) {
+            if (_.indexOf(names, f.entity_type) >= 0) {
+                return true;
+            }
+            names.push(f.entity_type);
+            return false;
+        });
+        $scope.searchFields = fields;
+        return $scope.searchFields;
+    };
+    $scope.addSearchField = function() {
+        $scope.search.push({
+            query: "",
+            type: "",
+            orFlag: false
         });
     };
     $scope.info = function(event, perspective) {
@@ -36259,12 +36298,19 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
             }
         });
     };
-    $scope.$watch("query", function(q) {
-        if (!q || q.length < 3) {
-            return;
-        }
+    $scope.doSearch = function() {
+        var q = _.map($scope.search, function(s) {
+            return {
+                searchstring: s.query,
+                entity_type: s.type.entity_type,
+                search_by_or: s.orFlag
+            };
+        });
+        _.remove(q, function(s) {
+            _.isEmpty(s.searchstring) || _.isUndefined(s.entity_type);
+        });
         $scope.searchComplete = false;
-        dictionaryService.advancedSearch(q, "Translation", $scope.activePerspectives, $scope.searchMode).then(function(entries) {
+        dictionaryService.advancedSearch(q, $scope.activePerspectives, $scope.adoptedSearch, $scope.etymologySearch).then(function(entries) {
             $scope.searchComplete = true;
             if (!_.isEmpty(entries)) {
                 var p = _.find(_.first(entries)["origin"], function(o) {
@@ -36308,10 +36354,18 @@ angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("
         }, function(reason) {
             responseHandler.error(reason);
         });
-    }, false);
+    };
     dictionaryService.getAllPerspectives().then(function(perspectives) {
         $scope.perspectives = _.clone(perspectives);
         $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
+        var reqs = _.map($scope.perspectives, function(p) {
+            return dictionaryService.getPerspectiveDictionaryFieldsNew(p);
+        });
+        $q.all(reqs).then(function(allFields) {
+            $scope.allFields = allFields;
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     }, function(reason) {
         responseHandler.error(reason);
     });
