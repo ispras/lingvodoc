@@ -3257,10 +3257,18 @@ def get_user_info(request):
 
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
-    else:
+    elif user_id:
         user = DBSession.query(User).filter_by(id=user_id).first()
         if not user:
-
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such user in the system")}
+    else:
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        if not client:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such client in the system")}
+        user = DBSession.query(User).filter_by(id=client.user_id)
+        if not user:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
     response['id']=user.id
