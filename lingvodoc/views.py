@@ -3263,7 +3263,7 @@ def get_user_info(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
     else:
-        client = DBSession.query(Client).filter_by(id=client_id).first()
+        client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
         if not client:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such client in the system")}
