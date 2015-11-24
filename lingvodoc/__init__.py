@@ -162,6 +162,12 @@ def configure_routes(config):
     config.add_route(name='perspective_outside',
                      pattern='perspective/{perspective_client_id}/{perspective_id}',
                      factory='lingvodoc.models.PerspectiveAcl')
+    # API #POST
+    # creates hash in metadata on objects
+    config.add_route(name='perspective_hash',
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'perspective/{perspective_client_id}/{perspective_id}/hash',
+                     factory='lingvodoc.models.PerspectiveAcl')
     # API #GET && PUT && DELETE
     # {<some_data_name>:{"type""<datatype>, "content":<content>},}
     # for geo: {"location":{"type":"location", "content":{"lat":<lat>, "lng":<lng>}}}

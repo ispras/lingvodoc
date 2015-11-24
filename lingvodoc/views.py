@@ -2490,6 +2490,7 @@ def upload_user_blob(request):
     response = {"client_id": blob.client_id, "object_id": blob.object_id, "content": blob_object.content}
     return response
 
+
 @view_config(route_name='get_user_blob', renderer='json', request_method='GET')
 def get_user_blob(request):
     variables = {'auth': authenticated_userid(request)}
@@ -2515,6 +2516,7 @@ def get_user_blob(request):
 #         FileResponse(blob.real_storage_path)
 #     else:
 #         raise HTTPNotFound
+
 
 @view_config(route_name='list_user_blobs', renderer='json', request_method='GET')
 def list_user_blobs(request):
@@ -2583,6 +2585,7 @@ def create_l1_entity(request):
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
+
 
 @view_config(route_name='create_entities_bulk', renderer='json', request_method='POST', permission='create')
 def create_entities_bulk(request):
@@ -3154,8 +3157,8 @@ def lexical_entries_published(request):
                 .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
                                            LevelOneEntity.parent_object_id == LexicalEntry.object_id,
                                            LevelOneEntity.marked_for_deletion == False)) \
-                .outerjoin(PublishLevelOneEntity, and_(PublishLevelOneEntity.parent_client_id == LevelOneEntity.client_id,
-                                                  PublishLevelOneEntity.parent_object_id == LevelOneEntity.object_id,
+                .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+                                                  PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id,
                                                   PublishLevelOneEntity.marked_for_deletion == False)) \
                 .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
                 .offset(start_from).limit(count)
@@ -4305,14 +4308,102 @@ try it again.
 """
 
 
+@view_config(route_name='perspective_hash', renderer='json', request_method='PUT', permission='edit')
+def edit_perspective_hash(request):
+    import requests
+    import hashlib
+    try:
+        response = dict()
+        client_id = request.matchdict.get('perspective_client_id')
+        object_id = request.matchdict.get('perspective_id')
+        client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        parent_client_id = request.matchdict.get('dictionary_client_id')
+        parent_object_id = request.matchdict.get('dictionary_object_id')
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such dictionary in the system")}
+
+        perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+        if perspective:
+            if not perspective.marked_for_deletion:
+                l1es = DBSession.query(LevelOneEntity)\
+                    .join(LexicalEntry,
+                          and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+                               LevelOneEntity.parent_object_id == LexicalEntry.object_id,
+                               LexicalEntry.parent_client_id == client_id,
+                               LexicalEntry.parent_object_id == object_id))\
+                    .filter(func.lower(LevelOneEntity.entity_type).like('%sound%'), or_(LevelOneEntity.additional_metadata == None,
+                                                                                        not_(LevelOneEntity.additional_metadata.like('%hash%'))))
+                count_l1e = l1es.count()
+                for l1e in l1es:
+                    url = l1e.content
+                    r = requests.get(url)
+                    hash = hashlib.sha224(r.content).hexdigest()
+                    old_meta = l1e.additional_metadata
+                    hash_dict = {'hash': hash}
+                    if old_meta is not None:
+                        new_meta = json.loads(old_meta)
+                        new_meta.update(hash_dict)
+                    else:
+                        new_meta = hash_dict
+                    l1e.additional_metadata = json.dumps(new_meta)
+                DBSession.flush()
+                l2es = DBSession.query(LevelTwoEntity)\
+                    .join(LevelOneEntity,
+                          and_(LevelTwoEntity.parent_client_id == LevelOneEntity.client_id,
+                               LevelTwoEntity.parent_object_id == LevelOneEntity.object_id))\
+                    .join(LexicalEntry,
+                          and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+                               LevelOneEntity.parent_object_id == LexicalEntry.object_id,
+                               LexicalEntry.parent_client_id == client_id,
+                               LexicalEntry.parent_object_id == object_id))\
+                    .filter(func.lower(LevelTwoEntity.entity_type).like('%markup%'), or_(LevelTwoEntity.additional_metadata == None,
+                                                                                        not_(LevelTwoEntity.additional_metadata.like('%hash%'))))
+                count_l2e = l2es.count()
+                for l2e in l2es:
+                    url = l2e.content
+                    r = requests.get(url)
+                    hash = hashlib.sha224(r.content).hexdigest()
+                    old_meta = l2e.additional_metadata
+                    hash_dict = {'hash': hash}
+                    if old_meta is not None:
+                        new_meta = json.loads(old_meta)
+                        new_meta.update(hash_dict)
+                    else:
+                        new_meta = hash_dict
+                    l2e.additional_metadata = json.dumps(new_meta)
+                DBSession.flush()
+                response['count_l1e'] = count_l1e
+                response['count_l2e'] = count_l2e
+                request.response.status = HTTPOk.code
+                return response
+        else:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such perspective in the system")}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    req = request.json
-    dicts = req
-    dicts = [(o[0], o[1]) for o in dicts]
-    dictis = DBSession.query(Dictionary).filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dicts))
-    res = [(o.object_id, o.client_id) for o in dictis]
-    return res
+    import requests
+    import hashlib
+
+    sound = DBSession.query(LevelOneEntity).filter_by(client_id=3, object_id=1255).first()
+    url = sound.content
+    local_filename = url.split('/')[-1]
+    session = requests.Session()
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=3)
+    session.mount('http://', adapter)
+    r = requests.get(sound.content)
+    hash = hashlib.sha224(r.content).hexdigest()
+
+    return {'hash': str(hash)}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')

@@ -560,6 +560,8 @@ class EntityMixin(object):
                       'marked_for_deletion': self.marked_for_deletion,
                       'locale_id': self.locale_id
                       }
+        if self.additional_metadata:
+            dictionary['additional_metadata'] = self.additional_metadata
         children = recursive_content(self, publish)
         if children:
             dictionary['contains'] = children
