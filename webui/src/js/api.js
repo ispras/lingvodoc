@@ -462,21 +462,20 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
-    var getDictionaryProperties = function(url) {
-
+    var getDictionaryProperties = function(dictionary) {
         var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id);
         $http.get(url).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject('An error  occurred while trying to get dictionary properties');
         });
-
         return deferred.promise;
     };
 
-    var setDictionaryProperties = function(url, properties) {
-
+    var setDictionaryProperties = function(dictionary, properties) {
         var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id);
         $http.put(url, properties).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
@@ -485,6 +484,19 @@ function lingvodocAPI($http, $q) {
 
         return deferred.promise;
     };
+
+    var removeDictionary = function(dictionary) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id);
+        $http.delete(url).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('An error  occurred while trying to delete dictionary');
+        });
+        return deferred.promise;
+    };
+
+
 
     var getLanguages = function(url) {
         var deferred = $q.defer();
@@ -584,6 +596,17 @@ function lingvodocAPI($http, $q) {
             deferred.reject('Failed to save perspective fields');
         });
 
+        return deferred.promise;
+    };
+
+    var removePerspective = function(perspective) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + perspective.parent_client_id + '/' + perspective.parent_object_id + '/perspective/' + perspective.client_id + '/' + perspective.object_id;
+        $http.delete(url).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('An error  occurred while trying to delete perspective');
+        });
         return deferred.promise;
     };
 
@@ -1314,6 +1337,7 @@ function lingvodocAPI($http, $q) {
         'approveAll': approveAll,
         'getDictionaryProperties': getDictionaryProperties,
         'setDictionaryProperties': setDictionaryProperties,
+        'removeDictionary': removeDictionary,
         'getLanguages': getLanguages,
         'setDictionaryStatus': setDictionaryStatus,
         'setPerspectiveStatus': setPerspectiveStatus,
@@ -1321,6 +1345,7 @@ function lingvodocAPI($http, $q) {
         'getPerspectiveFields': getPerspectiveFields,
         'setPerspectiveFields': setPerspectiveFields,
         'getPerspectiveFieldsNew': getPerspectiveFieldsNew,
+        'removePerspective': removePerspective,
         'getUserInfo': getUserInfo,
         'setUserInfo': setUserInfo,
         'getOrganizations': getOrganizations,

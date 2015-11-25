@@ -12,3 +12,20 @@
 
 </script>
 
+
+
+<script type="text/ng-template" id="responseHandlerYesNoModal.html">
+
+    <div class="modal-header">
+        <h3>{{ status }}</h3>
+    </div>
+    <div class="modal-body">
+        <p>{{ message }}</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-primary" ng-click="yes()">Yes</button>
+        <button type="button" class="btn btn-primary" ng-click="no()">No</button>
+    </div>
+
+</script>
+

@@ -30346,8 +30346,33 @@ function responseHandler($timeout, $modal) {
     function error(message) {
         show("error", message, 5e3);
     }
+    function yesno(status, message, callback) {
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.yes = function() {
+                $modalInstance.close(true);
+            };
+            $scope.no = function() {
+                $modalInstance.close(false);
+            };
+        };
+        $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerYesNoModal.html",
+            controller: controller,
+            size: "lg",
+            backdrop: "static",
+            keyboard: false
+        }).result.then(function(result) {
+            callback(result);
+        }, function() {
+            callback(false);
+        });
+    }
     return {
         success: success,
-        error: error
+        error: error,
+        yesno: yesno
     };
 }
