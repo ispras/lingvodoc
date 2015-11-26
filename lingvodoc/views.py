@@ -99,6 +99,8 @@ log = logging.getLogger(__name__)
 
 from sqlalchemy import tuple_
 
+import hashlib
+
 class CommonException(Exception):
     def __init__(self, value):
         self.value = value
@@ -2567,6 +2569,15 @@ def create_l1_entity(request):
 
         if url and real_location:
             entity.content = url
+            hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+            old_meta = entity.additional_metadata
+            hash_dict = {'hash': hash}
+            if old_meta is not None:
+                new_meta = json.loads(old_meta)
+                new_meta.update(hash_dict)
+            else:
+                new_meta = hash_dict
+            entity.additional_metadata = json.dumps(new_meta)
         else:
             entity.content = req['content']
         DBSession.add(entity)
@@ -2638,6 +2649,15 @@ def create_entities_bulk(request):
 
             if url and real_location:
                 entity.content = url
+                hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+                old_meta = entity.additional_metadata
+                hash_dict = {'hash': hash}
+                if old_meta is not None:
+                    new_meta = json.loads(old_meta)
+                    new_meta.update(hash_dict)
+                else:
+                    new_meta = hash_dict
+                entity.additional_metadata = json.dumps(new_meta)
             else:
                 entity.content = item['content']
             DBSession.add(entity)
@@ -2764,6 +2784,15 @@ def create_l2_entity(request):
 
         if url and real_location:
             entity.content = url
+            hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+            old_meta = entity.additional_metadata
+            hash_dict = {'hash': hash}
+            if old_meta is not None:
+                new_meta = json.loads(old_meta)
+                new_meta.update(hash_dict)
+            else:
+                new_meta = hash_dict
+            entity.additional_metadata = json.dumps(new_meta)
         else:
             entity.content = req['content']
         DBSession.add(entity)
@@ -3540,6 +3569,10 @@ def get_translations(request):
     return response
 
 
+
+
+
+
 @view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
 def merge_dictionaries(request):
     try:
@@ -4308,10 +4341,28 @@ try it again.
 """
 
 
+@view_config(route_name='dangerous_perspectives_hash', renderer='json', request_method='PUT', permission='edit')
+def dangerous_perspectives_hash(request):
+    response = dict()
+    perspectives = DBSession.query(DictionaryPerspective)
+    for perspective in perspectives:
+        path = request.route_url('perspective_hash',
+                                 dictionary_client_id=perspective.parent_client_id,
+                                 dictionary_object_id=perspective.parent_object_id,
+                                 perspective_client_id=perspective.client_id,
+                                 perspective_id=perspective.object_id)
+        subreq = Request.blank(path)
+        subreq.method = 'PUT'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        print('Perspecitve', perspective.client_id, perspective.object_id, 'ready')
+    request.response.status = HTTPOk.code
+    return response
+
+
 @view_config(route_name='perspective_hash', renderer='json', request_method='PUT', permission='edit')
 def edit_perspective_hash(request):
     import requests
-    import hashlib
     try:
         response = dict()
         client_id = request.matchdict.get('perspective_client_id')
@@ -4339,18 +4390,21 @@ def edit_perspective_hash(request):
                                                                                         not_(LevelOneEntity.additional_metadata.like('%hash%'))))
                 count_l1e = l1es.count()
                 for l1e in l1es:
+
                     url = l1e.content
-                    r = requests.get(url)
-                    hash = hashlib.sha224(r.content).hexdigest()
-                    old_meta = l1e.additional_metadata
-                    hash_dict = {'hash': hash}
-                    if old_meta is not None:
-                        new_meta = json.loads(old_meta)
-                        new_meta.update(hash_dict)
-                    else:
-                        new_meta = hash_dict
-                    l1e.additional_metadata = json.dumps(new_meta)
-                DBSession.flush()
+                    try:
+                        r = requests.get(url)
+                        hash = hashlib.sha224(r.content).hexdigest()
+                        old_meta = l1e.additional_metadata
+                        hash_dict = {'hash': hash}
+                        if old_meta is not None:
+                            new_meta = json.loads(old_meta)
+                            new_meta.update(hash_dict)
+                        else:
+                            new_meta = hash_dict
+                        l1e.additional_metadata = json.dumps(new_meta)
+                    except:
+                        print('fail with sound', l1e.client_id, l1e.object_id)
                 l2es = DBSession.query(LevelTwoEntity)\
                     .join(LevelOneEntity,
                           and_(LevelTwoEntity.parent_client_id == LevelOneEntity.client_id,
@@ -4364,18 +4418,22 @@ def edit_perspective_hash(request):
                                                                                         not_(LevelTwoEntity.additional_metadata.like('%hash%'))))
                 count_l2e = l2es.count()
                 for l2e in l2es:
+
+
                     url = l2e.content
-                    r = requests.get(url)
-                    hash = hashlib.sha224(r.content).hexdigest()
-                    old_meta = l2e.additional_metadata
-                    hash_dict = {'hash': hash}
-                    if old_meta is not None:
-                        new_meta = json.loads(old_meta)
-                        new_meta.update(hash_dict)
-                    else:
-                        new_meta = hash_dict
-                    l2e.additional_metadata = json.dumps(new_meta)
-                DBSession.flush()
+                    try:
+                        r = requests.get(url)
+                        hash = hashlib.sha224(r.content).hexdigest()
+                        old_meta = l2e.additional_metadata
+                        hash_dict = {'hash': hash}
+                        if old_meta is not None:
+                            new_meta = json.loads(old_meta)
+                            new_meta.update(hash_dict)
+                        else:
+                            new_meta = hash_dict
+                        l2e.additional_metadata = json.dumps(new_meta)
+                    except:
+                        print('fail with markup', l2e.client_id, l2e.object_id)
                 response['count_l1e'] = count_l1e
                 response['count_l2e'] = count_l2e
                 request.response.status = HTTPOk.code
