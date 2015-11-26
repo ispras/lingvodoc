@@ -2553,8 +2553,6 @@ def create_l1_entity(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
         additional_metadata = req.get('additional_metadata')
-        if additional_metadata:
-            additional_metadata = json.dumps(additional_metadata)
         entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
                                 locale_id=req['locale_id'], additional_metadata=additional_metadata,
                                 parent=parent)
@@ -2569,15 +2567,22 @@ def create_l1_entity(request):
 
         if url and real_location:
             entity.content = url
-            hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
             old_meta = entity.additional_metadata
-            hash_dict = {'hash': hash}
-            if old_meta is not None:
-                new_meta = json.loads(old_meta)
-                new_meta.update(hash_dict)
-            else:
-                new_meta = hash_dict
-            entity.additional_metadata = json.dumps(new_meta)
+
+            need_hash = True
+            if old_meta:
+                new_meta=json.loads(old_meta)
+                if new_meta.get('hash'):
+                    need_hash = False
+            if need_hash:
+                hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+                hash_dict = {'hash': hash}
+                if old_meta:
+                    new_meta = json.loads(old_meta)
+                    new_meta.update(hash_dict)
+                else:
+                    new_meta = hash_dict
+                entity.additional_metadata = json.dumps(new_meta)
         else:
             entity.content = req['content']
         DBSession.add(entity)
@@ -2649,15 +2654,22 @@ def create_entities_bulk(request):
 
             if url and real_location:
                 entity.content = url
-                hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
                 old_meta = entity.additional_metadata
-                hash_dict = {'hash': hash}
-                if old_meta is not None:
-                    new_meta = json.loads(old_meta)
-                    new_meta.update(hash_dict)
-                else:
-                    new_meta = hash_dict
-                entity.additional_metadata = json.dumps(new_meta)
+
+                need_hash = True
+                if old_meta:
+                    new_meta=json.loads(old_meta)
+                    if new_meta.get('hash'):
+                        need_hash = False
+                if need_hash:
+                    hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+                    hash_dict = {'hash': hash}
+                    if old_meta:
+                        new_meta = json.loads(old_meta)
+                        new_meta.update(hash_dict)
+                    else:
+                        new_meta = hash_dict
+                    entity.additional_metadata = json.dumps(new_meta)
             else:
                 entity.content = item['content']
             DBSession.add(entity)
@@ -2754,6 +2766,7 @@ def delete_l2_entity(request):
 @view_config(route_name='create_level_two_entity', renderer='json', request_method='POST', permission='create')
 def create_l2_entity(request):
     try:
+
         variables = {'auth': authenticated_userid(request)}
         response = dict()
         parent_client_id = request.matchdict.get('level_one_client_id')
@@ -2770,9 +2783,11 @@ def create_l2_entity(request):
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such level one entity in the system")}
+        additional_metadata = req.get('additional_metadata')
         entity = LevelTwoEntity(client_id=client.id, object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
-                                locale_id=req['locale_id'], additional_metadata=json.dumps(req.get('additional_metadata')),
+                                locale_id=req['locale_id'], additional_metadata=additional_metadata,
                                 parent=parent)
+
         DBSession.add(entity)
         DBSession.flush()
         data_type = req.get('data_type')
@@ -2784,15 +2799,22 @@ def create_l2_entity(request):
 
         if url and real_location:
             entity.content = url
-            hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
             old_meta = entity.additional_metadata
-            hash_dict = {'hash': hash}
-            if old_meta is not None:
-                new_meta = json.loads(old_meta)
-                new_meta.update(hash_dict)
-            else:
-                new_meta = hash_dict
-            entity.additional_metadata = json.dumps(new_meta)
+
+            need_hash = True
+            if old_meta:
+                new_meta=json.loads(old_meta)
+                if new_meta.get('hash'):
+                    need_hash = False
+            if need_hash:
+                hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+                hash_dict = {'hash': hash}
+                if old_meta:
+                    new_meta = json.loads(old_meta)
+                    new_meta.update(hash_dict)
+                else:
+                    new_meta = hash_dict
+                entity.additional_metadata = json.dumps(new_meta)
         else:
             entity.content = req['content']
         DBSession.add(entity)
@@ -4355,7 +4377,7 @@ def dangerous_perspectives_hash(request):
         subreq.method = 'PUT'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        print('Perspecitve', perspective.client_id, perspective.object_id, 'ready')
+        print('Perspective', perspective.client_id, perspective.object_id, 'ready')
     request.response.status = HTTPOk.code
     return response
 
@@ -4397,7 +4419,7 @@ def edit_perspective_hash(request):
                         hash = hashlib.sha224(r.content).hexdigest()
                         old_meta = l1e.additional_metadata
                         hash_dict = {'hash': hash}
-                        if old_meta is not None:
+                        if old_meta:
                             new_meta = json.loads(old_meta)
                             new_meta.update(hash_dict)
                         else:
@@ -4426,7 +4448,7 @@ def edit_perspective_hash(request):
                         hash = hashlib.sha224(r.content).hexdigest()
                         old_meta = l2e.additional_metadata
                         hash_dict = {'hash': hash}
-                        if old_meta is not None:
+                        if old_meta:
                             new_meta = json.loads(old_meta)
                             new_meta.update(hash_dict)
                         else:
