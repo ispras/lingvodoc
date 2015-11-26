@@ -168,6 +168,10 @@ def configure_routes(config):
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}/hash',
                      factory='lingvodoc.models.PerspectiveAcl')
+
+    config.add_route(name='dangerous_perspectives_hash',
+                     pattern='/perspectives/hash',
+                     factory='lingvodoc.models.AdminAcl')
     # API #GET && PUT && DELETE
     # {<some_data_name>:{"type""<datatype>, "content":<content>},}
     # for geo: {"location":{"type":"location", "content":{"lat":<lat>, "lng":<lng>}}}
