@@ -54,6 +54,7 @@
                     <ul class="dropdown-menu">
                         <li><a href="#" ng-click="editDictionaryProperties(dictionary)">Edit information</a></li>
                         <li><a href="#" ng-click="editDictionaryRoles(dictionary)">Edit roles</a></li>
+                        <li><a href="#" ng-click="removeDictionary(dictionary)">Remove dictionary</a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="#" ng-click="createPerspective(dictionary)">Create new perspective</a></li>
                     </ul>
@@ -73,6 +74,7 @@
                         <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Published')">Published</a></li>
                     </ul>
                 </div>
+
             </div>
 
             <br><br>
@@ -98,8 +100,8 @@
                             </li>
                             <li role="separator" class="divider"></li>
                             <li><a href="#" ng-click="editPerspectiveRoles(dictionary, perspective)">Edit roles</a></li>
-                            <li><a href="#" ng-click="editPerspectiveProperties(dictionary, perspective)">Edit
-                                properties</a></li>
+                            <li><a href="#" ng-click="editPerspectiveProperties(dictionary, perspective)">Edit properties</a></li>
+                            <li><a href="#" ng-click="removePerspective(dictionary, perspective)">Remove perspective</a></li>
 
                         </ul>
                     </div>

@@ -341,7 +341,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                             }
                             return i;
                         });
-                        
+
                         dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
                             $scope.fields = fields;
                             $scope.entries = entries;

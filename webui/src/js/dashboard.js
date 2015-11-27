@@ -137,6 +137,34 @@ app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log'
     };
 
 
+    $scope.removeDictionary = function(dictionary) {
+        responseHandler.yesno('', 'Do you really want to remove dictionary?', function(confirmed) {
+            if (confirmed) {
+                dictionaryService.removeDictionary(dictionary).then(function() {
+                    _.remove($scope.dictionaries, function(d) {
+                        return d.equals(dictionary);
+                    });
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            }
+        });
+    };
+
+    $scope.removePerspective = function(dictionary, perspective) {
+        responseHandler.yesno('', 'Do you really want to remove perspective?', function(confirmed) {
+            if (confirmed) {
+                dictionaryService.removePerspective(perspective).then(function() {
+                    _.remove(dictionary.perspectives, function(p) {
+                        return p.equals(perspective);
+                    });
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            }
+        });
+    };
+
     $scope.loadMyDictionaries = function() {
 
         var dictionaryQuery = {
@@ -287,8 +315,8 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
         });
         $scope.languages = langs;
 
-        var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id);
-        dictionaryService.getDictionaryProperties(url).then(function(dictionaryProperties) {
+        //var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id);
+        dictionaryService.getDictionaryProperties(params.dictionary).then(function(dictionaryProperties) {
             var selectedLanguageCompositeId = getCompositeKey(dictionaryProperties, 'parent_client_id', 'parent_object_id');
             $scope.dictionaryProperties = dictionaryProperties;
             $scope.data.selectedLanguage = selectedLanguageCompositeId;
@@ -324,8 +352,8 @@ app.controller('editDictionaryPropertiesController', ['$scope', '$http', '$q', '
             $scope.dictionaryProperties['parent_object_id'] = null;
         }
 
-        var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id);
-        dictionaryService.setDictionaryProperties(url, $scope.dictionaryProperties).then(function() {
+        //var url = '/dictionary/' + encodeURIComponent(params.dictionary.client_id) + '/' + encodeURIComponent(params.dictionary.object_id);
+        dictionaryService.setDictionaryProperties(params.dictionary, $scope.dictionaryProperties).then(function() {
             $modalInstance.close();
         });
     };

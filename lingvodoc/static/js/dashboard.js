@@ -32353,8 +32353,9 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var getDictionaryProperties = function(url) {
+    var getDictionaryProperties = function(dictionary) {
         var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id);
         $http.get(url).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
@@ -32362,12 +32363,23 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var setDictionaryProperties = function(url, properties) {
+    var setDictionaryProperties = function(dictionary, properties) {
         var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id);
         $http.put(url, properties).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var removeDictionary = function(dictionary) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id);
+        $http.delete(url).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to delete dictionary");
         });
         return deferred.promise;
     };
@@ -32451,6 +32463,16 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data.fields);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to save perspective fields");
+        });
+        return deferred.promise;
+    };
+    var removePerspective = function(perspective) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + perspective.parent_client_id + "/" + perspective.parent_object_id + "/perspective/" + perspective.client_id + "/" + perspective.object_id;
+        $http.delete(url).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to delete perspective");
         });
         return deferred.promise;
     };
@@ -33082,6 +33104,7 @@ function lingvodocAPI($http, $q) {
         approveAll: approveAll,
         getDictionaryProperties: getDictionaryProperties,
         setDictionaryProperties: setDictionaryProperties,
+        removeDictionary: removeDictionary,
         getLanguages: getLanguages,
         setDictionaryStatus: setDictionaryStatus,
         setPerspectiveStatus: setPerspectiveStatus,
@@ -33089,6 +33112,7 @@ function lingvodocAPI($http, $q) {
         getPerspectiveFields: getPerspectiveFields,
         setPerspectiveFields: setPerspectiveFields,
         getPerspectiveFieldsNew: getPerspectiveFieldsNew,
+        removePerspective: removePerspective,
         getUserInfo: getUserInfo,
         setUserInfo: setUserInfo,
         getOrganizations: getOrganizations,
@@ -33154,9 +33178,34 @@ function responseHandler($timeout, $modal) {
     function error(message) {
         show("error", message, 5e3);
     }
+    function yesno(status, message, callback) {
+        var controller = function($scope, $modalInstance) {
+            $scope.status = status;
+            $scope.message = message;
+            $scope.yes = function() {
+                $modalInstance.close(true);
+            };
+            $scope.no = function() {
+                $modalInstance.close(false);
+            };
+        };
+        $modal.open({
+            animation: true,
+            templateUrl: "responseHandlerYesNoModal.html",
+            controller: controller,
+            size: "lg",
+            backdrop: "static",
+            keyboard: false
+        }).result.then(function(result) {
+            callback(result);
+        }, function() {
+            callback(false);
+        });
+    }
     return {
         success: success,
-        error: error
+        error: error,
+        yesno: yesno
     };
 }
 
@@ -33277,6 +33326,32 @@ app.controller("DashboardController", [ "$scope", "$http", "$q", "$modal", "$log
             dictionary.status = status;
         }, function(reason) {
             responseHandler.error(reason);
+        });
+    };
+    $scope.removeDictionary = function(dictionary) {
+        responseHandler.yesno("", "Do you really want to remove dictionary?", function(confirmed) {
+            if (confirmed) {
+                dictionaryService.removeDictionary(dictionary).then(function() {
+                    _.remove($scope.dictionaries, function(d) {
+                        return d.equals(dictionary);
+                    });
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            }
+        });
+    };
+    $scope.removePerspective = function(dictionary, perspective) {
+        responseHandler.yesno("", "Do you really want to remove perspective?", function(confirmed) {
+            if (confirmed) {
+                dictionaryService.removePerspective(perspective).then(function() {
+                    _.remove(dictionary.perspectives, function(p) {
+                        return p.equals(perspective);
+                    });
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            }
         });
     };
     $scope.loadMyDictionaries = function() {
@@ -33409,8 +33484,7 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
             langs.push(language);
         });
         $scope.languages = langs;
-        var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id);
-        dictionaryService.getDictionaryProperties(url).then(function(dictionaryProperties) {
+        dictionaryService.getDictionaryProperties(params.dictionary).then(function(dictionaryProperties) {
             var selectedLanguageCompositeId = getCompositeKey(dictionaryProperties, "parent_client_id", "parent_object_id");
             $scope.dictionaryProperties = dictionaryProperties;
             $scope.data.selectedLanguage = selectedLanguageCompositeId;
@@ -33441,8 +33515,7 @@ app.controller("editDictionaryPropertiesController", [ "$scope", "$http", "$q", 
             $scope.dictionaryProperties["parent_client_id"] = null;
             $scope.dictionaryProperties["parent_object_id"] = null;
         }
-        var url = "/dictionary/" + encodeURIComponent(params.dictionary.client_id) + "/" + encodeURIComponent(params.dictionary.object_id);
-        dictionaryService.setDictionaryProperties(url, $scope.dictionaryProperties).then(function() {
+        dictionaryService.setDictionaryProperties(params.dictionary, $scope.dictionaryProperties).then(function() {
             $modalInstance.close();
         });
     };
