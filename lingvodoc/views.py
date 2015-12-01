@@ -825,7 +825,6 @@ def edit_dictionary_status(request):
 
 @view_config(route_name='dictionary_copy', renderer='json', request_method='POST', permission='edit')
 def copy_dictionary(request):
-    # TODO: do all what written in comments
     response = dict()
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
@@ -1037,7 +1036,7 @@ def copy_dictionary(request):
                 for ge in ges:
                     new_ge = GroupingEntity(client_id=ge.client_id,
                                              object_id=DBSession.query(GroupingEntity).filter_by(client_id=ge.client_id).count() + 1,
-                                             content=ge.content,
+                                             content=ge.content,  # same tag?
                                              entity_type=ge.entity_type,
                                              locale_id=ge.locale_id,
                                              additional_metadata=ge.additional_metadata,
