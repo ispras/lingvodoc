@@ -109,6 +109,8 @@ def configure_routes(config):
     # Gets/puts info about dictionary (name/additional authors/etc)
     config.add_route(name='dictionary', pattern='/dictionary/{client_id}/{object_id}',
                      factory='lingvodoc.models.DictionaryAcl')  # 100% ready
+    config.add_route(name='dictionary_copy', pattern='/dictionary/{client_id}/{object_id}/copy',
+                     factory='lingvodoc.models.DictionaryAcl')
 
 
     config.add_route(name='dictionary_info',

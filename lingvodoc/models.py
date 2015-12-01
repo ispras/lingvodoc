@@ -270,11 +270,12 @@ def find_by_translation_string(locale_id, translation_string):
 
 
 def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-        if not translation:
-            translation = translation_string
+
         client = DBSession.query(Client).filter_by(id=client_id).first()
         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
                                                                         translation_string=translation_string).first()
+        if not translation:
+            translation = translation_string
         if not uets:
             uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
                                                  client_id=client.id,
@@ -306,7 +307,7 @@ class TranslationStringMixin(object):
         else:
             req = request.json_body
 
-        translation = req.get('translation_string')
+        translation = None
         if 'translation' in req:
             translation = req['translation']
         translation_string = req.get('translation_string')
