@@ -558,7 +558,7 @@ def view_languages_list(request):
     return response
 
 
-@view_config(route_name='language', renderer='json', request_method='PUT', permission='edit')
+@view_config(route_name='language', renderer='json', request_method='PUT')
 def edit_language(request):
     try:
         response = dict()
