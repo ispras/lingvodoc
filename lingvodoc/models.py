@@ -321,7 +321,7 @@ class TranslationStringMixin(object):
         return
 
 
-class Language(Base, TableNameMixin, TranslationStringMixin):
+class Language(Base, TableNameMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -334,6 +334,48 @@ class Language(Base, TableNameMixin, TranslationStringMixin):
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
     parent = relationship('Language', remote_side=[client_id,  object_id], backref=backref('language'))
+
+    def get_translation(cls, request):
+        return find_by_translation_string(find_locale_id(request), cls.translation_string)
+
+    def set_translation(self, request):
+
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
+
+        translation = None
+        if 'translation' in req:
+            translation = req['translation']
+        translation_string = req.get('translation_string')
+        if not translation_string:
+            if self.translation_string:
+                translation_string = self.translation_string
+            else:
+                return
+        client_id = request.authenticated_userid
+        locale_id = find_locale_id(request)
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        search_translation_string = self.translation_string
+        if not search_translation_string:
+            search_translation_string = translation_string
+        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
+                                                                        translation_string=search_translation_string).first()
+        if not translation:
+            translation = translation_string
+        if not uets:
+            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
+                                                 client_id=client.id,
+                                                 locale_id=locale_id,
+                                                 translation_string=translation_string,
+                                                 translation=translation)
+            DBSession.add(uets)
+            DBSession.flush()
+        else:
+            uets.translation_string = translation_string
+            uets.translation = translation
+        return
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
