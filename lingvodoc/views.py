@@ -417,7 +417,6 @@ def advanced_search(request):
             result['parent_translation_string'] = dict_tr['translation_string']
             result['parent_translation'] = dict_tr['translation']
             results.append(result)
-    # results = {'results': results, 'sql': str(results_cursor.statement)} # TODO: REMOVE THIS
     request.response.status = HTTPOk.code
     return results
 
@@ -2567,6 +2566,7 @@ def delete_perspective_fields(request):
 
 @view_config(route_name='perspective_fields', renderer='json', request_method='POST', permission='edit')
 def create_perspective_fields(request):
+    # TODO: stop recreating fields. Needs to be done both there and in web
     try:
         variables = {'auth': authenticated_userid(request)}
         parent_client_id = request.matchdict.get('perspective_client_id')
