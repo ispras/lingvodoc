@@ -554,6 +554,10 @@ def configure_routes(config):
     # client_id = <client_id>
     # Response example:
     # {"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}
+    # #PUT
+    # {"client_id":<client_id> OR "user_id":<user_id>,
+    #  "new_password": <new_password>, "old_password":<old_password>,
+    #  "name":<name>, "birthday":<birthday>, "email":<email>, "about":<about>}
     config.add_route(name='get_user_info', pattern='/user')  # ready, not tested
     # API #GET
     # Returns translations for a list of words for current or default or fallback locale
