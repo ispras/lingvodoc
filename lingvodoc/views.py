@@ -3612,6 +3612,7 @@ def get_user_info(request):
 
 @view_config(route_name='get_user_info', renderer='json', request_method='PUT')
 def edit_user_info(request):
+    import bcrypt
     response = dict()
     client_id = None
     try:
@@ -3631,6 +3632,7 @@ def edit_user_info(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("No such client in the system")}
         user = DBSession.query(User).filter_by(id=client.user_id).first()
+        user_id = client.user_id
         if not user:
 
             request.response.status = HTTPNotFound.code
@@ -3641,25 +3643,54 @@ def edit_user_info(request):
 
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
-    req = request.json_body
-    user.name=req['name']
-    user.default_locale_id = req['default_locale_id']
-    user.birthday = datetime.date(response['birthday'])
-    if user.email:
-        for em in user.email:
-            em.email = req['email']
-    else:
-        new_email = Email(user=user, email=req['email'])
-        DBSession.add(new_email)
-        DBSession.flush()
-    if user.about:
-        for ab in user.about:
-            ab.content = req['about']
-    else:
-        new_about = About(user=user, email=req['about'])
-        DBSession.add(new_about)
-        DBSession.flush()
 
+    req = request.json_body
+    new_password = req.get('new_password')
+    old_password = req.get('old_password')
+    if new_password:
+        if not old_password:
+            request.response.status = HTTPBadRequest.code
+            return {'error': str("Need old password to confirm")}
+        pass_hash = bcrypt.encrypt(old_password)
+        old_hash = DBSession.query(Passhash).filter(user_id=user_id).first()
+        if old_hash:
+            if old_hash.hash != pass_hash:
+                request.response.status = HTTPBadRequest.code
+                return {'error': str("Wrong password")}
+            else:
+                old_hash.hash = bcrypt.encrypt(new_password)
+        else:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("User has no password")}
+
+    name = req.get('name')
+    if name:
+        user.name = name
+    default_locale_id = req.get('default_locale_id')
+    if default_locale_id:
+        user.default_locale_id = default_locale_id
+    birthday = req.get('birthday')
+    if birthday:
+        user.birthday = datetime.date(birthday)
+    email = req.get('email')
+    if email:
+        if user.email:
+            for em in user.email:
+
+                    em.email = email
+        else:
+            new_email = Email(user=user, email=email)
+            DBSession.add(new_email)
+            DBSession.flush()
+    about = req.get('about')
+    if about:
+        if user.about:
+            for ab in user.about:
+                ab.content = req['about']
+        else:
+            new_about = About(user=user, about=about)
+            DBSession.add(new_about)
+            DBSession.flush()
     # response['is_active']=str(user.is_active)
     request.response.status = HTTPOk.code
     return response
