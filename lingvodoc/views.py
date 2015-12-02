@@ -3612,16 +3612,18 @@ def get_user_info(request):
 
 @view_config(route_name='get_user_info', renderer='json', request_method='PUT')
 def edit_user_info(request):
-    import bcrypt
+    from passlib.hash import bcrypt
     response = dict()
+
+    req = request.json_body
     client_id = None
     try:
-        client_id = request.params.get('client_id')
+        client_id = req.get('client_id')
     except:
         pass
     user_id=None
     try:
-        user_id = request.params.get('user_id')
+        user_id = req.get('user_id')
     except:
         pass
     user = None
@@ -3643,18 +3645,15 @@ def edit_user_info(request):
 
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
-
-    req = request.json_body
     new_password = req.get('new_password')
     old_password = req.get('old_password')
     if new_password:
         if not old_password:
             request.response.status = HTTPBadRequest.code
             return {'error': str("Need old password to confirm")}
-        pass_hash = bcrypt.encrypt(old_password)
-        old_hash = DBSession.query(Passhash).filter(user_id=user_id).first()
+        old_hash = DBSession.query(Passhash).filter_by(user_id=user_id).first()
         if old_hash:
-            if old_hash.hash != pass_hash:
+            if not user.check_password(old_password):
                 request.response.status = HTTPBadRequest.code
                 return {'error': str("Wrong password")}
             else:
