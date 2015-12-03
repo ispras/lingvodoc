@@ -1,3 +1,4 @@
+import tgt
 import webob
 from pyramid.response import Response
 from pyramid.view import view_config
@@ -32,7 +33,8 @@ from .models import (
     Base,
     Organization,
     UserBlobs,
-    About
+    About,
+    convert_rules
     )
 
 from .merge_perspectives import (
@@ -4727,8 +4729,6 @@ def edit_perspective_hash(request):
                                                                                         not_(LevelTwoEntity.additional_metadata.like('%hash%'))))
                 count_l2e = l2es.count()
                 for l2e in l2es:
-
-
                     url = l2e.content
                     try:
                         r = requests.get(url)
@@ -4755,45 +4755,121 @@ def edit_perspective_hash(request):
         return {'error': str(e)}
 
 
+
+def _export_to_elan(textGrid_file):
+    if os.stat(textGrid_file).st_size == 0:
+        return 'error'
+    try:
+        textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-8')
+        elan = tgt.io.export_to_elan(textgrid)
+    except Exception as e:
+        try:
+            print(e)
+            textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-16')
+            elan = tgt.io.export_to_elan(textgrid)
+        except Exception as e:
+            print(e)
+            return 'error'
+    return elan
+
+
+def _import_from_elan(elan_file):
+    if os.stat(elan_file).st_size == 0:
+        return 'error'
+    try:
+        textgrid = tgt.io.read_eaf(elan_file)
+        content = tgt.io.export_to_long_textgrid(textgrid)
+    except Exception as e:
+            print(e)
+            return 'error'
+    return content
+
+
+# def _is_empty(tier):
+#     """ Checks whether all intervals are marked as ""
+#     """
+#     for int in tier:
+#         if int.text != "":
+#             return False
+#     return True
+def praat_to_elan(filename):
+    content = _import_from_elan(filename)
+    # check size
+    return content
+
+@view_config(route_name='convert', renderer='json', request_method='POST')
+def convert(request):
+    import requests
+    try:
+        variables = {'auth': request.authenticated_userid}
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        out_type = req['out_type']
+        client_id = req['client_id']
+        object_id = req['object_id']
+        blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+        if not blob:
+            raise KeyError("No such file")
+        r = requests.get(blob.content)
+        if not r:
+            raise CommonException("Cannot access file")
+        content = r.content
+        try:
+            n = 10
+            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                              for c in range(n))
+            # file_extension = os.path.splitext(blob.content)[1]
+            extension = ''  # get it from url
+            f = open(filename + extension, 'wb')
+        except Exception as e:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str(e)}
+
+        try:
+            f.write(content)
+            f.close()
+            data_type = blob.data_type
+            for rule_config in convert_rules:
+                if data_type == rule_config.in_type and out_type == rule_config.out_type:
+                    if extension in rule_config.in_extensions:
+                        # check size and check ext
+                        if data_type == 'Praat' and out_type == 'Elan': # TODO: make more abstract. Maybe add method to rule_config
+                            content = praat_to_elan
+                            break
+            request.response.status = HTTPOk.code
+            return {'content': content}
+        except Exception as e:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str(e)}
+        finally:
+            os.remove(filename)
+            pass
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    import requests
-    import hashlib
-    response = dict()
-    l1es = DBSession.query(LevelOneEntity)\
-                    .filter(func.lower(LevelOneEntity.entity_type).like('%sound%'))
-    counter = 0
-    l1emeta = list()
-    for l1e in l1es:
-        if l1e.additional_metadata is not None:
-            try:
-                it = json.loads(l1e.additional_metadata)
-                if counter < 10:
-                    l1emeta.append(it)
-                    counter += 1
-            except:
-                print('fail')
-        else:
-            print('no meta')
-
-    counter = 0
-    l2emeta = list()
-    l2es = DBSession.query(LevelTwoEntity)\
-                    .filter(func.lower(LevelTwoEntity.entity_type).like('%markup%'))
-    for l2e in l2es:
-        if l2e.additional_metadata is not None:
-            try:
-                it = json.loads(l2e.additional_metadata)
-                if counter < 10:
-                    l2emeta.append(it)
-                    counter += 1
-            except:
-                print('fail')
-        else:
-            print('no meta')
-    response['l1'] = l1emeta
-    response['l2'] = l2emeta
-    return response
+        try:
+            return 20/15
+        except Exception as e:
+            return str(e)
+        finally:
+            print('Good news, everyone!')
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')

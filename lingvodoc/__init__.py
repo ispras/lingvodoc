@@ -66,6 +66,10 @@ def configure_routes(config):
 
     # API #POST
     # Create language
+    config.add_route(name='convert', pattern='/convert')  # 100% ready
+
+    # API #POST
+    # Create language
     config.add_route(name='create_language', pattern='/language',
                      factory='lingvodoc.models.LanguageAcl')  # 100% ready
 
