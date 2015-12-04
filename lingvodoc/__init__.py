@@ -65,8 +65,12 @@ def configure_routes(config):
                      factory='lingvodoc.models.LanguageAcl')  # 100% ready
 
     # API #POST
-    # Create language
+    # Convert blob
     config.add_route(name='convert', pattern='/convert')  # 100% ready
+
+    # API #POST
+    # Convert markup
+    config.add_route(name='convert_markup', pattern='/convert/markup')  # 100% ready
 
     # API #POST
     # Create language

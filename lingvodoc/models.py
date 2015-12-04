@@ -55,18 +55,6 @@ DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
 Base = declarative_base()
 
 
-class ConvertRule:
-    def __init__(self, in_type, out_type, in_extensions, out_extensions, converter_config=None, max_out_size = 1, max_in_size = 1):
-        self.in_type = in_type
-        self.out_type = out_type
-        self.max_out_size = max_out_size  # in MB
-        self.max_in_size = max_in_size  # in MB
-        self.in_extensions = in_extensions
-        self.out_extensions = out_extensions
-        self.converter_config = converter_config
-
-convert_rules = [ConvertRule('Praat','Elan', ['TextGrid'], ['eaf'])]
-
 class SLBigInteger(BigInteger):
     pass
 
