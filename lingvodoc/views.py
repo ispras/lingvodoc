@@ -4860,17 +4860,18 @@ def convert_markup(request):
                 if 'praat' in l2e.entity_type.lower():
                     content = praat_to_elan(filename)
                     if sys.getsizeof(content) / 1024 / 1024.0 < 1:
-                        filename2 = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
-                                              for c in range(n))
-                        f2 = open(filename2, 'w')
-                        try:
-                            f2.write(content)
-                            f2.close()
-                            os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
-                        except:
-                            print('fail with xmllint')
-                        finally:
-                            os.remove(filename2)
+                        # filename2 = 'abc.xml'
+                        # f2 = open(filename2, 'w')
+                        # try:
+                        #     f2.write(content)
+                        #     f2.close()
+                        #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
+                        #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
+                        # except:
+                        #     print('fail with xmllint')
+                        # finally:
+                        #     pass
+                        #     os.remove(filename2)
                         return {'content': content}
                     raise KeyError('File too big')
                 raise KeyError("Not allowed convert option")
