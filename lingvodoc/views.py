@@ -1,3 +1,4 @@
+import tgt
 import webob
 from pyramid.response import Response
 from pyramid.view import view_config
@@ -34,6 +35,8 @@ from .models import (
     UserBlobs,
     About
     )
+
+from .scripts.convert_rules import rules
 
 from .merge_perspectives import (
     mergeDicts
@@ -4727,8 +4730,6 @@ def edit_perspective_hash(request):
                                                                                         not_(LevelTwoEntity.additional_metadata.like('%hash%'))))
                 count_l2e = l2es.count()
                 for l2e in l2es:
-
-
                     url = l2e.content
                     try:
                         r = requests.get(url)
@@ -4755,45 +4756,153 @@ def edit_perspective_hash(request):
         return {'error': str(e)}
 
 
+@view_config(route_name='convert', renderer='json', request_method='POST')
+def convert(request):  # TODO: test when convert in blobs will be needed
+    import requests
+    try:
+        variables = {'auth': request.authenticated_userid}
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        out_type = req['out_type']
+        client_id = req['client_id']
+        object_id = req['object_id']
+
+        blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
+        if not blob:
+            raise KeyError("No such file")
+        r = requests.get(blob.content)
+        if not r:
+            raise CommonException("Cannot access file")
+        content = r.content
+        try:
+            n = 10
+            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                              for c in range(n))
+            extension = os.path.splitext(blob.content)[1]
+            f = open(filename + extension, 'wb')
+        except Exception as e:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str(e)}
+        try:
+            f.write(content)
+            f.close()
+            data_type = blob.data_type
+            for rule in rules:
+                if data_type == rule.in_type and out_type == rule.out_type:
+                    if extension in rule.in_extensions:
+                        if os.path.getsize(filename) / 1024 / 1024.0 < rule.max_in_size:
+                            content = rule.convert(filename, req.get('config'), rule.converter_config)
+                            if sys.getsizeof(content) / 1024 / 1024.0 < rule.max_out_size:
+                                request.response.status = HTTPOk.code
+                                return {'content': content}
+                    raise KeyError("Cannot access file")
+        except Exception as e:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str(e)}
+        finally:
+            os.remove(filename)
+            pass
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='convert_markup', renderer='json', request_method='POST')
+def convert_markup(request):
+    import requests
+    from .scripts.convert_rules import praat_to_elan
+    try:
+        variables = {'auth': request.authenticated_userid}
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        # out_type = req['out_type']
+        client_id = req['client_id']
+        object_id = req['object_id']
+
+        l2e = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        if not l2e:
+            raise KeyError("No such file")
+        r = requests.get(l2e.content)
+        if not r:
+            raise CommonException("Cannot access file")
+        content = r.content
+        try:
+            n = 10
+            filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+                                              for c in range(n))
+            # extension = os.path.splitext(blob.content)[1]
+            f = open(filename, 'wb')
+        except Exception as e:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str(e)}
+        try:
+            f.write(content)
+            f.close()
+            if os.path.getsize(filename) / 1024 / 1024.0 < 1:
+                if 'praat' in l2e.entity_type.lower():
+                    content = praat_to_elan(filename)
+                    if sys.getsizeof(content) / 1024 / 1024.0 < 1:
+                        # filename2 = 'abc.xml'
+                        # f2 = open(filename2, 'w')
+                        # try:
+                        #     f2.write(content)
+                        #     f2.close()
+                        #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
+                        #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
+                        # except:
+                        #     print('fail with xmllint')
+                        # finally:
+                        #     pass
+                        #     os.remove(filename2)
+                        return {'content': content}
+                    raise KeyError('File too big')
+                raise KeyError("Not allowed convert option")
+            raise KeyError('File too big')
+        except Exception as e:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str(e)}
+        finally:
+            os.remove(filename)
+            pass
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    import requests
-    import hashlib
-    response = dict()
-    l1es = DBSession.query(LevelOneEntity)\
-                    .filter(func.lower(LevelOneEntity.entity_type).like('%sound%'))
-    counter = 0
-    l1emeta = list()
-    for l1e in l1es:
-        if l1e.additional_metadata is not None:
-            try:
-                it = json.loads(l1e.additional_metadata)
-                if counter < 10:
-                    l1emeta.append(it)
-                    counter += 1
-            except:
-                print('fail')
-        else:
-            print('no meta')
-
-    counter = 0
-    l2emeta = list()
-    l2es = DBSession.query(LevelTwoEntity)\
-                    .filter(func.lower(LevelTwoEntity.entity_type).like('%markup%'))
-    for l2e in l2es:
-        if l2e.additional_metadata is not None:
-            try:
-                it = json.loads(l2e.additional_metadata)
-                if counter < 10:
-                    l2emeta.append(it)
-                    counter += 1
-            except:
-                print('fail')
-        else:
-            print('no meta')
-    response['l1'] = l1emeta
-    response['l2'] = l2emeta
-    return response
+        try:
+            return 20/15
+        except Exception as e:
+            return str(e)
+        finally:
+            print('Good news, everyone!')
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
