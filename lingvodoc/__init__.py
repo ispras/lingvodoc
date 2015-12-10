@@ -66,7 +66,7 @@ def configure_routes(config):
 
     # API #POST
     # Convert blob
-    config.add_route(name='convert', pattern='/convert')  # 100% ready
+    config.add_route(name='convert', pattern='/convert/blob')  # 100% ready
 
     # API #POST
     # Convert markup
