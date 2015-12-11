@@ -161,7 +161,7 @@
 
                                                 <button type="button" class="btn btn-default btn-sm"
                                                         ng-if="fieldValue.contains && fieldValue.contains.length > 0"
-                                                        ng-click="annotate(fieldValue, fieldValue.contains[0])" ng-disabled="true">
+                                                        ng-click="annotate(fieldValue, fieldValue.contains[0])">
                                                     <span class="glyphicon glyphicon-list">View markup</span>
                                                 </button>
 
@@ -444,7 +444,7 @@
 
 </script>
 
-
+<div metal:use-macro="load: annotation.pt"></div>
 
 <div metal:use-macro="load: response_handler.pt"></div>
 

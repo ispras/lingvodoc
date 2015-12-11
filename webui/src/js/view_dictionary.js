@@ -161,7 +161,7 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
             });
         };
 
-        $scope.annotate = function(soundEntity, markupEntity) {
+        $scope.annotate = function(sound, markup) {
 
             var modalInstance = $modal.open({
                 animation: true,
@@ -169,11 +169,11 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
                 controller: 'AnnotationController',
                 size: 'lg',
                 resolve: {
-                    soundUrl: function() {
-                        return soundEntity.content;
-                    },
-                    annotationUrl: function() {
-                        return markupEntity.content;
+                    'params': function() {
+                        return {
+                            'sound': sound,
+                            'markup': markup
+                        };
                     }
                 }
             });
@@ -256,7 +256,7 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
     }])
 
 
-    .controller('AnnotationController', ['$scope', '$http', 'soundUrl', 'annotationUrl', 'responseHandler', function($scope, $http, soundUrl, annotationUrl, responseHandler) {
+    .controller('AnnotationController', ['$scope', '$http', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, dictionaryService, responseHandler, params) {
 
         var activeUrl = null;
 
@@ -278,27 +278,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
                     });
                 });
             }
-        };
-
-        var loadAnnotation = function(url) {
-            // load annotation
-            $http.get(url).success(function(data, status, headers, config) {
-
-                try {
-                    var xml = (new DOMParser()).parseFromString(data, 'application/xml');
-                    var annotation = new elan.Document();
-                    annotation.importXML(xml);
-                    $scope.annotation = annotation;
-
-                    createRegions(annotation);
-
-                } catch (e) {
-                    responseHandler.error('Failed to parse ELAN annotation: ' + e);
-                }
-
-            }).error(function(data, status, headers, config) {
-                responseHandler.error(data);
-            });
         };
 
         $scope.paused = true;
@@ -360,12 +339,24 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
             $scope.wavesurfer.once('ready', function() {
                 // load annotation once file is loaded
-                loadAnnotation(annotationUrl);
+                dictionaryService.convertMarkup(params.markup).then(function(data) {
+                    try {
+                        var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
+                        var annotation = new elan.Document();
+                        annotation.importXML(xml);
+                        $scope.annotation = annotation;
+                        createRegions(annotation);
+                    } catch (e) {
+                        responseHandler.error('Failed to parse ELAN annotation: ' + e);
+                    }
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
                 $scope.$apply();
             });
 
             // load file once wavesurfer is ready
-            $scope.wavesurfer.load(soundUrl);
+            $scope.wavesurfer.load(params.sound.content);
         });
 
         $scope.$on('modal.closing', function(e) {

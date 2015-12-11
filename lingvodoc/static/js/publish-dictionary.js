@@ -30925,6 +30925,183 @@ WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
 
 "use strict";
 
+WaveSurfer.Regions = {
+    init: function(a) {
+        this.wavesurfer = a, this.wrapper = this.wavesurfer.drawer.wrapper, this.list = {};
+    },
+    add: function(a) {
+        var b = Object.create(WaveSurfer.Region);
+        return b.init(a, this.wavesurfer), this.list[b.id] = b, b.on("remove", function() {
+            delete this.list[b.id];
+        }.bind(this)), b;
+    },
+    clear: function() {
+        Object.keys(this.list).forEach(function(a) {
+            this.list[a].remove();
+        }, this);
+    },
+    enableDragSelection: function(a) {
+        var b, c, d, e = this;
+        this.wrapper.addEventListener("mousedown", function(a) {
+            b = !0, c = e.wavesurfer.drawer.handleEvent(a), d = null;
+        }), this.wrapper.addEventListener("mouseup", function(a) {
+            b = !1, d && (d.fireEvent("update-end", a), e.wavesurfer.fireEvent("region-update-end", d, a)), 
+            d = null;
+        }), this.wrapper.addEventListener("mousemove", function(f) {
+            if (b) {
+                d || (d = e.add(a || {}));
+                var g = e.wavesurfer.getDuration(), h = e.wavesurfer.drawer.handleEvent(f);
+                d.update({
+                    start: Math.min(h * g, c * g),
+                    end: Math.max(h * g, c * g)
+                });
+            }
+        });
+    }
+}, WaveSurfer.Region = {
+    style: WaveSurfer.Drawer.style,
+    init: function(a, b) {
+        this.wavesurfer = b, this.wrapper = b.drawer.wrapper, this.id = null == a.id ? WaveSurfer.util.getId() : a.id, 
+        this.start = Number(a.start) || 0, this.end = null == a.end ? this.start + 4 / this.wrapper.scrollWidth * this.wavesurfer.getDuration() : Number(a.end), 
+        this.resize = void 0 === a.resize ? !0 : Boolean(a.resize), this.drag = void 0 === a.drag ? !0 : Boolean(a.drag), 
+        this.loop = Boolean(a.loop), this.color = a.color || "rgba(0, 0, 0, 0.1)", this.data = a.data || {}, 
+        this.maxLength = a.maxLength, this.minLength = a.minLength, this.bindInOut(), this.render(), 
+        this.wavesurfer.fireEvent("region-created", this);
+    },
+    update: function(a) {
+        null != a.start && (this.start = Number(a.start)), null != a.end && (this.end = Number(a.end)), 
+        null != a.loop && (this.loop = Boolean(a.loop)), null != a.color && (this.color = a.color), 
+        null != a.data && (this.data = a.data), null != a.resize && (this.resize = Boolean(a.resize)), 
+        null != a.drag && (this.drag = Boolean(a.drag)), null != a.maxLength && (this.maxLength = Number(a.maxLength)), 
+        null != a.minLength && (this.minLength = Number(a.minLength)), this.updateRender(), 
+        this.fireEvent("update"), this.wavesurfer.fireEvent("region-updated", this);
+    },
+    remove: function(a) {
+        this.element && (this.wrapper.removeChild(this.element), this.element = null, this.fireEvent("remove"), 
+        this.wavesurfer.fireEvent("region-removed", this));
+    },
+    play: function() {
+        this.wavesurfer.play(this.start, this.end), this.fireEvent("play"), this.wavesurfer.fireEvent("region-play", this);
+    },
+    playLoop: function() {
+        this.play(), this.once("out", this.playLoop.bind(this));
+    },
+    render: function() {
+        var a = document.createElement("region");
+        a.className = "wavesurfer-region", a.title = this.formatTime(this.start, this.end), 
+        a.setAttribute("data-id", this.id);
+        this.wrapper.scrollWidth;
+        if (this.style(a, {
+            position: "absolute",
+            zIndex: 2,
+            height: "100%",
+            top: "0px"
+        }), this.resize) {
+            var b = a.appendChild(document.createElement("handle")), c = a.appendChild(document.createElement("handle"));
+            b.className = "wavesurfer-handle wavesurfer-handle-start", c.className = "wavesurfer-handle wavesurfer-handle-end";
+            var d = {
+                cursor: "col-resize",
+                position: "absolute",
+                left: "0px",
+                top: "0px",
+                width: "1%",
+                maxWidth: "4px",
+                height: "100%"
+            };
+            this.style(b, d), this.style(c, d), this.style(c, {
+                left: "100%"
+            });
+        }
+        this.element = this.wrapper.appendChild(a), this.updateRender(), this.bindEvents(a);
+    },
+    formatTime: function(a, b) {
+        return (a == b ? [ a ] : [ a, b ]).map(function(a) {
+            return [ Math.floor(a % 3600 / 60), ("00" + Math.floor(a % 60)).slice(-2) ].join(":");
+        }).join("–");
+    },
+    updateRender: function() {
+        var a = this.wavesurfer.getDuration(), b = this.wrapper.scrollWidth;
+        this.start < 0 && (this.start = 0, this.end = this.end - this.start), this.end > a && (this.end = a, 
+        this.start = a - (this.end - this.start)), null != this.minLength && (this.end = Math.max(this.start + this.minLength, this.end)), 
+        null != this.maxLength && (this.end = Math.min(this.start + this.maxLength, this.end)), 
+        this.style(this.element, {
+            left: ~~(this.start / a * b) + "px",
+            width: ~~((this.end - this.start) / a * b) + "px",
+            backgroundColor: this.color,
+            cursor: this.drag ? "move" : "default"
+        }), this.element.title = this.formatTime(this.start, this.end);
+    },
+    bindInOut: function() {
+        var a = this, b = function() {
+            a.firedIn = !1, a.firedOut = !1;
+        }, c = function(b) {
+            !a.firedIn && a.start <= b && a.end > b && (a.firedIn = !0, a.fireEvent("in"), a.wavesurfer.fireEvent("region-in", a)), 
+            !a.firedOut && a.firedIn && a.end <= Math.round(100 * b) / 100 && (a.firedOut = !0, 
+            a.fireEvent("out"), a.wavesurfer.fireEvent("region-out", a));
+        };
+        this.wavesurfer.on("play", b), this.wavesurfer.backend.on("audioprocess", c), this.on("remove", function() {
+            a.wavesurfer.un("play", b), a.wavesurfer.backend.un("audioprocess", c);
+        }), this.on("out", function() {
+            a.loop && a.wavesurfer.play(a.start);
+        });
+    },
+    bindEvents: function() {
+        var a = this;
+        this.element.addEventListener("mouseenter", function(b) {
+            a.fireEvent("mouseenter", b), a.wavesurfer.fireEvent("region-mouseenter", a, b);
+        }), this.element.addEventListener("mouseleave", function(b) {
+            a.fireEvent("mouseleave", b), a.wavesurfer.fireEvent("region-mouseleave", a, b);
+        }), this.element.addEventListener("click", function(b) {
+            b.preventDefault(), a.fireEvent("click", b), a.wavesurfer.fireEvent("region-click", a, b);
+        }), this.element.addEventListener("dblclick", function(b) {
+            b.stopPropagation(), b.preventDefault(), a.fireEvent("dblclick", b), a.wavesurfer.fireEvent("region-dblclick", a, b);
+        }), (this.drag || this.resize) && function() {
+            var b, c, d, e = a.wavesurfer.getDuration(), f = function(f) {
+                f.stopPropagation(), d = a.wavesurfer.drawer.handleEvent(f) * e, "handle" == f.target.tagName.toLowerCase() ? c = f.target.classList.contains("wavesurfer-handle-start") ? "start" : "end" : b = !0;
+            }, g = function(d) {
+                (b || c) && (b = !1, c = !1, d.stopPropagation(), d.preventDefault(), a.fireEvent("update-end", d), 
+                a.wavesurfer.fireEvent("region-update-end", a, d));
+            }, h = function(f) {
+                if (b || c) {
+                    var g = a.wavesurfer.drawer.handleEvent(f) * e, h = g - d;
+                    d = g, a.drag && b && a.onDrag(h), a.resize && c && a.onResize(h, c);
+                }
+            };
+            a.element.addEventListener("mousedown", f), a.wrapper.addEventListener("mousemove", h), 
+            document.body.addEventListener("mouseup", g), a.on("remove", function() {
+                document.body.removeEventListener("mouseup", g), a.wrapper.removeEventListener("mousemove", h);
+            }), a.wavesurfer.on("destroy", function() {
+                document.body.removeEventListener("mouseup", g);
+            });
+        }();
+    },
+    onDrag: function(a) {
+        this.update({
+            start: this.start + a,
+            end: this.end + a
+        });
+    },
+    onResize: function(a, b) {
+        "start" == b ? this.update({
+            start: Math.min(this.start + a, this.end),
+            end: Math.max(this.start + a, this.end)
+        }) : this.update({
+            start: Math.min(this.end + a, this.start),
+            end: Math.max(this.end + a, this.start)
+        });
+    }
+}, WaveSurfer.util.extend(WaveSurfer.Region, WaveSurfer.Observer), WaveSurfer.initRegions = function() {
+    this.regions || (this.regions = Object.create(WaveSurfer.Regions), this.regions.init(this));
+}, WaveSurfer.addRegion = function(a) {
+    return this.initRegions(), this.regions.add(a);
+}, WaveSurfer.clearRegions = function() {
+    this.regions && this.regions.clear();
+}, WaveSurfer.enableDragSelection = function(a) {
+    this.initRegions(), this.regions.enableDragSelection(a);
+};
+
+"use strict";
+
 WaveSurfer.Spectrogram = {
     init: function(a) {
         this.params = a;
@@ -31197,8 +31374,10 @@ var elan = function() {
             var header = xml.querySelector("HEADER");
             var inMilliseconds = header.getAttribute("TIME_UNITS") == "milliseconds";
             var media = header.querySelector("MEDIA_DESCRIPTOR");
-            this.mediaUrl = media.getAttribute("MEDIA_URL");
-            this.mediaType = media.getAttribute("MIME_TYPE");
+            if (media) {
+                this.mediaUrl = media.getAttribute("MEDIA_URL");
+                this.mediaType = media.getAttribute("MIME_TYPE");
+            }
             var properties = xml.querySelectorAll("PROPERTY");
             _forEach.call(properties, function(prop) {
                 var name = prop.getAttribute("NAME");
@@ -31392,9 +31571,6 @@ lingvodoc.Object = function(clientId, objectId) {
     this.type = "abstract";
     this.getId = function() {
         return this.client_id + "_" + this.object_id;
-    };
-    this.export = function() {
-        return {};
     };
 };
 
@@ -32515,6 +32691,19 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var convertMarkup = function(object) {
+        var deferred = $q.defer();
+        var obj = {
+            client_id: object.client_id,
+            object_id: object.object_id
+        };
+        $http.post("/convert/markup", obj).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert markup!");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -32572,7 +32761,8 @@ function lingvodocAPI($http, $q) {
         getPerspectiveMeta: getPerspectiveMeta,
         setPerspectiveMeta: setPerspectiveMeta,
         removePerspectiveMeta: removePerspectiveMeta,
-        advancedSearch: advancedSearch
+        advancedSearch: advancedSearch,
+        convertMarkup: convertMarkup
     };
 }
 
@@ -32798,18 +32988,18 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
             }
         });
     };
-    $scope.annotate = function(soundEntity, markupEntity) {
+    $scope.annotate = function(sound, markup) {
         var modalInstance = $modal.open({
             animation: true,
             templateUrl: "annotationModal.html",
             controller: "AnnotationController",
             size: "lg",
             resolve: {
-                soundUrl: function() {
-                    return soundEntity.content;
-                },
-                annotationUrl: function() {
-                    return markupEntity.content;
+                params: function() {
+                    return {
+                        sound: sound,
+                        markup: markup
+                    };
                 }
             }
         });
@@ -32873,7 +33063,7 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
     }, function(reason) {
         responseHandler.error(reason);
     });
-} ]).controller("AnnotationController", [ "$scope", "$http", "soundUrl", "responseHandler", "annotationUrl", function($scope, $http, soundUrl, responseHandler, annotationUrl) {
+} ]).controller("AnnotationController", [ "$scope", "$http", "dictionaryService", "responseHandler", "params", function($scope, $http, dictionaryService, responseHandler, params) {
     var activeUrl = null;
     var createRegions = function(annotaion) {
         if (annotaion instanceof elan.Document) {
@@ -32890,19 +33080,6 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
                 });
             });
         }
-    };
-    var loadAnnotation = function(url) {
-        $http.get(url).success(function(data, status, headers, config) {
-            try {
-                var xml = new DOMParser().parseFromString(data, "application/xml");
-                var annotation = new elan.Document();
-                annotation.importXML(xml);
-                $scope.annotation = annotation;
-                createRegions(annotation);
-            } catch (e) {
-                alert("Failed to parse ELAN annotation: " + e);
-            }
-        }).error(function(data, status, headers, config) {});
     };
     $scope.paused = true;
     $scope.annotation = null;
@@ -32942,10 +33119,23 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
             region.remove(region);
         });
         $scope.wavesurfer.once("ready", function() {
-            loadAnnotation(annotationUrl);
+            dictionaryService.convertMarkup(params.markup).then(function(data) {
+                try {
+                    console.log(data.content);
+                    var xml = new DOMParser().parseFromString(data.content, "application/xml");
+                    var annotation = new elan.Document();
+                    annotation.importXML(xml);
+                    $scope.annotation = annotation;
+                    createRegions(annotation);
+                } catch (e) {
+                    responseHandler.error("Failed to parse ELAN annotation: " + e);
+                }
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
             $scope.$apply();
         });
-        $scope.wavesurfer.load(soundUrl);
+        $scope.wavesurfer.load(params.sound.content);
     });
     $scope.$on("modal.closing", function(e) {
         $scope.wavesurfer.stop();

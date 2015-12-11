@@ -289,6 +289,24 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
             });
         };
 
+        $scope.annotate = function(sound, markup) {
+
+            var modalInstance = $modal.open({
+                animation: true,
+                templateUrl: 'annotationModal.html',
+                controller: 'AnnotationController',
+                size: 'lg',
+                resolve: {
+                    'params': function() {
+                        return {
+                            'sound': sound,
+                            'markup': markup
+                        };
+                    }
+                }
+            });
+        };
+
         $scope.doSearch = function() {
 
 
@@ -371,73 +389,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
 
 
         };
-
-
-        //$scope.$watch('query', function(q) {
-        //    if (!q || q.length < 3) {
-        //        return;
-        //    }
-        //
-        //    $scope.searchComplete = false;
-        //    dictionaryService.advancedSearch(q, 'Translation', $scope.activePerspectives, $scope.searchMode).then(function(entries) {
-        //
-        //        $scope.searchComplete = true;
-        //        if (!_.isEmpty(entries)) {
-        //
-        //            var p = _.find(_.first(entries)['origin'], function(o) {
-        //                return o.type == 'perspective';
-        //            });
-        //
-        //            // group entries by dictionary and perspective
-        //            var groups = [];
-        //            var ge = _.groupBy(entries, function(e) {
-        //
-        //                var entryDictionary = _.find(e['origin'], function(o) {
-        //                    return o.type == 'dictionary';
-        //                });
-        //
-        //                var entryPerspective = _.find(e['origin'], function(o) {
-        //                    return o.type == 'perspective';
-        //                });
-        //
-        //                var i = _.findIndex(groups, function(g) {
-        //                    return g.perspective.equals(entryPerspective) && g.dictionary.equals(entryDictionary);
-        //                });
-        //
-        //                if (i < 0) {
-        //                    groups.push({
-        //                        'dictionary': entryDictionary,
-        //                        'perspective': entryPerspective,
-        //                        'origin': e['origin']
-        //                    });
-        //                    return (_.size(groups) - 1);
-        //                }
-        //                return i;
-        //            });
-        //
-        //            dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
-        //                $scope.fields = fields;
-        //                $scope.entries = entries;
-        //
-        //                _.each(groups, function(g, i) {
-        //                    g['matrix'] = mapFieldValues(ge[i], fields);
-        //                });
-        //
-        //                $scope.groups = groups;
-        //
-        //            }, function(reason) {
-        //                responseHandler.error(reason);
-        //            });
-        //
-        //        } else {
-        //            $scope.fields = [];
-        //            $scope.groups = [];
-        //        }
-        //
-        //    }, function(reason) {
-        //        responseHandler.error(reason);
-        //    });
-        //}, false);
 
         dictionaryService.getAllPerspectives().then(function(perspectives) {
             $scope.perspectives = _.clone(perspectives);
@@ -655,6 +606,115 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
 
     }])
 
+    .controller('AnnotationController', ['$scope', '$http', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, dictionaryService, responseHandler, params) {
+
+        var activeUrl = null;
+
+        var createRegions = function(annotaion) {
+            if (annotaion instanceof elan.Document) {
+                annotaion.tiers.forEach(function(tier) {
+
+                    tier.annotations.forEach(function(a) {
+
+                        var offset1 = annotaion.timeSlotRefToSeconds(a.timeslotRef1);
+                        var offset2 = annotaion.timeSlotRefToSeconds(a.timeslotRef2);
+
+                        var r = $scope.wavesurfer.addRegion({
+                            id: a.id,
+                            start: offset1,
+                            end: offset2,
+                            color: 'rgba(0, 255, 0, 0.1)'
+                        });
+                    });
+                });
+            }
+        };
+
+        $scope.paused = true;
+        $scope.annotation = null;
+
+        $scope.playPause = function() {
+            if ($scope.wavesurfer) {
+                $scope.wavesurfer.playPause();
+            }
+        };
+
+        $scope.playAnnotation = function(a) {
+            if ($scope.wavesurfer && $scope.annotation) {
+                var offset1 = $scope.annotation.timeSlotRefToSeconds(a.timeslotRef1);
+                var offset2 = $scope.annotation.timeSlotRefToSeconds(a.timeslotRef2);
+                $scope.wavesurfer.play(offset1, offset2);
+            }
+        };
+
+        $scope.selectRegion = function() {
+
+        };
+
+        // signal handlers
+        $scope.$on('wavesurferInit', function(e, wavesurfer) {
+
+            $scope.wavesurfer = wavesurfer;
+
+
+            if ($scope.wavesurfer.enableDragSelection) {
+                $scope.wavesurfer.enableDragSelection({
+                    color: 'rgba(0, 255, 0, 0.1)'
+                });
+            }
+
+            $scope.wavesurfer.on('play', function() {
+                $scope.paused = false;
+            });
+
+            $scope.wavesurfer.on('pause', function() {
+                $scope.paused = true;
+            });
+
+            $scope.wavesurfer.on('finish', function() {
+                $scope.paused = true;
+                $scope.wavesurfer.seekTo(0);
+                $scope.$apply();
+            });
+
+            // regions events
+            $scope.wavesurfer.on('region-click', function(region, event) {
+
+            });
+
+            $scope.wavesurfer.on('region-dblclick', function(region, event) {
+                region.remove(region);
+            });
+
+
+            $scope.wavesurfer.once('ready', function() {
+                // load annotation once file is loaded
+                dictionaryService.convertMarkup(params.markup).then(function(data) {
+                    try {
+                        var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
+                        var annotation = new elan.Document();
+                        annotation.importXML(xml);
+                        $scope.annotation = annotation;
+                        createRegions(annotation);
+                    } catch (e) {
+                        responseHandler.error('Failed to parse ELAN annotation: ' + e);
+                    }
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+                $scope.$apply();
+            });
+
+            // load file once wavesurfer is ready
+            $scope.wavesurfer.load(params.sound.content);
+        });
+
+        $scope.$on('modal.closing', function(e) {
+            $scope.wavesurfer.stop();
+            $scope.wavesurfer.destroy();
+        });
+
+    }])
 
     .controller('BlobController', ['$scope', '$http', '$log', '$modal', '$modalInstance', 'NgMap', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $log, $modal, $modalInstance, NgMap, dictionaryService, responseHandler, params) {
         $scope.blob = params.blob;
