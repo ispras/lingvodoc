@@ -31967,9 +31967,6 @@ lingvodoc.Object = function(clientId, objectId) {
     this.getId = function() {
         return this.client_id + "_" + this.object_id;
     };
-    this.export = function() {
-        return {};
-    };
 };
 
 lingvodoc.Object.prototype.equals = function(obj) {
@@ -33089,6 +33086,19 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var convertMarkup = function(object) {
+        var deferred = $q.defer();
+        var obj = {
+            client_id: object.client_id,
+            object_id: object.object_id
+        };
+        $http.post("/convert/markup", obj).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert markup!");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -33146,7 +33156,8 @@ function lingvodocAPI($http, $q) {
         getPerspectiveMeta: getPerspectiveMeta,
         setPerspectiveMeta: setPerspectiveMeta,
         removePerspectiveMeta: removePerspectiveMeta,
-        advancedSearch: advancedSearch
+        advancedSearch: advancedSearch,
+        convertMarkup: convertMarkup
     };
 }
 

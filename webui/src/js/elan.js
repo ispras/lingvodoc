@@ -128,8 +128,10 @@ var elan = (function() {
             var header = xml.querySelector('HEADER');
             var inMilliseconds = header.getAttribute('TIME_UNITS') == 'milliseconds';
             var media = header.querySelector('MEDIA_DESCRIPTOR');
-            this.mediaUrl = media.getAttribute('MEDIA_URL');
-            this.mediaType = media.getAttribute('MIME_TYPE');
+            if (media) {
+                this.mediaUrl = media.getAttribute('MEDIA_URL');
+                this.mediaType = media.getAttribute('MIME_TYPE');
+            }
 
             var properties = xml.querySelectorAll('PROPERTY');
             _forEach.call(properties, function(prop) {
