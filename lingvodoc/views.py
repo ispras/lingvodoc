@@ -2583,6 +2583,9 @@ def dictionaries_list(request):
         cli = [o.id for o in clients]
         response['clients'] = cli
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
+
+
+
     if author:
         user = DBSession.query(User).filter_by(id=author).first()
         dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
@@ -2592,7 +2595,7 @@ def dictionaries_list(request):
                 if group.subject_override:
                     isadmin = True
                     break
-                dcttmp = {'client_id': group.subject_client_id, 'object_id': group.subject_object_id}
+                dcttmp = (group.subject_client_id, group.subject_object_id)
                 if dcttmp not in dictstemp:
                     dictstemp += [dcttmp]
             if group.parent.perspective_default:
@@ -2605,20 +2608,25 @@ def dictionaries_list(request):
                                object_id=group.subject_object_id)\
                     .first()
                 if dicti:
-                    dcttmp = {'client_id': dicti.client_id, 'object_id': dicti.object_id}
+                    dcttmp = (dicti.client_id, dicti.object_id)
                     if dcttmp not in dictstemp:
                         dictstemp += [dcttmp]
-        if not isadmin:
-            if dictstemp:
-                prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-                for dicti in dictstemp:
-                    prevdicts = prevdicts.subquery().select()
-                    prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
 
-                dicts = prevdicts
+        if not isadmin:
+            # dictstemp = [o for o in dictstemp]
+            if dictstemp:
+                # print(len(dictstemp))
+                #
+                # prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+                # for dicti in dictstemp:
+                #     prevdicts = prevdicts.subquery().select()
+                #     prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
+                #
+                # dicts = prevdicts
+                dicts = dicts.filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictstemp))
+
             else:
                 dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-
     if languages:
         langs = []
         for lan in languages:
@@ -2675,8 +2683,19 @@ def dictionaries_list(request):
         else:
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
     # TODO: fix
-    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
-
+    dictionaries = list()
+    # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
+    for dct in dicts:
+        path = request.route_url('dictionary',
+                                 client_id=dct.client_id,
+                                 object_id=dct.object_id)
+        subreq = Request.blank(path)
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            dictionaries += [resp.json]
+    # return {'count': dicts.count()}
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
