@@ -506,147 +506,253 @@ def convert_xml(request):
     req = request.json_body
 
     xml_path = req['xml_path']
-    # translation_string = req['dictionary_translation_string']
-    # perspective_translation_string = req['perspective_translation_string']
-    # parent_client_id = req['parent_client_id']
-    # parent_object_id = req['parent_object_id']
+    translation_string = req['dictionary_translation_string']
+    perspective_translation_string = req['perspective_translation_string']
+    parent_client_id = req['parent_client_id']
+    parent_object_id = req['parent_object_id']
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     user = client.user
-    # create dict / ready
-    # create perspective / ready
 
-    # path = request.route_url('create_dictionary')
-    # subreq = Request.blank(path)
-    # subreq.method = 'POST'
-    # subreq.json = json.dumps({'translation_string': translation_string,
-    #                'parent_client_id': parent_client_id,
-    #                'parent_object_id': parent_object_id})
-    # headers = {'Cookie':request.headers['Cookie']}
-    # subreq.headers = headers
-    # resp = request.invoke_subrequest(subreq)
-    #
-    # dict_client_id = resp.json['client_id']
-    # dict_object_id = resp.json['object_id']
-    # path = request.route_url('create_perspective',
-    #                          dictionary_client_id=dict_client_id,
-    #                          dictionary_object_id=dict_object_id)
-    # subreq = Request.blank(path)
-    # subreq.method = 'POST'
-    # subreq.json = json.dumps({'translation_string': perspective_translation_string})
-    # headers = {'Cookie':request.headers['Cookie']}
-    # subreq.headers = headers
-    # resp = request.invoke_subrequest(subreq)
-    #
-    # persp_client_id = resp.json['client_id']
-    # persp_object_id = resp.json['object_id']
+    path = request.route_url('create_dictionary')
+    subreq = Request.blank(path)
+    subreq.method = 'POST'
+    subreq.json = json.dumps({'translation_string': translation_string,
+                   'parent_client_id': parent_client_id,
+                   'parent_object_id': parent_object_id})
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+
+    dict_client_id = resp.json['client_id']
+    dict_object_id = resp.json['object_id']
+    path = request.route_url('create_perspective',
+                             dictionary_client_id=dict_client_id,
+                             dictionary_object_id=dict_object_id)
+    subreq = Request.blank(path)
+    subreq.method = 'POST'
+    subreq.json = json.dumps({'translation_string': perspective_translation_string})
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+
+    persp_client_id = resp.json['client_id']
+    persp_object_id = resp.json['object_id']
 
     corpora = []
     fields = []
     position = 0
     tree = ElementTree.parse(xml_path)
     root = tree.getroot()
+    row_id = 0
+    all_entities = list()
     for phrase in root.iter('phrase'):
         phrase_info = dict()
         items = []
-
-        # fields.append()
-
-        # remember to add column in fields for paradigm containing phrase info
+        phrase_entities = list()
         for item in phrase.findall('item'):
             it = dict()
             lang = item.get('lang')
-            if lang:
-                it['lang'] = lang
-                if lang == 'ru':
-                    elem = {'entity_type': 'paradigm phrase translation', 'data_type': 'text', 'status': 'enabled', 'group': 'paradigm', 'position': 4}
+            text = item.text
+            if text:
+                if lang:
+                    it['lang'] = lang
+                    it['text'] = text
+                    if lang == 'ru':
+                        elem = {'entity_type': 'Paradigm Phrase Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 4}
 
-                    if elem not in fields:
-                        fields.append(elem)
-                if lang == 'kjh':
-                    elem = {'entity_type': 'paradigm phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'paradigm', 'position': 3}
+                        if elem not in fields:
+                            fields.append(elem)
+                        # {"level": "leveloneentity", "marked_for_deletion": false, "content": "jenpa\u0161", "additional_metadata": null, "entity_type": "Transcription", "locale_id": 1}
+                        additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
+                        l1e = {"level": "leveloneentity", "content": it['text'],
+                               "additional_metadata": additional_metadata,
+                               "entity_type": 'Paradigm Phrase Translation', "locale_id": 1}
+                        phrase_entities.append(l1e)
+                    if lang == 'kjh':
+                        elem = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
 
-                    if elem not in fields:
-                        fields.append(elem)
+                        if elem not in fields:
+                            fields.append(elem)
+                        additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
+                        l1e = {"level": "leveloneentity", "content": it['text'],
+                               "additional_metadata": additional_metadata, "entity_type": 'Paradigm Phrase',
+                               "locale_id": 1}
+                        phrase_entities.append(l1e)
 
             type = item.get('type')
             if type:
                 it['type'] = type
-            text = item.text
-            if text:
-                # remember to add text column in paradigm containing phrase info
-                # (or look for languages and create two columns: phrase and translation)
-                it['text'] = text
             if it != dict() and it not in items:
                 items.append(it)
-        phrase_info['objects'] = items
+        row_id += 1
+        phrase_info['phrase'] = items
         words = phrase.iter('word')
+        words_for_phrase = list()
         for word in words:
             morphs = word.iter('morph')
             word_info = dict()
-            # Create lexical entry
-            word_info['paradigm'] = phrase_info
+
+            path = request.route_url('create_lexical_entry',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.json = json.dumps({})
+            headers = {'Cookie':request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            lex_client_id, lex_object_id = resp.json['client_id'], resp.json['object_id']
+            word_info['client_id'], word_info['object_id'] = lex_client_id, lex_object_id
+            for entry in phrase_entities:
+                entry['parent_client_id'] = lex_client_id
+                entry['parent_object_id'] = lex_object_id
+                all_entities.append(entry)
+
             for item in word.findall('item'):
                 lang = item.get('lang')
-                if lang:
-                    word_info['lang'] = lang
-                    if lang == 'ru':
-                        elem = {'entity_type': 'translation', 'data_type': 'text', 'status': 'enabled', 'position': 2}
-
-                        if elem not in fields:
-                            fields.append(elem)
-                    if lang == 'kjh':
-                        elem = {'entity_type': 'word', 'data_type': 'text', 'status': 'enabled', 'position': 1}
-
-                        if elem not in fields:
-                            fields.append(elem)
-                    # if original language - create column text, otherwise - translation
                 if item.text:
                     word_info['text'] = item.text
-                    # if original language - fill column text, otherwise - translation
-                    # (probably exactly that with phrase info)
-            # add phrase_info in paradigm (one row_id, increase after adding all info)
+                    if lang:
+                        word_info['lang'] = lang
+                        if lang == 'ru':
+                            elem = {'entity_type': 'Translation', 'data_type': 'text', 'status': 'enabled', 'position': 2}
+
+                            if elem not in fields:
+                                fields.append(elem)
+                            additional_metadata = None  # json.dumps({'row_id': row_id, 'client_id': client.id})
+                            l1e = {"level": "leveloneentity", "content": word_info['text'],
+                                   "additional_metadata": additional_metadata, "entity_type": 'Translation',
+                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
+                            all_entities.append(l1e)
+                        if lang == 'kjh':
+                            elem = {'entity_type': 'Word', 'data_type': 'text', 'status': 'enabled', 'position': 1}
+
+                            if elem not in fields:
+                                fields.append(elem)
+                            additional_metadata = None  # json.dumps({'row_id': row_id, 'client_id': client.id})
+                            l1e = {"level": "leveloneentity", "content": word_info['text'],
+                                   "additional_metadata": additional_metadata, "entity_type": 'Word',
+                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
+                            all_entities.append(l1e)
             morphems = list()
             for morph in morphs:
                 mrph = list()
-                # Create column for morphems like paradigm
                 for item in morph.findall('item'):
                     morphy = dict()
                     lang = item.get('lang')
-                    if lang:
-                        morphy['lang'] = lang  # create column for original morphem if original language,
-                        #  translation otherwise
-                        if lang == 'ru':
-                            elem = {'entity_type': 'morphem translation', 'data_type': 'text', 'status': 'enabled', 'group': 'morphem', 'position': 6}
-
-                            if elem not in fields:
-                                fields.append(elem)
-                        if lang == 'kjh':
-                            elem = {'entity_type': 'morphem word', 'data_type': 'text', 'status': 'enabled', 'group': 'morphem', 'position': 5}
-
-                            if elem not in fields:
-                                fields.append(elem)
                     if item.text:
-                        morphy['text'] = item.text # fill column for original morphem if original language,
-                        #  translation otherwise
-                    mrph.append(morphy)
-                    # add all morphems in here to one paradigm (one row_id client_id)
-                # morphems here will be in different paradigms (increase row_id)
+                        morphy['text'] = item.text
+                        if lang:
+                            morphy['lang'] = lang
+                            if lang == 'ru':
+                                elem = {'entity_type': 'Morphem Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'morphem', 'position': 6}
+
+                                if elem not in fields:
+                                    fields.append(elem)
+                            additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
+                            l1e = {"level": "leveloneentity", "content": word_info['text'],
+                                   "additional_metadata": additional_metadata, "entity_type": 'Morphem Translation',
+                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
+                            all_entities.append(l1e)
+                            if lang == 'kjh':
+                                elem = {'entity_type': 'Morphem', 'data_type': 'text', 'status': 'enabled', 'group': 'morphem', 'position': 5}
+
+                                if elem not in fields:
+                                    fields.append(elem)
+                            additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
+                            l1e = {"level": "leveloneentity", "content": word_info['text'],
+                                   "additional_metadata": additional_metadata, "entity_type": 'Morphem',
+                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
+                            all_entities.append(l1e)
+                        mrph.append(morphy)
                 if mrph != dict() and mrph not in morphems:
                     morphems.append(mrph)
+                row_id += 1
             if morphems:
                 word_info['morphems'] = morphems
-            corpora.append(word_info)
+            words_for_phrase.append(word_info)
+        phrase_info['words'] = words_for_phrase
         if not any(True for __ in words):
-            # Create lexical entry
-            word_info = dict()
-            word_info['paradigm'] = phrase_info
-            corpora.append(word_info)
+
+            path = request.route_url('create_lexical_entry',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.json = json.dumps({})
+            headers = {'Cookie':request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            lex_client_id, lex_object_id = resp.json['client_id'], resp.json['object_id']
+
+            for entry in phrase_entities:
+                entry['parent_client_id'] = lex_client_id
+                entry['parent_object_id'] = lex_object_id
+                all_entities.append(entry)
+        corpora.append(phrase_info)
+        print('phrase_ready')
+    print('all_phrases_ready')
+    path = request.route_url('create_entities_bulk',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+    subreq = Request.blank(path)
+    subreq.method = 'POST'
+    subreq.json = json.dumps(all_entities)
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+    print('create_entities_bulk_ready')
+
+    path = request.route_url('perspective_fields',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+    subreq = Request.blank(path)
+    subreq.method = 'POST'
+    subreq.json = json.dumps(all_entities)
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+    print('perspective_fields_ready')
+
+    path = request.route_url('approve_all',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+    subreq = Request.blank(path)
+    subreq.method = 'PATCH'
+    subreq.json = json.dumps(all_entities)
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+    print('approve_all_ready')
+
+    path = request.route_url('perspective_meta',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+    subreq = Request.blank(path)
+    subreq.method = 'PUT'
+    subreq.json = json.dumps({"corpora":{"type":"corpora", "content":corpora}})
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+    print('perspective_meta_ready')
 
 
     # add corpora to metadata of persp
     # approve all
     request.response.status = HTTPOk.code
-    return {"fields": fields}
+    return {"corpora": corpora}
 
 
 @view_config(route_name='language', renderer='json', request_method='GET')
