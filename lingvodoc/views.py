@@ -3123,7 +3123,10 @@ def create_entities_bulk(request):
     try:
         variables = {'auth': authenticated_userid(request)}
         response = dict()
-        req = request.json_body
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
 
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -3133,6 +3136,7 @@ def create_entities_bulk(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         inserted_items = []
+
         for item in req:
             if item['level'] == 'leveloneentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
