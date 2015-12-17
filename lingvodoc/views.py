@@ -503,6 +503,7 @@ def convert_dictionary(request):
 @view_config(route_name='convert_xml', renderer='json', request_method='POST')
 def convert_xml(request):
     from xml.etree import ElementTree
+    import copy
     req = request.json_body
 
     xml_path = req['xml_path']
@@ -564,7 +565,7 @@ def convert_xml(request):
                             fields.append(elem)
                         # {"level": "leveloneentity", "marked_for_deletion": false, "content": "jenpa\u0161", "additional_metadata": null, "entity_type": "Transcription", "locale_id": 1}
                         additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                        l1e = {"level": "leveloneentity", "content": it['text'],
+                        l1e = {"level": "leveloneentity", "content": item.text,
                                "additional_metadata": additional_metadata,
                                "entity_type": 'Paradigm Phrase Translation', "locale_id": 1}
                         phrase_entities.append(l1e)
@@ -574,7 +575,7 @@ def convert_xml(request):
                         if elem not in fields:
                             fields.append(elem)
                         additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                        l1e = {"level": "leveloneentity", "content": it['text'],
+                        l1e = {"level": "leveloneentity", "content": item.text,
                                "additional_metadata": additional_metadata, "entity_type": 'Paradigm Phrase',
                                "locale_id": 1}
                         phrase_entities.append(l1e)
@@ -587,8 +588,28 @@ def convert_xml(request):
         row_id += 1
         phrase_info['phrase'] = items
         words = phrase.iter('word')
+        if not any(True for __ in words):
+
+            path = request.route_url('create_lexical_entry',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.json = json.dumps({})
+            headers = {'Cookie':request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            lex_client_id, lex_object_id = resp.json['client_id'], resp.json['object_id']
+            phrasecopy = copy.deepcopy(phrase_entities)
+            for entry in phrasecopy:
+                entry['parent_client_id'] = lex_client_id
+                entry['parent_object_id'] = lex_object_id
+                all_entities.append(entry)
         words_for_phrase = list()
         for word in words:
+
             morphs = word.iter('morph')
             word_info = dict()
 
@@ -605,11 +626,11 @@ def convert_xml(request):
             resp = request.invoke_subrequest(subreq)
             lex_client_id, lex_object_id = resp.json['client_id'], resp.json['object_id']
             word_info['client_id'], word_info['object_id'] = lex_client_id, lex_object_id
-            for entry in phrase_entities:
+            phrasecopy = copy.deepcopy(phrase_entities)
+            for entry in phrasecopy:
                 entry['parent_client_id'] = lex_client_id
                 entry['parent_object_id'] = lex_object_id
                 all_entities.append(entry)
-
             for item in word.findall('item'):
                 lang = item.get('lang')
                 if item.text:
@@ -622,7 +643,7 @@ def convert_xml(request):
                             if elem not in fields:
                                 fields.append(elem)
                             additional_metadata = None  # json.dumps({'row_id': row_id, 'client_id': client.id})
-                            l1e = {"level": "leveloneentity", "content": word_info['text'],
+                            l1e = {"level": "leveloneentity", "content": item.text,
                                    "additional_metadata": additional_metadata, "entity_type": 'Translation',
                                    "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
                             all_entities.append(l1e)
@@ -632,7 +653,7 @@ def convert_xml(request):
                             if elem not in fields:
                                 fields.append(elem)
                             additional_metadata = None  # json.dumps({'row_id': row_id, 'client_id': client.id})
-                            l1e = {"level": "leveloneentity", "content": word_info['text'],
+                            l1e = {"level": "leveloneentity", "content": item.text,
                                    "additional_metadata": additional_metadata, "entity_type": 'Word',
                                    "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
                             all_entities.append(l1e)
@@ -642,6 +663,7 @@ def convert_xml(request):
                 for item in morph.findall('item'):
                     morphy = dict()
                     lang = item.get('lang')
+
                     if item.text:
                         morphy['text'] = item.text
                         if lang:
@@ -651,21 +673,21 @@ def convert_xml(request):
 
                                 if elem not in fields:
                                     fields.append(elem)
-                            additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                            l1e = {"level": "leveloneentity", "content": word_info['text'],
-                                   "additional_metadata": additional_metadata, "entity_type": 'Morphem Translation',
-                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
-                            all_entities.append(l1e)
+                                additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
+                                l1e = {"level": "leveloneentity", "content": item.text,
+                                       "additional_metadata": additional_metadata, "entity_type": 'Morphem Translation',
+                                       "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
+                                all_entities.append(l1e)
                             if lang == 'kjh':
                                 elem = {'entity_type': 'Morphem', 'data_type': 'text', 'status': 'enabled', 'group': 'morphem', 'position': 5}
 
                                 if elem not in fields:
                                     fields.append(elem)
-                            additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                            l1e = {"level": "leveloneentity", "content": word_info['text'],
-                                   "additional_metadata": additional_metadata, "entity_type": 'Morphem',
-                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
-                            all_entities.append(l1e)
+                                additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
+                                l1e = {"level": "leveloneentity", "content": item.text,
+                                       "additional_metadata": additional_metadata, "entity_type": 'Morphem',
+                                       "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
+                                all_entities.append(l1e)
                         mrph.append(morphy)
                 if mrph != dict() and mrph not in morphems:
                     morphems.append(mrph)
@@ -674,28 +696,37 @@ def convert_xml(request):
                 word_info['morphems'] = morphems
             words_for_phrase.append(word_info)
         phrase_info['words'] = words_for_phrase
-        if not any(True for __ in words):
-
-            path = request.route_url('create_lexical_entry',
+        corpora.append(phrase_info)
+        # print('phrase_ready')
+    print('all_phrases_ready')
+    new_list = [(o['parent_client_id'], o['parent_object_id']) for o in all_entities if 'Paradigm' in o['entity_type']]
+    path = request.route_url('perspective_fields',
                            dictionary_client_id = dict_client_id,
                            dictionary_object_id = dict_object_id,
                            perspective_client_id = persp_client_id,
                            perspective_id = persp_object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.json = json.dumps({})
-            headers = {'Cookie':request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            lex_client_id, lex_object_id = resp.json['client_id'], resp.json['object_id']
+    subreq = Request.blank(path)
+    subreq.method = 'POST'
+    subreq.json = json.dumps({'fields': fields})
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
 
-            for entry in phrase_entities:
-                entry['parent_client_id'] = lex_client_id
-                entry['parent_object_id'] = lex_object_id
-                all_entities.append(entry)
-        corpora.append(phrase_info)
-        print('phrase_ready')
-    print('all_phrases_ready')
+    print('perspective_fields_ready')
+
+    path = request.route_url('perspective_meta',
+                           dictionary_client_id = dict_client_id,
+                           dictionary_object_id = dict_object_id,
+                           perspective_client_id = persp_client_id,
+                           perspective_id = persp_object_id)
+    subreq = Request.blank(path)
+    subreq.method = 'PUT'
+    subreq.json = json.dumps({"corpora":{"type":"corpora", "content":corpora}})
+    headers = {'Cookie':request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+    print('perspective_meta_ready', resp.json)
+
     path = request.route_url('create_entities_bulk',
                            dictionary_client_id = dict_client_id,
                            dictionary_object_id = dict_object_id,
@@ -709,19 +740,6 @@ def convert_xml(request):
     resp = request.invoke_subrequest(subreq)
     print('create_entities_bulk_ready')
 
-    path = request.route_url('perspective_fields',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-    subreq = Request.blank(path)
-    subreq.method = 'POST'
-    subreq.json = json.dumps(all_entities)
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-    print('perspective_fields_ready')
-
     path = request.route_url('approve_all',
                            dictionary_client_id = dict_client_id,
                            dictionary_object_id = dict_object_id,
@@ -734,19 +752,6 @@ def convert_xml(request):
     subreq.headers = headers
     resp = request.invoke_subrequest(subreq)
     print('approve_all_ready')
-
-    path = request.route_url('perspective_meta',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-    subreq = Request.blank(path)
-    subreq.method = 'PUT'
-    subreq.json = json.dumps({"corpora":{"type":"corpora", "content":corpora}})
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-    print('perspective_meta_ready')
 
 
     # add corpora to metadata of persp
@@ -1528,7 +1533,10 @@ def edit_perspective_meta(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            req = request.json_body
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
             if perspective.additional_metadata:
                 old_meta = json.loads(perspective.additional_metadata)
                 new_meta = req
@@ -1563,7 +1571,11 @@ def delete_perspective_meta(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            req = request.json_body
+
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
 
             old_meta = json.loads(perspective.additional_metadata)
             new_meta = req
@@ -2843,7 +2855,6 @@ def create_perspective_fields(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-
         perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id,
                                                                        object_id=parent_object_id).first()
         if not perspective:
@@ -2867,7 +2878,8 @@ def create_perspective_fields(request):
             field.set_entity_type(request, translation, entry['entity_type'])
             if 'group' in entry:
                 field.set_group(request, entry.get('group_translation'), entry['group'])
-            field.level = entry['level']
+            level = entry.get('level') or 'leveloneentity'
+            field.level = level
             field.position = entry['position']
             if 'contains' in entry:
                 for subentry in entry['contains']:
@@ -3127,7 +3139,6 @@ def create_entities_bulk(request):
             req = json.loads(request.json_body)
         else:
             req = request.json_body
-
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -3162,8 +3173,7 @@ def create_entities_bulk(request):
                                         locale_id=item['locale_id'],
                                         additional_metadata=item.get('additional_metadata'),
                                         parent=parent)
-            DBSession.add(entity)
-            DBSession.flush()
+            # DBSession.add(entity)
             data_type = item.get('data_type')
             filename = item.get('filename')
             real_location = None
@@ -3192,6 +3202,7 @@ def create_entities_bulk(request):
             else:
                 entity.content = item['content']
             DBSession.add(entity)
+            DBSession.flush()
             inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
         request.response.status = HTTPOk.code
         return inserted_items
