@@ -5550,3 +5550,14 @@ def maps_get(request):
         return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user }
     return render_to_response('templates/maps.pt', variables, request=request)
+
+
+@view_config(route_name='corpora', renderer='templates/corpora.pt', request_method='GET')
+def corpora_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+    variables = {'client_id': client_id, 'user': user }
+    return render_to_response('templates/corpora.pt', variables, request=request)

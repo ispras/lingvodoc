@@ -273,6 +273,22 @@ module.exports = function(grunt) {
                     'src/js/maps.js'
                 ],
                 dest: '../lingvodoc/static/js/maps.js'
+            },
+            corpora: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/angular-animate/angular-animate.js',
+                    'src/js/util.js',
+                    'src/js/api.js',
+                    'src/js/response_handler.js',
+                    'src/js/corpora.js'
+                ],
+                dest: '../lingvodoc/static/js/corpora.js'
             }
         }
     });

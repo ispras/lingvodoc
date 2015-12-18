@@ -59,6 +59,9 @@ def configure_routes(config):
     # web-view #GET
     config.add_route(name='maps', pattern='/dashboard/maps')
 
+    # web-view #GET
+    config.add_route(name='corpora', pattern='/dashboard/corpora')
+
     # API #GET && PUT && DELETE
     # Gets/puts info about language
     config.add_route(name='language', pattern='/language/{client_id}/{object_id}',
