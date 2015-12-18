@@ -104,10 +104,7 @@ angular.module('CorporaViewModule', ['ui.bootstrap'])
         };
 
         $scope.selectedWord = function(selectedText, selection) {
-            //$log.info(word);
-            //$log.info(selection);
-            selectedText = 'хайдаң килген';
-
+            
             var normalize = (function() {
                 var translate_re = /[aceiopxyöÿҷ]/g;
                 var translate = {
