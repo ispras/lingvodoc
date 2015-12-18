@@ -545,8 +545,15 @@ def convert_xml(request):
     tree = ElementTree.parse(xml_path)
     root = tree.getroot()
     row_id = 0
-    all_entities = list()
+    really_all_entities = list()
+    the_best_day_of_my_life = True
+    counter = 1
     for phrase in root.iter('phrase'):
+        # if counter > 10:
+        #     break
+        # else:
+        #     counter += 1
+        all_entities = list()
         phrase_info = dict()
         items = []
         phrase_entities = list()
@@ -591,13 +598,17 @@ def convert_xml(request):
         words = list()
         if xml_words:
             words = xml_words.findall('word')
-        # build_phrase = False
-        # if not [o for o in phrase_entities if o.entity_type == 'Paradigm Phrase'] and [o for o in phrase_entities if o.entity_type == 'Paradigm Phrase Translation']:
-        #     build_phrase = True
-        #     elem = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
-        #
-        #     if elem not in fields:
-        #         fields.append(elem)
+        build_phrase = False
+        list_of_phrases = [o for o in phrase_entities if o['entity_type'] == 'Paradigm Phrase']
+        list_of_translations = [o for o in phrase_entities if o['entity_type'] == 'Paradigm Phrase Translation']
+        if not list_of_phrases:
+            build_phrase = True
+            elem = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
+            if elem not in fields and {'entity_type': 'Paradigm Phrase Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 4} in fields:
+                fields.append(elem)
+
+            for entry in list_of_translations:
+                entry['the_best_day_of_my_life'] = the_best_day_of_my_life
         if not words:
             path = request.route_url('create_lexical_entry',
                            dictionary_client_id = dict_client_id,
@@ -617,6 +628,7 @@ def convert_xml(request):
                 entry['parent_object_id'] = lex_object_id
                 all_entities.append(entry)
         words_for_phrase = list()
+        new_phrase = ''
         for word in words:
 
             morphs = word.iter('morph')
@@ -644,6 +656,7 @@ def convert_xml(request):
                 lang = item.get('lang')
                 if item.text:
                     word_info['text'] = item.text
+                    new_phrase += ' ' + item.text
                     if lang:
                         word_info['lang'] = lang
                         if lang == 'ru':
@@ -704,11 +717,29 @@ def convert_xml(request):
             if morphems:
                 word_info['morphems'] = morphems
             words_for_phrase.append(word_info)
+        if build_phrase:
+            for entry in all_entities:
+                if entry.get('the_best_day_of_my_life'):
+                    new_entry = copy.deepcopy(entry)
+                    new_entry['entity_type'] = 'Paradigm Phrase'
+                    new_entry['content'] = new_phrase
+                    really_all_entities.append(new_entry)
         phrase_info['words'] = words_for_phrase
         corpora.append(phrase_info)
         # print('phrase_ready')
+        really_all_entities += all_entities
+
     print('all_phrases_ready')
-    new_list = [(o['parent_client_id'], o['parent_object_id']) for o in all_entities if 'Paradigm' in o['entity_type']]
+    elem1 = {'entity_type': 'Paradigm Phrase Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 4}
+    elem2 = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
+    if fields == [elem1,elem2] or fields == [elem2,elem1]:
+        for entry in fields:
+            entry['group'] = None
+            entry['entity_type'] = entry['entity_type'].replace('Paradigm', '')
+        for entry in really_all_entities:
+            entry['entity_type'] = entry['entity_type'].replace('Paradigm', '')
+
+
     path = request.route_url('perspective_fields',
                            dictionary_client_id = dict_client_id,
                            dictionary_object_id = dict_object_id,
@@ -743,7 +774,7 @@ def convert_xml(request):
                            perspective_id = persp_object_id)
     subreq = Request.blank(path)
     subreq.method = 'POST'
-    subreq.json = json.dumps(all_entities)
+    subreq.json = json.dumps(really_all_entities)
     headers = {'Cookie':request.headers['Cookie']}
     subreq.headers = headers
     resp = request.invoke_subrequest(subreq)
@@ -756,7 +787,7 @@ def convert_xml(request):
                            perspective_id = persp_object_id)
     subreq = Request.blank(path)
     subreq.method = 'PATCH'
-    subreq.json = json.dumps(all_entities)
+    subreq.json = json.dumps({})
     headers = {'Cookie':request.headers['Cookie']}
     subreq.headers = headers
     resp = request.invoke_subrequest(subreq)
