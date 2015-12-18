@@ -588,9 +588,17 @@ def convert_xml(request):
         row_id += 1
         phrase_info['phrase'] = items
         xml_words = phrase.find('words')
-        words = xml_words.findall('word')
+        words = list()
+        if xml_words:
+            words = xml_words.findall('word')
+        # build_phrase = False
+        # if not [o for o in phrase_entities if o.entity_type == 'Paradigm Phrase'] and [o for o in phrase_entities if o.entity_type == 'Paradigm Phrase Translation']:
+        #     build_phrase = True
+        #     elem = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
+        #
+        #     if elem not in fields:
+        #         fields.append(elem)
         if not words:
-
             path = request.route_url('create_lexical_entry',
                            dictionary_client_id = dict_client_id,
                            dictionary_object_id = dict_object_id,
