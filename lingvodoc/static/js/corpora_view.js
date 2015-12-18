@@ -33742,7 +33742,6 @@ angular.module("CorporaViewModule", [ "ui.bootstrap" ]).factory("dictionaryServi
         }).join(" ");
     };
     $scope.selectedWord = function(selectedText, selection) {
-        selectedText = "хайдаң килген";
         var normalize = function() {
             var translate_re = /[aceiopxyöÿҷ]/g;
             var translate = {
