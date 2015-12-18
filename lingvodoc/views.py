@@ -580,15 +580,16 @@ def convert_xml(request):
                                "locale_id": 1}
                         phrase_entities.append(l1e)
 
-            type = item.get('type')
-            if type:
-                it['type'] = type
+            item_type = item.get('type')
+            if item_type:
+                it['type'] = item_type
             if it != dict() and it not in items:
                 items.append(it)
         row_id += 1
         phrase_info['phrase'] = items
-        words = phrase.iter('word')
-        if not any(True for __ in words):
+        xml_words = phrase.find('words')
+        words = xml_words.findall('word')
+        if not words:
 
             path = request.route_url('create_lexical_entry',
                            dictionary_client_id = dict_client_id,
@@ -757,7 +758,10 @@ def convert_xml(request):
     # add corpora to metadata of persp
     # approve all
     request.response.status = HTTPOk.code
-    return {"corpora": corpora}
+    return {"dict_client_id": dict_client_id,
+            "dict_object_id": dict_object_id,
+            "persp_client_id": persp_client_id,
+            "persp_object_id": persp_object_id}
 
 
 @view_config(route_name='language', renderer='json', request_method='GET')
