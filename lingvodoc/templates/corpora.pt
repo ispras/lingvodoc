@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/corpora.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="CorporaModule">
+
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="userId" data-lingvodoc="${user.id}"></div>
+
+<div metal:use-macro="load: nav.pt"></div>
+
+<div class="container" ng-controller="CorporaController" ng-cloak>
+
+
+    <div ng-if="dictionaries.length > 0">
+        <div ng-repeat="dictionary in dictionaries">
+            <div>
+                <div class="btn-group col-md-8 col-sm-8 col-lg-8 col-xs-8">
+                    <button type="button" class="btn btn-default dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9">{{ dictionary.translation }}</button>
+                </div>
+            </div>
+
+            <br><br>
+
+            <div>
+                <div ng-repeat="perspective in dictionary.perspectives">
+                    <div class="btn-group btn-group-xs col-lg-offset-1 col-md-offset-1 col-sm-offset-1 col-xs-offset-1 col-md-7 col-sm-7 col-lg-7 col-xs-7">
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+                                aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <button type="button"
+                                class="btn btn-default col-md-10 col-lg-11 col-sm-10 col-xs-9 dropdown-toggle"
+                                data-toggle="dropdown">{{ perspective.translation }}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'view') }}">View
+                                published</a></li>
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}">Edit</a>
+                            </li>
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}">Publish</a>
+                            </li>
+                            <li><a href="#" ng-attr-href="{{ getViewCorpusLink(dictionary, perspective) }}">View corpora</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <br><br>
+                </div>
+            </div>
+            <hr>
+        </div>
+    </div>
+
+</div>
+
+<div metal:use-macro="load: response_handler.pt"></div>
+
+</body>
+
+</html>
