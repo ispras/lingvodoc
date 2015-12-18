@@ -314,7 +314,20 @@ div.modal-body {
   padding: 15px;
 }
 
+.entity_link {
+  text-decoration: underline;
+  cursor: pointer;
+}
 
+
+.glossed-view { font-family: Times New Roman PSMT Pro, Starling Serif, Charis SIL, Times New Roman, serif; }
+.phrase, .word, .morpheme { display: inline-block; margin: 3px; }
+.words { display: inline; }
+.mtxt { font-style: italic; }
+.txt, .mtxt, .mgls, .gls { text-align: center; }
+.gls { border-top: 1px dotted grey; margin: 0 3px; }
+.phrase { border: 1px solid grey; }
+.sc { color: grey; font-size: 80%; font-variant: small-caps; }
 
 
 
