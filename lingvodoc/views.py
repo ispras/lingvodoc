@@ -237,7 +237,7 @@ def basic_search(request):
     request.response.status = HTTPBadRequest.code
     return {'error': 'search is too short'}
 
-#TODO add missing dependencies
+
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
 def advanced_search(request):
     req = request.json
@@ -498,309 +498,6 @@ def convert_dictionary(request):
     request.response.status = HTTPOk.code
     return {"status": "Your dictionary is being converted."
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
-
-
-@view_config(route_name='convert_xml', renderer='json', request_method='POST')
-def convert_xml(request):
-    from xml.etree import ElementTree
-    import copy
-    req = request.json_body
-
-    xml_path = req['xml_path']
-    translation_string = req['dictionary_translation_string']
-    perspective_translation_string = req['perspective_translation_string']
-    parent_client_id = req['parent_client_id']
-    parent_object_id = req['parent_object_id']
-    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
-    user = client.user
-
-    path = request.route_url('create_dictionary')
-    subreq = Request.blank(path)
-    subreq.method = 'POST'
-    subreq.json = json.dumps({'translation_string': translation_string,
-                   'parent_client_id': parent_client_id,
-                   'parent_object_id': parent_object_id})
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-
-    dict_client_id = resp.json['client_id']
-    dict_object_id = resp.json['object_id']
-    path = request.route_url('create_perspective',
-                             dictionary_client_id=dict_client_id,
-                             dictionary_object_id=dict_object_id)
-    subreq = Request.blank(path)
-    subreq.method = 'POST'
-    subreq.json = json.dumps({'translation_string': perspective_translation_string})
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-
-    persp_client_id = resp.json['client_id']
-    persp_object_id = resp.json['object_id']
-
-    corpora = []
-    fields = []
-    position = 0
-    tree = ElementTree.parse(xml_path)
-    root = tree.getroot()
-    row_id = 0
-    really_all_entities = list()
-    the_best_day_of_my_life = True
-    counter = 1
-    for phrase in root.iter('phrase'):
-        # if counter > 10:
-        #     break
-        # else:
-        #     counter += 1
-        all_entities = list()
-        phrase_info = dict()
-        items = []
-        phrase_entities = list()
-        for item in phrase.findall('item'):
-            it = dict()
-            lang = item.get('lang')
-            text = item.text
-            if text:
-                if lang:
-                    it['lang'] = lang
-                    it['text'] = text
-                    if lang == 'ru':
-                        elem = {'entity_type': 'Paradigm Phrase Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 4}
-
-                        if elem not in fields:
-                            fields.append(elem)
-                        # {"level": "leveloneentity", "marked_for_deletion": false, "content": "jenpa\u0161", "additional_metadata": null, "entity_type": "Transcription", "locale_id": 1}
-                        additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                        l1e = {"level": "leveloneentity", "content": item.text,
-                               "additional_metadata": additional_metadata,
-                               "entity_type": 'Paradigm Phrase Translation', "locale_id": 1}
-                        phrase_entities.append(l1e)
-                    if lang == 'kjh':
-                        elem = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
-
-                        if elem not in fields:
-                            fields.append(elem)
-                        additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                        l1e = {"level": "leveloneentity", "content": item.text,
-                               "additional_metadata": additional_metadata, "entity_type": 'Paradigm Phrase',
-                               "locale_id": 1}
-                        phrase_entities.append(l1e)
-
-            item_type = item.get('type')
-            if item_type:
-                it['type'] = item_type
-            if it != dict() and it not in items:
-                items.append(it)
-        row_id += 1
-        phrase_info['phrase'] = items
-        xml_words = phrase.find('words')
-        words = list()
-        if xml_words:
-            words = xml_words.findall('word')
-        build_phrase = False
-        list_of_phrases = [o for o in phrase_entities if o['entity_type'] == 'Paradigm Phrase']
-        list_of_translations = [o for o in phrase_entities if o['entity_type'] == 'Paradigm Phrase Translation']
-        if not list_of_phrases:
-            build_phrase = True
-            elem = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
-            if elem not in fields and {'entity_type': 'Paradigm Phrase Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 4} in fields:
-                fields.append(elem)
-
-            for entry in list_of_translations:
-                entry['the_best_day_of_my_life'] = the_best_day_of_my_life
-        if not words:
-            path = request.route_url('create_lexical_entry',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.json = json.dumps({})
-            headers = {'Cookie':request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            lex_client_id, lex_object_id = resp.json['client_id'], resp.json['object_id']
-            phrasecopy = copy.deepcopy(phrase_entities)
-            for entry in phrasecopy:
-                entry['parent_client_id'] = lex_client_id
-                entry['parent_object_id'] = lex_object_id
-                all_entities.append(entry)
-        words_for_phrase = list()
-        new_phrase = ''
-        for word in words:
-
-            morphs = word.iter('morph')
-            word_info = dict()
-
-            path = request.route_url('create_lexical_entry',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-            subreq = Request.blank(path)
-            subreq.method = 'POST'
-            subreq.json = json.dumps({})
-            headers = {'Cookie':request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
-            lex_client_id, lex_object_id = resp.json['client_id'], resp.json['object_id']
-            word_info['client_id'], word_info['object_id'] = lex_client_id, lex_object_id
-            phrasecopy = copy.deepcopy(phrase_entities)
-            for entry in phrasecopy:
-                entry['parent_client_id'] = lex_client_id
-                entry['parent_object_id'] = lex_object_id
-                all_entities.append(entry)
-            for item in word.findall('item'):
-                lang = item.get('lang')
-                if item.text:
-                    word_info['text'] = item.text
-                    new_phrase += ' ' + item.text
-                    if lang:
-                        word_info['lang'] = lang
-                        if lang == 'ru':
-                            elem = {'entity_type': 'Translation', 'data_type': 'text', 'status': 'enabled', 'position': 2}
-
-                            if elem not in fields:
-                                fields.append(elem)
-                            additional_metadata = None  # json.dumps({'row_id': row_id, 'client_id': client.id})
-                            l1e = {"level": "leveloneentity", "content": item.text,
-                                   "additional_metadata": additional_metadata, "entity_type": 'Translation',
-                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
-                            all_entities.append(l1e)
-                        if lang == 'kjh':
-                            elem = {'entity_type': 'Word', 'data_type': 'text', 'status': 'enabled', 'position': 1}
-
-                            if elem not in fields:
-                                fields.append(elem)
-                            additional_metadata = None  # json.dumps({'row_id': row_id, 'client_id': client.id})
-                            l1e = {"level": "leveloneentity", "content": item.text,
-                                   "additional_metadata": additional_metadata, "entity_type": 'Word',
-                                   "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
-                            all_entities.append(l1e)
-            morphems = list()
-            for morph in morphs:
-                mrph = list()
-                for item in morph.findall('item'):
-                    morphy = dict()
-                    lang = item.get('lang')
-
-                    if item.text:
-                        morphy['text'] = item.text
-                        if lang:
-                            morphy['lang'] = lang
-                            if lang == 'ru':
-                                elem = {'entity_type': 'Morphem Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'morphem', 'position': 6}
-
-                                if elem not in fields:
-                                    fields.append(elem)
-                                additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                                l1e = {"level": "leveloneentity", "content": item.text,
-                                       "additional_metadata": additional_metadata, "entity_type": 'Morphem Translation',
-                                       "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
-                                all_entities.append(l1e)
-                            if lang == 'kjh':
-                                elem = {'entity_type': 'Morphem', 'data_type': 'text', 'status': 'enabled', 'group': 'morphem', 'position': 5}
-
-                                if elem not in fields:
-                                    fields.append(elem)
-                                additional_metadata = json.dumps({'row_id': row_id, 'client_id': client.id})
-                                l1e = {"level": "leveloneentity", "content": item.text,
-                                       "additional_metadata": additional_metadata, "entity_type": 'Morphem',
-                                       "locale_id": 1, 'parent_client_id': lex_client_id, 'parent_object_id': lex_object_id}
-                                all_entities.append(l1e)
-                        mrph.append(morphy)
-                if mrph != dict() and mrph not in morphems:
-                    morphems.append(mrph)
-                row_id += 1
-            if morphems:
-                word_info['morphems'] = morphems
-            words_for_phrase.append(word_info)
-        if build_phrase:
-            for entry in all_entities:
-                if entry.get('the_best_day_of_my_life'):
-                    new_entry = copy.deepcopy(entry)
-                    new_entry['entity_type'] = 'Paradigm Phrase'
-                    new_entry['content'] = new_phrase
-                    really_all_entities.append(new_entry)
-        phrase_info['words'] = words_for_phrase
-        corpora.append(phrase_info)
-        # print('phrase_ready')
-        really_all_entities += all_entities
-
-    print('all_phrases_ready')
-    elem1 = {'entity_type': 'Paradigm Phrase Translation', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 4}
-    elem2 = {'entity_type': 'Paradigm Phrase', 'data_type': 'text', 'status': 'enabled', 'group': 'Paradigm', 'position': 3}
-    if fields == [elem1,elem2] or fields == [elem2,elem1]:
-        for entry in fields:
-            entry['group'] = None
-            entry['entity_type'] = entry['entity_type'].replace('Paradigm', '')
-        for entry in really_all_entities:
-            entry['entity_type'] = entry['entity_type'].replace('Paradigm', '')
-
-
-    path = request.route_url('perspective_fields',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-    subreq = Request.blank(path)
-    subreq.method = 'POST'
-    subreq.json = json.dumps({'fields': fields})
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-
-    print('perspective_fields_ready')
-
-    path = request.route_url('perspective_meta',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-    subreq = Request.blank(path)
-    subreq.method = 'PUT'
-    subreq.json = json.dumps({"corpora":{"type":"corpora", "content":corpora}})
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-    print('perspective_meta_ready', resp.json)
-
-    path = request.route_url('create_entities_bulk',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-    subreq = Request.blank(path)
-    subreq.method = 'POST'
-    subreq.json = json.dumps(really_all_entities)
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-    print('create_entities_bulk_ready')
-
-    path = request.route_url('approve_all',
-                           dictionary_client_id = dict_client_id,
-                           dictionary_object_id = dict_object_id,
-                           perspective_client_id = persp_client_id,
-                           perspective_id = persp_object_id)
-    subreq = Request.blank(path)
-    subreq.method = 'PATCH'
-    subreq.json = json.dumps({})
-    headers = {'Cookie':request.headers['Cookie']}
-    subreq.headers = headers
-    resp = request.invoke_subrequest(subreq)
-    print('approve_all_ready')
-
-
-    # add corpora to metadata of persp
-    # approve all
-    request.response.status = HTTPOk.code
-    return {"dict_client_id": dict_client_id,
-            "dict_object_id": dict_object_id,
-            "persp_client_id": persp_client_id,
-            "persp_object_id": persp_object_id}
 
 
 @view_config(route_name='language', renderer='json', request_method='GET')
@@ -1425,10 +1122,28 @@ def real_delete_dictionary(request):
     return {'error': str("No such dictionary in the system")}
 
 
-def view_perspective_from_object(request, perspective, corpora):
+@view_config(route_name='perspective', renderer='json', request_method='GET')
+@view_config(route_name='perspective_outside', renderer='json', request_method='GET')
+def view_perspective(request):
     response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = None
+    if parent_client_id and parent_object_id:
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
+            if parent:
+                if perspective.parent != parent:
+                    request.response.status = HTTPNotFound.code
+                    return {'error': str("No such pair of dictionary/perspective in the system")}
             response['parent_client_id'] = perspective.parent_client_id
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
@@ -1450,101 +1165,24 @@ def view_perspective_from_object(request, perspective, corpora):
                     info_list = response['info']['content']
                     for info in info_list:
                         content = info['info']['content']
-                        # path = request.route_url('get_user_blob',
-                        #          client_id=content['client_id'],
-                        #          object_id=content['object_id'])
-                        # subreq = Request.blank(path)
-                        # subreq.method = 'GET'
-                        # subreq.headers = request.headers
-                        # resp = request.invoke_subrequest(subreq)
+                        path = request.route_url('get_user_blob',
+                                 client_id=content['client_id'],
+                                 object_id=content['object_id'])
+                        subreq = Request.blank(path)
+                        subreq.method = 'GET'
+                        subreq.headers = request.headers
+                        resp = request.invoke_subrequest(subreq)
                         if 'error' not in resp.json:
                             info['info']['content'] = resp.json
                         else:
                             if info not in remove_list:
                                 remove_list.append(info)
-            #         for info in remove_list:
-            #             info_list.remove(info)
-            #     if not corpora:
-            #         if 'corpora' in meta:
-            #             del meta['corpora']
-            #             response['additional_metadata'] = json.dumps(meta)
+                    for info in remove_list:
+                        info_list.remove(info)
+            request.response.status = HTTPOk.code
             return response
-    return {'error':'no persp'}
-
-@view_config(route_name='perspective', renderer='json', request_method='GET')
-@view_config(route_name='perspective_outside', renderer='json', request_method='GET')
-def view_perspective(request):
-    # response = dict()
-    client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
-    parent_client_id = request.matchdict.get('dictionary_client_id')
-    parent_object_id = request.matchdict.get('dictionary_object_id')
-    parent = None
-    corpora = request.GET.get('corpora')
-    if parent_client_id and parent_object_id:
-        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            request.response.status = HTTPNotFound.code
-            return {'error': str("No such dictionary in the system")}
-
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    response = view_perspective_from_object(request,perspective,corpora)
-    if 'error' in response:
-        request.response.status = HTTPNotFound.code
-        return {'error': str("No such perspective in the system")}
-    else:
-        request.response.status = HTTPOk.code
-        return response
-
-    # if perspective:
-    #     if not perspective.marked_for_deletion:
-    #         if parent:
-    #             if perspective.parent != parent:
-    #                 request.response.status = HTTPNotFound.code
-    #                 return {'error': str("No such pair of dictionary/perspective in the system")}
-    #         response['parent_client_id'] = perspective.parent_client_id
-    #         response['parent_object_id'] = perspective.parent_object_id
-    #         response['client_id'] = perspective.client_id
-    #         response['object_id'] = perspective.object_id
-    #         translation_string = perspective.get_translation(request)
-    #         response['translation_string'] = translation_string['translation_string']
-    #         response['translation'] = translation_string['translation']
-    #         response['status'] = perspective.state
-    #         response['marked_for_deletion'] = perspective.marked_for_deletion
-    #         response['is_template'] = perspective.is_template
-    #         response['additional_metadata'] = perspective.additional_metadata
-    #         if perspective.additional_metadata:
-    #             meta = json.loads(perspective.additional_metadata)
-    #             if 'location' in meta:
-    #                 response['location'] = meta['location']
-    #             if 'info' in meta:
-    #                 response['info'] = meta['info']
-    #                 remove_list = []
-    #                 info_list = response['info']['content']
-    #                 for info in info_list:
-    #                     content = info['info']['content']
-    #                     path = request.route_url('get_user_blob',
-    #                              client_id=content['client_id'],
-    #                              object_id=content['object_id'])
-    #                     subreq = Request.blank(path)
-    #                     subreq.method = 'GET'
-    #                     subreq.headers = request.headers
-    #                     resp = request.invoke_subrequest(subreq)
-    #                     if 'error' not in resp.json:
-    #                         info['info']['content'] = resp.json
-    #                     else:
-    #                         if info not in remove_list:
-    #                             remove_list.append(info)
-    #                 for info in remove_list:
-    #                     info_list.remove(info)
-    #             if not corpora:
-    #                 if 'corpora' in meta:
-    #                     del meta['corpora']
-    #                     response['additional_metadata'] = json.dumps(meta)
-    #         request.response.status = HTTPOk.code
-    #         return response
-    # request.response.status = HTTPNotFound.code
-    # return {'error': str("No such perspective in the system")}
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='perspective_tree', renderer='json', request_method='GET')
@@ -1635,10 +1273,7 @@ def edit_perspective_meta(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            if type(request.json_body) == str:
-                req = json.loads(request.json_body)
-            else:
-                req = request.json_body
+            req = request.json_body
             if perspective.additional_metadata:
                 old_meta = json.loads(perspective.additional_metadata)
                 new_meta = req
@@ -1673,11 +1308,7 @@ def delete_perspective_meta(request):
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-
-            if type(request.json_body) == str:
-                req = json.loads(request.json_body)
-            else:
-                req = request.json_body
+            req = request.json_body
 
             old_meta = json.loads(perspective.additional_metadata)
             new_meta = req
@@ -1796,7 +1427,6 @@ def view_perspectives(request):
     response = dict()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
-    corpora = request.GET.get('corpora')
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         request.response.status = HTTPNotFound.code
@@ -1808,15 +1438,12 @@ def view_perspectives(request):
                                  dictionary_object_id=parent_object_id,
                                  perspective_client_id=perspective.client_id,
                                  perspective_id=perspective.object_id)
-        if corpora:
-            path += '?corpora=%s' % corpora
         subreq = Request.blank(path)
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
         if 'error' not in resp.json:
             perspectives += [resp.json]
-
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
     return response
@@ -2689,9 +2316,6 @@ def dictionaries_list(request):
         cli = [o.id for o in clients]
         response['clients'] = cli
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
-
-
-
     if author:
         user = DBSession.query(User).filter_by(id=author).first()
         dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
@@ -2701,7 +2325,7 @@ def dictionaries_list(request):
                 if group.subject_override:
                     isadmin = True
                     break
-                dcttmp = (group.subject_client_id, group.subject_object_id)
+                dcttmp = {'client_id': group.subject_client_id, 'object_id': group.subject_object_id}
                 if dcttmp not in dictstemp:
                     dictstemp += [dcttmp]
             if group.parent.perspective_default:
@@ -2714,25 +2338,20 @@ def dictionaries_list(request):
                                object_id=group.subject_object_id)\
                     .first()
                 if dicti:
-                    dcttmp = (dicti.client_id, dicti.object_id)
+                    dcttmp = {'client_id': dicti.client_id, 'object_id': dicti.object_id}
                     if dcttmp not in dictstemp:
                         dictstemp += [dcttmp]
-
         if not isadmin:
-            # dictstemp = [o for o in dictstemp]
             if dictstemp:
-                # print(len(dictstemp))
-                #
-                # prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-                # for dicti in dictstemp:
-                #     prevdicts = prevdicts.subquery().select()
-                #     prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
-                #
-                # dicts = prevdicts
-                dicts = dicts.filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictstemp))
+                prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+                for dicti in dictstemp:
+                    prevdicts = prevdicts.subquery().select()
+                    prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
 
+                dicts = prevdicts
             else:
                 dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+
     if languages:
         langs = []
         for lan in languages:
@@ -2789,19 +2408,8 @@ def dictionaries_list(request):
         else:
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
     # TODO: fix
-    dictionaries = list()
-    # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
-    for dct in dicts:
-        path = request.route_url('dictionary',
-                                 client_id=dct.client_id,
-                                 object_id=dct.object_id)
-        subreq = Request.blank(path)
-        subreq.method = 'GET'
-        subreq.headers = request.headers
-        resp = request.invoke_subrequest(subreq)
-        if 'error' not in resp.json:
-            dictionaries += [resp.json]
-    # return {'count': dicts.count()}
+    dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
+
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
@@ -2821,8 +2429,7 @@ def perspectives_list(request):
         state = request.params.get('state')
     except:
         pass
-    corpora = request.GET.get('corpora')
-    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion==False)
+    persps = DBSession.query(DictionaryPerspective)
     if is_template is not None:
         if type(is_template) == str:
             if is_template.lower() == 'true':
@@ -2834,25 +2441,18 @@ def perspectives_list(request):
         persps = persps.filter(DictionaryPerspective.state==state)
     perspectives = []
     for perspective in persps:
-        # path = request.route_url('perspective',
-        #                          dictionary_client_id=perspective.parent_client_id,
-        #                          dictionary_object_id=perspective.parent_object_id,
-        #                          perspective_client_id=perspective.client_id,
-        #                          perspective_id=perspective.object_id)
-        # if corpora:
-        #     path += '?corpora=%s' % corpora
-        # subreq = Request.blank(path)
-        # # subreq = request.copy()
-        # subreq.method = 'GET'
-        # subreq.headers = request.headers
-        # resp = request.invoke_subrequest(subreq)
-        # if 'error' not in resp.json:
-        #     perspectives.append(resp.json)
-        resp = view_perspective_from_object(request, perspective, corpora)
-        if 'error' not in resp:
-            perspectives.append(resp)
-        else:
-            print(resp['error'])
+        path = request.route_url('perspective',
+                                 dictionary_client_id=perspective.parent_client_id,
+                                 dictionary_object_id=perspective.parent_object_id,
+                                 perspective_client_id=perspective.client_id,
+                                 perspective_id=perspective.object_id)
+        subreq = Request.blank(path)
+        # subreq = request.copy()
+        subreq.method = 'GET'
+        subreq.headers = request.headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            perspectives += [resp.json]
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
 
@@ -2988,6 +2588,7 @@ def create_perspective_fields(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
         perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id,
                                                                        object_id=parent_object_id).first()
         if not perspective:
@@ -3010,9 +2611,8 @@ def create_perspective_fields(request):
                 translation = entry['entity_type_translation']
             field.set_entity_type(request, translation, entry['entity_type'])
             if 'group' in entry:
-                field.set_group(request, entry.get('group_translation'), entry['group'])
-            level = entry.get('level') or 'leveloneentity'
-            field.level = level
+                field.set_group(request, entry['group_translation'], entry['group'])
+            field.level = entry['level']
             field.position = entry['position']
             if 'contains' in entry:
                 for subentry in entry['contains']:
@@ -3268,10 +2868,8 @@ def create_entities_bulk(request):
     try:
         variables = {'auth': authenticated_userid(request)}
         response = dict()
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
-            req = request.json_body
+        req = request.json_body
+
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -3280,7 +2878,6 @@ def create_entities_bulk(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         inserted_items = []
-
         for item in req:
             if item['level'] == 'leveloneentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
@@ -3306,7 +2903,8 @@ def create_entities_bulk(request):
                                         locale_id=item['locale_id'],
                                         additional_metadata=item.get('additional_metadata'),
                                         parent=parent)
-            # DBSession.add(entity)
+            DBSession.add(entity)
+            DBSession.flush()
             data_type = item.get('data_type')
             filename = item.get('filename')
             real_location = None
@@ -3335,7 +2933,6 @@ def create_entities_bulk(request):
             else:
                 entity.content = item['content']
             DBSession.add(entity)
-            DBSession.flush()
             inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
         request.response.status = HTTPOk.code
         return inserted_items
