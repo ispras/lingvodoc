@@ -1457,17 +1457,20 @@ def view_perspective_from_object(request, perspective, corpora):
                         # subreq.method = 'GET'
                         # subreq.headers = request.headers
                         # resp = request.invoke_subrequest(subreq)
-                        if 'error' not in resp.json:
-                            info['info']['content'] = resp.json
+                        blob = DBSession.query(UserBlobs).filter_by(client_id=content['client_id'], object_id=content['object_id']).first()
+                        if blob:
+                            response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                                         'client_id': blob.client_id, 'object_id': blob.object_id}
+                            info['info']['content'] = response
                         else:
                             if info not in remove_list:
                                 remove_list.append(info)
-            #         for info in remove_list:
-            #             info_list.remove(info)
-            #     if not corpora:
-            #         if 'corpora' in meta:
-            #             del meta['corpora']
-            #             response['additional_metadata'] = json.dumps(meta)
+                    for info in remove_list:
+                        info_list.remove(info)
+                if not corpora:
+                    if 'corpora' in meta:
+                        del meta['corpora']
+                        response['additional_metadata'] = json.dumps(meta)
             return response
     return {'error':'no persp'}
 
