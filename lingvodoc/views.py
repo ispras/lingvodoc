@@ -237,7 +237,7 @@ def basic_search(request):
     request.response.status = HTTPBadRequest.code
     return {'error': 'search is too short'}
 
-
+#TODO add missing dependencies
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
 def advanced_search(request):
     req = request.json
@@ -1434,6 +1434,7 @@ def view_perspective(request):
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     parent = None
+    corpora = request.GET.get('corpora')
     if parent_client_id and parent_object_id:
         parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent:
@@ -1482,6 +1483,10 @@ def view_perspective(request):
                                 remove_list.append(info)
                     for info in remove_list:
                         info_list.remove(info)
+                if not corpora:
+                    if 'corpora' in meta:
+                        del meta['corpora']
+                        response['additional_metadata'] = json.dumps(meta)
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -1737,6 +1742,7 @@ def view_perspectives(request):
     response = dict()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
+    corpora = request.GET.get('corpora')
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         request.response.status = HTTPNotFound.code
@@ -1748,12 +1754,15 @@ def view_perspectives(request):
                                  dictionary_object_id=parent_object_id,
                                  perspective_client_id=perspective.client_id,
                                  perspective_id=perspective.object_id)
+        if corpora:
+            path += '?corpora=%s' % corpora
         subreq = Request.blank(path)
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
         if 'error' not in resp.json:
             perspectives += [resp.json]
+
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
     return response
@@ -2758,6 +2767,7 @@ def perspectives_list(request):
         state = request.params.get('state')
     except:
         pass
+    corpora = request.GET.get('corpora')
     persps = DBSession.query(DictionaryPerspective)
     if is_template is not None:
         if type(is_template) == str:
@@ -2775,6 +2785,8 @@ def perspectives_list(request):
                                  dictionary_object_id=perspective.parent_object_id,
                                  perspective_client_id=perspective.client_id,
                                  perspective_id=perspective.object_id)
+        if corpora:
+            path += '?corpora=%s' % corpora
         subreq = Request.blank(path)
         # subreq = request.copy()
         subreq.method = 'GET'
