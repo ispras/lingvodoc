@@ -18,7 +18,7 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
                     wavesurfer.load($attrs.url, $attrs.data || null);
                 }
 
-                $scope.$emit('wavesurferInit', wavesurfer);
+                $scope.$emit('wavesurferInit', wavesurfer, $element);
             }
         };
     })
@@ -52,9 +52,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
     .controller('ViewDictionaryController', ['$scope', '$window', '$http', '$modal', '$log', 'dictionaryService', 'responseHandler', function($scope, $window, $http, $modal, $log, dictionaryService, responseHandler) {
 
-
-        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
-        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
         var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
         var perspectiveId = $('#perspectiveId').data('lingvodoc');
 
@@ -124,6 +121,9 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
         $scope.viewGroup = function(entry, field, values) {
 
+            $log.info(entry);
+            $log.info(values);
+
             $modal.open({
                 animation: true,
                 templateUrl: 'viewGroupModal.html',
@@ -161,7 +161,7 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
             });
         };
 
-        $scope.annotate = function(soundEntity, markupEntity) {
+        $scope.annotate = function(sound, markup) {
 
             var modalInstance = $modal.open({
                 animation: true,
@@ -169,11 +169,11 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
                 controller: 'AnnotationController',
                 size: 'lg',
                 resolve: {
-                    soundUrl: function() {
-                        return soundEntity.content;
-                    },
-                    annotationUrl: function() {
-                        return markupEntity.content;
+                    'params': function() {
+                        return {
+                            'sound': sound,
+                            'markup': markup
+                        };
                     }
                 }
             });
@@ -256,7 +256,7 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
     }])
 
 
-    .controller('AnnotationController', ['$scope', '$http', 'soundUrl', 'annotationUrl', 'responseHandler', function($scope, $http, soundUrl, annotationUrl, responseHandler) {
+    .controller('AnnotationController', ['$scope', '$http', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, dictionaryService, responseHandler, params) {
 
         var activeUrl = null;
 
@@ -278,27 +278,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
                     });
                 });
             }
-        };
-
-        var loadAnnotation = function(url) {
-            // load annotation
-            $http.get(url).success(function(data, status, headers, config) {
-
-                try {
-                    var xml = (new DOMParser()).parseFromString(data, 'application/xml');
-                    var annotation = new elan.Document();
-                    annotation.importXML(xml);
-                    $scope.annotation = annotation;
-
-                    createRegions(annotation);
-
-                } catch (e) {
-                    responseHandler.error('Failed to parse ELAN annotation: ' + e);
-                }
-
-            }).error(function(data, status, headers, config) {
-                responseHandler.error(data);
-            });
         };
 
         $scope.paused = true;
@@ -360,12 +339,24 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
             $scope.wavesurfer.once('ready', function() {
                 // load annotation once file is loaded
-                loadAnnotation(annotationUrl);
+                dictionaryService.convertMarkup(params.markup).then(function(data) {
+                    try {
+                        var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
+                        var annotation = new elan.Document();
+                        annotation.importXML(xml);
+                        $scope.annotation = annotation;
+                        createRegions(annotation);
+                    } catch (e) {
+                        responseHandler.error('Failed to parse ELAN annotation: ' + e);
+                    }
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
                 $scope.$apply();
             });
 
             // load file once wavesurfer is ready
-            $scope.wavesurfer.load(soundUrl);
+            $scope.wavesurfer.load(params.sound.content);
         });
 
         $scope.$on('modal.closing', function(e) {
@@ -378,11 +369,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
     .controller('viewGroupController', ['$scope', '$http', '$modalInstance', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
 
-        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
-        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
-        var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
-        var perspectiveId = $('#perspectiveId').data('lingvodoc');
-
         WaveSurferController.call(this, $scope);
 
         $scope.title = groupParams.field.entity_type;
@@ -394,10 +380,8 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
 
             var addValue = function(value, entries) {
 
-                var createNewEntry = true;
                 if (value.additional_metadata) {
                     for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
-                        var currentEntry = entries[entryIndex];
 
                         if (entries[entryIndex].client_id == value.client_id &&
                             entries[entryIndex].row_id == value.additional_metadata.row_id) {
@@ -476,32 +460,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
             return values;
         };
 
-        $scope.approve = function(lexicalEntry, field, fieldValue, approved) {
-
-            var url = $('#approveEntityUrl').data('lingvodoc');
-
-            var obj = {
-                'type': field.level,
-                'client_id': fieldValue.client_id,
-                'object_id': fieldValue.object_id
-            };
-
-            dictionaryService.approve(url, { 'entities': [obj] }, approved).then(function(data) {
-                fieldValue['published'] = approved;
-            }, function(reason) {
-                responseHandler.error(reason);
-            });
-        };
-
-        $scope.approved = function(lexicalEntry, field, fieldValue) {
-
-            if (!fieldValue.published) {
-                return false;
-            }
-
-            return !!fieldValue.published;
-        };
-
         $scope.ok = function() {
             $modalInstance.close($scope.entries);
         };
@@ -513,11 +471,6 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
     }])
 
     .controller('viewGroupingTagController', ['$scope', '$http', '$modalInstance', '$q', '$log', 'dictionaryService', 'responseHandler', 'groupParams', function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
-
-        var dictionaryClientId = $('#dictionaryClientId').data('lingvodoc');
-        var dictionaryObjectId = $('#dictionaryObjectId').data('lingvodoc');
-        var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');
-        var perspectiveId = $('#perspectiveId').data('lingvodoc');
 
         WaveSurferController.call(this, $scope);
 
@@ -606,5 +559,4 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
         }, function(reason) {
             responseHandler.error(reason);
         });
-
     }]);

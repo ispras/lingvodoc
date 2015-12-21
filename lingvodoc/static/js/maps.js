@@ -30201,6 +30201,3836 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
 
 !angular.$$csp() && angular.element(document).find("head").prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
 
+(function(window, angular, undefined) {
+    "use strict";
+    var noop = angular.noop;
+    var extend = angular.extend;
+    var jqLite = angular.element;
+    var forEach = angular.forEach;
+    var isArray = angular.isArray;
+    var isString = angular.isString;
+    var isObject = angular.isObject;
+    var isUndefined = angular.isUndefined;
+    var isDefined = angular.isDefined;
+    var isFunction = angular.isFunction;
+    var isElement = angular.isElement;
+    var ELEMENT_NODE = 1;
+    var COMMENT_NODE = 8;
+    var ADD_CLASS_SUFFIX = "-add";
+    var REMOVE_CLASS_SUFFIX = "-remove";
+    var EVENT_CLASS_PREFIX = "ng-";
+    var ACTIVE_CLASS_SUFFIX = "-active";
+    var NG_ANIMATE_CLASSNAME = "ng-animate";
+    var NG_ANIMATE_CHILDREN_DATA = "$$ngAnimateChildren";
+    var CSS_PREFIX = "", TRANSITION_PROP, TRANSITIONEND_EVENT, ANIMATION_PROP, ANIMATIONEND_EVENT;
+    if (isUndefined(window.ontransitionend) && isDefined(window.onwebkittransitionend)) {
+        CSS_PREFIX = "-webkit-";
+        TRANSITION_PROP = "WebkitTransition";
+        TRANSITIONEND_EVENT = "webkitTransitionEnd transitionend";
+    } else {
+        TRANSITION_PROP = "transition";
+        TRANSITIONEND_EVENT = "transitionend";
+    }
+    if (isUndefined(window.onanimationend) && isDefined(window.onwebkitanimationend)) {
+        CSS_PREFIX = "-webkit-";
+        ANIMATION_PROP = "WebkitAnimation";
+        ANIMATIONEND_EVENT = "webkitAnimationEnd animationend";
+    } else {
+        ANIMATION_PROP = "animation";
+        ANIMATIONEND_EVENT = "animationend";
+    }
+    var DURATION_KEY = "Duration";
+    var PROPERTY_KEY = "Property";
+    var DELAY_KEY = "Delay";
+    var TIMING_KEY = "TimingFunction";
+    var ANIMATION_ITERATION_COUNT_KEY = "IterationCount";
+    var ANIMATION_PLAYSTATE_KEY = "PlayState";
+    var SAFE_FAST_FORWARD_DURATION_VALUE = 9999;
+    var ANIMATION_DELAY_PROP = ANIMATION_PROP + DELAY_KEY;
+    var ANIMATION_DURATION_PROP = ANIMATION_PROP + DURATION_KEY;
+    var TRANSITION_DELAY_PROP = TRANSITION_PROP + DELAY_KEY;
+    var TRANSITION_DURATION_PROP = TRANSITION_PROP + DURATION_KEY;
+    var isPromiseLike = function(p) {
+        return p && p.then ? true : false;
+    };
+    function assertArg(arg, name, reason) {
+        if (!arg) {
+            throw ngMinErr("areq", "Argument '{0}' is {1}", name || "?", reason || "required");
+        }
+        return arg;
+    }
+    function mergeClasses(a, b) {
+        if (!a && !b) return "";
+        if (!a) return b;
+        if (!b) return a;
+        if (isArray(a)) a = a.join(" ");
+        if (isArray(b)) b = b.join(" ");
+        return a + " " + b;
+    }
+    function packageStyles(options) {
+        var styles = {};
+        if (options && (options.to || options.from)) {
+            styles.to = options.to;
+            styles.from = options.from;
+        }
+        return styles;
+    }
+    function pendClasses(classes, fix, isPrefix) {
+        var className = "";
+        classes = isArray(classes) ? classes : classes && isString(classes) && classes.length ? classes.split(/\s+/) : [];
+        forEach(classes, function(klass, i) {
+            if (klass && klass.length > 0) {
+                className += i > 0 ? " " : "";
+                className += isPrefix ? fix + klass : klass + fix;
+            }
+        });
+        return className;
+    }
+    function removeFromArray(arr, val) {
+        var index = arr.indexOf(val);
+        if (val >= 0) {
+            arr.splice(index, 1);
+        }
+    }
+    function stripCommentsFromElement(element) {
+        if (element instanceof jqLite) {
+            switch (element.length) {
+              case 0:
+                return [];
+                break;
+
+              case 1:
+                if (element[0].nodeType === ELEMENT_NODE) {
+                    return element;
+                }
+                break;
+
+              default:
+                return jqLite(extractElementNode(element));
+                break;
+            }
+        }
+        if (element.nodeType === ELEMENT_NODE) {
+            return jqLite(element);
+        }
+    }
+    function extractElementNode(element) {
+        if (!element[0]) return element;
+        for (var i = 0; i < element.length; i++) {
+            var elm = element[i];
+            if (elm.nodeType == ELEMENT_NODE) {
+                return elm;
+            }
+        }
+    }
+    function $$addClass($$jqLite, element, className) {
+        forEach(element, function(elm) {
+            $$jqLite.addClass(elm, className);
+        });
+    }
+    function $$removeClass($$jqLite, element, className) {
+        forEach(element, function(elm) {
+            $$jqLite.removeClass(elm, className);
+        });
+    }
+    function applyAnimationClassesFactory($$jqLite) {
+        return function(element, options) {
+            if (options.addClass) {
+                $$addClass($$jqLite, element, options.addClass);
+                options.addClass = null;
+            }
+            if (options.removeClass) {
+                $$removeClass($$jqLite, element, options.removeClass);
+                options.removeClass = null;
+            }
+        };
+    }
+    function prepareAnimationOptions(options) {
+        options = options || {};
+        if (!options.$$prepared) {
+            var domOperation = options.domOperation || noop;
+            options.domOperation = function() {
+                options.$$domOperationFired = true;
+                domOperation();
+                domOperation = noop;
+            };
+            options.$$prepared = true;
+        }
+        return options;
+    }
+    function applyAnimationStyles(element, options) {
+        applyAnimationFromStyles(element, options);
+        applyAnimationToStyles(element, options);
+    }
+    function applyAnimationFromStyles(element, options) {
+        if (options.from) {
+            element.css(options.from);
+            options.from = null;
+        }
+    }
+    function applyAnimationToStyles(element, options) {
+        if (options.to) {
+            element.css(options.to);
+            options.to = null;
+        }
+    }
+    function mergeAnimationOptions(element, target, newOptions) {
+        var toAdd = (target.addClass || "") + " " + (newOptions.addClass || "");
+        var toRemove = (target.removeClass || "") + " " + (newOptions.removeClass || "");
+        var classes = resolveElementClasses(element.attr("class"), toAdd, toRemove);
+        if (newOptions.preparationClasses) {
+            target.preparationClasses = concatWithSpace(newOptions.preparationClasses, target.preparationClasses);
+            delete newOptions.preparationClasses;
+        }
+        var realDomOperation = target.domOperation !== noop ? target.domOperation : null;
+        extend(target, newOptions);
+        if (realDomOperation) {
+            target.domOperation = realDomOperation;
+        }
+        if (classes.addClass) {
+            target.addClass = classes.addClass;
+        } else {
+            target.addClass = null;
+        }
+        if (classes.removeClass) {
+            target.removeClass = classes.removeClass;
+        } else {
+            target.removeClass = null;
+        }
+        return target;
+    }
+    function resolveElementClasses(existing, toAdd, toRemove) {
+        var ADD_CLASS = 1;
+        var REMOVE_CLASS = -1;
+        var flags = {};
+        existing = splitClassesToLookup(existing);
+        toAdd = splitClassesToLookup(toAdd);
+        forEach(toAdd, function(value, key) {
+            flags[key] = ADD_CLASS;
+        });
+        toRemove = splitClassesToLookup(toRemove);
+        forEach(toRemove, function(value, key) {
+            flags[key] = flags[key] === ADD_CLASS ? null : REMOVE_CLASS;
+        });
+        var classes = {
+            addClass: "",
+            removeClass: ""
+        };
+        forEach(flags, function(val, klass) {
+            var prop, allow;
+            if (val === ADD_CLASS) {
+                prop = "addClass";
+                allow = !existing[klass];
+            } else if (val === REMOVE_CLASS) {
+                prop = "removeClass";
+                allow = existing[klass];
+            }
+            if (allow) {
+                if (classes[prop].length) {
+                    classes[prop] += " ";
+                }
+                classes[prop] += klass;
+            }
+        });
+        function splitClassesToLookup(classes) {
+            if (isString(classes)) {
+                classes = classes.split(" ");
+            }
+            var obj = {};
+            forEach(classes, function(klass) {
+                if (klass.length) {
+                    obj[klass] = true;
+                }
+            });
+            return obj;
+        }
+        return classes;
+    }
+    function getDomNode(element) {
+        return element instanceof angular.element ? element[0] : element;
+    }
+    function applyGeneratedPreparationClasses(element, event, options) {
+        var classes = "";
+        if (event) {
+            classes = pendClasses(event, EVENT_CLASS_PREFIX, true);
+        }
+        if (options.addClass) {
+            classes = concatWithSpace(classes, pendClasses(options.addClass, ADD_CLASS_SUFFIX));
+        }
+        if (options.removeClass) {
+            classes = concatWithSpace(classes, pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX));
+        }
+        if (classes.length) {
+            options.preparationClasses = classes;
+            element.addClass(classes);
+        }
+    }
+    function clearGeneratedClasses(element, options) {
+        if (options.preparationClasses) {
+            element.removeClass(options.preparationClasses);
+            options.preparationClasses = null;
+        }
+        if (options.activeClasses) {
+            element.removeClass(options.activeClasses);
+            options.activeClasses = null;
+        }
+    }
+    function blockTransitions(node, duration) {
+        var value = duration ? "-" + duration + "s" : "";
+        applyInlineStyle(node, [ TRANSITION_DELAY_PROP, value ]);
+        return [ TRANSITION_DELAY_PROP, value ];
+    }
+    function blockKeyframeAnimations(node, applyBlock) {
+        var value = applyBlock ? "paused" : "";
+        var key = ANIMATION_PROP + ANIMATION_PLAYSTATE_KEY;
+        applyInlineStyle(node, [ key, value ]);
+        return [ key, value ];
+    }
+    function applyInlineStyle(node, styleTuple) {
+        var prop = styleTuple[0];
+        var value = styleTuple[1];
+        node.style[prop] = value;
+    }
+    function concatWithSpace(a, b) {
+        if (!a) return b;
+        if (!b) return a;
+        return a + " " + b;
+    }
+    var $$rAFSchedulerFactory = [ "$$rAF", function($$rAF) {
+        var queue, cancelFn;
+        function scheduler(tasks) {
+            queue = queue.concat(tasks);
+            nextTick();
+        }
+        queue = scheduler.queue = [];
+        scheduler.waitUntilQuiet = function(fn) {
+            if (cancelFn) cancelFn();
+            cancelFn = $$rAF(function() {
+                cancelFn = null;
+                fn();
+                nextTick();
+            });
+        };
+        return scheduler;
+        function nextTick() {
+            if (!queue.length) return;
+            var items = queue.shift();
+            for (var i = 0; i < items.length; i++) {
+                items[i]();
+            }
+            if (!cancelFn) {
+                $$rAF(function() {
+                    if (!cancelFn) nextTick();
+                });
+            }
+        }
+    } ];
+    var $$AnimateChildrenDirective = [ function() {
+        return function(scope, element, attrs) {
+            var val = attrs.ngAnimateChildren;
+            if (angular.isString(val) && val.length === 0) {
+                element.data(NG_ANIMATE_CHILDREN_DATA, true);
+            } else {
+                attrs.$observe("ngAnimateChildren", function(value) {
+                    value = value === "on" || value === "true";
+                    element.data(NG_ANIMATE_CHILDREN_DATA, value);
+                });
+            }
+        };
+    } ];
+    var ANIMATE_TIMER_KEY = "$$animateCss";
+    var ONE_SECOND = 1e3;
+    var BASE_TEN = 10;
+    var ELAPSED_TIME_MAX_DECIMAL_PLACES = 3;
+    var CLOSING_TIME_BUFFER = 1.5;
+    var DETECT_CSS_PROPERTIES = {
+        transitionDuration: TRANSITION_DURATION_PROP,
+        transitionDelay: TRANSITION_DELAY_PROP,
+        transitionProperty: TRANSITION_PROP + PROPERTY_KEY,
+        animationDuration: ANIMATION_DURATION_PROP,
+        animationDelay: ANIMATION_DELAY_PROP,
+        animationIterationCount: ANIMATION_PROP + ANIMATION_ITERATION_COUNT_KEY
+    };
+    var DETECT_STAGGER_CSS_PROPERTIES = {
+        transitionDuration: TRANSITION_DURATION_PROP,
+        transitionDelay: TRANSITION_DELAY_PROP,
+        animationDuration: ANIMATION_DURATION_PROP,
+        animationDelay: ANIMATION_DELAY_PROP
+    };
+    function getCssKeyframeDurationStyle(duration) {
+        return [ ANIMATION_DURATION_PROP, duration + "s" ];
+    }
+    function getCssDelayStyle(delay, isKeyframeAnimation) {
+        var prop = isKeyframeAnimation ? ANIMATION_DELAY_PROP : TRANSITION_DELAY_PROP;
+        return [ prop, delay + "s" ];
+    }
+    function computeCssStyles($window, element, properties) {
+        var styles = Object.create(null);
+        var detectedStyles = $window.getComputedStyle(element) || {};
+        forEach(properties, function(formalStyleName, actualStyleName) {
+            var val = detectedStyles[formalStyleName];
+            if (val) {
+                var c = val.charAt(0);
+                if (c === "-" || c === "+" || c >= 0) {
+                    val = parseMaxTime(val);
+                }
+                if (val === 0) {
+                    val = null;
+                }
+                styles[actualStyleName] = val;
+            }
+        });
+        return styles;
+    }
+    function parseMaxTime(str) {
+        var maxValue = 0;
+        var values = str.split(/\s*,\s*/);
+        forEach(values, function(value) {
+            if (value.charAt(value.length - 1) == "s") {
+                value = value.substring(0, value.length - 1);
+            }
+            value = parseFloat(value) || 0;
+            maxValue = maxValue ? Math.max(value, maxValue) : value;
+        });
+        return maxValue;
+    }
+    function truthyTimingValue(val) {
+        return val === 0 || val != null;
+    }
+    function getCssTransitionDurationStyle(duration, applyOnlyDuration) {
+        var style = TRANSITION_PROP;
+        var value = duration + "s";
+        if (applyOnlyDuration) {
+            style += DURATION_KEY;
+        } else {
+            value += " linear all";
+        }
+        return [ style, value ];
+    }
+    function createLocalCacheLookup() {
+        var cache = Object.create(null);
+        return {
+            flush: function() {
+                cache = Object.create(null);
+            },
+            count: function(key) {
+                var entry = cache[key];
+                return entry ? entry.total : 0;
+            },
+            get: function(key) {
+                var entry = cache[key];
+                return entry && entry.value;
+            },
+            put: function(key, value) {
+                if (!cache[key]) {
+                    cache[key] = {
+                        total: 1,
+                        value: value
+                    };
+                } else {
+                    cache[key].total++;
+                }
+            }
+        };
+    }
+    function registerRestorableStyles(backup, node, properties) {
+        forEach(properties, function(prop) {
+            backup[prop] = isDefined(backup[prop]) ? backup[prop] : node.style.getPropertyValue(prop);
+        });
+    }
+    var $AnimateCssProvider = [ "$animateProvider", function($animateProvider) {
+        var gcsLookup = createLocalCacheLookup();
+        var gcsStaggerLookup = createLocalCacheLookup();
+        this.$get = [ "$window", "$$jqLite", "$$AnimateRunner", "$timeout", "$$forceReflow", "$sniffer", "$$rAFScheduler", "$animate", function($window, $$jqLite, $$AnimateRunner, $timeout, $$forceReflow, $sniffer, $$rAFScheduler, $animate) {
+            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
+            var parentCounter = 0;
+            function gcsHashFn(node, extraClasses) {
+                var KEY = "$$ngAnimateParentKey";
+                var parentNode = node.parentNode;
+                var parentID = parentNode[KEY] || (parentNode[KEY] = ++parentCounter);
+                return parentID + "-" + node.getAttribute("class") + "-" + extraClasses;
+            }
+            function computeCachedCssStyles(node, className, cacheKey, properties) {
+                var timings = gcsLookup.get(cacheKey);
+                if (!timings) {
+                    timings = computeCssStyles($window, node, properties);
+                    if (timings.animationIterationCount === "infinite") {
+                        timings.animationIterationCount = 1;
+                    }
+                }
+                gcsLookup.put(cacheKey, timings);
+                return timings;
+            }
+            function computeCachedCssStaggerStyles(node, className, cacheKey, properties) {
+                var stagger;
+                if (gcsLookup.count(cacheKey) > 0) {
+                    stagger = gcsStaggerLookup.get(cacheKey);
+                    if (!stagger) {
+                        var staggerClassName = pendClasses(className, "-stagger");
+                        $$jqLite.addClass(node, staggerClassName);
+                        stagger = computeCssStyles($window, node, properties);
+                        stagger.animationDuration = Math.max(stagger.animationDuration, 0);
+                        stagger.transitionDuration = Math.max(stagger.transitionDuration, 0);
+                        $$jqLite.removeClass(node, staggerClassName);
+                        gcsStaggerLookup.put(cacheKey, stagger);
+                    }
+                }
+                return stagger || {};
+            }
+            var cancelLastRAFRequest;
+            var rafWaitQueue = [];
+            function waitUntilQuiet(callback) {
+                rafWaitQueue.push(callback);
+                $$rAFScheduler.waitUntilQuiet(function() {
+                    gcsLookup.flush();
+                    gcsStaggerLookup.flush();
+                    var pageWidth = $$forceReflow();
+                    for (var i = 0; i < rafWaitQueue.length; i++) {
+                        rafWaitQueue[i](pageWidth);
+                    }
+                    rafWaitQueue.length = 0;
+                });
+            }
+            function computeTimings(node, className, cacheKey) {
+                var timings = computeCachedCssStyles(node, className, cacheKey, DETECT_CSS_PROPERTIES);
+                var aD = timings.animationDelay;
+                var tD = timings.transitionDelay;
+                timings.maxDelay = aD && tD ? Math.max(aD, tD) : aD || tD;
+                timings.maxDuration = Math.max(timings.animationDuration * timings.animationIterationCount, timings.transitionDuration);
+                return timings;
+            }
+            return function init(element, options) {
+                var restoreStyles = {};
+                var node = getDomNode(element);
+                if (!node || !node.parentNode || !$animate.enabled()) {
+                    return closeAndReturnNoopAnimator();
+                }
+                options = prepareAnimationOptions(options);
+                var temporaryStyles = [];
+                var classes = element.attr("class");
+                var styles = packageStyles(options);
+                var animationClosed;
+                var animationPaused;
+                var animationCompleted;
+                var runner;
+                var runnerHost;
+                var maxDelay;
+                var maxDelayTime;
+                var maxDuration;
+                var maxDurationTime;
+                if (options.duration === 0 || !$sniffer.animations && !$sniffer.transitions) {
+                    return closeAndReturnNoopAnimator();
+                }
+                var method = options.event && isArray(options.event) ? options.event.join(" ") : options.event;
+                var isStructural = method && options.structural;
+                var structuralClassName = "";
+                var addRemoveClassName = "";
+                if (isStructural) {
+                    structuralClassName = pendClasses(method, EVENT_CLASS_PREFIX, true);
+                } else if (method) {
+                    structuralClassName = method;
+                }
+                if (options.addClass) {
+                    addRemoveClassName += pendClasses(options.addClass, ADD_CLASS_SUFFIX);
+                }
+                if (options.removeClass) {
+                    if (addRemoveClassName.length) {
+                        addRemoveClassName += " ";
+                    }
+                    addRemoveClassName += pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX);
+                }
+                if (options.applyClassesEarly && addRemoveClassName.length) {
+                    applyAnimationClasses(element, options);
+                }
+                var preparationClasses = [ structuralClassName, addRemoveClassName ].join(" ").trim();
+                var fullClassName = classes + " " + preparationClasses;
+                var activeClasses = pendClasses(preparationClasses, ACTIVE_CLASS_SUFFIX);
+                var hasToStyles = styles.to && Object.keys(styles.to).length > 0;
+                var containsKeyframeAnimation = (options.keyframeStyle || "").length > 0;
+                if (!containsKeyframeAnimation && !hasToStyles && !preparationClasses) {
+                    return closeAndReturnNoopAnimator();
+                }
+                var cacheKey, stagger;
+                if (options.stagger > 0) {
+                    var staggerVal = parseFloat(options.stagger);
+                    stagger = {
+                        transitionDelay: staggerVal,
+                        animationDelay: staggerVal,
+                        transitionDuration: 0,
+                        animationDuration: 0
+                    };
+                } else {
+                    cacheKey = gcsHashFn(node, fullClassName);
+                    stagger = computeCachedCssStaggerStyles(node, preparationClasses, cacheKey, DETECT_STAGGER_CSS_PROPERTIES);
+                }
+                if (!options.$$skipPreparationClasses) {
+                    $$jqLite.addClass(element, preparationClasses);
+                }
+                var applyOnlyDuration;
+                if (options.transitionStyle) {
+                    var transitionStyle = [ TRANSITION_PROP, options.transitionStyle ];
+                    applyInlineStyle(node, transitionStyle);
+                    temporaryStyles.push(transitionStyle);
+                }
+                if (options.duration >= 0) {
+                    applyOnlyDuration = node.style[TRANSITION_PROP].length > 0;
+                    var durationStyle = getCssTransitionDurationStyle(options.duration, applyOnlyDuration);
+                    applyInlineStyle(node, durationStyle);
+                    temporaryStyles.push(durationStyle);
+                }
+                if (options.keyframeStyle) {
+                    var keyframeStyle = [ ANIMATION_PROP, options.keyframeStyle ];
+                    applyInlineStyle(node, keyframeStyle);
+                    temporaryStyles.push(keyframeStyle);
+                }
+                var itemIndex = stagger ? options.staggerIndex >= 0 ? options.staggerIndex : gcsLookup.count(cacheKey) : 0;
+                var isFirst = itemIndex === 0;
+                if (isFirst && !options.skipBlocking) {
+                    blockTransitions(node, SAFE_FAST_FORWARD_DURATION_VALUE);
+                }
+                var timings = computeTimings(node, fullClassName, cacheKey);
+                var relativeDelay = timings.maxDelay;
+                maxDelay = Math.max(relativeDelay, 0);
+                maxDuration = timings.maxDuration;
+                var flags = {};
+                flags.hasTransitions = timings.transitionDuration > 0;
+                flags.hasAnimations = timings.animationDuration > 0;
+                flags.hasTransitionAll = flags.hasTransitions && timings.transitionProperty == "all";
+                flags.applyTransitionDuration = hasToStyles && (flags.hasTransitions && !flags.hasTransitionAll || flags.hasAnimations && !flags.hasTransitions);
+                flags.applyAnimationDuration = options.duration && flags.hasAnimations;
+                flags.applyTransitionDelay = truthyTimingValue(options.delay) && (flags.applyTransitionDuration || flags.hasTransitions);
+                flags.applyAnimationDelay = truthyTimingValue(options.delay) && flags.hasAnimations;
+                flags.recalculateTimingStyles = addRemoveClassName.length > 0;
+                if (flags.applyTransitionDuration || flags.applyAnimationDuration) {
+                    maxDuration = options.duration ? parseFloat(options.duration) : maxDuration;
+                    if (flags.applyTransitionDuration) {
+                        flags.hasTransitions = true;
+                        timings.transitionDuration = maxDuration;
+                        applyOnlyDuration = node.style[TRANSITION_PROP + PROPERTY_KEY].length > 0;
+                        temporaryStyles.push(getCssTransitionDurationStyle(maxDuration, applyOnlyDuration));
+                    }
+                    if (flags.applyAnimationDuration) {
+                        flags.hasAnimations = true;
+                        timings.animationDuration = maxDuration;
+                        temporaryStyles.push(getCssKeyframeDurationStyle(maxDuration));
+                    }
+                }
+                if (maxDuration === 0 && !flags.recalculateTimingStyles) {
+                    return closeAndReturnNoopAnimator();
+                }
+                if (options.delay != null) {
+                    var delayStyle = parseFloat(options.delay);
+                    if (flags.applyTransitionDelay) {
+                        temporaryStyles.push(getCssDelayStyle(delayStyle));
+                    }
+                    if (flags.applyAnimationDelay) {
+                        temporaryStyles.push(getCssDelayStyle(delayStyle, true));
+                    }
+                }
+                if (options.duration == null && timings.transitionDuration > 0) {
+                    flags.recalculateTimingStyles = flags.recalculateTimingStyles || isFirst;
+                }
+                maxDelayTime = maxDelay * ONE_SECOND;
+                maxDurationTime = maxDuration * ONE_SECOND;
+                if (!options.skipBlocking) {
+                    flags.blockTransition = timings.transitionDuration > 0;
+                    flags.blockKeyframeAnimation = timings.animationDuration > 0 && stagger.animationDelay > 0 && stagger.animationDuration === 0;
+                }
+                if (options.from) {
+                    if (options.cleanupStyles) {
+                        registerRestorableStyles(restoreStyles, node, Object.keys(options.from));
+                    }
+                    applyAnimationFromStyles(element, options);
+                }
+                if (flags.blockTransition || flags.blockKeyframeAnimation) {
+                    applyBlocking(maxDuration);
+                } else if (!options.skipBlocking) {
+                    blockTransitions(node, false);
+                }
+                return {
+                    $$willAnimate: true,
+                    end: endFn,
+                    start: function() {
+                        if (animationClosed) return;
+                        runnerHost = {
+                            end: endFn,
+                            cancel: cancelFn,
+                            resume: null,
+                            pause: null
+                        };
+                        runner = new $$AnimateRunner(runnerHost);
+                        waitUntilQuiet(start);
+                        return runner;
+                    }
+                };
+                function endFn() {
+                    close();
+                }
+                function cancelFn() {
+                    close(true);
+                }
+                function close(rejected) {
+                    if (animationClosed || animationCompleted && animationPaused) return;
+                    animationClosed = true;
+                    animationPaused = false;
+                    if (!options.$$skipPreparationClasses) {
+                        $$jqLite.removeClass(element, preparationClasses);
+                    }
+                    $$jqLite.removeClass(element, activeClasses);
+                    blockKeyframeAnimations(node, false);
+                    blockTransitions(node, false);
+                    forEach(temporaryStyles, function(entry) {
+                        node.style[entry[0]] = "";
+                    });
+                    applyAnimationClasses(element, options);
+                    applyAnimationStyles(element, options);
+                    if (Object.keys(restoreStyles).length) {
+                        forEach(restoreStyles, function(value, prop) {
+                            value ? node.style.setProperty(prop, value) : node.style.removeProperty(prop);
+                        });
+                    }
+                    if (options.onDone) {
+                        options.onDone();
+                    }
+                    if (runner) {
+                        runner.complete(!rejected);
+                    }
+                }
+                function applyBlocking(duration) {
+                    if (flags.blockTransition) {
+                        blockTransitions(node, duration);
+                    }
+                    if (flags.blockKeyframeAnimation) {
+                        blockKeyframeAnimations(node, !!duration);
+                    }
+                }
+                function closeAndReturnNoopAnimator() {
+                    runner = new $$AnimateRunner({
+                        end: endFn,
+                        cancel: cancelFn
+                    });
+                    waitUntilQuiet(noop);
+                    close();
+                    return {
+                        $$willAnimate: false,
+                        start: function() {
+                            return runner;
+                        },
+                        end: endFn
+                    };
+                }
+                function start() {
+                    if (animationClosed) return;
+                    if (!node.parentNode) {
+                        close();
+                        return;
+                    }
+                    var startTime, events = [];
+                    var playPause = function(playAnimation) {
+                        if (!animationCompleted) {
+                            animationPaused = !playAnimation;
+                            if (timings.animationDuration) {
+                                var value = blockKeyframeAnimations(node, animationPaused);
+                                animationPaused ? temporaryStyles.push(value) : removeFromArray(temporaryStyles, value);
+                            }
+                        } else if (animationPaused && playAnimation) {
+                            animationPaused = false;
+                            close();
+                        }
+                    };
+                    var maxStagger = itemIndex > 0 && (timings.transitionDuration && stagger.transitionDuration === 0 || timings.animationDuration && stagger.animationDuration === 0) && Math.max(stagger.animationDelay, stagger.transitionDelay);
+                    if (maxStagger) {
+                        $timeout(triggerAnimationStart, Math.floor(maxStagger * itemIndex * ONE_SECOND), false);
+                    } else {
+                        triggerAnimationStart();
+                    }
+                    runnerHost.resume = function() {
+                        playPause(true);
+                    };
+                    runnerHost.pause = function() {
+                        playPause(false);
+                    };
+                    function triggerAnimationStart() {
+                        if (animationClosed) return;
+                        applyBlocking(false);
+                        forEach(temporaryStyles, function(entry) {
+                            var key = entry[0];
+                            var value = entry[1];
+                            node.style[key] = value;
+                        });
+                        applyAnimationClasses(element, options);
+                        $$jqLite.addClass(element, activeClasses);
+                        if (flags.recalculateTimingStyles) {
+                            fullClassName = node.className + " " + preparationClasses;
+                            cacheKey = gcsHashFn(node, fullClassName);
+                            timings = computeTimings(node, fullClassName, cacheKey);
+                            relativeDelay = timings.maxDelay;
+                            maxDelay = Math.max(relativeDelay, 0);
+                            maxDuration = timings.maxDuration;
+                            if (maxDuration === 0) {
+                                close();
+                                return;
+                            }
+                            flags.hasTransitions = timings.transitionDuration > 0;
+                            flags.hasAnimations = timings.animationDuration > 0;
+                        }
+                        if (flags.applyAnimationDelay) {
+                            relativeDelay = typeof options.delay !== "boolean" && truthyTimingValue(options.delay) ? parseFloat(options.delay) : relativeDelay;
+                            maxDelay = Math.max(relativeDelay, 0);
+                            timings.animationDelay = relativeDelay;
+                            delayStyle = getCssDelayStyle(relativeDelay, true);
+                            temporaryStyles.push(delayStyle);
+                            node.style[delayStyle[0]] = delayStyle[1];
+                        }
+                        maxDelayTime = maxDelay * ONE_SECOND;
+                        maxDurationTime = maxDuration * ONE_SECOND;
+                        if (options.easing) {
+                            var easeProp, easeVal = options.easing;
+                            if (flags.hasTransitions) {
+                                easeProp = TRANSITION_PROP + TIMING_KEY;
+                                temporaryStyles.push([ easeProp, easeVal ]);
+                                node.style[easeProp] = easeVal;
+                            }
+                            if (flags.hasAnimations) {
+                                easeProp = ANIMATION_PROP + TIMING_KEY;
+                                temporaryStyles.push([ easeProp, easeVal ]);
+                                node.style[easeProp] = easeVal;
+                            }
+                        }
+                        if (timings.transitionDuration) {
+                            events.push(TRANSITIONEND_EVENT);
+                        }
+                        if (timings.animationDuration) {
+                            events.push(ANIMATIONEND_EVENT);
+                        }
+                        startTime = Date.now();
+                        var timerTime = maxDelayTime + CLOSING_TIME_BUFFER * maxDurationTime;
+                        var endTime = startTime + timerTime;
+                        var animationsData = element.data(ANIMATE_TIMER_KEY) || [];
+                        var setupFallbackTimer = true;
+                        if (animationsData.length) {
+                            var currentTimerData = animationsData[0];
+                            setupFallbackTimer = endTime > currentTimerData.expectedEndTime;
+                            if (setupFallbackTimer) {
+                                $timeout.cancel(currentTimerData.timer);
+                            } else {
+                                animationsData.push(close);
+                            }
+                        }
+                        if (setupFallbackTimer) {
+                            var timer = $timeout(onAnimationExpired, timerTime, false);
+                            animationsData[0] = {
+                                timer: timer,
+                                expectedEndTime: endTime
+                            };
+                            animationsData.push(close);
+                            element.data(ANIMATE_TIMER_KEY, animationsData);
+                        }
+                        element.on(events.join(" "), onAnimationProgress);
+                        if (options.to) {
+                            if (options.cleanupStyles) {
+                                registerRestorableStyles(restoreStyles, node, Object.keys(options.to));
+                            }
+                            applyAnimationToStyles(element, options);
+                        }
+                    }
+                    function onAnimationExpired() {
+                        var animationsData = element.data(ANIMATE_TIMER_KEY);
+                        if (animationsData) {
+                            for (var i = 1; i < animationsData.length; i++) {
+                                animationsData[i]();
+                            }
+                            element.removeData(ANIMATE_TIMER_KEY);
+                        }
+                    }
+                    function onAnimationProgress(event) {
+                        event.stopPropagation();
+                        var ev = event.originalEvent || event;
+                        var timeStamp = ev.$manualTimeStamp || ev.timeStamp || Date.now();
+                        var elapsedTime = parseFloat(ev.elapsedTime.toFixed(ELAPSED_TIME_MAX_DECIMAL_PLACES));
+                        if (Math.max(timeStamp - startTime, 0) >= maxDelayTime && elapsedTime >= maxDuration) {
+                            animationCompleted = true;
+                            close();
+                        }
+                    }
+                }
+            };
+        } ];
+    } ];
+    var $$AnimateCssDriverProvider = [ "$$animationProvider", function($$animationProvider) {
+        $$animationProvider.drivers.push("$$animateCssDriver");
+        var NG_ANIMATE_SHIM_CLASS_NAME = "ng-animate-shim";
+        var NG_ANIMATE_ANCHOR_CLASS_NAME = "ng-anchor";
+        var NG_OUT_ANCHOR_CLASS_NAME = "ng-anchor-out";
+        var NG_IN_ANCHOR_CLASS_NAME = "ng-anchor-in";
+        function isDocumentFragment(node) {
+            return node.parentNode && node.parentNode.nodeType === 11;
+        }
+        this.$get = [ "$animateCss", "$rootScope", "$$AnimateRunner", "$rootElement", "$sniffer", "$$jqLite", "$document", function($animateCss, $rootScope, $$AnimateRunner, $rootElement, $sniffer, $$jqLite, $document) {
+            if (!$sniffer.animations && !$sniffer.transitions) return noop;
+            var bodyNode = $document[0].body;
+            var rootNode = getDomNode($rootElement);
+            var rootBodyElement = jqLite(isDocumentFragment(rootNode) || bodyNode.contains(rootNode) ? rootNode : bodyNode);
+            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
+            return function initDriverFn(animationDetails) {
+                return animationDetails.from && animationDetails.to ? prepareFromToAnchorAnimation(animationDetails.from, animationDetails.to, animationDetails.classes, animationDetails.anchors) : prepareRegularAnimation(animationDetails);
+            };
+            function filterCssClasses(classes) {
+                return classes.replace(/\bng-\S+\b/g, "");
+            }
+            function getUniqueValues(a, b) {
+                if (isString(a)) a = a.split(" ");
+                if (isString(b)) b = b.split(" ");
+                return a.filter(function(val) {
+                    return b.indexOf(val) === -1;
+                }).join(" ");
+            }
+            function prepareAnchoredAnimation(classes, outAnchor, inAnchor) {
+                var clone = jqLite(getDomNode(outAnchor).cloneNode(true));
+                var startingClasses = filterCssClasses(getClassVal(clone));
+                outAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
+                inAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
+                clone.addClass(NG_ANIMATE_ANCHOR_CLASS_NAME);
+                rootBodyElement.append(clone);
+                var animatorIn, animatorOut = prepareOutAnimation();
+                if (!animatorOut) {
+                    animatorIn = prepareInAnimation();
+                    if (!animatorIn) {
+                        return end();
+                    }
+                }
+                var startingAnimator = animatorOut || animatorIn;
+                return {
+                    start: function() {
+                        var runner;
+                        var currentAnimation = startingAnimator.start();
+                        currentAnimation.done(function() {
+                            currentAnimation = null;
+                            if (!animatorIn) {
+                                animatorIn = prepareInAnimation();
+                                if (animatorIn) {
+                                    currentAnimation = animatorIn.start();
+                                    currentAnimation.done(function() {
+                                        currentAnimation = null;
+                                        end();
+                                        runner.complete();
+                                    });
+                                    return currentAnimation;
+                                }
+                            }
+                            end();
+                            runner.complete();
+                        });
+                        runner = new $$AnimateRunner({
+                            end: endFn,
+                            cancel: endFn
+                        });
+                        return runner;
+                        function endFn() {
+                            if (currentAnimation) {
+                                currentAnimation.end();
+                            }
+                        }
+                    }
+                };
+                function calculateAnchorStyles(anchor) {
+                    var styles = {};
+                    var coords = getDomNode(anchor).getBoundingClientRect();
+                    forEach([ "width", "height", "top", "left" ], function(key) {
+                        var value = coords[key];
+                        switch (key) {
+                          case "top":
+                            value += bodyNode.scrollTop;
+                            break;
+
+                          case "left":
+                            value += bodyNode.scrollLeft;
+                            break;
+                        }
+                        styles[key] = Math.floor(value) + "px";
+                    });
+                    return styles;
+                }
+                function prepareOutAnimation() {
+                    var animator = $animateCss(clone, {
+                        addClass: NG_OUT_ANCHOR_CLASS_NAME,
+                        delay: true,
+                        from: calculateAnchorStyles(outAnchor)
+                    });
+                    return animator.$$willAnimate ? animator : null;
+                }
+                function getClassVal(element) {
+                    return element.attr("class") || "";
+                }
+                function prepareInAnimation() {
+                    var endingClasses = filterCssClasses(getClassVal(inAnchor));
+                    var toAdd = getUniqueValues(endingClasses, startingClasses);
+                    var toRemove = getUniqueValues(startingClasses, endingClasses);
+                    var animator = $animateCss(clone, {
+                        to: calculateAnchorStyles(inAnchor),
+                        addClass: NG_IN_ANCHOR_CLASS_NAME + " " + toAdd,
+                        removeClass: NG_OUT_ANCHOR_CLASS_NAME + " " + toRemove,
+                        delay: true
+                    });
+                    return animator.$$willAnimate ? animator : null;
+                }
+                function end() {
+                    clone.remove();
+                    outAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
+                    inAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
+                }
+            }
+            function prepareFromToAnchorAnimation(from, to, classes, anchors) {
+                var fromAnimation = prepareRegularAnimation(from, noop);
+                var toAnimation = prepareRegularAnimation(to, noop);
+                var anchorAnimations = [];
+                forEach(anchors, function(anchor) {
+                    var outElement = anchor["out"];
+                    var inElement = anchor["in"];
+                    var animator = prepareAnchoredAnimation(classes, outElement, inElement);
+                    if (animator) {
+                        anchorAnimations.push(animator);
+                    }
+                });
+                if (!fromAnimation && !toAnimation && anchorAnimations.length === 0) return;
+                return {
+                    start: function() {
+                        var animationRunners = [];
+                        if (fromAnimation) {
+                            animationRunners.push(fromAnimation.start());
+                        }
+                        if (toAnimation) {
+                            animationRunners.push(toAnimation.start());
+                        }
+                        forEach(anchorAnimations, function(animation) {
+                            animationRunners.push(animation.start());
+                        });
+                        var runner = new $$AnimateRunner({
+                            end: endFn,
+                            cancel: endFn
+                        });
+                        $$AnimateRunner.all(animationRunners, function(status) {
+                            runner.complete(status);
+                        });
+                        return runner;
+                        function endFn() {
+                            forEach(animationRunners, function(runner) {
+                                runner.end();
+                            });
+                        }
+                    }
+                };
+            }
+            function prepareRegularAnimation(animationDetails) {
+                var element = animationDetails.element;
+                var options = animationDetails.options || {};
+                if (animationDetails.structural) {
+                    options.event = animationDetails.event;
+                    options.structural = true;
+                    options.applyClassesEarly = true;
+                    if (animationDetails.event === "leave") {
+                        options.onDone = options.domOperation;
+                    }
+                }
+                if (options.preparationClasses) {
+                    options.event = concatWithSpace(options.event, options.preparationClasses);
+                }
+                var animator = $animateCss(element, options);
+                return animator.$$willAnimate ? animator : null;
+            }
+        } ];
+    } ];
+    var $$AnimateJsProvider = [ "$animateProvider", function($animateProvider) {
+        this.$get = [ "$injector", "$$AnimateRunner", "$$jqLite", function($injector, $$AnimateRunner, $$jqLite) {
+            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
+            return function(element, event, classes, options) {
+                if (arguments.length === 3 && isObject(classes)) {
+                    options = classes;
+                    classes = null;
+                }
+                options = prepareAnimationOptions(options);
+                if (!classes) {
+                    classes = element.attr("class") || "";
+                    if (options.addClass) {
+                        classes += " " + options.addClass;
+                    }
+                    if (options.removeClass) {
+                        classes += " " + options.removeClass;
+                    }
+                }
+                var classesToAdd = options.addClass;
+                var classesToRemove = options.removeClass;
+                var animations = lookupAnimations(classes);
+                var before, after;
+                if (animations.length) {
+                    var afterFn, beforeFn;
+                    if (event == "leave") {
+                        beforeFn = "leave";
+                        afterFn = "afterLeave";
+                    } else {
+                        beforeFn = "before" + event.charAt(0).toUpperCase() + event.substr(1);
+                        afterFn = event;
+                    }
+                    if (event !== "enter" && event !== "move") {
+                        before = packageAnimations(element, event, options, animations, beforeFn);
+                    }
+                    after = packageAnimations(element, event, options, animations, afterFn);
+                }
+                if (!before && !after) return;
+                function applyOptions() {
+                    options.domOperation();
+                    applyAnimationClasses(element, options);
+                }
+                return {
+                    start: function() {
+                        var closeActiveAnimations;
+                        var chain = [];
+                        if (before) {
+                            chain.push(function(fn) {
+                                closeActiveAnimations = before(fn);
+                            });
+                        }
+                        if (chain.length) {
+                            chain.push(function(fn) {
+                                applyOptions();
+                                fn(true);
+                            });
+                        } else {
+                            applyOptions();
+                        }
+                        if (after) {
+                            chain.push(function(fn) {
+                                closeActiveAnimations = after(fn);
+                            });
+                        }
+                        var animationClosed = false;
+                        var runner = new $$AnimateRunner({
+                            end: function() {
+                                endAnimations();
+                            },
+                            cancel: function() {
+                                endAnimations(true);
+                            }
+                        });
+                        $$AnimateRunner.chain(chain, onComplete);
+                        return runner;
+                        function onComplete(success) {
+                            animationClosed = true;
+                            applyOptions();
+                            applyAnimationStyles(element, options);
+                            runner.complete(success);
+                        }
+                        function endAnimations(cancelled) {
+                            if (!animationClosed) {
+                                (closeActiveAnimations || noop)(cancelled);
+                                onComplete(cancelled);
+                            }
+                        }
+                    }
+                };
+                function executeAnimationFn(fn, element, event, options, onDone) {
+                    var args;
+                    switch (event) {
+                      case "animate":
+                        args = [ element, options.from, options.to, onDone ];
+                        break;
+
+                      case "setClass":
+                        args = [ element, classesToAdd, classesToRemove, onDone ];
+                        break;
+
+                      case "addClass":
+                        args = [ element, classesToAdd, onDone ];
+                        break;
+
+                      case "removeClass":
+                        args = [ element, classesToRemove, onDone ];
+                        break;
+
+                      default:
+                        args = [ element, onDone ];
+                        break;
+                    }
+                    args.push(options);
+                    var value = fn.apply(fn, args);
+                    if (value) {
+                        if (isFunction(value.start)) {
+                            value = value.start();
+                        }
+                        if (value instanceof $$AnimateRunner) {
+                            value.done(onDone);
+                        } else if (isFunction(value)) {
+                            return value;
+                        }
+                    }
+                    return noop;
+                }
+                function groupEventedAnimations(element, event, options, animations, fnName) {
+                    var operations = [];
+                    forEach(animations, function(ani) {
+                        var animation = ani[fnName];
+                        if (!animation) return;
+                        operations.push(function() {
+                            var runner;
+                            var endProgressCb;
+                            var resolved = false;
+                            var onAnimationComplete = function(rejected) {
+                                if (!resolved) {
+                                    resolved = true;
+                                    (endProgressCb || noop)(rejected);
+                                    runner.complete(!rejected);
+                                }
+                            };
+                            runner = new $$AnimateRunner({
+                                end: function() {
+                                    onAnimationComplete();
+                                },
+                                cancel: function() {
+                                    onAnimationComplete(true);
+                                }
+                            });
+                            endProgressCb = executeAnimationFn(animation, element, event, options, function(result) {
+                                var cancelled = result === false;
+                                onAnimationComplete(cancelled);
+                            });
+                            return runner;
+                        });
+                    });
+                    return operations;
+                }
+                function packageAnimations(element, event, options, animations, fnName) {
+                    var operations = groupEventedAnimations(element, event, options, animations, fnName);
+                    if (operations.length === 0) {
+                        var a, b;
+                        if (fnName === "beforeSetClass") {
+                            a = groupEventedAnimations(element, "removeClass", options, animations, "beforeRemoveClass");
+                            b = groupEventedAnimations(element, "addClass", options, animations, "beforeAddClass");
+                        } else if (fnName === "setClass") {
+                            a = groupEventedAnimations(element, "removeClass", options, animations, "removeClass");
+                            b = groupEventedAnimations(element, "addClass", options, animations, "addClass");
+                        }
+                        if (a) {
+                            operations = operations.concat(a);
+                        }
+                        if (b) {
+                            operations = operations.concat(b);
+                        }
+                    }
+                    if (operations.length === 0) return;
+                    return function startAnimation(callback) {
+                        var runners = [];
+                        if (operations.length) {
+                            forEach(operations, function(animateFn) {
+                                runners.push(animateFn());
+                            });
+                        }
+                        runners.length ? $$AnimateRunner.all(runners, callback) : callback();
+                        return function endFn(reject) {
+                            forEach(runners, function(runner) {
+                                reject ? runner.cancel() : runner.end();
+                            });
+                        };
+                    };
+                }
+            };
+            function lookupAnimations(classes) {
+                classes = isArray(classes) ? classes : classes.split(" ");
+                var matches = [], flagMap = {};
+                for (var i = 0; i < classes.length; i++) {
+                    var klass = classes[i], animationFactory = $animateProvider.$$registeredAnimations[klass];
+                    if (animationFactory && !flagMap[klass]) {
+                        matches.push($injector.get(animationFactory));
+                        flagMap[klass] = true;
+                    }
+                }
+                return matches;
+            }
+        } ];
+    } ];
+    var $$AnimateJsDriverProvider = [ "$$animationProvider", function($$animationProvider) {
+        $$animationProvider.drivers.push("$$animateJsDriver");
+        this.$get = [ "$$animateJs", "$$AnimateRunner", function($$animateJs, $$AnimateRunner) {
+            return function initDriverFn(animationDetails) {
+                if (animationDetails.from && animationDetails.to) {
+                    var fromAnimation = prepareAnimation(animationDetails.from);
+                    var toAnimation = prepareAnimation(animationDetails.to);
+                    if (!fromAnimation && !toAnimation) return;
+                    return {
+                        start: function() {
+                            var animationRunners = [];
+                            if (fromAnimation) {
+                                animationRunners.push(fromAnimation.start());
+                            }
+                            if (toAnimation) {
+                                animationRunners.push(toAnimation.start());
+                            }
+                            $$AnimateRunner.all(animationRunners, done);
+                            var runner = new $$AnimateRunner({
+                                end: endFnFactory(),
+                                cancel: endFnFactory()
+                            });
+                            return runner;
+                            function endFnFactory() {
+                                return function() {
+                                    forEach(animationRunners, function(runner) {
+                                        runner.end();
+                                    });
+                                };
+                            }
+                            function done(status) {
+                                runner.complete(status);
+                            }
+                        }
+                    };
+                } else {
+                    return prepareAnimation(animationDetails);
+                }
+            };
+            function prepareAnimation(animationDetails) {
+                var element = animationDetails.element;
+                var event = animationDetails.event;
+                var options = animationDetails.options;
+                var classes = animationDetails.classes;
+                return $$animateJs(element, event, classes, options);
+            }
+        } ];
+    } ];
+    var NG_ANIMATE_ATTR_NAME = "data-ng-animate";
+    var NG_ANIMATE_PIN_DATA = "$ngAnimatePin";
+    var $$AnimateQueueProvider = [ "$animateProvider", function($animateProvider) {
+        var PRE_DIGEST_STATE = 1;
+        var RUNNING_STATE = 2;
+        var rules = this.rules = {
+            skip: [],
+            cancel: [],
+            join: []
+        };
+        function isAllowed(ruleType, element, currentAnimation, previousAnimation) {
+            return rules[ruleType].some(function(fn) {
+                return fn(element, currentAnimation, previousAnimation);
+            });
+        }
+        function hasAnimationClasses(options, and) {
+            options = options || {};
+            var a = (options.addClass || "").length > 0;
+            var b = (options.removeClass || "").length > 0;
+            return and ? a && b : a || b;
+        }
+        rules.join.push(function(element, newAnimation, currentAnimation) {
+            return !newAnimation.structural && hasAnimationClasses(newAnimation.options);
+        });
+        rules.skip.push(function(element, newAnimation, currentAnimation) {
+            return !newAnimation.structural && !hasAnimationClasses(newAnimation.options);
+        });
+        rules.skip.push(function(element, newAnimation, currentAnimation) {
+            return currentAnimation.event == "leave" && newAnimation.structural;
+        });
+        rules.skip.push(function(element, newAnimation, currentAnimation) {
+            return currentAnimation.structural && currentAnimation.state === RUNNING_STATE && !newAnimation.structural;
+        });
+        rules.cancel.push(function(element, newAnimation, currentAnimation) {
+            return currentAnimation.structural && newAnimation.structural;
+        });
+        rules.cancel.push(function(element, newAnimation, currentAnimation) {
+            return currentAnimation.state === RUNNING_STATE && newAnimation.structural;
+        });
+        rules.cancel.push(function(element, newAnimation, currentAnimation) {
+            var nO = newAnimation.options;
+            var cO = currentAnimation.options;
+            return nO.addClass && nO.addClass === cO.removeClass || nO.removeClass && nO.removeClass === cO.addClass;
+        });
+        this.$get = [ "$$rAF", "$rootScope", "$rootElement", "$document", "$$HashMap", "$$animation", "$$AnimateRunner", "$templateRequest", "$$jqLite", "$$forceReflow", function($$rAF, $rootScope, $rootElement, $document, $$HashMap, $$animation, $$AnimateRunner, $templateRequest, $$jqLite, $$forceReflow) {
+            var activeAnimationsLookup = new $$HashMap();
+            var disabledElementsLookup = new $$HashMap();
+            var animationsEnabled = null;
+            function postDigestTaskFactory() {
+                var postDigestCalled = false;
+                return function(fn) {
+                    if (postDigestCalled) {
+                        fn();
+                    } else {
+                        $rootScope.$$postDigest(function() {
+                            postDigestCalled = true;
+                            fn();
+                        });
+                    }
+                };
+            }
+            var deregisterWatch = $rootScope.$watch(function() {
+                return $templateRequest.totalPendingRequests === 0;
+            }, function(isEmpty) {
+                if (!isEmpty) return;
+                deregisterWatch();
+                $rootScope.$$postDigest(function() {
+                    $rootScope.$$postDigest(function() {
+                        if (animationsEnabled === null) {
+                            animationsEnabled = true;
+                        }
+                    });
+                });
+            });
+            var callbackRegistry = {};
+            var classNameFilter = $animateProvider.classNameFilter();
+            var isAnimatableClassName = !classNameFilter ? function() {
+                return true;
+            } : function(className) {
+                return classNameFilter.test(className);
+            };
+            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
+            function normalizeAnimationOptions(element, options) {
+                return mergeAnimationOptions(element, options, {});
+            }
+            function findCallbacks(element, event) {
+                var targetNode = getDomNode(element);
+                var matches = [];
+                var entries = callbackRegistry[event];
+                if (entries) {
+                    forEach(entries, function(entry) {
+                        if (entry.node.contains(targetNode)) {
+                            matches.push(entry.callback);
+                        }
+                    });
+                }
+                return matches;
+            }
+            return {
+                on: function(event, container, callback) {
+                    var node = extractElementNode(container);
+                    callbackRegistry[event] = callbackRegistry[event] || [];
+                    callbackRegistry[event].push({
+                        node: node,
+                        callback: callback
+                    });
+                },
+                off: function(event, container, callback) {
+                    var entries = callbackRegistry[event];
+                    if (!entries) return;
+                    callbackRegistry[event] = arguments.length === 1 ? null : filterFromRegistry(entries, container, callback);
+                    function filterFromRegistry(list, matchContainer, matchCallback) {
+                        var containerNode = extractElementNode(matchContainer);
+                        return list.filter(function(entry) {
+                            var isMatch = entry.node === containerNode && (!matchCallback || entry.callback === matchCallback);
+                            return !isMatch;
+                        });
+                    }
+                },
+                pin: function(element, parentElement) {
+                    assertArg(isElement(element), "element", "not an element");
+                    assertArg(isElement(parentElement), "parentElement", "not an element");
+                    element.data(NG_ANIMATE_PIN_DATA, parentElement);
+                },
+                push: function(element, event, options, domOperation) {
+                    options = options || {};
+                    options.domOperation = domOperation;
+                    return queueAnimation(element, event, options);
+                },
+                enabled: function(element, bool) {
+                    var argCount = arguments.length;
+                    if (argCount === 0) {
+                        bool = !!animationsEnabled;
+                    } else {
+                        var hasElement = isElement(element);
+                        if (!hasElement) {
+                            bool = animationsEnabled = !!element;
+                        } else {
+                            var node = getDomNode(element);
+                            var recordExists = disabledElementsLookup.get(node);
+                            if (argCount === 1) {
+                                bool = !recordExists;
+                            } else {
+                                bool = !!bool;
+                                if (!bool) {
+                                    disabledElementsLookup.put(node, true);
+                                } else if (recordExists) {
+                                    disabledElementsLookup.remove(node);
+                                }
+                            }
+                        }
+                    }
+                    return bool;
+                }
+            };
+            function queueAnimation(element, event, options) {
+                var node, parent;
+                element = stripCommentsFromElement(element);
+                if (element) {
+                    node = getDomNode(element);
+                    parent = element.parent();
+                }
+                options = prepareAnimationOptions(options);
+                var runner = new $$AnimateRunner();
+                var runInNextPostDigestOrNow = postDigestTaskFactory();
+                if (isArray(options.addClass)) {
+                    options.addClass = options.addClass.join(" ");
+                }
+                if (options.addClass && !isString(options.addClass)) {
+                    options.addClass = null;
+                }
+                if (isArray(options.removeClass)) {
+                    options.removeClass = options.removeClass.join(" ");
+                }
+                if (options.removeClass && !isString(options.removeClass)) {
+                    options.removeClass = null;
+                }
+                if (options.from && !isObject(options.from)) {
+                    options.from = null;
+                }
+                if (options.to && !isObject(options.to)) {
+                    options.to = null;
+                }
+                if (!node) {
+                    close();
+                    return runner;
+                }
+                var className = [ node.className, options.addClass, options.removeClass ].join(" ");
+                if (!isAnimatableClassName(className)) {
+                    close();
+                    return runner;
+                }
+                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
+                var skipAnimations = !animationsEnabled || disabledElementsLookup.get(node);
+                var existingAnimation = !skipAnimations && activeAnimationsLookup.get(node) || {};
+                var hasExistingAnimation = !!existingAnimation.state;
+                if (!skipAnimations && (!hasExistingAnimation || existingAnimation.state != PRE_DIGEST_STATE)) {
+                    skipAnimations = !areAnimationsAllowed(element, parent, event);
+                }
+                if (skipAnimations) {
+                    close();
+                    return runner;
+                }
+                if (isStructural) {
+                    closeChildAnimations(element);
+                }
+                var newAnimation = {
+                    structural: isStructural,
+                    element: element,
+                    event: event,
+                    close: close,
+                    options: options,
+                    runner: runner
+                };
+                if (hasExistingAnimation) {
+                    var skipAnimationFlag = isAllowed("skip", element, newAnimation, existingAnimation);
+                    if (skipAnimationFlag) {
+                        if (existingAnimation.state === RUNNING_STATE) {
+                            close();
+                            return runner;
+                        } else {
+                            mergeAnimationOptions(element, existingAnimation.options, options);
+                            return existingAnimation.runner;
+                        }
+                    }
+                    var cancelAnimationFlag = isAllowed("cancel", element, newAnimation, existingAnimation);
+                    if (cancelAnimationFlag) {
+                        if (existingAnimation.state === RUNNING_STATE) {
+                            existingAnimation.runner.end();
+                        } else if (existingAnimation.structural) {
+                            existingAnimation.close();
+                        } else {
+                            mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
+                            return existingAnimation.runner;
+                        }
+                    } else {
+                        var joinAnimationFlag = isAllowed("join", element, newAnimation, existingAnimation);
+                        if (joinAnimationFlag) {
+                            if (existingAnimation.state === RUNNING_STATE) {
+                                normalizeAnimationOptions(element, options);
+                            } else {
+                                applyGeneratedPreparationClasses(element, isStructural ? event : null, options);
+                                event = newAnimation.event = existingAnimation.event;
+                                options = mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
+                                return existingAnimation.runner;
+                            }
+                        }
+                    }
+                } else {
+                    normalizeAnimationOptions(element, options);
+                }
+                var isValidAnimation = newAnimation.structural;
+                if (!isValidAnimation) {
+                    isValidAnimation = newAnimation.event === "animate" && Object.keys(newAnimation.options.to || {}).length > 0 || hasAnimationClasses(newAnimation.options);
+                }
+                if (!isValidAnimation) {
+                    close();
+                    clearElementAnimationState(element);
+                    return runner;
+                }
+                var counter = (existingAnimation.counter || 0) + 1;
+                newAnimation.counter = counter;
+                markElementAnimationState(element, PRE_DIGEST_STATE, newAnimation);
+                $rootScope.$$postDigest(function() {
+                    var animationDetails = activeAnimationsLookup.get(node);
+                    var animationCancelled = !animationDetails;
+                    animationDetails = animationDetails || {};
+                    var parentElement = element.parent() || [];
+                    var isValidAnimation = parentElement.length > 0 && (animationDetails.event === "animate" || animationDetails.structural || hasAnimationClasses(animationDetails.options));
+                    if (animationCancelled || animationDetails.counter !== counter || !isValidAnimation) {
+                        if (animationCancelled) {
+                            applyAnimationClasses(element, options);
+                            applyAnimationStyles(element, options);
+                        }
+                        if (animationCancelled || isStructural && animationDetails.event !== event) {
+                            options.domOperation();
+                            runner.end();
+                        }
+                        if (!isValidAnimation) {
+                            clearElementAnimationState(element);
+                        }
+                        return;
+                    }
+                    event = !animationDetails.structural && hasAnimationClasses(animationDetails.options, true) ? "setClass" : animationDetails.event;
+                    markElementAnimationState(element, RUNNING_STATE);
+                    var realRunner = $$animation(element, event, animationDetails.options);
+                    realRunner.done(function(status) {
+                        close(!status);
+                        var animationDetails = activeAnimationsLookup.get(node);
+                        if (animationDetails && animationDetails.counter === counter) {
+                            clearElementAnimationState(getDomNode(element));
+                        }
+                        notifyProgress(runner, event, "close", {});
+                    });
+                    runner.setHost(realRunner);
+                    notifyProgress(runner, event, "start", {});
+                });
+                return runner;
+                function notifyProgress(runner, event, phase, data) {
+                    runInNextPostDigestOrNow(function() {
+                        var callbacks = findCallbacks(element, event);
+                        if (callbacks.length) {
+                            $$rAF(function() {
+                                forEach(callbacks, function(callback) {
+                                    callback(element, phase, data);
+                                });
+                            });
+                        }
+                    });
+                    runner.progress(event, phase, data);
+                }
+                function close(reject) {
+                    clearGeneratedClasses(element, options);
+                    applyAnimationClasses(element, options);
+                    applyAnimationStyles(element, options);
+                    options.domOperation();
+                    runner.complete(!reject);
+                }
+            }
+            function closeChildAnimations(element) {
+                var node = getDomNode(element);
+                var children = node.querySelectorAll("[" + NG_ANIMATE_ATTR_NAME + "]");
+                forEach(children, function(child) {
+                    var state = parseInt(child.getAttribute(NG_ANIMATE_ATTR_NAME));
+                    var animationDetails = activeAnimationsLookup.get(child);
+                    switch (state) {
+                      case RUNNING_STATE:
+                        animationDetails.runner.end();
+
+                      case PRE_DIGEST_STATE:
+                        if (animationDetails) {
+                            activeAnimationsLookup.remove(child);
+                        }
+                        break;
+                    }
+                });
+            }
+            function clearElementAnimationState(element) {
+                var node = getDomNode(element);
+                node.removeAttribute(NG_ANIMATE_ATTR_NAME);
+                activeAnimationsLookup.remove(node);
+            }
+            function isMatchingElement(nodeOrElmA, nodeOrElmB) {
+                return getDomNode(nodeOrElmA) === getDomNode(nodeOrElmB);
+            }
+            function areAnimationsAllowed(element, parentElement, event) {
+                var bodyElement = jqLite($document[0].body);
+                var bodyElementDetected = isMatchingElement(element, bodyElement) || element[0].nodeName === "HTML";
+                var rootElementDetected = isMatchingElement(element, $rootElement);
+                var parentAnimationDetected = false;
+                var animateChildren;
+                var parentHost = element.data(NG_ANIMATE_PIN_DATA);
+                if (parentHost) {
+                    parentElement = parentHost;
+                }
+                while (parentElement && parentElement.length) {
+                    if (!rootElementDetected) {
+                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
+                    }
+                    var parentNode = parentElement[0];
+                    if (parentNode.nodeType !== ELEMENT_NODE) {
+                        break;
+                    }
+                    var details = activeAnimationsLookup.get(parentNode) || {};
+                    if (!parentAnimationDetected) {
+                        parentAnimationDetected = details.structural || disabledElementsLookup.get(parentNode);
+                    }
+                    if (isUndefined(animateChildren) || animateChildren === true) {
+                        var value = parentElement.data(NG_ANIMATE_CHILDREN_DATA);
+                        if (isDefined(value)) {
+                            animateChildren = value;
+                        }
+                    }
+                    if (parentAnimationDetected && animateChildren === false) break;
+                    if (!rootElementDetected) {
+                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
+                        if (!rootElementDetected) {
+                            parentHost = parentElement.data(NG_ANIMATE_PIN_DATA);
+                            if (parentHost) {
+                                parentElement = parentHost;
+                            }
+                        }
+                    }
+                    if (!bodyElementDetected) {
+                        bodyElementDetected = isMatchingElement(parentElement, bodyElement);
+                    }
+                    parentElement = parentElement.parent();
+                }
+                var allowAnimation = !parentAnimationDetected || animateChildren;
+                return allowAnimation && rootElementDetected && bodyElementDetected;
+            }
+            function markElementAnimationState(element, state, details) {
+                details = details || {};
+                details.state = state;
+                var node = getDomNode(element);
+                node.setAttribute(NG_ANIMATE_ATTR_NAME, state);
+                var oldValue = activeAnimationsLookup.get(node);
+                var newValue = oldValue ? extend(oldValue, details) : details;
+                activeAnimationsLookup.put(node, newValue);
+            }
+        } ];
+    } ];
+    var $$AnimateAsyncRunFactory = [ "$$rAF", function($$rAF) {
+        var waitQueue = [];
+        function waitForTick(fn) {
+            waitQueue.push(fn);
+            if (waitQueue.length > 1) return;
+            $$rAF(function() {
+                for (var i = 0; i < waitQueue.length; i++) {
+                    waitQueue[i]();
+                }
+                waitQueue = [];
+            });
+        }
+        return function() {
+            var passed = false;
+            waitForTick(function() {
+                passed = true;
+            });
+            return function(callback) {
+                passed ? callback() : waitForTick(callback);
+            };
+        };
+    } ];
+    var $$AnimateRunnerFactory = [ "$q", "$sniffer", "$$animateAsyncRun", function($q, $sniffer, $$animateAsyncRun) {
+        var INITIAL_STATE = 0;
+        var DONE_PENDING_STATE = 1;
+        var DONE_COMPLETE_STATE = 2;
+        AnimateRunner.chain = function(chain, callback) {
+            var index = 0;
+            next();
+            function next() {
+                if (index === chain.length) {
+                    callback(true);
+                    return;
+                }
+                chain[index](function(response) {
+                    if (response === false) {
+                        callback(false);
+                        return;
+                    }
+                    index++;
+                    next();
+                });
+            }
+        };
+        AnimateRunner.all = function(runners, callback) {
+            var count = 0;
+            var status = true;
+            forEach(runners, function(runner) {
+                runner.done(onProgress);
+            });
+            function onProgress(response) {
+                status = status && response;
+                if (++count === runners.length) {
+                    callback(status);
+                }
+            }
+        };
+        function AnimateRunner(host) {
+            this.setHost(host);
+            this._doneCallbacks = [];
+            this._runInAnimationFrame = $$animateAsyncRun();
+            this._state = 0;
+        }
+        AnimateRunner.prototype = {
+            setHost: function(host) {
+                this.host = host || {};
+            },
+            done: function(fn) {
+                if (this._state === DONE_COMPLETE_STATE) {
+                    fn();
+                } else {
+                    this._doneCallbacks.push(fn);
+                }
+            },
+            progress: noop,
+            getPromise: function() {
+                if (!this.promise) {
+                    var self = this;
+                    this.promise = $q(function(resolve, reject) {
+                        self.done(function(status) {
+                            status === false ? reject() : resolve();
+                        });
+                    });
+                }
+                return this.promise;
+            },
+            then: function(resolveHandler, rejectHandler) {
+                return this.getPromise().then(resolveHandler, rejectHandler);
+            },
+            "catch": function(handler) {
+                return this.getPromise()["catch"](handler);
+            },
+            "finally": function(handler) {
+                return this.getPromise()["finally"](handler);
+            },
+            pause: function() {
+                if (this.host.pause) {
+                    this.host.pause();
+                }
+            },
+            resume: function() {
+                if (this.host.resume) {
+                    this.host.resume();
+                }
+            },
+            end: function() {
+                if (this.host.end) {
+                    this.host.end();
+                }
+                this._resolve(true);
+            },
+            cancel: function() {
+                if (this.host.cancel) {
+                    this.host.cancel();
+                }
+                this._resolve(false);
+            },
+            complete: function(response) {
+                var self = this;
+                if (self._state === INITIAL_STATE) {
+                    self._state = DONE_PENDING_STATE;
+                    self._runInAnimationFrame(function() {
+                        self._resolve(response);
+                    });
+                }
+            },
+            _resolve: function(response) {
+                if (this._state !== DONE_COMPLETE_STATE) {
+                    forEach(this._doneCallbacks, function(fn) {
+                        fn(response);
+                    });
+                    this._doneCallbacks.length = 0;
+                    this._state = DONE_COMPLETE_STATE;
+                }
+            }
+        };
+        return AnimateRunner;
+    } ];
+    var $$AnimationProvider = [ "$animateProvider", function($animateProvider) {
+        var NG_ANIMATE_REF_ATTR = "ng-animate-ref";
+        var drivers = this.drivers = [];
+        var RUNNER_STORAGE_KEY = "$$animationRunner";
+        function setRunner(element, runner) {
+            element.data(RUNNER_STORAGE_KEY, runner);
+        }
+        function removeRunner(element) {
+            element.removeData(RUNNER_STORAGE_KEY);
+        }
+        function getRunner(element) {
+            return element.data(RUNNER_STORAGE_KEY);
+        }
+        this.$get = [ "$$jqLite", "$rootScope", "$injector", "$$AnimateRunner", "$$HashMap", "$$rAFScheduler", function($$jqLite, $rootScope, $injector, $$AnimateRunner, $$HashMap, $$rAFScheduler) {
+            var animationQueue = [];
+            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
+            function sortAnimations(animations) {
+                var tree = {
+                    children: []
+                };
+                var i, lookup = new $$HashMap();
+                for (i = 0; i < animations.length; i++) {
+                    var animation = animations[i];
+                    lookup.put(animation.domNode, animations[i] = {
+                        domNode: animation.domNode,
+                        fn: animation.fn,
+                        children: []
+                    });
+                }
+                for (i = 0; i < animations.length; i++) {
+                    processNode(animations[i]);
+                }
+                return flatten(tree);
+                function processNode(entry) {
+                    if (entry.processed) return entry;
+                    entry.processed = true;
+                    var elementNode = entry.domNode;
+                    var parentNode = elementNode.parentNode;
+                    lookup.put(elementNode, entry);
+                    var parentEntry;
+                    while (parentNode) {
+                        parentEntry = lookup.get(parentNode);
+                        if (parentEntry) {
+                            if (!parentEntry.processed) {
+                                parentEntry = processNode(parentEntry);
+                            }
+                            break;
+                        }
+                        parentNode = parentNode.parentNode;
+                    }
+                    (parentEntry || tree).children.push(entry);
+                    return entry;
+                }
+                function flatten(tree) {
+                    var result = [];
+                    var queue = [];
+                    var i;
+                    for (i = 0; i < tree.children.length; i++) {
+                        queue.push(tree.children[i]);
+                    }
+                    var remainingLevelEntries = queue.length;
+                    var nextLevelEntries = 0;
+                    var row = [];
+                    for (i = 0; i < queue.length; i++) {
+                        var entry = queue[i];
+                        if (remainingLevelEntries <= 0) {
+                            remainingLevelEntries = nextLevelEntries;
+                            nextLevelEntries = 0;
+                            result.push(row);
+                            row = [];
+                        }
+                        row.push(entry.fn);
+                        entry.children.forEach(function(childEntry) {
+                            nextLevelEntries++;
+                            queue.push(childEntry);
+                        });
+                        remainingLevelEntries--;
+                    }
+                    if (row.length) {
+                        result.push(row);
+                    }
+                    return result;
+                }
+            }
+            return function(element, event, options) {
+                options = prepareAnimationOptions(options);
+                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
+                var runner = new $$AnimateRunner({
+                    end: function() {
+                        close();
+                    },
+                    cancel: function() {
+                        close(true);
+                    }
+                });
+                if (!drivers.length) {
+                    close();
+                    return runner;
+                }
+                setRunner(element, runner);
+                var classes = mergeClasses(element.attr("class"), mergeClasses(options.addClass, options.removeClass));
+                var tempClasses = options.tempClasses;
+                if (tempClasses) {
+                    classes += " " + tempClasses;
+                    options.tempClasses = null;
+                }
+                animationQueue.push({
+                    element: element,
+                    classes: classes,
+                    event: event,
+                    structural: isStructural,
+                    options: options,
+                    beforeStart: beforeStart,
+                    close: close
+                });
+                element.on("$destroy", handleDestroyedElement);
+                if (animationQueue.length > 1) return runner;
+                $rootScope.$$postDigest(function() {
+                    var animations = [];
+                    forEach(animationQueue, function(entry) {
+                        if (getRunner(entry.element)) {
+                            animations.push(entry);
+                        } else {
+                            entry.close();
+                        }
+                    });
+                    animationQueue.length = 0;
+                    var groupedAnimations = groupAnimations(animations);
+                    var toBeSortedAnimations = [];
+                    forEach(groupedAnimations, function(animationEntry) {
+                        toBeSortedAnimations.push({
+                            domNode: getDomNode(animationEntry.from ? animationEntry.from.element : animationEntry.element),
+                            fn: function triggerAnimationStart() {
+                                animationEntry.beforeStart();
+                                var startAnimationFn, closeFn = animationEntry.close;
+                                var targetElement = animationEntry.anchors ? animationEntry.from.element || animationEntry.to.element : animationEntry.element;
+                                if (getRunner(targetElement)) {
+                                    var operation = invokeFirstDriver(animationEntry);
+                                    if (operation) {
+                                        startAnimationFn = operation.start;
+                                    }
+                                }
+                                if (!startAnimationFn) {
+                                    closeFn();
+                                } else {
+                                    var animationRunner = startAnimationFn();
+                                    animationRunner.done(function(status) {
+                                        closeFn(!status);
+                                    });
+                                    updateAnimationRunners(animationEntry, animationRunner);
+                                }
+                            }
+                        });
+                    });
+                    $$rAFScheduler(sortAnimations(toBeSortedAnimations));
+                });
+                return runner;
+                function getAnchorNodes(node) {
+                    var SELECTOR = "[" + NG_ANIMATE_REF_ATTR + "]";
+                    var items = node.hasAttribute(NG_ANIMATE_REF_ATTR) ? [ node ] : node.querySelectorAll(SELECTOR);
+                    var anchors = [];
+                    forEach(items, function(node) {
+                        var attr = node.getAttribute(NG_ANIMATE_REF_ATTR);
+                        if (attr && attr.length) {
+                            anchors.push(node);
+                        }
+                    });
+                    return anchors;
+                }
+                function groupAnimations(animations) {
+                    var preparedAnimations = [];
+                    var refLookup = {};
+                    forEach(animations, function(animation, index) {
+                        var element = animation.element;
+                        var node = getDomNode(element);
+                        var event = animation.event;
+                        var enterOrMove = [ "enter", "move" ].indexOf(event) >= 0;
+                        var anchorNodes = animation.structural ? getAnchorNodes(node) : [];
+                        if (anchorNodes.length) {
+                            var direction = enterOrMove ? "to" : "from";
+                            forEach(anchorNodes, function(anchor) {
+                                var key = anchor.getAttribute(NG_ANIMATE_REF_ATTR);
+                                refLookup[key] = refLookup[key] || {};
+                                refLookup[key][direction] = {
+                                    animationID: index,
+                                    element: jqLite(anchor)
+                                };
+                            });
+                        } else {
+                            preparedAnimations.push(animation);
+                        }
+                    });
+                    var usedIndicesLookup = {};
+                    var anchorGroups = {};
+                    forEach(refLookup, function(operations, key) {
+                        var from = operations.from;
+                        var to = operations.to;
+                        if (!from || !to) {
+                            var index = from ? from.animationID : to.animationID;
+                            var indexKey = index.toString();
+                            if (!usedIndicesLookup[indexKey]) {
+                                usedIndicesLookup[indexKey] = true;
+                                preparedAnimations.push(animations[index]);
+                            }
+                            return;
+                        }
+                        var fromAnimation = animations[from.animationID];
+                        var toAnimation = animations[to.animationID];
+                        var lookupKey = from.animationID.toString();
+                        if (!anchorGroups[lookupKey]) {
+                            var group = anchorGroups[lookupKey] = {
+                                structural: true,
+                                beforeStart: function() {
+                                    fromAnimation.beforeStart();
+                                    toAnimation.beforeStart();
+                                },
+                                close: function() {
+                                    fromAnimation.close();
+                                    toAnimation.close();
+                                },
+                                classes: cssClassesIntersection(fromAnimation.classes, toAnimation.classes),
+                                from: fromAnimation,
+                                to: toAnimation,
+                                anchors: []
+                            };
+                            if (group.classes.length) {
+                                preparedAnimations.push(group);
+                            } else {
+                                preparedAnimations.push(fromAnimation);
+                                preparedAnimations.push(toAnimation);
+                            }
+                        }
+                        anchorGroups[lookupKey].anchors.push({
+                            out: from.element,
+                            "in": to.element
+                        });
+                    });
+                    return preparedAnimations;
+                }
+                function cssClassesIntersection(a, b) {
+                    a = a.split(" ");
+                    b = b.split(" ");
+                    var matches = [];
+                    for (var i = 0; i < a.length; i++) {
+                        var aa = a[i];
+                        if (aa.substring(0, 3) === "ng-") continue;
+                        for (var j = 0; j < b.length; j++) {
+                            if (aa === b[j]) {
+                                matches.push(aa);
+                                break;
+                            }
+                        }
+                    }
+                    return matches.join(" ");
+                }
+                function invokeFirstDriver(animationDetails) {
+                    for (var i = drivers.length - 1; i >= 0; i--) {
+                        var driverName = drivers[i];
+                        if (!$injector.has(driverName)) continue;
+                        var factory = $injector.get(driverName);
+                        var driver = factory(animationDetails);
+                        if (driver) {
+                            return driver;
+                        }
+                    }
+                }
+                function beforeStart() {
+                    element.addClass(NG_ANIMATE_CLASSNAME);
+                    if (tempClasses) {
+                        $$jqLite.addClass(element, tempClasses);
+                    }
+                }
+                function updateAnimationRunners(animation, newRunner) {
+                    if (animation.from && animation.to) {
+                        update(animation.from.element);
+                        update(animation.to.element);
+                    } else {
+                        update(animation.element);
+                    }
+                    function update(element) {
+                        getRunner(element).setHost(newRunner);
+                    }
+                }
+                function handleDestroyedElement() {
+                    var runner = getRunner(element);
+                    if (runner && (event !== "leave" || !options.$$domOperationFired)) {
+                        runner.end();
+                    }
+                }
+                function close(rejected) {
+                    element.off("$destroy", handleDestroyedElement);
+                    removeRunner(element);
+                    applyAnimationClasses(element, options);
+                    applyAnimationStyles(element, options);
+                    options.domOperation();
+                    if (tempClasses) {
+                        $$jqLite.removeClass(element, tempClasses);
+                    }
+                    element.removeClass(NG_ANIMATE_CLASSNAME);
+                    runner.complete(!rejected);
+                }
+            };
+        } ];
+    } ];
+    angular.module("ngAnimate", []).directive("ngAnimateChildren", $$AnimateChildrenDirective).factory("$$rAFScheduler", $$rAFSchedulerFactory).factory("$$AnimateRunner", $$AnimateRunnerFactory).factory("$$animateAsyncRun", $$AnimateAsyncRunFactory).provider("$$animateQueue", $$AnimateQueueProvider).provider("$$animation", $$AnimationProvider).provider("$animateCss", $AnimateCssProvider).provider("$$animateCssDriver", $$AnimateCssDriverProvider).provider("$$animateJs", $$AnimateJsProvider).provider("$$animateJsDriver", $$AnimateJsDriverProvider);
+})(window, window.angular);
+
+angular.module("ngMap", []);
+
+(function() {
+    "use strict";
+    var Attr2MapOptions;
+    var __MapController = function($scope, $element, $attrs, $parse, _Attr2MapOptions_, NgMap) {
+        Attr2MapOptions = _Attr2MapOptions_;
+        var vm = this;
+        vm.mapOptions;
+        vm.mapEvents;
+        vm.ngMapDiv;
+        vm.addObject = function(groupName, obj) {
+            if (vm.map) {
+                vm.map[groupName] = vm.map[groupName] || {};
+                var len = Object.keys(vm.map[groupName]).length;
+                vm.map[groupName][obj.id || len] = obj;
+                if (groupName != "infoWindows" && obj.setMap) {
+                    obj.setMap && obj.setMap(vm.map);
+                }
+                if (obj.centered && obj.position) {
+                    vm.map.setCenter(obj.position);
+                }
+                groupName == "markers" && vm.objectChanged("markers");
+                groupName == "customMarkers" && vm.objectChanged("customMarkers");
+            }
+        };
+        vm.deleteObject = function(groupName, obj) {
+            if (obj.map) {
+                var objs = obj.map[groupName];
+                for (var name in objs) {
+                    objs[name] === obj && delete objs[name];
+                }
+                obj.map && obj.setMap && obj.setMap(null);
+                groupName == "markers" && vm.objectChanged("markers");
+                groupName == "customMarkers" && vm.objectChanged("customMarkers");
+            }
+        };
+        vm.observeAttrSetObj = function(orgAttrs, attrs, obj) {
+            if (attrs.noWatcher) {
+                return false;
+            }
+            var attrsToObserve = Attr2MapOptions.getAttrsToObserve(orgAttrs);
+            for (var i = 0; i < attrsToObserve.length; i++) {
+                var attrName = attrsToObserve[i];
+                attrs.$observe(attrName, NgMap.observeAndSet(attrName, obj));
+            }
+        };
+        vm.zoomToIncludeMarkers = function() {
+            var bounds = new google.maps.LatLngBounds();
+            for (var k1 in vm.map.markers) {
+                bounds.extend(vm.map.markers[k1].getPosition());
+            }
+            for (var k2 in vm.map.customMarkers) {
+                bounds.extend(vm.map.customMarkers[k2].getPosition());
+            }
+            vm.map.fitBounds(bounds);
+        };
+        vm.objectChanged = function(group) {
+            if ((group == "markers" || group == "customMarkers") && vm.map.zoomToIncludeMarkers == "auto") {
+                vm.zoomToIncludeMarkers();
+            }
+        };
+        vm.initializeMap = function() {
+            var mapOptions = vm.mapOptions, mapEvents = vm.mapEvents, ngMapDiv = vm.ngMapDiv;
+            vm.map = new google.maps.Map(ngMapDiv, {});
+            mapOptions.zoom = mapOptions.zoom || 15;
+            var center = mapOptions.center;
+            if (!mapOptions.center || typeof center === "string" && center.match(/\{\{.*\}\}/)) {
+                mapOptions.center = new google.maps.LatLng(0, 0);
+            } else if (!(center instanceof google.maps.LatLng)) {
+                var geoCenter = mapOptions.center;
+                delete mapOptions.center;
+                NgMap.getGeoLocation(geoCenter, mapOptions.geoLocationOptions).then(function(latlng) {
+                    vm.map.setCenter(latlng);
+                    var geoCallback = mapOptions.geoCallback;
+                    geoCallback && $parse(geoCallback)($scope);
+                }, function() {
+                    if (mapOptions.geoFallbackCenter) {
+                        vm.map.setCenter(mapOptions.geoFallbackCenter);
+                    }
+                });
+            }
+            vm.map.setOptions(mapOptions);
+            for (var eventName in mapEvents) {
+                google.maps.event.addListener(vm.map, eventName, mapEvents[eventName]);
+            }
+            vm.observeAttrSetObj(orgAttrs, $attrs, vm.map);
+            vm.singleInfoWindow = mapOptions.singleInfoWindow;
+            google.maps.event.addListenerOnce(vm.map, "idle", function() {
+                NgMap.addMap(vm);
+                if (mapOptions.zoomToIncludeMarkers) {
+                    vm.zoomToIncludeMarkers();
+                }
+                $scope.map = vm.map;
+                $scope.$emit("mapInitialized", vm.map);
+                if ($attrs.mapInitialized) {
+                    $parse($attrs.mapInitialized)($scope, {
+                        map: vm.map
+                    });
+                }
+            });
+        };
+        $scope.google = google;
+        var orgAttrs = Attr2MapOptions.orgAttributes($element);
+        var filtered = Attr2MapOptions.filter($attrs);
+        var options = Attr2MapOptions.getOptions(filtered);
+        var controlOptions = Attr2MapOptions.getControlOptions(filtered);
+        var mapOptions = angular.extend(options, controlOptions);
+        var mapEvents = Attr2MapOptions.getEvents($scope, filtered);
+        void 0;
+        vm.mapOptions = mapOptions;
+        vm.mapEvents = mapEvents;
+        vm.ngMapDiv = NgMap.getNgMapDiv($element[0]);
+        $element.append(vm.ngMapDiv);
+        if (options.lazyInit) {
+            vm.map = {
+                id: $attrs.id
+            };
+            NgMap.addMap(vm);
+        } else {
+            vm.initializeMap();
+        }
+        $element.bind("$destroy", function() {
+            NgMap.deleteMap(vm);
+        });
+    };
+    __MapController.$inject = [ "$scope", "$element", "$attrs", "$parse", "Attr2MapOptions", "NgMap" ];
+    angular.module("ngMap").controller("__MapController", __MapController);
+})();
+
+(function() {
+    "use strict";
+    var parser;
+    var linkFunc = function(scope, element, attrs, mapController) {
+        mapController = mapController[0] || mapController[1];
+        var orgAttrs = parser.orgAttributes(element);
+        var filtered = parser.filter(attrs);
+        var options = parser.getOptions(filtered);
+        var events = parser.getEvents(scope, filtered);
+        void 0;
+        var layer = getLayer(options, events);
+        mapController.addObject("bicyclingLayers", layer);
+        mapController.observeAttrSetObj(orgAttrs, attrs, layer);
+        element.bind("$destroy", function() {
+            mapController.deleteObject("bicyclingLayers", layer);
+        });
+    };
+    var getLayer = function(options, events) {
+        var layer = new google.maps.BicyclingLayer(options);
+        for (var eventName in events) {
+            google.maps.event.addListener(layer, eventName, events[eventName]);
+        }
+        return layer;
+    };
+    var bicyclingLayer = function(Attr2MapOptions) {
+        parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    bicyclingLayer.$inject = [ "Attr2MapOptions" ];
+    angular.module("ngMap").directive("bicyclingLayer", bicyclingLayer);
+})();
+
+(function() {
+    "use strict";
+    var parser, $compile, NgMap;
+    var linkFunc = function(scope, element, attrs, mapController) {
+        mapController = mapController[0] || mapController[1];
+        var filtered = parser.filter(attrs);
+        var options = parser.getOptions(filtered);
+        var events = parser.getEvents(scope, filtered);
+        void 0;
+        var customControlEl = element[0].parentElement.removeChild(element[0]);
+        $compile(customControlEl.innerHTML.trim())(scope);
+        for (var eventName in events) {
+            google.maps.event.addDomListener(customControlEl, eventName, events[eventName]);
+        }
+        mapController.addObject("customControls", customControlEl);
+        NgMap.getMap().then(function(map) {
+            var position = options.position;
+            map.controls[google.maps.ControlPosition[position]].push(customControlEl);
+        });
+    };
+    var customControl = function(Attr2MapOptions, _$compile_, _NgMap_) {
+        parser = Attr2MapOptions, $compile = _$compile_, NgMap = _NgMap_;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    customControl.$inject = [ "Attr2MapOptions", "$compile", "NgMap" ];
+    angular.module("ngMap").directive("customControl", customControl);
+})();
+
+(function() {
+    "use strict";
+    var parser, $timeout, $compile, NgMap;
+    var CustomMarker = function(options) {
+        options = options || {};
+        this.el = document.createElement("div");
+        this.el.style.display = "inline-block";
+        this.visible = true;
+        for (var key in options) {
+            this[key] = options[key];
+        }
+    };
+    var setCustomMarker = function() {
+        CustomMarker.prototype = new google.maps.OverlayView();
+        CustomMarker.prototype.setContent = function(html, scope) {
+            this.el.innerHTML = html;
+            this.el.style.position = "absolute";
+            if (scope) {
+                $compile(angular.element(this.el).contents())(scope);
+            }
+        };
+        CustomMarker.prototype.getDraggable = function() {
+            return this.draggable;
+        };
+        CustomMarker.prototype.setDraggable = function(draggable) {
+            this.draggable = draggable;
+        };
+        CustomMarker.prototype.getPosition = function() {
+            return this.position;
+        };
+        CustomMarker.prototype.setPosition = function(position) {
+            position && (this.position = position);
+            if (this.getProjection() && typeof this.position.lng == "function") {
+                var posPixel = this.getProjection().fromLatLngToDivPixel(this.position);
+                var x = Math.round(posPixel.x - this.el.offsetWidth / 2);
+                var y = Math.round(posPixel.y - this.el.offsetHeight - 10);
+                this.el.style.left = x + "px";
+                this.el.style.top = y + "px";
+            }
+        };
+        CustomMarker.prototype.setZIndex = function(zIndex) {
+            zIndex && (this.zIndex = zIndex);
+            this.el.style.zIndex = this.zIndex;
+        };
+        CustomMarker.prototype.setVisible = function(visible) {
+            this.el.style.display = visible ? "inline-block" : "none";
+            this.visible = visible;
+        };
+        CustomMarker.prototype.addClass = function(className) {
+            var classNames = this.el.className.trim().split(" ");
+            classNames.indexOf(className) == -1 && classNames.push(className);
+            this.el.className = classNames.join(" ");
+        };
+        CustomMarker.prototype.removeClass = function(className) {
+            var classNames = this.el.className.split(" ");
+            var index = classNames.indexOf(className);
+            index > -1 && classNames.splice(index, 1);
+            this.el.className = classNames.join(" ");
+        };
+        CustomMarker.prototype.onAdd = function() {
+            this.getPanes().overlayMouseTarget.appendChild(this.el);
+        };
+        CustomMarker.prototype.draw = function() {
+            this.setPosition();
+            this.setZIndex(this.zIndex);
+            this.setVisible(this.visible);
+        };
+        CustomMarker.prototype.onRemove = function() {
+            this.el.parentNode.removeChild(this.el);
+        };
+    };
+    var linkFunc = function(orgHtml, varsToWatch) {
+        return function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered, scope);
+            var events = parser.getEvents(scope, filtered);
+            var removedEl = element[0].parentElement.removeChild(element[0]);
+            void 0;
+            var customMarker = new CustomMarker(options);
+            $timeout(function() {
+                scope.$watch("[" + varsToWatch.join(",") + "]", function() {
+                    customMarker.setContent(orgHtml, scope);
+                });
+                customMarker.setContent(removedEl.innerHTML, scope);
+                var classNames = removedEl.firstElementChild.className;
+                customMarker.addClass("custom-marker");
+                customMarker.addClass(classNames);
+                void 0;
+                if (!(options.position instanceof google.maps.LatLng)) {
+                    NgMap.getGeoLocation(options.position).then(function(latlng) {
+                        customMarker.setPosition(latlng);
+                    });
+                }
+            });
+            void 0;
+            for (var eventName in events) {
+                google.maps.event.addDomListener(customMarker.el, eventName, events[eventName]);
+            }
+            mapController.addObject("customMarkers", customMarker);
+            mapController.observeAttrSetObj(orgAttrs, attrs, customMarker);
+            element.bind("$destroy", function() {
+                mapController.deleteObject("customMarkers", customMarker);
+            });
+        };
+    };
+    var customMarkerDirective = function(_$timeout_, _$compile_, Attr2MapOptions, _NgMap_) {
+        parser = Attr2MapOptions;
+        $timeout = _$timeout_;
+        $compile = _$compile_;
+        NgMap = _NgMap_;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            compile: function(element) {
+                setCustomMarker();
+                element[0].style.display = "none";
+                var orgHtml = element.html();
+                var matches = orgHtml.match(/{{([^}]+)}}/g);
+                var varsToWatch = [];
+                (matches || []).forEach(function(match) {
+                    var toWatch = match.replace("{{", "").replace("}}", "");
+                    if (match.indexOf("::") == -1 && match.indexOf("this.") == -1 && varsToWatch.indexOf(toWatch) == -1) {
+                        varsToWatch.push(match.replace("{{", "").replace("}}", ""));
+                    }
+                });
+                return linkFunc(orgHtml, varsToWatch);
+            }
+        };
+    };
+    customMarkerDirective.$inject = [ "$timeout", "$compile", "Attr2MapOptions", "NgMap" ];
+    angular.module("ngMap").directive("customMarker", customMarkerDirective);
+})();
+
+(function() {
+    "use strict";
+    var NgMap, $timeout, NavigatorGeolocation;
+    var getDirectionsRenderer = function(options, events) {
+        if (options.panel) {
+            options.panel = document.getElementById(options.panel) || document.querySelector(options.panel);
+        }
+        var renderer = new google.maps.DirectionsRenderer(options);
+        for (var eventName in events) {
+            google.maps.event.addListener(renderer, eventName, events[eventName]);
+        }
+        return renderer;
+    };
+    var updateRoute = function(renderer, options) {
+        var directionsService = new google.maps.DirectionsService();
+        var request = options;
+        request.travelMode = request.travelMode || "DRIVING";
+        var validKeys = [ "origin", "destination", "travelMode", "transitOptions", "unitSystem", "durationInTraffic", "waypoints", "optimizeWaypoints", "provideRouteAlternatives", "avoidHighways", "avoidTolls", "region" ];
+        for (var key in request) {
+            validKeys.indexOf(key) === -1 && delete request[key];
+        }
+        if (request.waypoints) {
+            if (request.waypoints == "[]" || request.waypoints === "") {
+                delete request.waypoints;
+            }
+        }
+        var showDirections = function(request) {
+            directionsService.route(request, function(response, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    $timeout(function() {
+                        renderer.setDirections(response);
+                    });
+                }
+            });
+        };
+        if (request.origin && request.destination) {
+            if (request.origin == "current-location") {
+                NavigatorGeolocation.getCurrentPosition().then(function(ll) {
+                    request.origin = new google.maps.LatLng(ll.coords.latitude, ll.coords.longitude);
+                    showDirections(request);
+                });
+            } else if (request.destination == "current-location") {
+                NavigatorGeolocation.getCurrentPosition().then(function(ll) {
+                    request.destination = new google.maps.LatLng(ll.coords.latitude, ll.coords.longitude);
+                    showDirections(request);
+                });
+            } else {
+                showDirections(request);
+            }
+        }
+    };
+    var directions = function(Attr2MapOptions, _$timeout_, _NavigatorGeolocation_, _NgMap_) {
+        var parser = Attr2MapOptions;
+        NgMap = _NgMap_;
+        $timeout = _$timeout_;
+        NavigatorGeolocation = _NavigatorGeolocation_;
+        var linkFunc = function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var events = parser.getEvents(scope, filtered);
+            var attrsToObserve = parser.getAttrsToObserve(orgAttrs);
+            var renderer = getDirectionsRenderer(options, events);
+            mapController.addObject("directionsRenderers", renderer);
+            attrsToObserve.forEach(function(attrName) {
+                (function(attrName) {
+                    attrs.$observe(attrName, function(val) {
+                        if (attrName == "panel") {
+                            $timeout(function() {
+                                var panel = document.getElementById(val) || document.querySelector(val);
+                                void 0;
+                                panel && renderer.setPanel(panel);
+                            });
+                        } else if (options[attrName] !== val) {
+                            var optionValue = parser.toOptionValue(val, {
+                                key: attrName
+                            });
+                            void 0;
+                            options[attrName] = optionValue;
+                            updateRoute(renderer, options);
+                        }
+                    });
+                })(attrName);
+            });
+            NgMap.getMap().then(function() {
+                updateRoute(renderer, options);
+            });
+            element.bind("$destroy", function() {
+                mapController.deleteObject("directionsRenderers", renderer);
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    directions.$inject = [ "Attr2MapOptions", "$timeout", "NavigatorGeolocation", "NgMap" ];
+    angular.module("ngMap").directive("directions", directions);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("drawingManager", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var controlOptions = parser.getControlOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var drawingManager = new google.maps.drawing.DrawingManager({
+                    drawingMode: options.drawingmode,
+                    drawingControl: options.drawingcontrol,
+                    drawingControlOptions: controlOptions.drawingControlOptions,
+                    circleOptions: options.circleoptions,
+                    markerOptions: options.markeroptions,
+                    polygonOptions: options.polygonoptions,
+                    polylineOptions: options.polylineoptions,
+                    rectangleOptions: options.rectangleoptions
+                });
+                for (var eventName in events) {
+                    google.maps.event.addListener(drawingManager, eventName, events[eventName]);
+                }
+                mapController.addObject("mapDrawingManager", drawingManager);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("dynamicMapsEngineLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getDynamicMapsEngineLayer = function(options, events) {
+            var layer = new google.maps.visualization.DynamicMapsEngineLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                var layer = getDynamicMapsEngineLayer(options, events);
+                mapController.addObject("mapsEngineLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("fusionTablesLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getLayer = function(options, events) {
+            var layer = new google.maps.FusionTablesLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                var layer = getLayer(options, events);
+                mapController.addObject("fusionTablesLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("heatmapLayer", [ "Attr2MapOptions", "$window", function(Attr2MapOptions, $window) {
+        var parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                options.data = $window[attrs.data] || scope[attrs.data];
+                if (options.data instanceof Array) {
+                    options.data = new google.maps.MVCArray(options.data);
+                } else {
+                    throw "invalid heatmap data";
+                }
+                var layer = new google.maps.visualization.HeatmapLayer(options);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                mapController.addObject("heatmapLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var infoWindow = function(Attr2MapOptions, $compile, $timeout, $parse, NgMap) {
+        var parser = Attr2MapOptions;
+        var getInfoWindow = function(options, events, element) {
+            var infoWindow;
+            if (options.position && !(options.position instanceof google.maps.LatLng)) {
+                delete options.position;
+            }
+            infoWindow = new google.maps.InfoWindow(options);
+            if (Object.keys(events).length > 0) {
+                void 0;
+            }
+            for (var eventName in events) {
+                if (eventName) {
+                    google.maps.event.addListener(infoWindow, eventName, events[eventName]);
+                }
+            }
+            var template = element.html().trim();
+            if (angular.element(template).length != 1) {
+                throw "info-window working as a template must have a container";
+            }
+            infoWindow.__template = template.replace(/\s?ng-non-bindable[='"]+/, "");
+            infoWindow.__open = function(map, scope, anchor) {
+                $timeout(function() {
+                    anchor && (scope.anchor = anchor);
+                    var el = $compile(infoWindow.__template)(scope);
+                    infoWindow.setContent(el[0]);
+                    scope.$apply();
+                    if (anchor && anchor.getPosition) {
+                        infoWindow.open(map, anchor);
+                    } else if (anchor && anchor instanceof google.maps.LatLng) {
+                        infoWindow.open(map);
+                        infoWindow.setPosition(anchor);
+                    } else {
+                        infoWindow.open(map);
+                    }
+                });
+            };
+            return infoWindow;
+        };
+        var linkFunc = function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            element.css("display", "none");
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var events = parser.getEvents(scope, filtered);
+            void 0;
+            var address;
+            if (options.position && !(options.position instanceof google.maps.LatLng)) {
+                address = options.position;
+            }
+            var infoWindow = getInfoWindow(options, events, element);
+            if (address) {
+                NgMap.getGeoLocation(address).then(function(latlng) {
+                    infoWindow.setPosition(latlng);
+                    infoWindow.__open(mapController.map, scope, latlng);
+                    var geoCallback = attrs.geoCallback;
+                    geoCallback && $parse(geoCallback)(scope);
+                });
+            }
+            mapController.addObject("infoWindows", infoWindow);
+            mapController.observeAttrSetObj(orgAttrs, attrs, infoWindow);
+            NgMap.getMap().then(function(map) {
+                infoWindow.visible && infoWindow.__open(map, scope);
+                if (infoWindow.visibleOnMarker) {
+                    var markerId = infoWindow.visibleOnMarker;
+                    infoWindow.__open(map, scope, map.markers[markerId]);
+                }
+                map.showInfoWindow = map.showInfoWindow || function(p1, p2, p3) {
+                    var id = typeof p1 == "string" ? p1 : p2;
+                    var marker = typeof p1 == "string" ? p2 : p3;
+                    var infoWindow = mapController.map.infoWindows[id];
+                    var anchor = marker ? marker : this.getPosition ? this : null;
+                    infoWindow.__open(mapController.map, scope, anchor);
+                    if (mapController.singleInfoWindow) {
+                        if (mapController.lastInfoWindow) {
+                            scope.hideInfoWindow(mapController.lastInfoWindow);
+                        }
+                        mapController.lastInfoWindow = id;
+                    }
+                };
+                map.hideInfoWindow = scope.hideInfoWindow || function(p1, p2) {
+                    var id = typeof p1 == "string" ? p1 : p2;
+                    var infoWindow = mapController.map.infoWindows[id];
+                    infoWindow.close();
+                };
+                scope.showInfoWindow = map.showInfoWindow;
+                scope.hideInfoWindow = map.hideInfoWindow;
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    infoWindow.$inject = [ "Attr2MapOptions", "$compile", "$timeout", "$parse", "NgMap" ];
+    angular.module("ngMap").directive("infoWindow", infoWindow);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("kmlLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getKmlLayer = function(options, events) {
+            var kmlLayer = new google.maps.KmlLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(kmlLayer, eventName, events[eventName]);
+            }
+            return kmlLayer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var orgAttrs = parser.orgAttributes(element);
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var kmlLayer = getKmlLayer(options, events);
+                mapController.addObject("kmlLayers", kmlLayer);
+                mapController.observeAttrSetObj(orgAttrs, attrs, kmlLayer);
+                element.bind("$destroy", function() {
+                    mapController.deleteObject("kmlLayers", kmlLayer);
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("mapData", [ "Attr2MapOptions", "NgMap", function(Attr2MapOptions, NgMap) {
+        var parser = Attr2MapOptions;
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs) {
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                NgMap.getMap().then(function(map) {
+                    for (var key in options) {
+                        var val = options[key];
+                        if (typeof scope[val] === "function") {
+                            map.data[key](scope[val]);
+                        } else {
+                            map.data[key](val);
+                        }
+                    }
+                    for (var eventName in events) {
+                        map.data.addListener(eventName, events[eventName]);
+                    }
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var $timeout, $compile, src, savedHtml;
+    var preLinkFunc = function(scope, element, attrs) {
+        var mapsUrl = attrs.mapLazyLoadParams || attrs.mapLazyLoad;
+        window.lazyLoadCallback = function() {
+            void 0;
+            $timeout(function() {
+                element.html(savedHtml);
+                $compile(element.contents())(scope);
+            }, 100);
+        };
+        if (window.google === undefined || window.google.maps === undefined) {
+            var scriptEl = document.createElement("script");
+            void 0;
+            scriptEl.src = mapsUrl + (mapsUrl.indexOf("?") > -1 ? "&" : "?") + "callback=lazyLoadCallback";
+            document.body.appendChild(scriptEl);
+        } else {
+            element.html(savedHtml);
+            $compile(element.contents())(scope);
+        }
+    };
+    var compileFunc = function(tElement, tAttrs) {
+        !tAttrs.mapLazyLoad && void 0;
+        savedHtml = tElement.html();
+        src = tAttrs.mapLazyLoad;
+        if (document.querySelector('script[src="' + src + (src.indexOf("?") > -1 ? "&" : "?") + 'callback=lazyLoadCallback"]')) {
+            return false;
+        }
+        tElement.html("");
+        return {
+            pre: preLinkFunc
+        };
+    };
+    var mapLazyLoad = function(_$compile_, _$timeout_) {
+        $compile = _$compile_, $timeout = _$timeout_;
+        return {
+            compile: compileFunc
+        };
+    };
+    mapLazyLoad.$inject = [ "$compile", "$timeout" ];
+    angular.module("ngMap").directive("mapLazyLoad", mapLazyLoad);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("mapType", [ "$parse", "NgMap", function($parse, NgMap) {
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var mapTypeName = attrs.name, mapTypeObject;
+                if (!mapTypeName) {
+                    throw "invalid map-type name";
+                }
+                mapTypeObject = $parse(attrs.object)(scope);
+                if (!mapTypeObject) {
+                    throw "invalid map-type object";
+                }
+                NgMap.getMap().then(function(map) {
+                    map.mapTypes.set(mapTypeName, mapTypeObject);
+                });
+                mapController.addObject("mapTypes", mapTypeObject);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var mapDirective = function() {
+        return {
+            restrict: "AE",
+            controller: "__MapController",
+            conrollerAs: "ngmap"
+        };
+    };
+    angular.module("ngMap").directive("map", [ mapDirective ]);
+    angular.module("ngMap").directive("ngMap", [ mapDirective ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("mapsEngineLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getMapsEngineLayer = function(options, events) {
+            var layer = new google.maps.visualization.MapsEngineLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered, events);
+                void 0;
+                var layer = getMapsEngineLayer(options, events);
+                mapController.addObject("mapsEngineLayers", layer);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var parser, $parse, NgMap;
+    var getMarker = function(options, events) {
+        var marker;
+        if (NgMap.defaultOptions.marker) {
+            for (var key in NgMap.defaultOptions.marker) {
+                if (typeof options[key] == "undefined") {
+                    void 0;
+                    options[key] = NgMap.defaultOptions.marker[key];
+                }
+            }
+        }
+        if (!(options.position instanceof google.maps.LatLng)) {
+            options.position = new google.maps.LatLng(0, 0);
+        }
+        marker = new google.maps.Marker(options);
+        if (Object.keys(events).length > 0) {
+            void 0;
+        }
+        for (var eventName in events) {
+            if (eventName) {
+                google.maps.event.addListener(marker, eventName, events[eventName]);
+            }
+        }
+        return marker;
+    };
+    var linkFunc = function(scope, element, attrs, mapController) {
+        mapController = mapController[0] || mapController[1];
+        var orgAttrs = parser.orgAttributes(element);
+        var filtered = parser.filter(attrs);
+        var markerOptions = parser.getOptions(filtered, scope);
+        var markerEvents = parser.getEvents(scope, filtered);
+        void 0;
+        var address;
+        if (!(markerOptions.position instanceof google.maps.LatLng)) {
+            address = markerOptions.position;
+        }
+        var marker = getMarker(markerOptions, markerEvents);
+        mapController.addObject("markers", marker);
+        if (address) {
+            NgMap.getGeoLocation(address).then(function(latlng) {
+                marker.setPosition(latlng);
+                markerOptions.centered && marker.map.setCenter(latlng);
+                var geoCallback = attrs.geoCallback;
+                geoCallback && $parse(geoCallback)(scope);
+            });
+        }
+        mapController.observeAttrSetObj(orgAttrs, attrs, marker);
+        element.bind("$destroy", function() {
+            mapController.deleteObject("markers", marker);
+        });
+    };
+    var marker = function(Attr2MapOptions, _$parse_, _NgMap_) {
+        parser = Attr2MapOptions;
+        $parse = _$parse_;
+        NgMap = _NgMap_;
+        return {
+            restrict: "E",
+            require: [ "^?map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    marker.$inject = [ "Attr2MapOptions", "$parse", "NgMap" ];
+    angular.module("ngMap").directive("marker", marker);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("overlayMapType", [ "NgMap", function(NgMap) {
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var initMethod = attrs.initMethod || "insertAt";
+                var overlayMapTypeObject = scope[attrs.object];
+                NgMap.getMap().then(function(map) {
+                    if (initMethod == "insertAt") {
+                        var index = parseInt(attrs.index, 10);
+                        map.overlayMapTypes.insertAt(index, overlayMapTypeObject);
+                    } else if (initMethod == "push") {
+                        map.overlayMapTypes.push(overlayMapTypeObject);
+                    }
+                });
+                mapController.addObject("overlayMapTypes", overlayMapTypeObject);
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var placesAutoComplete = function(Attr2MapOptions, $timeout) {
+        var parser = Attr2MapOptions;
+        var linkFunc = function(scope, element, attrs, ngModelCtrl) {
+            if (attrs.placesAutoComplete === "false") {
+                return false;
+            }
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var events = parser.getEvents(scope, filtered);
+            void 0;
+            var autocomplete = new google.maps.places.Autocomplete(element[0], options);
+            for (var eventName in events) {
+                google.maps.event.addListener(autocomplete, eventName, events[eventName]);
+            }
+            var updateModel = function() {
+                $timeout(function() {
+                    ngModelCtrl && ngModelCtrl.$setViewValue(element.val());
+                }, 100);
+            };
+            google.maps.event.addListener(autocomplete, "place_changed", updateModel);
+            element[0].addEventListener("change", updateModel);
+            attrs.$observe("types", function(val) {
+                if (val) {
+                    void 0;
+                    var optionValue = parser.toOptionValue(val, {
+                        key: "types"
+                    });
+                    void 0;
+                    autocomplete.setTypes(optionValue);
+                }
+            });
+        };
+        return {
+            restrict: "A",
+            require: "?ngModel",
+            link: linkFunc
+        };
+    };
+    placesAutoComplete.$inject = [ "Attr2MapOptions", "$timeout" ];
+    angular.module("ngMap").directive("placesAutoComplete", placesAutoComplete);
+})();
+
+(function() {
+    "use strict";
+    var getShape = function(options, events) {
+        var shape;
+        var shapeName = options.name;
+        delete options.name;
+        void 0;
+        switch (shapeName) {
+          case "circle":
+            if (!(options.center instanceof google.maps.LatLng)) {
+                options.center = new google.maps.LatLng(0, 0);
+            }
+            shape = new google.maps.Circle(options);
+            break;
+
+          case "polygon":
+            shape = new google.maps.Polygon(options);
+            break;
+
+          case "polyline":
+            shape = new google.maps.Polyline(options);
+            break;
+
+          case "rectangle":
+            shape = new google.maps.Rectangle(options);
+            break;
+
+          case "groundOverlay":
+          case "image":
+            var url = options.url;
+            var opts = {
+                opacity: options.opacity,
+                clickable: options.clickable,
+                id: options.id
+            };
+            shape = new google.maps.GroundOverlay(url, options.bounds, opts);
+            break;
+        }
+        for (var eventName in events) {
+            if (events[eventName]) {
+                google.maps.event.addListener(shape, eventName, events[eventName]);
+            }
+        }
+        return shape;
+    };
+    var shape = function(Attr2MapOptions, $parse, NgMap) {
+        var parser = Attr2MapOptions;
+        var linkFunc = function(scope, element, attrs, mapController) {
+            mapController = mapController[0] || mapController[1];
+            var orgAttrs = parser.orgAttributes(element);
+            var filtered = parser.filter(attrs);
+            var shapeOptions = parser.getOptions(filtered);
+            var shapeEvents = parser.getEvents(scope, filtered);
+            var address, shapeType;
+            shapeType = shapeOptions.name;
+            if (!(shapeOptions.center instanceof google.maps.LatLng)) {
+                address = shapeOptions.center;
+            }
+            var shape = getShape(shapeOptions, shapeEvents);
+            mapController.addObject("shapes", shape);
+            if (address && shapeType == "circle") {
+                NgMap.getGeoLocation(address).then(function(latlng) {
+                    shape.setCenter(latlng);
+                    shape.centered && shape.map.setCenter(latlng);
+                    var geoCallback = attrs.geoCallback;
+                    geoCallback && $parse(geoCallback)(scope);
+                });
+            }
+            mapController.observeAttrSetObj(orgAttrs, attrs, shape);
+            element.bind("$destroy", function() {
+                mapController.deleteObject("shapes", shape);
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    shape.$inject = [ "Attr2MapOptions", "$parse", "NgMap" ];
+    angular.module("ngMap").directive("shape", shape);
+})();
+
+(function() {
+    "use strict";
+    var streetViewPanorama = function(Attr2MapOptions, NgMap) {
+        var parser = Attr2MapOptions;
+        var getStreetViewPanorama = function(map, options, events) {
+            var svp, container;
+            if (options.container) {
+                container = document.getElementById(options.container);
+                container = container || document.querySelector(options.container);
+            }
+            if (container) {
+                svp = new google.maps.StreetViewPanorama(container, options);
+            } else {
+                svp = map.getStreetView();
+                svp.setOptions(options);
+            }
+            for (var eventName in events) {
+                eventName && google.maps.event.addListener(svp, eventName, events[eventName]);
+            }
+            return svp;
+        };
+        var linkFunc = function(scope, element, attrs) {
+            var filtered = parser.filter(attrs);
+            var options = parser.getOptions(filtered);
+            var controlOptions = parser.getControlOptions(filtered);
+            var svpOptions = angular.extend(options, controlOptions);
+            var svpEvents = parser.getEvents(scope, filtered);
+            void 0;
+            NgMap.getMap().then(function(map) {
+                var svp = getStreetViewPanorama(map, svpOptions, svpEvents);
+                map.setStreetView(svp);
+                !svp.getPosition() && svp.setPosition(map.getCenter());
+                google.maps.event.addListener(svp, "position_changed", function() {
+                    if (svp.getPosition() !== map.getCenter()) {
+                        map.setCenter(svp.getPosition());
+                    }
+                });
+                var listener = google.maps.event.addListener(map, "center_changed", function() {
+                    svp.setPosition(map.getCenter());
+                    google.maps.event.removeListener(listener);
+                });
+            });
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: linkFunc
+        };
+    };
+    streetViewPanorama.$inject = [ "Attr2MapOptions", "NgMap" ];
+    angular.module("ngMap").directive("streetViewPanorama", streetViewPanorama);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("trafficLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getLayer = function(options, events) {
+            var layer = new google.maps.TrafficLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var orgAttrs = parser.orgAttributes(element);
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var layer = getLayer(options, events);
+                mapController.addObject("trafficLayers", layer);
+                mapController.observeAttrSetObj(orgAttrs, attrs, layer);
+                element.bind("$destroy", function() {
+                    mapController.deleteObject("trafficLayers", layer);
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    angular.module("ngMap").directive("transitLayer", [ "Attr2MapOptions", function(Attr2MapOptions) {
+        var parser = Attr2MapOptions;
+        var getLayer = function(options, events) {
+            var layer = new google.maps.TransitLayer(options);
+            for (var eventName in events) {
+                google.maps.event.addListener(layer, eventName, events[eventName]);
+            }
+            return layer;
+        };
+        return {
+            restrict: "E",
+            require: [ "?^map", "?^ngMap" ],
+            link: function(scope, element, attrs, mapController) {
+                mapController = mapController[0] || mapController[1];
+                var orgAttrs = parser.orgAttributes(element);
+                var filtered = parser.filter(attrs);
+                var options = parser.getOptions(filtered);
+                var events = parser.getEvents(scope, filtered);
+                void 0;
+                var layer = getLayer(options, events);
+                mapController.addObject("transitLayers", layer);
+                mapController.observeAttrSetObj(orgAttrs, attrs, layer);
+                element.bind("$destroy", function() {
+                    mapController.deleteObject("transitLayers", layer);
+                });
+            }
+        };
+    } ]);
+})();
+
+(function() {
+    "use strict";
+    var SPECIAL_CHARS_REGEXP = /([\:\-\_]+(.))/g;
+    var MOZ_HACK_REGEXP = /^moz([A-Z])/;
+    var camelCaseFilter = function() {
+        return function(name) {
+            return name.replace(SPECIAL_CHARS_REGEXP, function(_, separator, letter, offset) {
+                return offset ? letter.toUpperCase() : letter;
+            }).replace(MOZ_HACK_REGEXP, "Moz$1");
+        };
+    };
+    angular.module("ngMap").filter("camelCase", camelCaseFilter);
+})();
+
+(function() {
+    "use strict";
+    var jsonizeFilter = function() {
+        return function(str) {
+            try {
+                JSON.parse(str);
+                return str;
+            } catch (e) {
+                return str.replace(/([\$\w]+)\s*:/g, function(_, $1) {
+                    return '"' + $1 + '":';
+                }).replace(/'([^']+)'/g, function(_, $1) {
+                    return '"' + $1 + '"';
+                });
+            }
+        };
+    };
+    angular.module("ngMap").filter("jsonize", jsonizeFilter);
+})();
+
+(function() {
+    "use strict";
+    var isoDateRE = /^(\d{4}\-\d\d\-\d\d([tT][\d:\.]*)?)([zZ]|([+\-])(\d\d):?(\d\d))?$/;
+    var Attr2MapOptions = function($parse, $timeout, $log, NavigatorGeolocation, GeoCoder, camelCaseFilter, jsonizeFilter) {
+        var orgAttributes = function(el) {
+            el.length > 0 && (el = el[0]);
+            var orgAttributes = {};
+            for (var i = 0; i < el.attributes.length; i++) {
+                var attr = el.attributes[i];
+                orgAttributes[attr.name] = attr.value;
+            }
+            return orgAttributes;
+        };
+        var getJSON = function(input) {
+            var re = /^[\+\-]?[0-9\.]+,[ ]*\ ?[\+\-]?[0-9\.]+$/;
+            if (input.match(re)) {
+                input = "[" + input + "]";
+            }
+            return JSON.parse(jsonizeFilter(input));
+        };
+        var getLatLng = function(input) {
+            var output = input;
+            if (input[0].constructor == Array) {
+                output = input.map(function(el) {
+                    return new google.maps.LatLng(el[0], el[1]);
+                });
+            } else if (!isNaN(parseFloat(input[0])) && isFinite(input[0])) {
+                output = new google.maps.LatLng(output[0], output[1]);
+            }
+            return output;
+        };
+        var toOptionValue = function(input, options) {
+            var output;
+            try {
+                output = getNumber(input);
+            } catch (err) {
+                try {
+                    var output = getJSON(input);
+                    if (output instanceof Array) {
+                        if (output[0].constructor == Object) {
+                            output = output;
+                        } else {
+                            output = getLatLng(output);
+                        }
+                    } else if (output === Object(output)) {
+                        var newOptions = options;
+                        newOptions.doNotConverStringToNumber = true;
+                        output = getOptions(output, newOptions);
+                    }
+                } catch (err2) {
+                    if (input.match(/^[A-Z][a-zA-Z0-9]+\(.*\)$/)) {
+                        try {
+                            var exp = "new google.maps." + input;
+                            output = eval(exp);
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else if (input.match(/^([A-Z][a-zA-Z0-9]+)\.([A-Z]+)$/)) {
+                        try {
+                            var matches = input.match(/^([A-Z][a-zA-Z0-9]+)\.([A-Z]+)$/);
+                            output = google.maps[matches[1]][matches[2]];
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else if (input.match(/^[A-Z]+$/)) {
+                        try {
+                            var capitalizedKey = options.key.charAt(0).toUpperCase() + options.key.slice(1);
+                            if (options.key.match(/temperatureUnit|windSpeedUnit|labelColor/)) {
+                                capitalizedKey = capitalizedKey.replace(/s$/, "");
+                                output = google.maps.weather[capitalizedKey][input];
+                            } else {
+                                output = google.maps[capitalizedKey][input];
+                            }
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else if (input.match(isoDateRE)) {
+                        try {
+                            output = new Date(input);
+                        } catch (e) {
+                            output = input;
+                        }
+                    } else {
+                        output = input;
+                    }
+                }
+            }
+            if (options.key == "bounds" && output instanceof Array) {
+                output = new google.maps.LatLngBounds(output[0], output[1]);
+            }
+            if (options.key == "icons" && output instanceof Array) {
+                for (var i = 0; i < output.length; i++) {
+                    var el = output[i];
+                    if (el.icon.path.match(/^[A-Z_]+$/)) {
+                        el.icon.path = google.maps.SymbolPath[el.icon.path];
+                    }
+                }
+            }
+            if (options.key == "icon" && output instanceof Object) {
+                if (("" + output.path).match(/^[A-Z_]+$/)) {
+                    output.path = google.maps.SymbolPath[output.path];
+                }
+                for (var key in output) {
+                    var arr = output[key];
+                    if (key == "anchor" || key == "origin") {
+                        output[key] = new google.maps.Point(arr[0], arr[1]);
+                    } else if (key == "size" || key == "scaledSize") {
+                        output[key] = new google.maps.Size(arr[0], arr[1]);
+                    }
+                }
+            }
+            return output;
+        };
+        var getAttrsToObserve = function(attrs) {
+            var attrsToObserve = [];
+            if (!attrs.noWatcher) {
+                for (var attrName in attrs) {
+                    var attrValue = attrs[attrName];
+                    void 0;
+                    if (attrValue && attrValue.match(/\{\{.*\}\}/)) {
+                        void 0;
+                        attrsToObserve.push(camelCaseFilter(attrName));
+                    }
+                }
+            }
+            return attrsToObserve;
+        };
+        var filter = function(attrs) {
+            var options = {};
+            for (var key in attrs) {
+                if (key.match(/^\$/) || key.match(/^ng[A-Z]/)) {
+                    void 0;
+                } else {
+                    options[key] = attrs[key];
+                }
+            }
+            return options;
+        };
+        var getOptions = function(attrs, params) {
+            var options = {};
+            for (var key in attrs) {
+                if (attrs[key] || attrs[key] === 0) {
+                    if (key.match(/^on[A-Z]/)) {
+                        continue;
+                    } else if (key.match(/ControlOptions$/)) {
+                        continue;
+                    } else {
+                        if (typeof attrs[key] !== "string") {
+                            options[key] = attrs[key];
+                        } else {
+                            if (params && params.doNotConverStringToNumber && attrs[key].match(/^[0-9]+$/)) {
+                                options[key] = attrs[key];
+                            } else {
+                                options[key] = toOptionValue(attrs[key], {
+                                    key: key
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            return options;
+        };
+        var getEvents = function(scope, attrs) {
+            var events = {};
+            var toLowercaseFunc = function($1) {
+                return "_" + $1.toLowerCase();
+            };
+            var EventFunc = function(attrValue) {
+                var matches = attrValue.match(/([^\(]+)\(([^\)]*)\)/);
+                var funcName = matches[1];
+                var argsStr = matches[2].replace(/event[ ,]*/, "");
+                var argsExpr = $parse("[" + argsStr + "]");
+                return function(event) {
+                    var args = argsExpr(scope);
+                    function index(obj, i) {
+                        return obj[i];
+                    }
+                    var f = funcName.split(".").reduce(index, scope);
+                    f && f.apply(this, [ event ].concat(args));
+                    $timeout(function() {
+                        scope.$apply();
+                    });
+                };
+            };
+            for (var key in attrs) {
+                if (attrs[key]) {
+                    if (!key.match(/^on[A-Z]/)) {
+                        continue;
+                    }
+                    var eventName = key.replace(/^on/, "");
+                    eventName = eventName.charAt(0).toLowerCase() + eventName.slice(1);
+                    eventName = eventName.replace(/([A-Z])/g, toLowercaseFunc);
+                    var attrValue = attrs[key];
+                    events[eventName] = new EventFunc(attrValue);
+                }
+            }
+            return events;
+        };
+        var getControlOptions = function(filtered) {
+            var controlOptions = {};
+            if (typeof filtered != "object") {
+                return false;
+            }
+            for (var attr in filtered) {
+                if (filtered[attr]) {
+                    if (!attr.match(/(.*)ControlOptions$/)) {
+                        continue;
+                    }
+                    var orgValue = filtered[attr];
+                    var newValue = orgValue.replace(/'/g, '"');
+                    newValue = newValue.replace(/([^"]+)|("[^"]+")/g, function($0, $1, $2) {
+                        if ($1) {
+                            return $1.replace(/([a-zA-Z0-9]+?):/g, '"$1":');
+                        } else {
+                            return $2;
+                        }
+                    });
+                    try {
+                        var options = JSON.parse(newValue);
+                        for (var key in options) {
+                            if (options[key]) {
+                                var value = options[key];
+                                if (typeof value === "string") {
+                                    value = value.toUpperCase();
+                                } else if (key === "mapTypeIds") {
+                                    value = value.map(function(str) {
+                                        if (str.match(/^[A-Z]+$/)) {
+                                            return google.maps.MapTypeId[str.toUpperCase()];
+                                        } else {
+                                            return str;
+                                        }
+                                    });
+                                }
+                                if (key === "style") {
+                                    var str = attr.charAt(0).toUpperCase() + attr.slice(1);
+                                    var objName = str.replace(/Options$/, "") + "Style";
+                                    options[key] = google.maps[objName][value];
+                                } else if (key === "position") {
+                                    options[key] = google.maps.ControlPosition[value];
+                                } else {
+                                    options[key] = value;
+                                }
+                            }
+                        }
+                        controlOptions[attr] = options;
+                    } catch (e) {
+                        void 0;
+                    }
+                }
+            }
+            return controlOptions;
+        };
+        return {
+            filter: filter,
+            getOptions: getOptions,
+            getEvents: getEvents,
+            getControlOptions: getControlOptions,
+            toOptionValue: toOptionValue,
+            getAttrsToObserve: getAttrsToObserve,
+            orgAttributes: orgAttributes
+        };
+    };
+    Attr2MapOptions.$inject = [ "$parse", "$timeout", "$log", "NavigatorGeolocation", "GeoCoder", "camelCaseFilter", "jsonizeFilter" ];
+    angular.module("ngMap").service("Attr2MapOptions", Attr2MapOptions);
+})();
+
+(function() {
+    "use strict";
+    var $q;
+    var geocodeFunc = function(options) {
+        var deferred = $q.defer();
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode(options, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                deferred.resolve(results);
+            } else {
+                deferred.reject(status);
+            }
+        });
+        return deferred.promise;
+    };
+    var GeoCoder = function(_$q_) {
+        $q = _$q_;
+        return {
+            geocode: geocodeFunc
+        };
+    };
+    GeoCoder.$inject = [ "$q" ];
+    angular.module("ngMap").service("GeoCoder", GeoCoder);
+})();
+
+(function() {
+    "use strict";
+    var $q;
+    var getCurrentPosition = function(geoLocationOptions) {
+        var deferred = $q.defer();
+        if (navigator.geolocation) {
+            if (geoLocationOptions === undefined) {
+                geoLocationOptions = {
+                    timeout: 5e3
+                };
+            } else if (geoLocationOptions.timeout === undefined) {
+                geoLocationOptions.timeout = 5e3;
+            }
+            navigator.geolocation.getCurrentPosition(function(position) {
+                deferred.resolve(position);
+            }, function(evt) {
+                void 0;
+                deferred.reject(evt);
+            }, geoLocationOptions);
+        } else {
+            deferred.reject("Browser Geolocation service failed.");
+        }
+        return deferred.promise;
+    };
+    var NavigatorGeolocation = function(_$q_) {
+        $q = _$q_;
+        return {
+            getCurrentPosition: getCurrentPosition
+        };
+    };
+    NavigatorGeolocation.$inject = [ "$q" ];
+    angular.module("ngMap").service("NavigatorGeolocation", NavigatorGeolocation);
+})();
+
+(function() {
+    "use strict";
+    var $window, $document, $q;
+    var NavigatorGeolocation, Attr2MapOptions, GeoCoder, camelCaseFilter;
+    var mapControllers = {};
+    var initMap = function(id) {
+        var ctrl = mapControllers[id || 0];
+        ctrl.initializeMap();
+    };
+    var getMap = function(options) {
+        options = options || {};
+        var deferred = $q.defer();
+        var id = options.id || 0;
+        var timeout = options.timeout || 2e3;
+        function waitForMap(timeElapsed) {
+            if (mapControllers[id]) {
+                deferred.resolve(mapControllers[id].map);
+            } else if (timeElapsed > timeout) {
+                deferred.reject("could not find map");
+            } else {
+                $window.setTimeout(function() {
+                    waitForMap(timeElapsed + 100);
+                }, 100);
+            }
+        }
+        waitForMap(0);
+        return deferred.promise;
+    };
+    var addMap = function(mapCtrl) {
+        var len = Object.keys(mapControllers).length;
+        mapControllers[mapCtrl.map.id || len] = mapCtrl;
+    };
+    var deleteMap = function(mapCtrl) {
+        var len = Object.keys(mapControllers).length - 1;
+        delete mapControllers[mapCtrl.map.id || len];
+    };
+    var getStyle = function(el, styleProp) {
+        var y;
+        if (el.currentStyle) {
+            y = el.currentStyle[styleProp];
+        } else if ($window.getComputedStyle) {
+            y = $document.defaultView.getComputedStyle(el, null).getPropertyValue(styleProp);
+        }
+        return y;
+    };
+    var getNgMapDiv = function(ngMapEl) {
+        var el = $document.createElement("div");
+        var defaultStyle = ngMapEl.getAttribute("default-style");
+        el.style.width = "100%";
+        el.style.height = "100%";
+        if (defaultStyle == "true") {
+            ngMapEl.style.display = "block";
+            ngMapEl.style.height = "300px";
+        } else {
+            if (getStyle(ngMapEl, "display") != "block") {
+                ngMapEl.style.display = "block";
+            }
+            if (getStyle(ngMapEl, "height").match(/^(0|auto)/)) {
+                ngMapEl.style.height = "300px";
+            }
+        }
+        el.addEventListener("dragstart", function(event) {
+            event.preventDefault();
+            return false;
+        });
+        return el;
+    };
+    var getGeoLocation = function(string, options) {
+        var deferred = $q.defer();
+        if (!string || string.match(/^current/i)) {
+            NavigatorGeolocation.getCurrentPosition(options).then(function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                var latLng = new google.maps.LatLng(lat, lng);
+                deferred.resolve(latLng);
+            }, function(error) {
+                deferred.reject(error);
+            });
+        } else {
+            GeoCoder.geocode({
+                address: string
+            }).then(function(results) {
+                deferred.resolve(results[0].geometry.location);
+            }, function(error) {
+                deferred.reject(error);
+            });
+        }
+        return deferred.promise;
+    };
+    var observeAndSet = function(attrName, object) {
+        return function(val) {
+            if (val) {
+                void 0;
+                var setMethod = camelCaseFilter("set-" + attrName);
+                var optionValue = Attr2MapOptions.toOptionValue(val, {
+                    key: attrName
+                });
+                void 0;
+                if (object[setMethod]) {
+                    if (attrName.match(/center|position/) && typeof optionValue == "string") {
+                        getGeoLocation(optionValue).then(function(latlng) {
+                            object[setMethod](latlng);
+                        });
+                    } else {
+                        object[setMethod](optionValue);
+                    }
+                }
+            }
+        };
+    };
+    angular.module("ngMap").provider("NgMap", function() {
+        var defaultOptions = {};
+        var useTinfoilShielding = false;
+        this.setDefaultOptions = function(options) {
+            defaultOptions = options;
+        };
+        var NgMap = function(_$window_, _$document_, _$q_, _NavigatorGeolocation_, _Attr2MapOptions_, _GeoCoder_, _camelCaseFilter_) {
+            $window = _$window_;
+            $document = _$document_[0];
+            $q = _$q_;
+            NavigatorGeolocation = _NavigatorGeolocation_;
+            Attr2MapOptions = _Attr2MapOptions_;
+            GeoCoder = _GeoCoder_;
+            camelCaseFilter = _camelCaseFilter_;
+            return {
+                defaultOptions: defaultOptions,
+                addMap: addMap,
+                deleteMap: deleteMap,
+                getMap: getMap,
+                initMap: initMap,
+                getStyle: getStyle,
+                getNgMapDiv: getNgMapDiv,
+                getGeoLocation: getGeoLocation,
+                observeAndSet: observeAndSet
+            };
+        };
+        NgMap.$inject = [ "$window", "$document", "$q", "NavigatorGeolocation", "Attr2MapOptions", "GeoCoder", "camelCaseFilter" ];
+        this.$get = NgMap;
+    });
+})();
+
+(function() {
+    "use strict";
+    var $q;
+    var getPanorama = function(map, latlng) {
+        latlng = latlng || map.getCenter();
+        var deferred = $q.defer();
+        var svs = new google.maps.StreetViewService();
+        svs.getPanoramaByLocation(latlng || map.getCenter, 100, function(data, status) {
+            if (status === google.maps.StreetViewStatus.OK) {
+                deferred.resolve(data.location.pano);
+            } else {
+                deferred.resolve(false);
+            }
+        });
+        return deferred.promise;
+    };
+    var setPanorama = function(map, panoId) {
+        var svp = new google.maps.StreetViewPanorama(map.getDiv(), {
+            enableCloseButton: true
+        });
+        svp.setPano(panoId);
+    };
+    var StreetView = function(_$q_) {
+        $q = _$q_;
+        return {
+            getPanorama: getPanorama,
+            setPanorama: setPanorama
+        };
+    };
+    StreetView.$inject = [ "$q" ];
+    angular.module("ngMap").service("StreetView", StreetView);
+})();
+
 "use strict";
 
 var WaveSurfer = {
@@ -31203,73 +35033,6 @@ WaveSurfer.Spectrogram = {
 
 "use strict";
 
-var model = {};
-
-model.Value = function() {
-    this.export = function() {
-        return {};
-    };
-};
-
-model.TextValue = function(content) {
-    this.content = content;
-    this.export = function() {
-        return {
-            content: content,
-            data_type: "text"
-        };
-    };
-};
-
-model.TextValue.prototype = new model.Value();
-
-model.SoundValue = function(name, mime, content) {
-    this.name = name;
-    this.mime = mime;
-    this.content = content;
-    this.export = function() {
-        return {
-            content: content,
-            filename: name,
-            data_type: "sound"
-        };
-    };
-};
-
-model.SoundValue.prototype = new model.Value();
-
-model.ImageValue = function(name, mime, content) {
-    this.name = name;
-    this.mime = mime;
-    this.content = content;
-    this.export = function() {
-        return {
-            content: content,
-            filename: name,
-            data_type: "image"
-        };
-    };
-};
-
-model.ImageValue.prototype = new model.Value();
-
-model.MarkupValue = function(name, mime, content) {
-    this.name = name;
-    this.mime = mime;
-    this.content = content;
-    this.export = function() {
-        return {
-            content: content,
-            filename: name,
-            data_type: "markup"
-        };
-    };
-};
-
-model.MarkupValue.prototype = new model.Value();
-
-"use strict";
-
 var elan = function() {
     var elan = {};
     var _forEach = Array.prototype.forEach;
@@ -31494,6 +35257,48 @@ var elan = function() {
     };
     return elan;
 }();
+
+function WaveSurferController($scope) {
+    var activeUrl = null;
+    $scope.play = function(url) {
+        if (!$scope.wavesurfer) {
+            return;
+        }
+        activeUrl = url;
+        $scope.wavesurfer.once("ready", function() {
+            $scope.wavesurfer.play();
+            $scope.$apply();
+        });
+        $scope.wavesurfer.load(activeUrl);
+    };
+    $scope.playPause = function() {
+        $scope.wavesurfer.playPause();
+    };
+    $scope.isPlaying = function(url) {
+        return url == activeUrl;
+    };
+    $scope.isMediaFileAvailable = function() {
+        return activeUrl != null;
+    };
+    $scope.$on("wavesurferInit", function(e, wavesurfer, container) {
+        $scope.wavesurfer = wavesurfer;
+        $scope.wavesurfer.on("play", function() {
+            $scope.paused = false;
+        });
+        $scope.wavesurfer.on("pause", function() {
+            $scope.paused = true;
+        });
+        $scope.wavesurfer.on("finish", function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+    });
+    $scope.$on("modal.closing", function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
+}
 
 function getCookie(name) {
     var nameEQ = name + "=";
@@ -32825,7 +36630,9 @@ function responseHandler($timeout, $modal) {
     };
 }
 
-angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionaryService", lingvodocAPI).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).directive("wavesurfer", function() {
+"use strict";
+
+angular.module("MapsModule", [ "ui.bootstrap", "ngAnimate", "ngMap" ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).factory("dictionaryService", [ "$http", "$q", lingvodocAPI ]).directive("wavesurfer", function() {
     return {
         restrict: "E",
         link: function($scope, $element, $attrs) {
@@ -32840,86 +36647,200 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             $scope.$emit("wavesurferInit", wavesurfer, $element);
         }
     };
-}).directive("onReadFile", function($parse) {
+}).directive("indeterminate", [ function() {
     return {
-        restrict: "A",
-        scope: false,
-        link: function(scope, element, attrs) {
-            var fn = $parse(attrs.onReadFile);
-            element.on("change", function(onChangeEvent) {
-                var reader = new FileReader();
-                var file = (onChangeEvent.srcElement || onChangeEvent.target).files[0];
-                reader.onload = function(onLoadEvent) {
-                    scope.$apply(function() {
-                        var b64file = btoa(onLoadEvent.target.result);
-                        fn(scope, {
-                            $fileName: file.name,
-                            $fileType: file.type,
-                            $fileContent: b64file
-                        });
-                    });
-                };
-                reader.readAsBinaryString(file);
+        require: "?ngModel",
+        link: function(scope, el, attrs, ctrl) {
+            ctrl.$formatters = [];
+            ctrl.$parsers = [];
+            ctrl.$render = function() {
+                var d = ctrl.$viewValue;
+                el.data("checked", d);
+                switch (d) {
+                  case true:
+                    el.prop("indeterminate", false);
+                    el.prop("checked", true);
+                    break;
+
+                  case false:
+                    el.prop("indeterminate", false);
+                    el.prop("checked", false);
+                    break;
+
+                  default:
+                    el.prop("indeterminate", true);
+                }
+            };
+            el.bind("click", function() {
+                var d;
+                switch (el.data("checked")) {
+                  case false:
+                    d = true;
+                    break;
+
+                  case true:
+                    d = null;
+                    break;
+
+                  default:
+                    d = false;
+                }
+                ctrl.$setViewValue(d);
+                scope.$apply(ctrl.$render);
             });
         }
     };
-}).controller("ViewDictionaryController", [ "$scope", "$window", "$http", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $window, $http, $modal, $log, dictionaryService, responseHandler) {
-    var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
-    var perspectiveId = $("#perspectiveId").data("lingvodoc");
+} ]).controller("MapsController", [ "$scope", "$http", "$q", "$log", "$modal", "NgMap", "dictionaryService", "responseHandler", function($scope, $http, $q, $log, $modal, NgMap, dictionaryService, responseHandler) {
     WaveSurferController.call(this, $scope);
-    $scope.perspectiveFields = [];
-    $scope.lexicalEntries = [];
+    var key = "AIzaSyB6l1ciVMcP1pIUkqvSx8vmuRJL14lbPXk";
+    $scope.googleMapsUrl = "http://maps.google.com/maps/api/js?v=3.20&key=" + encodeURIComponent(key);
+    $scope.perspectives = [];
+    $scope.activePerspectives = [];
+    $scope.adoptedSearch = null;
+    $scope.etymologySearch = null;
+    $scope.entries = [];
     $scope.fields = [];
-    $scope.dictionaryTable = [];
-    $scope.pageIndex = 1;
-    $scope.pageSize = 20;
-    $scope.pageCount = 1;
-    $scope.getFieldValues = function(entry, field) {
-        var value;
-        var values = [];
-        if (entry && entry.contains) {
-            if (field.isGroup) {
-                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                    var subField = field.contains[fieldIndex];
-                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                        value = entry.contains[valueIndex];
-                        if (value.entity_type == subField.entity_type) {
+    $scope.groups = [];
+    $scope.ge = [];
+    $scope.allFields = [];
+    $scope.searchFields = [];
+    $scope.fieldsIdx = [];
+    $scope.fieldsValues = [];
+    $scope.search = [ {
+        query: "",
+        type: "",
+        orFlag: true
+    } ];
+    $scope.searchComplete = true;
+    var mapFieldValues = function(allEntries, allFields) {
+        var result = [];
+        var getFieldValues = function(entry, field) {
+            var value;
+            var values = [];
+            if (entry && entry.contains) {
+                if (field.isGroup) {
+                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                        var subField = field.contains[fieldIndex];
+                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                            value = entry.contains[valueIndex];
+                            if (value.entity_type == subField.entity_type) {
+                                values.push(value);
+                            }
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < entry.contains.length; i++) {
+                        value = entry.contains[i];
+                        if (value.entity_type == field.entity_type) {
                             values.push(value);
                         }
                     }
                 }
-            } else {
-                for (var i = 0; i < entry.contains.length; i++) {
-                    value = entry.contains[i];
-                    if (value.entity_type == field.entity_type) {
-                        values.push(value);
-                    }
-                }
             }
+            return values;
+        };
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push(getFieldValues(allEntries[i], allFields[j]));
+            }
+            result.push(entryRow);
         }
-        return values;
+        return result;
     };
-    $scope.getPage = function(pageNumber) {
-        if (pageNumber > 0 && pageNumber <= $scope.pageCount) {
-            $scope.pageIndex = pageNumber;
-            dictionaryService.getLexicalEntries($("#allPublishedEntriesUrl").data("lingvodoc"), (pageNumber - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
-                $scope.lexicalEntries = lexicalEntries;
-            }, function(reason) {
-                responseHandler.error(reason);
+    $scope.getPerspectivesWithLocation = function() {
+        return _.filter($scope.perspectives, function(p) {
+            return _.has(p, "location") && !_.isEmpty(p, "location") && _.has(p.location, "lat") && _.has(p.location, "lng");
+        });
+    };
+    $scope.getDictionary = function(perspective) {
+        return _.find($scope.dictionaries, function(d) {
+            return d.client_id == perspective.parent_client_id && d.object_id == perspective.parent_object_id;
+        });
+    };
+    $scope.isPerspectiveActive = function(perspective) {
+        return !!_.find($scope.activePerspectives, function(p) {
+            return p.equals(perspective);
+        });
+    };
+    $scope.getSearchFields = function() {
+        var activeFields = _.clone($scope.allFields);
+        _.remove(activeFields, function(f, i) {
+            var perspective = $scope.perspectives[i];
+            return !_.find($scope.activePerspectives, function(p) {
+                return p.equals(perspective);
+            });
+        });
+        var fields = _.reduce(activeFields, function(acc, perspectiveFields) {
+            var fields = [];
+            _.each(perspectiveFields, function(f) {
+                if (f.level === "leveloneentity" && f.data_type === "text") {
+                    fields.push(f);
+                }
+                if (_.isArray(f.contains)) {
+                    _.each(f.contains, function(cf) {
+                        if (cf.level === "leveloneentity" && cf.data_type === "text") {
+                            fields.push(cf);
+                        }
+                    });
+                }
+            });
+            return acc.concat(fields);
+        }, []);
+        var names = [];
+        var removed = _.remove(fields, function(f) {
+            if (_.indexOf(names, f.entity_type) >= 0) {
+                return true;
+            }
+            names.push(f.entity_type);
+            return false;
+        });
+        $scope.searchFields = fields;
+        return $scope.searchFields;
+    };
+    $scope.addSearchField = function() {
+        $scope.search.push({
+            query: "",
+            type: "",
+            orFlag: false
+        });
+    };
+    $scope.info = function(event, perspective) {
+        var self = this;
+        $scope.selectedPerspective = perspective;
+        NgMap.getMap().then(function(map) {
+            map.showInfoWindow("bar", self);
+        });
+    };
+    $scope.toggle = function(event, perspective) {
+        if (!_.find($scope.activePerspectives, function(p) {
+            return p.equals(perspective);
+        })) {
+            $scope.activePerspectives.push(perspective);
+        } else {
+            _.remove($scope.activePerspectives, function(p) {
+                return p.equals(perspective);
             });
         }
     };
-    $scope.range = function(min, max, step) {
-        step = step || 1;
-        var input = [];
-        for (var i = min; i <= max; i += step) {
-            input.push(i);
-        }
-        return input;
+    $scope.showBlob = function(blob) {
+        $modal.open({
+            animation: true,
+            templateUrl: "blobModal.html",
+            controller: "BlobController",
+            size: "lg",
+            backdrop: "static",
+            keyboard: false,
+            resolve: {
+                params: function() {
+                    return {
+                        blob: blob
+                    };
+                }
+            }
+        }).result.then(function(req) {}, function() {});
     };
     $scope.viewGroup = function(entry, field, values) {
-        $log.info(entry);
-        $log.info(values);
         $modal.open({
             animation: true,
             templateUrl: "viewGroupModal.html",
@@ -32970,62 +36891,227 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             }
         });
     };
-    $scope.$watch("lexicalEntries", function(updatedEntries) {
-        var getFieldValues = function(entry, field) {
-            var value;
-            var values = [];
-            if (entry && entry.contains) {
-                if (field.isGroup) {
-                    for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                        var subField = field.contains[fieldIndex];
-                        for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                            value = entry.contains[valueIndex];
-                            if (value.entity_type == subField.entity_type) {
-                                values.push(value);
-                            }
-                        }
+    $scope.doSearch = function() {
+        var q = _.map($scope.search, function(s) {
+            return {
+                searchstring: s.query,
+                entity_type: s.type.entity_type,
+                search_by_or: s.orFlag
+            };
+        });
+        _.remove(q, function(s) {
+            _.isEmpty(s.searchstring) || _.isUndefined(s.entity_type);
+        });
+        $scope.searchComplete = false;
+        dictionaryService.advancedSearch(q, $scope.activePerspectives, $scope.adoptedSearch, $scope.etymologySearch).then(function(entries) {
+            $scope.searchComplete = true;
+            if (!_.isEmpty(entries)) {
+                var p = _.find(_.first(entries)["origin"], function(o) {
+                    return o.type == "perspective";
+                });
+                var groups = [];
+                var ge = _.groupBy(entries, function(e) {
+                    var entryDictionary = _.find(e["origin"], function(o) {
+                        return o.type == "dictionary";
+                    });
+                    var entryPerspective = _.find(e["origin"], function(o) {
+                        return o.type == "perspective";
+                    });
+                    var i = _.findIndex(groups, function(g) {
+                        return g.perspective.equals(entryPerspective) && g.dictionary.equals(entryDictionary);
+                    });
+                    if (i < 0) {
+                        groups.push({
+                            dictionary: entryDictionary,
+                            perspective: entryPerspective,
+                            origin: e["origin"]
+                        });
+                        return _.size(groups) - 1;
                     }
-                } else {
-                    for (var i = 0; i < entry.contains.length; i++) {
-                        value = entry.contains[i];
-                        if (value.entity_type == field.entity_type) {
-                            values.push(value);
-                        }
-                    }
-                }
+                    return i;
+                });
+                dictionaryService.getPerspectiveDictionaryFieldsNew(p).then(function(fields) {
+                    $scope.fields = fields;
+                    $scope.entries = entries;
+                    _.each(groups, function(g, i) {
+                        g["matrix"] = mapFieldValues(ge[i], fields);
+                    });
+                    $scope.groups = groups;
+                    $scope.ge = ge;
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            } else {
+                $scope.fields = [];
+                $scope.groups = [];
+                $scope.ge = [];
             }
-            return values;
-        };
-        var mapFieldValues = function(allEntries, allFields) {
-            var result = [];
-            for (var i = 0; i < allEntries.length; i++) {
-                var entryRow = [];
-                for (var j = 0; j < allFields.length; j++) {
-                    entryRow.push(getFieldValues(allEntries[i], allFields[j]));
-                }
-                result.push(entryRow);
-            }
-            return result;
-        };
-        $scope.dictionaryTable = mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
-    dictionaryService.getPerspectiveDictionaryFields($("#getPerspectiveFieldsUrl").data("lingvodoc")).then(function(fields) {
-        $scope.fields = fields;
-        dictionaryService.getLexicalEntries($("#allPublishedEntriesUrl").data("lingvodoc"), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
-            $scope.lexicalEntries = lexicalEntries;
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    };
+    dictionaryService.getAllPerspectives().then(function(perspectives) {
+        $scope.perspectives = _.clone(perspectives);
+        $scope.activePerspectives = _.clone($scope.getPerspectivesWithLocation());
+        var reqs = _.map($scope.perspectives, function(p) {
+            return dictionaryService.getPerspectiveDictionaryFieldsNew(p);
+        });
+        $q.all(reqs).then(function(allFields) {
+            $scope.allFields = allFields;
         }, function(reason) {
             responseHandler.error(reason);
         });
     }, function(reason) {
         responseHandler.error(reason);
     });
-    dictionaryService.getLexicalEntriesCount($("#allPublishedEntriesCountUrl").data("lingvodoc")).then(function(totalEntriesCount) {
-        $scope.pageCount = Math.ceil(totalEntriesCount / $scope.pageSize);
+    dictionaryService.getDictionaries({}).then(function(dictionaries) {
+        $scope.dictionaries = dictionaries;
     }, function(reason) {
         responseHandler.error(reason);
     });
-    dictionaryService.getPerspectiveOriginById(perspectiveClientId, perspectiveId).then(function(path) {
-        $scope.path = path;
+} ]).controller("viewGroupController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
+    WaveSurferController.call(this, $scope);
+    $scope.title = groupParams.field.entity_type;
+    $scope.fields = groupParams.field.contains;
+    $scope.parentEntry = groupParams.entry;
+    var createVirtualEntries = function(values) {
+        var virtualEntries = [];
+        var addValue = function(value, entries) {
+            if (value.additional_metadata) {
+                for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+                    if (entries[entryIndex].client_id == value.client_id && entries[entryIndex].row_id == value.additional_metadata.row_id) {
+                        entries[entryIndex].contains.push(value);
+                        return;
+                    }
+                }
+                entries.push({
+                    client_id: $scope.parentEntry.client_id,
+                    object_id: $scope.parentEntry.object_id,
+                    row_id: value.additional_metadata.row_id,
+                    contains: [ value ]
+                });
+            }
+        };
+        _.forEach(values, function(v) {
+            addValue(v, virtualEntries);
+        });
+        return virtualEntries;
+    };
+    $scope.fieldsIdx = [];
+    $scope.fieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+        $scope.fieldsValues = [];
+        $scope.fieldsIdx = [];
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            $scope.fieldsValues.push(entryRow);
+        }
+        for (var k = 0; k < allFields.length; k++) {
+            $scope.fieldsIdx.push(allFields[k]);
+        }
+    };
+    $scope.getFieldValues = function(entry, field) {
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+            if (field.isGroup) {
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+    $scope.ok = function() {
+        $modalInstance.close($scope.entries);
+    };
+    $scope.entries = createVirtualEntries(groupParams.values);
+    $scope.mapFieldValues($scope.entries, $scope.fields);
+} ]).controller("viewGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
+    WaveSurferController.call(this, $scope);
+    $scope.fields = groupParams.fields;
+    $scope.connectedEntries = [];
+    $scope.suggestedEntries = [];
+    $scope.fieldsIdx = [];
+    for (var k = 0; k < $scope.fields.length; k++) {
+        $scope.fieldsIdx.push($scope.fields[k]);
+    }
+    $scope.fieldsValues = [];
+    $scope.suggestedFieldsValues = [];
+    $scope.mapFieldValues = function(allEntries, allFields) {
+        var result = [];
+        for (var i = 0; i < allEntries.length; i++) {
+            var entryRow = [];
+            for (var j = 0; j < allFields.length; j++) {
+                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
+            }
+            result.push(entryRow);
+        }
+        return result;
+    };
+    $scope.getFieldValues = function(entry, field) {
+        var value;
+        var values = [];
+        if (entry && entry.contains) {
+            if (field.isGroup) {
+                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
+                    var subField = field.contains[fieldIndex];
+                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
+                        value = entry.contains[valueIndex];
+                        if (value.entity_type == subField.entity_type) {
+                            values.push(value);
+                        }
+                    }
+                }
+            } else {
+                for (var i = 0; i < entry.contains.length; i++) {
+                    value = entry.contains[i];
+                    if (value.entity_type == field.entity_type) {
+                        values.push(value);
+                    }
+                }
+            }
+        }
+        return values;
+    };
+    $scope.getPerspectiveLink = function(p) {
+        return "/dictionary/" + encodeURIComponent(p.parent_client_id) + "/" + encodeURIComponent(p.parent_object_id) + "/perspective/" + encodeURIComponent(p.client_id) + "/" + encodeURIComponent(p.object_id) + "/view";
+    };
+    $scope.ok = function() {
+        $modalInstance.close();
+    };
+    $scope.$watch("connectedEntries", function(updatedEntries) {
+        $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
+    }, true);
+    dictionaryService.getConnectedWords(groupParams.entry.client_id, groupParams.entry.object_id).then(function(entries) {
+        var r = entries.map(function(entry) {
+            var lexicalEntry = entry.lexical_entry;
+            return dictionaryService.getPerspectiveOriginById(lexicalEntry.parent_client_id, lexicalEntry.parent_object_id);
+        });
+        $q.all(r).then(function(paths) {
+            angular.forEach(entries, function(entry, i) {
+                entry.lexical_entry["origin"] = paths[i];
+                $scope.connectedEntries.push(entry.lexical_entry);
+            });
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
     }, function(reason) {
         responseHandler.error(reason);
     });
@@ -33106,195 +37192,9 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         $scope.wavesurfer.stop();
         $scope.wavesurfer.destroy();
     });
-} ]).controller("viewGroupController", [ "$scope", "$http", "$modalInstance", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $log, dictionaryService, responseHandler, groupParams) {
-    WaveSurferController.call(this, $scope);
-    $scope.title = groupParams.field.entity_type;
-    $scope.fields = groupParams.field.contains;
-    $scope.parentEntry = groupParams.entry;
-    var createVirtualEntries = function(values) {
-        var virtualEntries = [];
-        var addValue = function(value, entries) {
-            if (value.additional_metadata) {
-                for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
-                    if (entries[entryIndex].client_id == value.client_id && entries[entryIndex].row_id == value.additional_metadata.row_id) {
-                        entries[entryIndex].contains.push(value);
-                        return;
-                    }
-                }
-                entries.push({
-                    client_id: $scope.parentEntry.client_id,
-                    object_id: $scope.parentEntry.object_id,
-                    row_id: value.additional_metadata.row_id,
-                    contains: [ value ]
-                });
-            }
-        };
-        for (var i = 0; i < values.length; i++) {
-            var value = values[i];
-            addValue(value, virtualEntries);
-        }
-        return virtualEntries;
-    };
-    $scope.entries = createVirtualEntries(groupParams.values);
-    $scope.fieldsIdx = [];
-    $scope.fieldsValues = [];
-    $scope.mapFieldValues = function(allEntries, allFields) {
-        $scope.fieldsValues = [];
-        $scope.fieldsIdx = [];
-        for (var i = 0; i < allEntries.length; i++) {
-            var entryRow = [];
-            for (var j = 0; j < allFields.length; j++) {
-                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
-            }
-            $scope.fieldsValues.push(entryRow);
-        }
-        for (var k = 0; k < allFields.length; k++) {
-            $scope.fieldsIdx.push(allFields[k]);
-        }
-    };
-    $scope.getFieldValues = function(entry, field) {
-        var value;
-        var values = [];
-        if (entry && entry.contains) {
-            if (field.isGroup) {
-                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                    var subField = field.contains[fieldIndex];
-                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                        value = entry.contains[valueIndex];
-                        if (value.entity_type == subField.entity_type) {
-                            values.push(value);
-                        }
-                    }
-                }
-            } else {
-                for (var i = 0; i < entry.contains.length; i++) {
-                    value = entry.contains[i];
-                    if (value.entity_type == field.entity_type) {
-                        values.push(value);
-                    }
-                }
-            }
-        }
-        return values;
-    };
-    $scope.ok = function() {
-        $modalInstance.close($scope.entries);
-    };
-    $scope.$watch("entries", function(updatedEntries) {
-        $scope.mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
-} ]).controller("viewGroupingTagController", [ "$scope", "$http", "$modalInstance", "$q", "$log", "dictionaryService", "responseHandler", "groupParams", function($scope, $http, $modalInstance, $q, $log, dictionaryService, responseHandler, groupParams) {
-    WaveSurferController.call(this, $scope);
-    $scope.fields = groupParams.fields;
-    $scope.connectedEntries = [];
-    $scope.suggestedEntries = [];
-    $scope.fieldsIdx = [];
-    for (var k = 0; k < $scope.fields.length; k++) {
-        $scope.fieldsIdx.push($scope.fields[k]);
-    }
-    $scope.fieldsValues = [];
-    $scope.suggestedFieldsValues = [];
-    $scope.mapFieldValues = function(allEntries, allFields) {
-        var result = [];
-        for (var i = 0; i < allEntries.length; i++) {
-            var entryRow = [];
-            for (var j = 0; j < allFields.length; j++) {
-                entryRow.push($scope.getFieldValues(allEntries[i], allFields[j]));
-            }
-            result.push(entryRow);
-        }
-        return result;
-    };
-    $scope.getFieldValues = function(entry, field) {
-        var value;
-        var values = [];
-        if (entry && entry.contains) {
-            if (field.isGroup) {
-                for (var fieldIndex = 0; fieldIndex < field.contains.length; fieldIndex++) {
-                    var subField = field.contains[fieldIndex];
-                    for (var valueIndex = 0; valueIndex < entry.contains.length; valueIndex++) {
-                        value = entry.contains[valueIndex];
-                        if (value.entity_type == subField.entity_type) {
-                            values.push(value);
-                        }
-                    }
-                }
-            } else {
-                for (var i = 0; i < entry.contains.length; i++) {
-                    value = entry.contains[i];
-                    if (value.entity_type == field.entity_type) {
-                        values.push(value);
-                    }
-                }
-            }
-        }
-        return values;
-    };
-    $scope.getPerspectiveLink = function(p) {
-        return "/dictionary/" + encodeURIComponent(p.parent_client_id) + "/" + encodeURIComponent(p.parent_object_id) + "/perspective/" + encodeURIComponent(p.client_id) + "/" + encodeURIComponent(p.object_id) + "/view";
-    };
+} ]).controller("BlobController", [ "$scope", "$http", "$log", "$modal", "$modalInstance", "NgMap", "dictionaryService", "responseHandler", "params", function($scope, $http, $log, $modal, $modalInstance, NgMap, dictionaryService, responseHandler, params) {
+    $scope.blob = params.blob;
     $scope.ok = function() {
         $modalInstance.close();
     };
-    $scope.$watch("connectedEntries", function(updatedEntries) {
-        $scope.fieldsValues = $scope.mapFieldValues(updatedEntries, $scope.fields);
-    }, true);
-    dictionaryService.getConnectedWords(groupParams.entry.client_id, groupParams.entry.object_id).then(function(entries) {
-        var r = entries.map(function(entry) {
-            var lexicalEntry = entry.lexical_entry;
-            return dictionaryService.getPerspectiveOriginById(lexicalEntry.parent_client_id, lexicalEntry.parent_object_id);
-        });
-        $q.all(r).then(function(paths) {
-            angular.forEach(entries, function(entry, i) {
-                entry.lexical_entry["origin"] = paths[i];
-                $scope.connectedEntries.push(entry.lexical_entry);
-            });
-        }, function(reason) {
-            responseHandler.error(reason);
-        });
-    }, function(reason) {
-        responseHandler.error(reason);
-    });
 } ]);
-
-function WaveSurferController($scope) {
-    var activeUrl = null;
-    $scope.play = function(url) {
-        if (!$scope.wavesurfer) {
-            return;
-        }
-        activeUrl = url;
-        $scope.wavesurfer.once("ready", function() {
-            $scope.wavesurfer.play();
-            $scope.$apply();
-        });
-        $scope.wavesurfer.load(activeUrl);
-    };
-    $scope.playPause = function() {
-        $scope.wavesurfer.playPause();
-    };
-    $scope.isPlaying = function(url) {
-        return url == activeUrl;
-    };
-    $scope.isMediaFileAvailable = function() {
-        return activeUrl != null;
-    };
-    $scope.$on("wavesurferInit", function(e, wavesurfer, container) {
-        $scope.wavesurfer = wavesurfer;
-        $scope.wavesurfer.on("play", function() {
-            $scope.paused = false;
-        });
-        $scope.wavesurfer.on("pause", function() {
-            $scope.paused = true;
-        });
-        $scope.wavesurfer.on("finish", function() {
-            $scope.paused = true;
-            $scope.wavesurfer.seekTo(0);
-            $scope.$apply();
-        });
-    });
-    $scope.$on("modal.closing", function(e) {
-        $scope.wavesurfer.stop();
-        $scope.wavesurfer.destroy();
-    });
-}

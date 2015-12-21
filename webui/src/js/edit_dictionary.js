@@ -21,7 +21,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                     wavesurfer.load($attrs.url, $attrs.data || null);
                 }
 
-                $scope.$emit('wavesurferInit', wavesurfer);
+                $scope.$emit('wavesurferInit', wavesurfer, $element);
             }
         };
     })
@@ -411,7 +411,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             });
         };
 
-        $scope.annotate = function(soundEntity, markupEntity) {
+        $scope.annotate = function(sound, markup) {
 
             var modalInstance = $modal.open({
                 animation: true,
@@ -419,11 +419,11 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                 controller: 'AnnotationController',
                 size: 'lg',
                 resolve: {
-                    soundUrl: function() {
-                        return soundEntity.content;
-                    },
-                    annotationUrl: function() {
-                        return markupEntity.content;
+                    'params': function() {
+                        return {
+                            'sound': sound,
+                            'markup': markup
+                        };
                     }
                 }
             });
@@ -531,7 +531,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
     }])
 
 
-    .controller('AnnotationController', ['$scope', '$http', 'responseHandler', 'soundUrl', 'annotationUrl', function($scope, $http, responseHandler, soundUrl, annotationUrl) {
+    .controller('AnnotationController', ['$scope', '$http', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, dictionaryService, responseHandler, params) {
 
         var activeUrl = null;
 
@@ -553,26 +553,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
                     });
                 });
             }
-        };
-
-        var loadAnnotation = function(url) {
-            // load annotation
-            $http.get(url).success(function(data, status, headers, config) {
-
-                try {
-                    var xml = (new DOMParser()).parseFromString(data, 'application/xml');
-                    var annotation = new elan.Document();
-                    annotation.importXML(xml);
-                    $scope.annotation = annotation;
-
-                    createRegions(annotation);
-
-                } catch (e) {
-                    alert('Failed to parse ELAN annotation: ' + e);
-                }
-
-            }).error(function(data, status, headers, config) {
-            });
         };
 
         $scope.paused = true;
@@ -600,7 +580,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         $scope.$on('wavesurferInit', function(e, wavesurfer) {
 
             $scope.wavesurfer = wavesurfer;
-
 
             if ($scope.wavesurfer.enableDragSelection) {
                 $scope.wavesurfer.enableDragSelection({
@@ -634,12 +613,25 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
             $scope.wavesurfer.once('ready', function() {
                 // load annotation once file is loaded
-                loadAnnotation(annotationUrl);
+                dictionaryService.convertMarkup(params.markup).then(function(data) {
+                    try {
+                        var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
+                        var annotation = new elan.Document();
+                        annotation.importXML(xml);
+                        $scope.annotation = annotation;
+                        createRegions(annotation);
+                    } catch (e) {
+                        responseHandler.error('Failed to parse ELAN annotation: ' + e);
+                    }
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+
                 $scope.$apply();
             });
 
             // load file once wavesurfer is ready
-            $scope.wavesurfer.load(soundUrl);
+            $scope.wavesurfer.load(params.sound.content);
         });
 
         $scope.$on('modal.closing', function(e) {
@@ -832,7 +824,6 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
             var entryObject = value.export();
 
-            // TODO: get locale_id from cookies
             entryObject['entity_type'] = field.entity_type;
             entryObject['locale_id'] = getCookie('locale_id');
 

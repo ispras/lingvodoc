@@ -34,9 +34,6 @@ app.controller('ProfileController', ['$scope', '$http', '$q', '$modal', '$log', 
     }, function(reason) {
         responseHandler.error(reason);
     });
-
-
-
 }]);
 
 

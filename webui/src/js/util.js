@@ -51,7 +51,6 @@ var exportPerspective = function(perspective) {
             delete field._groupEnabled;
         }
 
-
         if (field._containsEnabled) {
             delete field._containsEnabled;
         }
@@ -73,5 +72,9 @@ var cloneObject = function(oldObject) {
     return JSON.parse(JSON.stringify(oldObject));
 };
 
-
+var enableControls = function(controls, enabled) {
+    _.each(controls, function(value, key) {
+        controls[key] = enabled;
+    });
+};
 

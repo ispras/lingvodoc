@@ -270,11 +270,12 @@ def find_by_translation_string(locale_id, translation_string):
 
 
 def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-        if not translation:
-            translation = translation_string
+
         client = DBSession.query(Client).filter_by(id=client_id).first()
         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
                                                                         translation_string=translation_string).first()
+        if not translation:
+            translation = translation_string
         if not uets:
             uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
                                                  client_id=client.id,
@@ -306,7 +307,7 @@ class TranslationStringMixin(object):
         else:
             req = request.json_body
 
-        translation = req.get('translation_string')
+        translation = None
         if 'translation' in req:
             translation = req['translation']
         translation_string = req.get('translation_string')
@@ -320,7 +321,7 @@ class TranslationStringMixin(object):
         return
 
 
-class Language(Base, TableNameMixin, TranslationStringMixin):
+class Language(Base, TableNameMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -333,6 +334,52 @@ class Language(Base, TableNameMixin, TranslationStringMixin):
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
     parent = relationship('Language', remote_side=[client_id,  object_id], backref=backref('language'))
+
+    def get_translation(cls, request):
+        return find_by_translation_string(find_locale_id(request), cls.translation_string)
+
+    def set_translation(self, request):
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
+
+        translation = None
+        if 'translation' in req:
+            translation = req['translation']
+        translation_string = req.get('translation_string')
+        if not translation_string:
+            if self.translation_string:
+                translation_string = self.translation_string
+            else:
+                return
+        client_id = request.authenticated_userid
+        locale_id = find_locale_id(request)
+        client = DBSession.query(Client).filter_by(id=client_id).first()
+        search_translation_string = self.translation_string
+        if not search_translation_string:
+            search_translation_string = translation_string
+        print('SHEEEET', search_translation_string)
+        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
+                                                                        translation_string=search_translation_string).first()
+        if not translation:
+            translation = translation_string
+        if not uets:
+            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
+                                                 client_id=client.id,
+                                                 locale_id=locale_id,
+                                                 translation_string=translation_string,
+                                                 translation=translation)
+            self.translation_string = translation_string
+            DBSession.add(uets)
+            DBSession.flush()
+            print('HEY, LISTEN! WTF')
+        else:
+            uets.translation_string = translation_string
+            self.translation_string = translation_string
+            uets.translation = translation
+            print('HEY, LISTEN!')
+        return
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -384,6 +431,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, Tran
     authors = Column(UnicodeText)
     translation_string = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    additional_metadata = Column(UnicodeText)
     # about = Column(UnicodeText)
 
 
@@ -407,6 +455,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     is_template = Column(Boolean, default=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
+    additional_metadata = Column(UnicodeText)
     # about = Column(UnicodeText)
 
 
@@ -558,6 +607,8 @@ class EntityMixin(object):
                       'marked_for_deletion': self.marked_for_deletion,
                       'locale_id': self.locale_id
                       }
+        if self.additional_metadata:
+            dictionary['additional_metadata'] = self.additional_metadata
         children = recursive_content(self, publish)
         if children:
             dictionary['contains'] = children
@@ -798,6 +849,7 @@ def acl_by_groups(object_id, client_id, subject):
     for group in groups:
         base_group = group.parent
         if group.subject_override:
+            group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \

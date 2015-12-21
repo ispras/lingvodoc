@@ -7,12 +7,8 @@ lingvodoc.Object = function(clientId, objectId) {
     this.type = 'abstract';
 
     this.getId = function() {
-        return this.client_id + '' + this.object_id;
+        return this.client_id + '_' + this.object_id;
     };
-
-    this.export = function() {
-        return {};
-    }
 };
 lingvodoc.Object.prototype.equals = function(obj) {
     return !!(this.client_id == obj.client_id && this.object_id == obj.object_id);
@@ -86,6 +82,9 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     this.is_template = is_template;
     this.marked_for_deletion = marked_for_deletion;
     this.fields = [];
+    this.location = null;
+    this.blobs = [];
+    this.additional_metadata = {};
 
     this.equals = function(obj) {
         return lingvodoc.Object.prototype.equals.call(this, obj) &&
@@ -93,8 +92,27 @@ lingvodoc.Perspective = function(client_id, object_id, parent_client_id, parent_
     };
 };
 lingvodoc.Perspective.fromJS = function (js) {
-    return new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id,
+    var perspective = new lingvodoc.Perspective(js.client_id, js.object_id, js.parent_client_id, js.parent_object_id,
         js.translation, js.translation_string, js.status, js.is_template, js.marked_for_deletion);
+
+    if (_.has(js, 'location') && _.has(js.location, 'content')) {
+        perspective['location'] = {'lat': js.location.content.lat, 'lng': js.location.content.lng};
+    }
+
+    if (_.has(js, 'info') && js.info.type == 'list') {
+        if (_.isArray(js.info.content)) {
+            perspective['blobs'] = _.map(js.info.content, function(e)  {
+                var blob = new lingvodoc.Blob(e.info.content.client_id, e.info.content.object_id, e.info.content.name, e.info.content.data_type);
+                blob.url = e.info.content.content;
+                return blob;
+            });
+        }
+    }
+
+    perspective.additional_metadata = js.additional_metadata;
+
+    return perspective;
+
 };
 lingvodoc.Perspective.prototype = new lingvodoc.Object();
 lingvodoc.Perspective.prototype.constructor = lingvodoc.Perspective;
@@ -117,6 +135,25 @@ lingvodoc.User = function(id, login, name, email, intl_name, about, signup_date,
 lingvodoc.User.fromJS = function (js) {
     return new lingvodoc.User(js.id, js.login, js.name, js.email, js.intl_name, js.about, js.signup_date, js.organizations);
 };
+
+lingvodoc.Blob = function(clientId, objectId, name, data_type) {
+
+    lingvodoc.Object.call(this, clientId, objectId);
+    this.type = 'blob';
+    this.name = name;
+    this.data_type = data_type;
+    this.url = null;
+
+    this.equals = function(obj) {
+        return lingvodoc.Object.prototype.equals.call(this, obj) && (this.name == obj.name);
+    };
+};
+lingvodoc.Blob.fromJS = function (js) {
+    return new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
+};
+lingvodoc.Blob.prototype = new lingvodoc.Object();
+lingvodoc.Blob.prototype.constructor = lingvodoc.Blob;
+
 
 
 
@@ -205,6 +242,22 @@ function lingvodocAPI($http, $q) {
             deferred.reject('An error occurred while fetching perspective fields');
         });
 
+        return deferred.promise;
+    };
+
+    var getPerspectiveDictionaryFieldsNew = function(perspective) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + perspective.parent_client_id + '/' + perspective.parent_object_id + '/perspective/' + perspective.client_id + '/' + perspective.object_id + '/fields';
+        $http.get(url).success(function(data, status, headers, config) {
+            if (_.isArray(data.fields)) {
+                var fields = perspectiveToDictionaryFields(data.fields);
+                deferred.resolve(fields);
+            } else {
+                deferred.reject('An error occurred while fetching perspective fields');
+            }
+        }).error(function(data, status, headers, config) {
+            deferred.reject('An error occurred while fetching perspective fields');
+        });
         return deferred.promise;
     };
 
@@ -405,21 +458,20 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
-    var getDictionaryProperties = function(url) {
-
+    var getDictionaryProperties = function(dictionary) {
         var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id);
         $http.get(url).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject('An error  occurred while trying to get dictionary properties');
         });
-
         return deferred.promise;
     };
 
-    var setDictionaryProperties = function(url, properties) {
-
+    var setDictionaryProperties = function(dictionary, properties) {
         var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id);
         $http.put(url, properties).success(function(data, status, headers, config) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
@@ -428,6 +480,19 @@ function lingvodocAPI($http, $q) {
 
         return deferred.promise;
     };
+
+    var removeDictionary = function(dictionary) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id);
+        $http.delete(url).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('An error  occurred while trying to delete dictionary');
+        });
+        return deferred.promise;
+    };
+
+
 
     var getLanguages = function(url) {
         var deferred = $q.defer();
@@ -527,6 +592,17 @@ function lingvodocAPI($http, $q) {
             deferred.reject('Failed to save perspective fields');
         });
 
+        return deferred.promise;
+    };
+
+    var removePerspective = function(perspective) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + perspective.parent_client_id + '/' + perspective.parent_object_id + '/perspective/' + perspective.client_id + '/' + perspective.object_id;
+        $http.delete(url).success(function(data, status, headers, config) {
+            deferred.resolve();
+        }).error(function(data, status, headers, config) {
+            deferred.reject('An error  occurred while trying to delete perspective');
+        });
         return deferred.promise;
     };
 
@@ -635,17 +711,16 @@ function lingvodocAPI($http, $q) {
     };
 
     var getDictionaries = function(query) {
-
         var deferred = $q.defer();
-        var dictionaries = [];
         $http.post('/dictionaries', query).success(function (data, status, headers, config) {
-
-            for (var i = 0; i < data.dictionaries.length; i++) {
-                var dictionary = data.dictionaries[i];
-                dictionaries.push(lingvodoc.Dictionary.fromJS(dictionary));
+            if (_.isArray(data.dictionaries)) {
+                deferred.resolve(_.map(data.dictionaries, function(d) {
+                    return lingvodoc.Dictionary.fromJS(d);
+                }));
+            } else {
+                deferred.reject('Failed to fetch dictionaries list. Malformed response.');
             }
 
-            deferred.resolve(dictionaries);
         }).error(function (data, status, headers, config) {
             deferred.reject('Failed to fetch dictionaries list');
         });
@@ -892,8 +967,8 @@ function lingvodocAPI($http, $q) {
 
         $http.post('/dictionaries', req).success(function(data, status, headers, config) {
             var dictionaries = [];
-            if (angular.isArray(data.dictionaries)) {
-                angular.forEach(data.dictionaries, function(jsdict) {
+            if (_.isArray(data.dictionaries)) {
+                _.forEach(data.dictionaries, function(jsdict) {
                     var dictionary = lingvodoc.Dictionary.fromJS(jsdict);
                     if (language.client_id == dictionary.parent_client_id && language.object_id == dictionary.parent_object_id) {
                         dictionaries.push(dictionary);
@@ -902,7 +977,7 @@ function lingvodocAPI($http, $q) {
             }
             deferred.resolve(dictionaries);
         }).error(function(data, status, headers, config) {
-            deferred.reject('Failed to move lexical entry');
+            deferred.reject('Failed to fetch list of dictionaries');
         });
         return deferred.promise;
     };
@@ -1112,6 +1187,148 @@ function lingvodocAPI($http, $q) {
     };
 
 
+    var getUserBlobs = function() {
+        var deferred = $q.defer();
+        $http.get('/blobs').success(function(data, status, headers, config) {
+            var blobs = _.map(data, lingvodoc.Blob.fromJS);
+            deferred.resolve(blobs);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to fetch list of available blobs');
+        });
+        return deferred.promise;
+    };
+
+    var checkDictionaryBlob = function(blob, parent) {
+        var deferred = $q.defer();
+        var query = {
+            'blob_client_id': blob.client_id,
+            'blob_object_id': blob.object_id,
+            'parent_client_id': parent.client_id,
+            'parent_object_id': parent.object_id
+        };
+
+        $http.post('/convert_check', query).success(function(data, status, headers, config) {
+            var perspectives = _.map(data, lingvodoc.Perspective.fromJS);
+            deferred.resolve(perspectives);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to convert dictionary');
+        });
+        return deferred.promise;
+    };
+
+    var convertDictionary = function(req) {
+        var deferred = $q.defer();
+        $http.post('/convert', req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to convert dictionary');
+        });
+        return deferred.promise;
+    };
+
+    var getPerspectiveMeta = function(dictionary, perspective) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/meta';
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to get perspective meta data!');
+        });
+        return deferred.promise;
+    };
+
+    var setPerspectiveMeta = function(dictionary, perspective, meta) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/meta';
+        $http.put(url, meta).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to set perspective meta data!');
+        });
+        return deferred.promise;
+    };
+
+    var removePerspectiveMeta = function(dictionary, perspective, meta) {
+        var deferred = $q.defer();
+        var url = '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/meta';
+        var config = {
+            method: 'DELETE',
+            url: url,
+            data: meta,
+            headers: {'Content-Type': 'application/json;charset=utf-8'}
+        };
+
+        $http(config).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to remove perspective meta data!');
+        });
+        return deferred.promise;
+    };
+
+    var advancedSearch = function(query,  where, adopted, etymology) {
+        var deferred = $q.defer();
+        var url = '/advanced_search';
+
+        var perspectives = where.map(function(o) {
+            if (o.type == 'perspective') {
+                return {'client_id': o.client_id, 'object_id': o.object_id};
+            }
+        }).filter(function(o) {
+            return typeof o !== 'undefined';
+        });
+
+        var req = {
+            'searchstrings': query,
+            'perspectives': perspectives
+        };
+
+        if (_.isBoolean(adopted)) {
+            req.adopted = adopted;
+        }
+
+        if (_.isBoolean(etymology)) {
+            req.with_etimology = etymology;
+        }
+
+        $http.post(url, req).success(function(data, status, headers, config) {
+            var r = data.map(function(e) {
+                var perspective = lingvodoc.Perspective.fromJS(e);
+                return getPerspectiveOriginById(perspective.client_id, perspective.object_id);
+            });
+
+            $q.all(r).then(function(paths) {
+                var out = [];
+                _.each(data, function(entry, i) {
+                    entry.lexical_entry['origin'] = paths[i];
+                    out.push(entry.lexical_entry);
+                });
+                deferred.resolve(out);
+
+            }, function(reason) {
+                deferred.reject('An error  occurred while doing basic search');
+            });
+
+        }).error(function(data, status, headers, config) {
+            deferred.reject('An error  occurred while doing advanced search');
+        });
+
+        return deferred.promise;
+    };
+
+    var convertMarkup = function(object) {
+        var deferred = $q.defer();
+        var obj = {
+            'client_id': object.client_id,
+            'object_id': object.object_id
+        };
+        $http.post('/convert/markup', obj).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to convert markup!');
+        });
+        return deferred.promise;
+    };
 
 
     // Return public API.
@@ -1119,6 +1336,7 @@ function lingvodocAPI($http, $q) {
         'getLexicalEntries': getLexicalEntries,
         'getLexicalEntriesCount': getLexicalEntriesCount,
         'getPerspectiveDictionaryFields': getPerspectiveDictionaryFields,
+        'getPerspectiveDictionaryFieldsNew': getPerspectiveDictionaryFieldsNew,
         'addNewLexicalEntry': addNewLexicalEntry,
         'saveValue': saveValue,
         'removeValue': removeValue,
@@ -1129,6 +1347,7 @@ function lingvodocAPI($http, $q) {
         'approveAll': approveAll,
         'getDictionaryProperties': getDictionaryProperties,
         'setDictionaryProperties': setDictionaryProperties,
+        'removeDictionary': removeDictionary,
         'getLanguages': getLanguages,
         'setDictionaryStatus': setDictionaryStatus,
         'setPerspectiveStatus': setPerspectiveStatus,
@@ -1136,6 +1355,7 @@ function lingvodocAPI($http, $q) {
         'getPerspectiveFields': getPerspectiveFields,
         'setPerspectiveFields': setPerspectiveFields,
         'getPerspectiveFieldsNew': getPerspectiveFieldsNew,
+        'removePerspective': removePerspective,
         'getUserInfo': getUserInfo,
         'setUserInfo': setUserInfo,
         'getOrganizations': getOrganizations,
@@ -1162,6 +1382,14 @@ function lingvodocAPI($http, $q) {
         'deleteDictionaryRoles': deleteDictionaryRoles,
         'getPerspectiveRoles': getPerspectiveRoles,
         'addPerspectiveRoles': addPerspectiveRoles,
-        'deletePerspectiveRoles': deletePerspectiveRoles
+        'deletePerspectiveRoles': deletePerspectiveRoles,
+        'getUserBlobs': getUserBlobs,
+        'checkDictionaryBlob': checkDictionaryBlob,
+        'convertDictionary': convertDictionary,
+        'getPerspectiveMeta': getPerspectiveMeta,
+        'setPerspectiveMeta': setPerspectiveMeta,
+        'removePerspectiveMeta': removePerspectiveMeta,
+        'advancedSearch': advancedSearch,
+        'convertMarkup': convertMarkup
     });
-};
+}

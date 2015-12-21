@@ -3,58 +3,59 @@
 angular.module('HomeModule', ['ui.bootstrap'], function($rootScopeProvider) {
     $rootScopeProvider.digestTtl(1000);
 })
-    .service('dictionaryService', lingvodocAPI)
+    .factory('dictionaryService', ['$http', '$q', lingvodocAPI])
 
     .factory('responseHandler', ['$timeout', '$modal', responseHandler])
 
-    .controller('HomeController', ['$scope', '$http', '$modal', '$q', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $modal, $q, $log, dictionaryService, responseHandler) {
+    .controller('HomeController', ['$scope', '$http', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $log, dictionaryService, responseHandler) {
 
-    var languagesUrl = $('#languagesUrl').data('lingvodoc');
-    var dictionariesUrl = $('#dictionariesUrl').data('lingvodoc');
-    var getUserInfoUrl = $('#getUserInfoUrl').data('lingvodoc');
+        $scope.languages = [];
 
-    $scope.languages = [];
+        $scope.getPerspectiveLink = function(dictionary, perspective) {
+            return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/view';
+        };
 
-    $scope.getPerspectiveLink = function (dictionary, perspective) {
-        return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/view';
-    };
-
-    var getPublishedPerspectives = function(dictionary) {
-        dictionaryService.getDictionaryPerspectives(dictionary).then(function(perspectives) {
-
-            var published = [];
-            angular.forEach(perspectives, function(perspective) {
-                if (perspective.status.toUpperCase() == 'published'.toUpperCase()) {
-                    published.push(perspective);
-                }
-            });
-            dictionary.perspectives = published;
-        }, function() {
-
-        });
-    };
-
-
-    var setPerspectives = function(languages) {
-        for (var i = 0; i < languages.length; ++i) {
-            var lang = languages[i];
-            angular.forEach(lang.dicts, function(dict) {
-                getPublishedPerspectives(dict);
-            });
-            if (angular.isArray(lang.contains)) {
-                setPerspectives(lang.contains);
+        $scope.getPerspectiveAuthors = function(perspective) {
+            var meta = JSON.parse(perspective.additional_metadata);
+            if (_.has(meta, 'authors') && _.has(meta.authors, 'content') && _.isString(meta.authors.content)) {
+                return meta.authors.content;
             }
-        }
-    };
+        };
 
-    dictionaryService.getPublishedDictionaries().then(function(languages) {
-        $scope.languages = languages;
-        setPerspectives($scope.languages);
-    }, function(reason) {
-        responseHandler.error(reason);
-    });
+        var getPublishedPerspectives = function(dictionary) {
+            dictionaryService.getDictionaryPerspectives(dictionary).then(function(perspectives) {
 
-}]);
+                var published = [];
+                _.forEach(perspectives, function(perspective) {
+                    if (perspective.status.toUpperCase() == 'published'.toUpperCase()) {
+                        published.push(perspective);
+                    }
+                });
+                dictionary.perspectives = published;
+            }, function() {
+
+            });
+        };
+
+        var setPerspectives = function(languages) {
+            for (var i = 0; i < languages.length; ++i) {
+                var lang = languages[i];
+                _.forEach(lang.dicts, function(dict) {
+                    getPublishedPerspectives(dict);
+                });
+                if (_.isArray(lang.contains)) {
+                    setPerspectives(lang.contains);
+                }
+            }
+        };
+
+        dictionaryService.getPublishedDictionaries().then(function(languages) {
+            $scope.languages = languages;
+            setPerspectives($scope.languages);
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    }]);
 
 
 

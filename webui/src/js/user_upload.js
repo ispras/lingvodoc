@@ -37,7 +37,7 @@ angular.module('UserUploadModule', ['ui.bootstrap'])
 
             var fd = new FormData();
             fd.append('blob', file);
-            fd.append('data_type', 'dialeqt_dictionary');
+            fd.append('data_type', $scope.dataType);
 
             $scope.uploadMsg = true;
 

@@ -56,10 +56,21 @@ def configure_routes(config):
     # web-view #GET
     config.add_route(name='languages', pattern='/languages/map')
 
+    # web-view #GET
+    config.add_route(name='maps', pattern='/dashboard/maps')
+
     # API #GET && PUT && DELETE
     # Gets/puts info about language
     config.add_route(name='language', pattern='/language/{client_id}/{object_id}',
                      factory='lingvodoc.models.LanguageAcl')  # 100% ready
+
+    # API #POST
+    # Convert blob
+    config.add_route(name='convert', pattern='/convert/blob')  # 100% ready
+
+    # API #POST
+    # Convert markup
+    config.add_route(name='convert_markup', pattern='/convert/markup')  # 100% ready
 
     # API #POST
     # Create language
@@ -106,6 +117,8 @@ def configure_routes(config):
     # Gets/puts info about dictionary (name/additional authors/etc)
     config.add_route(name='dictionary', pattern='/dictionary/{client_id}/{object_id}',
                      factory='lingvodoc.models.DictionaryAcl')  # 100% ready
+    config.add_route(name='dictionary_copy', pattern='/dictionary/{client_id}/{object_id}/copy',
+                     factory='lingvodoc.models.DictionaryAcl')
 
 
     config.add_route(name='dictionary_info',
@@ -158,6 +171,31 @@ def configure_routes(config):
                      factory='lingvodoc.models.PerspectiveAcl')
     config.add_route(name='perspective_outside',
                      pattern='perspective/{perspective_client_id}/{perspective_id}',
+                     factory='lingvodoc.models.PerspectiveAcl')
+    # API #POST
+    # creates hash in metadata on objects
+    config.add_route(name='perspective_hash',
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'perspective/{perspective_client_id}/{perspective_id}/hash',
+                     factory='lingvodoc.models.PerspectiveAcl')
+
+    config.add_route(name='dangerous_perspectives_hash',
+                     pattern='/perspectives/hash',
+                     factory='lingvodoc.models.AdminAcl')
+    # API #GET && PUT && DELETE
+    # {<some_data_name>:{"type""<datatype>, "content":<content>},}
+    # for geo: {"location":{"type":"location", "content":{"lat":<lat>, "lng":<lng>}}}
+    # for info:{"info":{"type":"list",
+    #           "content":[{"info":{"type":"blob",
+    #                               "content":{"client_id":<client_id>, "object_id":<object_id>}
+    #                              }
+    #                      },
+    #                     ]
+    #                  }
+    #          }
+    config.add_route(name='perspective_meta',
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'perspective/{perspective_client_id}/{perspective_id}/meta',
                      factory='lingvodoc.models.PerspectiveAcl')
 
     config.add_route(name='perspective_tree',
@@ -236,14 +274,15 @@ def configure_routes(config):
                      pattern="/blob")
 
     # seems to be redundant
+    # not anymore
     # API #GET
     # no params, returns file
-    #config.add_route(name="get_user_blob",
-    #                 pattern="/blobs/{client_id}/{object_id}")
+    config.add_route(name="get_user_blob",
+                    pattern="/blobs/{client_id}/{object_id}")
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
-                     pattern="/blobs/")
+                     pattern="/blobs")
 
 # TODO: LOCALES!
     # API #GET && DELETE
@@ -302,7 +341,24 @@ def configure_routes(config):
 
     # API #GET
     # like
+    # perspective_client_id
+    # perspective_object_id
     config.add_route(name='basic_search', pattern='/basic_search')
+
+    # API #POST
+    # {"searchstrings":[{"searchstring":<searchstring>, "entity_type":<entity_type>, "search_by_or":true/false},
+    #                  ],
+    #  "perspectives":[{"client_id":<persp_client_id>,"object_id":<persp_object_id>},
+    #                 ]
+    #   "adopted":True/False,
+    #   "adopted_type":<entity_type_where_to_search_if_lexical_entry_is_adopted>,
+    #   "count":True/False,
+    #   "with_etimology":True/False}
+    config.add_route(name='advanced_search', pattern='/advanced_search')
+
+    # API #GET
+    # like
+    config.add_route(name='entity_metadata_search', pattern='/meta_search')
 
     # API #GET
     # like
@@ -506,6 +562,10 @@ def configure_routes(config):
     # client_id = <client_id>
     # Response example:
     # {"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}
+    # #PUT
+    # {"client_id":<client_id> OR "user_id":<user_id>,
+    #  "new_password": <new_password>, "old_password":<old_password>,
+    #  "name":<name>, "birthday":<birthday>, "email":<email>, "about":<about>}
     config.add_route(name='get_user_info', pattern='/user')  # ready, not tested
     # API #GET
     # Returns translations for a list of words for current or default or fallback locale
@@ -520,6 +580,7 @@ def configure_routes(config):
     # params:
     # {"blob_client_id": <id>, "blob_object_id": <id>, "parent_client_id": <language_client_id>, "parent_object_id": <language_object_id>}
     config.add_route(name='convert_dictionary', pattern='/convert')
+    config.add_route(name='convert_dictionary_check', pattern='/convert_check')
 
 
 def main(global_config, **settings):
