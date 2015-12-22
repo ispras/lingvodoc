@@ -106,7 +106,7 @@ def _txt_to_elan(txt_file):
 
         elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-        elan.add_annotation('translation', tmp_key_1, tmp_key_2, tran)
+        elan.add_ref_annotation('translation', 'original', int((tmp_key_1+tmp_key_2)/2),  tran)
         key = new_key
         counter += 1
         orig = new_lines[counter]
@@ -126,7 +126,7 @@ def _txt_to_elan(txt_file):
     tmp_key_2 = _weird_float_to_int(float(new_key))
     elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-    elan.add_annotation('translation', tmp_key_1, tmp_key_2, tran)
+    elan.add_ref_annotation('translation', 'original', tmp_key_1,  tran)
     key = new_key
     counter += 1
     orig = new_lines[counter]
@@ -138,23 +138,24 @@ def _txt_to_elan(txt_file):
 
     elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-    elan.add_annotation('translation', tmp_key_1, tmp_key_2, tran)
+    elan.add_ref_annotation('translation', 'original', tmp_key_1,  tran)
 
 
     # elan = tgt.io.export_to_elan(textgrid)
-    elan.to_file('text.eaf')
-    # f = open('text.eaf', 'w')
-    # f.write(elan)
-    # f.close()
-    elan.remove_tier('default')
-    txtgrd = elan.to_textgrid()
     filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                               for c in range(10))
-    txtgrd.to_file(filename)
-    elan = _export_to_elan(filename)
+    elan.remove_tier('default')
+    elan.to_file(filename)
+    f = open('text.eaf', 'r')
+    a = f.read()
+    f.close()
+    # filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
+    #                                           for c in range(10))
+    # txtgrd.to_file(filename)
+    # elan = _export_to_elan(filename)
     os.remove(filename)
     # print(elan.tiers)
-    return elan
+    return a
 
 
 def _import_from_elan(elan_file):

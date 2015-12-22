@@ -5272,10 +5272,10 @@ def convert_markup(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='testing', renderer='json')
+@view_config(route_name='testing', renderer='string')
 def testing(request):
     from .scripts.convert_rules import _txt_to_elan, _export_to_elan
-    return {'my answa': str(_txt_to_elan('text.txt'))}
+    return _txt_to_elan('text.txt')
     # return {'my answa': str(_export_to_elan('abc.TextGrid'))}
 
 
