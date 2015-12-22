@@ -5161,16 +5161,15 @@ def convert(request):  # TODO: test when convert in blobs will be needed
             filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                               for c in range(n))
             extension = os.path.splitext(blob.content)[1]
-            f = open(filename + extension, 'wb')
+            f = open(filename, 'wb')
         except Exception as e:
             request.response.status = HTTPInternalServerError.code
-            return {'error': str(e)}
+            return {'error 1': str(e)}
         try:
             f.write(content)
-            f.close()
             data_type = blob.data_type
             for rule in rules:
-                if data_type == rule.in_type and out_type == rule.out_type:
+                if data_type.lower() == rule.in_type.lower() and out_type.lower() == rule.out_type.lower():
                     if extension in rule.in_extensions:
                         if os.path.getsize(filename) / 1024 / 1024.0 < rule.max_in_size:
                             content = rule.convert(filename, req.get('config'), rule.converter_config)
@@ -5180,21 +5179,22 @@ def convert(request):  # TODO: test when convert in blobs will be needed
                     raise KeyError("Cannot access file")
         except Exception as e:
             request.response.status = HTTPInternalServerError.code
-            return {'error': str(e)}
+            return {'error 2': str(e)}
         finally:
+            f.close()
             os.remove(filename)
             pass
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
-        return {'error': str(e)}
+        return {'error 3': str(e)}
 
     except IntegrityError as e:
         request.response.status = HTTPInternalServerError.code
-        return {'error': str(e)}
+        return {'error 4': str(e)}
 
     except CommonException as e:
         request.response.status = HTTPConflict.code
-        return {'error': str(e)}
+        return {'error 5': str(e)}
 
 
 @view_config(route_name='convert_markup', renderer='json', request_method='POST')
@@ -5272,14 +5272,11 @@ def convert_markup(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='testing', renderer='json')
+@view_config(route_name='testing', renderer='string')
 def testing(request):
-        try:
-            return 20/15
-        except Exception as e:
-            return str(e)
-        finally:
-            print('Good news, everyone!')
+    from .scripts.convert_rules import _txt_to_elan, _export_to_elan
+    return _txt_to_elan('text.txt')
+    # return {'my answa': str(_export_to_elan('abc.TextGrid'))}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
