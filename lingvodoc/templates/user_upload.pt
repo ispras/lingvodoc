@@ -79,6 +79,7 @@
     <select ng-model="dataType">
         <option value="dialeqt_dictionary">dialeqt_dictionary</option>
         <option value="pdf">pdf</option>
+        <option value="txt">text markup</option>
     </select>
 
 
