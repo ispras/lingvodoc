@@ -1425,28 +1425,10 @@ def real_delete_dictionary(request):
     return {'error': str("No such dictionary in the system")}
 
 
-@view_config(route_name='perspective', renderer='json', request_method='GET')
-@view_config(route_name='perspective_outside', renderer='json', request_method='GET')
-def view_perspective(request):
+def view_perspective_from_object(request, perspective):
     response = dict()
-    client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
-    parent_client_id = request.matchdict.get('dictionary_client_id')
-    parent_object_id = request.matchdict.get('dictionary_object_id')
-    parent = None
-    if parent_client_id and parent_object_id:
-        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent:
-            request.response.status = HTTPNotFound.code
-            return {'error': str("No such dictionary in the system")}
-
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         if not perspective.marked_for_deletion:
-            if parent:
-                if perspective.parent != parent:
-                    request.response.status = HTTPNotFound.code
-                    return {'error': str("No such pair of dictionary/perspective in the system")}
             response['parent_client_id'] = perspective.parent_client_id
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
@@ -1468,24 +1450,84 @@ def view_perspective(request):
                     info_list = response['info']['content']
                     for info in info_list:
                         content = info['info']['content']
-                        path = request.route_url('get_user_blob',
-                                 client_id=content['client_id'],
-                                 object_id=content['object_id'])
-                        subreq = Request.blank(path)
-                        subreq.method = 'GET'
-                        subreq.headers = request.headers
-                        resp = request.invoke_subrequest(subreq)
-                        if 'error' not in resp.json:
-                            info['info']['content'] = resp.json
+                        blob = DBSession.query(UserBlobs).filter_by(client_id=content['client_id'],
+                                                                    object_id=content['object_id']).first()
+                        if blob:
+                            response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                                        'client_id': blob.client_id, 'object_id': blob.object_id}
+                            info['info']['content'] = response
                         else:
                             if info not in remove_list:
                                 remove_list.append(info)
-                    for info in remove_list:
-                        info_list.remove(info)
-            request.response.status = HTTPOk.code
             return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such perspective in the system")}
+    return {'error':'no persp'}
+
+
+@view_config(route_name='perspective', renderer='json', request_method='GET')
+@view_config(route_name='perspective_outside', renderer='json', request_method='GET')
+def view_perspective(request):
+    # response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = None
+    if parent_client_id and parent_object_id:
+        parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        if not parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such dictionary in the system")}
+
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    # if perspective:
+    #     if not perspective.marked_for_deletion:
+    #         if parent:
+    #             if perspective.parent != parent:
+    #                 request.response.status = HTTPNotFound.code
+    #                 return {'error': str("No such pair of dictionary/perspective in the system")}
+    #         response['parent_client_id'] = perspective.parent_client_id
+    #         response['parent_object_id'] = perspective.parent_object_id
+    #         response['client_id'] = perspective.client_id
+    #         response['object_id'] = perspective.object_id
+    #         translation_string = perspective.get_translation(request)
+    #         response['translation_string'] = translation_string['translation_string']
+    #         response['translation'] = translation_string['translation']
+    #         response['status'] = perspective.state
+    #         response['marked_for_deletion'] = perspective.marked_for_deletion
+    #         response['is_template'] = perspective.is_template
+    #         response['additional_metadata'] = perspective.additional_metadata
+    #         if perspective.additional_metadata:
+    #             meta = json.loads(perspective.additional_metadata)
+    #             if 'location' in meta:
+    #                 response['location'] = meta['location']
+    #             if 'info' in meta:
+    #                 response['info'] = meta['info']
+    #                 remove_list = []
+    #                 info_list = response['info']['content']
+    #                 for info in info_list:
+    #                     content = info['info']['content']
+    #                     path = request.route_url('get_user_blob',
+    #                              client_id=content['client_id'],
+    #                              object_id=content['object_id'])
+    #                     subreq = Request.blank(path)
+    #                     subreq.method = 'GET'
+    #                     subreq.headers = request.headers
+    #                     resp = request.invoke_subrequest(subreq)
+    #                     if 'error' not in resp.json:
+    #                         info['info']['content'] = resp.json
+    #                     else:
+    #                         if info not in remove_list:
+    #                             remove_list.append(info)
+    #                 for info in remove_list:
+    #                     info_list.remove(info)
+    #         request.response.status = HTTPOk.code
+    #         return response
+    response = view_perspective_from_object(request, perspective)
+    if 'error' in response:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+    request.response.status = HTTPOk.code
+    return response
 
 
 @view_config(route_name='perspective_tree', renderer='json', request_method='GET')
@@ -2758,7 +2800,7 @@ def perspectives_list(request):
         state = request.params.get('state')
     except:
         pass
-    persps = DBSession.query(DictionaryPerspective)
+    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion==False)
     if is_template is not None:
         if type(is_template) == str:
             if is_template.lower() == 'true':
@@ -2770,18 +2812,21 @@ def perspectives_list(request):
         persps = persps.filter(DictionaryPerspective.state==state)
     perspectives = []
     for perspective in persps:
-        path = request.route_url('perspective',
-                                 dictionary_client_id=perspective.parent_client_id,
-                                 dictionary_object_id=perspective.parent_object_id,
-                                 perspective_client_id=perspective.client_id,
-                                 perspective_id=perspective.object_id)
-        subreq = Request.blank(path)
-        # subreq = request.copy()
-        subreq.method = 'GET'
-        subreq.headers = request.headers
-        resp = request.invoke_subrequest(subreq)
-        if 'error' not in resp.json:
-            perspectives += [resp.json]
+        # path = request.route_url('perspective',
+        #                          dictionary_client_id=perspective.parent_client_id,
+        #                          dictionary_object_id=perspective.parent_object_id,
+        #                          perspective_client_id=perspective.client_id,
+        #                          perspective_id=perspective.object_id)
+        # subreq = Request.blank(path)
+        # # subreq = request.copy()
+        # subreq.method = 'GET'
+        # subreq.headers = request.headers
+        # resp = request.invoke_subrequest(subreq)
+        # if 'error' not in resp.json:
+        #     perspectives += [resp.json]
+        resp = view_perspective_from_object(request, perspective)
+        if 'error' not in resp:
+            perspectives.append(resp)
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
 
@@ -5116,16 +5161,15 @@ def convert(request):  # TODO: test when convert in blobs will be needed
             filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                               for c in range(n))
             extension = os.path.splitext(blob.content)[1]
-            f = open(filename + extension, 'wb')
+            f = open(filename, 'wb')
         except Exception as e:
             request.response.status = HTTPInternalServerError.code
-            return {'error': str(e)}
+            return {'error 1': str(e)}
         try:
             f.write(content)
-            f.close()
             data_type = blob.data_type
             for rule in rules:
-                if data_type == rule.in_type and out_type == rule.out_type:
+                if data_type.lower() == rule.in_type.lower() and out_type.lower() == rule.out_type.lower():
                     if extension in rule.in_extensions:
                         if os.path.getsize(filename) / 1024 / 1024.0 < rule.max_in_size:
                             content = rule.convert(filename, req.get('config'), rule.converter_config)
@@ -5135,21 +5179,22 @@ def convert(request):  # TODO: test when convert in blobs will be needed
                     raise KeyError("Cannot access file")
         except Exception as e:
             request.response.status = HTTPInternalServerError.code
-            return {'error': str(e)}
+            return {'error 2': str(e)}
         finally:
+            f.close()
             os.remove(filename)
             pass
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
-        return {'error': str(e)}
+        return {'error 3': str(e)}
 
     except IntegrityError as e:
         request.response.status = HTTPInternalServerError.code
-        return {'error': str(e)}
+        return {'error 4': str(e)}
 
     except CommonException as e:
         request.response.status = HTTPConflict.code
-        return {'error': str(e)}
+        return {'error 5': str(e)}
 
 
 @view_config(route_name='convert_markup', renderer='json', request_method='POST')
@@ -5227,14 +5272,11 @@ def convert_markup(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='testing', renderer='json')
+@view_config(route_name='testing', renderer='string')
 def testing(request):
-        try:
-            return 20/15
-        except Exception as e:
-            return str(e)
-        finally:
-            print('Good news, everyone!')
+    from .scripts.convert_rules import _txt_to_elan, _export_to_elan
+    return _txt_to_elan('text.txt')
+    # return {'my answa': str(_export_to_elan('abc.TextGrid'))}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
