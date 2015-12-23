@@ -146,8 +146,8 @@ module.exports = function(grunt) {
                     'src/js/util.js',
                     'src/js/api.js',
                     'src/js/response_handler.js',
-                    'src/js/view_dictionary.js',
-                    'src/js/lingvowave.js'
+                    'src/js/lingvowave.js',
+                    'src/js/view_dictionary.js'
                 ],
                 dest: '../lingvodoc/static/js/view-dictionary.js'
             },
@@ -305,6 +305,26 @@ module.exports = function(grunt) {
                     'src/js/corpora_view.js'
                 ],
                 dest: '../lingvodoc/static/js/corpora_view.js'
+            },
+            auido_corpora: {
+                src: [
+                    'bower_components/jquery/dist/jquery.js',
+                    'bower_components/lodash/lodash.js',
+                    'bower_components/angular/angular.js',
+                    'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap.js',
+                    'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
+                    'bower_components/wavesurfer.js/dist/wavesurfer.min.js',
+                    'bower_components/wavesurfer.js/dist/plugin/wavesurfer.regions.min.js',
+                    'bower_components/wavesurfer.js/dist/plugin/wavesurfer.spectrogram.min.js',
+                    'src/js/elan.js',
+                    'src/js/util.js',
+                    'src/js/api.js',
+                    'src/js/response_handler.js',
+                    'src/js/lingvowave.js',
+                    'src/js/audio_corpora.js'
+                ],
+                dest: '../lingvodoc/static/js/auido_corpora.js'
             }
         }
     });
