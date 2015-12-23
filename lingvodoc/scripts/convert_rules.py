@@ -150,7 +150,7 @@ def _txt_to_elan(txt_file):
                                               for c in range(10))
     elan.remove_tier('default')
     elan.to_file(filename)
-    f = open('text.eaf', 'r')
+    f = open(filename, 'r')
     a = f.read()
     f.close()
     # filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
