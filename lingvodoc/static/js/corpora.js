@@ -33690,7 +33690,7 @@ angular.module("CorporaModule", [ "ui.bootstrap" ]).factory("dictionaryService",
                     } else {
                         meta = perspective.additional_metadata;
                     }
-                    return _.has(meta, "corpora");
+                    return _.has(meta, "corpora") || _.has(meta, "audio_corpora");
                 }
                 return false;
             });

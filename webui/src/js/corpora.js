@@ -31,7 +31,7 @@ angular.module('CorporaModule', ['ui.bootstrap'])
                             meta = perspective.additional_metadata;
                         }
 
-                        return _.has(meta, 'corpora');
+                        return _.has(meta, 'corpora') || _.has(meta, 'audio_corpora');
                     }
 
                     return false;
@@ -68,19 +68,6 @@ angular.module('CorporaModule', ['ui.bootstrap'])
         }, function(reason) {
             responseHandler.error(reason);
         });
-
-
-        //var props = {
-        //    'xml_path': '/home/steve/glotext1.xml',
-        //    'dictionary_translation_string': 'Name for new dict 2',
-        //    'perspective_translation_string': 'name for new persp 2', 'parent_client_id': 1, 'parent_object_id': 1
-        //};
-        //
-        //$http.post('/convert/xml', props).success(function(data, status, headers, config) {
-        //
-        //}).error(function(data, status, headers, config) {
-        //
-        //});
     }]);
 
 
