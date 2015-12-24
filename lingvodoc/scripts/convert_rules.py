@@ -25,11 +25,9 @@ def _export_to_elan(textGrid_file):
         elan = tgt.io.export_to_elan(textgrid)
     except Exception as e:
         try:
-            print(e)
             textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-16')
             elan = tgt.io.export_to_elan(textgrid)
         except Exception as e:
-            print(e)
             return 'error'
     return elan
 
@@ -50,11 +48,9 @@ def _txt_to_elan(txt_file):
     import string
     elan = Eaf()
     new_lines = list()
-    print('I\'m here!', txt_file)
     with open(txt_file, 'r') as f:
         for line in f:
             new_lines += split('([0-9]+\.[0-9]+)', line)
-    # print(new_lines)
     my_format = dict()
     key = -0.1
     building_line = ''
@@ -92,9 +88,11 @@ def _txt_to_elan(txt_file):
     orig = new_lines[counter]
     counter += 1
     tran = new_lines[counter]
+    if tran == '' or tran == '\n':
+        tran = orig
+        orig = ''
     counter += 2
     le =  len(new_lines)
-    print( le)
     while counter + 3 < le:
         new_key = new_lines[counter]
         new_key = float(new_key)
@@ -102,21 +100,21 @@ def _txt_to_elan(txt_file):
             new_key += 0.005
         tmp_key_1 = _weird_float_to_int(float(key))
         tmp_key_2 = _weird_float_to_int(float(new_key))
-        if tmp_key_2 - 1 <= tmp_key_1:
-            print(tmp_key_2, tmp_key_1)
 
         elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-        elan.add_ref_annotation('translation', 'original', int(tmp_key_2 - 1),  tran)
+        elan.add_ref_annotation('translation', 'original', int(tmp_key_2),  tran)
         key = new_key
         counter += 1
         orig = new_lines[counter]
         counter += 1
         tran = new_lines[counter]
+        if tran == '' or tran == '\n':
+            tran = orig
+            orig = ''
         counter += 1
         while (new_lines[counter] == '' or new_lines[counter] == '\n') and counter < le:
             counter += 1
-            # print(counter)
 
     new_key = new_lines[counter]
     new_key = float(new_key)
@@ -125,24 +123,23 @@ def _txt_to_elan(txt_file):
 
     tmp_key_1 = _weird_float_to_int(float(key))
     tmp_key_2 = _weird_float_to_int(float(new_key))
-    if tmp_key_2 - 1 <= tmp_key_1:
-        print(tmp_key_2, tmp_key_1)
     elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-    elan.add_ref_annotation('translation', 'original', int(tmp_key_2 - 1),  tran)
+    elan.add_ref_annotation('translation', 'original', int(tmp_key_2),  tran)
     key = new_key
     counter += 1
     orig = new_lines[counter]
     counter += 1
     tran = new_lines[counter]
+    if tran == '' or tran == '\n':
+        tran = orig
+        orig = ''
 
     tmp_key_1 = _weird_float_to_int(float(key))
     tmp_key_2 = _weird_float_to_int(float(21.00))
-    if tmp_key_2 - 1 <= tmp_key_1:
-        print(tmp_key_2, tmp_key_1)
     elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-    elan.add_ref_annotation('translation', 'original', int(tmp_key_2 - 1),  tran)
+    elan.add_ref_annotation('translation', 'original', int(tmp_key_2),  tran)
 
 
     # elan = tgt.io.export_to_elan(textgrid)
@@ -158,7 +155,6 @@ def _txt_to_elan(txt_file):
     # txtgrd.to_file(filename)
     # elan = _export_to_elan(filename)
     os.remove(filename)
-    # print(elan.tiers)
     return a
 
 
@@ -169,7 +165,6 @@ def _import_from_elan(elan_file):
         textgrid = tgt.io.read_eaf(elan_file)
         content = tgt.io.export_to_long_textgrid(textgrid)
     except Exception as e:
-            print(e)
             return 'error'
     return content
 
