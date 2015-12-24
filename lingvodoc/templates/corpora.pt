@@ -24,7 +24,7 @@
 
 
     <div ng-if="dictionaries.length > 0">
-        <div ng-repeat="dictionary in dictionaries">
+        <div ng-repeat="dictionary in getCorporaDictionaries(dictionaries, 'corpora')">
             <div>
                 <div class="btn-group col-md-8 col-sm-8 col-lg-8 col-xs-8">
                     <button type="button" class="btn btn-default dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9">{{ dictionary.translation }}</button>
@@ -34,7 +34,7 @@
             <br><br>
 
             <div>
-                <div ng-repeat="perspective in dictionary.perspectives">
+                <div ng-repeat="perspective in getCorporaPerspectives(dictionary, 'corpora')">
                     <div class="btn-group btn-group-xs col-lg-offset-1 col-md-offset-1 col-sm-offset-1 col-xs-offset-1 col-md-7 col-sm-7 col-lg-7 col-xs-7">
                         <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
                                 aria-haspopup="true" aria-expanded="false">
@@ -52,7 +52,7 @@
                             </li>
                             <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}">Publish</a>
                             </li>
-                            <li><a href="#" ng-attr-href="{{ getViewCorpusLink(dictionary, perspective) }}">View corpora</a>
+                            <li><a href="#" ng-attr-href="{{ getViewCorporaLink(dictionary, perspective) }}">View corpora</a>
                             </li>
                         </ul>
                     </div>
@@ -61,6 +61,51 @@
             </div>
             <hr>
         </div>
+
+        <h3>Audio corpora</h3>
+
+        <div ng-repeat="dictionary in getCorporaDictionaries(dictionaries, 'audio_corpora')">
+            <div>
+                <div class="btn-group col-md-8 col-sm-8 col-lg-8 col-xs-8">
+                    <button type="button" class="btn btn-default dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9">{{ dictionary.translation }}</button>
+                </div>
+            </div>
+
+            <br><br>
+
+            <div>
+                <div ng-repeat="perspective in getCorporaPerspectives(dictionary, 'audio_corpora')">
+                    <div class="btn-group btn-group-xs col-lg-offset-1 col-md-offset-1 col-sm-offset-1 col-xs-offset-1 col-md-7 col-sm-7 col-lg-7 col-xs-7">
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+                                aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <button type="button"
+                                class="btn btn-default col-md-10 col-lg-11 col-sm-10 col-xs-9 dropdown-toggle"
+                                data-toggle="dropdown">{{ perspective.translation }}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'view') }}" ng-disabled="true">View
+                                published</a></li>
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}" ng-disabled="true">Edit</a>
+                            </li>
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}" ng-disabled="true">Publish</a>
+                            </li>
+                            <li><a href="#" ng-attr-href="{{ getViewAudioCorporaLink(dictionary, perspective) }}">View corpora</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <br><br>
+                </div>
+            </div>
+            <hr>
+        </div>
+
+
+
+
+
     </div>
 
 </div>

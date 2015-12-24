@@ -13,8 +13,31 @@ angular.module('CorporaModule', ['ui.bootstrap'])
             return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/' + action;
         };
 
-        $scope.getViewCorpusLink = function (dictionary, perspective) {
+        $scope.getViewCorporaLink = function (dictionary, perspective) {
             return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/corpora';
+        };
+
+        $scope.getViewAudioCorporaLink = function (dictionary, perspective) {
+            return '/dictionary/' + encodeURIComponent(dictionary.client_id) + '/' + encodeURIComponent(dictionary.object_id) + '/perspective/' + encodeURIComponent(perspective.client_id) + '/' + encodeURIComponent(perspective.object_id) + '/audio_corpora';
+        };
+
+
+        $scope.getCorporaPerspectives = function(dictionary, type) {
+            return _.filter(dictionary.perspectives, function(p) {
+                var meta = {};
+                if (_.isString(p.additional_metadata)) {
+                    meta = JSON.parse(p.additional_metadata);
+                } else {
+                    meta = p.additional_metadata;
+                }
+                return _.has(meta, type);
+            });
+        };
+
+        $scope.getCorporaDictionaries = function(dictionaries, type) {
+            return _.filter(dictionaries, function(d) {
+                return !_.isEmpty($scope.getCorporaPerspectives(d, type));
+            });
         };
 
         dictionaryService.getDictionaries({}).then(function(dictionaries) {
@@ -33,7 +56,6 @@ angular.module('CorporaModule', ['ui.bootstrap'])
 
                         return _.has(meta, 'corpora') || _.has(meta, 'audio_corpora');
                     }
-
                     return false;
                 });
 

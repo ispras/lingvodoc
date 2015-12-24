@@ -12,7 +12,7 @@
 
     <title>Lingvodoc future</title>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
-    <script src="${request.static_url('lingvodoc:static/js/audio_corpora.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/audio_corpora_view.js')}"></script>
 
 </head>
 

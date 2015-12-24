@@ -306,7 +306,7 @@ module.exports = function(grunt) {
                 ],
                 dest: '../lingvodoc/static/js/corpora_view.js'
             },
-            auido_corpora: {
+            audio_corpora_view: {
                 src: [
                     'bower_components/jquery/dist/jquery.js',
                     'bower_components/lodash/lodash.js',
@@ -322,9 +322,9 @@ module.exports = function(grunt) {
                     'src/js/api.js',
                     'src/js/response_handler.js',
                     'src/js/lingvowave.js',
-                    'src/js/audio_corpora.js'
+                    'src/js/audio_corpora_view.js'
                 ],
-                dest: '../lingvodoc/static/js/auido_corpora.js'
+                dest: '../lingvodoc/static/js/audio_corpora_view.js'
             }
         }
     });

@@ -173,32 +173,79 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
 
 
             $scope.wavesurfer.once('ready', function() {
-
-                // load annotation once file is loaded
-                dictionaryService.convertMarkup(params.markup).then(function(data) {
-                    try {
-                        var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
-                        var annotation = new elan.Document();
-                        annotation.importXML(xml);
-                        $scope.annotation = annotation;
-                        $scope.annotationTable = annotation.render();
-                        createRegions(annotation);
-                    } catch (e) {
-                        responseHandler.error('Failed to parse ELAN annotation: ' + e);
-                    }
+                dictionaryService.getUserBlob($scope.markup.client_id, $scope.markup.object_id).then(function(blob) {
+                    dictionaryService.convertTxtMarkup(blob).then(function(data) {
+                        try {
+                            var xml = (new DOMParser()).parseFromString(data, 'application/xml');
+                            var annotation = new elan.Document();
+                            annotation.importXML(xml);
+                            $scope.annotation = annotation;
+                            $scope.annotationTable = annotation.render();
+                            createRegions(annotation);
+                        } catch (e) {
+                            responseHandler.error('Failed to parse ELAN annotation: ' + e);
+                        }
+                    }, function(reason) {
+                        responseHandler.error(reason);
+                    });
                 }, function(reason) {
                     responseHandler.error(reason);
                 });
 
                 $scope.$apply();
             });
-
-            // load file once wavesurfer is ready
-            $scope.wavesurfer.load(params.sound.content);
         });
 
         $scope.$on('modal.closing', function(e) {
             $scope.wavesurfer.stop();
             $scope.wavesurfer.destroy();
         });
+
+
+        dictionaryService.getDictionary(dictionaryClientId, dictionaryObjectId).then(function(dictionary) {
+            dictionaryService.getPerspectiveById(perspectiveClientId, perspectiveId).then(function(perspective) {
+
+                dictionaryService.getPerspectiveMeta(dictionary, perspective).then(function(meta) {
+
+                    //meta['audio_corpora'] = {
+                    //    audio : {
+                    //        client_id: 3,
+                    //        object_id: 3
+                    //    },
+                    //    markup: {
+                    //        client_id: 3,
+                    //        object_id: 4
+                    //    }
+                    //};
+                    //
+                    //dictionaryService.setPerspectiveMeta(dictionary, perspective, meta);
+
+                    //return;
+
+                    if (_.has(meta, 'audio_corpora')) {
+                        // load file once wavesurfer is ready
+                        $scope.audio = meta.audio_corpora.audio;
+                        $scope.markup = meta.audio_corpora.markup;
+
+                        dictionaryService.getUserBlob($scope.audio.client_id, $scope.audio.object_id).then(function(blob) {
+                            console.log(blob);
+                            $scope.wavesurfer.load(blob.url);
+                        }, function(reason) {
+                            responseHandler.error(reason);
+                        });
+                    }
+
+                }, function(reason) {
+
+                });
+
+            }, function(reason) {
+
+            });
+
+
+        }, function(reason) {
+
+        });
+
     }]);

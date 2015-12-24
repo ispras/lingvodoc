@@ -66,6 +66,10 @@ def configure_routes(config):
     config.add_route(name='corpora_view', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                             '/perspective/{perspective_client_id}/{perspective_id}/corpora')
 
+    # web-view #GET
+    config.add_route(name='audio_corpora_view', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                   '/perspective/{perspective_client_id}/{perspective_id}/audio_corpora')
+
     # API #GET && PUT && DELETE
     # Gets/puts info about language
     config.add_route(name='language', pattern='/language/{client_id}/{object_id}',
