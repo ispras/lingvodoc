@@ -100,13 +100,14 @@ def _txt_to_elan(txt_file):
         new_key = float(new_key)
         if new_key == key:
             new_key += 0.005
-
         tmp_key_1 = _weird_float_to_int(float(key))
         tmp_key_2 = _weird_float_to_int(float(new_key))
+        if tmp_key_2 - 1 <= tmp_key_1:
+            print(tmp_key_2, tmp_key_1)
 
         elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-        elan.add_ref_annotation('translation', 'original', int((tmp_key_1+tmp_key_2)/2),  tran)
+        elan.add_ref_annotation('translation', 'original', int(tmp_key_2 - 1),  tran)
         key = new_key
         counter += 1
         orig = new_lines[counter]
@@ -124,9 +125,11 @@ def _txt_to_elan(txt_file):
 
     tmp_key_1 = _weird_float_to_int(float(key))
     tmp_key_2 = _weird_float_to_int(float(new_key))
+    if tmp_key_2 - 1 <= tmp_key_1:
+        print(tmp_key_2, tmp_key_1)
     elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-    elan.add_ref_annotation('translation', 'original', tmp_key_1,  tran)
+    elan.add_ref_annotation('translation', 'original', int(tmp_key_2 - 1),  tran)
     key = new_key
     counter += 1
     orig = new_lines[counter]
@@ -135,10 +138,11 @@ def _txt_to_elan(txt_file):
 
     tmp_key_1 = _weird_float_to_int(float(key))
     tmp_key_2 = _weird_float_to_int(float(21.00))
-
+    if tmp_key_2 - 1 <= tmp_key_1:
+        print(tmp_key_2, tmp_key_1)
     elan.add_annotation('original', tmp_key_1, tmp_key_2, orig)
 
-    elan.add_ref_annotation('translation', 'original', tmp_key_1,  tran)
+    elan.add_ref_annotation('translation', 'original', int(tmp_key_2 - 1),  tran)
 
 
     # elan = tgt.io.export_to_elan(textgrid)
@@ -146,7 +150,7 @@ def _txt_to_elan(txt_file):
                                               for c in range(10))
     elan.remove_tier('default')
     elan.to_file(filename)
-    f = open('text.eaf', 'r')
+    f = open(filename, 'r')
     a = f.read()
     f.close()
     # filename = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
