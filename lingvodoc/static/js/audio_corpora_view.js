@@ -30201,2146 +30201,1280 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
 
 !angular.$$csp() && angular.element(document).find("head").prepend('<style type="text/css">.ng-animate.item:not(.left):not(.right){-webkit-transition:0s ease-in-out left;transition:0s ease-in-out left}</style>');
 
-(function(window, angular, undefined) {
-    "use strict";
-    var noop = angular.noop;
-    var extend = angular.extend;
-    var jqLite = angular.element;
-    var forEach = angular.forEach;
-    var isArray = angular.isArray;
-    var isString = angular.isString;
-    var isObject = angular.isObject;
-    var isUndefined = angular.isUndefined;
-    var isDefined = angular.isDefined;
-    var isFunction = angular.isFunction;
-    var isElement = angular.isElement;
-    var ELEMENT_NODE = 1;
-    var COMMENT_NODE = 8;
-    var ADD_CLASS_SUFFIX = "-add";
-    var REMOVE_CLASS_SUFFIX = "-remove";
-    var EVENT_CLASS_PREFIX = "ng-";
-    var ACTIVE_CLASS_SUFFIX = "-active";
-    var NG_ANIMATE_CLASSNAME = "ng-animate";
-    var NG_ANIMATE_CHILDREN_DATA = "$$ngAnimateChildren";
-    var CSS_PREFIX = "", TRANSITION_PROP, TRANSITIONEND_EVENT, ANIMATION_PROP, ANIMATIONEND_EVENT;
-    if (isUndefined(window.ontransitionend) && isDefined(window.onwebkittransitionend)) {
-        CSS_PREFIX = "-webkit-";
-        TRANSITION_PROP = "WebkitTransition";
-        TRANSITIONEND_EVENT = "webkitTransitionEnd transitionend";
-    } else {
-        TRANSITION_PROP = "transition";
-        TRANSITIONEND_EVENT = "transitionend";
-    }
-    if (isUndefined(window.onanimationend) && isDefined(window.onwebkitanimationend)) {
-        CSS_PREFIX = "-webkit-";
-        ANIMATION_PROP = "WebkitAnimation";
-        ANIMATIONEND_EVENT = "webkitAnimationEnd animationend";
-    } else {
-        ANIMATION_PROP = "animation";
-        ANIMATIONEND_EVENT = "animationend";
-    }
-    var DURATION_KEY = "Duration";
-    var PROPERTY_KEY = "Property";
-    var DELAY_KEY = "Delay";
-    var TIMING_KEY = "TimingFunction";
-    var ANIMATION_ITERATION_COUNT_KEY = "IterationCount";
-    var ANIMATION_PLAYSTATE_KEY = "PlayState";
-    var SAFE_FAST_FORWARD_DURATION_VALUE = 9999;
-    var ANIMATION_DELAY_PROP = ANIMATION_PROP + DELAY_KEY;
-    var ANIMATION_DURATION_PROP = ANIMATION_PROP + DURATION_KEY;
-    var TRANSITION_DELAY_PROP = TRANSITION_PROP + DELAY_KEY;
-    var TRANSITION_DURATION_PROP = TRANSITION_PROP + DURATION_KEY;
-    var isPromiseLike = function(p) {
-        return p && p.then ? true : false;
-    };
-    function assertArg(arg, name, reason) {
-        if (!arg) {
-            throw ngMinErr("areq", "Argument '{0}' is {1}", name || "?", reason || "required");
-        }
-        return arg;
-    }
-    function mergeClasses(a, b) {
-        if (!a && !b) return "";
-        if (!a) return b;
-        if (!b) return a;
-        if (isArray(a)) a = a.join(" ");
-        if (isArray(b)) b = b.join(" ");
-        return a + " " + b;
-    }
-    function packageStyles(options) {
-        var styles = {};
-        if (options && (options.to || options.from)) {
-            styles.to = options.to;
-            styles.from = options.from;
-        }
-        return styles;
-    }
-    function pendClasses(classes, fix, isPrefix) {
-        var className = "";
-        classes = isArray(classes) ? classes : classes && isString(classes) && classes.length ? classes.split(/\s+/) : [];
-        forEach(classes, function(klass, i) {
-            if (klass && klass.length > 0) {
-                className += i > 0 ? " " : "";
-                className += isPrefix ? fix + klass : klass + fix;
-            }
-        });
-        return className;
-    }
-    function removeFromArray(arr, val) {
-        var index = arr.indexOf(val);
-        if (val >= 0) {
-            arr.splice(index, 1);
-        }
-    }
-    function stripCommentsFromElement(element) {
-        if (element instanceof jqLite) {
-            switch (element.length) {
-              case 0:
-                return [];
-                break;
+"use strict";
 
-              case 1:
-                if (element[0].nodeType === ELEMENT_NODE) {
-                    return element;
-                }
-                break;
+var WaveSurfer = {
+    defaultParams: {
+        height: 128,
+        waveColor: "#999",
+        progressColor: "#555",
+        cursorColor: "#333",
+        cursorWidth: 1,
+        skipLength: 2,
+        minPxPerSec: 20,
+        pixelRatio: window.devicePixelRatio,
+        fillParent: !0,
+        scrollParent: !1,
+        hideScrollbar: !1,
+        normalize: !1,
+        audioContext: null,
+        container: null,
+        dragSelection: !0,
+        loopSelection: !0,
+        audioRate: 1,
+        interact: !0,
+        splitChannels: !1,
+        renderer: "Canvas",
+        backend: "WebAudio",
+        mediaType: "audio"
+    },
+    init: function(a) {
+        if (this.params = WaveSurfer.util.extend({}, this.defaultParams, a), this.container = "string" == typeof a.container ? document.querySelector(this.params.container) : this.params.container, 
+        !this.container) throw new Error("Container element not found");
+        if ("undefined" == typeof this.params.mediaContainer ? this.mediaContainer = this.container : "string" == typeof this.params.mediaContainer ? this.mediaContainer = document.querySelector(this.params.mediaContainer) : this.mediaContainer = this.params.mediaContainer, 
+        !this.mediaContainer) throw new Error("Media Container element not found");
+        this.savedVolume = 0, this.isMuted = !1, this.tmpEvents = [], this.createDrawer(), 
+        this.createBackend();
+    },
+    createDrawer: function() {
+        var a = this;
+        this.drawer = Object.create(WaveSurfer.Drawer[this.params.renderer]), this.drawer.init(this.container, this.params), 
+        this.drawer.on("redraw", function() {
+            a.drawBuffer(), a.drawer.progress(a.backend.getPlayedPercents());
+        }), this.drawer.on("click", function(b, c) {
+            setTimeout(function() {
+                a.seekTo(c);
+            }, 0);
+        }), this.drawer.on("scroll", function(b) {
+            a.fireEvent("scroll", b);
+        });
+    },
+    createBackend: function() {
+        var a = this;
+        this.backend && this.backend.destroy(), "AudioElement" == this.params.backend && (this.params.backend = "MediaElement"), 
+        "WebAudio" != this.params.backend || WaveSurfer.WebAudio.supportsWebAudio() || (this.params.backend = "MediaElement"), 
+        this.backend = Object.create(WaveSurfer[this.params.backend]), this.backend.init(this.params), 
+        this.backend.on("finish", function() {
+            a.fireEvent("finish");
+        }), this.backend.on("play", function() {
+            a.fireEvent("play");
+        }), this.backend.on("pause", function() {
+            a.fireEvent("pause");
+        }), this.backend.on("audioprocess", function(b) {
+            a.drawer.progress(a.backend.getPlayedPercents()), a.fireEvent("audioprocess", b);
+        });
+    },
+    getDuration: function() {
+        return this.backend.getDuration();
+    },
+    getCurrentTime: function() {
+        return this.backend.getCurrentTime();
+    },
+    play: function(a, b) {
+        this.backend.play(a, b);
+    },
+    pause: function() {
+        this.backend.pause();
+    },
+    playPause: function() {
+        this.backend.isPaused() ? this.play() : this.pause();
+    },
+    isPlaying: function() {
+        return !this.backend.isPaused();
+    },
+    skipBackward: function(a) {
+        this.skip(-a || -this.params.skipLength);
+    },
+    skipForward: function(a) {
+        this.skip(a || this.params.skipLength);
+    },
+    skip: function(a) {
+        var b = this.getCurrentTime() || 0, c = this.getDuration() || 1;
+        b = Math.max(0, Math.min(c, b + (a || 0))), this.seekAndCenter(b / c);
+    },
+    seekAndCenter: function(a) {
+        this.seekTo(a), this.drawer.recenter(a);
+    },
+    seekTo: function(a) {
+        var b = this.backend.isPaused(), c = this.params.scrollParent;
+        b && (this.params.scrollParent = !1), this.backend.seekTo(a * this.getDuration()), 
+        this.drawer.progress(this.backend.getPlayedPercents()), b || (this.backend.pause(), 
+        this.backend.play()), this.params.scrollParent = c, this.fireEvent("seek", a);
+    },
+    stop: function() {
+        this.pause(), this.seekTo(0), this.drawer.progress(0);
+    },
+    setVolume: function(a) {
+        this.backend.setVolume(a);
+    },
+    setPlaybackRate: function(a) {
+        this.backend.setPlaybackRate(a);
+    },
+    toggleMute: function() {
+        this.isMuted ? (this.backend.setVolume(this.savedVolume), this.isMuted = !1) : (this.savedVolume = this.backend.getVolume(), 
+        this.backend.setVolume(0), this.isMuted = !0);
+    },
+    toggleScroll: function() {
+        this.params.scrollParent = !this.params.scrollParent, this.drawBuffer();
+    },
+    toggleInteraction: function() {
+        this.params.interact = !this.params.interact;
+    },
+    drawBuffer: function() {
+        var a = Math.round(this.getDuration() * this.params.minPxPerSec * this.params.pixelRatio), b = this.drawer.getWidth(), c = a;
+        this.params.fillParent && (!this.params.scrollParent || b > a) && (c = b);
+        var d = this.backend.getPeaks(c);
+        this.drawer.drawPeaks(d, c), this.fireEvent("redraw", d, c);
+    },
+    zoom: function(a) {
+        this.params.minPxPerSec = a, this.params.scrollParent = !0, this.drawBuffer(), this.seekAndCenter(this.getCurrentTime() / this.getDuration());
+    },
+    loadArrayBuffer: function(a) {
+        this.decodeArrayBuffer(a, function(a) {
+            this.loadDecodedBuffer(a);
+        }.bind(this));
+    },
+    loadDecodedBuffer: function(a) {
+        this.backend.load(a), this.drawBuffer(), this.fireEvent("ready");
+    },
+    loadBlob: function(a) {
+        var b = this, c = new FileReader();
+        c.addEventListener("progress", function(a) {
+            b.onProgress(a);
+        }), c.addEventListener("load", function(a) {
+            b.loadArrayBuffer(a.target.result);
+        }), c.addEventListener("error", function() {
+            b.fireEvent("error", "Error reading file");
+        }), c.readAsArrayBuffer(a), this.empty();
+    },
+    load: function(a, b) {
+        switch (this.params.backend) {
+          case "WebAudio":
+            return this.loadBuffer(a);
 
-              default:
-                return jqLite(extractElementNode(element));
-                break;
-            }
+          case "MediaElement":
+            return this.loadMediaElement(a, b);
         }
-        if (element.nodeType === ELEMENT_NODE) {
-            return jqLite(element);
-        }
-    }
-    function extractElementNode(element) {
-        if (!element[0]) return element;
-        for (var i = 0; i < element.length; i++) {
-            var elm = element[i];
-            if (elm.nodeType == ELEMENT_NODE) {
-                return elm;
-            }
-        }
-    }
-    function $$addClass($$jqLite, element, className) {
-        forEach(element, function(elm) {
-            $$jqLite.addClass(elm, className);
+    },
+    loadBuffer: function(a) {
+        return this.empty(), this.getArrayBuffer(a, this.loadArrayBuffer.bind(this));
+    },
+    loadMediaElement: function(a, b) {
+        this.empty(), this.backend.load(a, this.mediaContainer, b), this.tmpEvents.push(this.backend.once("canplay", function() {
+            this.drawBuffer(), this.fireEvent("ready");
+        }.bind(this)), this.backend.once("error", function(a) {
+            this.fireEvent("error", a);
+        }.bind(this))), !b && this.backend.supportsWebAudio() && this.getArrayBuffer(a, function(a) {
+            this.decodeArrayBuffer(a, function(a) {
+                this.backend.buffer = a, this.drawBuffer();
+            }.bind(this));
+        }.bind(this));
+    },
+    decodeArrayBuffer: function(a, b) {
+        this.backend.decodeArrayBuffer(a, this.fireEvent.bind(this, "decoded"), this.fireEvent.bind(this, "error", "Error decoding audiobuffer")), 
+        this.tmpEvents.push(this.once("decoded", b));
+    },
+    getArrayBuffer: function(a, b) {
+        var c = this, d = WaveSurfer.util.ajax({
+            url: a,
+            responseType: "arraybuffer"
         });
-    }
-    function $$removeClass($$jqLite, element, className) {
-        forEach(element, function(elm) {
-            $$jqLite.removeClass(elm, className);
+        return this.tmpEvents.push(d.on("progress", function(a) {
+            c.onProgress(a);
+        }), d.on("success", b), d.on("error", function(a) {
+            c.fireEvent("error", "XHR error: " + a.target.statusText);
+        })), d;
+    },
+    onProgress: function(a) {
+        if (a.lengthComputable) var b = a.loaded / a.total; else b = a.loaded / (a.loaded + 1e6);
+        this.fireEvent("loading", Math.round(100 * b), a.target);
+    },
+    exportPCM: function(a, b, c) {
+        a = a || 1024, b = b || 1e4, c = c || !1;
+        var d = this.backend.getPeaks(a, b), e = [].map.call(d, function(a) {
+            return Math.round(a * b) / b;
+        }), f = JSON.stringify(e);
+        return c || window.open("data:application/json;charset=utf-8," + encodeURIComponent(f)), 
+        f;
+    },
+    clearTmpEvents: function() {
+        this.tmpEvents.forEach(function(a) {
+            a.un();
         });
+    },
+    empty: function() {
+        this.backend.isPaused() || (this.stop(), this.backend.disconnectSource()), this.clearTmpEvents(), 
+        this.drawer.progress(0), this.drawer.setWidth(0), this.drawer.drawPeaks({
+            length: this.drawer.getWidth()
+        }, 0);
+    },
+    destroy: function() {
+        this.fireEvent("destroy"), this.clearTmpEvents(), this.unAll(), this.backend.destroy(), 
+        this.drawer.destroy();
     }
-    function applyAnimationClassesFactory($$jqLite) {
-        return function(element, options) {
-            if (options.addClass) {
-                $$addClass($$jqLite, element, options.addClass);
-                options.addClass = null;
-            }
-            if (options.removeClass) {
-                $$removeClass($$jqLite, element, options.removeClass);
-                options.removeClass = null;
-            }
-        };
-    }
-    function prepareAnimationOptions(options) {
-        options = options || {};
-        if (!options.$$prepared) {
-            var domOperation = options.domOperation || noop;
-            options.domOperation = function() {
-                options.$$domOperationFired = true;
-                domOperation();
-                domOperation = noop;
-            };
-            options.$$prepared = true;
-        }
-        return options;
-    }
-    function applyAnimationStyles(element, options) {
-        applyAnimationFromStyles(element, options);
-        applyAnimationToStyles(element, options);
-    }
-    function applyAnimationFromStyles(element, options) {
-        if (options.from) {
-            element.css(options.from);
-            options.from = null;
-        }
-    }
-    function applyAnimationToStyles(element, options) {
-        if (options.to) {
-            element.css(options.to);
-            options.to = null;
-        }
-    }
-    function mergeAnimationOptions(element, target, newOptions) {
-        var toAdd = (target.addClass || "") + " " + (newOptions.addClass || "");
-        var toRemove = (target.removeClass || "") + " " + (newOptions.removeClass || "");
-        var classes = resolveElementClasses(element.attr("class"), toAdd, toRemove);
-        if (newOptions.preparationClasses) {
-            target.preparationClasses = concatWithSpace(newOptions.preparationClasses, target.preparationClasses);
-            delete newOptions.preparationClasses;
-        }
-        var realDomOperation = target.domOperation !== noop ? target.domOperation : null;
-        extend(target, newOptions);
-        if (realDomOperation) {
-            target.domOperation = realDomOperation;
-        }
-        if (classes.addClass) {
-            target.addClass = classes.addClass;
-        } else {
-            target.addClass = null;
-        }
-        if (classes.removeClass) {
-            target.removeClass = classes.removeClass;
-        } else {
-            target.removeClass = null;
-        }
-        return target;
-    }
-    function resolveElementClasses(existing, toAdd, toRemove) {
-        var ADD_CLASS = 1;
-        var REMOVE_CLASS = -1;
-        var flags = {};
-        existing = splitClassesToLookup(existing);
-        toAdd = splitClassesToLookup(toAdd);
-        forEach(toAdd, function(value, key) {
-            flags[key] = ADD_CLASS;
-        });
-        toRemove = splitClassesToLookup(toRemove);
-        forEach(toRemove, function(value, key) {
-            flags[key] = flags[key] === ADD_CLASS ? null : REMOVE_CLASS;
-        });
-        var classes = {
-            addClass: "",
-            removeClass: ""
-        };
-        forEach(flags, function(val, klass) {
-            var prop, allow;
-            if (val === ADD_CLASS) {
-                prop = "addClass";
-                allow = !existing[klass];
-            } else if (val === REMOVE_CLASS) {
-                prop = "removeClass";
-                allow = existing[klass];
-            }
-            if (allow) {
-                if (classes[prop].length) {
-                    classes[prop] += " ";
-                }
-                classes[prop] += klass;
-            }
-        });
-        function splitClassesToLookup(classes) {
-            if (isString(classes)) {
-                classes = classes.split(" ");
-            }
-            var obj = {};
-            forEach(classes, function(klass) {
-                if (klass.length) {
-                    obj[klass] = true;
-                }
+};
+
+WaveSurfer.create = function(a) {
+    var b = Object.create(WaveSurfer);
+    return b.init(a), b;
+}, WaveSurfer.util = {
+    extend: function(a) {
+        var b = Array.prototype.slice.call(arguments, 1);
+        return b.forEach(function(b) {
+            Object.keys(b).forEach(function(c) {
+                a[c] = b[c];
             });
-            return obj;
-        }
-        return classes;
+        }), a;
+    },
+    getId: function() {
+        return "wavesurfer_" + Math.random().toString(32).substring(2);
+    },
+    ajax: function(a) {
+        var b = Object.create(WaveSurfer.Observer), c = new XMLHttpRequest(), d = !1;
+        return c.open(a.method || "GET", a.url, !0), c.responseType = a.responseType || "json", 
+        c.addEventListener("progress", function(a) {
+            b.fireEvent("progress", a), a.lengthComputable && a.loaded == a.total && (d = !0);
+        }), c.addEventListener("load", function(a) {
+            d || b.fireEvent("progress", a), b.fireEvent("load", a), 200 == c.status || 206 == c.status ? b.fireEvent("success", c.response, a) : b.fireEvent("error", a);
+        }), c.addEventListener("error", function(a) {
+            b.fireEvent("error", a);
+        }), c.send(), b.xhr = c, b;
     }
-    function getDomNode(element) {
-        return element instanceof angular.element ? element[0] : element;
-    }
-    function applyGeneratedPreparationClasses(element, event, options) {
-        var classes = "";
-        if (event) {
-            classes = pendClasses(event, EVENT_CLASS_PREFIX, true);
-        }
-        if (options.addClass) {
-            classes = concatWithSpace(classes, pendClasses(options.addClass, ADD_CLASS_SUFFIX));
-        }
-        if (options.removeClass) {
-            classes = concatWithSpace(classes, pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX));
-        }
-        if (classes.length) {
-            options.preparationClasses = classes;
-            element.addClass(classes);
-        }
-    }
-    function clearGeneratedClasses(element, options) {
-        if (options.preparationClasses) {
-            element.removeClass(options.preparationClasses);
-            options.preparationClasses = null;
-        }
-        if (options.activeClasses) {
-            element.removeClass(options.activeClasses);
-            options.activeClasses = null;
-        }
-    }
-    function blockTransitions(node, duration) {
-        var value = duration ? "-" + duration + "s" : "";
-        applyInlineStyle(node, [ TRANSITION_DELAY_PROP, value ]);
-        return [ TRANSITION_DELAY_PROP, value ];
-    }
-    function blockKeyframeAnimations(node, applyBlock) {
-        var value = applyBlock ? "paused" : "";
-        var key = ANIMATION_PROP + ANIMATION_PLAYSTATE_KEY;
-        applyInlineStyle(node, [ key, value ]);
-        return [ key, value ];
-    }
-    function applyInlineStyle(node, styleTuple) {
-        var prop = styleTuple[0];
-        var value = styleTuple[1];
-        node.style[prop] = value;
-    }
-    function concatWithSpace(a, b) {
-        if (!a) return b;
-        if (!b) return a;
-        return a + " " + b;
-    }
-    var $$rAFSchedulerFactory = [ "$$rAF", function($$rAF) {
-        var queue, cancelFn;
-        function scheduler(tasks) {
-            queue = queue.concat(tasks);
-            nextTick();
-        }
-        queue = scheduler.queue = [];
-        scheduler.waitUntilQuiet = function(fn) {
-            if (cancelFn) cancelFn();
-            cancelFn = $$rAF(function() {
-                cancelFn = null;
-                fn();
-                nextTick();
-            });
+}, WaveSurfer.Observer = {
+    on: function(a, b) {
+        this.handlers || (this.handlers = {});
+        var c = this.handlers[a];
+        return c || (c = this.handlers[a] = []), c.push(b), {
+            name: a,
+            callback: b,
+            un: this.un.bind(this, a, b)
         };
-        return scheduler;
-        function nextTick() {
-            if (!queue.length) return;
-            var items = queue.shift();
-            for (var i = 0; i < items.length; i++) {
-                items[i]();
-            }
-            if (!cancelFn) {
-                $$rAF(function() {
-                    if (!cancelFn) nextTick();
-                });
-            }
+    },
+    un: function(a, b) {
+        if (this.handlers) {
+            var c = this.handlers[a];
+            if (c) if (b) for (var d = c.length - 1; d >= 0; d--) c[d] == b && c.splice(d, 1); else c.length = 0;
         }
-    } ];
-    var $$AnimateChildrenDirective = [ function() {
-        return function(scope, element, attrs) {
-            var val = attrs.ngAnimateChildren;
-            if (angular.isString(val) && val.length === 0) {
-                element.data(NG_ANIMATE_CHILDREN_DATA, true);
+    },
+    unAll: function() {
+        this.handlers = null;
+    },
+    once: function(a, b) {
+        var c = this, d = function() {
+            b.apply(this, arguments), setTimeout(function() {
+                c.un(a, d);
+            }, 0);
+        };
+        return this.on(a, d);
+    },
+    fireEvent: function(a) {
+        if (this.handlers) {
+            var b = this.handlers[a], c = Array.prototype.slice.call(arguments, 1);
+            b && b.forEach(function(a) {
+                a.apply(null, c);
+            });
+        }
+    }
+}, WaveSurfer.util.extend(WaveSurfer, WaveSurfer.Observer), WaveSurfer.WebAudio = {
+    scriptBufferSize: 256,
+    PLAYING_STATE: 0,
+    PAUSED_STATE: 1,
+    FINISHED_STATE: 2,
+    supportsWebAudio: function() {
+        return !(!window.AudioContext && !window.webkitAudioContext);
+    },
+    getAudioContext: function() {
+        return WaveSurfer.WebAudio.audioContext || (WaveSurfer.WebAudio.audioContext = new (window.AudioContext || window.webkitAudioContext)()), 
+        WaveSurfer.WebAudio.audioContext;
+    },
+    getOfflineAudioContext: function(a) {
+        return WaveSurfer.WebAudio.offlineAudioContext || (WaveSurfer.WebAudio.offlineAudioContext = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 2, a)), 
+        WaveSurfer.WebAudio.offlineAudioContext;
+    },
+    init: function(a) {
+        this.params = a, this.ac = a.audioContext || this.getAudioContext(), this.lastPlay = this.ac.currentTime, 
+        this.startPosition = 0, this.scheduledPause = null, this.states = [ Object.create(WaveSurfer.WebAudio.state.playing), Object.create(WaveSurfer.WebAudio.state.paused), Object.create(WaveSurfer.WebAudio.state.finished) ], 
+        this.createVolumeNode(), this.createScriptNode(), this.createAnalyserNode(), this.setState(this.PAUSED_STATE), 
+        this.setPlaybackRate(this.params.audioRate);
+    },
+    disconnectFilters: function() {
+        this.filters && (this.filters.forEach(function(a) {
+            a && a.disconnect();
+        }), this.filters = null, this.analyser.connect(this.gainNode));
+    },
+    setState: function(a) {
+        this.state !== this.states[a] && (this.state = this.states[a], this.state.init.call(this));
+    },
+    setFilter: function() {
+        this.setFilters([].slice.call(arguments));
+    },
+    setFilters: function(a) {
+        this.disconnectFilters(), a && a.length && (this.filters = a, this.analyser.disconnect(), 
+        a.reduce(function(a, b) {
+            return a.connect(b), b;
+        }, this.analyser).connect(this.gainNode));
+    },
+    createScriptNode: function() {
+        this.ac.createScriptProcessor ? this.scriptNode = this.ac.createScriptProcessor(this.scriptBufferSize) : this.scriptNode = this.ac.createJavaScriptNode(this.scriptBufferSize), 
+        this.scriptNode.connect(this.ac.destination);
+    },
+    addOnAudioProcess: function() {
+        var a = this;
+        this.scriptNode.onaudioprocess = function() {
+            var b = a.getCurrentTime();
+            b >= a.getDuration() ? (a.setState(a.FINISHED_STATE), a.fireEvent("pause")) : b >= a.scheduledPause ? (a.setState(a.PAUSED_STATE), 
+            a.fireEvent("pause")) : a.state === a.states[a.PLAYING_STATE] && a.fireEvent("audioprocess", b);
+        };
+    },
+    removeOnAudioProcess: function() {
+        this.scriptNode.onaudioprocess = null;
+    },
+    createAnalyserNode: function() {
+        this.analyser = this.ac.createAnalyser(), this.analyser.connect(this.gainNode);
+    },
+    createVolumeNode: function() {
+        this.ac.createGain ? this.gainNode = this.ac.createGain() : this.gainNode = this.ac.createGainNode(), 
+        this.gainNode.connect(this.ac.destination);
+    },
+    setVolume: function(a) {
+        this.gainNode.gain.value = a;
+    },
+    getVolume: function() {
+        return this.gainNode.gain.value;
+    },
+    decodeArrayBuffer: function(a, b, c) {
+        this.offlineAc || (this.offlineAc = this.getOfflineAudioContext(this.ac ? this.ac.sampleRate : 44100)), 
+        this.offlineAc.decodeAudioData(a, function(a) {
+            b(a);
+        }.bind(this), c);
+    },
+    getPeaks: function(a) {
+        for (var b = this.buffer.length / a, c = ~~(b / 10) || 1, d = this.buffer.numberOfChannels, e = [], f = [], g = 0; d > g; g++) for (var h = e[g] = [], i = this.buffer.getChannelData(g), j = 0; a > j; j++) {
+            for (var k = ~~(j * b), l = ~~(k + b), m = i[0], n = i[0], o = k; l > o; o += c) {
+                var p = i[o];
+                p > n && (n = p), m > p && (m = p);
+            }
+            h[2 * j] = n, h[2 * j + 1] = m, (0 == g || n > f[2 * j]) && (f[2 * j] = n), (0 == g || m < f[2 * j + 1]) && (f[2 * j + 1] = m);
+        }
+        return this.params.splitChannels ? e : f;
+    },
+    getPlayedPercents: function() {
+        return this.state.getPlayedPercents.call(this);
+    },
+    disconnectSource: function() {
+        this.source && this.source.disconnect();
+    },
+    destroy: function() {
+        this.isPaused() || this.pause(), this.unAll(), this.buffer = null, this.disconnectFilters(), 
+        this.disconnectSource(), this.gainNode.disconnect(), this.scriptNode.disconnect(), 
+        this.analyser.disconnect();
+    },
+    load: function(a) {
+        this.startPosition = 0, this.lastPlay = this.ac.currentTime, this.buffer = a, this.createSource();
+    },
+    createSource: function() {
+        this.disconnectSource(), this.source = this.ac.createBufferSource(), this.source.start = this.source.start || this.source.noteGrainOn, 
+        this.source.stop = this.source.stop || this.source.noteOff, this.source.playbackRate.value = this.playbackRate, 
+        this.source.buffer = this.buffer, this.source.connect(this.analyser);
+    },
+    isPaused: function() {
+        return this.state !== this.states[this.PLAYING_STATE];
+    },
+    getDuration: function() {
+        return this.buffer ? this.buffer.duration : 0;
+    },
+    seekTo: function(a, b) {
+        return this.scheduledPause = null, null == a && (a = this.getCurrentTime(), a >= this.getDuration() && (a = 0)), 
+        null == b && (b = this.getDuration()), this.startPosition = a, this.lastPlay = this.ac.currentTime, 
+        this.state === this.states[this.FINISHED_STATE] && this.setState(this.PAUSED_STATE), 
+        {
+            start: a,
+            end: b
+        };
+    },
+    getPlayedTime: function() {
+        return (this.ac.currentTime - this.lastPlay) * this.playbackRate;
+    },
+    play: function(a, b) {
+        this.createSource();
+        var c = this.seekTo(a, b);
+        a = c.start, b = c.end, this.scheduledPause = b, this.source.start(0, a, b - a), 
+        this.setState(this.PLAYING_STATE), this.fireEvent("play");
+    },
+    pause: function() {
+        this.scheduledPause = null, this.startPosition += this.getPlayedTime(), this.source && this.source.stop(0), 
+        this.setState(this.PAUSED_STATE), this.fireEvent("pause");
+    },
+    getCurrentTime: function() {
+        return this.state.getCurrentTime.call(this);
+    },
+    setPlaybackRate: function(a) {
+        a = a || 1, this.isPaused() ? this.playbackRate = a : (this.pause(), this.playbackRate = a, 
+        this.play());
+    }
+}, WaveSurfer.WebAudio.state = {}, WaveSurfer.WebAudio.state.playing = {
+    init: function() {
+        this.addOnAudioProcess();
+    },
+    getPlayedPercents: function() {
+        var a = this.getDuration();
+        return this.getCurrentTime() / a || 0;
+    },
+    getCurrentTime: function() {
+        return this.startPosition + this.getPlayedTime();
+    }
+}, WaveSurfer.WebAudio.state.paused = {
+    init: function() {
+        this.removeOnAudioProcess();
+    },
+    getPlayedPercents: function() {
+        var a = this.getDuration();
+        return this.getCurrentTime() / a || 0;
+    },
+    getCurrentTime: function() {
+        return this.startPosition;
+    }
+}, WaveSurfer.WebAudio.state.finished = {
+    init: function() {
+        this.removeOnAudioProcess(), this.fireEvent("finish");
+    },
+    getPlayedPercents: function() {
+        return 1;
+    },
+    getCurrentTime: function() {
+        return this.getDuration();
+    }
+}, WaveSurfer.util.extend(WaveSurfer.WebAudio, WaveSurfer.Observer), WaveSurfer.MediaElement = Object.create(WaveSurfer.WebAudio), 
+WaveSurfer.util.extend(WaveSurfer.MediaElement, {
+    init: function(a) {
+        this.params = a, this.media = {
+            currentTime: 0,
+            duration: 0,
+            paused: !0,
+            playbackRate: 1,
+            play: function() {},
+            pause: function() {}
+        }, this.mediaType = a.mediaType.toLowerCase(), this.elementPosition = a.elementPosition;
+    },
+    load: function(a, b, c) {
+        var d = this, e = document.createElement(this.mediaType);
+        e.controls = !1, e.autoplay = !1, e.preload = "auto", e.src = a, e.addEventListener("error", function() {
+            d.fireEvent("error", "Error loading media element");
+        }), e.addEventListener("canplay", function() {
+            d.fireEvent("canplay");
+        }), e.addEventListener("ended", function() {
+            d.fireEvent("finish");
+        }), e.addEventListener("timeupdate", function() {
+            d.fireEvent("audioprocess", d.getCurrentTime());
+        });
+        var f = b.querySelector(this.mediaType);
+        f && b.removeChild(f), b.appendChild(e), this.media = e, this.peaks = c, this.onPlayEnd = null, 
+        this.buffer = null, this.setPlaybackRate(this.playbackRate);
+    },
+    isPaused: function() {
+        return !this.media || this.media.paused;
+    },
+    getDuration: function() {
+        var a = this.media.duration;
+        return a >= 1 / 0 && (a = this.media.seekable.end()), a;
+    },
+    getCurrentTime: function() {
+        return this.media && this.media.currentTime;
+    },
+    getPlayedPercents: function() {
+        return this.getCurrentTime() / this.getDuration() || 0;
+    },
+    setPlaybackRate: function(a) {
+        this.playbackRate = a || 1, this.media.playbackRate = this.playbackRate;
+    },
+    seekTo: function(a) {
+        null != a && (this.media.currentTime = a), this.clearPlayEnd();
+    },
+    play: function(a, b) {
+        this.seekTo(a), this.media.play(), b && this.setPlayEnd(b), this.fireEvent("play");
+    },
+    pause: function() {
+        this.media && this.media.pause(), this.clearPlayEnd(), this.fireEvent("pause");
+    },
+    setPlayEnd: function(a) {
+        var b = this;
+        this.onPlayEnd = function(c) {
+            c >= a && (b.pause(), b.seekTo(a));
+        }, this.on("audioprocess", this.onPlayEnd);
+    },
+    clearPlayEnd: function() {
+        this.onPlayEnd && (this.un("audioprocess", this.onPlayEnd), this.onPlayEnd = null);
+    },
+    getPeaks: function(a) {
+        return this.buffer ? WaveSurfer.WebAudio.getPeaks.call(this, a) : this.peaks || [];
+    },
+    getVolume: function() {
+        return this.media.volume;
+    },
+    setVolume: function(a) {
+        this.media.volume = a;
+    },
+    destroy: function() {
+        this.pause(), this.unAll(), this.media && this.media.parentNode && this.media.parentNode.removeChild(this.media), 
+        this.media = null;
+    }
+}), WaveSurfer.AudioElement = WaveSurfer.MediaElement, WaveSurfer.Drawer = {
+    init: function(a, b) {
+        this.container = a, this.params = b, this.width = 0, this.height = b.height * this.params.pixelRatio, 
+        this.lastPos = 0, this.createWrapper(), this.createElements();
+    },
+    createWrapper: function() {
+        this.wrapper = this.container.appendChild(document.createElement("wave")), this.style(this.wrapper, {
+            display: "block",
+            position: "relative",
+            userSelect: "none",
+            webkitUserSelect: "none",
+            height: this.params.height + "px"
+        }), (this.params.fillParent || this.params.scrollParent) && this.style(this.wrapper, {
+            width: "100%",
+            overflowX: this.params.hideScrollbar ? "hidden" : "auto",
+            overflowY: "hidden"
+        }), this.setupWrapperEvents();
+    },
+    handleEvent: function(a) {
+        a.preventDefault();
+        var b = this.wrapper.getBoundingClientRect();
+        return (a.clientX - b.left + this.wrapper.scrollLeft) / this.wrapper.scrollWidth || 0;
+    },
+    setupWrapperEvents: function() {
+        var a = this;
+        this.wrapper.addEventListener("click", function(b) {
+            var c = a.wrapper.offsetHeight - a.wrapper.clientHeight;
+            if (0 != c) {
+                var d = a.wrapper.getBoundingClientRect();
+                if (b.clientY >= d.bottom - c) return;
+            }
+            a.params.interact && a.fireEvent("click", b, a.handleEvent(b));
+        }), this.wrapper.addEventListener("scroll", function(b) {
+            a.fireEvent("scroll", b);
+        });
+    },
+    drawPeaks: function(a, b) {
+        this.resetScroll(), this.setWidth(b), this.params.barWidth ? this.drawBars(a) : this.drawWave(a);
+    },
+    style: function(a, b) {
+        return Object.keys(b).forEach(function(c) {
+            a.style[c] !== b[c] && (a.style[c] = b[c]);
+        }), a;
+    },
+    resetScroll: function() {
+        null !== this.wrapper && (this.wrapper.scrollLeft = 0);
+    },
+    recenter: function(a) {
+        var b = this.wrapper.scrollWidth * a;
+        this.recenterOnPosition(b, !0);
+    },
+    recenterOnPosition: function(a, b) {
+        var c = this.wrapper.scrollLeft, d = ~~(this.wrapper.clientWidth / 2), e = a - d, f = e - c, g = this.wrapper.scrollWidth - this.wrapper.clientWidth;
+        if (0 != g) {
+            if (!b && f >= -d && d > f) {
+                var h = 5;
+                f = Math.max(-h, Math.min(h, f)), e = c + f;
+            }
+            e = Math.max(0, Math.min(g, e)), e != c && (this.wrapper.scrollLeft = e);
+        }
+    },
+    getWidth: function() {
+        return Math.round(this.container.clientWidth * this.params.pixelRatio);
+    },
+    setWidth: function(a) {
+        a != this.width && (this.width = a, this.params.fillParent || this.params.scrollParent ? this.style(this.wrapper, {
+            width: ""
+        }) : this.style(this.wrapper, {
+            width: ~~(this.width / this.params.pixelRatio) + "px"
+        }), this.updateSize());
+    },
+    setHeight: function(a) {
+        a != this.height && (this.height = a, this.style(this.wrapper, {
+            height: ~~(this.height / this.params.pixelRatio) + "px"
+        }), this.updateSize());
+    },
+    progress: function(a) {
+        var b = 1 / this.params.pixelRatio, c = Math.round(a * this.width) * b;
+        if (c < this.lastPos || c - this.lastPos >= b) {
+            if (this.lastPos = c, this.params.scrollParent) {
+                var d = ~~(this.wrapper.scrollWidth * a);
+                this.recenterOnPosition(d);
+            }
+            this.updateProgress(a);
+        }
+    },
+    destroy: function() {
+        this.unAll(), this.wrapper && (this.container.removeChild(this.wrapper), this.wrapper = null);
+    },
+    createElements: function() {},
+    updateSize: function() {},
+    drawWave: function(a, b) {},
+    clearWave: function() {},
+    updateProgress: function(a) {}
+}, WaveSurfer.util.extend(WaveSurfer.Drawer, WaveSurfer.Observer), WaveSurfer.Drawer.Canvas = Object.create(WaveSurfer.Drawer), 
+WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
+    createElements: function() {
+        var a = this.wrapper.appendChild(this.style(document.createElement("canvas"), {
+            position: "absolute",
+            zIndex: 1,
+            left: 0,
+            top: 0,
+            bottom: 0
+        }));
+        if (this.waveCc = a.getContext("2d"), this.progressWave = this.wrapper.appendChild(this.style(document.createElement("wave"), {
+            position: "absolute",
+            zIndex: 2,
+            left: 0,
+            top: 0,
+            bottom: 0,
+            overflow: "hidden",
+            width: "0",
+            display: "none",
+            boxSizing: "border-box",
+            borderRightStyle: "solid",
+            borderRightWidth: this.params.cursorWidth + "px",
+            borderRightColor: this.params.cursorColor
+        })), this.params.waveColor != this.params.progressColor) {
+            var b = this.progressWave.appendChild(document.createElement("canvas"));
+            this.progressCc = b.getContext("2d");
+        }
+    },
+    updateSize: function() {
+        var a = Math.round(this.width / this.params.pixelRatio);
+        this.waveCc.canvas.width = this.width, this.waveCc.canvas.height = this.height, 
+        this.style(this.waveCc.canvas, {
+            width: a + "px"
+        }), this.style(this.progressWave, {
+            display: "block"
+        }), this.progressCc && (this.progressCc.canvas.width = this.width, this.progressCc.canvas.height = this.height, 
+        this.style(this.progressCc.canvas, {
+            width: a + "px"
+        })), this.clearWave();
+    },
+    clearWave: function() {
+        this.waveCc.clearRect(0, 0, this.width, this.height), this.progressCc && this.progressCc.clearRect(0, 0, this.width, this.height);
+    },
+    drawBars: function(a, b) {
+        if (a[0] instanceof Array) {
+            var c = a;
+            if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), 
+            void c.forEach(this.drawBars, this);
+            a = c[0];
+        }
+        var d = .5 / this.params.pixelRatio, e = this.width, f = this.params.height * this.params.pixelRatio, g = f * b || 0, h = f / 2, i = ~~(a.length / 2), j = this.params.barWidth * this.params.pixelRatio, k = Math.max(this.params.pixelRatio, ~~(j / 2)), l = j + k, m = 1;
+        if (this.params.normalize) {
+            var n, o;
+            o = Math.max.apply(Math, a), n = Math.min.apply(Math, a), m = o, -n > m && (m = -n);
+        }
+        var p = i / e;
+        this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), 
+        [ this.waveCc, this.progressCc ].forEach(function(b) {
+            if (b) if (this.params.reflection) for (var c = 0; e > c; c += l) {
+                var f = Math.round(a[2 * c * p] / m * h);
+                b.fillRect(c + d, h - f + g, j + d, 2 * f);
             } else {
-                attrs.$observe("ngAnimateChildren", function(value) {
-                    value = value === "on" || value === "true";
-                    element.data(NG_ANIMATE_CHILDREN_DATA, value);
+                for (var c = 0; e > c; c += l) {
+                    var f = Math.round(a[2 * c * p] / m * h);
+                    b.fillRect(c + d, h - f + g, j + d, f);
+                }
+                for (var c = 0; e > c; c += l) {
+                    var f = Math.round(a[2 * c * p + 1] / m * h);
+                    b.fillRect(c + d, h - f + g, j + d, f);
+                }
+            }
+        }, this);
+    },
+    drawWave: function(a, b) {
+        if (a[0] instanceof Array) {
+            var c = a;
+            if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), 
+            void c.forEach(this.drawWave, this);
+            a = c[0];
+        }
+        var d = .5 / this.params.pixelRatio, e = this.params.height * this.params.pixelRatio, f = e * b || 0, g = e / 2, h = ~~(a.length / 2), i = 1;
+        this.params.fillParent && this.width != h && (i = this.width / h);
+        var j = 1;
+        if (this.params.normalize) {
+            var k, l;
+            l = Math.max.apply(Math, a), k = Math.min.apply(Math, a), j = l, -k > j && (j = -k);
+        }
+        this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), 
+        [ this.waveCc, this.progressCc ].forEach(function(b) {
+            if (b) {
+                b.beginPath(), b.moveTo(d, g + f);
+                for (var c = 0; h > c; c++) {
+                    var e = Math.round(a[2 * c] / j * g);
+                    b.lineTo(c * i + d, g - e + f);
+                }
+                for (var c = h - 1; c >= 0; c--) {
+                    var e = Math.round(a[2 * c + 1] / j * g);
+                    b.lineTo(c * i + d, g - e + f);
+                }
+                b.closePath(), b.fill(), b.fillRect(0, g + f - d, this.width, d);
+            }
+        }, this);
+    },
+    updateProgress: function(a) {
+        var b = Math.round(this.width * a) / this.params.pixelRatio;
+        this.style(this.progressWave, {
+            width: b + "px"
+        });
+    }
+});
+
+"use strict";
+
+WaveSurfer.Regions = {
+    init: function(a) {
+        this.wavesurfer = a, this.wrapper = this.wavesurfer.drawer.wrapper, this.list = {};
+    },
+    add: function(a) {
+        var b = Object.create(WaveSurfer.Region);
+        return b.init(a, this.wavesurfer), this.list[b.id] = b, b.on("remove", function() {
+            delete this.list[b.id];
+        }.bind(this)), b;
+    },
+    clear: function() {
+        Object.keys(this.list).forEach(function(a) {
+            this.list[a].remove();
+        }, this);
+    },
+    enableDragSelection: function(a) {
+        var b, c, d, e = this;
+        this.wrapper.addEventListener("mousedown", function(a) {
+            b = !0, c = e.wavesurfer.drawer.handleEvent(a), d = null;
+        }), this.wrapper.addEventListener("mouseup", function(a) {
+            b = !1, d && (d.fireEvent("update-end", a), e.wavesurfer.fireEvent("region-update-end", d, a)), 
+            d = null;
+        }), this.wrapper.addEventListener("mousemove", function(f) {
+            if (b) {
+                d || (d = e.add(a || {}));
+                var g = e.wavesurfer.getDuration(), h = e.wavesurfer.drawer.handleEvent(f);
+                d.update({
+                    start: Math.min(h * g, c * g),
+                    end: Math.max(h * g, c * g)
                 });
             }
+        });
+    }
+}, WaveSurfer.Region = {
+    style: WaveSurfer.Drawer.style,
+    init: function(a, b) {
+        this.wavesurfer = b, this.wrapper = b.drawer.wrapper, this.id = null == a.id ? WaveSurfer.util.getId() : a.id, 
+        this.start = Number(a.start) || 0, this.end = null == a.end ? this.start + 4 / this.wrapper.scrollWidth * this.wavesurfer.getDuration() : Number(a.end), 
+        this.resize = void 0 === a.resize ? !0 : Boolean(a.resize), this.drag = void 0 === a.drag ? !0 : Boolean(a.drag), 
+        this.loop = Boolean(a.loop), this.color = a.color || "rgba(0, 0, 0, 0.1)", this.data = a.data || {}, 
+        this.maxLength = a.maxLength, this.minLength = a.minLength, this.bindInOut(), this.render(), 
+        this.wavesurfer.fireEvent("region-created", this);
+    },
+    update: function(a) {
+        null != a.start && (this.start = Number(a.start)), null != a.end && (this.end = Number(a.end)), 
+        null != a.loop && (this.loop = Boolean(a.loop)), null != a.color && (this.color = a.color), 
+        null != a.data && (this.data = a.data), null != a.resize && (this.resize = Boolean(a.resize)), 
+        null != a.drag && (this.drag = Boolean(a.drag)), null != a.maxLength && (this.maxLength = Number(a.maxLength)), 
+        null != a.minLength && (this.minLength = Number(a.minLength)), this.updateRender(), 
+        this.fireEvent("update"), this.wavesurfer.fireEvent("region-updated", this);
+    },
+    remove: function(a) {
+        this.element && (this.wrapper.removeChild(this.element), this.element = null, this.fireEvent("remove"), 
+        this.wavesurfer.fireEvent("region-removed", this));
+    },
+    play: function() {
+        this.wavesurfer.play(this.start, this.end), this.fireEvent("play"), this.wavesurfer.fireEvent("region-play", this);
+    },
+    playLoop: function() {
+        this.play(), this.once("out", this.playLoop.bind(this));
+    },
+    render: function() {
+        var a = document.createElement("region");
+        a.className = "wavesurfer-region", a.title = this.formatTime(this.start, this.end), 
+        a.setAttribute("data-id", this.id);
+        this.wrapper.scrollWidth;
+        if (this.style(a, {
+            position: "absolute",
+            zIndex: 2,
+            height: "100%",
+            top: "0px"
+        }), this.resize) {
+            var b = a.appendChild(document.createElement("handle")), c = a.appendChild(document.createElement("handle"));
+            b.className = "wavesurfer-handle wavesurfer-handle-start", c.className = "wavesurfer-handle wavesurfer-handle-end";
+            var d = {
+                cursor: "col-resize",
+                position: "absolute",
+                left: "0px",
+                top: "0px",
+                width: "1%",
+                maxWidth: "4px",
+                height: "100%"
+            };
+            this.style(b, d), this.style(c, d), this.style(c, {
+                left: "100%"
+            });
+        }
+        this.element = this.wrapper.appendChild(a), this.updateRender(), this.bindEvents(a);
+    },
+    formatTime: function(a, b) {
+        return (a == b ? [ a ] : [ a, b ]).map(function(a) {
+            return [ Math.floor(a % 3600 / 60), ("00" + Math.floor(a % 60)).slice(-2) ].join(":");
+        }).join("–");
+    },
+    updateRender: function() {
+        var a = this.wavesurfer.getDuration(), b = this.wrapper.scrollWidth;
+        this.start < 0 && (this.start = 0, this.end = this.end - this.start), this.end > a && (this.end = a, 
+        this.start = a - (this.end - this.start)), null != this.minLength && (this.end = Math.max(this.start + this.minLength, this.end)), 
+        null != this.maxLength && (this.end = Math.min(this.start + this.maxLength, this.end)), 
+        this.style(this.element, {
+            left: ~~(this.start / a * b) + "px",
+            width: ~~((this.end - this.start) / a * b) + "px",
+            backgroundColor: this.color,
+            cursor: this.drag ? "move" : "default"
+        }), this.element.title = this.formatTime(this.start, this.end);
+    },
+    bindInOut: function() {
+        var a = this, b = function() {
+            a.firedIn = !1, a.firedOut = !1;
+        }, c = function(b) {
+            !a.firedIn && a.start <= b && a.end > b && (a.firedIn = !0, a.fireEvent("in"), a.wavesurfer.fireEvent("region-in", a)), 
+            !a.firedOut && a.firedIn && a.end <= Math.round(100 * b) / 100 && (a.firedOut = !0, 
+            a.fireEvent("out"), a.wavesurfer.fireEvent("region-out", a));
         };
-    } ];
-    var ANIMATE_TIMER_KEY = "$$animateCss";
-    var ONE_SECOND = 1e3;
-    var BASE_TEN = 10;
-    var ELAPSED_TIME_MAX_DECIMAL_PLACES = 3;
-    var CLOSING_TIME_BUFFER = 1.5;
-    var DETECT_CSS_PROPERTIES = {
-        transitionDuration: TRANSITION_DURATION_PROP,
-        transitionDelay: TRANSITION_DELAY_PROP,
-        transitionProperty: TRANSITION_PROP + PROPERTY_KEY,
-        animationDuration: ANIMATION_DURATION_PROP,
-        animationDelay: ANIMATION_DELAY_PROP,
-        animationIterationCount: ANIMATION_PROP + ANIMATION_ITERATION_COUNT_KEY
+        this.wavesurfer.on("play", b), this.wavesurfer.backend.on("audioprocess", c), this.on("remove", function() {
+            a.wavesurfer.un("play", b), a.wavesurfer.backend.un("audioprocess", c);
+        }), this.on("out", function() {
+            a.loop && a.wavesurfer.play(a.start);
+        });
+    },
+    bindEvents: function() {
+        var a = this;
+        this.element.addEventListener("mouseenter", function(b) {
+            a.fireEvent("mouseenter", b), a.wavesurfer.fireEvent("region-mouseenter", a, b);
+        }), this.element.addEventListener("mouseleave", function(b) {
+            a.fireEvent("mouseleave", b), a.wavesurfer.fireEvent("region-mouseleave", a, b);
+        }), this.element.addEventListener("click", function(b) {
+            b.preventDefault(), a.fireEvent("click", b), a.wavesurfer.fireEvent("region-click", a, b);
+        }), this.element.addEventListener("dblclick", function(b) {
+            b.stopPropagation(), b.preventDefault(), a.fireEvent("dblclick", b), a.wavesurfer.fireEvent("region-dblclick", a, b);
+        }), (this.drag || this.resize) && function() {
+            var b, c, d, e = a.wavesurfer.getDuration(), f = function(f) {
+                f.stopPropagation(), d = a.wavesurfer.drawer.handleEvent(f) * e, "handle" == f.target.tagName.toLowerCase() ? c = f.target.classList.contains("wavesurfer-handle-start") ? "start" : "end" : b = !0;
+            }, g = function(d) {
+                (b || c) && (b = !1, c = !1, d.stopPropagation(), d.preventDefault(), a.fireEvent("update-end", d), 
+                a.wavesurfer.fireEvent("region-update-end", a, d));
+            }, h = function(f) {
+                if (b || c) {
+                    var g = a.wavesurfer.drawer.handleEvent(f) * e, h = g - d;
+                    d = g, a.drag && b && a.onDrag(h), a.resize && c && a.onResize(h, c);
+                }
+            };
+            a.element.addEventListener("mousedown", f), a.wrapper.addEventListener("mousemove", h), 
+            document.body.addEventListener("mouseup", g), a.on("remove", function() {
+                document.body.removeEventListener("mouseup", g), a.wrapper.removeEventListener("mousemove", h);
+            }), a.wavesurfer.on("destroy", function() {
+                document.body.removeEventListener("mouseup", g);
+            });
+        }();
+    },
+    onDrag: function(a) {
+        this.update({
+            start: this.start + a,
+            end: this.end + a
+        });
+    },
+    onResize: function(a, b) {
+        "start" == b ? this.update({
+            start: Math.min(this.start + a, this.end),
+            end: Math.max(this.start + a, this.end)
+        }) : this.update({
+            start: Math.min(this.end + a, this.start),
+            end: Math.max(this.end + a, this.start)
+        });
+    }
+}, WaveSurfer.util.extend(WaveSurfer.Region, WaveSurfer.Observer), WaveSurfer.initRegions = function() {
+    this.regions || (this.regions = Object.create(WaveSurfer.Regions), this.regions.init(this));
+}, WaveSurfer.addRegion = function(a) {
+    return this.initRegions(), this.regions.add(a);
+}, WaveSurfer.clearRegions = function() {
+    this.regions && this.regions.clear();
+}, WaveSurfer.enableDragSelection = function(a) {
+    this.initRegions(), this.regions.enableDragSelection(a);
+};
+
+"use strict";
+
+WaveSurfer.Spectrogram = {
+    init: function(a) {
+        this.params = a;
+        var b = this.wavesurfer = a.wavesurfer;
+        if (!this.wavesurfer) throw Error("No WaveSurfer instance provided");
+        this.frequenciesDataUrl = a.frequenciesDataUrl;
+        var c = this.drawer = this.wavesurfer.drawer;
+        if (this.buffer = this.wavesurfer.backend.buffer, this.container = "string" == typeof a.container ? document.querySelector(a.container) : a.container, 
+        !this.container) throw Error("No container for WaveSurfer spectrogram");
+        this.width = c.width, this.pixelRatio = this.params.pixelRatio || b.params.pixelRatio, 
+        this.fftSamples = this.params.fftSamples || b.params.fftSamples || 512, this.height = this.fftSamples / 2, 
+        this.createWrapper(), this.createCanvas(), this.render(), b.drawer.wrapper.onscroll = this.updateScroll.bind(this), 
+        b.on("destroy", this.destroy.bind(this));
+    },
+    destroy: function() {
+        this.unAll(), this.wrapper && (this.wrapper.parentNode.removeChild(this.wrapper), 
+        this.wrapper = null);
+    },
+    createWrapper: function() {
+        var a = this.container.querySelector("spectrogram");
+        a && this.container.removeChild(a);
+        var b = this.wavesurfer.params;
+        this.wrapper = this.container.appendChild(document.createElement("spectrogram")), 
+        this.drawer.style(this.wrapper, {
+            display: "block",
+            position: "relative",
+            userSelect: "none",
+            webkitUserSelect: "none",
+            height: this.height + "px"
+        }), (b.fillParent || b.scrollParent) && this.drawer.style(this.wrapper, {
+            width: "100%",
+            overflowX: "hidden",
+            overflowY: "hidden"
+        });
+        var c = this;
+        this.wrapper.addEventListener("click", function(a) {
+            a.preventDefault();
+            var b = "offsetX" in a ? a.offsetX : a.layerX;
+            c.fireEvent("click", b / c.scrollWidth || 0);
+        });
+    },
+    createCanvas: function() {
+        var a = this.canvas = this.wrapper.appendChild(document.createElement("canvas"));
+        this.spectrCc = a.getContext("2d"), this.wavesurfer.drawer.style(a, {
+            position: "absolute",
+            zIndex: 4
+        });
+    },
+    render: function() {
+        this.updateCanvasStyle(), this.frequenciesDataUrl ? this.loadFrequenciesData(this.frequenciesDataUrl) : this.getFrequencies(this.drawSpectrogram);
+    },
+    updateCanvasStyle: function() {
+        var a = Math.round(this.width / this.pixelRatio) + "px";
+        this.canvas.width = this.width, this.canvas.height = this.height, this.canvas.style.width = a;
+    },
+    drawSpectrogram: function(a, b) {
+        for (var c = (b.spectrCc, b.wavesurfer.backend.getDuration(), b.height), d = b.resample(a), e = 2 / b.buffer.numberOfChannels, f = 0; f < d.length; f++) for (var g = 0; g < d[f].length; g++) {
+            var h = 255 - d[f][g];
+            b.spectrCc.fillStyle = "rgb(" + h + ", " + h + ", " + h + ")", b.spectrCc.fillRect(f, c - g * e, 1, 1 * e);
+        }
+    },
+    getFrequencies: function(a) {
+        var b = this.fftSamples, c = this.buffer, d = [], e = new window.OfflineAudioContext(1, c.length, c.sampleRate), f = e.createBufferSource(), g = e.createScriptProcessor(0, 1, 1), h = e.createAnalyser();
+        h.fftSize = b, h.smoothingTimeConstant = this.width / c.duration < 10 ? .75 : .25, 
+        f.buffer = c, f.connect(h), h.connect(g), g.connect(e.destination), g.onaudioprocess = function() {
+            var a = new Uint8Array(h.frequencyBinCount);
+            h.getByteFrequencyData(a), d.push(a);
+        }, f.start(0), e.startRendering();
+        var i = this;
+        e.oncomplete = function() {
+            a(d, i);
+        };
+    },
+    loadFrequenciesData: function(a) {
+        var b = this, c = WaveSurfer.util.ajax({
+            url: a
+        });
+        return c.on("success", function(a) {
+            b.drawSpectrogram(JSON.parse(a), b);
+        }), c.on("error", function(a) {
+            b.fireEvent("error", "XHR error: " + a.target.statusText);
+        }), c;
+    },
+    updateScroll: function(a) {
+        this.wrapper.scrollLeft = a.target.scrollLeft;
+    },
+    resample: function(a, b) {
+        for (var b = this.width, c = [], d = 1 / a.length, e = 1 / b, f = 0; b > f; f++) {
+            for (var g = new Array(a[0].length), h = 0; h < a.length; h++) {
+                var i = h * d, j = i + d, k = f * e, l = k + e, m = k >= j || i >= l ? 0 : Math.min(Math.max(j, k), Math.max(l, i)) - Math.max(Math.min(j, k), Math.min(l, i));
+                if (m > 0) for (var n = 0; n < a[0].length; n++) null == g[n] && (g[n] = 0), g[n] += m / e * a[h][n];
+            }
+            for (var o = new Uint8Array(a[0].length), n = 0; n < a[0].length; n++) o[n] = g[n];
+            c.push(o);
+        }
+        return c;
+    }
+}, WaveSurfer.util.extend(WaveSurfer.Spectrogram, WaveSurfer.Observer);
+
+"use strict";
+
+var elan = function() {
+    var elan = {};
+    var _forEach = Array.prototype.forEach;
+    var _map = Array.prototype.map;
+    elan.TimeSlot = function(id, value) {
+        this.id = id;
+        this.value = value;
     };
-    var DETECT_STAGGER_CSS_PROPERTIES = {
-        transitionDuration: TRANSITION_DURATION_PROP,
-        transitionDelay: TRANSITION_DELAY_PROP,
-        animationDuration: ANIMATION_DURATION_PROP,
-        animationDelay: ANIMATION_DELAY_PROP
+    elan.Annotation = function(id, value, timeslotRef1, timeslotRef2) {
+        this.id = id;
+        this.value = value;
+        this.timeslotRef1 = timeslotRef1;
+        this.timeslotRef2 = timeslotRef2;
     };
-    function getCssKeyframeDurationStyle(duration) {
-        return [ ANIMATION_DURATION_PROP, duration + "s" ];
-    }
-    function getCssDelayStyle(delay, isKeyframeAnimation) {
-        var prop = isKeyframeAnimation ? ANIMATION_DELAY_PROP : TRANSITION_DELAY_PROP;
-        return [ prop, delay + "s" ];
-    }
-    function computeCssStyles($window, element, properties) {
-        var styles = Object.create(null);
-        var detectedStyles = $window.getComputedStyle(element) || {};
-        forEach(properties, function(formalStyleName, actualStyleName) {
-            var val = detectedStyles[formalStyleName];
-            if (val) {
-                var c = val.charAt(0);
-                if (c === "-" || c === "+" || c >= 0) {
-                    val = parseMaxTime(val);
-                }
-                if (val === 0) {
-                    val = null;
-                }
-                styles[actualStyleName] = val;
-            }
-        });
-        return styles;
-    }
-    function parseMaxTime(str) {
-        var maxValue = 0;
-        var values = str.split(/\s*,\s*/);
-        forEach(values, function(value) {
-            if (value.charAt(value.length - 1) == "s") {
-                value = value.substring(0, value.length - 1);
-            }
-            value = parseFloat(value) || 0;
-            maxValue = maxValue ? Math.max(value, maxValue) : value;
-        });
-        return maxValue;
-    }
-    function truthyTimingValue(val) {
-        return val === 0 || val != null;
-    }
-    function getCssTransitionDurationStyle(duration, applyOnlyDuration) {
-        var style = TRANSITION_PROP;
-        var value = duration + "s";
-        if (applyOnlyDuration) {
-            style += DURATION_KEY;
-        } else {
-            value += " linear all";
-        }
-        return [ style, value ];
-    }
-    function createLocalCacheLookup() {
-        var cache = Object.create(null);
-        return {
-            flush: function() {
-                cache = Object.create(null);
-            },
-            count: function(key) {
-                var entry = cache[key];
-                return entry ? entry.total : 0;
-            },
-            get: function(key) {
-                var entry = cache[key];
-                return entry && entry.value;
-            },
-            put: function(key, value) {
-                if (!cache[key]) {
-                    cache[key] = {
-                        total: 1,
-                        value: value
-                    };
-                } else {
-                    cache[key].total++;
+    elan.RefAnnotation = function(id, value, ref) {
+        this.id = id;
+        this.value = value;
+        this.ref = ref;
+    };
+    elan.Tier = function(id, linguisticTypeRef, defaultLocale, annotations) {
+        this.id = id;
+        this.defaultLocale = defaultLocale;
+        this.linguisticTypeRef = linguisticTypeRef;
+        this.annotations = annotations;
+    };
+    elan.Document = function() {
+        this.mediaFile = "";
+        this.mediaUrl = "";
+        this.mediaType = "";
+        this.timeslots = [];
+        this.tiers = [];
+        this.lastUsedTierId = 0;
+        this.lastUsedAnnoationId = 0;
+        this.lastUsedTimeSlotId = 0;
+        var timeslotExists = function(ts, list) {
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].id == ts.id) {
+                    return true;
                 }
             }
+            return false;
         };
-    }
-    function registerRestorableStyles(backup, node, properties) {
-        forEach(properties, function(prop) {
-            backup[prop] = isDefined(backup[prop]) ? backup[prop] : node.style.getPropertyValue(prop);
-        });
-    }
-    var $AnimateCssProvider = [ "$animateProvider", function($animateProvider) {
-        var gcsLookup = createLocalCacheLookup();
-        var gcsStaggerLookup = createLocalCacheLookup();
-        this.$get = [ "$window", "$$jqLite", "$$AnimateRunner", "$timeout", "$$forceReflow", "$sniffer", "$$rAFScheduler", "$animate", function($window, $$jqLite, $$AnimateRunner, $timeout, $$forceReflow, $sniffer, $$rAFScheduler, $animate) {
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            var parentCounter = 0;
-            function gcsHashFn(node, extraClasses) {
-                var KEY = "$$ngAnimateParentKey";
-                var parentNode = node.parentNode;
-                var parentID = parentNode[KEY] || (parentNode[KEY] = ++parentCounter);
-                return parentID + "-" + node.getAttribute("class") + "-" + extraClasses;
-            }
-            function computeCachedCssStyles(node, className, cacheKey, properties) {
-                var timings = gcsLookup.get(cacheKey);
-                if (!timings) {
-                    timings = computeCssStyles($window, node, properties);
-                    if (timings.animationIterationCount === "infinite") {
-                        timings.animationIterationCount = 1;
-                    }
-                }
-                gcsLookup.put(cacheKey, timings);
-                return timings;
-            }
-            function computeCachedCssStaggerStyles(node, className, cacheKey, properties) {
-                var stagger;
-                if (gcsLookup.count(cacheKey) > 0) {
-                    stagger = gcsStaggerLookup.get(cacheKey);
-                    if (!stagger) {
-                        var staggerClassName = pendClasses(className, "-stagger");
-                        $$jqLite.addClass(node, staggerClassName);
-                        stagger = computeCssStyles($window, node, properties);
-                        stagger.animationDuration = Math.max(stagger.animationDuration, 0);
-                        stagger.transitionDuration = Math.max(stagger.transitionDuration, 0);
-                        $$jqLite.removeClass(node, staggerClassName);
-                        gcsStaggerLookup.put(cacheKey, stagger);
-                    }
-                }
-                return stagger || {};
-            }
-            var cancelLastRAFRequest;
-            var rafWaitQueue = [];
-            function waitUntilQuiet(callback) {
-                rafWaitQueue.push(callback);
-                $$rAFScheduler.waitUntilQuiet(function() {
-                    gcsLookup.flush();
-                    gcsStaggerLookup.flush();
-                    var pageWidth = $$forceReflow();
-                    for (var i = 0; i < rafWaitQueue.length; i++) {
-                        rafWaitQueue[i](pageWidth);
-                    }
-                    rafWaitQueue.length = 0;
-                });
-            }
-            function computeTimings(node, className, cacheKey) {
-                var timings = computeCachedCssStyles(node, className, cacheKey, DETECT_CSS_PROPERTIES);
-                var aD = timings.animationDelay;
-                var tD = timings.transitionDelay;
-                timings.maxDelay = aD && tD ? Math.max(aD, tD) : aD || tD;
-                timings.maxDuration = Math.max(timings.animationDuration * timings.animationIterationCount, timings.transitionDuration);
-                return timings;
-            }
-            return function init(element, options) {
-                var restoreStyles = {};
-                var node = getDomNode(element);
-                if (!node || !node.parentNode || !$animate.enabled()) {
-                    return closeAndReturnNoopAnimator();
-                }
-                options = prepareAnimationOptions(options);
-                var temporaryStyles = [];
-                var classes = element.attr("class");
-                var styles = packageStyles(options);
-                var animationClosed;
-                var animationPaused;
-                var animationCompleted;
-                var runner;
-                var runnerHost;
-                var maxDelay;
-                var maxDelayTime;
-                var maxDuration;
-                var maxDurationTime;
-                if (options.duration === 0 || !$sniffer.animations && !$sniffer.transitions) {
-                    return closeAndReturnNoopAnimator();
-                }
-                var method = options.event && isArray(options.event) ? options.event.join(" ") : options.event;
-                var isStructural = method && options.structural;
-                var structuralClassName = "";
-                var addRemoveClassName = "";
-                if (isStructural) {
-                    structuralClassName = pendClasses(method, EVENT_CLASS_PREFIX, true);
-                } else if (method) {
-                    structuralClassName = method;
-                }
-                if (options.addClass) {
-                    addRemoveClassName += pendClasses(options.addClass, ADD_CLASS_SUFFIX);
-                }
-                if (options.removeClass) {
-                    if (addRemoveClassName.length) {
-                        addRemoveClassName += " ";
-                    }
-                    addRemoveClassName += pendClasses(options.removeClass, REMOVE_CLASS_SUFFIX);
-                }
-                if (options.applyClassesEarly && addRemoveClassName.length) {
-                    applyAnimationClasses(element, options);
-                }
-                var preparationClasses = [ structuralClassName, addRemoveClassName ].join(" ").trim();
-                var fullClassName = classes + " " + preparationClasses;
-                var activeClasses = pendClasses(preparationClasses, ACTIVE_CLASS_SUFFIX);
-                var hasToStyles = styles.to && Object.keys(styles.to).length > 0;
-                var containsKeyframeAnimation = (options.keyframeStyle || "").length > 0;
-                if (!containsKeyframeAnimation && !hasToStyles && !preparationClasses) {
-                    return closeAndReturnNoopAnimator();
-                }
-                var cacheKey, stagger;
-                if (options.stagger > 0) {
-                    var staggerVal = parseFloat(options.stagger);
-                    stagger = {
-                        transitionDelay: staggerVal,
-                        animationDelay: staggerVal,
-                        transitionDuration: 0,
-                        animationDuration: 0
-                    };
-                } else {
-                    cacheKey = gcsHashFn(node, fullClassName);
-                    stagger = computeCachedCssStaggerStyles(node, preparationClasses, cacheKey, DETECT_STAGGER_CSS_PROPERTIES);
-                }
-                if (!options.$$skipPreparationClasses) {
-                    $$jqLite.addClass(element, preparationClasses);
-                }
-                var applyOnlyDuration;
-                if (options.transitionStyle) {
-                    var transitionStyle = [ TRANSITION_PROP, options.transitionStyle ];
-                    applyInlineStyle(node, transitionStyle);
-                    temporaryStyles.push(transitionStyle);
-                }
-                if (options.duration >= 0) {
-                    applyOnlyDuration = node.style[TRANSITION_PROP].length > 0;
-                    var durationStyle = getCssTransitionDurationStyle(options.duration, applyOnlyDuration);
-                    applyInlineStyle(node, durationStyle);
-                    temporaryStyles.push(durationStyle);
-                }
-                if (options.keyframeStyle) {
-                    var keyframeStyle = [ ANIMATION_PROP, options.keyframeStyle ];
-                    applyInlineStyle(node, keyframeStyle);
-                    temporaryStyles.push(keyframeStyle);
-                }
-                var itemIndex = stagger ? options.staggerIndex >= 0 ? options.staggerIndex : gcsLookup.count(cacheKey) : 0;
-                var isFirst = itemIndex === 0;
-                if (isFirst && !options.skipBlocking) {
-                    blockTransitions(node, SAFE_FAST_FORWARD_DURATION_VALUE);
-                }
-                var timings = computeTimings(node, fullClassName, cacheKey);
-                var relativeDelay = timings.maxDelay;
-                maxDelay = Math.max(relativeDelay, 0);
-                maxDuration = timings.maxDuration;
-                var flags = {};
-                flags.hasTransitions = timings.transitionDuration > 0;
-                flags.hasAnimations = timings.animationDuration > 0;
-                flags.hasTransitionAll = flags.hasTransitions && timings.transitionProperty == "all";
-                flags.applyTransitionDuration = hasToStyles && (flags.hasTransitions && !flags.hasTransitionAll || flags.hasAnimations && !flags.hasTransitions);
-                flags.applyAnimationDuration = options.duration && flags.hasAnimations;
-                flags.applyTransitionDelay = truthyTimingValue(options.delay) && (flags.applyTransitionDuration || flags.hasTransitions);
-                flags.applyAnimationDelay = truthyTimingValue(options.delay) && flags.hasAnimations;
-                flags.recalculateTimingStyles = addRemoveClassName.length > 0;
-                if (flags.applyTransitionDuration || flags.applyAnimationDuration) {
-                    maxDuration = options.duration ? parseFloat(options.duration) : maxDuration;
-                    if (flags.applyTransitionDuration) {
-                        flags.hasTransitions = true;
-                        timings.transitionDuration = maxDuration;
-                        applyOnlyDuration = node.style[TRANSITION_PROP + PROPERTY_KEY].length > 0;
-                        temporaryStyles.push(getCssTransitionDurationStyle(maxDuration, applyOnlyDuration));
-                    }
-                    if (flags.applyAnimationDuration) {
-                        flags.hasAnimations = true;
-                        timings.animationDuration = maxDuration;
-                        temporaryStyles.push(getCssKeyframeDurationStyle(maxDuration));
-                    }
-                }
-                if (maxDuration === 0 && !flags.recalculateTimingStyles) {
-                    return closeAndReturnNoopAnimator();
-                }
-                if (options.delay != null) {
-                    var delayStyle = parseFloat(options.delay);
-                    if (flags.applyTransitionDelay) {
-                        temporaryStyles.push(getCssDelayStyle(delayStyle));
-                    }
-                    if (flags.applyAnimationDelay) {
-                        temporaryStyles.push(getCssDelayStyle(delayStyle, true));
-                    }
-                }
-                if (options.duration == null && timings.transitionDuration > 0) {
-                    flags.recalculateTimingStyles = flags.recalculateTimingStyles || isFirst;
-                }
-                maxDelayTime = maxDelay * ONE_SECOND;
-                maxDurationTime = maxDuration * ONE_SECOND;
-                if (!options.skipBlocking) {
-                    flags.blockTransition = timings.transitionDuration > 0;
-                    flags.blockKeyframeAnimation = timings.animationDuration > 0 && stagger.animationDelay > 0 && stagger.animationDuration === 0;
-                }
-                if (options.from) {
-                    if (options.cleanupStyles) {
-                        registerRestorableStyles(restoreStyles, node, Object.keys(options.from));
-                    }
-                    applyAnimationFromStyles(element, options);
-                }
-                if (flags.blockTransition || flags.blockKeyframeAnimation) {
-                    applyBlocking(maxDuration);
-                } else if (!options.skipBlocking) {
-                    blockTransitions(node, false);
-                }
-                return {
-                    $$willAnimate: true,
-                    end: endFn,
-                    start: function() {
-                        if (animationClosed) return;
-                        runnerHost = {
-                            end: endFn,
-                            cancel: cancelFn,
-                            resume: null,
-                            pause: null
-                        };
-                        runner = new $$AnimateRunner(runnerHost);
-                        waitUntilQuiet(start);
-                        return runner;
-                    }
-                };
-                function endFn() {
-                    close();
-                }
-                function cancelFn() {
-                    close(true);
-                }
-                function close(rejected) {
-                    if (animationClosed || animationCompleted && animationPaused) return;
-                    animationClosed = true;
-                    animationPaused = false;
-                    if (!options.$$skipPreparationClasses) {
-                        $$jqLite.removeClass(element, preparationClasses);
-                    }
-                    $$jqLite.removeClass(element, activeClasses);
-                    blockKeyframeAnimations(node, false);
-                    blockTransitions(node, false);
-                    forEach(temporaryStyles, function(entry) {
-                        node.style[entry[0]] = "";
-                    });
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    if (Object.keys(restoreStyles).length) {
-                        forEach(restoreStyles, function(value, prop) {
-                            value ? node.style.setProperty(prop, value) : node.style.removeProperty(prop);
-                        });
-                    }
-                    if (options.onDone) {
-                        options.onDone();
-                    }
-                    if (runner) {
-                        runner.complete(!rejected);
-                    }
-                }
-                function applyBlocking(duration) {
-                    if (flags.blockTransition) {
-                        blockTransitions(node, duration);
-                    }
-                    if (flags.blockKeyframeAnimation) {
-                        blockKeyframeAnimations(node, !!duration);
-                    }
-                }
-                function closeAndReturnNoopAnimator() {
-                    runner = new $$AnimateRunner({
-                        end: endFn,
-                        cancel: cancelFn
-                    });
-                    waitUntilQuiet(noop);
-                    close();
-                    return {
-                        $$willAnimate: false,
-                        start: function() {
-                            return runner;
-                        },
-                        end: endFn
-                    };
-                }
-                function start() {
-                    if (animationClosed) return;
-                    if (!node.parentNode) {
-                        close();
-                        return;
-                    }
-                    var startTime, events = [];
-                    var playPause = function(playAnimation) {
-                        if (!animationCompleted) {
-                            animationPaused = !playAnimation;
-                            if (timings.animationDuration) {
-                                var value = blockKeyframeAnimations(node, animationPaused);
-                                animationPaused ? temporaryStyles.push(value) : removeFromArray(temporaryStyles, value);
-                            }
-                        } else if (animationPaused && playAnimation) {
-                            animationPaused = false;
-                            close();
-                        }
-                    };
-                    var maxStagger = itemIndex > 0 && (timings.transitionDuration && stagger.transitionDuration === 0 || timings.animationDuration && stagger.animationDuration === 0) && Math.max(stagger.animationDelay, stagger.transitionDelay);
-                    if (maxStagger) {
-                        $timeout(triggerAnimationStart, Math.floor(maxStagger * itemIndex * ONE_SECOND), false);
-                    } else {
-                        triggerAnimationStart();
-                    }
-                    runnerHost.resume = function() {
-                        playPause(true);
-                    };
-                    runnerHost.pause = function() {
-                        playPause(false);
-                    };
-                    function triggerAnimationStart() {
-                        if (animationClosed) return;
-                        applyBlocking(false);
-                        forEach(temporaryStyles, function(entry) {
-                            var key = entry[0];
-                            var value = entry[1];
-                            node.style[key] = value;
-                        });
-                        applyAnimationClasses(element, options);
-                        $$jqLite.addClass(element, activeClasses);
-                        if (flags.recalculateTimingStyles) {
-                            fullClassName = node.className + " " + preparationClasses;
-                            cacheKey = gcsHashFn(node, fullClassName);
-                            timings = computeTimings(node, fullClassName, cacheKey);
-                            relativeDelay = timings.maxDelay;
-                            maxDelay = Math.max(relativeDelay, 0);
-                            maxDuration = timings.maxDuration;
-                            if (maxDuration === 0) {
-                                close();
-                                return;
-                            }
-                            flags.hasTransitions = timings.transitionDuration > 0;
-                            flags.hasAnimations = timings.animationDuration > 0;
-                        }
-                        if (flags.applyAnimationDelay) {
-                            relativeDelay = typeof options.delay !== "boolean" && truthyTimingValue(options.delay) ? parseFloat(options.delay) : relativeDelay;
-                            maxDelay = Math.max(relativeDelay, 0);
-                            timings.animationDelay = relativeDelay;
-                            delayStyle = getCssDelayStyle(relativeDelay, true);
-                            temporaryStyles.push(delayStyle);
-                            node.style[delayStyle[0]] = delayStyle[1];
-                        }
-                        maxDelayTime = maxDelay * ONE_SECOND;
-                        maxDurationTime = maxDuration * ONE_SECOND;
-                        if (options.easing) {
-                            var easeProp, easeVal = options.easing;
-                            if (flags.hasTransitions) {
-                                easeProp = TRANSITION_PROP + TIMING_KEY;
-                                temporaryStyles.push([ easeProp, easeVal ]);
-                                node.style[easeProp] = easeVal;
-                            }
-                            if (flags.hasAnimations) {
-                                easeProp = ANIMATION_PROP + TIMING_KEY;
-                                temporaryStyles.push([ easeProp, easeVal ]);
-                                node.style[easeProp] = easeVal;
-                            }
-                        }
-                        if (timings.transitionDuration) {
-                            events.push(TRANSITIONEND_EVENT);
-                        }
-                        if (timings.animationDuration) {
-                            events.push(ANIMATIONEND_EVENT);
-                        }
-                        startTime = Date.now();
-                        var timerTime = maxDelayTime + CLOSING_TIME_BUFFER * maxDurationTime;
-                        var endTime = startTime + timerTime;
-                        var animationsData = element.data(ANIMATE_TIMER_KEY) || [];
-                        var setupFallbackTimer = true;
-                        if (animationsData.length) {
-                            var currentTimerData = animationsData[0];
-                            setupFallbackTimer = endTime > currentTimerData.expectedEndTime;
-                            if (setupFallbackTimer) {
-                                $timeout.cancel(currentTimerData.timer);
-                            } else {
-                                animationsData.push(close);
-                            }
-                        }
-                        if (setupFallbackTimer) {
-                            var timer = $timeout(onAnimationExpired, timerTime, false);
-                            animationsData[0] = {
-                                timer: timer,
-                                expectedEndTime: endTime
-                            };
-                            animationsData.push(close);
-                            element.data(ANIMATE_TIMER_KEY, animationsData);
-                        }
-                        element.on(events.join(" "), onAnimationProgress);
-                        if (options.to) {
-                            if (options.cleanupStyles) {
-                                registerRestorableStyles(restoreStyles, node, Object.keys(options.to));
-                            }
-                            applyAnimationToStyles(element, options);
-                        }
-                    }
-                    function onAnimationExpired() {
-                        var animationsData = element.data(ANIMATE_TIMER_KEY);
-                        if (animationsData) {
-                            for (var i = 1; i < animationsData.length; i++) {
-                                animationsData[i]();
-                            }
-                            element.removeData(ANIMATE_TIMER_KEY);
-                        }
-                    }
-                    function onAnimationProgress(event) {
-                        event.stopPropagation();
-                        var ev = event.originalEvent || event;
-                        var timeStamp = ev.$manualTimeStamp || ev.timeStamp || Date.now();
-                        var elapsedTime = parseFloat(ev.elapsedTime.toFixed(ELAPSED_TIME_MAX_DECIMAL_PLACES));
-                        if (Math.max(timeStamp - startTime, 0) >= maxDelayTime && elapsedTime >= maxDuration) {
-                            animationCompleted = true;
-                            close();
-                        }
-                    }
-                }
-            };
-        } ];
-    } ];
-    var $$AnimateCssDriverProvider = [ "$$animationProvider", function($$animationProvider) {
-        $$animationProvider.drivers.push("$$animateCssDriver");
-        var NG_ANIMATE_SHIM_CLASS_NAME = "ng-animate-shim";
-        var NG_ANIMATE_ANCHOR_CLASS_NAME = "ng-anchor";
-        var NG_OUT_ANCHOR_CLASS_NAME = "ng-anchor-out";
-        var NG_IN_ANCHOR_CLASS_NAME = "ng-anchor-in";
-        function isDocumentFragment(node) {
-            return node.parentNode && node.parentNode.nodeType === 11;
-        }
-        this.$get = [ "$animateCss", "$rootScope", "$$AnimateRunner", "$rootElement", "$sniffer", "$$jqLite", "$document", function($animateCss, $rootScope, $$AnimateRunner, $rootElement, $sniffer, $$jqLite, $document) {
-            if (!$sniffer.animations && !$sniffer.transitions) return noop;
-            var bodyNode = $document[0].body;
-            var rootNode = getDomNode($rootElement);
-            var rootBodyElement = jqLite(isDocumentFragment(rootNode) || bodyNode.contains(rootNode) ? rootNode : bodyNode);
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            return function initDriverFn(animationDetails) {
-                return animationDetails.from && animationDetails.to ? prepareFromToAnchorAnimation(animationDetails.from, animationDetails.to, animationDetails.classes, animationDetails.anchors) : prepareRegularAnimation(animationDetails);
-            };
-            function filterCssClasses(classes) {
-                return classes.replace(/\bng-\S+\b/g, "");
-            }
-            function getUniqueValues(a, b) {
-                if (isString(a)) a = a.split(" ");
-                if (isString(b)) b = b.split(" ");
-                return a.filter(function(val) {
-                    return b.indexOf(val) === -1;
-                }).join(" ");
-            }
-            function prepareAnchoredAnimation(classes, outAnchor, inAnchor) {
-                var clone = jqLite(getDomNode(outAnchor).cloneNode(true));
-                var startingClasses = filterCssClasses(getClassVal(clone));
-                outAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                inAnchor.addClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                clone.addClass(NG_ANIMATE_ANCHOR_CLASS_NAME);
-                rootBodyElement.append(clone);
-                var animatorIn, animatorOut = prepareOutAnimation();
-                if (!animatorOut) {
-                    animatorIn = prepareInAnimation();
-                    if (!animatorIn) {
-                        return end();
-                    }
-                }
-                var startingAnimator = animatorOut || animatorIn;
-                return {
-                    start: function() {
-                        var runner;
-                        var currentAnimation = startingAnimator.start();
-                        currentAnimation.done(function() {
-                            currentAnimation = null;
-                            if (!animatorIn) {
-                                animatorIn = prepareInAnimation();
-                                if (animatorIn) {
-                                    currentAnimation = animatorIn.start();
-                                    currentAnimation.done(function() {
-                                        currentAnimation = null;
-                                        end();
-                                        runner.complete();
-                                    });
-                                    return currentAnimation;
-                                }
-                            }
-                            end();
-                            runner.complete();
-                        });
-                        runner = new $$AnimateRunner({
-                            end: endFn,
-                            cancel: endFn
-                        });
-                        return runner;
-                        function endFn() {
-                            if (currentAnimation) {
-                                currentAnimation.end();
-                            }
-                        }
-                    }
-                };
-                function calculateAnchorStyles(anchor) {
-                    var styles = {};
-                    var coords = getDomNode(anchor).getBoundingClientRect();
-                    forEach([ "width", "height", "top", "left" ], function(key) {
-                        var value = coords[key];
-                        switch (key) {
-                          case "top":
-                            value += bodyNode.scrollTop;
-                            break;
-
-                          case "left":
-                            value += bodyNode.scrollLeft;
-                            break;
-                        }
-                        styles[key] = Math.floor(value) + "px";
-                    });
-                    return styles;
-                }
-                function prepareOutAnimation() {
-                    var animator = $animateCss(clone, {
-                        addClass: NG_OUT_ANCHOR_CLASS_NAME,
-                        delay: true,
-                        from: calculateAnchorStyles(outAnchor)
-                    });
-                    return animator.$$willAnimate ? animator : null;
-                }
-                function getClassVal(element) {
-                    return element.attr("class") || "";
-                }
-                function prepareInAnimation() {
-                    var endingClasses = filterCssClasses(getClassVal(inAnchor));
-                    var toAdd = getUniqueValues(endingClasses, startingClasses);
-                    var toRemove = getUniqueValues(startingClasses, endingClasses);
-                    var animator = $animateCss(clone, {
-                        to: calculateAnchorStyles(inAnchor),
-                        addClass: NG_IN_ANCHOR_CLASS_NAME + " " + toAdd,
-                        removeClass: NG_OUT_ANCHOR_CLASS_NAME + " " + toRemove,
-                        delay: true
-                    });
-                    return animator.$$willAnimate ? animator : null;
-                }
-                function end() {
-                    clone.remove();
-                    outAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
-                    inAnchor.removeClass(NG_ANIMATE_SHIM_CLASS_NAME);
+        var getReferencedAnnotation = function(id) {
+            for (var i = 0; i < this.tiers.length; i++) {
+                var tier = this.tiers[i];
+                for (var j = 0; j < tier.annotations.length; j++) {
+                    var annotation = tier.annotations[j];
+                    if (annotation.id == id) return annotation;
                 }
             }
-            function prepareFromToAnchorAnimation(from, to, classes, anchors) {
-                var fromAnimation = prepareRegularAnimation(from, noop);
-                var toAnimation = prepareRegularAnimation(to, noop);
-                var anchorAnimations = [];
-                forEach(anchors, function(anchor) {
-                    var outElement = anchor["out"];
-                    var inElement = anchor["in"];
-                    var animator = prepareAnchoredAnimation(classes, outElement, inElement);
-                    if (animator) {
-                        anchorAnimations.push(animator);
-                    }
-                });
-                if (!fromAnimation && !toAnimation && anchorAnimations.length === 0) return;
-                return {
-                    start: function() {
-                        var animationRunners = [];
-                        if (fromAnimation) {
-                            animationRunners.push(fromAnimation.start());
-                        }
-                        if (toAnimation) {
-                            animationRunners.push(toAnimation.start());
-                        }
-                        forEach(anchorAnimations, function(animation) {
-                            animationRunners.push(animation.start());
-                        });
-                        var runner = new $$AnimateRunner({
-                            end: endFn,
-                            cancel: endFn
-                        });
-                        $$AnimateRunner.all(animationRunners, function(status) {
-                            runner.complete(status);
-                        });
-                        return runner;
-                        function endFn() {
-                            forEach(animationRunners, function(runner) {
-                                runner.end();
-                            });
-                        }
-                    }
-                };
+        }.bind(this);
+        this.getTimeSlot = function(slotId) {
+            for (var i = 0; i < this.timeslots.length; i++) {
+                var timeslot = this.timeslots[i];
+                if (timeslot.id == slotId) {
+                    return timeslot;
+                }
             }
-            function prepareRegularAnimation(animationDetails) {
-                var element = animationDetails.element;
-                var options = animationDetails.options || {};
-                if (animationDetails.structural) {
-                    options.event = animationDetails.event;
-                    options.structural = true;
-                    options.applyClassesEarly = true;
-                    if (animationDetails.event === "leave") {
-                        options.onDone = options.domOperation;
-                    }
+        }.bind(this);
+        this.getTimeSlotByValue = function(value) {
+            for (var i = 0; i < this.timeslots.length; i++) {
+                var timeslot = this.timeslots[i];
+                if (timeslot.value === value) {
+                    return timeslot;
                 }
-                if (options.preparationClasses) {
-                    options.event = concatWithSpace(options.event, options.preparationClasses);
-                }
-                var animator = $animateCss(element, options);
-                return animator.$$willAnimate ? animator : null;
             }
-        } ];
-    } ];
-    var $$AnimateJsProvider = [ "$animateProvider", function($animateProvider) {
-        this.$get = [ "$injector", "$$AnimateRunner", "$$jqLite", function($injector, $$AnimateRunner, $$jqLite) {
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            return function(element, event, classes, options) {
-                if (arguments.length === 3 && isObject(classes)) {
-                    options = classes;
-                    classes = null;
-                }
-                options = prepareAnimationOptions(options);
-                if (!classes) {
-                    classes = element.attr("class") || "";
-                    if (options.addClass) {
-                        classes += " " + options.addClass;
-                    }
-                    if (options.removeClass) {
-                        classes += " " + options.removeClass;
-                    }
-                }
-                var classesToAdd = options.addClass;
-                var classesToRemove = options.removeClass;
-                var animations = lookupAnimations(classes);
-                var before, after;
-                if (animations.length) {
-                    var afterFn, beforeFn;
-                    if (event == "leave") {
-                        beforeFn = "leave";
-                        afterFn = "afterLeave";
-                    } else {
-                        beforeFn = "before" + event.charAt(0).toUpperCase() + event.substr(1);
-                        afterFn = event;
-                    }
-                    if (event !== "enter" && event !== "move") {
-                        before = packageAnimations(element, event, options, animations, beforeFn);
-                    }
-                    after = packageAnimations(element, event, options, animations, afterFn);
-                }
-                if (!before && !after) return;
-                function applyOptions() {
-                    options.domOperation();
-                    applyAnimationClasses(element, options);
-                }
-                return {
-                    start: function() {
-                        var closeActiveAnimations;
-                        var chain = [];
-                        if (before) {
-                            chain.push(function(fn) {
-                                closeActiveAnimations = before(fn);
-                            });
-                        }
-                        if (chain.length) {
-                            chain.push(function(fn) {
-                                applyOptions();
-                                fn(true);
-                            });
-                        } else {
-                            applyOptions();
-                        }
-                        if (after) {
-                            chain.push(function(fn) {
-                                closeActiveAnimations = after(fn);
-                            });
-                        }
-                        var animationClosed = false;
-                        var runner = new $$AnimateRunner({
-                            end: function() {
-                                endAnimations();
-                            },
-                            cancel: function() {
-                                endAnimations(true);
-                            }
-                        });
-                        $$AnimateRunner.chain(chain, onComplete);
-                        return runner;
-                        function onComplete(success) {
-                            animationClosed = true;
-                            applyOptions();
-                            applyAnimationStyles(element, options);
-                            runner.complete(success);
-                        }
-                        function endAnimations(cancelled) {
-                            if (!animationClosed) {
-                                (closeActiveAnimations || noop)(cancelled);
-                                onComplete(cancelled);
-                            }
-                        }
-                    }
-                };
-                function executeAnimationFn(fn, element, event, options, onDone) {
-                    var args;
-                    switch (event) {
-                      case "animate":
-                        args = [ element, options.from, options.to, onDone ];
-                        break;
-
-                      case "setClass":
-                        args = [ element, classesToAdd, classesToRemove, onDone ];
-                        break;
-
-                      case "addClass":
-                        args = [ element, classesToAdd, onDone ];
-                        break;
-
-                      case "removeClass":
-                        args = [ element, classesToRemove, onDone ];
-                        break;
-
-                      default:
-                        args = [ element, onDone ];
-                        break;
-                    }
-                    args.push(options);
-                    var value = fn.apply(fn, args);
-                    if (value) {
-                        if (isFunction(value.start)) {
-                            value = value.start();
-                        }
-                        if (value instanceof $$AnimateRunner) {
-                            value.done(onDone);
-                        } else if (isFunction(value)) {
-                            return value;
-                        }
-                    }
-                    return noop;
-                }
-                function groupEventedAnimations(element, event, options, animations, fnName) {
-                    var operations = [];
-                    forEach(animations, function(ani) {
-                        var animation = ani[fnName];
-                        if (!animation) return;
-                        operations.push(function() {
-                            var runner;
-                            var endProgressCb;
-                            var resolved = false;
-                            var onAnimationComplete = function(rejected) {
-                                if (!resolved) {
-                                    resolved = true;
-                                    (endProgressCb || noop)(rejected);
-                                    runner.complete(!rejected);
-                                }
-                            };
-                            runner = new $$AnimateRunner({
-                                end: function() {
-                                    onAnimationComplete();
-                                },
-                                cancel: function() {
-                                    onAnimationComplete(true);
-                                }
-                            });
-                            endProgressCb = executeAnimationFn(animation, element, event, options, function(result) {
-                                var cancelled = result === false;
-                                onAnimationComplete(cancelled);
-                            });
-                            return runner;
-                        });
-                    });
-                    return operations;
-                }
-                function packageAnimations(element, event, options, animations, fnName) {
-                    var operations = groupEventedAnimations(element, event, options, animations, fnName);
-                    if (operations.length === 0) {
-                        var a, b;
-                        if (fnName === "beforeSetClass") {
-                            a = groupEventedAnimations(element, "removeClass", options, animations, "beforeRemoveClass");
-                            b = groupEventedAnimations(element, "addClass", options, animations, "beforeAddClass");
-                        } else if (fnName === "setClass") {
-                            a = groupEventedAnimations(element, "removeClass", options, animations, "removeClass");
-                            b = groupEventedAnimations(element, "addClass", options, animations, "addClass");
-                        }
-                        if (a) {
-                            operations = operations.concat(a);
-                        }
-                        if (b) {
-                            operations = operations.concat(b);
-                        }
-                    }
-                    if (operations.length === 0) return;
-                    return function startAnimation(callback) {
-                        var runners = [];
-                        if (operations.length) {
-                            forEach(operations, function(animateFn) {
-                                runners.push(animateFn());
-                            });
-                        }
-                        runners.length ? $$AnimateRunner.all(runners, callback) : callback();
-                        return function endFn(reject) {
-                            forEach(runners, function(runner) {
-                                reject ? runner.cancel() : runner.end();
-                            });
-                        };
-                    };
-                }
-            };
-            function lookupAnimations(classes) {
-                classes = isArray(classes) ? classes : classes.split(" ");
-                var matches = [], flagMap = {};
-                for (var i = 0; i < classes.length; i++) {
-                    var klass = classes[i], animationFactory = $animateProvider.$$registeredAnimations[klass];
-                    if (animationFactory && !flagMap[klass]) {
-                        matches.push($injector.get(animationFactory));
-                        flagMap[klass] = true;
-                    }
-                }
-                return matches;
+        }.bind(this);
+        this.timeSlotRefToSeconds = function(slotId) {
+            var slot = this.getTimeSlot(slotId);
+            if (slot) {
+                return parseInt(slot.value) / 1e3;
             }
-        } ];
-    } ];
-    var $$AnimateJsDriverProvider = [ "$$animationProvider", function($$animationProvider) {
-        $$animationProvider.drivers.push("$$animateJsDriver");
-        this.$get = [ "$$animateJs", "$$AnimateRunner", function($$animateJs, $$AnimateRunner) {
-            return function initDriverFn(animationDetails) {
-                if (animationDetails.from && animationDetails.to) {
-                    var fromAnimation = prepareAnimation(animationDetails.from);
-                    var toAnimation = prepareAnimation(animationDetails.to);
-                    if (!fromAnimation && !toAnimation) return;
-                    return {
-                        start: function() {
-                            var animationRunners = [];
-                            if (fromAnimation) {
-                                animationRunners.push(fromAnimation.start());
+        }.bind(this);
+        this.getValidTimeslots = function() {
+            var validTimeslots = [];
+            for (var i = 0; i < this.tiers.length; i++) {
+                var tier = this.tiers[i];
+                for (var j = 0; j < tier.annotations.length; j++) {
+                    var annotation = tier.annotations[j];
+                    if (annotation instanceof elan.Annotation) {
+                        var timeslot1 = this.getTimeSlot(annotation.timeslotRef1);
+                        var timeslot2 = this.getTimeSlot(annotation.timeslotRef2);
+                        if (typeof timeslot1 != "undefined" && typeof timeslot2 != "undefined") {
+                            if (!timeslotExists(timeslot1, validTimeslots)) {
+                                validTimeslots.push(timeslot1);
                             }
-                            if (toAnimation) {
-                                animationRunners.push(toAnimation.start());
-                            }
-                            $$AnimateRunner.all(animationRunners, done);
-                            var runner = new $$AnimateRunner({
-                                end: endFnFactory(),
-                                cancel: endFnFactory()
-                            });
-                            return runner;
-                            function endFnFactory() {
-                                return function() {
-                                    forEach(animationRunners, function(runner) {
-                                        runner.end();
-                                    });
-                                };
-                            }
-                            function done(status) {
-                                runner.complete(status);
+                            if (!timeslotExists(timeslot2, validTimeslots)) {
+                                validTimeslots.push(timeslot2);
                             }
                         }
-                    };
-                } else {
-                    return prepareAnimation(animationDetails);
+                    }
                 }
-            };
-            function prepareAnimation(animationDetails) {
-                var element = animationDetails.element;
-                var event = animationDetails.event;
-                var options = animationDetails.options;
-                var classes = animationDetails.classes;
-                return $$animateJs(element, event, classes, options);
             }
-        } ];
-    } ];
-    var NG_ANIMATE_ATTR_NAME = "data-ng-animate";
-    var NG_ANIMATE_PIN_DATA = "$ngAnimatePin";
-    var $$AnimateQueueProvider = [ "$animateProvider", function($animateProvider) {
-        var PRE_DIGEST_STATE = 1;
-        var RUNNING_STATE = 2;
-        var rules = this.rules = {
-            skip: [],
-            cancel: [],
-            join: []
-        };
-        function isAllowed(ruleType, element, currentAnimation, previousAnimation) {
-            return rules[ruleType].some(function(fn) {
-                return fn(element, currentAnimation, previousAnimation);
+            validTimeslots.sort(function(a, b) {
+                if (a.value > b.value) {
+                    return 1;
+                }
+                if (a.value < b.value) {
+                    return -1;
+                }
+                return 0;
             });
-        }
-        function hasAnimationClasses(options, and) {
-            options = options || {};
-            var a = (options.addClass || "").length > 0;
-            var b = (options.removeClass || "").length > 0;
-            return and ? a && b : a || b;
-        }
-        rules.join.push(function(element, newAnimation, currentAnimation) {
-            return !newAnimation.structural && hasAnimationClasses(newAnimation.options);
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return !newAnimation.structural && !hasAnimationClasses(newAnimation.options);
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.event == "leave" && newAnimation.structural;
-        });
-        rules.skip.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.structural && currentAnimation.state === RUNNING_STATE && !newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.structural && newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            return currentAnimation.state === RUNNING_STATE && newAnimation.structural;
-        });
-        rules.cancel.push(function(element, newAnimation, currentAnimation) {
-            var nO = newAnimation.options;
-            var cO = currentAnimation.options;
-            return nO.addClass && nO.addClass === cO.removeClass || nO.removeClass && nO.removeClass === cO.addClass;
-        });
-        this.$get = [ "$$rAF", "$rootScope", "$rootElement", "$document", "$$HashMap", "$$animation", "$$AnimateRunner", "$templateRequest", "$$jqLite", "$$forceReflow", function($$rAF, $rootScope, $rootElement, $document, $$HashMap, $$animation, $$AnimateRunner, $templateRequest, $$jqLite, $$forceReflow) {
-            var activeAnimationsLookup = new $$HashMap();
-            var disabledElementsLookup = new $$HashMap();
-            var animationsEnabled = null;
-            function postDigestTaskFactory() {
-                var postDigestCalled = false;
-                return function(fn) {
-                    if (postDigestCalled) {
-                        fn();
-                    } else {
-                        $rootScope.$$postDigest(function() {
-                            postDigestCalled = true;
-                            fn();
-                        });
-                    }
-                };
+            return validTimeslots;
+        }.bind(this);
+        this.getTier = function(id) {
+            var tier = null;
+            for (var i = 0; i < this.tiers.length; i++) {
+                if (this.tiers[i].id === id) {
+                    tier = this.tiers[i];
+                    break;
+                }
             }
-            var deregisterWatch = $rootScope.$watch(function() {
-                return $templateRequest.totalPendingRequests === 0;
-            }, function(isEmpty) {
-                if (!isEmpty) return;
-                deregisterWatch();
-                $rootScope.$$postDigest(function() {
-                    $rootScope.$$postDigest(function() {
-                        if (animationsEnabled === null) {
-                            animationsEnabled = true;
-                        }
-                    });
-                });
+            return tier;
+        }.bind(this);
+        this.importXML = function(xml) {
+            var header = xml.querySelector("HEADER");
+            var inSeconds = header.getAttribute("TIME_UNITS") == "seconds";
+            var media = header.querySelector("MEDIA_DESCRIPTOR");
+            if (media) {
+                this.mediaUrl = media.getAttribute("MEDIA_URL");
+                this.mediaType = media.getAttribute("MIME_TYPE");
+            }
+            var properties = xml.querySelectorAll("PROPERTY");
+            _forEach.call(properties, function(prop) {
+                var name = prop.getAttribute("NAME");
+                if (name === "lastUsedAnnotationId") {
+                    var c = prop.textContent.trim();
+                    this.lastUsedAnnoationId = parseInt(c);
+                }
+            }.bind(this));
+            var timeSlots = xml.querySelectorAll("TIME_ORDER TIME_SLOT");
+            _forEach.call(timeSlots, function(slot) {
+                var slotId = slot.getAttribute("TIME_SLOT_ID");
+                var value = parseFloat(slot.getAttribute("TIME_VALUE"));
+                if (inSeconds) {
+                    value = Math.floor(value * 1e3);
+                }
+                var s = this.getTimeSlot(slotId);
+                if (typeof s == "undefined") {
+                    this.timeslots.push(new elan.TimeSlot(slotId, value));
+                }
+            }.bind(this));
+            this.tiers = _map.call(xml.querySelectorAll("TIER"), function(tier) {
+                var tierId = tier.getAttribute("TIER_ID");
+                var linguisticTypeRef = tier.getAttribute("LINGUISTIC_TYPE_REF");
+                var defaultLocale = tier.getAttribute("DEFAULT_LOCALE");
+                var annotations = _map.call(tier.querySelectorAll("REF_ANNOTATION, ALIGNABLE_ANNOTATION"), function(node) {
+                    var annotationId = node.getAttribute("ANNOTATION_ID");
+                    var value = node.querySelector("ANNOTATION_VALUE").textContent.trim();
+                    if (node.nodeName == "ALIGNABLE_ANNOTATION") {
+                        var start = node.getAttribute("TIME_SLOT_REF1");
+                        var end = node.getAttribute("TIME_SLOT_REF2");
+                        return new elan.Annotation(annotationId, value, start, end);
+                    } else {
+                        var ref = node.getAttribute("ANNOTATION_REF");
+                        return new elan.RefAnnotation(annotationId, value, ref);
+                    }
+                }, this);
+                return new elan.Tier(tierId, linguisticTypeRef, defaultLocale, annotations);
+            }, this);
+        }.bind(this);
+        this.exportXML = function() {
+            var doc = document.implementation.createDocument(null, "ANNOTATION_DOCUMENT", null);
+            var headerElement = doc.createElement("HEADER");
+            headerElement.setAttribute("MEDIA_FILE", this.mediaFile);
+            headerElement.setAttribute("TIME_UNITS", "milliseconds");
+            var mediaDescriptorElement = doc.createElement("MEDIA_DESCRIPTOR");
+            mediaDescriptorElement.setAttribute("MEDIA_URL", this.mediaUrl);
+            headerElement.appendChild(mediaDescriptorElement);
+            var prop1Element = doc.createElement("PROPERTY");
+            prop1Element.setAttribute("NAME", "URN");
+            prop1Element.textContent = "urn:nl-mpi-tools-elan-eaf:dd04600d-3cc3-41a3-a102-548c7b8c0e45";
+            headerElement.appendChild(prop1Element);
+            var prop2Element = doc.createElement("PROPERTY");
+            prop2Element.setAttribute("NAME", "lastUsedAnnotationId");
+            prop2Element.textContent = this.lastUsedAnnoationId.toString();
+            headerElement.appendChild(prop2Element);
+            doc.documentElement.appendChild(headerElement);
+            var validTimeslots = this.getValidTimeslots();
+            var timeOrderElement = doc.createElement("TIME_ORDER");
+            validTimeslots.forEach(function(slot) {
+                var slotElement = doc.createElement("TIME_SLOT");
+                slotElement.setAttribute("TIME_SLOT_ID", slot.id);
+                slotElement.setAttribute("TIME_VALUE", slot.value);
+                timeOrderElement.appendChild(slotElement);
             });
-            var callbackRegistry = {};
-            var classNameFilter = $animateProvider.classNameFilter();
-            var isAnimatableClassName = !classNameFilter ? function() {
-                return true;
-            } : function(className) {
-                return classNameFilter.test(className);
-            };
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            function normalizeAnimationOptions(element, options) {
-                return mergeAnimationOptions(element, options, {});
+            doc.documentElement.appendChild(timeOrderElement);
+            for (var i = 0; i < this.tiers.length; i++) {
+                var tier = this.tiers[i];
+                var tierElement = doc.createElement("TIER");
+                tierElement.setAttribute("TIER_ID", tier.id);
+                tierElement.setAttribute("LINGUISTIC_TYPE_REF", tier.linguisticTypeRef);
+                tierElement.setAttribute("DEFAULT_LOCALE", tier.defaultLocale);
+                for (var j = 0; j < tier.annotations.length; j++) {
+                    var an = tier.annotations[j];
+                    var annotationElement = doc.createElement("ANNOTATION");
+                    var allignableAnnotationElement = doc.createElement("ALIGNABLE_ANNOTATION");
+                    allignableAnnotationElement.setAttribute("ANNOTATION_ID", an.id);
+                    allignableAnnotationElement.setAttribute("TIME_SLOT_REF1", an.timeslotRef1);
+                    allignableAnnotationElement.setAttribute("TIME_SLOT_REF2", an.timeslotRef2);
+                    var annotationValueElement = doc.createElement("ANNOTATION_VALUE");
+                    annotationValueElement.textContent = an.value;
+                    allignableAnnotationElement.appendChild(annotationValueElement);
+                    annotationElement.appendChild(allignableAnnotationElement);
+                    tierElement.appendChild(annotationElement);
+                }
+                doc.documentElement.appendChild(tierElement);
             }
-            function findCallbacks(element, event) {
-                var targetNode = getDomNode(element);
-                var matches = [];
-                var entries = callbackRegistry[event];
-                if (entries) {
-                    forEach(entries, function(entry) {
-                        if (entry.node.contains(targetNode)) {
-                            matches.push(entry.callback);
-                        }
-                    });
+            var serializer = new XMLSerializer();
+            return serializer.serializeToString(doc);
+        }.bind(this);
+        this.createTier = function(linguisticTypeRef, defaultLocale) {
+            var tierId = "tier" + this.lastUsedTierId;
+            this.lastUsedTierId++;
+            this.tiers.push(new elan.Tier(tierId, linguisticTypeRef, "default-locale", []));
+            return tierId;
+        }.bind(this);
+        this.createAnnotation = function(tierId, value, from, to) {
+            var tier = this.getTier(tierId);
+            if (tier != null) {
+                var ts1 = this.getTimeSlotByValue(from);
+                if (typeof ts1 == "undefined") {
+                    ts1 = new elan.TimeSlot("ts" + this.lastUsedTimeSlotId, from);
+                    this.lastUsedTimeSlotId++;
+                    this.timeslots.push(ts1);
                 }
-                return matches;
+                var ts2 = this.getTimeSlotByValue(to);
+                if (typeof ts2 == "undefined") {
+                    ts2 = new elan.TimeSlot("ts" + this.lastUsedTimeSlotId, to);
+                    this.lastUsedTimeSlotId++;
+                    this.timeslots.push(ts2);
+                }
+                var annotationId = "an" + this.lastUsedAnnoationId;
+                this.lastUsedAnnoationId++;
+                var annotation = new elan.Annotation(annotationId, value, ts1.id, ts2.id);
+                tier.annotations.push(annotation);
+                return annotationId;
             }
-            return {
-                on: function(event, container, callback) {
-                    var node = extractElementNode(container);
-                    callbackRegistry[event] = callbackRegistry[event] || [];
-                    callbackRegistry[event].push({
-                        node: node,
-                        callback: callback
-                    });
-                },
-                off: function(event, container, callback) {
-                    var entries = callbackRegistry[event];
-                    if (!entries) return;
-                    callbackRegistry[event] = arguments.length === 1 ? null : filterFromRegistry(entries, container, callback);
-                    function filterFromRegistry(list, matchContainer, matchCallback) {
-                        var containerNode = extractElementNode(matchContainer);
-                        return list.filter(function(entry) {
-                            var isMatch = entry.node === containerNode && (!matchCallback || entry.callback === matchCallback);
-                            return !isMatch;
-                        });
-                    }
-                },
-                pin: function(element, parentElement) {
-                    assertArg(isElement(element), "element", "not an element");
-                    assertArg(isElement(parentElement), "parentElement", "not an element");
-                    element.data(NG_ANIMATE_PIN_DATA, parentElement);
-                },
-                push: function(element, event, options, domOperation) {
-                    options = options || {};
-                    options.domOperation = domOperation;
-                    return queueAnimation(element, event, options);
-                },
-                enabled: function(element, bool) {
-                    var argCount = arguments.length;
-                    if (argCount === 0) {
-                        bool = !!animationsEnabled;
-                    } else {
-                        var hasElement = isElement(element);
-                        if (!hasElement) {
-                            bool = animationsEnabled = !!element;
-                        } else {
-                            var node = getDomNode(element);
-                            var recordExists = disabledElementsLookup.get(node);
-                            if (argCount === 1) {
-                                bool = !recordExists;
-                            } else {
-                                bool = !!bool;
-                                if (!bool) {
-                                    disabledElementsLookup.put(node, true);
-                                } else if (recordExists) {
-                                    disabledElementsLookup.remove(node);
-                                }
+            return null;
+        }.bind(this);
+        this.render = function() {
+            var indices = {};
+            this.tiers.forEach(function(tier, index) {
+                tier.annotations.forEach(function(a) {
+                    if (a instanceof elan.RefAnnotation) {
+                        var referencedAnnotation = getReferencedAnnotation(a.ref);
+                        if (referencedAnnotation instanceof elan.Annotation) {
+                            if (!(referencedAnnotation.id in indices)) {
+                                indices[referencedAnnotation.id] = [];
                             }
-                        }
-                    }
-                    return bool;
-                }
-            };
-            function queueAnimation(element, event, options) {
-                var node, parent;
-                element = stripCommentsFromElement(element);
-                if (element) {
-                    node = getDomNode(element);
-                    parent = element.parent();
-                }
-                options = prepareAnimationOptions(options);
-                var runner = new $$AnimateRunner();
-                var runInNextPostDigestOrNow = postDigestTaskFactory();
-                if (isArray(options.addClass)) {
-                    options.addClass = options.addClass.join(" ");
-                }
-                if (options.addClass && !isString(options.addClass)) {
-                    options.addClass = null;
-                }
-                if (isArray(options.removeClass)) {
-                    options.removeClass = options.removeClass.join(" ");
-                }
-                if (options.removeClass && !isString(options.removeClass)) {
-                    options.removeClass = null;
-                }
-                if (options.from && !isObject(options.from)) {
-                    options.from = null;
-                }
-                if (options.to && !isObject(options.to)) {
-                    options.to = null;
-                }
-                if (!node) {
-                    close();
-                    return runner;
-                }
-                var className = [ node.className, options.addClass, options.removeClass ].join(" ");
-                if (!isAnimatableClassName(className)) {
-                    close();
-                    return runner;
-                }
-                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
-                var skipAnimations = !animationsEnabled || disabledElementsLookup.get(node);
-                var existingAnimation = !skipAnimations && activeAnimationsLookup.get(node) || {};
-                var hasExistingAnimation = !!existingAnimation.state;
-                if (!skipAnimations && (!hasExistingAnimation || existingAnimation.state != PRE_DIGEST_STATE)) {
-                    skipAnimations = !areAnimationsAllowed(element, parent, event);
-                }
-                if (skipAnimations) {
-                    close();
-                    return runner;
-                }
-                if (isStructural) {
-                    closeChildAnimations(element);
-                }
-                var newAnimation = {
-                    structural: isStructural,
-                    element: element,
-                    event: event,
-                    close: close,
-                    options: options,
-                    runner: runner
-                };
-                if (hasExistingAnimation) {
-                    var skipAnimationFlag = isAllowed("skip", element, newAnimation, existingAnimation);
-                    if (skipAnimationFlag) {
-                        if (existingAnimation.state === RUNNING_STATE) {
-                            close();
-                            return runner;
-                        } else {
-                            mergeAnimationOptions(element, existingAnimation.options, options);
-                            return existingAnimation.runner;
-                        }
-                    }
-                    var cancelAnimationFlag = isAllowed("cancel", element, newAnimation, existingAnimation);
-                    if (cancelAnimationFlag) {
-                        if (existingAnimation.state === RUNNING_STATE) {
-                            existingAnimation.runner.end();
-                        } else if (existingAnimation.structural) {
-                            existingAnimation.close();
-                        } else {
-                            mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
-                            return existingAnimation.runner;
-                        }
-                    } else {
-                        var joinAnimationFlag = isAllowed("join", element, newAnimation, existingAnimation);
-                        if (joinAnimationFlag) {
-                            if (existingAnimation.state === RUNNING_STATE) {
-                                normalizeAnimationOptions(element, options);
-                            } else {
-                                applyGeneratedPreparationClasses(element, isStructural ? event : null, options);
-                                event = newAnimation.event = existingAnimation.event;
-                                options = mergeAnimationOptions(element, existingAnimation.options, newAnimation.options);
-                                return existingAnimation.runner;
-                            }
-                        }
-                    }
-                } else {
-                    normalizeAnimationOptions(element, options);
-                }
-                var isValidAnimation = newAnimation.structural;
-                if (!isValidAnimation) {
-                    isValidAnimation = newAnimation.event === "animate" && Object.keys(newAnimation.options.to || {}).length > 0 || hasAnimationClasses(newAnimation.options);
-                }
-                if (!isValidAnimation) {
-                    close();
-                    clearElementAnimationState(element);
-                    return runner;
-                }
-                var counter = (existingAnimation.counter || 0) + 1;
-                newAnimation.counter = counter;
-                markElementAnimationState(element, PRE_DIGEST_STATE, newAnimation);
-                $rootScope.$$postDigest(function() {
-                    var animationDetails = activeAnimationsLookup.get(node);
-                    var animationCancelled = !animationDetails;
-                    animationDetails = animationDetails || {};
-                    var parentElement = element.parent() || [];
-                    var isValidAnimation = parentElement.length > 0 && (animationDetails.event === "animate" || animationDetails.structural || hasAnimationClasses(animationDetails.options));
-                    if (animationCancelled || animationDetails.counter !== counter || !isValidAnimation) {
-                        if (animationCancelled) {
-                            applyAnimationClasses(element, options);
-                            applyAnimationStyles(element, options);
-                        }
-                        if (animationCancelled || isStructural && animationDetails.event !== event) {
-                            options.domOperation();
-                            runner.end();
-                        }
-                        if (!isValidAnimation) {
-                            clearElementAnimationState(element);
-                        }
-                        return;
-                    }
-                    event = !animationDetails.structural && hasAnimationClasses(animationDetails.options, true) ? "setClass" : animationDetails.event;
-                    markElementAnimationState(element, RUNNING_STATE);
-                    var realRunner = $$animation(element, event, animationDetails.options);
-                    realRunner.done(function(status) {
-                        close(!status);
-                        var animationDetails = activeAnimationsLookup.get(node);
-                        if (animationDetails && animationDetails.counter === counter) {
-                            clearElementAnimationState(getDomNode(element));
-                        }
-                        notifyProgress(runner, event, "close", {});
-                    });
-                    runner.setHost(realRunner);
-                    notifyProgress(runner, event, "start", {});
-                });
-                return runner;
-                function notifyProgress(runner, event, phase, data) {
-                    runInNextPostDigestOrNow(function() {
-                        var callbacks = findCallbacks(element, event);
-                        if (callbacks.length) {
-                            $$rAF(function() {
-                                forEach(callbacks, function(callback) {
-                                    callback(element, phase, data);
-                                });
+                            indices[referencedAnnotation.id].push({
+                                tier: tier.id,
+                                annotation: a
                             });
                         }
-                    });
-                    runner.progress(event, phase, data);
-                }
-                function close(reject) {
-                    clearGeneratedClasses(element, options);
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    options.domOperation();
-                    runner.complete(!reject);
-                }
-            }
-            function closeChildAnimations(element) {
-                var node = getDomNode(element);
-                var children = node.querySelectorAll("[" + NG_ANIMATE_ATTR_NAME + "]");
-                forEach(children, function(child) {
-                    var state = parseInt(child.getAttribute(NG_ANIMATE_ATTR_NAME));
-                    var animationDetails = activeAnimationsLookup.get(child);
-                    switch (state) {
-                      case RUNNING_STATE:
-                        animationDetails.runner.end();
-
-                      case PRE_DIGEST_STATE:
-                        if (animationDetails) {
-                            activeAnimationsLookup.remove(child);
+                    }
+                    if (a instanceof elan.Annotation) {
+                        if (!(a.id in indices)) {
+                            indices[a.id] = [];
                         }
-                        break;
-                    }
-                });
-            }
-            function clearElementAnimationState(element) {
-                var node = getDomNode(element);
-                node.removeAttribute(NG_ANIMATE_ATTR_NAME);
-                activeAnimationsLookup.remove(node);
-            }
-            function isMatchingElement(nodeOrElmA, nodeOrElmB) {
-                return getDomNode(nodeOrElmA) === getDomNode(nodeOrElmB);
-            }
-            function areAnimationsAllowed(element, parentElement, event) {
-                var bodyElement = jqLite($document[0].body);
-                var bodyElementDetected = isMatchingElement(element, bodyElement) || element[0].nodeName === "HTML";
-                var rootElementDetected = isMatchingElement(element, $rootElement);
-                var parentAnimationDetected = false;
-                var animateChildren;
-                var parentHost = element.data(NG_ANIMATE_PIN_DATA);
-                if (parentHost) {
-                    parentElement = parentHost;
-                }
-                while (parentElement && parentElement.length) {
-                    if (!rootElementDetected) {
-                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
-                    }
-                    var parentNode = parentElement[0];
-                    if (parentNode.nodeType !== ELEMENT_NODE) {
-                        break;
-                    }
-                    var details = activeAnimationsLookup.get(parentNode) || {};
-                    if (!parentAnimationDetected) {
-                        parentAnimationDetected = details.structural || disabledElementsLookup.get(parentNode);
-                    }
-                    if (isUndefined(animateChildren) || animateChildren === true) {
-                        var value = parentElement.data(NG_ANIMATE_CHILDREN_DATA);
-                        if (isDefined(value)) {
-                            animateChildren = value;
-                        }
-                    }
-                    if (parentAnimationDetected && animateChildren === false) break;
-                    if (!rootElementDetected) {
-                        rootElementDetected = isMatchingElement(parentElement, $rootElement);
-                        if (!rootElementDetected) {
-                            parentHost = parentElement.data(NG_ANIMATE_PIN_DATA);
-                            if (parentHost) {
-                                parentElement = parentHost;
-                            }
-                        }
-                    }
-                    if (!bodyElementDetected) {
-                        bodyElementDetected = isMatchingElement(parentElement, bodyElement);
-                    }
-                    parentElement = parentElement.parent();
-                }
-                var allowAnimation = !parentAnimationDetected || animateChildren;
-                return allowAnimation && rootElementDetected && bodyElementDetected;
-            }
-            function markElementAnimationState(element, state, details) {
-                details = details || {};
-                details.state = state;
-                var node = getDomNode(element);
-                node.setAttribute(NG_ANIMATE_ATTR_NAME, state);
-                var oldValue = activeAnimationsLookup.get(node);
-                var newValue = oldValue ? extend(oldValue, details) : details;
-                activeAnimationsLookup.put(node, newValue);
-            }
-        } ];
-    } ];
-    var $$AnimateAsyncRunFactory = [ "$$rAF", function($$rAF) {
-        var waitQueue = [];
-        function waitForTick(fn) {
-            waitQueue.push(fn);
-            if (waitQueue.length > 1) return;
-            $$rAF(function() {
-                for (var i = 0; i < waitQueue.length; i++) {
-                    waitQueue[i]();
-                }
-                waitQueue = [];
-            });
-        }
-        return function() {
-            var passed = false;
-            waitForTick(function() {
-                passed = true;
-            });
-            return function(callback) {
-                passed ? callback() : waitForTick(callback);
-            };
-        };
-    } ];
-    var $$AnimateRunnerFactory = [ "$q", "$sniffer", "$$animateAsyncRun", function($q, $sniffer, $$animateAsyncRun) {
-        var INITIAL_STATE = 0;
-        var DONE_PENDING_STATE = 1;
-        var DONE_COMPLETE_STATE = 2;
-        AnimateRunner.chain = function(chain, callback) {
-            var index = 0;
-            next();
-            function next() {
-                if (index === chain.length) {
-                    callback(true);
-                    return;
-                }
-                chain[index](function(response) {
-                    if (response === false) {
-                        callback(false);
-                        return;
-                    }
-                    index++;
-                    next();
-                });
-            }
-        };
-        AnimateRunner.all = function(runners, callback) {
-            var count = 0;
-            var status = true;
-            forEach(runners, function(runner) {
-                runner.done(onProgress);
-            });
-            function onProgress(response) {
-                status = status && response;
-                if (++count === runners.length) {
-                    callback(status);
-                }
-            }
-        };
-        function AnimateRunner(host) {
-            this.setHost(host);
-            this._doneCallbacks = [];
-            this._runInAnimationFrame = $$animateAsyncRun();
-            this._state = 0;
-        }
-        AnimateRunner.prototype = {
-            setHost: function(host) {
-                this.host = host || {};
-            },
-            done: function(fn) {
-                if (this._state === DONE_COMPLETE_STATE) {
-                    fn();
-                } else {
-                    this._doneCallbacks.push(fn);
-                }
-            },
-            progress: noop,
-            getPromise: function() {
-                if (!this.promise) {
-                    var self = this;
-                    this.promise = $q(function(resolve, reject) {
-                        self.done(function(status) {
-                            status === false ? reject() : resolve();
+                        indices[a.id].push({
+                            tier: tier.id,
+                            annotation: a
                         });
-                    });
-                }
-                return this.promise;
-            },
-            then: function(resolveHandler, rejectHandler) {
-                return this.getPromise().then(resolveHandler, rejectHandler);
-            },
-            "catch": function(handler) {
-                return this.getPromise()["catch"](handler);
-            },
-            "finally": function(handler) {
-                return this.getPromise()["finally"](handler);
-            },
-            pause: function() {
-                if (this.host.pause) {
-                    this.host.pause();
-                }
-            },
-            resume: function() {
-                if (this.host.resume) {
-                    this.host.resume();
-                }
-            },
-            end: function() {
-                if (this.host.end) {
-                    this.host.end();
-                }
-                this._resolve(true);
-            },
-            cancel: function() {
-                if (this.host.cancel) {
-                    this.host.cancel();
-                }
-                this._resolve(false);
-            },
-            complete: function(response) {
-                var self = this;
-                if (self._state === INITIAL_STATE) {
-                    self._state = DONE_PENDING_STATE;
-                    self._runInAnimationFrame(function() {
-                        self._resolve(response);
-                    });
-                }
-            },
-            _resolve: function(response) {
-                if (this._state !== DONE_COMPLETE_STATE) {
-                    forEach(this._doneCallbacks, function(fn) {
-                        fn(response);
-                    });
-                    this._doneCallbacks.length = 0;
-                    this._state = DONE_COMPLETE_STATE;
-                }
-            }
+                    }
+                }, this);
+            }, this);
+            return indices;
         };
-        return AnimateRunner;
-    } ];
-    var $$AnimationProvider = [ "$animateProvider", function($animateProvider) {
-        var NG_ANIMATE_REF_ATTR = "ng-animate-ref";
-        var drivers = this.drivers = [];
-        var RUNNER_STORAGE_KEY = "$$animationRunner";
-        function setRunner(element, runner) {
-            element.data(RUNNER_STORAGE_KEY, runner);
-        }
-        function removeRunner(element) {
-            element.removeData(RUNNER_STORAGE_KEY);
-        }
-        function getRunner(element) {
-            return element.data(RUNNER_STORAGE_KEY);
-        }
-        this.$get = [ "$$jqLite", "$rootScope", "$injector", "$$AnimateRunner", "$$HashMap", "$$rAFScheduler", function($$jqLite, $rootScope, $injector, $$AnimateRunner, $$HashMap, $$rAFScheduler) {
-            var animationQueue = [];
-            var applyAnimationClasses = applyAnimationClassesFactory($$jqLite);
-            function sortAnimations(animations) {
-                var tree = {
-                    children: []
-                };
-                var i, lookup = new $$HashMap();
-                for (i = 0; i < animations.length; i++) {
-                    var animation = animations[i];
-                    lookup.put(animation.domNode, animations[i] = {
-                        domNode: animation.domNode,
-                        fn: animation.fn,
-                        children: []
-                    });
-                }
-                for (i = 0; i < animations.length; i++) {
-                    processNode(animations[i]);
-                }
-                return flatten(tree);
-                function processNode(entry) {
-                    if (entry.processed) return entry;
-                    entry.processed = true;
-                    var elementNode = entry.domNode;
-                    var parentNode = elementNode.parentNode;
-                    lookup.put(elementNode, entry);
-                    var parentEntry;
-                    while (parentNode) {
-                        parentEntry = lookup.get(parentNode);
-                        if (parentEntry) {
-                            if (!parentEntry.processed) {
-                                parentEntry = processNode(parentEntry);
-                            }
-                            break;
-                        }
-                        parentNode = parentNode.parentNode;
-                    }
-                    (parentEntry || tree).children.push(entry);
-                    return entry;
-                }
-                function flatten(tree) {
-                    var result = [];
-                    var queue = [];
-                    var i;
-                    for (i = 0; i < tree.children.length; i++) {
-                        queue.push(tree.children[i]);
-                    }
-                    var remainingLevelEntries = queue.length;
-                    var nextLevelEntries = 0;
-                    var row = [];
-                    for (i = 0; i < queue.length; i++) {
-                        var entry = queue[i];
-                        if (remainingLevelEntries <= 0) {
-                            remainingLevelEntries = nextLevelEntries;
-                            nextLevelEntries = 0;
-                            result.push(row);
-                            row = [];
-                        }
-                        row.push(entry.fn);
-                        entry.children.forEach(function(childEntry) {
-                            nextLevelEntries++;
-                            queue.push(childEntry);
-                        });
-                        remainingLevelEntries--;
-                    }
-                    if (row.length) {
-                        result.push(row);
-                    }
-                    return result;
-                }
-            }
-            return function(element, event, options) {
-                options = prepareAnimationOptions(options);
-                var isStructural = [ "enter", "move", "leave" ].indexOf(event) >= 0;
-                var runner = new $$AnimateRunner({
-                    end: function() {
-                        close();
-                    },
-                    cancel: function() {
-                        close(true);
-                    }
-                });
-                if (!drivers.length) {
-                    close();
-                    return runner;
-                }
-                setRunner(element, runner);
-                var classes = mergeClasses(element.attr("class"), mergeClasses(options.addClass, options.removeClass));
-                var tempClasses = options.tempClasses;
-                if (tempClasses) {
-                    classes += " " + tempClasses;
-                    options.tempClasses = null;
-                }
-                animationQueue.push({
-                    element: element,
-                    classes: classes,
-                    event: event,
-                    structural: isStructural,
-                    options: options,
-                    beforeStart: beforeStart,
-                    close: close
-                });
-                element.on("$destroy", handleDestroyedElement);
-                if (animationQueue.length > 1) return runner;
-                $rootScope.$$postDigest(function() {
-                    var animations = [];
-                    forEach(animationQueue, function(entry) {
-                        if (getRunner(entry.element)) {
-                            animations.push(entry);
-                        } else {
-                            entry.close();
-                        }
-                    });
-                    animationQueue.length = 0;
-                    var groupedAnimations = groupAnimations(animations);
-                    var toBeSortedAnimations = [];
-                    forEach(groupedAnimations, function(animationEntry) {
-                        toBeSortedAnimations.push({
-                            domNode: getDomNode(animationEntry.from ? animationEntry.from.element : animationEntry.element),
-                            fn: function triggerAnimationStart() {
-                                animationEntry.beforeStart();
-                                var startAnimationFn, closeFn = animationEntry.close;
-                                var targetElement = animationEntry.anchors ? animationEntry.from.element || animationEntry.to.element : animationEntry.element;
-                                if (getRunner(targetElement)) {
-                                    var operation = invokeFirstDriver(animationEntry);
-                                    if (operation) {
-                                        startAnimationFn = operation.start;
-                                    }
-                                }
-                                if (!startAnimationFn) {
-                                    closeFn();
-                                } else {
-                                    var animationRunner = startAnimationFn();
-                                    animationRunner.done(function(status) {
-                                        closeFn(!status);
-                                    });
-                                    updateAnimationRunners(animationEntry, animationRunner);
-                                }
-                            }
-                        });
-                    });
-                    $$rAFScheduler(sortAnimations(toBeSortedAnimations));
-                });
-                return runner;
-                function getAnchorNodes(node) {
-                    var SELECTOR = "[" + NG_ANIMATE_REF_ATTR + "]";
-                    var items = node.hasAttribute(NG_ANIMATE_REF_ATTR) ? [ node ] : node.querySelectorAll(SELECTOR);
-                    var anchors = [];
-                    forEach(items, function(node) {
-                        var attr = node.getAttribute(NG_ANIMATE_REF_ATTR);
-                        if (attr && attr.length) {
-                            anchors.push(node);
-                        }
-                    });
-                    return anchors;
-                }
-                function groupAnimations(animations) {
-                    var preparedAnimations = [];
-                    var refLookup = {};
-                    forEach(animations, function(animation, index) {
-                        var element = animation.element;
-                        var node = getDomNode(element);
-                        var event = animation.event;
-                        var enterOrMove = [ "enter", "move" ].indexOf(event) >= 0;
-                        var anchorNodes = animation.structural ? getAnchorNodes(node) : [];
-                        if (anchorNodes.length) {
-                            var direction = enterOrMove ? "to" : "from";
-                            forEach(anchorNodes, function(anchor) {
-                                var key = anchor.getAttribute(NG_ANIMATE_REF_ATTR);
-                                refLookup[key] = refLookup[key] || {};
-                                refLookup[key][direction] = {
-                                    animationID: index,
-                                    element: jqLite(anchor)
-                                };
-                            });
-                        } else {
-                            preparedAnimations.push(animation);
-                        }
-                    });
-                    var usedIndicesLookup = {};
-                    var anchorGroups = {};
-                    forEach(refLookup, function(operations, key) {
-                        var from = operations.from;
-                        var to = operations.to;
-                        if (!from || !to) {
-                            var index = from ? from.animationID : to.animationID;
-                            var indexKey = index.toString();
-                            if (!usedIndicesLookup[indexKey]) {
-                                usedIndicesLookup[indexKey] = true;
-                                preparedAnimations.push(animations[index]);
-                            }
-                            return;
-                        }
-                        var fromAnimation = animations[from.animationID];
-                        var toAnimation = animations[to.animationID];
-                        var lookupKey = from.animationID.toString();
-                        if (!anchorGroups[lookupKey]) {
-                            var group = anchorGroups[lookupKey] = {
-                                structural: true,
-                                beforeStart: function() {
-                                    fromAnimation.beforeStart();
-                                    toAnimation.beforeStart();
-                                },
-                                close: function() {
-                                    fromAnimation.close();
-                                    toAnimation.close();
-                                },
-                                classes: cssClassesIntersection(fromAnimation.classes, toAnimation.classes),
-                                from: fromAnimation,
-                                to: toAnimation,
-                                anchors: []
-                            };
-                            if (group.classes.length) {
-                                preparedAnimations.push(group);
-                            } else {
-                                preparedAnimations.push(fromAnimation);
-                                preparedAnimations.push(toAnimation);
-                            }
-                        }
-                        anchorGroups[lookupKey].anchors.push({
-                            out: from.element,
-                            "in": to.element
-                        });
-                    });
-                    return preparedAnimations;
-                }
-                function cssClassesIntersection(a, b) {
-                    a = a.split(" ");
-                    b = b.split(" ");
-                    var matches = [];
-                    for (var i = 0; i < a.length; i++) {
-                        var aa = a[i];
-                        if (aa.substring(0, 3) === "ng-") continue;
-                        for (var j = 0; j < b.length; j++) {
-                            if (aa === b[j]) {
-                                matches.push(aa);
-                                break;
-                            }
-                        }
-                    }
-                    return matches.join(" ");
-                }
-                function invokeFirstDriver(animationDetails) {
-                    for (var i = drivers.length - 1; i >= 0; i--) {
-                        var driverName = drivers[i];
-                        if (!$injector.has(driverName)) continue;
-                        var factory = $injector.get(driverName);
-                        var driver = factory(animationDetails);
-                        if (driver) {
-                            return driver;
-                        }
-                    }
-                }
-                function beforeStart() {
-                    element.addClass(NG_ANIMATE_CLASSNAME);
-                    if (tempClasses) {
-                        $$jqLite.addClass(element, tempClasses);
-                    }
-                }
-                function updateAnimationRunners(animation, newRunner) {
-                    if (animation.from && animation.to) {
-                        update(animation.from.element);
-                        update(animation.to.element);
-                    } else {
-                        update(animation.element);
-                    }
-                    function update(element) {
-                        getRunner(element).setHost(newRunner);
-                    }
-                }
-                function handleDestroyedElement() {
-                    var runner = getRunner(element);
-                    if (runner && (event !== "leave" || !options.$$domOperationFired)) {
-                        runner.end();
-                    }
-                }
-                function close(rejected) {
-                    element.off("$destroy", handleDestroyedElement);
-                    removeRunner(element);
-                    applyAnimationClasses(element, options);
-                    applyAnimationStyles(element, options);
-                    options.domOperation();
-                    if (tempClasses) {
-                        $$jqLite.removeClass(element, tempClasses);
-                    }
-                    element.removeClass(NG_ANIMATE_CLASSNAME);
-                    runner.complete(!rejected);
-                }
-            };
-        } ];
-    } ];
-    angular.module("ngAnimate", []).directive("ngAnimateChildren", $$AnimateChildrenDirective).factory("$$rAFScheduler", $$rAFSchedulerFactory).factory("$$AnimateRunner", $$AnimateRunnerFactory).factory("$$animateAsyncRun", $$AnimateAsyncRunFactory).provider("$$animateQueue", $$AnimateQueueProvider).provider("$$animation", $$AnimationProvider).provider("$animateCss", $AnimateCssProvider).provider("$$animateCssDriver", $$AnimateCssDriverProvider).provider("$$animateJs", $$AnimateJsProvider).provider("$$animateJsDriver", $$AnimateJsDriverProvider);
-})(window, window.angular);
+    };
+    return elan;
+}();
 
 function getCookie(name) {
     var nameEQ = name + "=";
@@ -33711,62 +32845,213 @@ function responseHandler($timeout, $modal) {
     };
 }
 
-angular.module("CorporaModule", [ "ui.bootstrap" ]).factory("dictionaryService", [ "$http", "$q", lingvodocAPI ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("CorporaController", [ "$scope", "$http", "$q", "$modal", "$location", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $location, $log, dictionaryService, responseHandler) {
-    $scope.dictionaries = [];
-    $scope.getActionLink = function(dictionary, perspective, action) {
-        return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/" + action;
+function WaveSurferController($scope) {
+    var activeUrl = null;
+    $scope.play = function(url) {
+        if (!$scope.wavesurfer) {
+            return;
+        }
+        activeUrl = url;
+        $scope.wavesurfer.once("ready", function() {
+            $scope.wavesurfer.play();
+            $scope.$apply();
+        });
+        $scope.wavesurfer.load(activeUrl);
     };
-    $scope.getViewCorporaLink = function(dictionary, perspective) {
-        return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/corpora";
+    $scope.playPause = function() {
+        $scope.wavesurfer.playPause();
     };
-    $scope.getViewAudioCorporaLink = function(dictionary, perspective) {
-        return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/audio_corpora";
+    $scope.isPlaying = function(url) {
+        return url == activeUrl;
     };
-    $scope.getCorporaPerspectives = function(dictionary, type) {
-        return _.filter(dictionary.perspectives, function(p) {
-            var meta = {};
-            if (_.isString(p.additional_metadata)) {
-                meta = JSON.parse(p.additional_metadata);
-            } else {
-                meta = p.additional_metadata;
+    $scope.isMediaFileAvailable = function() {
+        return activeUrl != null;
+    };
+    $scope.$on("wavesurferInit", function(e, wavesurfer, container) {
+        $scope.wavesurfer = wavesurfer;
+        $scope.wavesurfer.on("play", function() {
+            $scope.paused = false;
+        });
+        $scope.wavesurfer.on("pause", function() {
+            $scope.paused = true;
+        });
+        $scope.wavesurfer.on("finish", function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+    });
+    $scope.$on("modal.closing", function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
+}
+
+"use strict";
+
+angular.module("AudioCorporaViewModule", [ "ui.bootstrap" ]).service("dictionaryService", lingvodocAPI).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).directive("wavesurfer", function() {
+    return {
+        restrict: "E",
+        link: function($scope, $element, $attrs) {
+            $element.css("display", "block");
+            var options = angular.extend({
+                container: $element[0]
+            }, $attrs);
+            var wavesurfer = WaveSurfer.create(options);
+            if ($attrs.url) {
+                wavesurfer.load($attrs.url, $attrs.data || null);
             }
-            return _.has(meta, type);
-        });
+            $scope.$emit("wavesurferInit", wavesurfer, $element);
+        }
     };
-    $scope.getCorporaDictionaries = function(dictionaries, type) {
-        return _.filter(dictionaries, function(d) {
-            return !_.isEmpty($scope.getCorporaPerspectives(d, type));
-        });
-    };
-    dictionaryService.getDictionaries({}).then(function(dictionaries) {
-        dictionaryService.getAllPerspectives().then(function(perspectives) {
-            var corporaPerspectives = _.filter(perspectives, function(perspective) {
-                if (_.has(perspective, "additional_metadata")) {
-                    var meta = {};
-                    if (typeof perspective.additional_metadata == "string") {
-                        meta = JSON.parse(perspective.additional_metadata);
-                    } else {
-                        meta = perspective.additional_metadata;
-                    }
-                    return _.has(meta, "corpora") || _.has(meta, "audio_corpora");
-                }
-                return false;
-            });
-            var reqs = _.map(corporaPerspectives, function(p) {
-                return dictionaryService.getPerspectiveDictionaryFieldsNew(p);
-            });
-            $q.all(reqs).then(function(allFields) {
-                _.forEach(corporaPerspectives, function(p, i) {
-                    p.fields = allFields[i];
-                });
-                _.forEach(corporaPerspectives, function(corporaPerspective) {
-                    _.forEach(dictionaries, function(d) {
-                        if (corporaPerspective.parent_client_id === d.client_id && corporaPerspective.parent_object_id === d.object_id) {
-                            d.perspectives.push(corporaPerspective);
-                            $scope.dictionaries.push(d);
-                        }
+}).controller("AudioCorporaViewController", [ "$scope", "$http", "$q", "$modal", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
+    var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
+    var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
+    var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
+    var perspectiveId = $("#perspectiveId").data("lingvodoc");
+    WaveSurferController.call(this, $scope);
+    var activeUrl = null;
+    var createRegions = function(annotaion) {
+        if (annotaion instanceof elan.Document) {
+            annotaion.tiers.forEach(function(tier) {
+                tier.annotations.forEach(function(a) {
+                    var offset1 = annotaion.timeSlotRefToSeconds(a.timeslotRef1);
+                    var offset2 = annotaion.timeSlotRefToSeconds(a.timeslotRef2);
+                    var r = $scope.wavesurfer.addRegion({
+                        id: a.id,
+                        start: offset1,
+                        end: offset2,
+                        color: "rgba(0, 255, 0, 0.1)"
                     });
                 });
+            });
+        }
+    };
+    $scope.annotationTable = {};
+    $scope.paused = true;
+    $scope.annotation = null;
+    $scope.getAlignableTiers = function(doc) {
+        if (!doc) {
+            return [];
+        }
+        return _.filter(doc.tiers, function(t) {
+            var a = _.find(t.annotations, function(a) {
+                return a instanceof elan.Annotation;
+            });
+            return !!a;
+        });
+    };
+    $scope.getRefTiers = function(doc, tier) {
+        if (!doc || !tier) {
+            return [];
+        }
+        return _.filter(doc.tiers, function(t) {
+            var b = _.find(t.annotations, function(a) {
+                var hasReferencedAnnotations = false;
+                _.forEach(tier.annotations, function(ra) {
+                    if (a.ref == ra.id) {
+                        hasReferencedAnnotations = true;
+                    }
+                });
+                return hasReferencedAnnotations;
+            });
+            return !!b;
+        });
+    };
+    $scope.getAnnotationTableEntries = function(tier) {
+        var r = _.filter($scope.annotationTable, function(annotations, key) {
+            return !!_.find(annotations, function(value) {
+                return tier.id == value.tier;
+            });
+        });
+        return _.sortBy(r, function(a) {
+            var alignAnnotation = _.find(a, function(ann) {
+                return ann.annotation instanceof elan.Annotation;
+            });
+            return $scope.annotation.timeSlotRefToSeconds(alignAnnotation.annotation.timeslotRef1);
+        });
+    };
+    $scope.getAnnotation = function(tableEntry, tier) {
+        var entry = _.find(tableEntry, function(e) {
+            return tier.id == e.tier;
+        });
+        if (entry) {
+            return entry.annotation;
+        }
+    };
+    $scope.playPause = function() {
+        if ($scope.wavesurfer) {
+            $scope.wavesurfer.playPause();
+        }
+    };
+    $scope.playAnnotation = function(a) {
+        if ($scope.wavesurfer && $scope.annotation) {
+            var offset1 = $scope.annotation.timeSlotRefToSeconds(a.timeslotRef1);
+            var offset2 = $scope.annotation.timeSlotRefToSeconds(a.timeslotRef2);
+            $scope.wavesurfer.play(offset1, offset2);
+        }
+    };
+    $scope.selectRegion = function() {};
+    $scope.$on("wavesurferInit", function(e, wavesurfer) {
+        $scope.wavesurfer = wavesurfer;
+        if ($scope.wavesurfer.enableDragSelection) {
+            $scope.wavesurfer.enableDragSelection({
+                color: "rgba(0, 255, 0, 0.1)"
+            });
+        }
+        $scope.wavesurfer.on("play", function() {
+            $scope.paused = false;
+        });
+        $scope.wavesurfer.on("pause", function() {
+            $scope.paused = true;
+        });
+        $scope.wavesurfer.on("finish", function() {
+            $scope.paused = true;
+            $scope.wavesurfer.seekTo(0);
+            $scope.$apply();
+        });
+        $scope.wavesurfer.on("region-click", function(region, event) {});
+        $scope.wavesurfer.on("region-dblclick", function(region, event) {
+            region.remove(region);
+        });
+        $scope.wavesurfer.once("ready", function() {
+            dictionaryService.getUserBlob($scope.markup.client_id, $scope.markup.object_id).then(function(blob) {
+                dictionaryService.convertTxtMarkup(blob).then(function(data) {
+                    try {
+                        var xml = new DOMParser().parseFromString(data.content, "application/xml");
+                        var annotation = new elan.Document();
+                        annotation.importXML(xml);
+                        $scope.annotation = annotation;
+                        $scope.annotationTable = annotation.render();
+                        createRegions(annotation);
+                    } catch (e) {
+                        responseHandler.error("Failed to parse ELAN annotation: " + e);
+                    }
+                }, function(reason) {
+                    responseHandler.error(reason);
+                });
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+            $scope.$apply();
+        });
+    });
+    $scope.$on("modal.closing", function(e) {
+        $scope.wavesurfer.stop();
+        $scope.wavesurfer.destroy();
+    });
+    dictionaryService.getDictionary(dictionaryClientId, dictionaryObjectId).then(function(dictionary) {
+        dictionaryService.getPerspectiveById(perspectiveClientId, perspectiveId).then(function(perspective) {
+            dictionaryService.getPerspectiveMeta(dictionary, perspective).then(function(meta) {
+                if (_.has(meta, "audio_corpora")) {
+                    $scope.audio = meta.audio_corpora.audio;
+                    $scope.markup = meta.audio_corpora.markup;
+                    dictionaryService.getUserBlob($scope.audio.client_id, $scope.audio.object_id).then(function(blob) {
+                        $scope.wavesurfer.load(blob.url);
+                    }, function(reason) {
+                        responseHandler.error(reason);
+                    });
+                }
             }, function(reason) {
                 responseHandler.error(reason);
             });

@@ -32541,9 +32541,7 @@ lingvodoc.Blob = function(clientId, objectId, name, data_type) {
 };
 
 lingvodoc.Blob.fromJS = function(js) {
-    var blob = new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
-    blob.url = js.content;
-    return blob;
+    return new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
 };
 
 lingvodoc.Blob.prototype = new lingvodoc.Object();
@@ -32821,16 +32819,6 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("An error  occurred while trying to get dictionary properties");
-        });
-        return deferred.promise;
-    };
-    var getDictionary = function(client_id, object_id) {
-        var deferred = $q.defer();
-        var url = "/dictionary/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
-        $http.get(url).success(function(data, status, headers, config) {
-            deferred.resolve(lingvodoc.Dictionary.fromJS(data));
-        }).error(function(data, status, headers, config) {
-            deferred.reject("An error  occurred while trying to get dictionary");
         });
         return deferred.promise;
     };
@@ -33434,16 +33422,6 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var getUserBlob = function(client_id, object_id) {
-        var deferred = $q.defer();
-        var url = "/blobs/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
-        $http.get(url).success(function(data, status, headers, config) {
-            deferred.resolve(lingvodoc.Blob.fromJS(data));
-        }).error(function(data, status, headers, config) {
-            deferred.reject("Failed to fetch user blob");
-        });
-        return deferred.promise;
-    };
     var getUserBlobs = function() {
         var deferred = $q.defer();
         $http.get("/blobs").success(function(data, status, headers, config) {
@@ -33573,20 +33551,6 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
-    var convertTxtMarkup = function(blob) {
-        var deferred = $q.defer();
-        var obj = {
-            out_type: "Elan",
-            client_id: blob.client_id,
-            object_id: blob.object_id
-        };
-        $http.post("/convert/blob", obj).success(function(data, status, headers, config) {
-            deferred.resolve(data);
-        }).error(function(data, status, headers, config) {
-            deferred.reject("Failed to convert text markup!");
-        });
-        return deferred.promise;
-    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -33602,7 +33566,6 @@ function lingvodocAPI($http, $q) {
         approveAll: approveAll,
         getDictionaryProperties: getDictionaryProperties,
         setDictionaryProperties: setDictionaryProperties,
-        getDictionary: getDictionary,
         removeDictionary: removeDictionary,
         getLanguages: getLanguages,
         setDictionaryStatus: setDictionaryStatus,
@@ -33639,7 +33602,6 @@ function lingvodocAPI($http, $q) {
         getPerspectiveRoles: getPerspectiveRoles,
         addPerspectiveRoles: addPerspectiveRoles,
         deletePerspectiveRoles: deletePerspectiveRoles,
-        getUserBlob: getUserBlob,
         getUserBlobs: getUserBlobs,
         checkDictionaryBlob: checkDictionaryBlob,
         convertDictionary: convertDictionary,
@@ -33647,8 +33609,7 @@ function lingvodocAPI($http, $q) {
         setPerspectiveMeta: setPerspectiveMeta,
         removePerspectiveMeta: removePerspectiveMeta,
         advancedSearch: advancedSearch,
-        convertMarkup: convertMarkup,
-        convertTxtMarkup: convertTxtMarkup
+        convertMarkup: convertMarkup
     };
 }
 
@@ -33711,33 +33672,121 @@ function responseHandler($timeout, $modal) {
     };
 }
 
-angular.module("CorporaModule", [ "ui.bootstrap" ]).factory("dictionaryService", [ "$http", "$q", lingvodocAPI ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("CorporaController", [ "$scope", "$http", "$q", "$modal", "$location", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $location, $log, dictionaryService, responseHandler) {
-    $scope.dictionaries = [];
-    $scope.getActionLink = function(dictionary, perspective, action) {
-        return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/" + action;
+var Corpora = function() {
+    var Value = function(lang, content) {
+        this.lang = lang;
+        this.content = content;
     };
-    $scope.getViewCorporaLink = function(dictionary, perspective) {
-        return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/corpora";
+    var TextTitle = function(lang, content) {
+        Value.call(this, lang, content);
     };
-    $scope.getViewAudioCorporaLink = function(dictionary, perspective) {
-        return "/dictionary/" + encodeURIComponent(dictionary.client_id) + "/" + encodeURIComponent(dictionary.object_id) + "/perspective/" + encodeURIComponent(perspective.client_id) + "/" + encodeURIComponent(perspective.object_id) + "/audio_corpora";
+    TextTitle.prototype = new Value();
+    TextTitle.prototype = new Value();
+    var TextComment = function(lang, content) {
+        Value.call(this, lang, content);
     };
-    $scope.getCorporaPerspectives = function(dictionary, type) {
-        return _.filter(dictionary.perspectives, function(p) {
-            var meta = {};
-            if (_.isString(p.additional_metadata)) {
-                meta = JSON.parse(p.additional_metadata);
-            } else {
-                meta = p.additional_metadata;
+    TextComment.prototype = new Value();
+    var Item = function(lang, content, type) {
+        this.type = type;
+        Value.call(this, lang, content);
+    };
+    Item.prototype = new Value();
+    var Translation = function(lang, content) {
+        Value.call(this, lang, content);
+    };
+    Translation.prototype = new Value();
+    var DictItem = function(url) {
+        this.type = "lingvodoc_metaword";
+        this.url = url;
+    };
+    var Word = function(items) {
+        this.items = items;
+        this.getDictionaryEntry = function() {
+            for (var i = 0; i < this.items.length; i++) {
+                var item = this.items[i];
+                if (item.type == "lingvodoc_metaword") {
+                    return item;
+                }
             }
-            return _.has(meta, type);
-        });
+            return null;
+        }.bind(this);
+        this.getTextEntry = function() {
+            for (var i = 0; i < this.items.length; i++) {
+                var item = this.items[i];
+                if (item.type == "txt") {
+                    return item;
+                }
+            }
+            return null;
+        }.bind(this);
     };
-    $scope.getCorporaDictionaries = function(dictionaries, type) {
-        return _.filter(dictionaries, function(d) {
-            return !_.isEmpty($scope.getCorporaPerspectives(d, type));
-        });
+    Word.fromJS = function(word) {
+        var items = [];
+        for (var i = 0; i < word.items.length; i++) {
+            var item = word.items[i];
+            if (item.type === "lingvodoc_metaword") {
+                items.push(new DictItem(item.url));
+            } else {
+                items.push(new Item(item.lang, item.content, item.type));
+            }
+        }
+        return new Word(items);
     };
+    var Phrase = function(words, translations) {
+        this.words = words;
+        this.translations = translations;
+    };
+    Phrase.fromJS = function(phrase) {
+        var i = 0, words = [], translations = [];
+        for (i = 0; i < phrase.words.length; i++) {
+            var word = phrase.words[i];
+            words.push(Word.fromJS(word));
+        }
+        for (i = 0; i < phrase.translations.length; i++) {
+            var translation = phrase.translations[i];
+            translations.push(new Translation(translation.lang, translation.content));
+        }
+        return new Phrase(words, translations);
+    };
+    var Paragraph = function(phrases) {
+        this.phrases = phrases;
+    };
+    Paragraph.fromJS = function(paragraph) {
+        var phrases = [];
+        for (var i = 0; i < paragraph.phrases.length; i++) {
+            var phrase = paragraph.phrases[i];
+            phrases.push(Phrase.fromJS(phrase));
+        }
+        return new Paragraph(phrases);
+    };
+    var Text = function(text_id, client_id, text_titles, paragraphs) {
+        this.text_id = text_id;
+        this.client_id = client_id;
+        this.text_titles = text_titles;
+        this.paragraphs = paragraphs;
+    };
+    Text.fromJS = function(text) {
+        var i;
+        var text_titles = [], paragraphs = [];
+        for (i = 0; i < text.text_titles.length; i++) {
+            var title = text.text_titles[i];
+            text_titles.push(new TextTitle(title.lang, title.content));
+        }
+        for (i = 0; i < text.paragraphs.length; i++) {
+            var paragraph = text.paragraphs[i];
+            paragraphs.push(Paragraph.fromJS(paragraph));
+        }
+        return new Text(text.text_id, text.client_id, text_titles, paragraphs);
+    };
+    return {};
+};
+
+angular.module("CorporaViewModule", [ "ui.bootstrap" ]).factory("dictionaryService", [ "$http", "$q", lingvodocAPI ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("CorporaViewController", [ "$scope", "$http", "$q", "$modal", "$location", "$log", "dictionaryService", "responseHandler", function($scope, $http, $q, $modal, $location, $log, dictionaryService, responseHandler) {
+    var dictionaryClientId = $("#dictionaryClientId").data("lingvodoc");
+    var dictionaryObjectId = $("#dictionaryObjectId").data("lingvodoc");
+    var perspectiveClientId = $("#perspectiveClientId").data("lingvodoc");
+    var perspectiveId = $("#perspectiveId").data("lingvodoc");
+    $scope.dictionaries = [];
     dictionaryService.getDictionaries({}).then(function(dictionaries) {
         dictionaryService.getAllPerspectives().then(function(perspectives) {
             var corporaPerspectives = _.filter(perspectives, function(perspective) {
@@ -33748,7 +33797,7 @@ angular.module("CorporaModule", [ "ui.bootstrap" ]).factory("dictionaryService",
                     } else {
                         meta = perspective.additional_metadata;
                     }
-                    return _.has(meta, "corpora") || _.has(meta, "audio_corpora");
+                    return _.has(meta, "corpora");
                 }
                 return false;
             });
@@ -33767,6 +33816,22 @@ angular.module("CorporaModule", [ "ui.bootstrap" ]).factory("dictionaryService",
                         }
                     });
                 });
+                var corporaDictionary = _.find($scope.dictionaries, function(d) {
+                    return d.client_id == dictionaryClientId && d.object_id == dictionaryObjectId;
+                });
+                var corporaPerspective = _.find(corporaDictionary.perspectives, function(p) {
+                    return p.client_id == perspectiveClientId && p.object_id == perspectiveId;
+                });
+                if (_.isObject(corporaPerspective) && _.isObject(corporaDictionary)) {
+                    $scope.corporaDictionary = corporaDictionary;
+                    $scope.corporaPerspective = corporaPerspective;
+                    var meta = corporaPerspective.additional_metadata;
+                    if (_.isString(meta)) {
+                        meta = JSON.parse(meta);
+                    }
+                    $scope.corpora = meta.corpora;
+                    $log.info($scope.corpora);
+                }
             }, function(reason) {
                 responseHandler.error(reason);
             });

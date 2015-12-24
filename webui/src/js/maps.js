@@ -610,6 +610,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
 
         var activeUrl = null;
 
+
         var createRegions = function(annotaion) {
             if (annotaion instanceof elan.Document) {
                 annotaion.tiers.forEach(function(tier) {
@@ -630,8 +631,67 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
             }
         };
 
+        $scope.annotationTable = {};
         $scope.paused = true;
         $scope.annotation = null;
+
+        $scope.getAlignableTiers = function(doc) {
+            if (!doc) {
+                return [];
+            }
+
+            return _.filter(doc.tiers, function(t) {
+                var a = _.find(t.annotations, function(a) {
+                    return a instanceof elan.Annotation;
+                });
+                return !!a;
+            });
+        };
+
+        $scope.getRefTiers = function(doc, tier) {
+
+            if (!doc || !tier) {
+                return [];
+            }
+
+            return _.filter(doc.tiers, function(t) {
+                var b = _.find(t.annotations, function(a) {
+                    var hasReferencedAnnotations = false;
+                    _.forEach(tier.annotations, function(ra) {
+                        if (a.ref == ra.id) {
+                            hasReferencedAnnotations = true;
+                        }
+                    });
+                    return hasReferencedAnnotations;
+                });
+                return !!b;
+            });
+        };
+
+        $scope.getAnnotationTableEntries = function(tier) {
+            var r = _.filter($scope.annotationTable, function(annotations, key) {
+                return !!_.find(annotations, function(value) {
+                    return tier.id == value.tier;
+                });
+            });
+
+            return _.sortBy(r, function(a) {
+                var alignAnnotation = _.find(a, function(ann) {
+                    return ann.annotation instanceof elan.Annotation;
+                });
+                return $scope.annotation.timeSlotRefToSeconds(alignAnnotation.annotation.timeslotRef1);
+            });
+        };
+
+        $scope.getAnnotation = function(tableEntry, tier) {
+            var entry = _.find(tableEntry, function(e) {
+                return tier.id == e.tier;
+            });
+            if (entry) {
+                return entry.annotation;
+            }
+
+        };
 
         $scope.playPause = function() {
             if ($scope.wavesurfer) {
@@ -655,7 +715,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         $scope.$on('wavesurferInit', function(e, wavesurfer) {
 
             $scope.wavesurfer = wavesurfer;
-
 
             if ($scope.wavesurfer.enableDragSelection) {
                 $scope.wavesurfer.enableDragSelection({
@@ -688,6 +747,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
 
 
             $scope.wavesurfer.once('ready', function() {
+
                 // load annotation once file is loaded
                 dictionaryService.convertMarkup(params.markup).then(function(data) {
                     try {
@@ -695,6 +755,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                         var annotation = new elan.Document();
                         annotation.importXML(xml);
                         $scope.annotation = annotation;
+                        $scope.annotationTable = annotation.render();
                         createRegions(annotation);
                     } catch (e) {
                         responseHandler.error('Failed to parse ELAN annotation: ' + e);
@@ -702,6 +763,7 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
                 }, function(reason) {
                     responseHandler.error(reason);
                 });
+
                 $scope.$apply();
             });
 
@@ -713,7 +775,6 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
             $scope.wavesurfer.stop();
             $scope.wavesurfer.destroy();
         });
-
     }])
 
     .controller('BlobController', ['$scope', '$http', '$log', '$modal', '$modalInstance', 'NgMap', 'dictionaryService', 'responseHandler', 'params', function($scope, $http, $log, $modal, $modalInstance, NgMap, dictionaryService, responseHandler, params) {

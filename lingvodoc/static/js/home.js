@@ -30400,7 +30400,9 @@ lingvodoc.Blob = function(clientId, objectId, name, data_type) {
 };
 
 lingvodoc.Blob.fromJS = function(js) {
-    return new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
+    var blob = new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
+    blob.url = js.content;
+    return blob;
 };
 
 lingvodoc.Blob.prototype = new lingvodoc.Object();
@@ -30678,6 +30680,16 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var getDictionary = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.Dictionary.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary");
         });
         return deferred.promise;
     };
@@ -31281,6 +31293,16 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getUserBlob = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "/blobs/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.Blob.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch user blob");
+        });
+        return deferred.promise;
+    };
     var getUserBlobs = function() {
         var deferred = $q.defer();
         $http.get("/blobs").success(function(data, status, headers, config) {
@@ -31410,6 +31432,20 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var convertTxtMarkup = function(blob) {
+        var deferred = $q.defer();
+        var obj = {
+            out_type: "Elan",
+            client_id: blob.client_id,
+            object_id: blob.object_id
+        };
+        $http.post("/convert/blob", obj).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert text markup!");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -31425,6 +31461,7 @@ function lingvodocAPI($http, $q) {
         approveAll: approveAll,
         getDictionaryProperties: getDictionaryProperties,
         setDictionaryProperties: setDictionaryProperties,
+        getDictionary: getDictionary,
         removeDictionary: removeDictionary,
         getLanguages: getLanguages,
         setDictionaryStatus: setDictionaryStatus,
@@ -31461,6 +31498,7 @@ function lingvodocAPI($http, $q) {
         getPerspectiveRoles: getPerspectiveRoles,
         addPerspectiveRoles: addPerspectiveRoles,
         deletePerspectiveRoles: deletePerspectiveRoles,
+        getUserBlob: getUserBlob,
         getUserBlobs: getUserBlobs,
         checkDictionaryBlob: checkDictionaryBlob,
         convertDictionary: convertDictionary,
@@ -31468,7 +31506,8 @@ function lingvodocAPI($http, $q) {
         setPerspectiveMeta: setPerspectiveMeta,
         removePerspectiveMeta: removePerspectiveMeta,
         advancedSearch: advancedSearch,
-        convertMarkup: convertMarkup
+        convertMarkup: convertMarkup,
+        convertTxtMarkup: convertTxtMarkup
     };
 }
 

@@ -31284,6 +31284,11 @@ var elan = function() {
         this.timeslotRef1 = timeslotRef1;
         this.timeslotRef2 = timeslotRef2;
     };
+    elan.RefAnnotation = function(id, value, ref) {
+        this.id = id;
+        this.value = value;
+        this.ref = ref;
+    };
     elan.Tier = function(id, linguisticTypeRef, defaultLocale, annotations) {
         this.id = id;
         this.defaultLocale = defaultLocale;
@@ -31307,6 +31312,15 @@ var elan = function() {
             }
             return false;
         };
+        var getReferencedAnnotation = function(id) {
+            for (var i = 0; i < this.tiers.length; i++) {
+                var tier = this.tiers[i];
+                for (var j = 0; j < tier.annotations.length; j++) {
+                    var annotation = tier.annotations[j];
+                    if (annotation.id == id) return annotation;
+                }
+            }
+        }.bind(this);
         this.getTimeSlot = function(slotId) {
             for (var i = 0; i < this.timeslots.length; i++) {
                 var timeslot = this.timeslots[i];
@@ -31372,7 +31386,7 @@ var elan = function() {
         }.bind(this);
         this.importXML = function(xml) {
             var header = xml.querySelector("HEADER");
-            var inMilliseconds = header.getAttribute("TIME_UNITS") == "milliseconds";
+            var inSeconds = header.getAttribute("TIME_UNITS") == "seconds";
             var media = header.querySelector("MEDIA_DESCRIPTOR");
             if (media) {
                 this.mediaUrl = media.getAttribute("MEDIA_URL");
@@ -31390,7 +31404,7 @@ var elan = function() {
             _forEach.call(timeSlots, function(slot) {
                 var slotId = slot.getAttribute("TIME_SLOT_ID");
                 var value = parseFloat(slot.getAttribute("TIME_VALUE"));
-                if (!inMilliseconds) {
+                if (inSeconds) {
                     value = Math.floor(value * 1e3);
                 }
                 var s = this.getTimeSlot(slotId);
@@ -31402,12 +31416,17 @@ var elan = function() {
                 var tierId = tier.getAttribute("TIER_ID");
                 var linguisticTypeRef = tier.getAttribute("LINGUISTIC_TYPE_REF");
                 var defaultLocale = tier.getAttribute("DEFAULT_LOCALE");
-                var annotations = _map.call(tier.querySelectorAll("ALIGNABLE_ANNOTATION"), function(node) {
+                var annotations = _map.call(tier.querySelectorAll("REF_ANNOTATION, ALIGNABLE_ANNOTATION"), function(node) {
                     var annotationId = node.getAttribute("ANNOTATION_ID");
                     var value = node.querySelector("ANNOTATION_VALUE").textContent.trim();
-                    var start = node.getAttribute("TIME_SLOT_REF1");
-                    var end = node.getAttribute("TIME_SLOT_REF2");
-                    return new elan.Annotation(annotationId, value, start, end);
+                    if (node.nodeName == "ALIGNABLE_ANNOTATION") {
+                        var start = node.getAttribute("TIME_SLOT_REF1");
+                        var end = node.getAttribute("TIME_SLOT_REF2");
+                        return new elan.Annotation(annotationId, value, start, end);
+                    } else {
+                        var ref = node.getAttribute("ANNOTATION_REF");
+                        return new elan.RefAnnotation(annotationId, value, ref);
+                    }
                 }, this);
                 return new elan.Tier(tierId, linguisticTypeRef, defaultLocale, annotations);
             }, this);
@@ -31491,6 +31510,35 @@ var elan = function() {
             }
             return null;
         }.bind(this);
+        this.render = function() {
+            var indices = {};
+            this.tiers.forEach(function(tier, index) {
+                tier.annotations.forEach(function(a) {
+                    if (a instanceof elan.RefAnnotation) {
+                        var referencedAnnotation = getReferencedAnnotation(a.ref);
+                        if (referencedAnnotation instanceof elan.Annotation) {
+                            if (!(referencedAnnotation.id in indices)) {
+                                indices[referencedAnnotation.id] = [];
+                            }
+                            indices[referencedAnnotation.id].push({
+                                tier: tier.id,
+                                annotation: a
+                            });
+                        }
+                    }
+                    if (a instanceof elan.Annotation) {
+                        if (!(a.id in indices)) {
+                            indices[a.id] = [];
+                        }
+                        indices[a.id].push({
+                            tier: tier.id,
+                            annotation: a
+                        });
+                    }
+                }, this);
+            }, this);
+            return indices;
+        };
     };
     return elan;
 }();
@@ -31694,7 +31742,9 @@ lingvodoc.Blob = function(clientId, objectId, name, data_type) {
 };
 
 lingvodoc.Blob.fromJS = function(js) {
-    return new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
+    var blob = new lingvodoc.Blob(js.client_id, js.object_id, js.name, js.data_type);
+    blob.url = js.content;
+    return blob;
 };
 
 lingvodoc.Blob.prototype = new lingvodoc.Object();
@@ -31972,6 +32022,16 @@ function lingvodocAPI($http, $q) {
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("An error  occurred while trying to get dictionary properties");
+        });
+        return deferred.promise;
+    };
+    var getDictionary = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "/dictionary/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.Dictionary.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("An error  occurred while trying to get dictionary");
         });
         return deferred.promise;
     };
@@ -32575,6 +32635,16 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getUserBlob = function(client_id, object_id) {
+        var deferred = $q.defer();
+        var url = "/blobs/" + encodeURIComponent(client_id) + "/" + encodeURIComponent(object_id);
+        $http.get(url).success(function(data, status, headers, config) {
+            deferred.resolve(lingvodoc.Blob.fromJS(data));
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to fetch user blob");
+        });
+        return deferred.promise;
+    };
     var getUserBlobs = function() {
         var deferred = $q.defer();
         $http.get("/blobs").success(function(data, status, headers, config) {
@@ -32704,6 +32774,20 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var convertTxtMarkup = function(blob) {
+        var deferred = $q.defer();
+        var obj = {
+            out_type: "Elan",
+            client_id: blob.client_id,
+            object_id: blob.object_id
+        };
+        $http.post("/convert/blob", obj).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to convert text markup!");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -32719,6 +32803,7 @@ function lingvodocAPI($http, $q) {
         approveAll: approveAll,
         getDictionaryProperties: getDictionaryProperties,
         setDictionaryProperties: setDictionaryProperties,
+        getDictionary: getDictionary,
         removeDictionary: removeDictionary,
         getLanguages: getLanguages,
         setDictionaryStatus: setDictionaryStatus,
@@ -32755,6 +32840,7 @@ function lingvodocAPI($http, $q) {
         getPerspectiveRoles: getPerspectiveRoles,
         addPerspectiveRoles: addPerspectiveRoles,
         deletePerspectiveRoles: deletePerspectiveRoles,
+        getUserBlob: getUserBlob,
         getUserBlobs: getUserBlobs,
         checkDictionaryBlob: checkDictionaryBlob,
         convertDictionary: convertDictionary,
@@ -32762,7 +32848,8 @@ function lingvodocAPI($http, $q) {
         setPerspectiveMeta: setPerspectiveMeta,
         removePerspectiveMeta: removePerspectiveMeta,
         advancedSearch: advancedSearch,
-        convertMarkup: convertMarkup
+        convertMarkup: convertMarkup,
+        convertTxtMarkup: convertTxtMarkup
     };
 }
 
@@ -33081,8 +33168,58 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
             });
         }
     };
+    $scope.annotationTable = {};
     $scope.paused = true;
     $scope.annotation = null;
+    $scope.getAlignableTiers = function(doc) {
+        if (!doc) {
+            return [];
+        }
+        return _.filter(doc.tiers, function(t) {
+            var a = _.find(t.annotations, function(a) {
+                return a instanceof elan.Annotation;
+            });
+            return !!a;
+        });
+    };
+    $scope.getRefTiers = function(doc, tier) {
+        if (!doc || !tier) {
+            return [];
+        }
+        return _.filter(doc.tiers, function(t) {
+            var b = _.find(t.annotations, function(a) {
+                var hasReferencedAnnotations = false;
+                _.forEach(tier.annotations, function(ra) {
+                    if (a.ref == ra.id) {
+                        hasReferencedAnnotations = true;
+                    }
+                });
+                return hasReferencedAnnotations;
+            });
+            return !!b;
+        });
+    };
+    $scope.getAnnotationTableEntries = function(tier) {
+        var r = _.filter($scope.annotationTable, function(annotations, key) {
+            return !!_.find(annotations, function(value) {
+                return tier.id == value.tier;
+            });
+        });
+        return _.sortBy(r, function(a) {
+            var alignAnnotation = _.find(a, function(ann) {
+                return ann.annotation instanceof elan.Annotation;
+            });
+            return $scope.annotation.timeSlotRefToSeconds(alignAnnotation.annotation.timeslotRef1);
+        });
+    };
+    $scope.getAnnotation = function(tableEntry, tier) {
+        var entry = _.find(tableEntry, function(e) {
+            return tier.id == e.tier;
+        });
+        if (entry) {
+            return entry.annotation;
+        }
+    };
     $scope.playPause = function() {
         if ($scope.wavesurfer) {
             $scope.wavesurfer.playPause();
@@ -33121,11 +33258,11 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
         $scope.wavesurfer.once("ready", function() {
             dictionaryService.convertMarkup(params.markup).then(function(data) {
                 try {
-                    console.log(data.content);
                     var xml = new DOMParser().parseFromString(data.content, "application/xml");
                     var annotation = new elan.Document();
                     annotation.importXML(xml);
                     $scope.annotation = annotation;
+                    $scope.annotationTable = annotation.render();
                     createRegions(annotation);
                 } catch (e) {
                     responseHandler.error("Failed to parse ELAN annotation: " + e);

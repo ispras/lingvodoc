@@ -5685,3 +5685,29 @@ def corpora_view_get(request):
                  'perspective_id': perspective_id}
 
     return render_to_response('templates/corpora_view.pt', variables, request=request)
+
+@view_config(route_name='audio_corpora_view', renderer='templates/audio_corpora.pt', request_method='GET')
+def audio_corpora_view_get(request):
+    client_id = authenticated_userid(request)
+    user = get_user_by_client_id(client_id)
+
+    dictionary_client_id = request.matchdict.get('dictionary_client_id')
+    dictionary_object_id = request.matchdict.get('dictionary_object_id')
+    perspective_client_id = request.matchdict.get('perspective_client_id')
+    perspective_id = request.matchdict.get('perspective_id')
+
+    if user is None:
+        response = Response()
+        return HTTPFound(location=request.route_url('login'), headers=response.headers)
+
+    variables = {'user': user, 'client_id': client_id, 'dictionary_client_id': dictionary_client_id,
+                 'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
+                 'perspective_id': perspective_id}
+
+    return render_to_response('templates/audio_corpora_view.pt', variables, request=request)
+
+
+
+
+
+

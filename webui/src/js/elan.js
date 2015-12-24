@@ -18,6 +18,13 @@ var elan = (function() {
         this.timeslotRef2 = timeslotRef2;
     };
 
+    elan.RefAnnotation = function(id, value, ref) {
+        this.id = id;
+        this.value = value;
+        this.ref = ref;
+    };
+
+
     elan.Tier = function(id, linguisticTypeRef, defaultLocale, annotations) {
         this.id = id;
         this.defaultLocale = defaultLocale;
@@ -46,6 +53,16 @@ var elan = (function() {
             return false;
         };
 
+        var getReferencedAnnotation = function(id) {
+            for (var i = 0; i < this.tiers.length; i++) {
+                var tier = this.tiers[i];
+                for (var j = 0; j < tier.annotations.length; j++) {
+                    var annotation = tier.annotations[j];
+                    if (annotation.id == id)
+                        return annotation;
+                }
+            }
+        }.bind(this);
 
         this.getTimeSlot = function(slotId) {
             for (var i = 0; i < this.timeslots.length; i++) {
@@ -126,7 +143,7 @@ var elan = (function() {
         this.importXML = function(xml) {
 
             var header = xml.querySelector('HEADER');
-            var inMilliseconds = header.getAttribute('TIME_UNITS') == 'milliseconds';
+            var inSeconds = header.getAttribute('TIME_UNITS') == 'seconds';
             var media = header.querySelector('MEDIA_DESCRIPTOR');
             if (media) {
                 this.mediaUrl = media.getAttribute('MEDIA_URL');
@@ -147,7 +164,7 @@ var elan = (function() {
                 var slotId = slot.getAttribute('TIME_SLOT_ID');
                 var value = parseFloat(slot.getAttribute('TIME_VALUE'));
                 // If in milliseconds, convert to seconds with rounding
-                if (!inMilliseconds) {
+                if (inSeconds) {
                     value = Math.floor(value * 1000);
                 }
 
@@ -162,13 +179,21 @@ var elan = (function() {
                 var linguisticTypeRef = tier.getAttribute('LINGUISTIC_TYPE_REF');
                 var defaultLocale = tier.getAttribute('DEFAULT_LOCALE');
                 var annotations = _map.call(
-                    tier.querySelectorAll('ALIGNABLE_ANNOTATION'),
+                    tier.querySelectorAll('REF_ANNOTATION, ALIGNABLE_ANNOTATION'),
                     function(node) {
+
                         var annotationId = node.getAttribute('ANNOTATION_ID');
                         var value = node.querySelector('ANNOTATION_VALUE').textContent.trim();
-                        var start = node.getAttribute('TIME_SLOT_REF1');
-                        var end = node.getAttribute('TIME_SLOT_REF2');
-                        return new elan.Annotation(annotationId, value, start, end);
+
+                        if (node.nodeName == 'ALIGNABLE_ANNOTATION') {
+                            var start = node.getAttribute('TIME_SLOT_REF1');
+                            var end = node.getAttribute('TIME_SLOT_REF2');
+                            return new elan.Annotation(annotationId, value, start, end);
+                        } else {
+                            var ref = node.getAttribute('ANNOTATION_REF');
+                            return new elan.RefAnnotation(annotationId, value, ref);
+                        }
+
                     }, this
                 );
 
@@ -280,6 +305,37 @@ var elan = (function() {
             }
             return null;
         }.bind(this);
+
+        this.render = function() {
+            var indices = {};
+            this.tiers.forEach(function (tier, index) {
+                tier.annotations.forEach(function (a) {
+                    if (a instanceof elan.RefAnnotation) {
+                        var referencedAnnotation = getReferencedAnnotation(a.ref);
+                        if (referencedAnnotation instanceof elan.Annotation) {
+                            if (!(referencedAnnotation.id in indices)) {
+                                indices[referencedAnnotation.id] = [];
+                            }
+                            indices[referencedAnnotation.id].push({
+                                'tier': tier.id,
+                                'annotation': a
+                            });
+                        }
+                    }
+
+                    if (a instanceof elan.Annotation) {
+                        if (!(a.id in indices)) {
+                            indices[a.id] = [];
+                        }
+                        indices[a.id].push({
+                            'tier': tier.id,
+                            'annotation': a
+                        });
+                    }
+                }, this);
+            }, this);
+            return indices;
+        };
     };
 
     return elan;

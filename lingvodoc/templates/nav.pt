@@ -25,11 +25,9 @@
                 </li>
                 <li tal:condition="user"><a href="${request.route_url('languages')}">Languages</a></li>
                 <li tal:condition="user"><a href="${request.route_url('organizations')}">Organizations</a></li>
-                <li tal:condition="user"><a href="${request.route_url('maps')}">Maps search</a></li>
-                <li tal:condition="user"><a href="${request.route_url('corpora')}">Corpora</a></li>
+                <li><a href="${request.route_url('maps')}">Maps search</a></li>
+                <li><a href="${request.route_url('corpora')}">Corpora</a></li>
                 <li tal:condition="user"><a href="${request.route_url('blob_upload')}">My files</a></li>
-                <!--<li><a href="">Search</a></li> -->
-                <!--<li><a href="#about">About</a></li> -->
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
@@ -38,7 +36,6 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">${user.name}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <!--<li><a href="#" onclick="alert('Not implemented!');">Profile</a></li>-->
                         <li><a href="${request.route_url('blob_upload')}">My files</a></li>
                         <li><a href="${request.route_url('logout')}">Sign out</a></li>
                     </ul>

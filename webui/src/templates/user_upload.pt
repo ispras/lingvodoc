@@ -80,6 +80,7 @@
         <option value="dialeqt_dictionary">dialeqt_dictionary</option>
         <option value="pdf">pdf</option>
         <option value="txt">text markup</option>
+        <option value="audio">audio</option>
     </select>
 
 
