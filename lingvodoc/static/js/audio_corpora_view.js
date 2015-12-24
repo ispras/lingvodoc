@@ -33018,7 +33018,7 @@ angular.module("AudioCorporaViewModule", [ "ui.bootstrap" ]).service("dictionary
             dictionaryService.getUserBlob($scope.markup.client_id, $scope.markup.object_id).then(function(blob) {
                 dictionaryService.convertTxtMarkup(blob).then(function(data) {
                     try {
-                        var xml = new DOMParser().parseFromString(data, "application/xml");
+                        var xml = new DOMParser().parseFromString(data.content, "application/xml");
                         var annotation = new elan.Document();
                         annotation.importXML(xml);
                         $scope.annotation = annotation;
@@ -33047,13 +33047,18 @@ angular.module("AudioCorporaViewModule", [ "ui.bootstrap" ]).service("dictionary
                     $scope.audio = meta.audio_corpora.audio;
                     $scope.markup = meta.audio_corpora.markup;
                     dictionaryService.getUserBlob($scope.audio.client_id, $scope.audio.object_id).then(function(blob) {
-                        console.log(blob);
                         $scope.wavesurfer.load(blob.url);
                     }, function(reason) {
                         responseHandler.error(reason);
                     });
                 }
-            }, function(reason) {});
-        }, function(reason) {});
-    }, function(reason) {});
+            }, function(reason) {
+                responseHandler.error(reason);
+            });
+        }, function(reason) {
+            responseHandler.error(reason);
+        });
+    }, function(reason) {
+        responseHandler.error(reason);
+    });
 } ]);

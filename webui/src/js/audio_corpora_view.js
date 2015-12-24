@@ -176,7 +176,7 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
                 dictionaryService.getUserBlob($scope.markup.client_id, $scope.markup.object_id).then(function(blob) {
                     dictionaryService.convertTxtMarkup(blob).then(function(data) {
                         try {
-                            var xml = (new DOMParser()).parseFromString(data, 'application/xml');
+                            var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
                             var annotation = new elan.Document();
                             annotation.importXML(xml);
                             $scope.annotation = annotation;
@@ -201,34 +201,15 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
             $scope.wavesurfer.destroy();
         });
 
-
         dictionaryService.getDictionary(dictionaryClientId, dictionaryObjectId).then(function(dictionary) {
             dictionaryService.getPerspectiveById(perspectiveClientId, perspectiveId).then(function(perspective) {
-
                 dictionaryService.getPerspectiveMeta(dictionary, perspective).then(function(meta) {
-
-                    //meta['audio_corpora'] = {
-                    //    audio : {
-                    //        client_id: 3,
-                    //        object_id: 3
-                    //    },
-                    //    markup: {
-                    //        client_id: 3,
-                    //        object_id: 4
-                    //    }
-                    //};
-                    //
-                    //dictionaryService.setPerspectiveMeta(dictionary, perspective, meta);
-
-                    //return;
-
                     if (_.has(meta, 'audio_corpora')) {
                         // load file once wavesurfer is ready
                         $scope.audio = meta.audio_corpora.audio;
                         $scope.markup = meta.audio_corpora.markup;
 
                         dictionaryService.getUserBlob($scope.audio.client_id, $scope.audio.object_id).then(function(blob) {
-                            console.log(blob);
                             $scope.wavesurfer.load(blob.url);
                         }, function(reason) {
                             responseHandler.error(reason);
@@ -236,16 +217,15 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
                     }
 
                 }, function(reason) {
-
+                    responseHandler.error(reason);
                 });
 
             }, function(reason) {
-
+                responseHandler.error(reason);
             });
 
-
         }, function(reason) {
-
+            responseHandler.error(reason);
         });
 
     }]);
