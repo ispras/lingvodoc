@@ -1453,9 +1453,9 @@ def view_perspective_from_object(request, perspective):
                         blob = DBSession.query(UserBlobs).filter_by(client_id=content['client_id'],
                                                                     object_id=content['object_id']).first()
                         if blob:
-                            response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                            whyhaveinamedthisresponseearlier = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
                                         'client_id': blob.client_id, 'object_id': blob.object_id}
-                            info['info']['content'] = response
+                            info['info']['content'] = whyhaveinamedthisresponseearlier
                         else:
                             if info not in remove_list:
                                 remove_list.append(info)
@@ -2826,6 +2826,9 @@ def perspectives_list(request):
         #     perspectives += [resp.json]
         resp = view_perspective_from_object(request, perspective)
         if 'error' not in resp:
+            if 'content' in resp:
+                print(resp)
+                print(perspective)
             perspectives.append(resp)
     response['perspectives'] = perspectives
     request.response.status = HTTPOk.code
