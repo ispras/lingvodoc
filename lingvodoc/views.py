@@ -1150,9 +1150,9 @@ def view_perspective_from_object(request, perspective):
                         blob = DBSession.query(UserBlobs).filter_by(client_id=content['client_id'],
                                                                     object_id=content['object_id']).first()
                         if blob:
-                            response = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
+                            prevnamewaswrong = {'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
                                         'client_id': blob.client_id, 'object_id': blob.object_id}
-                            info['info']['content'] = response
+                            info['info']['content'] = prevnamewaswrong
                         else:
                             if info not in remove_list:
                                 remove_list.append(info)
