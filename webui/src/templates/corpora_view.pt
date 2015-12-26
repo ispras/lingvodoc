@@ -32,8 +32,12 @@
         <div class="phrase">
             <div class="txt">{{ phrase.words[0].text }}</div>
 
-            <div class="txt" on-selected="selectedWord">
+            <div class="txt" on-selected="selectedWord" ng-if="phrase.words.length > 0">
                 {{ getWordsText(phrase.words) }}
+            </div>
+
+            <div class="txt" on-selected="selectedWord" ng-if="phrase.words.length == 0">
+                {{ getPhraseValue(phrase.phrase, 'txt') }}
             </div>
 
             <div class="words" ng-repeat="word in phrase.words">
