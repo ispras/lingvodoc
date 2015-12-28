@@ -191,9 +191,10 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
                     if (_.has(meta, 'audio_corpora')) {
 
                         dictionaryService.getUserBlob(meta.audio_corpora.markup.client_id, meta.audio_corpora.markup.object_id).then(function(blob) {
-                            dictionaryService.convertTxtMarkup(blob).then(function(data) {
+
+                            $http.get(blob.url).success(function(data, status, headers, config) {
                                 try {
-                                    var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
+                                    var xml = (new DOMParser()).parseFromString(data, 'application/xml');
                                     var annotation = new elan.Document();
                                     annotation.importXML(xml);
                                     $scope.annotation = annotation;
@@ -201,9 +202,10 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
                                 } catch (e) {
                                     responseHandler.error('Failed to parse ELAN annotation: ' + e);
                                 }
-                            }, function(reason) {
-                                responseHandler.error(reason);
+                            }).error(function(data, status, headers, config) {
+                                responseHandler.error(status);
                             });
+
                         }, function(reason) {
                             responseHandler.error(reason);
                         });

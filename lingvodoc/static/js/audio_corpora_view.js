@@ -32812,7 +32812,7 @@ function responseHandler($timeout, $modal) {
         show("success", message, 5e3);
     }
     function error(message) {
-        show("error", message, 5e3);
+        show("error", message, 5e4);
     }
     function yesno(status, message, callback) {
         var controller = function($scope, $modalInstance) {
@@ -33030,9 +33030,9 @@ angular.module("AudioCorporaViewModule", [ "ui.bootstrap" ]).service("dictionary
             dictionaryService.getPerspectiveMeta(dictionary, perspective).then(function(meta) {
                 if (_.has(meta, "audio_corpora")) {
                     dictionaryService.getUserBlob(meta.audio_corpora.markup.client_id, meta.audio_corpora.markup.object_id).then(function(blob) {
-                        dictionaryService.convertTxtMarkup(blob).then(function(data) {
+                        $http.get(blob.url).success(function(data, status, headers, config) {
                             try {
-                                var xml = new DOMParser().parseFromString(data.content, "application/xml");
+                                var xml = new DOMParser().parseFromString(data, "application/xml");
                                 var annotation = new elan.Document();
                                 annotation.importXML(xml);
                                 $scope.annotation = annotation;
@@ -33040,8 +33040,8 @@ angular.module("AudioCorporaViewModule", [ "ui.bootstrap" ]).service("dictionary
                             } catch (e) {
                                 responseHandler.error("Failed to parse ELAN annotation: " + e);
                             }
-                        }, function(reason) {
-                            responseHandler.error(reason);
+                        }).error(function(data, status, headers, config) {
+                            responseHandler.error(status);
                         });
                     }, function(reason) {
                         responseHandler.error(reason);

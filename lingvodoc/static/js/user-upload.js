@@ -30227,7 +30227,7 @@ function responseHandler($timeout, $modal) {
         show("success", message, 5e3);
     }
     function error(message) {
-        show("error", message, 5e3);
+        show("error", message, 5e4);
     }
     function yesno(status, message, callback) {
         var controller = function($scope, $modalInstance) {

@@ -91,13 +91,6 @@ angular.module('CorporaModule', ['ui.bootstrap'])
             responseHandler.error(reason);
         });
 
-
-        var req = {"xml_path":"/home/steve/choohtar2.xml", "dictionary_translation_string":"Name for new dict2", "perspective_translation_string":"name for new persp2", "parent_client_id":1, "parent_object_id": 1};
-
-
-        //$http.post('/convert/xml', req);
-
-
     }]);
 
 

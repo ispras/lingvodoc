@@ -33678,7 +33678,7 @@ function responseHandler($timeout, $modal) {
         show("success", message, 5e3);
     }
     function error(message) {
-        show("error", message, 5e3);
+        show("error", message, 5e4);
     }
     function yesno(status, message, callback) {
         var controller = function($scope, $modalInstance) {
@@ -33776,11 +33776,4 @@ angular.module("CorporaModule", [ "ui.bootstrap" ]).factory("dictionaryService",
     }, function(reason) {
         responseHandler.error(reason);
     });
-    var req = {
-        xml_path: "/home/steve/choohtar2.xml",
-        dictionary_translation_string: "Name for new dict2",
-        perspective_translation_string: "name for new persp2",
-        parent_client_id: 1,
-        parent_object_id: 1
-    };
 } ]);

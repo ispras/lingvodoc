@@ -61,7 +61,6 @@ angular.module('UserUploadModule', ['ui.bootstrap'])
         };
 
         loadBlobs();
-
     }]);
 
 
