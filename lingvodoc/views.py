@@ -1370,6 +1370,12 @@ def view_perspective_meta(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
+    parent_client_id = request.matchdict.get('dictionary_client_id')
+    parent_object_id = request.matchdict.get('dictionary_object_id')
+    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+    if not parent:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
@@ -5199,13 +5205,13 @@ def blob_upload_get(request):
 
 @view_config(route_name='merge_suggestions_old', renderer='json', request_method='POST')
 def merge_suggestions_old(request):
-    subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_1') + '/' + 
+    subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_1') + '/' +
     request.matchdict.get('dictionary_object_id_1') + '/perspective/' +
     request.matchdict.get('perspective_client_id_1') + '/' +
     request.matchdict.get('perspective_object_id_1') + '/all')
     subreq.method = 'GET'
     response_1 = request.invoke_subrequest(subreq).json
-    subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_2') + '/' + 
+    subreq = Request.blank('/dictionary/' + request.matchdict.get('dictionary_client_id_2') + '/' +
     request.matchdict.get('dictionary_object_id_2') + '/perspective/' +
     request.matchdict.get('perspective_client_id_2') + '/' +
     request.matchdict.get('perspective_object_id_2') + '/all')
