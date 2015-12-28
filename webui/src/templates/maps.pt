@@ -19,7 +19,6 @@
 <body class="body-dashboard" ng-app="MapsModule">
 
 <div id="clientId" data-lingvodoc="${client_id}"></div>
-<div id="userId" data-lingvodoc="${user.id}"></div>
 
 <div metal:use-macro="load: nav.pt"></div>
 

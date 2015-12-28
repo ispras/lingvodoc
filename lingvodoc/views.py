@@ -5652,9 +5652,6 @@ def merge_master_get(request):
 def maps_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user }
     return render_to_response('templates/maps.pt', variables, request=request)
 
@@ -5663,9 +5660,6 @@ def maps_get(request):
 def corpora_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
     variables = {'client_id': client_id, 'user': user }
     return render_to_response('templates/corpora.pt', variables, request=request)
 
@@ -5678,10 +5672,6 @@ def corpora_view_get(request):
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
     perspective_id = request.matchdict.get('perspective_id')
-
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
 
     variables = {'user': user, 'client_id': client_id, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
@@ -5698,10 +5688,6 @@ def audio_corpora_view_get(request):
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
     perspective_id = request.matchdict.get('perspective_id')
-
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
 
     variables = {'user': user, 'client_id': client_id, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
