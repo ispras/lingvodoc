@@ -1365,7 +1365,7 @@ def delete_perspective_meta(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_meta', renderer='json', request_method='GET', permission='edit')
+@view_config(route_name='perspective_meta', renderer='json', request_method='GET', permission='view')
 def view_perspective_meta(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
