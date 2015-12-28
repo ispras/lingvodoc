@@ -32,7 +32,7 @@ function responseHandler($timeout, $modal) {
     }
 
     function error(message) {
-        show('error', message, 5000);
+        show('error', message, 50000);
     }
 
     function yesno(status, message, callback) {
