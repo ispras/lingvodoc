@@ -73,7 +73,7 @@
                     </td>
 
                     <td>
-                        <button type="button" class="btn btn-default" ng-click="playAnnotation(a)">
+                        <button type="button" class="btn btn-default" ng-disabled="!audioReady" ng-click="playAnnotation(a)">
                             <span class="glyphicon glyphicon-play"></span>
                         </button>
                     </td>

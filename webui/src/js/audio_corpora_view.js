@@ -60,6 +60,7 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
         $scope.annotationTable = {};
         $scope.paused = true;
         $scope.annotation = null;
+        $scope.audioReady = false;
 
         $scope.getAlignableTiers = function(doc) {
             if (!doc) {
@@ -173,25 +174,8 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
 
 
             $scope.wavesurfer.once('ready', function() {
-                dictionaryService.getUserBlob($scope.markup.client_id, $scope.markup.object_id).then(function(blob) {
-                    dictionaryService.convertTxtMarkup(blob).then(function(data) {
-                        try {
-                            var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
-                            var annotation = new elan.Document();
-                            annotation.importXML(xml);
-                            $scope.annotation = annotation;
-                            $scope.annotationTable = annotation.render();
-                            createRegions(annotation);
-                        } catch (e) {
-                            responseHandler.error('Failed to parse ELAN annotation: ' + e);
-                        }
-                    }, function(reason) {
-                        responseHandler.error(reason);
-                    });
-                }, function(reason) {
-                    responseHandler.error(reason);
-                });
-
+                $scope.audioReady = true;
+                createRegions($scope.annotation);
                 $scope.$apply();
             });
         });
@@ -205,11 +189,26 @@ angular.module('AudioCorporaViewModule', ['ui.bootstrap'])
             dictionaryService.getPerspectiveById(perspectiveClientId, perspectiveId).then(function(perspective) {
                 dictionaryService.getPerspectiveMeta(dictionary, perspective).then(function(meta) {
                     if (_.has(meta, 'audio_corpora')) {
-                        // load file once wavesurfer is ready
-                        $scope.audio = meta.audio_corpora.audio;
-                        $scope.markup = meta.audio_corpora.markup;
 
-                        dictionaryService.getUserBlob($scope.audio.client_id, $scope.audio.object_id).then(function(blob) {
+                        dictionaryService.getUserBlob(meta.audio_corpora.markup.client_id, meta.audio_corpora.markup.object_id).then(function(blob) {
+                            dictionaryService.convertTxtMarkup(blob).then(function(data) {
+                                try {
+                                    var xml = (new DOMParser()).parseFromString(data.content, 'application/xml');
+                                    var annotation = new elan.Document();
+                                    annotation.importXML(xml);
+                                    $scope.annotation = annotation;
+                                    $scope.annotationTable = annotation.render();
+                                } catch (e) {
+                                    responseHandler.error('Failed to parse ELAN annotation: ' + e);
+                                }
+                            }, function(reason) {
+                                responseHandler.error(reason);
+                            });
+                        }, function(reason) {
+                            responseHandler.error(reason);
+                        });
+
+                        dictionaryService.getUserBlob(meta.audio_corpora.audio.client_id, meta.audio_corpora.audio.object_id).then(function(blob) {
                             $scope.wavesurfer.load(blob.url);
                         }, function(reason) {
                             responseHandler.error(reason);
