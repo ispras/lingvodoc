@@ -1370,15 +1370,6 @@ def view_perspective_meta(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
-    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
-    if not client:
-        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
-    parent_client_id = request.matchdict.get('dictionary_client_id')
-    parent_object_id = request.matchdict.get('dictionary_object_id')
-    parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-    if not parent:
-        request.response.status = HTTPNotFound.code
-        return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
