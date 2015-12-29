@@ -2306,6 +2306,7 @@ def published_dictionaries_list(request):
             organizations += [org]
         return {'organizations': organizations}
     dictionaries = []
+    dicts = dicts.order_by("client_id", "object_id")
     for dct in dicts:
         path = request.route_url('dictionary',
                                  client_id=dct.client_id,
@@ -2458,6 +2459,7 @@ def dictionaries_list(request):
     # TODO: fix
     dictionaries = list()
     # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
+    dicts = dicts.order_by("client_id", "object_id")
     for dct in dicts:
         path = request.route_url('dictionary',
                                  client_id=dct.client_id,
