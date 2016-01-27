@@ -3809,6 +3809,36 @@ def approve_all(request):
     return {'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='approve_all_outer', renderer='json', request_method='PATCH', permission='create')
+def approve_outer(request): # TODO: create test.
+    from .scripts.approve import approve_all_outer
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    cli_id = request.matchdict.get('dictionary_client_id')
+    obj_id = request.matchdict.get('dictionary_object_id')
+
+    # convert_one(blob.real_storage_path,
+    #             user.login,
+    #             user.password.hash,
+    #             parent_client_id,
+    #             parent_object_id)
+
+    # NOTE: doesn't work on Mac OS otherwise
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    user = client.user
+    p = multiprocessing.Process(target=approve_all_outer, args=(user.login,
+                                                          user.password.hash,
+                                                          cli_id,
+                                                          obj_id,
+                                                          client_id,
+                                                          object_id))
+    log.debug("Conversion started")
+    p.start()
+    request.response.status = HTTPOk.code
+    return {"status": "Your dictionary is being approved."
+                      " Wait 5-15 minutes."}
+
+
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
@@ -4979,7 +5009,8 @@ def login_post(request):
     next = request.params.get('next') or request.route_url('home')
     login = request.POST.get('login', '')
     password = request.POST.get('password', '')
-    print(login)
+    # print(login)
+    log.debug(login)
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.check_password(password):
         client = Client(user_id=user.id)

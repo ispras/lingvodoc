@@ -35,22 +35,11 @@ def usage(argv):
     sys.exit(1)
 
 
-def main(argv=sys.argv):
-    if len(argv) < 2:
-        usage(argv)
-    config_uri = argv[1]
-    options = parse_vars(argv[2:])
-    setup_logging(config_uri)
-    settings = get_appsettings(config_uri, options=options)
-    accounts = get_appsettings(config_uri, 'accounts')
-    engine = engine_from_config(settings, 'sqlalchemy.')
-
-    DBSession.configure(bind=engine)
-    # Base.metadata.create_all(engine)
-    with transaction.manager:
+def data_init(manager, accounts):
+    with manager:
         # Creating global administrator
         admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
-        print("Admin record not found, initializing")
+        # print("Admin record not found, initializing")
         admin_account = User(login=accounts['administrator_login'],
                              name="Администратор",
                              intl_name="System Administrator",
@@ -595,3 +584,18 @@ def main(argv=sys.argv):
                       the_page_morph, the_line_morph, notes_morph]:
             DBSession.add(field)
 
+
+def main(argv=sys.argv):
+    if len(argv) < 2:
+        usage(argv)
+    config_uri = argv[1]
+    options = parse_vars(argv[2:])
+    setup_logging(config_uri)
+    settings = get_appsettings(config_uri, options=options)
+    accounts = get_appsettings(config_uri, 'accounts')
+    engine = engine_from_config(settings, 'sqlalchemy.')
+
+    DBSession.configure(bind=engine)
+    # Base.metadata.create_all(engine)
+    # with transaction.manager:
+    data_init(transaction.manager, accounts)

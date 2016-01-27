@@ -2,743 +2,535 @@ import unittest
 import transaction
 
 from pyramid import testing
-
 from lingvodoc.models import DBSession
-from pyramid.httpexceptions import HTTPNotFound, HTTPOk, HTTPBadRequest, HTTPConflict, HTTPInternalServerError
-#
-#
-# class SimpleTestDictionariesListSuccessCondition(unittest.TestCase):
-#     def setUp(self):
-#         self.config = testing.setUp()
-#         from sqlalchemy import create_engine
-#         engine = create_engine('sqlite://')
-#         from lingvodoc.models import (
-#             Base,
-#             Dictionary
-#             )
-#         DBSession.configure(bind=engine)
-#         Base.metadata.create_all(engine)
-#         with transaction.manager:
-#             new_dict=Dictionary(client_id=1, object_id=1, name='test')
-#             DBSession.add(new_dict)
-#             new_dict=Dictionary(client_id=1, object_id=2, name='test2')
-#             DBSession.add(new_dict)
-#
-#     def tearDown(self):
-#         DBSession.remove()
-#         testing.tearDown()
-#
-#     def test_passing_view(self):
-#         from lingvodoc.views import dictionaries_list
-#         request = testing.DummyRequest()
-#         request.json_body={}
-#         response = dictionaries_list(request)
-#
-#         self.assertEqual(response['status'], HTTPOk.code)
-#         self.assertEqual(response['dictionaries'], [{'object_id': 1, 'client_id': 1}, {'object_id':2,'client_id':1}])
+
+from pyramid.httpexceptions import (
+    HTTPNotFound,
+    HTTPOk,
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPInternalServerError,
+    HTTPUnauthorized,
+    HTTPFound,
+    HTTPForbidden
+)
+from pyramid.paster import (
+    get_appsettings,
+    setup_logging,
+    )
+
+from subprocess import PIPE, Popen
+inifile = 'andrey.ini'
+alembicini = 'alembictests.ini'
+dbname = 'postgresql+psycopg2://postgres@/lingvodoc_testing'  # TODO: read from alembicini
+
+from lingvodoc.scripts.initializedb import data_init
+
+print_deb = False
+
+def new_dict(d, key_set):
+    new_d = dict()
+    for key in d:
+        el = d[key]
+        empty_lst = [None, {}, [], ()]
+        empty_lst += [str(o) for o in empty_lst]
+        if el not in empty_lst:
+            new_d[key] = el
+            key_set.add(key)
+    return new_d
 
 
-class TestDictionariesListSuccessCondition(unittest.TestCase):
+def is_equal(el1, el2):
+    t1, t2 = type(el1), type(el2)
+    # print('elems', el1, el2)
+    if t1 != t2:
+        # print('type false')
+        return False
+    if t1 == dict:
+        if not dict_diff(el1,el2):
+            # print('dict false')
+            return False
+    elif t1 == list:
+        if not list_diff(el1,el2):
+                return False
+    elif el1 != el2:
+        # print('simple false')
+        return False
+    return True
+
+
+def list_diff(l1, l2):
+    for i in range(len(l1)):
+        if not is_equal(l1[i], l2[i]):
+            # print('list false')
+            return False
+    return True
+
+
+def dict_diff(d1,d2):
+    keyset = set()
+    nd1 = new_dict(d1, keyset)
+    nd2 = new_dict(d2, keyset)
+    # print(nd1, nd2)
+    # print(keyset)
+    for key in keyset:
+        el1, el2 = nd1.get(key), nd2.get(key)
+        # print('key', key)
+        if not is_equal(el1, el2):
+            # print('elems in dict false')
+            return False
+    return True
+
+
+def commonSetUp(self):
+    import os
+    self.config = testing.setUp()
+    import webtest
+    from pyramid import paster
+    from sqlalchemy import create_engine
+    engine = create_engine(dbname)
+    myapp = paster.get_app(inifile)
+    self.app = webtest.TestApp(myapp)
+    DBSession.remove()
+    DBSession.configure(bind=engine)
+    bashcommand = "alembic -c %s upgrade head" % alembicini
+    args = bashcommand.split()
+    pathdir = os.path.dirname(os.path.realpath(__file__))
+    pathdir = pathdir[:(len(pathdir) - 6)]
+    my_env = os.environ
+    proc = Popen(args, cwd=pathdir, env=my_env)
+    proc.communicate()
+    accounts = get_appsettings(inifile, 'accounts')
+    data_init(transaction.manager, accounts)
+
+
+def commonTearDown(self):
+    import os
+    DBSession.remove()
+    bashcommand = "alembic -c %s downgrade base" % alembicini
+    args = bashcommand.split()
+    pathdir = os.path.dirname(os.path.realpath(__file__))
+    pathdir = pathdir[:(len(pathdir) - 6)]
+    my_env = os.environ
+    proc = Popen(args, cwd=pathdir, env=my_env)
+    proc.communicate()
+    testing.tearDown()
+
+
+class MyTestCase(unittest.TestCase):
+
     def setUp(self):
-        self.config = testing.setUp()
-        import webtest
-        from pyramid import paster
-        from sqlalchemy import create_engine
-        engine = create_engine('sqlite://')
-        myapp = paster.get_app('testing.ini')
-        self.app = webtest.TestApp(myapp)
-        from lingvodoc.models import (
-            Base,
-            Dictionary,
-            Language,
-            Organization,
-            Locale,
-            User,
-            Passhash,
-            Client,
-            DictionaryPerspective
-            )
-        DBSession.configure(bind=engine)
-        Base.metadata.create_all(engine)
-        with transaction.manager:
-            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
-            DBSession.add(ru_locale)
-            en_locale = Locale(id=2, shortcut="en", intl_name="English")
-            DBSession.add(en_locale)
-            DBSession.flush()
-            new_user = User(id=1, login='test', default_locale_id = 1)
-            new_pass = Passhash(password='pass')
-            DBSession.add(new_pass)
-            new_user.password = new_pass
-            DBSession.add(new_user)
-            new_client = Client(id=1, user=new_user)
-            DBSession.add(new_client)
-            new_user2 = User(id=2, login='test2', default_locale_id = 1)
-            new_pass2 = Passhash(password='pass')
-            DBSession.add(new_pass)
-            new_user2.password = new_pass2
-            DBSession.add(new_user2)
-            new_client = Client(id=2, user=new_user2)
-            DBSession.add(new_client)
-            new_client = Client(id=3, user=new_user)
-            DBSession.add(new_client)
-            DBSession.flush()
-            new_user3 = User(id=3, login='test3', default_locale_id = 1)
-            new_pass3 = Passhash(password='pass')
-            DBSession.add(new_pass3)
-            new_user3.password = new_pass3
-            DBSession.add(new_user3)
-            new_client = Client(id=4, user=new_user3)
-            DBSession.add(new_client)
-            new_user4 = User(id=4, login='test4', default_locale_id = 1)
-            new_pass4 = Passhash(password='pass')
-            DBSession.add(new_pass4)
-            new_user4.password = new_pass4
-            DBSession.add(new_user4)
-            new_client = Client(id=5, user=new_user4)
-            DBSession.add(new_client)
-            new_lang1 = Language(client_id=1, object_id=1, translation_string='head')
-            DBSession.add(new_lang1)
-            new_lang2 = Language(client_id=2, object_id=5, translation_string='left son', parent=new_lang1)
-            DBSession.add(new_lang2)
-            new_lang3 = Language(client_id=1, object_id=3, translation_string='right son', parent=new_lang1)
-            DBSession.add(new_lang3)
-            new_lang4 = Language(client_id=2, object_id=4, translation_string='first grand son', parent=new_lang3)
-            DBSession.add(new_lang4)
-            new_lang5 = Language(client_id=1, object_id=5, translation_string='second grand son', parent=new_lang3)
-            DBSession.add(new_lang5)
-            new_lang6 = Language(client_id=1, object_id=6, translation_string='third grand son', parent=new_lang3)
-            DBSession.add(new_lang6)
-            new_lang7 = Language(client_id=1, object_id=7, translation_string='grand grand son', parent=new_lang5)
-            DBSession.add(new_lang7)
-            new_lang8 = Language(client_id=1, object_id=8, translation_string='second head')
-            DBSession.add(new_lang8)
-            new_lang9 = Language(client_id=1, object_id=9, translation_string='second left son', parent=new_lang8)
-            DBSession.add(new_lang9)
-            new_lang10 = Language(client_id=1, object_id=10, translation_string='second right son', parent=new_lang8)
-            DBSession.add(new_lang10)
-            new_org1 = Organization(name='first')
-            new_org1.users.append(new_user)
-            new_org1.users.append(new_user3)
-            DBSession.add(new_org1)
-            new_org2 = Organization(name='second')
-            DBSession.add(new_org2)
-            new_dict1 = Dictionary(client_id=1, object_id=1, name='test', parent=new_lang3)
-            DBSession.add(new_dict1)
-            new_dict2 = Dictionary(client_id=2, object_id=1, name='test2', parent=new_lang5)
-            DBSession.add(new_dict2)
-            new_dict3 = Dictionary(client_id=3, object_id=1, name='test3', parent=new_lang8)
-            DBSession.add(new_dict3)
-            new_dict4 = Dictionary(client_id=5, object_id=1, name='test4', parent=new_lang9)
-            DBSession.add(new_dict4)
-            new_dict5 = Dictionary(client_id=4, object_id=1, name='test5', parent=new_lang10)
-            DBSession.add(new_dict5)
-            new_dict6 = Dictionary(client_id=4, object_id=2, name='test3', parent=new_lang4)
-            DBSession.add(new_dict6)
-            new_dict_persp = DictionaryPerspective(client_id=4, object_id=1, name='test', parent=new_dict2)
-            DBSession.add(new_dict_persp)
-
+        commonSetUp(self)
 
     def tearDown(self):
-        DBSession.remove()
-        testing.tearDown()
+        commonTearDown(self)
 
-    def test_language_filter(self):
-        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.post_json('/dictionaries',
-                                      params={'languages': [{'client_id': 1, 'object_id': 3}]})
+    def assertDictEqual(self, d1, d2, msg=None):
+        self.assertEqual(dict_diff(d1, d2), True, msg)
+
+    def assertListEqual(self, l1, l2, msg=None):
+        self.assertEqual(list_diff(l1, l2), True, msg)
+
+def login_common(self):
+    response = self.app.post('/signup', params={'login': 'test',
+                                                     'password': 'pass',
+                                                     'name': 'test',
+                                                     'email': 'test@test.com',
+                                                     'day': '1',
+                                                     'month': '1',
+                                                     'year': '1970'})
+    self.assertEqual(response.status_int, HTTPFound.code)
+    response = self.app.post('/login', params={'login': 'test',
+                                               'password': 'pass'})
+    self.assertEqual(response.status_int, HTTPFound.code)
+
+
+def create_language(self, translation_string):
+        response = self.app.post_json('/language', params={'translation_string': translation_string})
         self.assertEqual(response.status_int, HTTPOk.code)
-        # self.assertCountEqual(response.json['dictionaries'],
-        #                  [{'object_id': 1, 'client_id': 1}, {'object_id': 1, 'client_id': 2}])
-
-    def test_no_filter(self):
-        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.post_json('/dictionaries', params={})
+        ids = response.json
+        response = self.app.get('/language/%s/%s' % (ids['client_id'], ids['object_id']))
+        correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
+                          'locale_exist': False, 'translation': translation_string,
+                          'parent_client_id': None, 'translation_string': translation_string, 'parent_object_id': None}
         self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+        return ids
 
-    def test_languages_list(self):
+
+def create_dictionary(self, translation_string, par_ids):
+        response = self.app.post_json('/dictionary', params={'translation_string': translation_string,
+                                                           'parent_client_id': par_ids['client_id'],
+                                                           'parent_object_id': par_ids['object_id']})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        ids = response.json
+        response = self.app.get('/dictionary/%s/%s' % (ids['client_id'], ids['object_id']))
+        correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
+                          'additional_metadata': None,
+                          'parent_client_id':  par_ids['client_id'],
+                          'parent_object_id':  par_ids['object_id'],
+                          'translation': translation_string,
+                          'translation_string': translation_string,
+                          'status': 'WiP'}
+
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+        return ids
+
+
+def create_perspective(self, translation_string, par_ids):
+        response = self.app.post_json('/dictionary/%s/%s/perspective' % (par_ids['client_id'],par_ids['object_id']),
+                                      params={'translation_string': translation_string})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        ids = response.json
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' % (par_ids['client_id'],par_ids['object_id'],
+                                                                         ids['client_id'], ids['object_id']))
+        correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
+                          'additional_metadata': None,
+                          'parent_client_id':  par_ids['client_id'],
+                          'parent_object_id':  par_ids['object_id'],
+                          'translation': translation_string,
+                          'translation_string': translation_string,
+                          'is_template': False,
+                          'marked_for_deletion': False,
+                          'status': 'WiP'}
+        first_view = response.json
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(first_view, correct_answer)
+        response = self.app.get('/perspective/%s/%s' % (ids['client_id'], ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+        return ids
+
+
+class TestSignUp(MyTestCase):
+
+    def one_big_test(self):
+        # test impossibility to create language without login
+        response = self.app.post_json('/language', params={'translation_string': 'test'},
+                                     status=HTTPForbidden.code)
+        self.assertEqual(response.status_int, HTTPForbidden.code)
+        # test signup & login
+        login_common(self)
+        # test creating language
+        lang_name = 'test_lang'
+        par_ids = create_language(self, lang_name)
+        # test view all languages
+
         response = self.app.get('/languages')
+
+        self.assertEqual(response.status_int, HTTPOk.code)
+        correct_answer = {'languages':
+                              [{'translation': 'Russian language',
+                                'client_id': 1, 'translation_string': 'Russian language',
+                                'object_id': 1, 'locale_exist': True},
+                               {'translation': 'English language', 'client_id': 1,
+                                'translation_string': 'English language',
+                                'object_id': 2, 'locale_exist': True},
+                               {'translation': 'Finnish language', 'client_id': 1,
+                                'translation_string': 'Finnish language', 'object_id': 3,
+                                'locale_exist': True},
+                               {'translation': 'French language', 'client_id': 1,
+                                'translation_string': 'French language', 'object_id': 4,
+                                'locale_exist': True},
+                               {'translation': 'German language', 'client_id': 1,
+                                'translation_string': 'German language',
+                                'object_id': 5, 'locale_exist': True},
+                               {'translation': lang_name, 'client_id': 3,
+                                'translation_string': lang_name,
+                                'object_id': 1, 'locale_exist': False}]}
+        self.assertDictEqual(response.json, correct_answer)
+
+        # test all params when editing language
+        response = self.app.put_json('/language/%s/%s' % (par_ids['client_id'], par_ids['object_id']),
+                                     params={'translation':'new_translation',
+                                             'parent_client_id':1,
+                                             'parent_object_id':1})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/language/%s/%s' % (par_ids['client_id'], par_ids['object_id']))
+        correct_answer = {'client_id': par_ids['client_id'], 'object_id': par_ids['object_id'],
+                          'locale_exist': False, 'translation': 'new_translation',
+                          'parent_client_id': 1, 'translation_string': lang_name, 'parent_object_id': 1}
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+        # test all params when creating language
+        response = self.app.post_json('/language', params={'translation_string': 'test_child',
+                                                           'parent_client_id': par_ids['client_id'],
+                                                           'parent_object_id': par_ids['object_id']})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        ids2 = response.json
+        response = self.app.get('/language/%s/%s' % (ids2['client_id'], ids2['object_id']))
+        correct_answer = {'client_id': ids2['client_id'], 'object_id': ids2['object_id'],
+                          'locale_exist': False, 'translation': 'test_child',
+                          'parent_client_id': par_ids['client_id'],
+                          'translation_string': 'test_child',
+                          'parent_object_id': par_ids['object_id']}
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+        # test creating dictionary
+
+        dict_name = 'test_dict'
+        dict_ids = create_dictionary(self, dict_name, par_ids)
+        # test edit dictionary
+        response = self.app.put_json('/dictionary/%s/%s' % (dict_ids['client_id'], dict_ids['object_id']),
+                                     params={'translation':'new_translation',
+                                             'parent_client_id':1,
+                                             'parent_object_id':1})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/dictionary/%s/%s' % (dict_ids['client_id'], dict_ids['object_id']))
+        correct_answer = {'client_id': dict_ids['client_id'], 'object_id': dict_ids['object_id'],
+                          'additional_metadata': '[]',
+                          'translation': 'new_translation',
+                          'parent_client_id': 1, 'translation_string': dict_name, 'parent_object_id': 1,
+                          'status': 'WiP'}
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+
+
+        response = self.app.put_json('/dictionary/%s/%s' % (dict_ids['client_id'], dict_ids['object_id']),
+                                     params={'translation':'new_translation',
+                                             'parent_client_id':par_ids['client_id'],
+                                             'parent_object_id':par_ids['object_id']})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/dictionary/%s/%s' % (dict_ids['client_id'], dict_ids['object_id']))
+        correct_answer = {'client_id': dict_ids['client_id'], 'object_id': dict_ids['object_id'],
+                          'additional_metadata': '[]',
+                          'translation': 'new_translation',
+                          'parent_client_id': par_ids['client_id'], 'translation_string': dict_name,
+                          'parent_object_id': par_ids['object_id'],
+                          'status': 'WiP'}
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+
+        # test view dictionary state
+        response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, {'status': 'WiP'})
+        # test edit dictionary state
+        response = self.app.put_json('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']),
+                                     params={'status':'test state'})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, {'status': 'test state'})
+
+        persp_name = 'test_persp'
+        # test creating perspective
+        persp_ids = create_perspective(self, persp_name, dict_ids)
+        # test perspective edit
+        response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s' % (dict_ids['client_id'],dict_ids['object_id'],
+                                                                         persp_ids['client_id'], persp_ids['object_id']),
+                                     params={'translation':'new_translation',
+                                             'parent_client_id':1,
+                                             'parent_object_id':1,
+                                             'is_template': True})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' % (dict_ids['client_id'], dict_ids['object_id'],
+                                                                         persp_ids['client_id'], persp_ids['object_id']))
+        correct_answer = {'client_id': persp_ids['client_id'], 'object_id': persp_ids['object_id'],
+                          'additional__metadata': '[]',
+                          'translation': 'new_translation',
+                          'parent_client_id': 1, 'translation_string': persp_name,
+                          'parent_object_id': 1,
+                          'is_template': True,
+                          'marked_for_deletion': False,
+                          'status': 'WiP'}
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+        # return old parent to perspective
+        response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s' % (1,1,
+                                                                         persp_ids['client_id'], persp_ids['object_id']),
+                                     params={'parent_client_id': dict_ids['client_id'],
+                                             'parent_object_id': dict_ids['object_id'],
+                                             'is_template': True})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        # test view perspective state
+        response = self.app.get('/dictionary/%s/%s'
+                     '/perspective/%s/%s/state' % (dict_ids['client_id'],dict_ids['object_id'],
+                                                                         persp_ids['client_id'], persp_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, {'status': 'WiP'})
+        # test edit perspective state
+        response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s/state'
+                                     % (dict_ids['client_id'],dict_ids['object_id'],
+                                        persp_ids['client_id'], persp_ids['object_id']),
+                                     params={'status':'test state'})
+
         self.assertEqual(response.status_int, HTTPOk.code)
 
-class TestEmptyListSuccessCondition(unittest.TestCase):
-    def setUp(self):
-        self.config = testing.setUp()
-        import webtest
-        from pyramid import paster
-        from sqlalchemy import create_engine
-        engine = create_engine('sqlite://')
-        myapp = paster.get_app('testing.ini')
-        self.app = webtest.TestApp(myapp)
-        from lingvodoc.models import (
-            Base,
-            Dictionary,
-            Language,
-            Organization,
-            Locale,
-            User,
-            Passhash,
-            Client,
-            DictionaryPerspective
-            )
-        DBSession.configure(bind=engine)
-        Base.metadata.create_all(engine)
-        with transaction.manager:
-            pass
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/state' % (dict_ids['client_id'],dict_ids['object_id'],
+                                                                         persp_ids['client_id'], persp_ids['object_id']))
 
-
-    def tearDown(self):
-        DBSession.remove()
-        testing.tearDown()
-
-    def test_languages_list(self):
-        response = self.app.get('/languages')
         self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, {'status': 'test state'})
 
-    # def test_user_created_filter(self):
-    #     response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-    #     response = self.app.post_json('/dictionaries', params={'user_created': 1})
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     self.assertEqual(response.json['dictionaries'],
-    #                      [{'object_id': 1, 'client_id': 1}, {'object_id': 1, 'client_id': 3}])
-    #     response = self.app.post_json('/dictionaries', params={'user_created': 2})
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     self.assertEqual(response.json['dictionaries'],
-    #                      [{'object_id': 1, 'client_id': 2}])
-    #
-    # def test_user_participated_filter(self):
-    #     response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-    #     response = self.app.post_json('/dictionaries', params={'user_participated': [3]})
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     self.assertEqual(response.json['dictionaries'],
-    #                      [{'object_id': 1, 'client_id': 2}, {'object_id': 1, 'client_id': 4}])
-    #
-    # def test_organization_participated(self):
-    #     response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-    #     response = self.app.post_json('/dictionaries', params={'organization_participated': 1})
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     dicts = [{'object_id': 1, 'client_id': 2},
-    #              {'object_id': 1, 'client_id': 1},
-    #              {'object_id': 1, 'client_id': 4},
-    #              {'object_id': 1, 'client_id': 3}]
-    #     self.assertCountEqual(response.json['dictionaries'], dicts)
-
-#
-# class TestViewPerspectiveFieldsSuccessCondition(unittest.TestCase):
-#
-#     def setUp(self):
-#         self.config = testing.setUp()
-#         import webtest
-#         from pyramid import paster
-#         from sqlalchemy import create_engine
-#         engine = create_engine('sqlite://')
-#         myapp = paster.get_app('testing.ini')
-#         self.app = webtest.TestApp(myapp)
-#         from lingvodoc.models import (
-#             Base,
-#             DictionaryPerspectiveField,
-#             DictionaryPerspective,
-#             Dictionary,
-#             User,
-#             Locale,
-#             Passhash,
-#             Client,
-#             UserEntitiesTranslationString
-#             )
-#         DBSession.configure(bind=engine)
-#         Base.metadata.create_all(engine)
-#         with transaction.manager:
-#             ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
-#             DBSession.add(ru_locale)
-#             en_locale = Locale(id=2, shortcut="en", intl_name="English")
-#             DBSession.add(en_locale)
-#             DBSession.flush()
-#             new_user = User(id=1, login='test', default_locale_id = 1)
-#             new_pass = Passhash(password='pass')
-#             DBSession.add(new_pass)
-#             new_user.password = new_pass
-#             DBSession.add(new_user)
-#             new_client = Client(id=1, user=new_user)
-#             DBSession.add(new_client)
-#             DBSession.flush()
-#             persp = DictionaryPerspective(client_id=1, object_id=1, name='test',
-#                                              parent_client_id=1, parent_object_id=1)
-#             DBSession.add(persp)
-#             new_dict = Dictionary(client_id=1, object_id=1, name='test', state='WiP')
-#             DBSession.add(new_dict)
-#             field = DictionaryPerspectiveField(parent = persp, client_id=1, object_id=1,
-#                                                entity_type='protoform', data_type='text',
-#                                                level='leveloneentity', state='enabled', position=1)
-#             DBSession.add(field)
-#             field1 = DictionaryPerspectiveField(parent=persp, client_id=1, object_id=2,entity_type='sound',
-#                                                 data_type='sound', level='leveloneentity', state = 'enabled', position=2)
-#             DBSession.add(field1)
-#             field2 = DictionaryPerspectiveField(parent_entity=field1, parent=persp, client_id=1,
-#                                                 object_id=3, entity_type='praat', level='leveltwoentity',
-#                                                 data_type='markup', state='enabled', position=1)
-#             DBSession.add(field2)
-#             fieldgroup = DictionaryPerspectiveField(parent=persp, client_id=1, object_id=4,
-#                                                     entity_type='protoform', data_type='text',
-#                                                     level='leveloneentity', group='testgroup', state='enabled', position=3)
-#             DBSession.add(fieldgroup)
-#             grouping = DictionaryPerspectiveField(parent=persp, client_id=1, object_id=5, entity_type='etymology',
-#                                                   data_type='grouping_tag', level='groupingentity', state='enabled', position=4)
-#             DBSession.add(grouping)
-#             field3 = DictionaryPerspectiveField(parent_entity=field1, parent=persp, client_id=1,
-#                                                 object_id=6, entity_type='praat2', level='leveltwoentity',
-#                                                 data_type='markup', state='enabled', position=1)
-#             DBSession.add(field3)
-#             new_uets = UserEntitiesTranslationString(object_id=1, client_id = 1,
-#                                                      locale_id=1, translation_string='protoform',
-#                                                      translation='protoform1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=2, client_id = 1,
-#                                                      locale_id=1, translation_string='sound',
-#                                                      translation='sound1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=3, client_id = 1,
-#                                                      locale_id=1, translation_string='text',
-#                                                      translation='text1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=4, client_id = 1,
-#                                                      locale_id=1, translation_string='etymology',
-#                                                      translation='etymology1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=5, client_id = 1,
-#                                                      locale_id=1, translation_string='grouping_tag',
-#                                                      translation='grouping_tag1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=6, client_id = 1,
-#                                                      locale_id=1, translation_string='testgroup',
-#                                                      translation='testgroup1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=7, client_id = 1,
-#                                                      locale_id=1, translation_string='praat',
-#                                                      translation='praat1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=8, client_id = 1,
-#                                                      locale_id=1, translation_string='markup',
-#                                                      translation='markup1')
-#             DBSession.add(new_uets)
-#             new_uets = UserEntitiesTranslationString(object_id=9, client_id = 1,
-#                                                      locale_id=1, translation_string='praat2',
-#                                                      translation='praat3')
-#             DBSession.add(new_uets)
-#
-#     def tearDown(self):
-#         DBSession.remove()
-#         testing.tearDown()
-#
-#     def test_view_perspective_fields(self):
-#         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-#         response = self.app.get('/dictionary/1/1/perspective/1/1/fields')
-#         self.assertEqual(response.status_int, HTTPOk.code)
-#         self.assertCountEqual(response.json['fields'],  # may be problems with checking in 'contains'
-#                          [
-#                              {'entity_type': 'protoform1', 'data_type': 'text1', 'state': 'enabled', 'position': 1},
-#                              {'entity_type': 'sound1', 'data_type': 'sound1', 'state': 'enabled', 'position': 2,
-#                               'contains': [{'entity_type': 'praat1',
-#                                             'data_type': 'markup1',
-#                                             'state': 'enabled',
-#                                             'position': 1},
-#                                            {'entity_type': 'praat3',
-#                                             'data_type': 'markup1',
-#                                             'state': 'enabled',
-#                                             'position': 1}]},
-#                              {'entity_type': 'protoform1', 'data_type': 'text1',
-#                               'state': 'enabled', 'group': 'testgroup1', 'position': 3},
-#                              {'entity_type': 'etymology1', 'data_type': 'grouping_tag1',
-#                               'state': 'enabled', 'position': 4}
-#                          ])
-#
-#
-# class TestDeletePerspectiveFieldsSuccessCondition(unittest.TestCase):
-#
-#     def setUp(self):
-#         self.config = testing.setUp()
-#         import webtest
-#         from pyramid import paster
-#         from sqlalchemy import create_engine
-#         engine = create_engine('sqlite://')
-#         myapp = paster.get_app('testing.ini')
-#         self.app = webtest.TestApp(myapp)
-#         from lingvodoc.models import (
-#             Base,
-#             DictionaryPerspectiveField,
-#             DictionaryPerspective,
-#             Dictionary,
-#             User,
-#             Locale,
-#             Passhash,
-#             Client,
-#             UserEntitiesTranslationString
-#             )
-#         DBSession.configure(bind=engine)
-#         Base.metadata.create_all(engine)
-#         with transaction.manager:
-#             ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
-#             DBSession.add(ru_locale)
-#             en_locale = Locale(id=2, shortcut="en", intl_name="English")
-#             DBSession.add(en_locale)
-#             DBSession.flush()
-#             new_user = User(id=1, login='test', default_locale_id = 1)
-#             new_pass = Passhash(password='pass')
-#             DBSession.add(new_pass)
-#             new_user.password = new_pass
-#             DBSession.add(new_user)
-#             new_client = Client(id=1, user=new_user)
-#             DBSession.add(new_client)
-#             DBSession.flush()
-#             persp = DictionaryPerspective(client_id=1, object_id=1, name='test',
-#                                              parent_client_id=1, parent_object_id=1)
-#             DBSession.add(persp)
-#             new_dict = Dictionary(client_id=1, object_id=1, name='test', state='WiP')
-#             DBSession.add(new_dict)
-#             field = DictionaryPerspectiveField(parent = persp, client_id=1, object_id=1,
-#                                                entity_type='protoform', data_type='text',
-#                                                level='leveloneentity', state='enabled', position=1)
-#             DBSession.add(field)
-#             new_uets = UserEntitiesTranslationString(object_id=1, client_id = 1,
-#                                                      locale_id=1, translation_string='protoform',
-#                                                      translation='protoform1')
-#             DBSession.add(new_uets)
-#
-#     def tearDown(self):
-#         DBSession.remove()
-#         testing.tearDown()
-#
-#     def test_delete_perspective_fields(self):
-#         from lingvodoc.models import DictionaryPerspectiveField
-#         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-#         response = self.app.delete_json('/dictionary/1/1/perspective/1/1/fields',
-#                                         params={'field_object_id': 1, 'field_client_id': 1})
-#         self.assertEqual(response.status_int, HTTPOk.code)
-#         field = DBSession.query(DictionaryPerspectiveField).filter_by(client_id=1, object_id=1).first()
-#         self.assertNotEqual(field, None)
-#         self.assertEqual(field.marked_for_deletion, True)
-#
-#
-# class TestCreatePerspectiveFieldsSuccessCondition(unittest.TestCase):
-#
-#     def setUp(self):
-#         self.config = testing.setUp()
-#         import webtest
-#         from pyramid import paster
-#         from sqlalchemy import create_engine
-#         engine = create_engine('sqlite://')
-#         myapp = paster.get_app('testing.ini')
-#         self.app = webtest.TestApp(myapp)
-#         from lingvodoc.models import (
-#             Base,
-#             DictionaryPerspectiveField,
-#             DictionaryPerspective,
-#             Dictionary,
-#             User,
-#             Locale,
-#             Passhash,
-#             Client,
-#             UserEntitiesTranslationString
-#             )
-#         DBSession.configure(bind=engine)
-#         Base.metadata.create_all(engine)
-#         with transaction.manager:
-#             ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
-#             DBSession.add(ru_locale)
-#             en_locale = Locale(id=2, shortcut="en", intl_name="English")
-#             DBSession.add(en_locale)
-#             DBSession.flush()
-#             new_user = User(id=1, login='test', default_locale_id = 1)
-#             new_pass = Passhash(password='pass')
-#             DBSession.add(new_pass)
-#             new_user.password = new_pass
-#             DBSession.add(new_user)
-#             new_client = Client(id=1, user=new_user)
-#             DBSession.add(new_client)
-#             DBSession.flush()
-#             new_dict = Dictionary(client_id=1, object_id=1, name='test', state='WiP')
-#             DBSession.add(new_dict)
-#             persp = DictionaryPerspective(client_id=1, object_id=1, name='test',
-#                                           parent_client_id=1, parent_object_id=1)
-#             DBSession.add(persp)
-#             DBSession.flush()
-#
-#     def tearDown(self):
-#         DBSession.remove()
-#         testing.tearDown()
-#
-#     def test_view_perspective_fields(self):
-#         from lingvodoc.models import DictionaryPerspectiveField
-#         fields = [{'entity_type_translation': 'protoform1', 'entity_type': 'protoform',
-#                    'data_type_translation': 'text1', 'data_type': 'text',
-#                    'state': 'enabled', 'level': 'leveloneentity', 'position': 1},
-#                   {'entity_type_translation': 'sound1', 'entity_type': 'sound', 'data_type_translation': 'sound1',
-#                    'data_type': 'sound', 'state': 'enabled',
-#                    'contains': [{'entity_type_translation': 'praat1',
-#                                  'entity_type': 'praat',
-#                                  'data_type_translation': 'markup1',
-#                                  'data_type': 'markup',
-#                                  'state': 'enabled', 'level': 'leveltwoentity', 'position': 1}], 'level': 'leveloneentity', 'position': 2},
-#                   {'entity_type_translation': 'protoform1', 'entity_type': 'protoform',
-#                    'data_type_translation': 'text1', 'data_type': 'text', 'state': 'enabled',
-#                    'group_translation':'testgroup1', 'group':'testgroup', 'level': 'leveloneentity', 'position': 3},
-#                   {'entity_type_translation': 'etymology1', 'entity_type': 'etymology',
-#                    'data_type_translation': 'grouping_tag1', 'data_type': 'grouping_tag',
-#                    'state': 'enabled', 'level': 'groupingentity', 'position': 4}]
-#
-#         response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-#         response = self.app.post_json('/dictionary/1/1/perspective/1/1/fields', params={'fields': fields})
-#         self.assertEqual(response.status_int, HTTPOk.code)
-#         response = self.app.get('/dictionary/1/1/perspective/1/1/fields')
-#         self.assertEqual(response.status_int, HTTPOk.code)
-#         field = DBSession.query(DictionaryPerspectiveField).filter_by(parent_client_id=1,
-#                                                                       parent_object_id=1,
-#                                                                       entity_type='protoform',
-#                                                                       data_type='text',
-#                                                                       state='enabled',
-#                                                                       level='leveloneentity',
-#                                                                       group=None,
-#                                                                       position=1).first()
-#         self.assertNotEqual(field, None)
-#         field = DBSession.query(DictionaryPerspectiveField).filter_by(parent_client_id=1,
-#                                                                       parent_object_id=1,
-#                                                                       entity_type='sound',
-#                                                                       data_type='sound',
-#                                                                       state='enabled',
-#                                                                       level='leveloneentity',
-#                                                                       position=2).first()
-#         self.assertNotEqual(field, None)
-#         field = DBSession.query(DictionaryPerspectiveField).filter_by(parent_client_id=1,
-#                                                                       parent_object_id=1,
-#                                                                       entity_type='praat',
-#                                                                       data_type='markup',
-#                                                                       state='enabled',
-#                                                                       level='leveltwoentity',
-#                                                                       position=1).first()
-#         self.assertNotEqual(field, None)
-#         field = DBSession.query(DictionaryPerspectiveField).filter_by(parent_client_id=1,
-#                                                                       parent_object_id=1,
-#                                                                       entity_type='protoform',
-#                                                                       data_type='text',
-#                                                                       state='enabled',
-#                                                                       level='leveloneentity',
-#                                                                       group='testgroup',
-#                                                                       position=3).first()
-#         self.assertNotEqual(field, None)
-#         field = DBSession.query(DictionaryPerspectiveField).filter_by(parent_client_id=1,
-#                                                                       parent_object_id=1,
-#                                                                       entity_type='etymology',
-#                                                                       data_type='grouping_tag',
-#                                                                       state='enabled',
-#                                                                       level='groupingentity',
-#                                                                       position=4).first()
-#         self.assertNotEqual(field, None)
-
-
-class TestDictionariesList(unittest.TestCase):
-    def setUp(self):
-        self.config = testing.setUp()
-        import webtest
-        from pyramid import paster
-        from sqlalchemy import create_engine
-        engine = create_engine('sqlite://')
-        myapp = paster.get_app('testing.ini')
-        self.app = webtest.TestApp(myapp)
-        from lingvodoc.models import (
-            Base,
-            Dictionary,
-            Language,
-            Organization,
-            Locale,
-            User,
-            Passhash,
-            Client,
-            DictionaryPerspective
-            )
-        DBSession.configure(bind=engine)
-        Base.metadata.create_all(engine)
-        with transaction.manager:
-            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
-            DBSession.add(ru_locale)
-            en_locale = Locale(id=2, shortcut="en", intl_name="English")
-            DBSession.add(en_locale)
-            DBSession.flush()
-            new_user = User(id=1, login='test', default_locale_id = 1)
-            new_pass = Passhash(password='pass')
-            DBSession.add(new_pass)
-            new_user.password = new_pass
-            DBSession.add(new_user)
-            new_client = Client(id=1, user=new_user)
-            DBSession.add(new_client)
-            new_user2 = User(id=2, login='test2', default_locale_id = 1)
-            new_pass2 = Passhash(password='pass')
-            DBSession.add(new_pass)
-            new_user2.password = new_pass2
-            DBSession.add(new_user2)
-            new_client = Client(id=2, user=new_user2)
-            DBSession.add(new_client)
-            new_client = Client(id=3, user=new_user)
-            DBSession.add(new_client)
-            DBSession.flush()
-            new_user3 = User(id=3, login='test3', default_locale_id = 1)
-            new_pass3 = Passhash(password='pass')
-            DBSession.add(new_pass3)
-            new_user3.password = new_pass3
-            DBSession.add(new_user3)
-            new_client = Client(id=4, user=new_user3)
-            DBSession.add(new_client)
-            new_user4 = User(id=4, login='test4', default_locale_id = 1)
-            new_pass4 = Passhash(password='pass')
-            DBSession.add(new_pass4)
-            new_user4.password = new_pass4
-            DBSession.add(new_user4)
-            new_client = Client(id=5, user=new_user4)
-            DBSession.add(new_client)
-            new_lang1 = Language(client_id=1, object_id=1, translation_string='head')
-            DBSession.add(new_lang1)
-            new_lang2 = Language(client_id=2, object_id=5, translation_string='left son', parent=new_lang1)
-            DBSession.add(new_lang2)
-            new_lang3 = Language(client_id=1, object_id=3, translation_string='right son', parent=new_lang1)
-            DBSession.add(new_lang3)
-            new_lang4 = Language(client_id=2, object_id=4, translation_string='first grand son', parent=new_lang3)
-            DBSession.add(new_lang4)
-            new_lang5 = Language(client_id=1, object_id=5, translation_string='second grand son', parent=new_lang3)
-            DBSession.add(new_lang5)
-            new_lang6 = Language(client_id=1, object_id=6, translation_string='third grand son', parent=new_lang3)
-            DBSession.add(new_lang6)
-            new_lang7 = Language(client_id=1, object_id=7, translation_string='grand grand son', parent=new_lang5)
-            DBSession.add(new_lang7)
-            new_lang8 = Language(client_id=1, object_id=8, translation_string='second head')
-            DBSession.add(new_lang8)
-            new_lang9 = Language(client_id=1, object_id=9, translation_string='second left son', parent=new_lang8)
-            DBSession.add(new_lang9)
-            new_lang10 = Language(client_id=1, object_id=10, translation_string='second right son', parent=new_lang8)
-            DBSession.add(new_lang10)
-            new_org1 = Organization(name='first')
-            new_org1.users.append(new_user)
-            new_org1.users.append(new_user3)
-            DBSession.add(new_org1)
-            new_org2 = Organization(name='second')
-            DBSession.add(new_org2)
-
-
-    def tearDown(self):
-        DBSession.remove()
-        testing.tearDown()
-
-    def test_no_filter(self):
-        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.get('/user',
-                                      params={'client_id':1})
+        # test view perspective tree
+        response = self.app.get('/dictionary/%s/%s'
+                     '/perspective/%s/%s/tree' % (dict_ids['client_id'],dict_ids['object_id'],
+                                                                         persp_ids['client_id'], persp_ids['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # correct_answer = [
+        #     {'translation': persp_name, 'client_id':  persp_ids['client_id'],
+        #      'type': 'perspective', 'object_id':  persp_ids['object_id'],
+        #      'is_template': True, 'status': 'test state',
+        #      'translation_string': 'new_translation',
+        #      'parent_client_id': dict_ids['client_id'], 'parent_object_id': dict_ids['object_id'],
+        #      'marked_for_deletion': False},
+        #     {'client_id': dict_ids['client_id'], 'translation': 'new_translation',
+        #      'type': 'dictionary', 'object_id': dict_ids['object_id'], 'status': 'test state',
+        #      'translation_string': dict_name, 'additional_metadata': None,
+        #      'parent_client_id': par_ids['client_id'], 'parent_object_id': par_ids['object_id']},
+        #     {'client_id': par_ids['client_id'], 'translation': 'new_translation', 'locale_exist': False,
+        #      'object_id': par_ids['object_id'], 'type': 'language', 'translation_string': lang_name,
+        #      'parent_client_id': 1, 'parent_object_id': 1},
+        #     {'parent_object_id': None, 'parent_client_id': None,
+        #      'object_id': 1, 'translation_string': 'Russian language',
+        #      'client_id': 1, 'locale_exist': True, 'translation': 'Russian language', 'type': 'language'}] #TODO: check diff
 
-
-class TestPerspectiveList(unittest.TestCase):
-    def setUp(self):
-        self.config = testing.setUp()
-        import webtest
-        from pyramid import paster
-        from sqlalchemy import create_engine
-        engine = create_engine('sqlite://')
-        myapp = paster.get_app('testing.ini')
-        self.app = webtest.TestApp(myapp)
-        from lingvodoc.models import (
-            Base,
-            Dictionary,
-            Language,
-            Organization,
-            Locale,
-            User,
-            Passhash,
-            Client,
-            DictionaryPerspective,
-            UserEntitiesTranslationString
-            )
-        DBSession.configure(bind=engine)
-        Base.metadata.create_all(engine)
-        with transaction.manager:
-            ru_locale = Locale(id=1, shortcut="ru", intl_name="Русский")
-            DBSession.add(ru_locale)
-            en_locale = Locale(id=2, shortcut="en", intl_name="English")
-            DBSession.add(en_locale)
-            DBSession.flush()
-            new_user = User(id=1, login='test', default_locale_id = 1)
-            new_pass = Passhash(password='pass')
-            DBSession.add(new_pass)
-            new_user.password = new_pass
-            DBSession.add(new_user)
-            new_client = Client(id=1, user=new_user)
-            DBSession.add(new_client)
-            new_user2 = User(id=2, login='test2', default_locale_id = 1)
-            new_pass2 = Passhash(password='pass')
-            DBSession.add(new_pass)
-            new_user2.password = new_pass2
-            DBSession.add(new_user2)
-            new_client = Client(id=2, user=new_user2)
-            DBSession.add(new_client)
-            new_client = Client(id=3, user=new_user)
-            DBSession.add(new_client)
-            DBSession.flush()
-            new_user3 = User(id=3, login='test3', default_locale_id = 1)
-            new_pass3 = Passhash(password='pass')
-            DBSession.add(new_pass3)
-            new_user3.password = new_pass3
-            DBSession.add(new_user3)
-            new_client = Client(id=4, user=new_user3)
-            DBSession.add(new_client)
-            new_user4 = User(id=4, login='test4', default_locale_id = 1)
-            new_pass4 = Passhash(password='pass')
-            DBSession.add(new_pass4)
-            new_user4.password = new_pass4
-            DBSession.add(new_user4)
-            new_client = Client(id=5, user=new_user4)
-            DBSession.add(new_client)
-            new_lang1 = Language(client_id=1, object_id=1, translation_string='head')
-            DBSession.add(new_lang1)
-            new_lang2 = Language(client_id=2, object_id=5, translation_string='left son', parent=new_lang1)
-            DBSession.add(new_lang2)
-            new_lang3 = Language(client_id=1, object_id=3, translation_string='right son', parent=new_lang1)
-            DBSession.add(new_lang3)
-            new_lang4 = Language(client_id=2, object_id=4, translation_string='first grand son', parent=new_lang3)
-            DBSession.add(new_lang4)
-            new_lang5 = Language(client_id=1, object_id=5, translation_string='second grand son', parent=new_lang3)
-            DBSession.add(new_lang5)
-            new_lang6 = Language(client_id=1, object_id=6, translation_string='third grand son', parent=new_lang3)
-            DBSession.add(new_lang6)
-            new_lang7 = Language(client_id=1, object_id=7, translation_string='grand grand son', parent=new_lang5)
-            DBSession.add(new_lang7)
-            new_lang8 = Language(client_id=1, object_id=8, translation_string='second head')
-            DBSession.add(new_lang8)
-            new_lang9 = Language(client_id=1, object_id=9, translation_string='second left son', parent=new_lang8)
-            DBSession.add(new_lang9)
-            new_lang10 = Language(client_id=1, object_id=10, translation_string='second right son', parent=new_lang8)
-            DBSession.add(new_lang10)
-            new_org1 = Organization(name='first')
-            new_org1.users.append(new_user)
-            new_org1.users.append(new_user3)
-            DBSession.add(new_org1)
-            new_org2 = Organization(name='second')
-            DBSession.add(new_org2)
-            new_dict = Dictionary(client_id=1, object_id=1, name='dict')
-            DBSession.add(new_dict)
-            DBSession.flush()
-            new_persp1 = DictionaryPerspective(client_id=1, object_id=1, name='persp', parent=new_dict)
-            DBSession.add(new_persp1)
-            new_persp2 = DictionaryPerspective(client_id=2, object_id=2, name='persp', parent=new_dict)
-            DBSession.add(new_persp2)
-            uets = UserEntitiesTranslationString(locale_id=1, translation_string='persp', translation='персп')
-
-
-    def tearDown(self):
-        DBSession.remove()
-        testing.tearDown()
-
-    def test_no_filter(self):
-        response = self.app.post_json('/signin', params={'login': 'test', 'password': 'pass'})
-        response = self.app.get('/dictionary/1/1/perspectives',
-                                      params={})
-
-        # response = self.app.get('/dictionary/1/1/perspective/1/1',
-        #                               params={})
+        correct_answer = [{'parent_object_id': dict_ids['object_id'], 'parent_client_id': dict_ids['client_id'],
+                           'object_id': persp_ids['object_id'], 'client_id': persp_ids['client_id'],
+                           'translation_string': persp_name,
+                           'is_template': True, 'status': 'test state',
+                           'marked_for_deletion': False,
+                           'translation': 'new_translation', 'type': 'perspective'},
+                          {'additional_metadata': None, 'parent_object_id': par_ids['object_id'],
+                           'parent_client_id': par_ids['client_id'], 'client_id': dict_ids['client_id'],
+                           'translation_string': dict_name,
+                           'object_id': dict_ids['object_id'], 'status': 'test state',
+                           'translation': 'new_translation', 'type': 'dictionary'},
+                          {'parent_object_id': 1, 'parent_client_id': 1,
+                           'locale_exist': False, 'translation_string': lang_name,
+                           'object_id': par_ids['object_id'], 'client_id': par_ids['client_id'],
+                           'translation': 'new_translation', 'type': 'language'},
+                          {'parent_object_id': None, 'parent_client_id': None,
+                           'locale_exist': True, 'translation_string': 'Russian language',
+                           'object_id': 1, 'client_id': 1, 'translation': 'Russian language',
+                           'type': 'language'}]
+        first_answ = response.json
+        self.assertListEqual(first_answ, correct_answer)
+        response = self.app.get('/perspective/%s/%s/tree' % (persp_ids['client_id'], persp_ids['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
-        print()
-        print("LIST:", response.json)
-        print()
+        self.assertListEqual(first_answ, response.json)
+
+        # testing perspective meta
+        metadict = {'a':'b', 'c':{'d':'e'}}
+        response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s/meta'
+                                     % (dict_ids['client_id'],dict_ids['object_id'],
+                                        persp_ids['client_id'], persp_ids['object_id']),
+                                     params = metadict)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/meta'
+                                     % (dict_ids['client_id'],dict_ids['object_id'],
+                                        persp_ids['client_id'], persp_ids['object_id']),
+                                    )
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, metadict)
+        metaupd = {'a':{'f':'g'}, 'h':'i', 'j':['k','l', {'m':'n', 'o':'p'}]}
+        response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s/meta'
+                                     % (dict_ids['client_id'],dict_ids['object_id'],
+                                        persp_ids['client_id'], persp_ids['object_id']),
+                                     params = metaupd)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        metadict.update(metaupd)
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/meta'
+                                     % (dict_ids['client_id'],dict_ids['object_id'],
+                                        persp_ids['client_id'], persp_ids['object_id']),
+                                    )
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, metadict)
+        metadel = ['j', 'c']
+        response = self.app.delete_json('/dictionary/%s/%s/perspective/%s/%s/meta'
+                                     % (dict_ids['client_id'],dict_ids['object_id'],
+                                        persp_ids['client_id'], persp_ids['object_id']),
+                                        params = metadel
+                                    )
+        self.assertEqual(response.status_int, HTTPOk.code)
+        for key in metadel:
+            del metadict[key]
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/meta'
+                                     % (dict_ids['client_id'],dict_ids['object_id'],
+                                        persp_ids['client_id'], persp_ids['object_id']),
+                                    )
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, metadict)
+
+
+    #     _________________________________________________________________________
+    #     _________________________________________________________________________
+    #     Tests on deleting part
+    #     _________________________________________________________________________
+
+        lang_ids = create_language(self, 'test_lang_del')
+        dict_ids = create_dictionary(self, 'test_dict_del', lang_ids)
+        persp_ids = create_perspective(self, 'test_persp_del', dict_ids)
+
+        response = self.app.delete('/dictionary/%s/%s/perspective/%s/%s' %
+                                   (dict_ids['client_id'], dict_ids['object_id'],
+                                    persp_ids['client_id'], persp_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' %
+                                   (dict_ids['client_id'], dict_ids['object_id'],
+                                    persp_ids['client_id'], persp_ids['object_id']),
+                                status=HTTPNotFound.code)
+        self.assertEqual(response.status_int, HTTPNotFound.code)
+
+        response = self.app.delete('/dictionary/%s/%s' % (dict_ids['client_id'], dict_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/dictionary/%s/%s' % (dict_ids['client_id'], dict_ids['object_id']),
+                                status=HTTPNotFound.code)
+        self.assertEqual(response.status_int, HTTPNotFound.code)
+
+        response = self.app.delete('/language/%s/%s' % (lang_ids['client_id'], lang_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        response = self.app.get('/language/%s/%s' % (lang_ids['client_id'], lang_ids['object_id']),
+                                status=HTTPNotFound.code)
+        self.assertEqual(response.status_int, HTTPNotFound.code)
+
+    #     _________________________________________________________________________
+        # test logout (TODO: add tests on protections here)
+        create_language(self, 'test_logout')
+        response = self.app.post('/logout')
+
+        self.assertEqual(response.status_int, HTTPFound.code)
+        response = self.app.post_json('/language', params={'translation_string': 'test_logout'},
+                                     status=HTTPForbidden.code)
+        self.assertEqual(response.status_int, HTTPForbidden.code)
+
+class TestFuncs(unittest.TestCase):
+
+    def test_dict_diff_empty(self):
+        d1 = {}
+        d2 = {}
+        self.assertEqual(dict_diff(d1, d2), True)
+
+    def test_dict_diff_not_eq(self):
+        d1 = {'a':'b'}
+        d2 = {'b':'a'}
+        self.assertNotEqual(dict_diff(d1, d2), True)
+
+    def test_dict_diff_with_dicts_help(self):
+        d1 =  {'b':'c','d':'e'}
+        d2 = {'d':'e','b':'c'}
+        self.assertEqual(dict_diff(d1, d2), True)
+
+    def test_dict_diff_with_dicts(self):
+        d1 = {'a': {'b':'c','d':'e'}}
+        d2 = {'a':  {'d':'e','b':'c'}}
+        self.assertEqual(dict_diff(d1, d2), True)
+
+    def test_dict_diff_with_lists(self):
+        d1 = {'a': {'b':'c','d':'e'}, 'f':['g', {'i':'j', 'k':'l', 'm':'n', 'o':'p'}, 'q']}
+        d2 = {'a':  {'d':'e','b':'c'}, 'f':['g', {'i':'j', 'o':'p', 'k':'l', 'm':'n'}, 'q']}
+        self.assertEqual(dict_diff(d1, d2), True)
+
+    def test_dict_diff_with_lists_not_eq(self):
+        d1 = {'a': {'b':'c','d':'e'}, 'f':['q', {'i':'j', 'k':'l', 'm':'n', 'o':'p'}, 'g']}
+        d2 = {'a':  {'d':'e','b':'c'}, 'f':['g', {'i':'j', 'o':'p', 'k':'l', 'm':'n'}, 'q']}
+        self.assertNotEqual(dict_diff(d1, d2), True)
+
+    def test_dict_diff_not_eq_2(self):
+        d1 = {'is_template': True, 'client_id': 3, 'parent_object_id': 1, 'object_id': 1, 'status': 'WiP', 'translation': 'new_translation', 'translation_string': 'test_persp', 'additional_metadata': '{}', 'marked_for_deletion': False, 'parent_client_id': 1}
+        d2 = {'client_id': 3, 'object_id': 1,
+                          'locale_exist': False, 'translation': 'new_translation',
+                          'parent_client_id': 1,
+                          'translation_string': 'test_child',
+                          'parent_object_id': 1}
+        self.assertNotEqual(dict_diff(d1, d2), True)

@@ -19,7 +19,8 @@ requires = [
     'waitress',
     'alembic',
     'passlib',
-    'py-bcrypt',
+    'bcrypt',
+
     'requests',
     'simplejson',
     'nltk',

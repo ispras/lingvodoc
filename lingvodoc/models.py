@@ -359,7 +359,6 @@ class Language(Base, TableNameMixin):
         search_translation_string = self.translation_string
         if not search_translation_string:
             search_translation_string = translation_string
-        print('SHEEEET', search_translation_string)
         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
                                                                         translation_string=search_translation_string).first()
         if not translation:
@@ -373,12 +372,10 @@ class Language(Base, TableNameMixin):
             self.translation_string = translation_string
             DBSession.add(uets)
             DBSession.flush()
-            print('HEY, LISTEN! WTF')
         else:
             uets.translation_string = translation_string
             self.translation_string = translation_string
             uets.translation = translation
-            print('HEY, LISTEN!')
         return
 
 
