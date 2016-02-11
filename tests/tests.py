@@ -104,48 +104,40 @@ def dict_diff(d1, d2, stop_words=list(), set_like=False, debug_flag=False):
     return True
 
 
-def commonSetUp(self):
-    import os
-    self.config = testing.setUp()
-    import webtest
-    from pyramid import paster
-    from sqlalchemy import create_engine
-    engine = create_engine(dbname)
-    myapp = paster.get_app('../' + alembicini)
-    self.app = webtest.TestApp(myapp)
-    DBSession.remove()
-    DBSession.configure(bind=engine)
-    bashcommand = "alembic -c %s upgrade head" % alembicini
-    args = bashcommand.split()
-    pathdir = os.path.dirname(os.path.realpath(__file__))
-    pathdir = pathdir[:(len(pathdir) - 6)]
-    my_env = os.environ
-    proc = Popen(args, cwd=pathdir, env=my_env)
-    proc.communicate()
-    accounts = get_appsettings('../' + alembicini, 'accounts')
-    data_init(transaction.manager, accounts)
-
-
-def commonTearDown(self):
-    import os
-    DBSession.remove()
-    bashcommand = "alembic -c %s downgrade base" % alembicini
-    args = bashcommand.split()
-    pathdir = os.path.dirname(os.path.realpath(__file__))
-    pathdir = pathdir[:(len(pathdir) - 6)]
-    my_env = os.environ
-    proc = Popen(args, cwd=pathdir, env=my_env)
-    proc.communicate()
-    testing.tearDown()
-
-
 class MyTestCase(unittest.TestCase):
 
     def setUp(self):
-        commonSetUp(self)
+        import os
+        self.config = testing.setUp()
+        import webtest
+        from pyramid import paster
+        from sqlalchemy import create_engine
+        engine = create_engine(dbname)
+        myapp = paster.get_app('../' + alembicini)
+        self.app = webtest.TestApp(myapp)
+        DBSession.remove()
+        DBSession.configure(bind=engine)
+        bashcommand = "alembic -c %s upgrade head" % alembicini
+        args = bashcommand.split()
+        pathdir = os.path.dirname(os.path.realpath(__file__))
+        pathdir = pathdir[:(len(pathdir) - 6)]
+        my_env = os.environ
+        proc = Popen(args, cwd=pathdir, env=my_env)
+        proc.communicate()
+        accounts = get_appsettings('../' + alembicini, 'accounts')
+        data_init(transaction.manager, accounts)
 
     def tearDown(self):
-        commonTearDown(self)
+        import os
+        DBSession.remove()
+        bashcommand = "alembic -c %s downgrade base" % alembicini
+        args = bashcommand.split()
+        pathdir = os.path.dirname(os.path.realpath(__file__))
+        pathdir = pathdir[:(len(pathdir) - 6)]
+        my_env = os.environ
+        proc = Popen(args, cwd=pathdir, env=my_env)
+        proc.communicate()
+        testing.tearDown()
 
     def assertDictEqual(self, d1, d2, msg=None, stop_words=list(), set_like=False, debug_flag=False):
         self.assertEqual(dict_diff(d1, d2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
@@ -153,189 +145,273 @@ class MyTestCase(unittest.TestCase):
     def assertListEqual(self, l1, l2, msg=None, stop_words=list(), set_like=False, debug_flag=False):
         self.assertEqual(list_diff(l1, l2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
 
+    def signup_common(self, username='test', prev_log = 'test'):
+        email = username + '@test.com'
+        response = self.app.post('/signup', params={'login': username,
+                                                         'password': 'pass',
+                                                         'name': 'test',
+                                                         'email': email,
+                                                         'day': '1',
+                                                         'month': '1',
+                                                         'year': '1970'})
+        response = self.app.post('/logout')
+        response = self.app.post('/login', params={'login': username,
+                                                   'password': 'pass'})
+        response = self.app.get('/user')
+        id = response.json['id']
 
-def signup_common(self, username='test', prev_log = 'test'):
-    email = username + '@test.com'
-    response = self.app.post('/signup', params={'login': username,
-                                                     'password': 'pass',
-                                                     'name': 'test',
-                                                     'email': email,
-                                                     'day': '1',
-                                                     'month': '1',
-                                                     'year': '1970'})
+        response = self.app.post('/logout')
+        response = self.app.post('/login', params={'login': prev_log,
+                                                   'password': 'pass'})
+        return id
 
-    self.assertEqual(response.status_int, HTTPFound.code)
-    response = self.app.post('/logout')
-    self.assertEqual(response.status_int, HTTPFound.code)
-    response = self.app.post('/login', params={'login': username,
-                                               'password': 'pass'})
-    self.assertEqual(response.status_int, HTTPFound.code)
-    response = self.app.get('/user')
-    correct_answer = {'intl_name': username, 'login': username, 'organizations': [],
-                      'is_active': 'True',  'name': 'test', 'email': email,
-                      'default_locale_id': None, 'birthday': '1970-01-01', 'about': None}
+    def login_common(self, username='test'):
+        response = self.app.post('/login', params={'login': username,
+                                                   'password': 'pass'})
 
-    self.assertDictEqual(response.json, correct_answer, stop_words=['id', 'signup_date'])
-    id = response.json['id']
-
-    response = self.app.post('/logout')
-    self.assertEqual(response.status_int, HTTPFound.code)
-    response = self.app.post('/login', params={'login': prev_log,
-                                               'password': 'pass'})
-
-    self.assertEqual(response.status_int, HTTPFound.code)
-    return id
-
-
-def login_common(self, username='test'):
-    response = self.app.post('/login', params={'login': username,
-                                               'password': 'pass'})
-    self.assertEqual(response.status_int, HTTPFound.code)
-
-
-def create_language(self, translation_string, par_ids={'client_id': None, 'object_id': None}):
+    def create_language(self, translation_string, par_ids={'client_id': None, 'object_id': None}):
 
         response = self.app.post_json('/language', params={'translation_string': translation_string,
                                                            'parent_client_id': par_ids['client_id'],
                                                            'parent_object_id': par_ids['object_id']})
-        self.assertEqual(response.status_int, HTTPOk.code)
         ids = response.json
-        response = self.app.get('/language/%s/%s' % (ids['client_id'], ids['object_id']))
-        correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
-                          'locale_exist': False, 'translation': translation_string,
-                          'parent_client_id': par_ids['client_id'],
-                          'translation_string': translation_string,
-                          'parent_object_id': par_ids['object_id']}
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(response.json, correct_answer)
         return ids
 
+    def dictionary_change_state(self, dict_ids, state):
+            response = self.app.put_json('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']),
+                                         params={'status':state})
 
-def dictionary_change_state(self, dict_ids, state):
-        response = self.app.put_json('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']),
-                                     params={'status':state})
-        self.assertEqual(response.status_int, HTTPOk.code)
-        response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(response.json, {'status': state})
+    def perspective_change_state(self, dict_ids, persp_ids, state):
+            response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s/state'
+                                         % (dict_ids['client_id'],dict_ids['object_id'],
+                                            persp_ids['client_id'], persp_ids['object_id']),
+                                         params={'status':state})
 
+    def create_dictionary(self, translation_string, par_ids, state=None):
+            response = self.app.post_json('/dictionary', params={'translation_string': translation_string,
+                                                               'parent_client_id': par_ids['client_id'],
+                                                               'parent_object_id': par_ids['object_id']})
+            ids = response.json
+            if state:
+                self.dictionary_change_state(ids,state)
+            return ids
 
-def perspective_change_state(self, dict_ids, persp_ids, state):
-        response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s/state'
-                                     % (dict_ids['client_id'],dict_ids['object_id'],
-                                        persp_ids['client_id'], persp_ids['object_id']),
-                                     params={'status':state})
+    def create_perspective(self, translation_string, par_ids, state=None):
+            response = self.app.post_json('/dictionary/%s/%s/perspective' % (par_ids['client_id'],par_ids['object_id']),
+                                          params={'translation_string': translation_string})
+            ids = response.json
+            response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' % (par_ids['client_id'],par_ids['object_id'],
+                                                                             ids['client_id'], ids['object_id']))
+            first_view = response.json
+            if state:
+                self.perspective_change_state(par_ids,ids,state)
+            return ids
 
-        self.assertEqual(response.status_int, HTTPOk.code)
+    def add_l1e(self, dict_ids, persp_ids, lex_ids, content='content', entity_type='Word', data_type='text'):
 
-        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/state' % (dict_ids['client_id'],dict_ids['object_id'],
-                                                                         persp_ids['client_id'], persp_ids['object_id']))
+        response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity'
+                                      % (dict_ids['client_id'],
+                                         dict_ids['object_id'],
+                                         persp_ids['client_id'],
+                                         persp_ids['object_id'],
+                                         lex_ids['client_id'],
+                                         lex_ids['object_id']),
+                                      params={'entity_type':entity_type,
+                                              'data_type':data_type,
+                                              'content': content,
+                                              'locale_id': 1})
+        l1e_ids = response.json
+        return l1e_ids
 
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(response.json, {'status': state})
-
-
-def create_dictionary(self, translation_string, par_ids, state=None):
-        response = self.app.post_json('/dictionary', params={'translation_string': translation_string,
-                                                           'parent_client_id': par_ids['client_id'],
-                                                           'parent_object_id': par_ids['object_id']})
-        self.assertEqual(response.status_int, HTTPOk.code)
-        ids = response.json
-        response = self.app.get('/dictionary/%s/%s' % (ids['client_id'], ids['object_id']))
-        correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
-                          'additional_metadata': None,
-                          'parent_client_id':  par_ids['client_id'],
-                          'parent_object_id':  par_ids['object_id'],
-                          'translation': translation_string,
-                          'translation_string': translation_string,
-                          'status': 'WiP'}
-
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(response.json, correct_answer)
-        if state:
-            dictionary_change_state(self,ids,state)
-        return ids
-
-
-def create_perspective(self, translation_string, par_ids, state=None):
-        response = self.app.post_json('/dictionary/%s/%s/perspective' % (par_ids['client_id'],par_ids['object_id']),
-                                      params={'translation_string': translation_string})
-        self.assertEqual(response.status_int, HTTPOk.code)
-        ids = response.json
-        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' % (par_ids['client_id'],par_ids['object_id'],
-                                                                         ids['client_id'], ids['object_id']))
-        correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
-                          'additional_metadata': None,
-                          'parent_client_id':  par_ids['client_id'],
-                          'parent_object_id':  par_ids['object_id'],
-                          'translation': translation_string,
-                          'translation_string': translation_string,
-                          'is_template': False,
-                          'marked_for_deletion': False,
-                          'status': 'WiP'}
-        first_view = response.json
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(first_view, correct_answer)
-        response = self.app.get('/perspective/%s/%s' % (ids['client_id'], ids['object_id']))
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(response.json, correct_answer)
-        if state:
-            perspective_change_state(self,par_ids,ids,state)
-        return ids
-
-
-def add_l1e(self, dict_ids, persp_ids, lex_ids, content='content', entity_type='Word', data_type='text'):
-
-    response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity'
-                                  % (dict_ids['client_id'],
-                                     dict_ids['object_id'],
-                                     persp_ids['client_id'],
-                                     persp_ids['object_id'],
-                                     lex_ids['client_id'],
-                                     lex_ids['object_id']),
-                                  params={'entity_type':entity_type,
-                                          'data_type':data_type,
-                                          'content': content,
-                                          'locale_id': 1})
-    self.assertEqual(response.status_int, HTTPOk.code)
-    l1e_ids = response.json
-    self.assertDictEqual(response.json, {}, stop_words=['object_id', 'client_id'])
-
-    response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity/%s/%s'
-                            % (dict_ids['client_id'],
-                               dict_ids['object_id'],
-                               persp_ids['client_id'],
-                               persp_ids['object_id'],
-                               lex_ids['client_id'],
-                               lex_ids['object_id'],
-                               l1e_ids['client_id'],
-                               l1e_ids['object_id']))
-    self.assertEqual(response.status_int, HTTPOk.code)
-    correct_answer = {'client_id': l1e_ids['client_id'],
-                      'parent_client_id': lex_ids['client_id'],
-                      'parent_object_id': lex_ids['object_id'],
-                      'object_id': l1e_ids['object_id'],
-                      'entity_type': entity_type,
-                      'level': 'leveloneentity',
-                      'marked_for_deletion': False,
-                      'locale_id': 1,
-                      'content': content}
-    self.assertDictEqual(response.json, correct_answer)
-    return l1e_ids
-
-
-def add_grouping(self, first_lex, second_lex, tag=None):
-    params = {'connections': [first_lex, second_lex], 'entity_type':'Etymology'}
-    if tag:
-        params['tag'] = tag
-    response = self.app.post_json('/group_entity', params=params)
-    self.assertEqual(response.status_int, HTTPOk.code)
-    self.assertDictEqual(response.json,{})
-
+    def add_grouping(self, first_lex, second_lex, tag=None):
+        params = {'connections': [first_lex, second_lex], 'entity_type':'Etymology'}
+        if tag:
+            params['tag'] = tag
+        response = self.app.post_json('/group_entity', params=params)
 
 
 class TestSignUp(MyTestCase):
+
+    # def test_helper_funcs(self):
+    #     id = self.signup_common()
+    #
+    #     email = username + '@test.com'
+    #     response = self.app.post('/signup', params={'login': username,
+    #                                                      'password': 'pass',
+    #                                                      'name': 'test',
+    #                                                      'email': email,
+    #                                                      'day': '1',
+    #                                                      'month': '1',
+    #                                                      'year': '1970'})
+    #
+    #     self.assertEqual(response.status_int, HTTPFound.code)
+    #     response = self.app.post('/logout')
+    #     self.assertEqual(response.status_int, HTTPFound.code)
+    #     response = self.app.post('/login', params={'login': username,
+    #                                                'password': 'pass'})
+    #     self.assertEqual(response.status_int, HTTPFound.code)
+    #     response = self.app.get('/user')
+    #     correct_answer = {'intl_name': username, 'login': username, 'organizations': [],
+    #                       'is_active': 'True',  'name': 'test', 'email': email,
+    #                       'default_locale_id': None, 'birthday': '1970-01-01', 'about': None}
+    #
+    #     self.assertDictEqual(response.json, correct_answer, stop_words=['id', 'signup_date'])
+    #     id = response.json['id']
+    #
+    #     response = self.app.post('/logout')
+    #     self.assertEqual(response.status_int, HTTPFound.code)
+    #     response = self.app.post('/login', params={'login': prev_log,
+    #                                                'password': 'pass'})
+    #
+    #     self.assertEqual(response.status_int, HTTPFound.code)
+    #
+    #
+    # def test_login_common(self, username='test'):
+    #     response = self.app.post('/login', params={'login': username,
+    #                                                'password': 'pass'})
+    #     self.assertEqual(response.status_int, HTTPFound.code)
+    #
+    #
+    # def test_create_language(self, translation_string, par_ids={'client_id': None, 'object_id': None}):
+    #
+    #         response = self.app.post_json('/language', params={'translation_string': translation_string,
+    #                                                            'parent_client_id': par_ids['client_id'],
+    #                                                            'parent_object_id': par_ids['object_id']})
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         ids = response.json
+    #         response = self.app.get('/language/%s/%s' % (ids['client_id'], ids['object_id']))
+    #         correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
+    #                           'locale_exist': False, 'translation': translation_string,
+    #                           'parent_client_id': par_ids['client_id'],
+    #                           'translation_string': translation_string,
+    #                           'parent_object_id': par_ids['object_id']}
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         self.assertDictEqual(response.json, correct_answer)
+    #         return ids
+    #
+    #
+    # def test_dictionary_change_state(self, dict_ids, state):
+    #         response = self.app.put_json('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']),
+    #                                      params={'status':state})
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         self.assertDictEqual(response.json, {'status': state})
+    #
+    #
+    # def test_perspective_change_state(self, dict_ids, persp_ids, state):
+    #         response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s/state'
+    #                                      % (dict_ids['client_id'],dict_ids['object_id'],
+    #                                         persp_ids['client_id'], persp_ids['object_id']),
+    #                                      params={'status':state})
+    #
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #
+    #         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/state' % (dict_ids['client_id'],dict_ids['object_id'],
+    #                                                                          persp_ids['client_id'], persp_ids['object_id']))
+    #
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         self.assertDictEqual(response.json, {'status': state})
+    #
+    #
+    # def test_create_dictionary(self, translation_string, par_ids, state=None):
+    #         response = self.app.post_json('/dictionary', params={'translation_string': translation_string,
+    #                                                            'parent_client_id': par_ids['client_id'],
+    #                                                            'parent_object_id': par_ids['object_id']})
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         ids = response.json
+    #         response = self.app.get('/dictionary/%s/%s' % (ids['client_id'], ids['object_id']))
+    #         correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
+    #                           'additional_metadata': None,
+    #                           'parent_client_id':  par_ids['client_id'],
+    #                           'parent_object_id':  par_ids['object_id'],
+    #                           'translation': translation_string,
+    #                           'translation_string': translation_string,
+    #                           'status': 'WiP'}
+    #
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         self.assertDictEqual(response.json, correct_answer)
+    #         if state:
+    #             dictionary_change_state(self,ids,state)
+    #         return ids
+    #
+    #
+    # def test_create_perspective(self, translation_string, par_ids, state=None):
+    #         response = self.app.post_json('/dictionary/%s/%s/perspective' % (par_ids['client_id'],par_ids['object_id']),
+    #                                       params={'translation_string': translation_string})
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         ids = response.json
+    #         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' % (par_ids['client_id'],par_ids['object_id'],
+    #                                                                          ids['client_id'], ids['object_id']))
+    #         correct_answer = {'client_id': ids['client_id'], 'object_id': ids['object_id'],
+    #                           'additional_metadata': None,
+    #                           'parent_client_id':  par_ids['client_id'],
+    #                           'parent_object_id':  par_ids['object_id'],
+    #                           'translation': translation_string,
+    #                           'translation_string': translation_string,
+    #                           'is_template': False,
+    #                           'marked_for_deletion': False,
+    #                           'status': 'WiP'}
+    #         first_view = response.json
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         self.assertDictEqual(first_view, correct_answer)
+    #         response = self.app.get('/perspective/%s/%s' % (ids['client_id'], ids['object_id']))
+    #         self.assertEqual(response.status_int, HTTPOk.code)
+    #         self.assertDictEqual(response.json, correct_answer)
+    #         if state:
+    #             perspective_change_state(self,par_ids,ids,state)
+    #         return ids
+    #
+    #
+    # def test_add_l1e(self, dict_ids, persp_ids, lex_ids, content='content', entity_type='Word', data_type='text'):
+    #
+    #     response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity'
+    #                                   % (dict_ids['client_id'],
+    #                                      dict_ids['object_id'],
+    #                                      persp_ids['client_id'],
+    #                                      persp_ids['object_id'],
+    #                                      lex_ids['client_id'],
+    #                                      lex_ids['object_id']),
+    #                                   params={'entity_type':entity_type,
+    #                                           'data_type':data_type,
+    #                                           'content': content,
+    #                                           'locale_id': 1})
+    #     self.assertEqual(response.status_int, HTTPOk.code)
+    #     l1e_ids = response.json
+    #     self.assertDictEqual(response.json, {}, stop_words=['object_id', 'client_id'])
+    #
+    #     response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity/%s/%s'
+    #                             % (dict_ids['client_id'],
+    #                                dict_ids['object_id'],
+    #                                persp_ids['client_id'],
+    #                                persp_ids['object_id'],
+    #                                lex_ids['client_id'],
+    #                                lex_ids['object_id'],
+    #                                l1e_ids['client_id'],
+    #                                l1e_ids['object_id']))
+    #     self.assertEqual(response.status_int, HTTPOk.code)
+    #     correct_answer = {'client_id': l1e_ids['client_id'],
+    #                       'parent_client_id': lex_ids['client_id'],
+    #                       'parent_object_id': lex_ids['object_id'],
+    #                       'object_id': l1e_ids['object_id'],
+    #                       'entity_type': entity_type,
+    #                       'level': 'leveloneentity',
+    #                       'marked_for_deletion': False,
+    #                       'locale_id': 1,
+    #                       'content': content}
+    #     self.assertDictEqual(response.json, correct_answer)
+    #     return l1e_ids
+    #
+    #
+    # def test_add_grouping(self, first_lex, second_lex, tag=None):
+    #     params = {'connections': [first_lex, second_lex], 'entity_type':'Etymology'}
+    #     if tag:
+    #         params['tag'] = tag
+    #     response = self.app.post_json('/group_entity', params=params)
+    #     self.assertEqual(response.status_int, HTTPOk.code)
+    #     self.assertDictEqual(response.json,{})
+
 
     def one_big_test(self):
         # test impossibility to create language without login
@@ -343,11 +419,11 @@ class TestSignUp(MyTestCase):
                                      status=HTTPForbidden.code)
         self.assertEqual(response.status_int, HTTPForbidden.code)
         # test signup & login
-        user_id = signup_common(self)
-        login_common(self)
+        user_id = self.signup_common()
+        self.login_common()
         # test creating language
         lang_name = 'test_lang'
-        par_ids = create_language(self, lang_name)
+        par_ids = self.create_language(lang_name)
         # test view all languages
 
         response = self.app.get('/languages')
@@ -409,7 +485,7 @@ class TestSignUp(MyTestCase):
         # test creating dictionary
 
         dict_name = 'test_dict'
-        dict_ids = create_dictionary(self, dict_name, par_ids)
+        dict_ids = self.create_dictionary(dict_name, par_ids)
         # test edit dictionary
         response = self.app.put_json('/dictionary/%s/%s' % (dict_ids['client_id'], dict_ids['object_id']),
                                      params={'translation':'new_translation',
@@ -450,10 +526,10 @@ class TestSignUp(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, {'status': 'WiP'})
         # test edit dictionary state
-        dictionary_change_state(self, dict_ids, 'test state')
+        self.dictionary_change_state(dict_ids, 'test state')
         persp_name = 'test_persp'
         # test creating perspective
-        persp_ids = create_perspective(self, persp_name, dict_ids)
+        persp_ids = self.create_perspective(persp_name, dict_ids)
         # test perspective edit
         response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s'
                                      % (dict_ids['client_id'],
@@ -495,7 +571,7 @@ class TestSignUp(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, {'status': 'WiP'})
         # test edit perspective state
-        perspective_change_state(self, dict_ids, persp_ids, 'test state')
+        self.perspective_change_state(dict_ids, persp_ids, 'test state')
         # test view perspective tree
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/tree'
                                 % (dict_ids['client_id'],
@@ -621,15 +697,16 @@ class TestSignUp(MyTestCase):
         # TODO: create two new users. share roles with first (not all). login into him, share roles with second.
         # TODO:  Should be able to share shared roles and not be able not shared. Login into 0th user
 
-        user_id2 = signup_common(self, 'test2')
-        user_id3 = signup_common(self, 'test3')
+        user_id2 = self.signup_common('test2')
+        user_id3 = self.signup_common('test3')
         params = {'roles_users':
                               {'Can resign users from perspective editors': [user_id2],
                                'Can create perspectives': [user_id2],
                                'Can merge dictionaries and perspectives': [user_id3],
                                'Can create dictionary roles and assign collaborators': [user_id2],
+                               'Can get dictionary role list': [user_id2],
                                'Can edit dictionary options': [user_id3]}}
-        response = self.app.get('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
+        response = self.app.post_json('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
                                                              dict_ids['object_id']), params=params)
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'roles_users':
@@ -638,7 +715,7 @@ class TestSignUp(MyTestCase):
                                'Can merge dictionaries and perspectives': [user_id, user_id3],
                                'Can delete dictionary': [user_id],
                                'Can create dictionary roles and assign collaborators': [user_id, user_id2],
-                               'Can get dictionary role list': [user_id],
+                               'Can get dictionary role list': [user_id, user_id2],
                                'Can edit dictionary options': [user_id, user_id3]},
                           'roles_organizations':
                               {'Can resign users from perspective editors': [],
@@ -648,13 +725,68 @@ class TestSignUp(MyTestCase):
                                'Can create dictionary roles and assign collaborators': [],
                                'Can get dictionary role list': [],
                                'Can edit dictionary options': []}}
-        # self.assertDictEqual(response.json, correct_answer)
-        # print(response.json)
-        # print(correct_answer)
-        login_common(self, 'test2')
+        response = self.app.get('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
+                                                             dict_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+        self.login_common('test2')
         # import pdb; pdb.set_trace()
+        params = {'roles_users':
+                              {'Can resign users from perspective editors': [user_id3],
+                               'Can create perspectives': [user_id3]}}
+        response = self.app.post_json('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
+                                                             dict_ids['object_id']), params=params)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        correct_answer = {'roles_users':
+                              {'Can resign users from perspective editors': [user_id, user_id2, user_id3],
+                               'Can create perspectives': [user_id, user_id2, user_id3],
+                               'Can merge dictionaries and perspectives': [user_id, user_id3],
+                               'Can delete dictionary': [user_id],
+                               'Can create dictionary roles and assign collaborators': [user_id, user_id2],
+                               'Can get dictionary role list': [user_id, user_id2],
+                               'Can edit dictionary options': [user_id, user_id3]},
+                          'roles_organizations':
+                              {'Can resign users from perspective editors': [],
+                               'Can create perspectives': [],
+                               'Can merge dictionaries and perspectives': [],
+                               'Can delete dictionary': [],
+                               'Can create dictionary roles and assign collaborators': [],
+                               'Can get dictionary role list': [],
+                               'Can edit dictionary options': []}}
+        response = self.app.get('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
+                                                             dict_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
 
-        login_common(self, 'test')
+        self.login_common('test')
+
+        params = {'roles_users':
+                              {'Can create dictionary roles and assign collaborators': [user_id2],
+                               'Can edit dictionary options': [user_id3]}}
+        response = self.app.delete_json('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
+                                                                     dict_ids['object_id']), params=params)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        correct_answer = {'roles_users':
+                              {'Can resign users from perspective editors': [user_id, user_id2, user_id3],
+                               'Can create perspectives': [user_id, user_id2, user_id3],
+                               'Can merge dictionaries and perspectives': [user_id, user_id3],
+                               'Can delete dictionary': [user_id],
+                               'Can create dictionary roles and assign collaborators': [user_id],
+                               'Can get dictionary role list': [user_id, user_id2],
+                               'Can edit dictionary options': [user_id]},
+                          'roles_organizations':
+                              {'Can resign users from perspective editors': [],
+                               'Can create perspectives': [],
+                               'Can merge dictionaries and perspectives': [],
+                               'Can delete dictionary': [],
+                               'Can create dictionary roles and assign collaborators': [],
+                               'Can get dictionary role list': [],
+                               'Can edit dictionary options': []}}
+        response = self.app.get('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
+                                                             dict_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+
         response = self.app.get('/users')
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'users': [{'login': 'admin', 'name': 'Администратор', 'id': 1,
@@ -701,7 +833,7 @@ class TestSignUp(MyTestCase):
         correct_answer = [{} for o in range(41)]
         self.assertListEqual(response.json, correct_answer, stop_words=['object_id', 'client_id'])
         lexes_ids = response.json
-        l1e_ids = add_l1e(self,dict_ids,persp_ids,lex_ids, content='testing level one entity')
+        l1e_ids = self.add_l1e(dict_ids, persp_ids,lex_ids, content='testing level one entity')
 
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity'
                                       '/%s/%s/leveltwoentity'
@@ -756,10 +888,10 @@ class TestSignUp(MyTestCase):
         for iter_lex_ids in grouping_lexes:
             content = 'grouping word ' + str(counter)
             grouping_contents.append(content)
-            add_l1e(self, dict_ids, persp_ids, iter_lex_ids, content=content)
+            self.add_l1e(dict_ids, persp_ids, iter_lex_ids, content=content)
             counter += 1
 
-        add_grouping(self, grouping_lexes[0], grouping_lexes[1])
+        self.add_grouping(grouping_lexes[0], grouping_lexes[1])
         correct_answer = {'words': [{'lexical_entry': {'object_id': 2, 'contains': [{'additional_metadata': None, 'object_id': 2, 'parent_client_id': 11, 'published': False, 'locale_id': 1, 'level': 'leveloneentity', 'content': "grouping word {'object_id': 2, 'client_id': 11}", 'contains': None, 'parent_object_id': 2, 'client_id': 11, 'entity_type': 'Word', 'marked_for_deletion': False}, {'additional_metadata': None, 'object_id': 1, 'parent_client_id': 11, 'published': False, 'locale_id': None, 'level': 'groupingentity', 'content': 'Wed Feb 10 13:50:08 2016MNAZGRV22A', 'contains': None, 'parent_object_id': 2, 'client_id': 11, 'entity_type': 'Etymology', 'marked_for_deletion': False}], 'published': False, 'client_id': 11, 'level': 'lexicalentry', 'came_from': None, 'marked_for_deletion': False, 'parent_client_id': 5, 'parent_object_id': 1}}, {'lexical_entry': {'object_id': 3, 'contains': [{'additional_metadata': None, 'object_id': 3, 'parent_client_id': 11, 'published': False, 'locale_id': 1, 'level': 'leveloneentity', 'content': "grouping word {'object_id': 3, 'client_id': 11}", 'contains': None, 'parent_object_id': 3, 'client_id': 11, 'entity_type': 'Word', 'marked_for_deletion': False}, {'additional_metadata': None, 'object_id': 2, 'parent_client_id': 11, 'published': False, 'locale_id': None, 'level': 'groupingentity', 'content': 'Wed Feb 10 13:50:08 2016MNAZGRV22A', 'contains': None, 'parent_object_id': 3, 'client_id': 11, 'entity_type': 'Etymology', 'marked_for_deletion': False}], 'published': False, 'client_id': 11, 'level': 'lexicalentry', 'came_from': None, 'marked_for_deletion': False, 'parent_client_id': 5, 'parent_object_id': 1}}]}
 
         response = self.app.get('/lexical_entry/%s/%s/connected'
@@ -770,7 +902,7 @@ class TestSignUp(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, correct_answer, stop_words=['content', 'client_id', 'object_id', 'parent_client_id', 'parent_object_id'], set_like=True)  # TODO: do not ignore everything. Some other equality check needs to be done
 
-        add_grouping(self, grouping_lexes[2], grouping_lexes[3])
+        self.add_grouping(grouping_lexes[2], grouping_lexes[3])
         correct_answer = {'words': [{'lexical_entry': {'contains': [{'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'contains': None, 'object_id': 4, 'content': "grouping word {'object_id': 4, 'client_id': 11}", 'entity_type': 'Word', 'parent_object_id': 4, 'client_id': 11, 'level': 'leveloneentity', 'published': False, 'locale_id': 1}, {'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'contains': None, 'object_id': 3, 'content': 'Wed Feb 10 15:36:45 2016ZV06I8ZRYW', 'entity_type': 'Etymology', 'parent_object_id': 4, 'client_id': 11, 'level': 'groupingentity', 'published': False, 'locale_id': None}], 'parent_client_id': 5, 'parent_object_id': 1, 'client_id': 11, 'level': 'lexicalentry', 'object_id': 4, 'published': False, 'marked_for_deletion': False, 'came_from': None}}, {'lexical_entry': {'contains': [{'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'contains': None, 'object_id': 5, 'content': "grouping word {'object_id': 5, 'client_id': 11}", 'entity_type': 'Word', 'parent_object_id': 5, 'client_id': 11, 'level': 'leveloneentity', 'published': False, 'locale_id': 1}, {'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'contains': None, 'object_id': 4, 'content': 'Wed Feb 10 15:36:45 2016ZV06I8ZRYW', 'entity_type': 'Etymology', 'parent_object_id': 5, 'client_id': 11, 'level': 'groupingentity', 'published': False, 'locale_id': None}], 'parent_client_id': 5, 'parent_object_id': 1, 'client_id': 11, 'level': 'lexicalentry', 'object_id': 5, 'published': False, 'marked_for_deletion': False, 'came_from': None}}]}
 
         response = self.app.get('/lexical_entry/%s/%s/connected'
@@ -782,7 +914,7 @@ class TestSignUp(MyTestCase):
         # print(response.json)
         self.assertDictEqual(response.json, correct_answer, stop_words=['content', 'client_id', 'object_id', 'parent_client_id', 'parent_object_id'], set_like=True)
 
-        add_grouping(self, grouping_lexes[3], grouping_lexes[4])
+        self.add_grouping(grouping_lexes[3], grouping_lexes[4])
         correct_answer = {'words': [{'lexical_entry': {'published': False, 'came_from': None, 'object_id': 4, 'client_id': 11, 'level': 'lexicalentry', 'marked_for_deletion': False, 'parent_object_id': 1, 'parent_client_id': 5, 'contains': [{'entity_type': 'Word', 'parent_object_id': 4, 'content': "grouping word {'client_id': 11, 'object_id': 4}", 'published': False, 'locale_id': 1, 'object_id': 4, 'client_id': 11, 'level': 'leveloneentity', 'marked_for_deletion': False, 'additional_metadata': None, 'parent_client_id': 11, 'contains': None}, {'entity_type': 'Etymology', 'parent_object_id': 4, 'content': 'Wed Feb 10 15:49:45 20166TGFY3S1LX', 'published': False, 'locale_id': None, 'object_id': 3, 'client_id': 11, 'level': 'groupingentity', 'marked_for_deletion': False, 'additional_metadata': None, 'parent_client_id': 11, 'contains': None}]}}, {'lexical_entry': {'published': False, 'came_from': None, 'object_id': 5, 'client_id': 11, 'level': 'lexicalentry', 'marked_for_deletion': False, 'parent_object_id': 1, 'parent_client_id': 5, 'contains': [{'entity_type': 'Word', 'parent_object_id': 5, 'content': "grouping word {'client_id': 11, 'object_id': 5}", 'published': False, 'locale_id': 1, 'object_id': 5, 'client_id': 11, 'level': 'leveloneentity', 'marked_for_deletion': False, 'additional_metadata': None, 'parent_client_id': 11, 'contains': None}, {'entity_type': 'Etymology', 'parent_object_id': 5, 'content': 'Wed Feb 10 15:49:45 20166TGFY3S1LX', 'published': False, 'locale_id': None, 'object_id': 4, 'client_id': 11, 'level': 'groupingentity', 'marked_for_deletion': False, 'additional_metadata': None, 'parent_client_id': 11, 'contains': None}]}}, {'lexical_entry': {'published': False, 'came_from': None, 'object_id': 6, 'client_id': 11, 'level': 'lexicalentry', 'marked_for_deletion': False, 'parent_object_id': 1, 'parent_client_id': 5, 'contains': [{'entity_type': 'Word', 'parent_object_id': 6, 'content': "grouping word {'client_id': 11, 'object_id': 6}", 'published': False, 'locale_id': 1, 'object_id': 6, 'client_id': 11, 'level': 'leveloneentity', 'marked_for_deletion': False, 'additional_metadata': None, 'parent_client_id': 11, 'contains': None}, {'entity_type': 'Etymology', 'parent_object_id': 6, 'content': 'Wed Feb 10 15:49:45 20166TGFY3S1LX', 'published': False, 'locale_id': None, 'object_id': 5, 'client_id': 11, 'level': 'groupingentity', 'marked_for_deletion': False, 'additional_metadata': None, 'parent_client_id': 11, 'contains': None}]}}]}
 
         response = self.app.get('/lexical_entry/%s/%s/connected'
@@ -794,7 +926,7 @@ class TestSignUp(MyTestCase):
         # print(response.json)
         self.assertDictEqual(response.json, correct_answer, stop_words=['content', 'client_id', 'object_id', 'parent_client_id', 'parent_object_id'], set_like=True)
 
-        add_grouping(self, grouping_lexes[1], grouping_lexes[4])
+        self.add_grouping(grouping_lexes[1], grouping_lexes[4])
         correct_answer = {'words': [{'lexical_entry': {'level': 'lexicalentry', 'came_from': None, 'parent_client_id': 5, 'published': False, 'object_id': 2, 'contains': [{'level': 'leveloneentity', 'entity_type': 'Word', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 2, 'published': False, 'content': "grouping word {'object_id': 2, 'client_id': 11}", 'object_id': 2, 'contains': None, 'locale_id': 1}, {'level': 'groupingentity', 'entity_type': 'Etymology', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 2, 'published': False, 'content': 'Wed Feb 10 15:54:08 2016KPBGYM63DB', 'object_id': 1, 'contains': None, 'locale_id': None}], 'marked_for_deletion': False, 'client_id': 11, 'parent_object_id': 1}}, {'lexical_entry': {'level': 'lexicalentry', 'came_from': None, 'parent_client_id': 5, 'published': False, 'object_id': 3, 'contains': [{'level': 'leveloneentity', 'entity_type': 'Word', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 3, 'published': False, 'content': "grouping word {'object_id': 3, 'client_id': 11}", 'object_id': 3, 'contains': None, 'locale_id': 1}, {'level': 'groupingentity', 'entity_type': 'Etymology', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 3, 'published': False, 'content': 'Wed Feb 10 15:54:08 20167VF6IEU0O7', 'object_id': 6, 'contains': None, 'locale_id': None}, {'level': 'groupingentity', 'entity_type': 'Etymology', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 3, 'published': False, 'content': 'Wed Feb 10 15:54:08 2016KPBGYM63DB', 'object_id': 2, 'contains': None, 'locale_id': None}], 'marked_for_deletion': False, 'client_id': 11, 'parent_object_id': 1}}, {'lexical_entry': {'level': 'lexicalentry', 'came_from': None, 'parent_client_id': 5, 'published': False, 'object_id': 6, 'contains': [{'level': 'leveloneentity', 'entity_type': 'Word', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 6, 'published': False, 'content': "grouping word {'object_id': 6, 'client_id': 11}", 'object_id': 6, 'contains': None, 'locale_id': 1}, {'level': 'groupingentity', 'entity_type': 'Etymology', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 6, 'published': False, 'content': 'Wed Feb 10 15:54:08 2016KPBGYM63DB', 'object_id': 7, 'contains': None, 'locale_id': None}, {'level': 'groupingentity', 'entity_type': 'Etymology', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 6, 'published': False, 'content': 'Wed Feb 10 15:54:08 20167VF6IEU0O7', 'object_id': 5, 'contains': None, 'locale_id': None}], 'marked_for_deletion': False, 'client_id': 11, 'parent_object_id': 1}}, {'lexical_entry': {'level': 'lexicalentry', 'came_from': None, 'parent_client_id': 5, 'published': False, 'object_id': 4, 'contains': [{'level': 'leveloneentity', 'entity_type': 'Word', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 4, 'published': False, 'content': "grouping word {'object_id': 4, 'client_id': 11}", 'object_id': 4, 'contains': None, 'locale_id': 1}, {'level': 'groupingentity', 'entity_type': 'Etymology', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 4, 'published': False, 'content': 'Wed Feb 10 15:54:08 20167VF6IEU0O7', 'object_id': 3, 'contains': None, 'locale_id': None}], 'marked_for_deletion': False, 'client_id': 11, 'parent_object_id': 1}}, {'lexical_entry': {'level': 'lexicalentry', 'came_from': None, 'parent_client_id': 5, 'published': False, 'object_id': 5, 'contains': [{'level': 'leveloneentity', 'entity_type': 'Word', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 5, 'published': False, 'content': "grouping word {'object_id': 5, 'client_id': 11}", 'object_id': 5, 'contains': None, 'locale_id': 1}, {'level': 'groupingentity', 'entity_type': 'Etymology', 'parent_client_id': 11, 'marked_for_deletion': False, 'additional_metadata': None, 'client_id': 11, 'parent_object_id': 5, 'published': False, 'content': 'Wed Feb 10 15:54:08 20167VF6IEU0O7', 'object_id': 4, 'contains': None, 'locale_id': None}], 'marked_for_deletion': False, 'client_id': 11, 'parent_object_id': 1}}]}
 
         response = self.app.get('/lexical_entry/%s/%s/connected'
@@ -882,9 +1014,9 @@ class TestSignUp(MyTestCase):
     #     Tests on delete
     #     _________________________________________________________________________
 
-        lang_ids = create_language(self, 'test_lang_del')
-        dict_ids = create_dictionary(self, 'test_dict_del', lang_ids)
-        persp_ids = create_perspective(self, 'test_persp_del', dict_ids)
+        lang_ids = self.create_language('test_lang_del')
+        dict_ids = self.create_dictionary('test_dict_del', lang_ids)
+        persp_ids = self.create_perspective('test_persp_del', dict_ids)
 
         response = self.app.delete('/dictionary/%s/%s/perspective/%s/%s' %
                                    (dict_ids['client_id'], dict_ids['object_id'],
@@ -910,7 +1042,7 @@ class TestSignUp(MyTestCase):
 
     #     _________________________________________________________________________
         # test logout
-        create_language(self, 'test_logout')
+        self.create_language('test_logout')
         response = self.app.post('/logout')
 
         self.assertEqual(response.status_int, HTTPFound.code)
@@ -919,28 +1051,28 @@ class TestSignUp(MyTestCase):
         self.assertEqual(response.status_int, HTTPForbidden.code)
 
     def test_dict_lang_tree(self):
-        id = signup_common(self)
-        login_common(self)
-        root_ids = create_language(self,'Корень')
-        first_child = create_language(self,'Первый ребенок', root_ids)
-        second_child = create_language(self,'Второй ребенок', root_ids)
-        dict_root = create_dictionary(self, 'Словарь корня', root_ids, 'Published')
-        dict_first = create_dictionary(self, 'Словарь первого ребенка', first_child, 'Published')
-        dict_second = create_dictionary(self, 'Словарь второго ребенка', second_child, 'Published')
-        persp_root = create_perspective(self, 'Root Perspective', dict_root, 'Published')
-        persp_first = create_perspective(self, '1st Perspective', dict_first, 'Published')
-        persp_second = create_perspective(self, '2nd Perspective', dict_second, 'Published')
-        empty_lang = create_language(self, 'Пустой язык', first_child)
-        many_dicts_lang = create_language(self, 'Язык с многими словарями', empty_lang)
-        complete_emptyness = create_language(self, 'Абсолютная пустота', second_child)
+        id = self.signup_common()
+        self.login_common()
+        root_ids = self.create_language('Корень')
+        first_child = self.create_language('Первый ребенок', root_ids)
+        second_child = self.create_language('Второй ребенок', root_ids)
+        dict_root = self.create_dictionary('Словарь корня', root_ids, 'Published')
+        dict_first = self.create_dictionary('Словарь первого ребенка', first_child, 'Published')
+        dict_second = self.create_dictionary('Словарь второго ребенка', second_child, 'Published')
+        persp_root = self.create_perspective('Root Perspective', dict_root, 'Published')
+        persp_first = self.create_perspective('1st Perspective', dict_first, 'Published')
+        persp_second = self.create_perspective('2nd Perspective', dict_second, 'Published')
+        empty_lang = self.create_language('Пустой язык', first_child)
+        many_dicts_lang = self.create_language('Язык с многими словарями', empty_lang)
+        complete_emptyness = self.create_language('Абсолютная пустота', second_child)
         many_dicts = list()
         for i in range(10):
-            many_dicts += [create_dictionary(self, 'Словарь №%s' % i, many_dicts_lang, 'Published')]
+            many_dicts += [self.create_dictionary('Словарь №%s' % i, many_dicts_lang, 'Published')]
         many_persps = list()
         i = 0
         for dict_ids in many_dicts:
             i += 1
-            many_persps += [create_perspective(self, 'Перспектива №%s' % i, dict_ids, 'Published')]
+            many_persps += [self.create_perspective('Перспектива №%s' % i, dict_ids, 'Published')]
         response = self.app.post_json('/published_dictionaries', params = {})
         self.assertEqual(response.status_int, HTTPOk.code)
         # TODO: change from numbers to ids, returned in previous responses.
