@@ -64,7 +64,7 @@ def approve(session, server_url,dictionary_client_id, dictionary_object_id, clie
     return {'time': time() - start}
 
 
-def approve_all_outer(login, password_hash,dictionary_client_id, dictionary_object_id,
+def approve_all_outer(login, password_hash, dictionary_client_id, dictionary_object_id,
                       perspective_client_id, perspective_object_id,  server_url="http://localhost:6543/"):
     log = logging.getLogger(__name__)
     log.debug("Starting convert_one")

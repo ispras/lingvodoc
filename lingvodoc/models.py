@@ -212,7 +212,7 @@ class CompositeIdMixin(object):
     """
     #object_id = Column(BigInteger, primary_key=True)
     object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
-    client_id = Column(BigInteger, primary_key=True)
+    client_id = Column(BigInteger, primary_key=True)  # SLBigInteger() ?
 
 
 class CompositeKeysHelper(object):
@@ -846,7 +846,6 @@ def acl_by_groups(object_id, client_id, subject):
     for group in groups:
         base_group = group.parent
         if group.subject_override:
-            group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \

@@ -113,7 +113,7 @@ class CommonException(Exception):
 
 
 @view_config(route_name='entity_metadata_search', renderer='json', request_method='GET')
-def entity_metadata_search(request):
+def entity_metadata_search(request):  # TODO: test
     # TODO: add same check for permission as in basic_search
     searchstring = request.params.get('searchstring')
     if type(searchstring) != str:
@@ -143,7 +143,7 @@ def entity_metadata_search(request):
 
 
 @view_config(route_name='basic_search_old', renderer='json', request_method='GET')
-def basic_search_old(request):
+def basic_search_old(request):  # TODO: test? should not be used anywhere
     searchstring = request.params.get('leveloneentity')
     results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%')).all()
     results = []
@@ -172,7 +172,7 @@ def basic_search_old(request):
 
 
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
-def basic_search(request):
+def basic_search(request):  # TODO: test
     can_add_tags = request.params.get('can_add_tags')
     searchstring = request.params.get('leveloneentity')
     perspective_client_id = request.params.get('perspective_client_id')
@@ -239,7 +239,7 @@ def basic_search(request):
 
 
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
-def advanced_search(request):
+def advanced_search(request):  # TODO: test
     req = request.json
     perspectives = req.get('perspectives')
     searchstrings = req.get('searchstrings') or []
@@ -267,9 +267,9 @@ def advanced_search(request):
         request.response.status = HTTPBadRequest.code
         return {'error': 'No search'}
     length_search = [len(o['searchstring']) for o in searchstrings if len(o['searchstring']) >= 1]
-    if length_search == []:
-        request.response.status = HTTPBadRequest.code
-        return {'error': 'search is too short'}
+    # if length_search == []:
+    #     request.response.status = HTTPBadRequest.code
+    #     return {'error': 'search is too short'}
     if adopted is not None:
         if adopted:
             sub = results_cursor.subquery()
@@ -347,6 +347,7 @@ def advanced_search(request):
         if searchstring:
             if len(searchstring) >= 1:
                 searchstring = searchstring.split(' ')
+                print(searchstring)
                 if entity_type:
                     if search_by_or:
                         new_results_cursor = DBSession.query(sublexes)\
@@ -359,6 +360,8 @@ def advanced_search(request):
                             LevelOneEntity.marked_for_deletion == False,
                             or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]),
                             LevelOneEntity.entity_type == entity_type).union_all(new_results_cursor)
+                        for e in new_results_cursor:
+                            print(e)
                         # .filter(or_(*[MyTable.my_column.like(name) for name in foo]))
                     else:
                         new_results_cursor = DBSession.query(sublexes)\
@@ -371,6 +374,8 @@ def advanced_search(request):
                 LevelOneEntity.marked_for_deletion == False,
                             and_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]),
                             LevelOneEntity.entity_type == entity_type).union_all(new_results_cursor)
+                        for e in new_results_cursor:
+                            print(e)
                 else:
                     if search_by_or:
                         new_results_cursor = DBSession.query(sublexes)\
@@ -382,6 +387,13 @@ def advanced_search(request):
                     .filter(PublishLevelOneEntity.marked_for_deletion == False,
                 LevelOneEntity.marked_for_deletion == False,
                             or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring])).union_all(new_results_cursor)
+                        for e in new_results_cursor:
+                            print(e)
+                        what = DBSession.query(LevelOneEntity)\
+                    .filter(
+                            or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]))
+                        for e in what:
+                            print(e.client_id, e.object_id)
                         # .filter(or_(*[MyTable.my_column.like(name) for name in foo]))
                     else:
                         new_results_cursor = DBSession.query(sublexes)\
@@ -393,6 +405,8 @@ def advanced_search(request):
                     .filter(PublishLevelOneEntity.marked_for_deletion == False,
                 LevelOneEntity.marked_for_deletion == False,
                             and_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring])).union_all(new_results_cursor)
+                        for e in new_results_cursor:
+                            print(e)
     results_cursor = new_results_cursor
     results_cursor = results_cursor.group_by(LexicalEntry)
     # return {'result': str(results_cursor.statement)}
@@ -425,7 +439,7 @@ def advanced_search(request):
 
 
 @view_config(route_name='convert_dictionary_check', renderer='json', request_method='POST')
-def convert_dictionary_check(request):
+def convert_dictionary_check(request):  # TODO: test
     import sqlite3
     req = request.json_body
 
@@ -460,7 +474,7 @@ def convert_dictionary_check(request):
 
 
 @view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
-def convert_dictionary(request):
+def convert_dictionary(request):  # TODO: test
     req = request.json_body
 
     client_id = req['blob_client_id']
@@ -501,7 +515,7 @@ def convert_dictionary(request):
 
 
 @view_config(route_name='language', renderer='json', request_method='GET')
-def view_language(request):
+def view_language(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -548,7 +562,7 @@ def language_info(lang, request):
 
 
 @view_config(route_name='get_languages', renderer='json', request_method='GET')
-def view_languages_list(request):
+def view_languages_list(request):  # tested & in docs
     response = dict()
     langs = []
     languages = DBSession.query(Language).filter_by(parent = None).all()
@@ -562,7 +576,7 @@ def view_languages_list(request):
 
 
 @view_config(route_name='language', renderer='json', request_method='PUT')
-def edit_language(request):
+def edit_language(request):  # tested & in docs
     try:
         response = dict()
         client_id = request.matchdict.get('client_id')
@@ -590,7 +604,7 @@ def edit_language(request):
 
 
 @view_config(route_name='language', renderer='json', request_method='DELETE', permission='delete')
-def delete_language(request):
+def delete_language(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -605,7 +619,7 @@ def delete_language(request):
 
 
 @view_config(route_name='create_language', renderer='json', request_method='POST', permission='create')
-def create_language(request):
+def create_language(request):  # tested & in docs
     try:
         variables = {'auth': request.authenticated_userid}
 
@@ -660,7 +674,7 @@ def create_language(request):
 
 
 @view_config(route_name='dictionary', renderer='json', request_method='GET')  # Authors -- names of users, who can edit?
-def view_dictionary(request):
+def view_dictionary(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -683,7 +697,7 @@ def view_dictionary(request):
 
 
 @view_config(route_name='dictionary', renderer='json', request_method='PUT', permission='edit')
-def edit_dictionary(request):
+def edit_dictionary(request):  # tested & in docs
     try:
         response = dict()
         client_id = request.matchdict.get('client_id')
@@ -719,7 +733,7 @@ def edit_dictionary(request):
 
 
 @view_config(route_name='dictionary', renderer='json', request_method='DELETE', permission='delete')
-def delete_dictionary(request):
+def delete_dictionary(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -734,7 +748,7 @@ def delete_dictionary(request):
 
 
 @view_config(route_name='create_dictionary', renderer='json', request_method='POST', permission='create')
-def create_dictionary(request):
+def create_dictionary(request):  # tested & in docs
     try:
 
         variables = {'auth': request.authenticated_userid}
@@ -788,7 +802,7 @@ def create_dictionary(request):
 
 
 @view_config(route_name='dictionary_status', renderer='json', request_method='GET')
-def view_dictionary_status(request):
+def view_dictionary_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -803,7 +817,7 @@ def view_dictionary_status(request):
 
 
 @view_config(route_name='dictionary_status', renderer='json', request_method='PUT', permission='edit')
-def edit_dictionary_status(request):
+def edit_dictionary_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -826,7 +840,7 @@ def edit_dictionary_status(request):
 
 
 @view_config(route_name='dictionary_copy', renderer='json', request_method='POST', permission='edit')
-def copy_dictionary(request):
+def copy_dictionary(request):  # TODO: test. or not. was this ever finished?
     response = dict()
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
@@ -1067,7 +1081,7 @@ def copy_dictionary(request):
 
 
 @view_config(route_name='dictionary_delete', renderer='json', request_method='DELETE', permission='delete')
-def real_delete_dictionary(request):
+def real_delete_dictionary(request):  # TODO: test. how?
     response = dict()
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
@@ -1162,8 +1176,7 @@ def view_perspective_from_object(request, perspective):
 
 @view_config(route_name='perspective', renderer='json', request_method='GET')
 @view_config(route_name='perspective_outside', renderer='json', request_method='GET')
-def view_perspective(request):
-    # response = dict()
+def view_perspective(request): # tested & in docs
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
@@ -1176,49 +1189,6 @@ def view_perspective(request):
             return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    # if perspective:
-    #     if not perspective.marked_for_deletion:
-    #         if parent:
-    #             if perspective.parent != parent:
-    #                 request.response.status = HTTPNotFound.code
-    #                 return {'error': str("No such pair of dictionary/perspective in the system")}
-    #         response['parent_client_id'] = perspective.parent_client_id
-    #         response['parent_object_id'] = perspective.parent_object_id
-    #         response['client_id'] = perspective.client_id
-    #         response['object_id'] = perspective.object_id
-    #         translation_string = perspective.get_translation(request)
-    #         response['translation_string'] = translation_string['translation_string']
-    #         response['translation'] = translation_string['translation']
-    #         response['status'] = perspective.state
-    #         response['marked_for_deletion'] = perspective.marked_for_deletion
-    #         response['is_template'] = perspective.is_template
-    #         response['additional_metadata'] = perspective.additional_metadata
-    #         if perspective.additional_metadata:
-    #             meta = json.loads(perspective.additional_metadata)
-    #             if 'location' in meta:
-    #                 response['location'] = meta['location']
-    #             if 'info' in meta:
-    #                 response['info'] = meta['info']
-    #                 remove_list = []
-    #                 info_list = response['info']['content']
-    #                 for info in info_list:
-    #                     content = info['info']['content']
-    #                     path = request.route_url('get_user_blob',
-    #                              client_id=content['client_id'],
-    #                              object_id=content['object_id'])
-    #                     subreq = Request.blank(path)
-    #                     subreq.method = 'GET'
-    #                     subreq.headers = request.headers
-    #                     resp = request.invoke_subrequest(subreq)
-    #                     if 'error' not in resp.json:
-    #                         info['info']['content'] = resp.json
-    #                     else:
-    #                         if info not in remove_list:
-    #                             remove_list.append(info)
-    #                 for info in remove_list:
-    #                     info_list.remove(info)
-    #         request.response.status = HTTPOk.code
-    #         return response
     response = view_perspective_from_object(request, perspective)
     if 'error' in response:
         request.response.status = HTTPNotFound.code
@@ -1227,10 +1197,9 @@ def view_perspective(request):
     return response
 
 
-
 @view_config(route_name='perspective_tree', renderer='json', request_method='GET')
 @view_config(route_name='perspective_outside_tree', renderer='json', request_method='GET')
-def view_perspective_tree(request):
+def view_perspective_tree(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1296,7 +1265,7 @@ def view_perspective_tree(request):
 
 
 @view_config(route_name='perspective_meta', renderer='json', request_method='PUT', permission='edit')
-def edit_perspective_meta(request):
+def edit_perspective_meta(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1331,7 +1300,7 @@ def edit_perspective_meta(request):
 
 
 @view_config(route_name='perspective_meta', renderer='json', request_method='DELETE', permission='edit')
-def delete_perspective_meta(request):
+def delete_perspective_meta(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1366,7 +1335,7 @@ def delete_perspective_meta(request):
 
 
 @view_config(route_name='perspective_meta', renderer='json', request_method='GET')
-def view_perspective_meta(request):
+def view_perspective_meta(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1392,9 +1361,8 @@ def view_perspective_meta(request):
     return {'error': str("No such perspective in the system")}
 
 
-
 @view_config(route_name='perspective', renderer='json', request_method='PUT', permission='edit')
-def edit_perspective(request):
+def edit_perspective(request):  # tested & in docs
     try:
         response = dict()
         client_id = request.matchdict.get('perspective_client_id')
@@ -1438,7 +1406,7 @@ def edit_perspective(request):
 
 
 @view_config(route_name='perspective', renderer='json', request_method='DELETE', permission='delete')
-def delete_perspective(request):
+def delete_perspective(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1463,7 +1431,7 @@ def delete_perspective(request):
 
 
 @view_config(route_name='perspectives', renderer='json', request_method='GET')
-def view_perspectives(request):
+def view_perspectives(request):  # tested & in docs
     response = dict()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
@@ -1490,7 +1458,7 @@ def view_perspectives(request):
 
 
 @view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST', permission='create')
-def create_perspective(request):
+def create_perspective(request):  # tested & in docs
     try:
         variables = {'auth': authenticated_userid(request)}
         parent_client_id = request.matchdict.get('dictionary_client_id')
@@ -1566,7 +1534,7 @@ def create_perspective(request):
 
 
 @view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'GET')
-def view_perspective_status(request):
+def view_perspective_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1591,7 +1559,7 @@ def view_perspective_status(request):
 
 
 @view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'PUT', permission='edit')
-def edit_perspective_status(request):
+def edit_perspective_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1621,7 +1589,7 @@ def edit_perspective_status(request):
 
 
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'GET', permission='view')
-def view_dictionary_roles(request):
+def view_dictionary_roles(request): # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -1654,7 +1622,7 @@ def view_dictionary_roles(request):
 
 
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'POST', permission='create')
-def edit_dictionary_roles(request):
+def edit_dictionary_roles(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -1749,7 +1717,7 @@ def edit_dictionary_roles(request):
 
 
 @view_config(route_name = 'dictionary_roles', renderer = 'json', request_method = 'DELETE', permission='delete')
-def delete_dictionary_roles(request):
+def delete_dictionary_roles(request):  #  & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -1843,7 +1811,7 @@ def delete_dictionary_roles(request):
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'GET', permission='view')
-def view_perspective_roles(request):
+def view_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1883,7 +1851,7 @@ def view_perspective_roles(request):
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'POST', permission='create')
-def edit_perspective_roles(request):
+def edit_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -1985,7 +1953,7 @@ def edit_perspective_roles(request):
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'DELETE', permission='delete')
-def delete_perspective_roles(request):
+def delete_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -2086,7 +2054,7 @@ def delete_perspective_roles(request):
 
 
 @view_config(route_name='signin', renderer='json', request_method='POST')
-def signin(request):
+def signin(request):  # TODO: find out if it used anywhere. And the get rid of it
     next = request.params.get('next') or request.route_url('home')
     req = request.json_body
     login = req['login']
@@ -2263,7 +2231,7 @@ def group_by_organizations(dicts, request):
 
 
 @view_config(route_name = 'published_dictionaries', renderer = 'json', request_method='POST')
-def published_dictionaries_list(request):
+def published_dictionaries_list(request):  # tested.   # TODO: test with org
     req = request.json_body
     response = dict()
     group_by_org = None
@@ -2324,7 +2292,7 @@ def published_dictionaries_list(request):
 
 
 @view_config(route_name = 'dictionaries', renderer = 'json', request_method='POST')
-def dictionaries_list(request):
+def dictionaries_list(request):  # TODO: test
     req = request.json_body
     response = dict()
     user_created = None
@@ -2456,7 +2424,8 @@ def dictionaries_list(request):
             dicts = prevdicts
         else:
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-    # TODO: fix
+    # TODO: fix.
+    # TODO: start writing todos with more information
     dictionaries = list()
     # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
     dicts = dicts.order_by("client_id", "object_id")
@@ -2478,7 +2447,7 @@ def dictionaries_list(request):
 
 
 @view_config(route_name='all_perspectives', renderer = 'json', request_method='GET')
-def perspectives_list(request):
+def perspectives_list(request):  # tested
     response = dict()
     is_template = None
     try:
@@ -2522,8 +2491,9 @@ def perspectives_list(request):
 
     return response
 
+
 @view_config(route_name='users', renderer='json', request_method='GET')
-def users_list(request):
+def users_list(request):  # tested
     response = dict()
     search = None
     try:
@@ -2550,7 +2520,7 @@ def users_list(request):
 
 
 @view_config(route_name='perspective_fields', renderer='json', request_method='GET')
-def view_perspective_fields(request):
+def view_perspective_fields(request):  # tested
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -2581,9 +2551,9 @@ def view_perspective_fields(request):
                             ent_type = field2.get_entity_type(request)
                             data2['entity_type'] = ent_type['translation_string']
                             data2['entity_type_translation'] = ent_type['translation']
-                            data_type = field2.get_data_type(request)
-                            data2['data_type'] = data_type['translation_string']
-                            data2['data_type_translation'] = data_type['translation']
+                            data_type2 = field2.get_data_type(request)
+                            data2['data_type'] = data_type2['translation_string']
+                            data2['data_type_translation'] = data_type2['translation']
                             data2['status'] = field2.state
                             data2['position'] = field2.position
                             data2['level'] = field2.level
@@ -2607,7 +2577,7 @@ def view_perspective_fields(request):
 
 
 @view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE', permission='edit')
-def delete_perspective_fields(request):
+def delete_perspective_fields(request):  # tested
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -2631,7 +2601,7 @@ def delete_perspective_fields(request):
 
 
 @view_config(route_name='perspective_fields', renderer='json', request_method='POST', permission='edit')
-def create_perspective_fields(request):
+def create_perspective_fields(request):  # tested
     # TODO: stop recreating fields. Needs to be done both there and in web
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -2690,7 +2660,7 @@ def create_perspective_fields(request):
                     field2.position = subentry['position']
                     translation = subentry['data_type']
                     if 'data_type_translation' in subentry:
-                        translation = entry['data_type_translation']
+                        translation = subentry['data_type_translation']
                     field2.set_data_type(request, translation, subentry['data_type'])
                     translation = subentry['entity_type']
                     if 'entity_type_translation' in subentry:
@@ -2780,8 +2750,9 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
                   filename))
     return real_location, url
 
+
 @view_config(route_name='upload_user_blob', renderer='json', request_method='POST')
-def upload_user_blob(request):
+def upload_user_blob(request):  # TODO: test
     variables = {'auth': authenticated_userid(request)}
     response = dict()
     filename = request.POST['blob'].filename
@@ -2817,7 +2788,7 @@ def upload_user_blob(request):
 
 
 @view_config(route_name='get_user_blob', renderer='json', request_method='GET')
-def get_user_blob(request):
+def get_user_blob(request):  # TODO: test
     variables = {'auth': authenticated_userid(request)}
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -2844,7 +2815,7 @@ def get_user_blob(request):
 
 
 @view_config(route_name='list_user_blobs', renderer='json', request_method='GET')
-def list_user_blobs(request):
+def list_user_blobs(request):  # TODO: test
     variables = {'auth': authenticated_userid(request)}
 #    user_client_ids = [cl_id.id for cl_id in DBSession.query(Client).filter_by(id=variables['auth']).all()]
 #    user_blobs = DBSession.query(UserBlobs).filter_by(client_id.in_(user_client_ids)).all()
@@ -2857,7 +2828,7 @@ def list_user_blobs(request):
 
 
 @view_config(route_name='create_level_one_entity', renderer='json', request_method='POST', permission='create')
-def create_l1_entity(request):
+def create_l1_entity(request):  # tested
     try:
         variables = {'auth': authenticated_userid(request)}
         response = dict()
@@ -2927,7 +2898,7 @@ def create_l1_entity(request):
 
 
 @view_config(route_name='create_entities_bulk', renderer='json', request_method='POST', permission='create')
-def create_entities_bulk(request):
+def create_entities_bulk(request):  # TODO: test
     try:
         variables = {'auth': authenticated_userid(request)}
         response = dict()
@@ -3014,7 +2985,7 @@ def create_entities_bulk(request):
 
 @view_config(route_name='get_level_one_entity_indict', renderer='json', request_method='GET', permission='view')
 @view_config(route_name='get_level_one_entity', renderer='json', request_method='GET', permission='view')
-def view_l1_entity(request):
+def view_l1_entity(request):  # tested
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -3031,7 +3002,7 @@ def view_l1_entity(request):
 
 @view_config(route_name='get_level_one_entity_indict', renderer='json', request_method='DELETE', permission='delete')
 @view_config(route_name='get_level_one_entity', renderer='json', request_method='DELETE', permission='delete')
-def delete_l1_entity(request):
+def delete_l1_entity(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -3049,14 +3020,14 @@ def delete_l1_entity(request):
 
 @view_config(route_name='get_level_two_entity_indict', renderer='json', request_method='GET', permission='view')
 @view_config(route_name='get_level_two_entity', renderer='json', request_method='GET', permission='view')
-def view_l2_entity(request):
+def view_l2_entity(request):  # tested
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
     if entity:
         if not entity.marked_for_deletion:
-
+            # TODO: use track
             response['entity_type'] = entity.entity_type
             response['parent_client_id'] = entity.parent_client_id
             response['parent_object_id'] = entity.parent_object_id
@@ -3070,7 +3041,7 @@ def view_l2_entity(request):
 
 @view_config(route_name='get_level_two_entity_indict', renderer='json', request_method='DELETE', permission='delete')
 @view_config(route_name='get_level_two_entity', renderer='json', request_method='DELETE', permission='delete')
-def delete_l2_entity(request):
+def delete_l2_entity(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -3087,7 +3058,7 @@ def delete_l2_entity(request):
 
 
 @view_config(route_name='create_level_two_entity', renderer='json', request_method='POST', permission='create')
-def create_l2_entity(request):
+def create_l2_entity(request):  # tested
     try:
 
         variables = {'auth': authenticated_userid(request)}
@@ -3159,7 +3130,7 @@ def create_l2_entity(request):
 
 
 @view_config(route_name='get_group_entity', renderer='json', request_method='GET')
-def view_group_entity(request):
+def view_group_entity(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -3186,7 +3157,7 @@ def view_group_entity(request):
 
 @view_config(route_name='get_connected_words', renderer='json', request_method='GET')
 @view_config(route_name='get_connected_words_indict', renderer='json', request_method='GET')
-def view_connected_words(request):
+def view_connected_words(request):  # tested, found some shit(tags here are not the same, as in view_group_entity) # TODO: fix
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -3258,7 +3229,7 @@ def view_connected_words(request):
 
 
 @view_config(route_name='get_group_entity', renderer='json', request_method='DELETE', permission='delete')
-def delete_group_entity(request):
+def delete_group_entity(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -3275,7 +3246,7 @@ def delete_group_entity(request):
 
 @view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')
-def create_group_entity(request):
+def create_group_entity(request):  # tested
     try:
         variables = {'auth': authenticated_userid(request)}
         response = dict()
@@ -3290,7 +3261,6 @@ def create_group_entity(request):
         tags = []
         if 'tag' in req:
             tags += [req['tag']]
-
         for par in req['connections']:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
@@ -3334,7 +3304,7 @@ def create_group_entity(request):
 
 
 @view_config(route_name='create_lexical_entry', renderer='json', request_method='POST', permission='create')
-def create_lexical_entry(request):
+def create_lexical_entry(request):  # tested
     try:
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
@@ -3375,8 +3345,6 @@ def create_lexical_entry(request):
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
 
-
-
 # @view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='DELETE', permission='delete')#, permission='view')
 # @view_config(route_name='lexical_entry', renderer='json', request_method='DELETE', permission='delete')
 # def delete_lexical_entry(request):
@@ -3394,14 +3362,14 @@ def create_lexical_entry(request):
 
 
 @view_config(route_name='create_lexical_entry_bulk', renderer='json', request_method='POST', permission='create')
-def create_lexical_entry_bulk(request):
+def create_lexical_entry_bulk(request):  # TODO: test
     try:
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
         perspective_client_id = request.matchdict.get('perspective_client_id')
         perspective_id = request.matchdict.get('perspective_id')
 
-        count = request.json_body.get('count')
+        count = request.json_body.get('count') or 0
 
         variables = {'auth': request.authenticated_userid}
 
@@ -3445,7 +3413,7 @@ def create_lexical_entry_bulk(request):
 
 
 @view_config(route_name='lexical_entries_all', renderer='json', request_method='GET', permission='view')
-def lexical_entries_all(request):
+def lexical_entries_all(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -3484,7 +3452,7 @@ def lexical_entries_all(request):
 
 
 @view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET', permission='view')
-def lexical_entries_all_count(request):
+def lexical_entries_all_count(request): # tested
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -3505,7 +3473,7 @@ def lexical_entries_all_count(request):
 
 
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
-def lexical_entries_published(request):
+def lexical_entries_published(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -3551,7 +3519,7 @@ def lexical_entries_published(request):
 
 
 @view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
-def lexical_entries_published_count(request):
+def lexical_entries_published_count(request): # tested todo:?
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
 
@@ -3577,7 +3545,7 @@ def lexical_entries_published_count(request):
 
 @view_config(route_name='lexical_entry_in_perspective', renderer='json', request_method='GET', permission='view')
 @view_config(route_name='lexical_entry', renderer='json', request_method='GET', permission='view')
-def view_lexical_entry(request):
+def view_lexical_entry(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -3610,7 +3578,7 @@ def view_lexical_entry(request):
 
 
 @view_config(route_name='get_user_info', renderer='json', request_method='GET')
-def get_user_info(request):
+def get_user_info(request):  # tested
     response = dict()
     client_id = None
     try:
@@ -3677,7 +3645,7 @@ def get_user_info(request):
 
 
 @view_config(route_name='get_user_info', renderer='json', request_method='PUT')
-def edit_user_info(request):
+def edit_user_info(request):  # TODO: test
     from passlib.hash import bcrypt
     response = dict()
 
@@ -3713,6 +3681,7 @@ def edit_user_info(request):
             return {'error': str("No such user in the system")}
     new_password = req.get('new_password')
     old_password = req.get('old_password')
+
     if new_password:
         if not old_password:
             request.response.status = HTTPBadRequest.code
@@ -3762,7 +3731,7 @@ def edit_user_info(request):
 
 
 @view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
-def approve_all(request):
+def approve_all(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -3810,7 +3779,7 @@ def approve_all(request):
 
 
 @view_config(route_name='approve_all_outer', renderer='json', request_method='PATCH', permission='create')
-def approve_outer(request): # TODO: create test.
+def approve_outer(request):  # TODO: create test.
     from .scripts.approve import approve_all_outer
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -3840,7 +3809,7 @@ def approve_outer(request): # TODO: create test.
 
 
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
-def approve_entity(request):
+def approve_entity(request):  # TODO: test
     try:
         if type(request.json_body) == str:
             req = json.loads(request.json_body)
@@ -3910,7 +3879,7 @@ def approve_entity(request):
 
 
 @view_config(route_name='approve_entity', renderer='json', request_method='DELETE', permission='delete')
-def disapprove_entity(request):
+def disapprove_entity(request):  # TODO: test
     try:
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
@@ -3964,7 +3933,7 @@ def disapprove_entity(request):
 
 
 @view_config(route_name='get_translations', renderer='json', request_method='GET')
-def get_translations(request):
+def get_translations(request):  # TODO: test
     from .models import find_by_translation_string, find_locale_id
     req = request.json_body
     response = []
@@ -3974,12 +3943,8 @@ def get_translations(request):
     return response
 
 
-
-
-
-
 @view_config(route_name='merge_dictionaries', renderer='json', request_method='POST')
-def merge_dictionaries(request):
+def merge_dictionaries(request):  # TODO: test
     try:
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
@@ -4107,7 +4072,7 @@ def merge_dictionaries(request):
 
 
 @view_config(route_name='merge_perspectives', renderer='json', request_method='POST')
-def merge_perspectives_api(request):
+def merge_perspectives_api(request):  # TODO: test
     try:
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
@@ -4269,7 +4234,7 @@ def merge_perspectives_api(request):
 
 
 @view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH', permission='create')
-def move_lexical_entry(request):
+def move_lexical_entry(request):  # TODO: test
     req = request.json_body
     variables = {'auth': request.authenticated_userid}
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -4339,7 +4304,7 @@ def move_lexical_entry(request):
 
 
 @view_config(route_name='move_lexical_entry_bulk', renderer='json', request_method='PATCH')
-def move_lexical_entry_bulk(request):
+def move_lexical_entry_bulk(request):  # TODO: test
     req = request.json_body
     real_delete = req.get('real_delete')  # With great power comes great responsibility
     # Maybe there needs to be check for permission of some sort (can really delete only when updating dictionary)
@@ -4428,7 +4393,7 @@ def move_lexical_entry_bulk(request):
 
 
 @view_config(route_name='organization_list', renderer='json', request_method='GET')
-def view_organization_list(request):
+def view_organization_list(request):  # TODO: test
     response = dict()
     organizations = []
     for organization in DBSession.query(Organization).filter_by(marked_for_deletion=False).all():
@@ -4448,7 +4413,7 @@ def view_organization_list(request):
 
 
 @view_config(route_name='organization', renderer='json', request_method='GET')
-def view_organization(request):
+def view_organization(request):  # TODO: test
     response = dict()
     organization_id = request.matchdict.get('organization_id')
     organization = DBSession.query(Organization).filter_by(id=organization_id).first()
@@ -4467,7 +4432,7 @@ def view_organization(request):
 
 
 @view_config(route_name='organization', renderer='json', request_method='PUT', permission='edit')
-def edit_organization(request):
+def edit_organization(request):  # TODO: test
     try:
         response = dict()
         organization_id = request.matchdict.get('organization_id')
@@ -4522,7 +4487,7 @@ def edit_organization(request):
 
 
 @view_config(route_name='organization', renderer='json', request_method='DELETE', permission='delete')
-def delete_organization(request):
+def delete_organization(request):  # TODO: test
     response = dict()
     organization_id = request.matchdict.get('organization_id')
     organization = DBSession.query(Organization).filter_by(id=organization_id).first()
@@ -4596,7 +4561,7 @@ def cache_clients():
 
 
 @view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='view')
-def perspective_info(request):
+def perspective_info(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -4661,7 +4626,7 @@ def perspective_info(request):
 
 
 @view_config(route_name='dictionary_info', renderer='json', request_method='GET', permission='view')
-def dictionary_info(request):
+def dictionary_info(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -4689,7 +4654,7 @@ def dictionary_info(request):
 
 
 @view_config(route_name='create_organization', renderer='json', request_method='POST', permission='create')
-def create_organization(request):
+def create_organization(request):  # TODO: test
     try:
 
         variables = {'auth': request.authenticated_userid}
@@ -4747,7 +4712,7 @@ try it again.
 
 
 @view_config(route_name='dangerous_perspectives_hash', renderer='json', request_method='PUT', permission='edit')
-def dangerous_perspectives_hash(request):
+def dangerous_perspectives_hash(request):  # TODO: test?
     response = dict()
     perspectives = DBSession.query(DictionaryPerspective)
     for perspective in perspectives:
@@ -4766,7 +4731,7 @@ def dangerous_perspectives_hash(request):
 
 
 @view_config(route_name='perspective_hash', renderer='json', request_method='PUT', permission='edit')
-def edit_perspective_hash(request):
+def edit_perspective_hash(request):  # TODO: test?
     import requests
     try:
         response = dict()
@@ -4914,7 +4879,7 @@ def convert(request):  # TODO: test when convert in blobs will be needed
 
 
 @view_config(route_name='convert_markup', renderer='json', request_method='POST')
-def convert_markup(request):
+def convert_markup(request):  # TODO: test
     import requests
     from .scripts.convert_rules import praat_to_elan
     try:
@@ -5005,7 +4970,7 @@ def login_get(request):
 
 
 @view_config(route_name='login', request_method='POST')
-def login_post(request):
+def login_post(request):  # tested
     next = request.params.get('next') or request.route_url('home')
     login = request.POST.get('login', '')
     password = request.POST.get('password', '')
@@ -5028,8 +4993,9 @@ def login_post(request):
         return HTTPFound(location=next, headers=response.headers)
     return HTTPUnauthorized(location=request.route_url('login'))
 
+
 @view_config(route_name='cheatlogin', request_method='POST')
-def login_cheat(request):
+def login_cheat(request):  # TODO: test
     next = request.params.get('next') or request.route_url('dashboard')
     login = request.json_body.get('login', '')
     passwordhash = request.json_body.get('passwordhash', '')
@@ -5054,8 +5020,9 @@ def login_cheat(request):
     log.debug("Login unsuccessful for " + login)
     return HTTPUnauthorized(location=request.route_url('login'))
 
+
 @view_config(route_name='logout', renderer='json')
-def logout_any(request):
+def logout_any(request):  # tested
     next = request.params.get('next') or request.route_url('login')
     headers = forget(request)
     return HTTPFound(location=next, headers=headers)
@@ -5066,8 +5033,9 @@ def signup_get(request):
     variables = {'auth': authenticated_userid(request)}
     return render_to_response('templates/signup.pt', variables, request=request)
 
+
 @view_config(route_name='signup', renderer='json', request_method='POST')
-def signup_post(request):
+def signup_post(request):  # tested
     try:
         login = request.POST.getone('login')
         name = request.POST.getone('name')
@@ -5293,7 +5261,7 @@ def remove_deleted(lst):
 
 
 @view_config(route_name='merge_suggestions', renderer='json', request_method='POST')
-def merge_suggestions(request):
+def merge_suggestions(request):  # TODO: test
     req = request.json
     entity_type_primary = req.get('entity_type_primary') or 'Transcription'
     entity_type_secondary = req.get('entity_type_secondary') or 'Translation'
