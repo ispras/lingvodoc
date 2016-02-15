@@ -11,7 +11,6 @@ from pyramid.httpexceptions import (
     HTTPForbidden
 )
 
-
 class TestHelperMethods(MyTestCase):
 
     def testsignuplogin(self):
