@@ -1431,7 +1431,7 @@ def delete_perspective(request):  # tested & in docs
 
 
 @view_config(route_name='perspectives', renderer='json', request_method='GET')
-def view_perspectives(request):  # tested & in docs
+def view_perspectives(request):
     response = dict()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
@@ -1469,9 +1469,6 @@ def create_perspective(request):  # tested & in docs
         else:
             req = request.json_body
         is_template = req.get('is_template')
-        print("=======")
-        print(req)
-        print("=======")
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
