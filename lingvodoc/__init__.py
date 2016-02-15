@@ -235,7 +235,7 @@ def configure_routes(config):
     config.add_route(name='perspective_status',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                      '/perspective/{perspective_client_id}/{perspective_id}/state',
-                     factory='lingvodoc.models.PerspectiveAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectiveAcl')  # tested
 
     # API #GET && POST && DELETE
     # Configuring columns in perspective table.
