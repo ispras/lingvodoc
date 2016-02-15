@@ -76,40 +76,40 @@ class DictionaryTest(MyTestCase):
         result, answer = self._build_ordered_lists(response, [])
         self.assertFalse(result)
 
-        # # Tests filtering by languages
-        # response = self.app.post_json('/dictionaries',
-        #                               params = {'languages': [id_l1, id_l2]})
-        # result, answer = self._build_ordered_lists(response, [dict_1, dict_2])
-        # self.assertEqual(result, answer)
-        #
-        # response = self.app.post_json('/dictionaries',
-        #                               params = {'languages': [id_l3]})
-        # result, answer = self._build_ordered_lists(response, [dict_3])
-        # self.assertEqual(result, answer)
-        #
-        # response = self.app.post_json('/dictionaries',
-        #                               params = {'languages': [id_l4]})
-        # result, answer = self._build_ordered_lists(response, [])
-        # self.assertFalse(result)
-        #
-        # # Tests filtering by users and languages
-        # response = self.app.post_json('/dictionaries',
-        #                               params = {'user_created': [id_u2, id_u3], 'languages': [id_l1, id_l2]})
-        # result, answer = self._build_ordered_lists(response, [dict_2])
-        # self.assertEqual(result, answer)
-        #
-        # response = self.app.post_json('/dictionaries',
-        #                               params = {'user_created': [id_u3, id_u4], 'languages': [id_l1, id_l2]})
-        # result, answer = self._build_ordered_lists(response, [])
-        # self.assertFalse(result)
-        #
-        # response = self.app.post_json('/dictionaries',
-        #                               params = {'user_created': [id_u1, id_u2, id_u3, id_u4],
-        #                                         'languages': [id_l1, id_l2, id_l3, id_l4]})
-        # result, answer = self._build_ordered_lists(response, [])
-        # self.assertFalse(result)
-        #
-        # response = self.app.post_json('/dictionaries',
-        #                               params = {'user_created': [], 'languages': []})
-        # result, answer = self._build_ordered_lists(response, [])
-        # self.assertFalse(result)
+        # Tests filtering by languages
+        response = self.app.post_json('/dictionaries',
+                                      params = {'languages': [id_l1, id_l2]})
+        result, answer = self._build_ordered_lists(response, [dict_1, dict_2])
+        self.assertEqual(result, answer)
+
+        response = self.app.post_json('/dictionaries',
+                                      params = {'languages': [id_l3]})
+        result, answer = self._build_ordered_lists(response, [dict_3])
+        self.assertEqual(result, answer)
+
+        response = self.app.post_json('/dictionaries',
+                                      params = {'languages': [id_l4]})
+        result, answer = self._build_ordered_lists(response, [])
+        self.assertFalse(result)
+
+        # Tests filtering by users and languages
+        response = self.app.post_json('/dictionaries',
+                                      params = {'user_created': [id_u2, id_u3], 'languages': [id_l1, id_l2]})
+        result, answer = self._build_ordered_lists(response, [dict_2])
+        self.assertEqual(result, answer)
+
+        response = self.app.post_json('/dictionaries',
+                                      params = {'user_created': [id_u3, id_u4], 'languages': [id_l1, id_l2]})
+        result, answer = self._build_ordered_lists(response, [])
+        self.assertFalse(result)
+
+        response = self.app.post_json('/dictionaries',
+                                      params = {'user_created': [id_u1, id_u2, id_u3, id_u4],
+                                                'languages': [id_l1, id_l2, id_l3, id_l4]})
+        result, answer = self._build_ordered_lists(response, [])
+        self.assertFalse(result)
+
+        response = self.app.post_json('/dictionaries',
+                                      params = {'user_created': [], 'languages': []})
+        result, answer = self._build_ordered_lists(response, [])
+        self.assertFalse(result)

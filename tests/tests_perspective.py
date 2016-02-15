@@ -113,7 +113,6 @@ class PerspectiveTest(MyTestCase):
         id_u1 = self.signup_common('user1', 'user1')
         id_u2 = self.signup_common('user2', 'user1')
         id_u3 = self.signup_common('user3', 'user1')
-        print(id_u1, id_u2)
         id_l1 = self.create_language('language1')
         dict_1 = self.create_dictionary('user1_dict1', id_l1)
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
