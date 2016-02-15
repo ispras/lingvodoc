@@ -1431,7 +1431,7 @@ def delete_perspective(request):  # tested & in docs
 
 
 @view_config(route_name='perspectives', renderer='json', request_method='GET')
-def view_perspectives(request):  # tested & in docs
+def view_perspectives(request):
     response = dict()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
