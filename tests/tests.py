@@ -754,7 +754,6 @@ class TestBig(MyTestCase):
         # print(response.json)
         self.assertDictEqual(response.json, correct_answer, stop_words=['content', 'client_id', 'object_id', 'parent_client_id', 'parent_object_id'], set_like=True)
         some_lex = correct_answer['words'][0]
-        contains = some_lex
         # print('some lex:', some_lex)
         ge_ids = None
         ge = None
@@ -773,16 +772,20 @@ class TestBig(MyTestCase):
                     combined_words.append({'client_id': lex['lexical_entry']['client_id'],
                                            'object_id': lex['lexical_entry']['object_id']})
 
-        # response = self.app.get('/group_entity/%s/%s' % (ge_ids['client_id'], ge_ids['object_id']))
-        # self.assertEqual(response.status_int, HTTPOk.code)
-        # correct_answer = {'entity_type': ge['entity_type'], 'tag': tag, 'connections':combined_words}
+
+        print(response.json)
+        print('wtf?')
+        print(ge)
+        response = self.app.get('/group_entity/%s/%s' % (ge_ids['client_id'], ge_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        correct_answer = {'entity_type': ge['entity_type'], 'tag': tag, 'connections':combined_words}
         # TODO: find what's wrong with tags
-        # print(response.json)
-        # print(correct_answer)
-        #
-        # print('wtf?')
-        # print(ge)
-        # self.assertDictEqual(response.json, correct_answer, set_like=True)
+        print(response.json)
+        print(correct_answer)
+
+        print('wtf?')
+        print(ge)
+        self.assertDictEqual(response.json, correct_answer, set_like=True)
 
         # ____
         # ____

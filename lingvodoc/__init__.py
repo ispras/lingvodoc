@@ -70,7 +70,7 @@ def configure_routes(config):
 
     # API #POST
     # Convert markup
-    config.add_route(name='convert_markup', pattern='/convert/markup')  # TODO: test
+    config.add_route(name='convert_markup', pattern='/convert/markup')  # TODO: not test
 
     # API #POST
     # Create language
@@ -91,7 +91,7 @@ def configure_routes(config):
     #    e) Maps location (coordinates) +- radius in kilometers
     config.add_route('dictionaries', 'dictionaries')  # TODO: test
 
-    config.add_route(name='published_dictionaries', pattern='/published_dictionaries')  # TODO: test
+    config.add_route(name='published_dictionaries', pattern='/published_dictionaries')  # tested
 
     # API #GET
     # Perspective list
@@ -558,7 +558,7 @@ def configure_routes(config):
     # object_type = <type>
     # client_id = <client_id>
     # object_id = <object_id>
-    config.add_route(name='get_object_info', pattern='/info')  # TODO:IT
+    config.add_route(name='get_object_info', pattern='/info')
 
     # API #GET
     # This methods gets info about user by his client_id
