@@ -88,8 +88,7 @@ def configure_routes(config):
     #    b) User participated
     #    c) Organization participated
     #    d) By language group (all the languages that point to the given one). Need to build a lang tree here.
-    #    e) Maps location (coordinates) +- radius in kilometers
-    config.add_route('dictionaries', 'dictionaries')  # TODO: test
+    config.add_route('dictionaries', 'dictionaries')
 
     config.add_route(name='published_dictionaries', pattern='/published_dictionaries')  # TODO: test
 
