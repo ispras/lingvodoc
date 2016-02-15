@@ -2374,6 +2374,7 @@ def dictionaries_list(request):  # TODO: test
         for lan in languages:
             lang = DBSession.query(Language).filter_by(object_id=lan['object_id'], client_id=lan['client_id']).first()
             langs += all_languages(lang)
+
         if langs:
             prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
             for lan in langs:
@@ -2428,7 +2429,7 @@ def dictionaries_list(request):  # TODO: test
     # TODO: start writing todos with more information
     dictionaries = list()
     # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
-    dicts = dicts.order_by("client_id", "object_id")
+    dicts = dicts.order_by(Dictionary.client_id, Dictionary.object_id)
     for dct in dicts:
         path = request.route_url('dictionary',
                                  client_id=dct.client_id,
@@ -2451,7 +2452,7 @@ def perspectives_list(request):  # tested
     response = dict()
     is_template = None
     try:
-        is_template = request.params.get('is_template')
+        is_template = request.GET.get('is_template')
     except:
         pass
     state = None
@@ -2464,8 +2465,13 @@ def perspectives_list(request):  # tested
         if type(is_template) == str:
             if is_template.lower() == 'true':
                 is_template = True
-            else:
+            elif is_template.lower() == 'false':
                 is_template = False
+            else:
+                request.response.status = HTTPBadRequest.code
+                # TODO: write normal return
+                return
+
         persps = persps.filter(DictionaryPerspective.is_template == is_template)
     if state:
         persps = persps.filter(DictionaryPerspective.state==state)
@@ -4955,12 +4961,8 @@ def convert_markup(request):  # TODO: test
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-        try:
-            return 20/15
-        except Exception as e:
-            return str(e)
-        finally:
-            print('Good news, everyone!')
+    # lang = DBSession.query(Language).filter_by(client_id=31, object_id=7).first()
+    return{'words': [{'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 2, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 2, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 0', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 2, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 2, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 1, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 3, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 1', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 3, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 6, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 2, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 6, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 4', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 6, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 7, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 5, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 4, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 4, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 2', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 4, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 4, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 3, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 5, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 5, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 3', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 5, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 5, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 4, 'client_id': 13, 'contains': None}]}}]}
 
 
 @view_config(route_name='login', renderer='templates/login.pt', request_method='GET')
