@@ -13,7 +13,8 @@ from pyramid.httpexceptions import (
 
 class PerspectiveTest(MyTestCase):
 
-    def _build_ordered_lists(self, correct_answer, response):
+    def _build_ordered_lists(self, response, correct_answer):
+        self.assertEqual(response.status_int, HTTPOk.code)
         answer = sorted(correct_answer, key=lambda x: (x['client_id'], x['object_id']))
         response = response.json
         result = list()
@@ -31,21 +32,46 @@ class PerspectiveTest(MyTestCase):
         dict_1 = self.create_dictionary('user1_dict1', id_l1)
         default_persp = [
             {"object_id": 1, "client_id": 1},
-            {"object_id": 1, "client_id": 2},
-            {"object_id": 1, "client_id": 3}
+            {"object_id": 2, "client_id": 1},
+            {"object_id": 3, "client_id": 1}
         ]
+
         response = self.app.get('/perspectives',
-                                params = {'is_template': "true"})
-        persp_1 = self.create_perspective('translation_string1', dict_1, "Published")
+                                params = {'is_template': False})
+        result, answer = self._build_ordered_lists(response, [])
+        self.assertFalse(result)
 
+        persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
+        persp_2 = self.create_perspective('translation_string2', dict_1, "Published", True)
+        persp_3 = self.create_perspective('translation_string3', dict_1, "Marked", False)
+        persp_4 = self.create_perspective('translation_string4', dict_1, "Marked", True)
 
-        # print(response)
-        # self.assertEqual(response.status_int, HTTPOk.code)
-        # result, answer = self._build_ordered_lists(default_persp, response)
-        # self.assertFalse(result)
-        #
-        # response = self.app.get('/perspectives',
-        #                               params = {'is_template': False})
-        # self.assertEqual(response.status_int, HTTPOk.code)
-        # result, answer = self._build_ordered_lists([], response)
-        # print(result, answer)
+        response = self.app.get('/perspectives',
+                                params = {'is_template': True})
+        result, answer = self._build_ordered_lists(response, default_persp + [persp_2, persp_4])
+        self.assertEqual(result, answer)
+
+        response = self.app.get('/perspectives',
+                                params = {'is_template': False})
+        result, answer = self._build_ordered_lists(response, [persp_1, persp_3])
+        self.assertEqual(result, answer)
+
+        response = self.app.get('/perspectives',
+                                params = {'state': "Published"})
+        result, answer = self._build_ordered_lists(response, [persp_1, persp_2])
+        self.assertEqual(result, answer)
+
+        response = self.app.get('/perspectives',
+                                params = {'state': "Marked", 'is_template': False})
+        result, answer = self._build_ordered_lists(response, [persp_3])
+        self.assertEqual(result, answer)
+
+        response = self.app.get('/perspectives',
+                                params = {'state': "NoState"})
+        result, answer = self._build_ordered_lists(response, [])
+        self.assertFalse(result)
+
+        response = self.app.get('/perspectives')
+        result, answer = self._build_ordered_lists(
+            response, default_persp + [persp_1, persp_2, persp_3, persp_4])
+        self.assertEqual(result, answer)

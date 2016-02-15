@@ -97,7 +97,7 @@ def configure_routes(config):
     # 1. Filter by:
     #    a) template (param is_template=true/false)
     #    b) state  (param state=<state>)
-    config.add_route('all_perspectives', '/perspectives')  # TODO: test
+    config.add_route('all_perspectives', '/perspectives')
 
     # API #GET
     config.add_route('users', '/users')  # tested

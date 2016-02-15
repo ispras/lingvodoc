@@ -199,14 +199,10 @@ class MyTestCase(unittest.TestCase):
     def create_perspective(self, translation_string, par_ids, state=None, is_template=False):
             response = self.app.post_json('/dictionary/%s/%s/perspective' % (par_ids['client_id'],par_ids['object_id']),
                                           params={'translation_string': translation_string, 'is_template': is_template})
-            #print(response)
             ids = response.json
             response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' % (par_ids['client_id'],par_ids['object_id'],
                                                                              ids['client_id'], ids['object_id']))
-            #print(response)
             first_view = response.json
-            #response = self.app.get('/perspectives')
-            #print(response)
             if state:
                 self.perspective_change_state(par_ids,ids,state)
             return ids

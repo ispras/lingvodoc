@@ -1469,9 +1469,6 @@ def create_perspective(request):  # tested & in docs
         else:
             req = request.json_body
         is_template = req.get('is_template')
-        print("=======")
-        print(req)
-        print("=======")
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
