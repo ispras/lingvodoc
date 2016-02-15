@@ -757,8 +757,7 @@ class TestBig(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         # print(response.json)
         self.assertDictEqual(response.json, correct_answer, stop_words=['content', 'client_id', 'object_id', 'parent_client_id', 'parent_object_id'], set_like=True)
-        some_lex = correct_answer['words'][0]
-        contains = some_lex
+        some_lex = response.json['words'][0]
         # print('some lex:', some_lex)
         ge_ids = None
         ge = None
@@ -771,26 +770,15 @@ class TestBig(MyTestCase):
         if not ge_ids:
             self.assertEqual('Error:', 'No tag')
         combined_words = list()
-        for lex in correct_answer['words']:
+        for lex in response.json['words']:
             for entry in lex['lexical_entry']['contains']:
                 if entry['content'] == tag:
                     combined_words.append({'client_id': lex['lexical_entry']['client_id'],
                                            'object_id': lex['lexical_entry']['object_id']})
-
-        # response = self.app.get('/group_entity/%s/%s' % (ge_ids['client_id'], ge_ids['object_id']))
-        # self.assertEqual(response.status_int, HTTPOk.code)
-        # correct_answer = {'entity_type': ge['entity_type'], 'tag': tag, 'connections':combined_words}
-        # TODO: find what's wrong with tags
-        # print(response.json)
-        # print(correct_answer)
-        #
-        # print('wtf?')
-        # print(ge)
-        # self.assertDictEqual(response.json, correct_answer, set_like=True)
-
-        # ____
-        # ____
-
+        response = self.app.get('/group_entity/%s/%s' % (ge_ids['client_id'], ge_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        correct_answer = {'entity_type': ge['entity_type'], 'tag': tag, 'connections':combined_words}
+        self.assertDictEqual(response.json, correct_answer, set_like=True, debug_flag=True)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all_count'
                                 % (dict_ids['client_id'],
                                    dict_ids['object_id'],

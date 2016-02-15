@@ -70,7 +70,7 @@ def configure_routes(config):
 
     # API #POST
     # Convert markup
-    config.add_route(name='convert_markup', pattern='/convert/markup')  # TODO: test
+    config.add_route(name='convert_markup', pattern='/convert/markup')  # TODO: not test
 
     # API #POST
     # Create language
@@ -90,7 +90,7 @@ def configure_routes(config):
     #    d) By language group (all the languages that point to the given one). Need to build a lang tree here.
     config.add_route('dictionaries', 'dictionaries')
 
-    config.add_route(name='published_dictionaries', pattern='/published_dictionaries')  # TODO: test
+    config.add_route(name='published_dictionaries', pattern='/published_dictionaries')  # tested
 
     # API #GET
     # Perspective list
@@ -235,7 +235,7 @@ def configure_routes(config):
     config.add_route(name='perspective_status',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                      '/perspective/{perspective_client_id}/{perspective_id}/state',
-                     factory='lingvodoc.models.PerspectiveAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectiveAcl')  # tested
 
     # API #GET && POST && DELETE
     # Configuring columns in perspective table.
@@ -557,7 +557,7 @@ def configure_routes(config):
     # object_type = <type>
     # client_id = <client_id>
     # object_id = <object_id>
-    config.add_route(name='get_object_info', pattern='/info')  # TODO:IT
+    config.add_route(name='get_object_info', pattern='/info')
 
     # API #GET
     # This methods gets info about user by his client_id
