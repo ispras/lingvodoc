@@ -228,7 +228,7 @@ def configure_routes(config):
     config.add_route(name='perspective_roles',
                      pattern='/dictionary/{client_id}/{object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}/roles',
-                     factory='lingvodoc.models.PerspectiveRolesAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectiveRolesAcl')
 
     # API #GET && PUT
     # Get or change visibility state for perspective. States are: 'frozen', 'WiP', 'published'
