@@ -56,10 +56,6 @@ class DictionaryTest(MyTestCase):
         self.login_common('user3')
         dict_3 = self.create_dictionary('user3_dict1', id_l3)
 
-
-
-        # TODO: uncomment tests after the bug is fixed
-
         # Tests filtering by user
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [id_u1, id_u2]})

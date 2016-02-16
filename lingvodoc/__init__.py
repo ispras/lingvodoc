@@ -205,7 +205,7 @@ def configure_routes(config):
     config.add_route(name='perspective_info',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}/info',
-                     factory='lingvodoc.models.PerspectiveAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectiveAcl')
 
     # API #POST
     # Creating perspective
