@@ -3832,6 +3832,7 @@ def approve_entity(request):  # TODO: test
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        # {""}
         for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
                 entity = DBSession.query(LevelOneEntity).\

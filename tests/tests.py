@@ -517,7 +517,6 @@ class TestBig(MyTestCase):
                                'Can edit dictionary options': []}}
         self.assertDictEqual(response.json, correct_answer)
 
-
         user_id2 = self.signup_common('test2')
         user_id3 = self.signup_common('test3')
         params = {'roles_users':
@@ -654,7 +653,36 @@ class TestBig(MyTestCase):
         correct_answer = [{} for o in range(41)]
         self.assertListEqual(response.json, correct_answer, stop_words=['object_id', 'client_id'])
         lexes_ids = response.json
+
         l1e_ids = self.add_l1e(dict_ids, persp_ids,lex_ids, content='testing level one entity')
+
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity/%s/%s'
+                                % (dict_ids['client_id'],
+                                   dict_ids['object_id'],
+                                   persp_ids['client_id'],
+                                   persp_ids['object_id'],
+                                   lex_ids['client_id'],
+                                   lex_ids['object_id'],
+                                   l1e_ids['client_id'],
+                                   l1e_ids['object_id'],))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        correct_answer = {'client_id': l1e_ids['client_id'],
+                          'parent_client_id': l1e_ids['client_id'],
+                          'parent_object_id': l1e_ids['object_id'],
+                          'object_id': l1e_ids['object_id'],
+                          'entity_type': 'Word',
+                          'level': 'leveloneentity',
+                          'marked_for_deletion': False,
+                          'locale_id': 1,
+                          'content': 'testing level one entity'}
+
+        self.assertDictEqual(response.json, correct_answer)
+
+        response = self.app.get('/leveloneentity/%s/%s'
+                                % (l1e_ids['client_id'],
+                                   l1e_ids['object_id'],))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
 
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity'
                                       '/%s/%s/leveltwoentity'
@@ -671,6 +699,7 @@ class TestBig(MyTestCase):
                                               'content': 'testing level two entity',
                                               'locale_id': 1})
         self.assertEqual(response.status_int, HTTPOk.code)
+
         l2e_ids = response.json
         self.assertDictEqual(response.json, {}, stop_words=['object_id', 'client_id'])
 
@@ -702,6 +731,37 @@ class TestBig(MyTestCase):
                           'locale_id': 1,
                           'content': 'testing level two entity'}
         self.assertDictEqual(response.json, correct_answer)
+
+        response = self.app.get('/leveltwoentity/%s/%s'
+                                % (l2e_ids['client_id'],
+                                   l2e_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertDictEqual(response.json, correct_answer)
+
+        response = self.app.get('/lexical_entry/%s/%s' %
+                                (lex_ids['client_id'],
+                                lex_ids['object_id']))
+
+        self.assertEqual(response.status_int, HTTPOk.code)
+        # print('RIGHT ANSWER:', response.json)
+        correct_answer = {'lexical_entry': {'client_id': 13, 'object_id': 1, 'came_from': None, 'level': 'lexicalentry', 'published': False, 'parent_client_id': 5, 'contains': [{'client_id': 13, 'content': 'testing level one entity', 'locale_id': 1, 'level': 'leveloneentity', 'parent_client_id': 13, 'object_id': 1, 'entity_type': 'Word', 'contains': [{'client_id': 13, 'content': 'testing level two entity', 'locale_id': 1, 'level': 'leveltwoentity', 'parent_client_id': 13, 'object_id': 1, 'entity_type': 'Word', 'contains': None, 'additional_metadata': None, 'published': False, 'marked_for_deletion': False, 'parent_object_id': 1}], 'additional_metadata': None, 'published': False, 'marked_for_deletion': False, 'parent_object_id': 1}], 'parent_object_id': 1, 'marked_for_deletion': False}}
+
+        self.assertDictEqual(response.json, correct_answer, stop_words=['client_id', 'object_id', 'parent_client_id', 'parent_object_id'], set_like=True)  # TODO: do not ignore everything. Some other equality check needs to be done
+        same_answer = response.json
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s'
+                                % (dict_ids['client_id'],
+                                   dict_ids['object_id'],
+                                   persp_ids['client_id'],
+                                   persp_ids['object_id'],
+                                   lex_ids['client_id'],
+                                   lex_ids['object_id']))
+
+        self.assertEqual(response.status_int, HTTPOk.code)
+        # print('RIGHT ANSWER:', response.json)
+        self.assertDictEqual(response.json, same_answer, set_like=True)
+
+
+
         grouping_lexes = lexes_ids[:6:]
         lexes_ids = lexes_ids[6::]
         grouping_contents = list()
@@ -712,11 +772,22 @@ class TestBig(MyTestCase):
             self.add_l1e(dict_ids, persp_ids, iter_lex_ids, content=content)
             counter += 1
 
-        self.add_grouping(grouping_lexes[0], grouping_lexes[1])
+        params = {'connections': [grouping_lexes[0], grouping_lexes[1]], 'entity_type':'Etymology'}
+        response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/connect' %
+                                      (dict_ids['client_id'],
+                                       dict_ids['object_id'],
+                                       persp_ids['client_id'],
+                                       persp_ids['object_id']),
+                                      params=params)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        # self.add_grouping(grouping_lexes[0], grouping_lexes[1])
         correct_answer = {'words': [{'lexical_entry': {'object_id': 2, 'contains': [{'additional_metadata': None, 'object_id': 2, 'parent_client_id': 11, 'published': False, 'locale_id': 1, 'level': 'leveloneentity', 'content': "grouping word {'object_id': 2, 'client_id': 11}", 'contains': None, 'parent_object_id': 2, 'client_id': 11, 'entity_type': 'Word', 'marked_for_deletion': False}, {'additional_metadata': None, 'object_id': 1, 'parent_client_id': 11, 'published': False, 'locale_id': None, 'level': 'groupingentity', 'content': 'Wed Feb 10 13:50:08 2016MNAZGRV22A', 'contains': None, 'parent_object_id': 2, 'client_id': 11, 'entity_type': 'Etymology', 'marked_for_deletion': False}], 'published': False, 'client_id': 11, 'level': 'lexicalentry', 'came_from': None, 'marked_for_deletion': False, 'parent_client_id': 5, 'parent_object_id': 1}}, {'lexical_entry': {'object_id': 3, 'contains': [{'additional_metadata': None, 'object_id': 3, 'parent_client_id': 11, 'published': False, 'locale_id': 1, 'level': 'leveloneentity', 'content': "grouping word {'object_id': 3, 'client_id': 11}", 'contains': None, 'parent_object_id': 3, 'client_id': 11, 'entity_type': 'Word', 'marked_for_deletion': False}, {'additional_metadata': None, 'object_id': 2, 'parent_client_id': 11, 'published': False, 'locale_id': None, 'level': 'groupingentity', 'content': 'Wed Feb 10 13:50:08 2016MNAZGRV22A', 'contains': None, 'parent_object_id': 3, 'client_id': 11, 'entity_type': 'Etymology', 'marked_for_deletion': False}], 'published': False, 'client_id': 11, 'level': 'lexicalentry', 'came_from': None, 'marked_for_deletion': False, 'parent_client_id': 5, 'parent_object_id': 1}}]}
 
-        response = self.app.get('/lexical_entry/%s/%s/connected'
-                                % (
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/connected'
+                                % (dict_ids['client_id'],
+                                   dict_ids['object_id'],
+                                   persp_ids['client_id'],
+                                   persp_ids['object_id'],
                                    grouping_lexes[0]['client_id'],
                                    grouping_lexes[0]['object_id']))
 
@@ -778,7 +849,7 @@ class TestBig(MyTestCase):
         response = self.app.get('/group_entity/%s/%s' % (ge_ids['client_id'], ge_ids['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'entity_type': ge['entity_type'], 'tag': tag, 'connections':combined_words}
-        self.assertDictEqual(response.json, correct_answer, set_like=True, debug_flag=True)
+        self.assertDictEqual(response.json, correct_answer, set_like=True)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all_count'
                                 % (dict_ids['client_id'],
                                    dict_ids['object_id'],
@@ -898,6 +969,40 @@ class TestBig(MyTestCase):
         self.assertDictEqual(response.json, correct_answer)
         # print(response.json)
 
+    def test_dict_convert(self):
+        import hashlib
+        self.signup_common()
+        self.login_common()
+        first_hash = hashlib.md5(open("test.sqlite", 'rb').read()).hexdigest()
+        response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
+                                 upload_files=([('blob', 'test.sqlite')]))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        blob_ids = response.json
+        response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
+                                                          blob_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        file_response = self.app.get(response.json['content'])
+        second_hash = hashlib.md5(file_response.body).hexdigest()
+        self.assertEqual(first_hash, second_hash)
+        # TODO: convert check
+
+    def test_user_blobs(self):
+        import hashlib
+        self.signup_common()
+        self.login_common()
+        first_hash = hashlib.md5(open("test.pdf", 'rb').read()).hexdigest()
+        # response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
+        #                          upload_files=([('blob', 'test.sqlite')]))
+        response = self.app.post('/blob', params = {'data_type':'pdf'},
+                                 upload_files=([('blob', 'test.pdf')]))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        blob_ids = response.json
+        response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
+                                                          blob_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        file_response = self.app.get(response.json['content'])
+        second_hash = hashlib.md5(file_response.body).hexdigest()
+        self.assertEqual(first_hash, second_hash)
 
 class TestHelperFuncs(unittest.TestCase):
 
