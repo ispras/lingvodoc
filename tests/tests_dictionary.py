@@ -106,10 +106,11 @@ class DictionaryTest(MyTestCase):
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [id_u1, id_u2, id_u3, id_u4],
                                                 'languages': [id_l1, id_l2, id_l3, id_l4]})
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        result, answer = self._build_ordered_lists(response, [dict_1, dict_2, dict_3])
+        self.assertEqual(result, answer)
 
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [], 'languages': []})
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        result, answer = self._build_ordered_lists(
+            response, [dict_1, dict_2, dict_3] + [{'client_id': 1, 'object_id': 1}])
+        self.assertEqual(result, answer)
