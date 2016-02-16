@@ -97,7 +97,7 @@ def configure_routes(config):
     # 1. Filter by:
     #    a) template (param is_template=true/false)
     #    b) state  (param state=<state>)
-    config.add_route('all_perspectives', '/perspectives')  # TODO: test
+    config.add_route('all_perspectives', '/perspectives')
 
     # API #GET
     config.add_route('users', '/users')  # tested
@@ -228,7 +228,7 @@ def configure_routes(config):
     config.add_route(name='perspective_roles',
                      pattern='/dictionary/{client_id}/{object_id}/'
                              'perspective/{perspective_client_id}/{perspective_id}/roles',
-                     factory='lingvodoc.models.PerspectiveRolesAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectiveRolesAcl')
 
     # API #GET && PUT
     # Get or change visibility state for perspective. States are: 'frozen', 'WiP', 'published'
