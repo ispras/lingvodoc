@@ -446,7 +446,7 @@ def convert_one(filename, login, password_hash, language_client_id, language_obj
     log.debug("Creating session")
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
-    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=3)
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
     log.debug("Going to login")
     login_data = {"login": login, "passwordhash": password_hash}

@@ -3829,6 +3829,7 @@ def approve_entity(request):  # TODO: test
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        # {""}
         for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
                 entity = DBSession.query(LevelOneEntity).\
@@ -4643,13 +4644,38 @@ def dictionary_info(request):  # TODO: test
     if ending_date:
         ending_date = datetime.datetime(ending_date)
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    result = []
     if dictionary:
         if not dictionary.marked_for_deletion:
             clients_to_users_dict = cache_clients()
+            # todo: in one iteration
+
+            types = []
+            result = []
+            for perspective in dictionary.dictionaryperspective:
+                path = request.route_url('perspective_fields',
+                                         dictionary_client_id=perspective.parent_client_id,
+                                         dictionary_object_id=perspective.parent_object_id,
+                                         perspective_client_id=perspective.client_id,
+                                         perspective_id=perspective.object_id
+                                         )
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                fields = resp.json["fields"]
+                for field in fields:
+                    entity_type = field['entity_type']
+                    if entity_type not in types:
+                        types.append(entity_type)
+                    if 'contains' in field:
+                        for field2 in field['contains']:
+                            entity_type = field2['entity_type']
+                            if entity_type not in types:
+                                types.append(entity_type)
+
             for perspective in dictionary.dictionaryperspective:
                 for lex in perspective.lexicalentry:
-                    user_counter(lex.track(True), result, starting_date, ending_date, clients_to_users_dict)
+                    result = user_counter(lex.track(True), result, starting_date, ending_date, types, clients_to_users_dict)
 
             response['count'] = result
             request.response.status = HTTPOk.code
