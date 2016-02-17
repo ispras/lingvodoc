@@ -1,4 +1,5 @@
 from tests.tests import MyTestCase
+from tests.common import initValuesFactory
 
 from pyramid.httpexceptions import (
     HTTPNotFound,
@@ -118,7 +119,7 @@ class PerspectiveTest(MyTestCase):
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
 
         correct_answer = {
-            'roles_users': {
+            "roles_users": {
                 "Can view published lexical entries": [id_u1, id_u2],
                 "Can get perspective role list": [id_u1],
                 "Can view unpublished lexical entries": [id_u1, id_u2],
@@ -145,19 +146,12 @@ class PerspectiveTest(MyTestCase):
                 "Can delete perspective": []
             }
         }
-        params = {'roles_users':
-                              {"Can create lexical entries": [],
-                               "Can get perspective role list": [id_u1],
-                               "Can resign users from dictionary editors": [id_u2],
-                               "Can approve lexical entries and publish": [id_u3],
-                               "Can create perspective roles and assign collaborators":[id_u2, id_u3],
-                               "Can edit perspective": [id_u2],
-                               "Can delete perspective": [id_u2],
-                               "Can delete lexical entries": [id_u2],
-                               "Can deactivate lexical entries": [id_u2],
-                               "Can view unpublished lexical entries": [id_u2],
-                               "Can view published lexical entries": [id_u2]}
-                  }
+
+        params = initValuesFactory.get_role_params([id_u2])
+        params['roles_users']['Can create lexical entries'] = []
+        params['roles_users']['Can get perspective role list'] = [id_u1]
+        params['roles_users']['Can approve lexical entries and publish'] = [id_u3]
+        params['roles_users']['Can create perspective roles and assign collaborators'] = [id_u2, id_u3]
 
         # Testing get and post
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
@@ -260,19 +254,7 @@ class PerspectiveTest(MyTestCase):
                                 (dict_1['client_id'], dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertDictEqual(response.json, {"count": []})
 
-        params = {'roles_users':
-                              {"Can create lexical entries": [id_u1, id_u2],
-                               "Can get perspective role list": [id_u1, id_u2],
-                               "Can resign users from dictionary editors": [id_u1, id_u2],
-                               "Can approve lexical entries and publish": [id_u1, id_u2],
-                               "Can create perspective roles and assign collaborators":[id_u1, id_u2],
-                               "Can edit perspective": [id_u1, id_u2],
-                               "Can delete perspective": [id_u1, id_u2],
-                               "Can delete lexical entries": [id_u1, id_u2],
-                               "Can deactivate lexical entries": [id_u1, id_u2],
-                               "Can view unpublished lexical entries": [id_u1, id_u2],
-                               "Can view published lexical entries": [id_u1, id_u2]}
-                  }
+        params = initValuesFactory.get_role_params([id_u1, id_u2])
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
 

@@ -1,4 +1,5 @@
 from tests.tests import MyTestCase
+from tests.common import initValuesFactory
 
 from pyramid.httpexceptions import (
     HTTPNotFound,
@@ -36,20 +37,6 @@ class DictionaryTest(MyTestCase):
         self.id_l2 = self.create_language('language2')
         self.id_l3 = self.create_language('language3')
         self.id_l4 = self.create_language('language4')
-
-        self.dictionary_roles = {"roles_users":
-                              {"Can create lexical entries": [],
-                               "Can get perspective role list": [],
-                               "Can resign users from dictionary editors": [],
-                               "Can approve lexical entries and publish": [],
-                               "Can create perspective roles and assign collaborators":[],
-                               "Can edit perspective": [],
-                               "Can delete perspective": [],
-                               "Can delete lexical entries": [],
-                               "Can deactivate lexical entries": [],
-                               "Can view unpublished lexical entries": [],
-                               "Can view published lexical entries": []}
-                  }
 
     def _build_ordered_lists(self, response, correct_answer):
         answer = sorted(correct_answer, key=lambda x: (x['client_id'], x['object_id']))
@@ -148,12 +135,13 @@ class DictionaryTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/info' % (dict_1['client_id'], dict_1['object_id']))
         self.assertDictEqual(response.json, {"count": []})
 
-        for k in self.dictionary_roles["roles_users"]:
-            self.dictionary_roles["roles_users"][k] += [self.id_u1, self.id_u2]
+        dictionary_roles = initValuesFactory.get_role_params()
+        for k in dictionary_roles["roles_users"]:
+            dictionary_roles["roles_users"][k] += [self.id_u1, self.id_u2]
 
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']),
-                                      params=self.dictionary_roles)
+                                      params=dictionary_roles)
         response = self.app.get('/dictionary/%s/%s/roles' % (dict_1['client_id'], dict_1['object_id']))
 
         to_be_approved = list()
