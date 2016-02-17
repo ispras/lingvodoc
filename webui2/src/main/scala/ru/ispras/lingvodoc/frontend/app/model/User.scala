@@ -41,7 +41,7 @@ object User {
       val login = js("login").asInstanceOf[Js.Str].value
       val email = js("email").asInstanceOf[Js.Str].value
       val name = js("name").asInstanceOf[Js.Str].value
-      val intlName = js("name").asInstanceOf[Js.Str].value
+      val intlName = js("intl_name").asInstanceOf[Js.Str].value
 
       val about = js("about") match {
         case str: Js.Str => str.value

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/create-dictionary.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="CreateDictionaryModule">
+
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="userId" data-lingvodoc="${user.id}"></div>
+
+<div id="dictionariesUrl" data-lingvodoc="${request.route_url('dictionaries')}"></div>
+<div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
+<div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
+<div id="createLanguageUrl" data-lingvodoc="${request.route_url('create_language')}"></div>
+<div id="allPerspectivesUrl" data-lingvodoc="${request.route_url('all_perspectives')}"></div>
+<div id="listBlobsUrl" data-lingvodoc="${request.route_url('list_user_blobs')}"></div>
+<div id="convertUrl" data-lingvodoc="${request.route_url('convert_dictionary')}"></div>
+
+<div metal:use-macro="load: nav.pt"></div>
+
+<div class="container" ng-cloak>
+
+    <div id="form-views" ui-view></div>
+
+</div>
+
+
+<script type="text/ng-template" id="createDictionary.html">
+
+    <div class="row">
+        <div class="col-sm-8 col-sm-offset-2">
+
+            <div class="form-container">
+
+                <div class="page-header text-center">
+                    <h2>Create dictionary</h2>
+                </div>
+
+            </div>
+
+            <div id="form-views" ui-view></div>
+
+        </div>
+
+</script>
+
+
+<script type="text/ng-template" id="createDictionaryStep1.html">
+
+    <div>
+        <label for="language">Language</label>
+        <select id="language" class="form-control" ng-model="dictionaryData.languageId"
+                ng-options="getLanguageId(language) as language.translation_string for language in languages track by getLanguageId(language)">
+        </select>
+
+        <span class="glyphicon glyphicon-plus-sign" ng-click="newLanguage()"></span>
+        <hr>
+
+        <ol>
+            <li><label><input type="radio" name="mode" ng-model="wizard.mode" value="create"> Create new dictionary</label></li>
+            <li><label><input type="radio" name="mode" ng-model="wizard.mode" value="import"> Import dictionary</label></li>
+        </ol>
+
+        <div ng-if="wizard.mode == 'create'">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" class="form-control" placeholder="" required autofocus ng-model="dictionaryData.name">
+        </div>
+
+
+
+        <div ng-if="wizard.mode == 'import'">
+            <label for="selectFile">Select uploaded file</label> (<a href="${request.route_url('blob_upload')}">Upload dictionary</a>)
+
+            <select id="selectFile" class="form-control" ng-options="p.getId() as p.name for p in uploadedDictionaries track by p.getId()" ng-model="wizard.importedDictionaryId">
+                <option></option>
+            </select>
+
+        </div>
+
+    </div>
+
+    <button href="#" class="btn btn-block btn-info" ng-click="createDictionary()" ng-disabled="!controls.createDictionary">
+        Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
+    </button>
+
+</script>
+
+
+<script type="text/ng-template" id="createDictionaryStep2.html">
+
+    <div>
+        <label for="perspective">Import perspective</label>
+        <select id="perspective" class="form-control" ng-model="dictionaryData.perspectiveId"
+                ng-options="p.getId() as p.translation_string for p in perspectives track by p.getId()">
+        </select>
+
+        <hr>
+        <div>
+            <div class="form-group">
+                <label for="perspectiveName">Perspective name</label>
+                <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
+                       ng-model="dictionaryData.perspectiveName">
+            </div>
+
+            <div class="form-group">
+                <label for="isTemplate">I want to share this perspective as template</label>
+                <input type="checkbox" id="isTemplate" ng-model="dictionaryData.isTemplate">
+            </div>
+
+            <div class="form-group">
+                <span class="glyphicon glyphicon-plus-sign" ng-click="addField()"></span>
+            </div>
+
+            <table class="table">
+                <thead>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                </thead>
+
+                <tbody ng-repeat="field in perspective.fields">
+                <tr>
+
+                    <td>
+                        <input type="checkbox" ng-checked="field.status == 'enabled'"
+                               ng-model="perspective.fields[$index]._statusEnabled">
+                    </td>
+
+                    <td>
+                        <input type="text" class="form-control" ng-model="perspective.fields[$index].entity_type">
+                    </td>
+
+                    <td>
+                        <select class="form-control" ng-model="perspective.fields[$index].data_type">
+                            <option value="text" ng-if="field.data_type == 'text'" selected>Text</option>
+                            <option value="text" ng-if="field.data_type != 'text'">Text</option>
+                            <option value="image" ng-if="field.data_type == 'image'" selected>Image</option>
+                            <option value="image" ng-if="field.data_type != 'image'">Image</option>
+                            <option value="sound" ng-if="field.data_type == 'sound'" selected>Audio</option>
+                            <option value="sound" ng-if="field.data_type != 'sound'">Audio</option>
+                            <option value="grouping_tag" ng-if="field.data_type == 'grouping_tag'" selected>Grouping
+                                tag
+                            </option>
+                            <option value="grouping_tag" ng-if="field.data_type != 'grouping_tag'">Groupping tag
+                            </option>
+                        </select>
+
+                    </td>
+
+                    <td>
+                        <input type="checkbox" ng-checked="field.group || perspective.fields[$index]._groupEnabled"
+                               ng-model="perspective.fields[$index]._groupEnabled" ng-change="enableGroup($index)">
+                    </td>
+
+
+                    <td>
+                        <input type="text" ng-model="perspective.fields[$index].group" class="form-control"
+                               ng-if="field.group!==undefined">
+                    </td>
+
+                    <td>
+                        <input type="checkbox"
+                               ng-checked="field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled"
+                               ng-if="field.data_type == 'sound'" ng-model="perspective.fields[$index]._containsEnabled"
+                               ng-change="enableLinkedField($index)">
+                    </td>
+
+                    <td>
+                        <span class="glyphicon glyphicon-circle-arrow-right"
+                              ng-if="field.data_type == 'sound' && field.contains && field.contains.length > 0"></span>
+                    </td>
+
+                    <td>
+
+
+                        <input type="text" ng-value="field.contains[0].entity_type" class="form-control"
+                               ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)"
+                               ng-model="perspective.fields[$index].contains[0].entity_type">
+                    </td>
+
+                    <td>
+
+                        <label class="checkbox-inline" ng-if="field.data_type == 'text'">
+                            <input type="checkbox"
+                                   ng-checked="field.translatable"
+                                   ng-model="perspective.fields[$index].translatable"> translatable</label>
+
+
+                        <select class="form-control"
+                                ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)"
+                                ng-model="perspective.fields[$index].contains[0].data_type">
+                            <option value="text" ng-if="field.contains[0].data_type == 'text'" selected>Text</option>
+                            <option value="text" ng-if="field.contains[0].data_type != 'text'">Text</option>
+                            <option value="image" ng-if="field.contains[0].data_type == 'image'" selected>Image</option>
+                            <option value="image" ng-if="field.contains[0].data_type != 'image'">Image</option>
+                            <option value="sound" ng-if="field.contains[0].data_type == 'sound'" selected>Audio</option>
+                            <option value="sound" ng-if="field.contains[0].data_type != 'sound'">Audio</option>
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type == 'grouping_tag'" selected>
+                                Groupping tag
+                            </option>
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'grouping_tag'">Groupping
+                                tag
+                            </option>
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type == 'markup'" selected>
+                                Markup
+                            </option>
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'">Markup</option>
+                        </select>
+                    </td>
+
+
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+
+    </div>
+
+    <button class="btn btn-block btn-warning" ng-click="createPerspective()" ng-disabled="!controls.createPerspective">
+        Complete <span class="glyphicon glyphicon-ok-sign"></span>
+    </button>
+
+</script>
+
+
+<script type="text/ng-template" id="createDictionaryStep3.html">
+
+    <div>
+
+        <autocomplete type="text" data="userLogins" on-type="searchUsers" on-select="addUser"></autocomplete>
+
+
+        <!--
+        Can get dictionary role list
+        Can get perspective role list
+        Can view published lexical entries
+        Can create dictionary roles and assign collaborators
+        Can create perspective roles and assign collaborators
+        Can resign users from dictionary editors
+        Can resign users from perspective editors
+        Can edit organization
+        Can create perspectives
+        Can edit perspective
+        Can create lexical entries
+        Can approve lexical entries and publish
+        Can deactivate lexical entries
+        Can merge dictionaries and perspectives
+        -->
+
+        <table class="table">
+            <thead>
+            <tr>
+                <td>Can get dictionary role list</td>
+                <td>Can get perspective role list</td>
+                <td>Can view published lexical entries</td>
+                <td>Can create dictionary roles and assign collaborators</td>
+                <td>Can create perspective roles and assign collaborators</td>
+                <td>Can resign users from dictionary editors</td>
+                <td>Can resign users from perspective editors</td>
+                <td>Can edit organization</td>
+                <td>Can create perspectives</td>
+                <td>Can edit perspective</td>
+                <td>Can create lexical entries</td>
+                <td>Can approve lexical entries and publish</td>
+                <td>Can deactivate lexical entries</td>
+                <td>Can merge dictionaries and perspectives</td>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            </tbody>
+        </table>
+    </div>
+
+
+
+    <button class="btn btn-block btn-warning" ng-click="saveDictionary()" ng-disabled="!controls.saveDictionary">
+        Complete <span class="glyphicon glyphicon-ok-sign"></span>
+    </button>
+</script>
+
+
+<script type="text/ng-template" id="createLanguageModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">Create language</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <!-- parent language -->
+        <label for="parentLanguage">Parent language</label>
+        <select id="parentLanguage" class="form-control" ng-model="parentLanguageId"
+                ng-options="getLanguageId(language) as language.translation_string for language in languages track by getLanguageId(language)">
+
+        </select>
+
+        <label for="translation">Translation</label>
+        <input type="text" id="translation" name="translation" class="form-control" placeholder="" required autofocus
+               ng-model="translation">
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+    </div>
+
+</script>
+
+
+<script type="text/ng-template" id="importModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">Import mode</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <div>
+            <!-- -->
+        </div>
+
+
+        <ol>
+            <li><label><input type="radio" name="mode" ng-model="mode" value="create"> Create new dictionary</label></li>
+            <li><label><input type="radio" name="mode" ng-model="mode" value="import"> Import into existing dictionary</label></li>
+        </ol>
+
+        <div ng-if="mode=='import'">
+
+            <div>
+                <select id="dictionary" class="form-control" ng-options="d.getId() as d.translation for d in dictionaries track by d.getId()" ng-model="import.dictionaryId">
+                </select>
+            </div>
+
+            <div>
+                <select id="perspective" class="form-control" ng-options="p.getId() as p.translation for p in perspectives track by p.getId()" ng-model="import.perspectiveId" ng-if="!import.createNewPerspective">
+                </select>
+            </div>
+
+            <div>
+                <label for="createNewPerspective">or create a new perspective</label>
+                <input id="createNewPerspective" type="checkbox" ng-model="import.createNewPerspective">
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary btn-info" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-primary btn-danger" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div metal:use-macro="load: response_handler.pt"></div>
+
+
+</body>
+
+</html>

@@ -1,7 +1,6 @@
 package ru.ispras.lingvodoc.frontend.app.model
 
 import upickle.Js
-import upickle.Js.Obj
 import upickle.default._
 
 
@@ -29,8 +28,8 @@ object Field {
     case field =>
       (new (Field => Js.Obj) {
         override def apply(f: Field): Js.Obj = {
-          // FIXME: serialize sub fields
-          // val contains = f.fields.map(e => apply(e)).toSeq
+
+          val contains = f.fields.map(e => apply(e)).toSeq
           Js.Obj(
             ("client_id", Js.Num(f.clientId)),
             ("object_id", Js.Num(f.objectId)),
@@ -41,7 +40,7 @@ object Field {
             ("level", Js.Str(f.level)),
             ("status", Js.Str(f.status)),
             ("position", Js.Num(f.position)),
-            ("contains", Js.Arr())
+            ("contains", Js.Arr(contains:_*))
           )
         }
       })(field)
@@ -64,6 +63,8 @@ object Field {
           val status = js("status").asInstanceOf[Js.Str].value
           val position = js("position").asInstanceOf[Js.Num].value.toInt
 
+          val group = js.value.find(_._1 == "group").getOrElse(("group", null))._2.asInstanceOf[Js.Str].value
+
           // get array of child fields or empty list if there are none
           val fields = js.value.find(_._1 == "contains").getOrElse(("contains", Js.Arr()))._2.asInstanceOf[Js.Arr]
 
@@ -76,8 +77,10 @@ object Field {
               case _ =>
             }
           }
-          Field(clientId, objectId, entityType, entityTypeTranslation, dataType, dataTypeTranslation, level,
+          val field = Field(clientId, objectId, entityType, entityTypeTranslation, dataType, dataTypeTranslation, level,
             position, status, subfields.toJSArray)
+          field.group = Option(group)
+          field
         }
       })(jsval)
   }

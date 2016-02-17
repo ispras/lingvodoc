@@ -2,8 +2,8 @@ package ru.ispras.lingvodoc.frontend
 
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{Route, RouteProvider}
-import ru.ispras.lingvodoc.frontend.app.controllers.{PerspectivePropertiesController, DashboardController,
-DictionaryPropertiesController}
+import ru.ispras.lingvodoc.frontend.app.controllers.{CreatePerspectiveController, PerspectivePropertiesController,
+DashboardController, DictionaryPropertiesController}
 import ru.ispras.lingvodoc.frontend.app.services.BackendServiceFactory
 
 import scala.scalajs.js.JSApp
@@ -23,6 +23,7 @@ object App extends JSApp {
       .controller[DashboardController]
       .controller[DictionaryPropertiesController]
       .controller[PerspectivePropertiesController]
+      .controller[CreatePerspectiveController]
       .factory[BackendServiceFactory]
   }
 }
