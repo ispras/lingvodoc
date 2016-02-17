@@ -123,12 +123,8 @@ class MyTestCase(unittest.TestCase):
         from lingvodoc import main
 
         myapp = paster.get_app('../' + alembicini)
-        # myapp = main({})
-        # self.ws = webtest.http.StopableWSGIServer(myapp, port=6543, host="0.0.0.0")
-        # self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")
-        # self.ws = DummyWs
+        self.myapp = myapp
         self.app = webtest.TestApp(myapp)
-        # self.ws.run()
         DBSession.remove()
         DBSession.configure(bind=engine)
         bashcommand = "alembic -c %s upgrade head" % alembicini
@@ -151,9 +147,6 @@ class MyTestCase(unittest.TestCase):
         my_env = os.environ
         proc = Popen(args, cwd=pathdir, env=my_env)
         proc.communicate()
-        # print('starting shutdown')
-        # self.ws.shutdown()
-        # print('ending shutdown')
         testing.tearDown()
 
     def assertDictEqual(self, d1, d2, msg=None, stop_words=list(), set_like=False, debug_flag=False):
@@ -981,59 +974,6 @@ class TestBig(MyTestCase):
         correct_answer = {'perspectives': [{'is_template': True, 'translation': 'Lingvodoc desktop version', 'parent_client_id': 1, 'translation_string': 'Lingvodoc desktop version', 'additional_metadata': None, 'status': 'Service', 'object_id': 1, 'client_id': 1, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': True, 'translation': 'Regular dictionary', 'parent_client_id': 1, 'translation_string': 'Regular dictionary', 'additional_metadata': None, 'status': 'Service', 'object_id': 2, 'client_id': 1, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': True, 'translation': 'Morhological dictionary', 'parent_client_id': 1, 'translation_string': 'Morhological dictionary', 'additional_metadata': None, 'status': 'Service', 'object_id': 3, 'client_id': 1, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Root Perspective', 'parent_client_id': 5, 'translation_string': 'Root Perspective', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 1, 'client_id': 5, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': False, 'translation': '1st Perspective', 'parent_client_id': 5, 'translation_string': '1st Perspective', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 2, 'client_id': 5, 'parent_object_id': 2, 'marked_for_deletion': False}, {'is_template': False, 'translation': '2nd Perspective', 'parent_client_id': 5, 'translation_string': '2nd Perspective', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 3, 'client_id': 5, 'parent_object_id': 3, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №1', 'parent_client_id': 5, 'translation_string': 'Перспектива №1', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 4, 'client_id': 5, 'parent_object_id': 4, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №2', 'parent_client_id': 5, 'translation_string': 'Перспектива №2', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 5, 'client_id': 5, 'parent_object_id': 5, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №3', 'parent_client_id': 5, 'translation_string': 'Перспектива №3', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 6, 'client_id': 5, 'parent_object_id': 6, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №4', 'parent_client_id': 5, 'translation_string': 'Перспектива №4', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 7, 'client_id': 5, 'parent_object_id': 7, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №5', 'parent_client_id': 5, 'translation_string': 'Перспектива №5', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 8, 'client_id': 5, 'parent_object_id': 8, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №6', 'parent_client_id': 5, 'translation_string': 'Перспектива №6', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 9, 'client_id': 5, 'parent_object_id': 9, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №7', 'parent_client_id': 5, 'translation_string': 'Перспектива №7', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 10, 'client_id': 5, 'parent_object_id': 10, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №8', 'parent_client_id': 5, 'translation_string': 'Перспектива №8', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 11, 'client_id': 5, 'parent_object_id': 11, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №9', 'parent_client_id': 5, 'translation_string': 'Перспектива №9', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 12, 'client_id': 5, 'parent_object_id': 12, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №10', 'parent_client_id': 5, 'translation_string': 'Перспектива №10', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 13, 'client_id': 5, 'parent_object_id': 13, 'marked_for_deletion': False}]}
         self.assertDictEqual(response.json, correct_answer)
         # print(response.json)
-
-    # def test_dict_convert(self):
-    #     import hashlib
-    #     from time import sleep
-    #     import webtest.http
-    #     import threading
-    #     print('before starting')
-    #     self.ws = webtest.http.StopableWSGIServer.create(self.app, port=6543, host="0.0.0.0")
-    #     server_started = self.ws.wait()
-    #     self.assertEqual(server_started, True)
-    #     # self.ws.run()
-    #     # t = threading.Thread(target=self.ws.run)
-    #     # t.daemon = True
-    #     # t.start()
-    #     print('after starting')
-    #     user_id = self.signup_common()
-    #     self.login_common()
-    #     root_ids = self.create_language('Корень')
-    #     first_hash = hashlib.md5(open("test.sqlite", 'rb').read()).hexdigest()
-    #     response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
-    #                              upload_files=([('blob', 'test.sqlite')]))
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     blob_ids = response.json
-    #     response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
-    #                                                       blob_ids['object_id']))
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     file_response = self.app.get(response.json['content'])
-    #     second_hash = hashlib.md5(file_response.body).hexdigest()
-    #     self.assertEqual(first_hash, second_hash)
-    #     response = self.app.post_json('/convert_check', params={'blob_client_id': blob_ids['client_id'],
-    #                                                      'blob_object_id': blob_ids['object_id']})
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     self.assertEqual(response.json, [])
-    #     response = self.app.post_json('/convert', params={'blob_client_id': blob_ids['client_id'],
-    #                                                      'blob_object_id': blob_ids['object_id'],
-    #                                                       'parent_client_id':root_ids['client_id'],
-    #                                                       'parent_object_id':root_ids['object_id']})
-    #     self.assertEqual(response.status_int, HTTPOk.code)
-    #     self.assertDictEqual(response.json, {"status": "Your dictionary is being converted."
-    #                   " Wait 5-15 minutes and you will see new dictionary in your dashboard."})
-    #
-    #     print('==== LOOK HERE ====')
-    #     print(response.json)
-    #     not_found = True
-    #     for i in range(3):
-    #         response = self.app.post_json('/dictionaries', params={'user_created': [user_id]})
-    #         if response.json['dictionaries']:
-    #             not_found = False
-    #             break
-    #         sleep(10)
-    #     if not_found:
-    #         self.assertEqual('error', 'dictionary was not found')
-    #     print(response.json['dictionaries'])
 
     def test_user_blobs(self):
         import hashlib
