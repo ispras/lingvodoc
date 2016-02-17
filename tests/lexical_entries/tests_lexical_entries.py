@@ -50,7 +50,7 @@ class LexicalEntriesTest(MyTestCase):
                                       params=params)
 
     def testLexicalEntriesAll(self):
-        correct_answers = self._load_correct_answers("test_lexical_entries_answers.json")
+        correct_answers = self._load_correct_answers("answers_lexical_entries_all.json")
 
         test_name = "test_empty"
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all' %

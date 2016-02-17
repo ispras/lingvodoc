@@ -1,3 +1,13 @@
+import json
+import os
+
+
+def _load_correct_answers(test_name):
+        with open(os.path.join(os.path.dirname(__file__), test_name)) as data_file:
+            data = json.load(data_file)
+        return data
+
+
 class initValuesFactory:
 
     @staticmethod
