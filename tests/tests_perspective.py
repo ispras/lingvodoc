@@ -323,4 +323,5 @@ class PerspectiveTest(MyTestCase):
                 "id": 4
             }]
         }
+        self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, correct_answer)

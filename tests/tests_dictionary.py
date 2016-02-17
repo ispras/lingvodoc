@@ -133,6 +133,7 @@ class DictionaryTest(MyTestCase):
                                          persp_1['object_id']),
                                       params=fields)
         response = self.app.get('/dictionary/%s/%s/info' % (dict_1['client_id'], dict_1['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, {"count": []})
 
         dictionary_roles = initValuesFactory.get_role_params()
@@ -216,4 +217,5 @@ class DictionaryTest(MyTestCase):
                 "id": 4
             }]
         }
+        self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, correct_answer)
