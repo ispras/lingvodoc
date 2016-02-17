@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/corpora_view.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="CorporaViewModule">
+
+<div id="dictionaryClientId" data-lingvodoc="${dictionary_client_id}"></div>
+<div id="dictionaryObjectId" data-lingvodoc="${dictionary_object_id}"></div>
+<div id="perspectiveClientId" data-lingvodoc="${perspective_client_id}"></div>
+<div id="perspectiveId" data-lingvodoc="${perspective_id}"></div>
+
+<div metal:use-macro="load: nav.pt"></div>
+
+<div class="container" ng-controller="CorporaViewController" ng-cloak>
+
+
+    <div ng-repeat="phrase in corpora" class="glossed-view">
+        <div class="phrase">
+            <div class="txt">{{ phrase.words[0].text }}</div>
+
+            <div class="txt" on-selected="selectedWord" ng-if="phrase.words.length > 0">
+                {{ getWordsText(phrase.words) }}
+            </div>
+
+            <div class="txt" on-selected="selectedWord" ng-if="phrase.words.length == 0">
+                {{ getPhraseValue(phrase.phrase, 'txt') }}
+            </div>
+
+            <div class="words" ng-repeat="word in phrase.words">
+                <div class="word">
+                    <div class="txt entity_link" ng-click="showEntry(word)">
+                        {{ word.text }}
+                    </div>
+
+                    <div class="morphemes">
+                        <div class="morpheme" ng-repeat="morphem in word.morphems">
+                            <div class="mtxt">{{ getmtxt(morphem) }}</div>
+                            <div class="mgls">
+                                <span class="sc">{{ getmgls(morphem) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="gls">{{ getPhraseValue(phrase.phrase, 'gls') }}</div>
+        </div>
+    </div>
+
+
+</div>
+
+<div metal:use-macro="load: response_handler.pt"></div>
+
+
+<script type="text/ng-template" id="viewEntryModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+    </div>
+
+
+    <div class="modal-body">
+        <table class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                <td> <!-- action --> </td>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr ng-repeat="entryFields in dictionaryTable">
+
+                <td ng-repeat="fieldValues in entryFields"
+                    ng-init="lexicalEntry=lexicalEntries[$parent.$index]; field=fields[$index]">
+
+
+                    <div ng-if="field.data_type == 'text'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                {{ fieldValue.content }}
+                            </li>
+                        </ul>
+
+                    </div>
+
+
+                    <div ng-if="field.data_type == 'image'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                <a ng-href="fieldValue.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
+                            </li>
+                        </ul>
+
+                    </div>
+
+                    <div ng-if="field.data_type == 'sound'">
+                        <ul class="entries_list">
+                            <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-click="play(fieldValue.content)">
+                                    <span class="glyphicon glyphicon-play">Play sound</span>
+                                </button>
+
+                                <button type="button" class="btn btn-default btn-sm"
+                                        ng-if="fieldValue.contains && fieldValue.contains.length > 0"
+                                        ng-click="annotate(fieldValue, fieldValue.contains[0])">
+                                    <span class="glyphicon glyphicon-list">View markup</span>
+                                </button>
+
+                            </li>
+                        </ul>
+
+                    </div>
+
+                    <div ng-if="field.isGroup">
+                        <div ng-if="field.isGroup">
+
+                            <button type="button" class="btn btn-default btn-sm"
+                                    ng-click="viewGroup(lexicalEntry, field, fieldValues)"
+                                    ng-if="fieldValues.length > 0">
+                                <span class="glyphicon glyphicon-list">View</span>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div ng-if="field.data_type == 'grouping_tag'">
+
+                        <button type="button" class="btn btn-default btn-sm"
+                                ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)"
+                                ng-if="fieldValues.length > 0">
+                            <span class="glyphicon glyphicon-list">View</span>
+                        </button>
+
+                    </div>
+
+
+                </td>
+
+                <td> <!-- action --> </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+    </div>
+
+</script>
+
+<script type="text/ng-template" id="viewGroupModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <div class="row">
+            <div class="col-md-12 ">
+
+                <table class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                        <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                        <td> <!-- action --> </td>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+
+                    <tr ng-repeat="entryFields in fieldsValues">
+
+                        <td ng-repeat="fieldValues in entryFields"
+                            ng-init="lexicalEntry=entries[$parent.$index]; field=fieldsIdx[$index]">
+
+                            <div ng-if="field.data_type == 'text'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                        {{ fieldValue.content }}
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div ng-if="field.data_type == 'image'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                        <a ng-href="fieldValue.content" target="_blank"><span
+                                                class="glyphicon glyphicon-list">View markup</span></a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div ng-if="field.data_type == 'sound'">
+                                <ul class="entries_list">
+                                    <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+
+                                        <button type="button" class="btn btn-default btn-sm"
+                                                ng-click="play(fieldValue.content)">
+                                            <span class="glyphicon glyphicon-play">Play sound</span>
+                                        </button>
+
+                                        <button type="button" class="btn btn-default btn-sm"
+                                                ng-if="fieldValue.contains && fieldValue.contains.length > 0"
+                                                ng-click="annotate(fieldValue, fieldValue.contains[0])">
+                                            <span class="glyphicon glyphicon-list">View markup</span>
+                                        </button>
+                                    </li>
+                                </ul>
+
+                            </div>
+
+                        </td>
+
+                        <td> <!-- action --> </td>
+
+                    </tr>
+
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+    </div>
+
+
+</script>
+
+
+<script type="text/ng-template" id="viewParseModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+    </div>
+
+    <div class="modal-body">
+
+        <span ng-repeat="r in parseResults">
+
+            <a href="#" ng-click="selectWord(r)" ng-if="r.omonyms.length > 0" style="background-color: green;">{{ r.word }}</a>
+            <a href="#" ng-if="r.omonyms.length == 0" ng-attr-href="{{ '/suddenly-debug/?parse=' + r.word }}" style="background-color: red;">{{ r.word }}</a>
+
+        </span>
+
+
+        <div ng-if="selectedWord">
+            <div ng-repeat="omonym in selectedWord.omonyms">
+                <div class="entry">
+                    <div class="dict">
+                        <i>{{ omonym.p_o_s }}</i> {{ omonym.headword }} {{ omonym.meaning }} {{ omonym.stem }}
+                    </div>
+                    <div class="affixes">{{ omonym.affixes }}</div>
+                    <div class="chars" ng-bind-html="wrapOmonym(omonym)"></div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+    </div>
+
+
+</script>
+
+
+</body>
+
+</html>

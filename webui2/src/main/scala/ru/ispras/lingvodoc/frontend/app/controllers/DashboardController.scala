@@ -84,6 +84,29 @@ AbstractController[DashboardScope](scope) {
   }
 
   @JSExport
+  def createPerspective(dictionary: Dictionary) = {
+    val options = ModalOptions()
+    options.templateUrl = "CreatePerspectiveModal.html"
+    options.controller = "CreatePerspectiveController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionary = dictionary.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Perspective](options)
+
+    instance.result map {
+      case p: Perspective => console.log(p.toString)
+    }
+  }
+
+  @JSExport
   def setDictionaryStatus(dictionary: Dictionary, status: String) = {
     backend.setDictionaryStatus(dictionary, status)
   }
@@ -91,6 +114,16 @@ AbstractController[DashboardScope](scope) {
   @JSExport
   def setPerspectiveStatus(dictionary: Dictionary, perspective: Perspective, status: String) = {
     backend.setPerspectiveStatus(dictionary, perspective, status)
+  }
+
+  @JSExport
+  def removeDictionary(dictionary: Dictionary) = {
+    backend.removeDictionary(dictionary)
+  }
+
+  @JSExport
+  def removePerspective(dictionary: Dictionary, perspective: Perspective) = {
+    backend.removePerspective(dictionary, perspective)
   }
 
   // load dynamic data

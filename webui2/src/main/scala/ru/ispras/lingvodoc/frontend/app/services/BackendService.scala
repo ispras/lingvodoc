@@ -219,6 +219,30 @@ class BackendService(http: HttpService) extends Service {
   // Perspectives
 
   /**
+   * Get perspective by ids
+   * @param clientId
+   * @param objectId
+   * @return
+   */
+  def getPerspective(clientId: Int, objectId: Int): Future[Perspective] = {
+    val p = Promise[Perspective]()
+    val url = "perspective/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(read[Perspective](js.JSON.stringify(response)))
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspective json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspective data. Missing some " +
+            "required fields: " + e.getMessage))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get perspective: " + e.getMessage))
+    }
+    p.future
+  }
+
+
+  /**
    * Set perspective status
    * @param dictionary
    * @param perspective
@@ -251,15 +275,35 @@ class BackendService(http: HttpService) extends Service {
    */
   def removePerspective(dictionary: Dictionary, perspective: Perspective): Future[Unit] = {
     val p = Promise[Unit]()
-    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary
-      .objectId.toString) + encodeURIComponent(perspective.clientId.toString) + "/" + encodeURIComponent(perspective
-      .objectId.toString)
+    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" +
+      encodeURIComponent(dictionary.objectId.toString) + "/perspective/" + encodeURIComponent(perspective.clientId.toString) +
+      "/" + encodeURIComponent(perspective.objectId.toString)
+
     http.delete(getMethodUrl(url)) onComplete {
       case Success(_) => p.success(())
       case Failure(e) => p.failure(BackendException("Failed to remove perspective: " + e.getMessage))
     }
     p.future
   }
+
+  /**
+   * Update perspective
+   * @param dictionary
+   * @param perspective
+   * @return
+   */
+  def updatePerspective(dictionary: Dictionary, perspective: Perspective): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" +
+      encodeURIComponent(dictionary.objectId.toString) + "/perspective/" + encodeURIComponent(perspective.clientId.toString) +
+      "/" + encodeURIComponent(perspective.objectId.toString)
+    http.put(getMethodUrl(url), write(perspective)) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update perspective: " + e.getMessage))
+    }
+    p.future
+  }
+
 
   /**
    * Get information about current user
@@ -289,7 +333,7 @@ class BackendService(http: HttpService) extends Service {
    * @param perspective
    * @return
    */
-  def getPerspectiveFields(dictionary: Dictionary, perspective: Perspective): Future[Seq[Field]] = {
+  def getFields(dictionary: Dictionary, perspective: Perspective): Future[Seq[Field]] = {
     val p = Promise[Seq[Field]]()
 
     val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary
@@ -314,6 +358,42 @@ class BackendService(http: HttpService) extends Service {
   }
 
   /**
+   * Update perspective fields
+   * @param dictionary
+   * @param perspective
+   * @return
+   */
+  def updateFields(dictionary: Dictionary, perspective: Perspective): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary
+      .objectId.toString) + "/perspective/" + encodeURIComponent(perspective.clientId.toString) + "/" + encodeURIComponent(perspective
+      .objectId.toString) + "/fields"
+    http.post(getMethodUrl(url), write(perspective)) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update perspective fields: " + e.getMessage))
+    }
+    p.future
+  }
+
+
+  /**
+   * Get perspective with fields
+   * @param dictionary
+   * @param perspective
+   * @return
+   */
+  def getPerspectiveFields(dictionary: Dictionary, perspective: Perspective): Future[Perspective] = {
+    val p = Promise[Perspective]()
+    getFields(dictionary, perspective) onComplete {
+      case Success(fields) =>
+        perspective.fields = fields.toJSArray
+        p.success(perspective)
+      case Failure(e) => p.failure(BackendException("Failed to fetch perspective fields: " + e.getMessage))
+    }
+    p.future
+  }
+
+  /**
    * Get lexical entries list
    * @param dictionary
    * @param perspective
@@ -322,7 +402,8 @@ class BackendService(http: HttpService) extends Service {
    * @param count
    * @return
    */
-  def getLexicalEntries(dictionary: Dictionary, perspective: Perspective, action: String, offset: Int, count: Int): Future[Seq[LexicalEntry]] = {
+  def getLexicalEntries(dictionary: Dictionary, perspective: Perspective, action: String, offset: Int, count: Int):
+  Future[Seq[LexicalEntry]] = {
     val p = Promise[Seq[LexicalEntry]]()
 
     var url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary

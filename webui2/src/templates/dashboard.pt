@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/javascriptdeps.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-fastopt.js')}"></script>
+
+	<script type="text/javascript">
+		ru.ispras.lingvodoc.frontend.App().main();
+	</script>
+</head>
+
+<body class="body-dashboard" ng-app="DashboardModule">
+
+<div id="clientId" data-lingvodoc="${client_id}"></div>
+<div id="userId" data-lingvodoc="${user.id}"></div>
+
+<div id="dictionariesUrl" data-lingvodoc="${request.route_url('dictionaries')}"></div>
+<div id="languagesUrl" data-lingvodoc="${request.route_url('get_languages')}"></div>
+<div id="createDictionaryUrl" data-lingvodoc="${request.route_url('create_dictionary')}"></div>
+
+<div metal:use-macro="load: nav.pt"></div>
+
+
+<div class="container" ng-controller="DashboardController" ng-cloak>
+
+
+    <div class="panel">
+        <button type="button" class="btn btn-primary" ng-click="loadMyDictionaries()">My dictionaries</button>
+        <button type="button" class="btn btn-primary" ng-click="loadAvailableDictionaries()">Avaliable dictionaries
+        </button>
+    </div>
+    <br>
+
+    <div ng-if="dictionaries.length > 0">
+        <div ng-repeat="dictionary in dictionaries">
+            <div>
+                <div class="btn-group col-md-8 col-sm-8 col-lg-8 col-xs-8">
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <button type="button" class="btn btn-default dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-9"
+                            data-toggle="dropdown">{{ dictionary.translation }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" ng-click="controller.editDictionaryProperties(dictionary)">Edit information</a></li>
+                        <li><a href="#" ng-click="controller.editDictionaryRoles(dictionary)">Edit roles</a></li>
+                        <li><a href="#" ng-click="controller.removeDictionary(dictionary)">Remove dictionary</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="#" ng-click="controller.createPerspective(dictionary)">Create new perspective</a></li>
+                    </ul>
+                </div>
+                <div class="btn-group col-md-4 col-sm-4 col-lg-4">
+                    <button type="button" class="btn btn-info col-md-10 col-lg-11 col-sm-10 col-xs-8"
+                            data-toggle="dropdown">{{ dictionary.status }}
+                    </button>
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" ng-click="controller.setDictionaryStatus(dictionary, 'Hidden')">Hidden</a></li>
+                        <li><a href="#" ng-click="controller.setDictionaryStatus(dictionary, 'WiP')">WiP</a></li>
+                        <li><a href="#" ng-click="controller.setDictionaryStatus(dictionary, 'Published')">Published</a></li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <br><br>
+
+            <div>
+                <div ng-repeat="perspective in dictionary.perspectives">
+                    <div class="btn-group btn-group-xs col-lg-offset-1 col-md-offset-1 col-sm-offset-1 col-xs-offset-1 col-md-7 col-sm-7 col-lg-7 col-xs-7">
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+                                aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <button type="button"
+                                class="btn btn-default col-md-10 col-lg-11 col-sm-10 col-xs-9 dropdown-toggle"
+                                data-toggle="dropdown">{{ perspective.translation }}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'view') }}">View published</a></li>
+                            <li><a href="#" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}">Edit</a>
+                            </li>
+                            <li><a href="#" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}">Publish</a>
+                            </li>
+                            <li role="separator" class="divider"></li>
+                            <li><a href="#" ng-click="controller.editPerspectiveRoles(dictionary, perspective)">Edit roles</a></li>
+                            <li><a href="#" ng-click="controller.editPerspectiveProperties(dictionary, perspective)">Edit properties</a></li>
+                            <li><a href="#" ng-click="controller.removePerspective(dictionary, perspective)">Remove perspective</a></li>
+
+                        </ul>
+                    </div>
+                    <div class="btn-group btn-group-xs col-md-4 col-sm-4 col-lg-4 col-xs-4 ">
+                        <button type="button"
+                                class="btn btn-info dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-8"
+                                data-toggle="dropdown">{{ perspective.status }}
+                        </button>
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+                                aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#"
+                                   ng-click="controller.setPerspectiveStatus(dictionary, perspective, 'Hidden')">Hidden</a></li>
+                            <li><a href="#" ng-click="controller.setPerspectiveStatus(dictionary, perspective, 'WiP')">WiP</a></li>
+                            <li><a href="#" ng-click="controller.setPerspectiveStatus(dictionary, perspective, 'Published')">Published</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <br><br>
+                </div>
+            </div>
+            <hr>
+        </div>
+    </div>
+
+    <div ng-if="dictionaries.length == 0">
+        <span>No dictionaries</span>
+    </div>
+
+    <hr>
+
+    <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary...</a>
+	<a href="#" ng-click="controller.showModal()" class="btn btn-primary">{{ test }}</a>
+</div>
+
+
+<script type="text/ng-template" id="DictionaryPropertiesModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title"></h3>
+    </div>
+
+    <div class="modal-body">
+
+        <label for="dictionaryName">Dictionary name</label>
+        <input type="text" id="dictionaryName" class="form-control" placeholder="" required autofocus ng-model="dictionary.translation">
+
+        <label for="language">Language</label>
+        <select id="language" class="form-control" ng-model="selectedLanguageId"
+                ng-options="language.getId as language.translation for language in languages">
+            <option></option>
+        </select>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="controller.ok()">OK</button>
+        <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+    </div>
+
+</script>
+
+
+<script type="text/ng-template" id="PerspectivePropertiesModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title"></h3>
+    </div>
+
+    <div class="modal-body">
+        <div>
+            <div class="form-group">
+                <label for="perspectiveName">Perspective name</label>
+                <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
+                       ng-model="perspective.translation" ng-change="perspective.translationString=perspective.translation">
+
+                <label for="perspectiveAuthors">Authors</label>
+                <input type="text" id="perspectiveAuthors" class="form-control" placeholder="" required autofocus
+                       ng-model="authors">
+            </div>
+
+            <div class="form-group">
+                <label for="isTemplate">I want to share this perspective as template</label>
+                <input type="checkbox" id="isTemplate" ng-model="perspective.isTemplate">
+            </div>
+
+            <div class="form-group">
+                <span class="glyphicon glyphicon-plus-sign" ng-click="controller.addField()"></span>
+            </div>
+
+            <table class="table">
+                <thead>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                </thead>
+
+                <tbody ng-repeat="f in fields">
+                <tr>
+
+                    <td>
+                        <input type="checkbox" ng-checked="f.statusEnabled" ng-model="f.statusEnabled">
+                    </td>
+
+                    <td>
+                        <input type="text" class="form-control" ng-model="f.field.entityType">
+                    </td>
+
+                    <td>
+                        <select class="form-control" ng-model="f.field.dataType">
+                            <option value="text" ng-if="f.field.dataType == 'text'" selected>Text</option>
+                            <option value="text" ng-if="f.field.dataType != 'text'">Text</option>
+                            <option value="image" ng-if="f.field.dataType == 'image'" selected>Image</option>
+                            <option value="image" ng-if="f.field.dataType != 'image'">Image</option>
+                            <option value="sound" ng-if="f.field.dataType == 'sound'" selected>Audio</option>
+                            <option value="sound" ng-if="f.field.dataType != 'sound'">Audio</option>
+                            <option value="grouping_tag" ng-if="f.field.dataType == 'grouping_tag'" selected>Grouping tag</option>
+                            <option value="grouping_tag" ng-if="f.field.dataType != 'grouping_tag'">Groupping tag</option>
+                        </select>
+
+                    </td>
+
+                    <td>
+                        <input type="checkbox" ng-checked="f.groupEnabled" ng-model="f.groupEnabled" ng-change="controller.enableGroup(f)">
+                    </td>
+
+
+                    <td>
+                        <input type="text" ng-model="field.group" class="form-control" ng-if="f.groupEnabled">
+                    </td>
+
+                    <td>
+                        <input type="checkbox" ng-checked="field.fields.length > 0 || f.subfieldsEnabled"
+                               ng-if="f.field.dataType == 'sound'" ng-model="f.subfieldsEnabled"
+                               ng-change="controller.enableLinkedField(f)">
+                    </td>
+
+                    <td>
+                        <span class="glyphicon glyphicon-circle-arrow-right"
+                              ng-if="f.field.dataType == 'sound' && f.field.fields.length > 0 && f.field.fields.length > 0"></span>
+                    </td>
+
+                    <td>
+
+                        <input type="text" ng-value="f.field.fields[0].entityType" class="form-control"
+                               ng-if="f.field.dataType == 'sound' && (f.field.fields.length > 0 || f.subfieldsEnabled)"
+                               ng-model="f.field.fields[0].entityType">
+                    </td>
+
+                    <td>
+
+                        <label class="checkbox-inline" ng-if="f.field.dataType == 'text'">
+                            <input type="checkbox"
+                                   ng-checked="f.translatable"
+                                   ng-model="f.translatable"> translatable</label>
+
+                        <select class="form-control"
+                                ng-if="f.field.dataType == 'sound' && (f.field.fields.length > 0 || f.subfieldsEnabled)"
+                                ng-model="f.field.fields[0].dataType">
+                            <option value="text" ng-if="f.field.fields[0].dataType == 'text'" selected>Text</option>
+                            <option value="text" ng-if="f.field.fields[0].dataType != 'text'">Text</option>
+                            <option value="image" ng-if="f.field.fields[0].dataType == 'image'" selected>Image</option>
+                            <option value="image" ng-if="f.field.fields[0].dataType != 'image'">Image</option>
+                            <option value="sound" ng-if="f.field.fields[0].dataType == 'sound'" selected>Audio</option>
+                            <option value="sound" ng-if="f.field.fields[0].dataType != 'sound'">Audio</option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType == 'grouping_tag'" selected>
+                                Groupping tag
+                            </option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType != 'grouping_tag'">Groupping
+                                tag
+                            </option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType == 'markup'" selected>
+                                Markup
+                            </option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType != 'markup'">Markup</option>
+                        </select>
+                    </td>
+
+                    <td>
+                        <span class="glyphicon glyphicon-remove" ng-click="controller.removeField($index)"></span>
+                    </td>
+
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                Files
+            </div>
+            <div class="panel-body">
+                <table class="table table-bordered">
+                    <tr ng-repeat="blob in perspective.blobs">
+                        <td>{{ blob.name }}</td>
+                        <td> <span class="glyphicon glyphicon-remove" ng-click="removeBlob(blob)"></span> </td>
+                    </tr>
+                </table>
+
+                <select id="blob" class="form-control" ng-model="blobId" ng-options="blob.getId() as blob.name for blob in blobs track by blob.getId()">
+                    <option></option>
+                </select>
+
+                <button type="button" class="btn btn-primary" ng-click="controller.addBlob()">Add</button>
+            </div>
+
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                Location
+            </div>
+            <div class="panel-body">
+                <button type="button" class="btn btn-primary" ng-click="controller.editGeoLabels()">Location...</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="controller.ok()" >OK</button>
+        <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+    </div>
+
+</script>
+
+
+<script type="text/ng-template" id="editRolesModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title"></h3>
+    </div>
+
+    <div class="modal-body">
+        <div>
+
+
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <td></td>
+                    <td ng-repeat="(role, users) in roles">{{ role }}</td>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr ng-repeat="user in userTable">
+                    <td>{{ user.name }}</td>
+                    <td ng-repeat="(role, users) in roles">
+                        <input type="checkbox" ng-checked="userHasRole(user, role)"
+                               ng-click="toggleRole($event, user, role)">
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div>
+            <h4>Add new user</h4>
+            <label for="userLogin"></label>
+            <input id="userLogin" class="form-control" type="text" placeholder="Search user" ng-model="searchQuery">
+
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <td>User</td>
+                    <td>Name</td>
+                    <td></td>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr ng-repeat="user in suggestedUsers">
+                    <td>{{ user.login }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>
+                        <button class="btn btn-primary" ng-click="addUser(user)">
+                            <span class="glyphicon glyphicon-plus-sign"></span>
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="controller.ok()">OK</button>
+        <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+    </div>
+
+</script>
+
+
+<script type="text/ng-template" id="CreatePerspectiveModal.html">
+
+    <div class="modal-header">
+        <h3 class="modal-title"></h3>
+    </div>
+
+    <div class="modal-body">
+        <label for="perspective">Import perspective</label>
+        <select id="perspective" class="form-control" ng-options="p.getId() as p.translation_string for p in perspectives track by p.getId()" ng-model="perspectiveId">
+            <option></option>
+        </select>
+
+        <hr>
+
+        <div>
+            <div class="form-group">
+                <label for="perspectiveName">Perspective name</label>
+                <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
+                       ng-model="perspectiveName">
+            </div>
+
+            <div class="form-group">
+                <label for="isTemplate">I want to share this perspective as template</label>
+                <input type="checkbox" id="isTemplate" ng-model="isTemplate">
+            </div>
+
+            <div class="form-group">
+                <span class="glyphicon glyphicon-plus-sign" ng-click="controller.addField()"></span>
+            </div>
+
+            <table class="table">
+                <thead>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                </thead>
+
+                <tbody ng-repeat="f in fields">
+                <tr>
+
+                    <td>
+                        <input type="checkbox" ng-checked="f.statusEnabled" ng-model="f.statusEnabled">
+                    </td>
+
+                    <td>
+                        <input type="text" class="form-control" ng-model="f.field.entityType">
+                    </td>
+
+                    <td>
+                        <select class="form-control" ng-model="f.field.dataType">
+                            <option value="text" ng-if="f.field.dataType == 'text'" selected>Text</option>
+                            <option value="text" ng-if="f.field.dataType != 'text'">Text</option>
+                            <option value="image" ng-if="f.field.dataType == 'image'" selected>Image</option>
+                            <option value="image" ng-if="f.field.dataType != 'image'">Image</option>
+                            <option value="sound" ng-if="f.field.dataType == 'sound'" selected>Audio</option>
+                            <option value="sound" ng-if="f.field.dataType != 'sound'">Audio</option>
+                            <option value="grouping_tag" ng-if="f.field.dataType == 'grouping_tag'" selected>Grouping tag</option>
+                            <option value="grouping_tag" ng-if="f.field.dataType != 'grouping_tag'">Groupping tag</option>
+                        </select>
+
+                    </td>
+
+                    <td>
+                        <input type="checkbox" ng-checked="f.groupEnabled" ng-model="f.groupEnabled" ng-change="controller.enableGroup(f)">
+                    </td>
+
+
+                    <td>
+                        <input type="text" ng-model="field.group" class="form-control" ng-if="f.groupEnabled">
+                    </td>
+
+                    <td>
+                        <input type="checkbox" ng-checked="field.fields.length > 0 || f.subfieldsEnabled"
+                               ng-if="f.field.dataType == 'sound'" ng-model="f.subfieldsEnabled"
+                               ng-change="controller.enableLinkedField(f)">
+                    </td>
+
+                    <td>
+                        <span class="glyphicon glyphicon-circle-arrow-right"
+                              ng-if="f.field.dataType == 'sound' && f.field.fields.length > 0 && f.field.fields.length > 0"></span>
+                    </td>
+
+                    <td>
+
+                        <input type="text" ng-value="f.field.fields[0].entityType" class="form-control"
+                               ng-if="f.field.dataType == 'sound' && (f.field.fields.length > 0 || f.subfieldsEnabled)"
+                               ng-model="f.field.fields[0].entityType">
+                    </td>
+
+                    <td>
+
+                        <label class="checkbox-inline" ng-if="f.field.dataType == 'text'">
+                            <input type="checkbox"
+                                   ng-checked="f.translatable"
+                                   ng-model="f.translatable"> translatable</label>
+
+                        <select class="form-control"
+                                ng-if="f.field.dataType == 'sound' && (f.field.fields.length > 0 || f.subfieldsEnabled)"
+                                ng-model="f.field.fields[0].dataType">
+                            <option value="text" ng-if="f.field.fields[0].dataType == 'text'" selected>Text</option>
+                            <option value="text" ng-if="f.field.fields[0].dataType != 'text'">Text</option>
+                            <option value="image" ng-if="f.field.fields[0].dataType == 'image'" selected>Image</option>
+                            <option value="image" ng-if="f.field.fields[0].dataType != 'image'">Image</option>
+                            <option value="sound" ng-if="f.field.fields[0].dataType == 'sound'" selected>Audio</option>
+                            <option value="sound" ng-if="f.field.fields[0].dataType != 'sound'">Audio</option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType == 'grouping_tag'" selected>
+                                Groupping tag
+                            </option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType != 'grouping_tag'">Groupping
+                                tag
+                            </option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType == 'markup'" selected>
+                                Markup
+                            </option>
+                            <option value="grouping_tag" ng-if="f.field.fields[0].dataType != 'markup'">Markup</option>
+                        </select>
+                    </td>
+
+                    <td>
+                        <span class="glyphicon glyphicon-remove" ng-click="controller.removeField($index)"></span>
+                    </td>
+
+                </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="controller.ok()" ng-disabled="!controls.ok">OK</button>
+        <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+    </div>
+
+</script>
+
+
+
+<script type="text/ng-template" id="perspectiveGeoLabelsModal.html">
+
+
+    <div class="modal-header">
+        <h3 class="modal-title"></h3>
+    </div>
+
+    <div class="modal-body">
+
+        <div class="row">
+            <div class="col-md-12" map-lazy-load="http://maps.google.com/maps/api/js"
+                 map-lazy-load-params="{{googleMapsUrl}}">
+                <ng-map zoom="2" style="height: 600px;" on-click="addMarker()">
+                    <marker ng-repeat="pos in positions" position="{{pos.lat}}, {{pos.lng}}" on-click="removeMarker(pos)"></marker>
+                </ng-map>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="controller.ok()">OK</button>
+    </div>
+</script>
+
+
+<div metal:use-macro="load: response_handler.pt"></div>
+
+</body>
+
+</html>

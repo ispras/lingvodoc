@@ -1,0 +1,55 @@
+<nav class="lingvodoc-navbar">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="${request.route_url('home')}">Lingvodoc</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li class="dropdown" tal:condition="user">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">
+                        Dashboard<span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="${request.route_url('dashboard')}">My dictionaries</a></li>
+                        <li><a href="${request.route_url('new_dictionary')}">Create dictionary</a></li>
+                        <li><a href="${request.route_url('merge_master')}">Merge master</a></li>
+                    </ul>
+                </li>
+                <li tal:condition="user"><a href="${request.route_url('languages')}">Languages</a></li>
+                <li tal:condition="user"><a href="${request.route_url('organizations')}">Organizations</a></li>
+                <li><a href="${request.route_url('maps')}">Maps search</a></li>
+                <li><a href="${request.route_url('corpora')}">Corpora</a></li>
+                <li tal:condition="user"><a href="${request.route_url('blob_upload')}">My files</a></li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+
+                <li class="dropdown" tal:condition="user">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">${user.name}<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="${request.route_url('blob_upload')}">My files</a></li>
+                        <li><a href="${request.route_url('logout')}">Sign out</a></li>
+                    </ul>
+                </li>
+
+                <li class="dropdown" tal:condition="not: user">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Guest<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="${request.route_url('login')}">Sign in</a></li>
+                        <li><a href="${request.route_url('signup')}">Sign up</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
