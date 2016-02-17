@@ -243,14 +243,12 @@ class PerspectiveTest(MyTestCase):
         id_tester = self.signup_common()
         id_u1 = self.signup_common('user1', 'user1')
         id_u2 = self.signup_common('user2', 'user1')
-        id_u3 = self.signup_common('user3', 'user1')
         id_l1 = self.create_language('language1')
         dict_1 = self.create_dictionary('user1_dict1', id_l1)
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
 
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/fields'
                                 % (1, 1, 1, 1))
-        self.assertEqual(response.status_int, HTTPOk.code)
         fields = response.json
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/fields'
                                       % (dict_1['client_id'],

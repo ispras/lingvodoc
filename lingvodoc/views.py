@@ -4631,15 +4631,15 @@ def perspective_info(request):  # TODO: test
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='dictionary_info', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='dictionary_info', renderer='json', request_method='GET')
 def dictionary_info(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    starting_date = request.GET.matchdict.get('starting_date')
+    starting_date = request.GET.get('starting_date')
     if starting_date:
         starting_date = datetime.datetime(starting_date)
-    ending_date = request.GET.matchdict.get('ending_date')
+    ending_date = request.GET.get('ending_date')
     if ending_date:
         ending_date = datetime.datetime(ending_date)
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
