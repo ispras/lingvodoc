@@ -66,11 +66,11 @@ def configure_routes(config):
 
     # API #POST
     # Convert blob
-    config.add_route(name='convert', pattern='/convert/blob')  # TODO: test
+    config.add_route(name='convert', pattern='/convert/blob')  # TODO: when ready test
 
     # API #POST
     # Convert markup
-    config.add_route(name='convert_markup', pattern='/convert/markup')  # TODO: not test
+    config.add_route(name='convert_markup', pattern='/convert/markup')  # TODO: test
 
     # API #POST
     # Create language

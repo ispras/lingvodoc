@@ -4632,25 +4632,50 @@ def perspective_info(request):  # TODO: test
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='dictionary_info', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='dictionary_info', renderer='json', request_method='GET')
 def dictionary_info(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    starting_date = request.GET.matchdict.get('starting_date')
+    starting_date = request.GET.get('starting_date')
     if starting_date:
         starting_date = datetime.datetime(starting_date)
-    ending_date = request.GET.matchdict.get('ending_date')
+    ending_date = request.GET.get('ending_date')
     if ending_date:
         ending_date = datetime.datetime(ending_date)
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    result = []
     if dictionary:
         if not dictionary.marked_for_deletion:
             clients_to_users_dict = cache_clients()
+            # todo: in one iteration
+
+            types = []
+            result = []
+            for perspective in dictionary.dictionaryperspective:
+                path = request.route_url('perspective_fields',
+                                         dictionary_client_id=perspective.parent_client_id,
+                                         dictionary_object_id=perspective.parent_object_id,
+                                         perspective_client_id=perspective.client_id,
+                                         perspective_id=perspective.object_id
+                                         )
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                fields = resp.json["fields"]
+                for field in fields:
+                    entity_type = field['entity_type']
+                    if entity_type not in types:
+                        types.append(entity_type)
+                    if 'contains' in field:
+                        for field2 in field['contains']:
+                            entity_type = field2['entity_type']
+                            if entity_type not in types:
+                                types.append(entity_type)
+
             for perspective in dictionary.dictionaryperspective:
                 for lex in perspective.lexicalentry:
-                    user_counter(lex.track(True), result, starting_date, ending_date, clients_to_users_dict)
+                    result = user_counter(lex.track(True), result, starting_date, ending_date, types, clients_to_users_dict)
 
             response['count'] = result
             request.response.status = HTTPOk.code

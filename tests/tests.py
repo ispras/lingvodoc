@@ -104,17 +104,31 @@ def dict_diff(d1, d2, stop_words=list(), set_like=False, debug_flag=False):
     return True
 
 
+class DummyWs(object):
+
+    def shutdown(self=None):  # that is really bad. really
+        pass
+
+
 class MyTestCase(unittest.TestCase):
 
     def setUp(self):
         import os
         self.config = testing.setUp()
-        import webtest
+        import webtest.http
         from pyramid import paster
         from sqlalchemy import create_engine
         engine = create_engine(dbname)
+
+        from lingvodoc import main
+
         myapp = paster.get_app('../' + alembicini)
+        # myapp = main({})
+        # self.ws = webtest.http.StopableWSGIServer(myapp, port=6543, host="0.0.0.0")
+        # self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")
+        # self.ws = DummyWs
         self.app = webtest.TestApp(myapp)
+        # self.ws.run()
         DBSession.remove()
         DBSession.configure(bind=engine)
         bashcommand = "alembic -c %s upgrade head" % alembicini
@@ -137,6 +151,9 @@ class MyTestCase(unittest.TestCase):
         my_env = os.environ
         proc = Popen(args, cwd=pathdir, env=my_env)
         proc.communicate()
+        # print('starting shutdown')
+        # self.ws.shutdown()
+        # print('ending shutdown')
         testing.tearDown()
 
     def assertDictEqual(self, d1, d2, msg=None, stop_words=list(), set_like=False, debug_flag=False):
@@ -158,12 +175,12 @@ class MyTestCase(unittest.TestCase):
         response = self.app.post('/login', params={'login': username,
                                                    'password': 'pass'})
         response = self.app.get('/user')
-        id = response.json['id']
+        user_id = response.json['id']
 
         response = self.app.post('/logout')
         response = self.app.post('/login', params={'login': prev_log,
                                                    'password': 'pass'})
-        return id
+        return user_id
 
     def login_common(self, username='test'):
         response = self.app.post('/login', params={'login': username,
@@ -928,7 +945,7 @@ class TestBig(MyTestCase):
         self.assertEqual(response.status_int, HTTPForbidden.code)
 
     def test_dict_lang_tree(self):
-        id = self.signup_common()
+        user_id = self.signup_common()
         self.login_common()
         root_ids = self.create_language('Корень')
         first_child = self.create_language('Первый ребенок', root_ids)
@@ -965,22 +982,58 @@ class TestBig(MyTestCase):
         self.assertDictEqual(response.json, correct_answer)
         # print(response.json)
 
-    def test_dict_convert(self):
-        import hashlib
-        self.signup_common()
-        self.login_common()
-        first_hash = hashlib.md5(open("test.sqlite", 'rb').read()).hexdigest()
-        response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
-                                 upload_files=([('blob', 'test.sqlite')]))
-        self.assertEqual(response.status_int, HTTPOk.code)
-        blob_ids = response.json
-        response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
-                                                          blob_ids['object_id']))
-        self.assertEqual(response.status_int, HTTPOk.code)
-        file_response = self.app.get(response.json['content'])
-        second_hash = hashlib.md5(file_response.body).hexdigest()
-        self.assertEqual(first_hash, second_hash)
-        # TODO: convert check
+    # def test_dict_convert(self):
+    #     import hashlib
+    #     from time import sleep
+    #     import webtest.http
+    #     import threading
+    #     print('before starting')
+    #     self.ws = webtest.http.StopableWSGIServer.create(self.app, port=6543, host="0.0.0.0")
+    #     server_started = self.ws.wait()
+    #     self.assertEqual(server_started, True)
+    #     # self.ws.run()
+    #     # t = threading.Thread(target=self.ws.run)
+    #     # t.daemon = True
+    #     # t.start()
+    #     print('after starting')
+    #     user_id = self.signup_common()
+    #     self.login_common()
+    #     root_ids = self.create_language('Корень')
+    #     first_hash = hashlib.md5(open("test.sqlite", 'rb').read()).hexdigest()
+    #     response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
+    #                              upload_files=([('blob', 'test.sqlite')]))
+    #     self.assertEqual(response.status_int, HTTPOk.code)
+    #     blob_ids = response.json
+    #     response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
+    #                                                       blob_ids['object_id']))
+    #     self.assertEqual(response.status_int, HTTPOk.code)
+    #     file_response = self.app.get(response.json['content'])
+    #     second_hash = hashlib.md5(file_response.body).hexdigest()
+    #     self.assertEqual(first_hash, second_hash)
+    #     response = self.app.post_json('/convert_check', params={'blob_client_id': blob_ids['client_id'],
+    #                                                      'blob_object_id': blob_ids['object_id']})
+    #     self.assertEqual(response.status_int, HTTPOk.code)
+    #     self.assertEqual(response.json, [])
+    #     response = self.app.post_json('/convert', params={'blob_client_id': blob_ids['client_id'],
+    #                                                      'blob_object_id': blob_ids['object_id'],
+    #                                                       'parent_client_id':root_ids['client_id'],
+    #                                                       'parent_object_id':root_ids['object_id']})
+    #     self.assertEqual(response.status_int, HTTPOk.code)
+    #     self.assertDictEqual(response.json, {"status": "Your dictionary is being converted."
+    #                   " Wait 5-15 minutes and you will see new dictionary in your dashboard."})
+    #
+    #     print('==== LOOK HERE ====')
+    #     print(response.json)
+    #     not_found = True
+    #     for i in range(3):
+    #         response = self.app.post_json('/dictionaries', params={'user_created': [user_id]})
+    #         if response.json['dictionaries']:
+    #             not_found = False
+    #             break
+    #         sleep(10)
+    #     if not_found:
+    #         self.assertEqual('error', 'dictionary was not found')
+    #     print(response.json['dictionaries'])
 
     def test_user_blobs(self):
         import hashlib
