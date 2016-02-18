@@ -4249,7 +4249,7 @@ def disapprove_entity(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='get_translations', renderer='json', request_method='GET')
+@view_config(route_name='get_translations', renderer='json', request_method='POST')
 def get_translations(request):
     from .models import find_by_translation_string, find_locale_id
     req = request.json_body
