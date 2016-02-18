@@ -2724,6 +2724,7 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
 # Json_input point to the method of file getting: if it's embedded in json, we need to decode it. If
 # it's uploaded via multipart form, it's just saved as-is.
 def create_object(request, content, obj, data_type, filename, json_input=True):
+    import errno
     # here will be object storage write as an option. Fallback (default) is filesystem write
     settings = request.registry.settings
     storage = settings['storage']
@@ -2736,6 +2737,12 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
     else:
         filename = filename or 'noname.noext'
         storage_path = object_file_path(obj, settings, data_type, filename, True)
+        directory = os.path.dirname(storage_path)
+        try:
+            os.makedirs(directory)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
 
         with open(storage_path, 'wb+') as f:
             if json_input:

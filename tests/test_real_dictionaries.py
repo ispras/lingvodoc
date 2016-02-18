@@ -38,6 +38,7 @@ class ConvertTest(MyTestCase):
     def test_dict_convert(self):
         import hashlib
         from time import sleep
+        # from werkzeug.utils import secure_filename
         import webtest.http
         import threading
         # self.ws.run()
