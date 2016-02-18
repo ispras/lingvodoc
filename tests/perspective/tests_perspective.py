@@ -289,7 +289,7 @@ class PerspectiveTest(MyTestCase):
         self.add_l1e(dict_1, persp_1, response.json[1], 'text3', 'Word')
         to_be_approved.append(self.add_l1e(dict_1, persp_1, response.json[1], 'translation3', 'Translation'))
         to_be_approved.append(self.add_l1e(dict_1, persp_1, response.json[2], 'transcription1', 'Transcription'))
-        list(map(lambda x: x.update({"type": 'leveloneentity'}), to_be_approved))
+        for x in to_be_approved: x.update({"type": 'leveloneentity'})
 
         response = self.app.patch_json(
             '/dictionary/%s/%s/perspective/%s/%s/approve' % (dict_1['client_id'], dict_1['object_id'],
