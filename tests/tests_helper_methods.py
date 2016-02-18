@@ -10,6 +10,7 @@ from pyramid.httpexceptions import (
     HTTPFound,
     HTTPForbidden
 )
+import json
 
 class TestHelperMethods(MyTestCase):
 
@@ -112,3 +113,17 @@ class TestHelperMethods(MyTestCase):
                           'locale_id': 1,
                           'content': content}
         self.assertDictEqual(response.json, correct_answer)
+
+    def test_dict_convert_method(self):
+        dict_ids, persp_ids = self.dict_convert()
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all'
+                                % (dict_ids['client_id'],
+                                   dict_ids['object_id'],
+                                   persp_ids['client_id'],
+                                   persp_ids['object_id']))
+        json_file = open('test_dict_convert.json', 'r')
+        correct_answer = json.loads(json_file.read())
+        self.assertDictEqual(response.json, correct_answer, stop_words=['client_id',
+                                                                        'object_id',
+                                                                        'parent_client_id',
+                                                                        'parent_object_id'], set_like= True)

@@ -112,6 +112,16 @@ class DummyWs(object):
 
 class MyTestCase(unittest.TestCase):
 
+    server_is_up = False
+
+    @classmethod
+    def set_server_is_up(cls, sip):
+        MyTestCase.server_is_up = sip
+
+    @classmethod
+    def get_server_is_up(cls):
+        return MyTestCase.server_is_up
+
     def setUp(self):
         import os
         self.config = testing.setUp()
@@ -120,10 +130,11 @@ class MyTestCase(unittest.TestCase):
         from sqlalchemy import create_engine
         engine = create_engine(dbname)
 
-        from lingvodoc import main
-
         myapp = paster.get_app('../' + alembicini)
-        self.myapp = myapp
+        if not self.get_server_is_up():
+            self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")  # todo: change to pserve
+            self.ws.wait()
+            self.set_server_is_up(True)
         self.app = webtest.TestApp(myapp)
         DBSession.remove()
         DBSession.configure(bind=engine)
@@ -238,6 +249,42 @@ class MyTestCase(unittest.TestCase):
         if tag:
             params['tag'] = tag
         response = self.app.post_json('/group_entity', params=params)
+
+    def dict_convert(self):
+        from time import sleep
+        user_id = self.signup_common()
+        self.login_common()
+        root_ids = self.create_language('Корень')
+        response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
+                                 upload_files=([('blob', 'test.sqlite')]))
+        blob_ids = response.json
+        response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
+                                                          blob_ids['object_id']))
+        file_response = self.app.get(response.json['content'])
+        response = self.app.post_json('/convert_check', params={'blob_client_id': blob_ids['client_id'],
+                                                         'blob_object_id': blob_ids['object_id']})
+        response = self.app.post_json('/convert', params={'blob_client_id': blob_ids['client_id'],
+                                                         'blob_object_id': blob_ids['object_id'],
+                                                          'parent_client_id':root_ids['client_id'],
+                                                          'parent_object_id':root_ids['object_id']})
+        not_found = True
+        for i in range(3):
+            response = self.app.post_json('/dictionaries', params={'user_created': [user_id]})
+            if response.json['dictionaries']:
+                not_found = False
+                break
+            sleep(10)
+        if not_found:
+            self.assertEqual('error', 'converting dictionary was not found')
+        dict_ids = response.json['dictionaries'][0]
+        for i in range(20):
+            response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
+            if response.json['status'].lower() == 'published':
+                break
+            sleep(60)
+        response = self.app.get('/dictionary/%s/%s/perspectives' % (dict_ids['client_id'], dict_ids['object_id']))
+        persp_ids = response.json['perspectives'][0]
+        return dict_ids, persp_ids
 
 
 class TestBig(MyTestCase):
@@ -979,11 +1026,11 @@ class TestBig(MyTestCase):
         import hashlib
         self.signup_common()
         self.login_common()
-        first_hash = hashlib.md5(open("test.pdf", 'rb').read()).hexdigest()
+        first_hash = hashlib.md5(open("test_user_blobs.pdf", 'rb').read()).hexdigest()
         # response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
         #                          upload_files=([('blob', 'test.sqlite')]))
         response = self.app.post('/blob', params = {'data_type':'pdf'},
-                                 upload_files=([('blob', 'test.pdf')]))
+                                 upload_files=([('blob', 'test_user_blobs.pdf')]))
         self.assertEqual(response.status_int, HTTPOk.code)
         blob_ids = response.json
         response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],

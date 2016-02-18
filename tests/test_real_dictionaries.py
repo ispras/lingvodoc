@@ -11,26 +11,35 @@ from pyramid.httpexceptions import (
     HTTPForbidden
 )
 
+import threading
+from tests.tests import alembicini
+from pyramid import paster
+from waitress import serve
+import json
+
+def pserve():
+    myapp = paster.get_app('../' + alembicini)
+
+
+    def my_serve():
+        serve(myapp, host='0.0.0.0', port=6543)
+
+
+    a = threading.Thread(target=my_serve)
+    a.daemon = True
+    print('starting server')
+    a.run()
+
+    print('server started')
+
 
 class ConvertTest(MyTestCase):
-
-    def setUp(self):
-        super().setUp()
-        import webtest.http
-        myapp = self.myapp
-        self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")
-
-    def tearDown(self):
-        self.ws.shutdown()
-        super().tearDown()
 
     def test_dict_convert(self):
         import hashlib
         from time import sleep
         import webtest.http
         import threading
-        server_started = self.ws.wait()
-        self.assertEqual(server_started, True)
         # self.ws.run()
         # t = threading.Thread(target=self.ws.run)
         # t.daemon = True
@@ -60,9 +69,6 @@ class ConvertTest(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, {"status": "Your dictionary is being converted."
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."})
-
-        print('==== LOOK HERE ====')
-        print(response.json)
         not_found = True
         for i in range(3):
             response = self.app.post_json('/dictionaries', params={'user_created': [user_id]})
@@ -72,4 +78,26 @@ class ConvertTest(MyTestCase):
             sleep(10)
         if not_found:
             self.assertEqual('error', 'dictionary was not found')
-        print(response.json['dictionaries'])
+        dict_ids = response.json['dictionaries'][0]
+        for i in range(20):
+            response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
+            if response.json['status'].lower() == 'published':
+                break
+            sleep(60)
+        response = self.app.get('/dictionary/%s/%s/perspectives' % (dict_ids['client_id'], dict_ids['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        persp_ids = response.json['perspectives'][0]
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all'
+                                % (dict_ids['client_id'],
+                                   dict_ids['object_id'],
+                                   persp_ids['client_id'],
+                                   persp_ids['object_id']))
+        # json_file = open('test_dict_convert.json', 'w')
+        # json_file.write(json.dumps(response.json))
+        # json_file.close()
+        json_file = open('test_dict_convert.json', 'r')
+        correct_answer = json.loads(json_file.read())
+        self.assertDictEqual(response.json, correct_answer, stop_words=['client_id',
+                                                                        'object_id',
+                                                                        'parent_client_id',
+                                                                        'parent_object_id'], set_like= True)
