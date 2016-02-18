@@ -3479,7 +3479,7 @@ def lexical_entries_all_count(request): # tested
 
 
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
-def lexical_entries_published(request):  # TODO: test
+def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
