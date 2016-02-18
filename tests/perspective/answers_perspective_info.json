@@ -1,0 +1,49 @@
+{
+  "empty_perspective": {
+    "count": []
+  },
+  "filled_perspective": {
+    "count": [
+      {
+        "counters": {
+          "Paradigm transcription": 0,
+          "Translation": 2,
+          "Sound": 0,
+          "Etymology": 0,
+          "Paradigm translation": 0,
+          "Paradigm word": 0,
+          "Praat markup": 0,
+          "Paradigm sound": 0,
+          "Transcription": 0,
+          "lexical_entry": 3,
+          "Paradigm Praat markup": 0,
+          "Word": 2
+        },
+        "intl_name": "user1",
+        "name": "test",
+        "id": 3,
+        "login": "user1"
+      },
+      {
+        "counters": {
+          "Paradigm transcription": 0,
+          "Translation": 1,
+          "Sound": 0,
+          "Etymology": 0,
+          "Paradigm translation": 0,
+          "Paradigm word": 0,
+          "Praat markup": 0,
+          "Paradigm sound": 0,
+          "Transcription": 1,
+          "lexical_entry": 0,
+          "Paradigm Praat markup": 0,
+          "Word": 0
+        },
+        "intl_name": "user2",
+        "name": "test",
+        "id": 4,
+        "login": "user2"
+      }
+    ]
+  }
+}

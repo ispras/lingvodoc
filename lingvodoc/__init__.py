@@ -122,7 +122,7 @@ def configure_routes(config):
 
     config.add_route(name='dictionary_info',
                      pattern='/dictionary/{client_id}/{object_id}/info',
-                     factory='lingvodoc.models.DictionaryAcl')  # TODO: test
+                     factory='lingvodoc.models.DictionaryAcl')
 
     # API #DELETE
     config.add_route(name='dictionary_delete', pattern='/dictionary/{client_id}/{object_id}/delete',
@@ -401,7 +401,7 @@ def configure_routes(config):
     # params: start_from=M, count=N, sort_by=<entity_type>
     config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_id}/all',
-                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')
 
     config.add_route(name='lexical_entries_all_count', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/all_count',

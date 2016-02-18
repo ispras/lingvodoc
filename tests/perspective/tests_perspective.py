@@ -1,4 +1,6 @@
 from tests.tests import MyTestCase
+from tests.common import initValuesFactory
+from tests.common import load_correct_answers
 
 from pyramid.httpexceptions import (
     HTTPNotFound,
@@ -24,15 +26,9 @@ class PerspectiveTest(MyTestCase):
         result = sorted(result, key=lambda x: (x['client_id'], x['object_id']))
         return (result, answer)
 
-    def _perspective_role_assertion(self, response, correct_answer):
-        self.assertIn('roles_users', response.json)
-        self.assertEqual(sorted(response.json['roles_users'].items()),
-                         sorted(correct_answer['roles_users'].items()))
-        self.assertIn('roles_organizations', response.json)
-        self.assertEqual(sorted(response.json['roles_organizations'].items()),
-                         sorted(correct_answer['roles_organizations'].items()))
-
     def testAllPerspectives(self):
+        correct_answers = load_correct_answers("perspective/answers_all_perspectives.json")
+
         id_tester = self.signup_common()
         id_u1 = self.signup_common('user1', 'user1')
         id_l1 = self.create_language('language1')
@@ -43,47 +39,54 @@ class PerspectiveTest(MyTestCase):
             {"object_id": 3, "client_id": 1}
         ]
 
+        test_name = "empty_perspective"
         response = self.app.get('/perspectives',
                                 params = {'is_template': False})
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
         persp_2 = self.create_perspective('translation_string2', dict_1, "Published", True)
         persp_3 = self.create_perspective('translation_string3', dict_1, "Marked", False)
         persp_4 = self.create_perspective('translation_string4', dict_1, "Marked", True)
 
+        test_name = "template_true"
         response = self.app.get('/perspectives',
                                 params = {'is_template': True})
-        result, answer = self._build_ordered_lists(response, default_persp + [persp_2, persp_4])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "template_false"
         response = self.app.get('/perspectives',
                                 params = {'is_template': False})
-        result, answer = self._build_ordered_lists(response, [persp_1, persp_3])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "combined_condition_1"
         response = self.app.get('/perspectives',
                                 params = {'state': "Published"})
-        result, answer = self._build_ordered_lists(response, [persp_1, persp_2])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "combined_condition_2"
         response = self.app.get('/perspectives',
                                 params = {'state': "Marked", 'is_template': False})
-        result, answer = self._build_ordered_lists(response, [persp_3])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "missing_state"
         response = self.app.get('/perspectives',
                                 params = {'state': "NoState"})
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "all"
         response = self.app.get('/perspectives')
-        result, answer = self._build_ordered_lists(
-            response, default_persp + [persp_1, persp_2, persp_3, persp_4])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
     def testPerspectives(self):
+        correct_answers = load_correct_answers("perspective/answers_perspectives.json")
         id_tester = self.signup_common()
         id_u1 = self.signup_common('user1', 'user1')
         id_l1 = self.create_language('language1')
@@ -93,13 +96,15 @@ class PerspectiveTest(MyTestCase):
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
         persp_2 = self.create_perspective('translation_string1', dict_1, "Marked", True)
 
+        test_name = "filled_perspective"
         response = self.app.get('/dictionary/%(client_id)s/%(object_id)s/perspectives' % dict_1)
-        result, answer = self._build_ordered_lists(response, [persp_1, persp_2])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "empty_perspective"
         response = self.app.get('/dictionary/%(client_id)s/%(object_id)s/perspectives' % dict_2)
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
         #TODO: catch bad response exception and check it
         # try:
@@ -109,6 +114,7 @@ class PerspectiveTest(MyTestCase):
         # self.assertEqual(response.status_int, HTTPNotFound.code)
 
     def testViewPerspectiveRoles(self):
+        correct_answers = load_correct_answers("perspective/answers_view_perspective_roles.json")
         id_tester = self.signup_common()
         id_u1 = self.signup_common('user1', 'user1')
         id_u2 = self.signup_common('user2', 'user1')
@@ -118,7 +124,7 @@ class PerspectiveTest(MyTestCase):
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
 
         correct_answer = {
-            'roles_users': {
+            "roles_users": {
                 "Can view published lexical entries": [id_u1, id_u2],
                 "Can get perspective role list": [id_u1],
                 "Can view unpublished lexical entries": [id_u1, id_u2],
@@ -145,101 +151,104 @@ class PerspectiveTest(MyTestCase):
                 "Can delete perspective": []
             }
         }
-        params = {'roles_users':
-                              {"Can create lexical entries": [],
-                               "Can get perspective role list": [id_u1],
-                               "Can resign users from dictionary editors": [id_u2],
-                               "Can approve lexical entries and publish": [id_u3],
-                               "Can create perspective roles and assign collaborators":[id_u2, id_u3],
-                               "Can edit perspective": [id_u2],
-                               "Can delete perspective": [id_u2],
-                               "Can delete lexical entries": [id_u2],
-                               "Can deactivate lexical entries": [id_u2],
-                               "Can view unpublished lexical entries": [id_u2],
-                               "Can view published lexical entries": [id_u2]}
-                  }
+
+        params = initValuesFactory.get_role_params([id_u2])
+        params['roles_users']['Can create lexical entries'] = []
+        params['roles_users']['Can get perspective role list'] = [id_u1]
+        params['roles_users']['Can approve lexical entries and publish'] = [id_u3]
+        params['roles_users']['Can create perspective roles and assign collaborators'] = [id_u2, id_u3]
 
         # Testing get and post
+        test_name = "change_several_roles"
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
-        # Add single role permission
         params = {'roles_users':
                               {"Can view unpublished lexical entries": [id_u3]}}
-        correct_answer['roles_users']['Can view unpublished lexical entries'] += [id_u3]
+        test_name = "add_single_role"
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
-        # Empty tests
         params = {'roles_users': {}}
+        test_name = "empty_test_1"
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
         params = {}
+        test_name = "empty_test_2"
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
         # Testing get and delete
-        # Delete one user
         params = {'roles_users':
                               {"Can view unpublished lexical entries": [id_u3]}}
-        correct_answer['roles_users']['Can view unpublished lexical entries'] = [id_u1, id_u2]
+        test_name = "delete_one_user"
         response = self.app.delete_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
-        # Delete user that is not presented in the list
         params = {'roles_users':
                               {"Can resign users from dictionary editors": [id_u3]}}
+        test_name = "delete_missing_user"
         response = self.app.delete_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
-        # Delete several users
         params = {'roles_users':
                               {"Can create perspective roles and assign collaborators": [id_u2, id_u3]}}
-        correct_answer['roles_users']['Can create perspective roles and assign collaborators'] = [id_u1]
+        test_name = "delete_several_users"
         response = self.app.delete_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
-        # Empty tests
         params = {'roles_users':
                               {}}
+        test_name = "empty_delete_test_1"
         response = self.app.delete_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
         params = {}
+        test_name = "empty_delete_test_2"
         response = self.app.delete_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self._perspective_role_assertion(response, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
         # TODO: add test for prohibited deletion of the owner from user roles
 
     def testPerspectiveInfo(self):
+        correct_answers = load_correct_answers("perspective/answers_perspective_info.json")
         id_tester = self.signup_common()
         id_u1 = self.signup_common('user1', 'user1')
         id_u2 = self.signup_common('user2', 'user1')
@@ -256,23 +265,14 @@ class PerspectiveTest(MyTestCase):
                                          persp_1['client_id'],
                                          persp_1['object_id']),
                                       params=fields)
+
+        test_name = "empty_perspective"
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/info' %
                                 (dict_1['client_id'], dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        self.assertDictEqual(response.json, {"count": []})
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
-        params = {'roles_users':
-                              {"Can create lexical entries": [id_u1, id_u2],
-                               "Can get perspective role list": [id_u1, id_u2],
-                               "Can resign users from dictionary editors": [id_u1, id_u2],
-                               "Can approve lexical entries and publish": [id_u1, id_u2],
-                               "Can create perspective roles and assign collaborators":[id_u1, id_u2],
-                               "Can edit perspective": [id_u1, id_u2],
-                               "Can delete perspective": [id_u1, id_u2],
-                               "Can delete lexical entries": [id_u1, id_u2],
-                               "Can deactivate lexical entries": [id_u1, id_u2],
-                               "Can view unpublished lexical entries": [id_u1, id_u2],
-                               "Can view published lexical entries": [id_u1, id_u2]}
-                  }
+        params = initValuesFactory.get_role_params([id_u1, id_u2])
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
 
@@ -297,48 +297,8 @@ class PerspectiveTest(MyTestCase):
             params={"entities": to_be_approved}
         )
 
+        test_name = "filled_perspective"
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/info' %
                                 (dict_1['client_id'], dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
-        correct_answer = {
-            "count": [
-                {
-                "login": "user1",
-                "intl_name": "user1",
-                "counters": {
-                    "Transcription": 0,
-                    "Sound": 0,
-                    "Translation": 2,
-                    "Paradigm transcription": 0,
-                    "lexical_entry": 3,
-                    "Paradigm translation": 0,
-                    "Etymology": 0,
-                    "Paradigm sound": 0,
-                    "Word": 2,
-                    "Paradigm word": 0,
-                    "Paradigm Praat markup": 0,
-                    "Praat markup": 0
-                },
-                "name": "test",
-                "id": 3
-            }, {
-                "login": "user2",
-                "intl_name": "user2",
-                "counters": {
-                    "Transcription": 1,
-                    "Sound": 0,
-                    "Translation": 1,
-                    "Paradigm transcription": 0,
-                    "lexical_entry": 0,
-                    "Paradigm translation": 0,
-                    "Etymology": 0,
-                    "Paradigm sound": 0,
-                    "Word": 0,
-                    "Paradigm word": 0,
-                    "Paradigm Praat markup": 0,
-                    "Praat markup": 0
-                },
-                "name": "test",
-                "id": 4
-            }]
-        }
-        self.assertDictEqual(response.json, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])

@@ -3419,7 +3419,7 @@ def create_lexical_entry_bulk(request):  # TODO: test
 
 
 @view_config(route_name='lexical_entries_all', renderer='json', request_method='GET', permission='view')
-def lexical_entries_all(request):  # TODO: test
+def lexical_entries_all(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')

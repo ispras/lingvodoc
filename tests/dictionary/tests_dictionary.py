@@ -1,4 +1,6 @@
 from tests.tests import MyTestCase
+from tests.common import initValuesFactory
+from tests.common import load_correct_answers
 
 from pyramid.httpexceptions import (
     HTTPNotFound,
@@ -10,6 +12,7 @@ from pyramid.httpexceptions import (
     HTTPFound,
     HTTPForbidden
 )
+
 
 class NewTestClass(MyTestCase):
 
@@ -37,20 +40,6 @@ class DictionaryTest(MyTestCase):
         self.id_l3 = self.create_language('language3')
         self.id_l4 = self.create_language('language4')
 
-        self.dictionary_roles = {"roles_users":
-                              {"Can create lexical entries": [],
-                               "Can get perspective role list": [],
-                               "Can resign users from dictionary editors": [],
-                               "Can approve lexical entries and publish": [],
-                               "Can create perspective roles and assign collaborators":[],
-                               "Can edit perspective": [],
-                               "Can delete perspective": [],
-                               "Can delete lexical entries": [],
-                               "Can deactivate lexical entries": [],
-                               "Can view unpublished lexical entries": [],
-                               "Can view published lexical entries": []}
-                  }
-
     def _build_ordered_lists(self, response, correct_answer):
         answer = sorted(correct_answer, key=lambda x: (x['client_id'], x['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
@@ -65,6 +54,8 @@ class DictionaryTest(MyTestCase):
 
     # Tests 'dictionaries' API call
     def testDictionaries(self):
+        correct_answers = load_correct_answers("dictionary/answers_dictionaries.json")
+
         self.login_common('user1')
         dict_1 = self.create_dictionary('user1_dict1', self.id_l1)
         self.login_common('user2')
@@ -73,64 +64,74 @@ class DictionaryTest(MyTestCase):
         dict_3 = self.create_dictionary('user3_dict1', self.id_l3)
 
         # Tests filtering by user
+        test_name = "filter_by_user_1"
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u1, self.id_u2]})
-        result, answer = self._build_ordered_lists(response, [dict_1, dict_2])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_user_2"
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u3]})
-        result, answer = self._build_ordered_lists(response, [dict_3])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_user_3"
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u4]})
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
         # Tests filtering by languages
+        test_name = "filter_by_language_1"
         response = self.app.post_json('/dictionaries',
                                       params = {'languages': [self.id_l1, self.id_l2]})
-        result, answer = self._build_ordered_lists(response, [dict_1, dict_2])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_language_2"
         response = self.app.post_json('/dictionaries',
                                       params = {'languages': [self.id_l3]})
-        result, answer = self._build_ordered_lists(response, [dict_3])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_language_3"
         response = self.app.post_json('/dictionaries',
                                       params = {'languages': [self.id_l4]})
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_user_language_1"
         # Tests filtering by users and languages
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u2, self.id_u3],
                                                 'languages': [self.id_l1, self.id_l2]})
-        result, answer = self._build_ordered_lists(response, [dict_2])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_user_language_2"
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u3, self.id_u4],
                                                 'languages': [self.id_l1,self. id_l2]})
-        result, answer = self._build_ordered_lists(response, [])
-        self.assertFalse(result)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_user_language_3"
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u1, self.id_u2, self.id_u3, self.id_u4],
                                                 'languages': [self.id_l1, self.id_l2, self.id_l3, self.id_l4]})
-        result, answer = self._build_ordered_lists(response, [dict_1, dict_2, dict_3])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
+        test_name = "filter_by_user_language_4"
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [], 'languages': []})
-        result, answer = self._build_ordered_lists(
-            response, [dict_1, dict_2, dict_3] + [{'client_id': 1, 'object_id': 1}])
-        self.assertEqual(result, answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
     # Tests 'dictionary_info' API call
     def testDictionaryInfo(self):
+        correct_answers = load_correct_answers("dictionary/answers_dictionary_info.json")
         self.login_common('user1')
         dict_1 = self.create_dictionary('user1_dict1', self.id_l1)
 
@@ -145,15 +146,19 @@ class DictionaryTest(MyTestCase):
                                          persp_1['client_id'],
                                          persp_1['object_id']),
                                       params=fields)
-        response = self.app.get('/dictionary/%s/%s/info' % (dict_1['client_id'], dict_1['object_id']))
-        self.assertDictEqual(response.json, {"count": []})
 
-        for k in self.dictionary_roles["roles_users"]:
-            self.dictionary_roles["roles_users"][k] += [self.id_u1, self.id_u2]
+        test_name = "empty_dict"
+        response = self.app.get('/dictionary/%s/%s/info' % (dict_1['client_id'], dict_1['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
+
+        dictionary_roles = initValuesFactory.get_role_params()
+        for k in dictionary_roles["roles_users"]:
+            dictionary_roles["roles_users"][k] += [self.id_u1, self.id_u2]
 
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']),
-                                      params=self.dictionary_roles)
+                                      params=dictionary_roles)
         response = self.app.get('/dictionary/%s/%s/roles' % (dict_1['client_id'], dict_1['object_id']))
 
         to_be_approved = list()
@@ -184,48 +189,8 @@ class DictionaryTest(MyTestCase):
             params={"entities": to_be_approved}
         )
 
+        test_name = "filled_dict"
         response = self.app.get('/dictionary/%s/%s/info' %
                                 (dict_1['client_id'], dict_1['object_id']))
-
-        correct_answer = {
-            "count": [{
-                "name": "test",
-                "intl_name": "user1",
-                "counters": {
-                    "Transcription": 0,
-                    "Translation": 3,
-                    "Paradigm transcription": 0,
-                    "Etymology": 0,
-                    "Paradigm word": 0,
-                    "Praat markup": 0,
-                    "Word": 2,
-                    "Paradigm translation": 0,
-                    "Sound": 0,
-                    "lexical_entry": 4,
-                    "Paradigm sound": 0,
-                    "Paradigm Praat markup": 0
-                },
-                "login": "user1",
-                "id": 3
-            }, {
-                "name": "test",
-                "intl_name": "user2",
-                "counters": {
-                    "Transcription": 1,
-                    "Translation": 1,
-                    "Paradigm transcription": 0,
-                    "Etymology": 0,
-                    "Paradigm word": 0,
-                    "Praat markup": 0,
-                    "Word": 0,
-                    "Paradigm translation": 0,
-                    "Sound": 0,
-                    "lexical_entry": 0,
-                    "Paradigm sound": 0,
-                    "Paradigm Praat markup": 0
-                },
-                "login": "user2",
-                "id": 4
-            }]
-        }
-        self.assertDictEqual(response.json, correct_answer)
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
