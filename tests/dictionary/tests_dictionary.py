@@ -1,6 +1,6 @@
 from tests.tests import MyTestCase
 from tests.common import initValuesFactory
-from tests.common import _load_correct_answers
+from tests.common import load_correct_answers
 
 from pyramid.httpexceptions import (
     HTTPNotFound,
@@ -54,7 +54,7 @@ class DictionaryTest(MyTestCase):
 
     # Tests 'dictionaries' API call
     def testDictionaries(self):
-        correct_answers = _load_correct_answers("dictionary/answers_dictionaries.json")
+        correct_answers = load_correct_answers("dictionary/answers_dictionaries.json")
 
         self.login_common('user1')
         dict_1 = self.create_dictionary('user1_dict1', self.id_l1)
@@ -131,6 +131,7 @@ class DictionaryTest(MyTestCase):
 
     # Tests 'dictionary_info' API call
     def testDictionaryInfo(self):
+        correct_answers = load_correct_answers("dictionary/answers_dictionary_info.json")
         self.login_common('user1')
         dict_1 = self.create_dictionary('user1_dict1', self.id_l1)
 
@@ -145,9 +146,11 @@ class DictionaryTest(MyTestCase):
                                          persp_1['client_id'],
                                          persp_1['object_id']),
                                       params=fields)
+
+        test_name = "empty_dict"
         response = self.app.get('/dictionary/%s/%s/info' % (dict_1['client_id'], dict_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(response.json, {"count": []})
+        self.assertEqual(response.json, correct_answers[test_name])
 
         dictionary_roles = initValuesFactory.get_role_params()
         for k in dictionary_roles["roles_users"]:
@@ -186,49 +189,8 @@ class DictionaryTest(MyTestCase):
             params={"entities": to_be_approved}
         )
 
+        test_name = "filled_dict"
         response = self.app.get('/dictionary/%s/%s/info' %
                                 (dict_1['client_id'], dict_1['object_id']))
-
-        correct_answer = {
-            "count": [{
-                "name": "test",
-                "intl_name": "user1",
-                "counters": {
-                    "Transcription": 0,
-                    "Translation": 3,
-                    "Paradigm transcription": 0,
-                    "Etymology": 0,
-                    "Paradigm word": 0,
-                    "Praat markup": 0,
-                    "Word": 2,
-                    "Paradigm translation": 0,
-                    "Sound": 0,
-                    "lexical_entry": 4,
-                    "Paradigm sound": 0,
-                    "Paradigm Praat markup": 0
-                },
-                "login": "user1",
-                "id": 3
-            }, {
-                "name": "test",
-                "intl_name": "user2",
-                "counters": {
-                    "Transcription": 1,
-                    "Translation": 1,
-                    "Paradigm transcription": 0,
-                    "Etymology": 0,
-                    "Paradigm word": 0,
-                    "Praat markup": 0,
-                    "Word": 0,
-                    "Paradigm translation": 0,
-                    "Sound": 0,
-                    "lexical_entry": 0,
-                    "Paradigm sound": 0,
-                    "Paradigm Praat markup": 0
-                },
-                "login": "user2",
-                "id": 4
-            }]
-        }
         self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertDictEqual(response.json, correct_answer)
+        self.assertEqual(response.json, correct_answers[test_name])

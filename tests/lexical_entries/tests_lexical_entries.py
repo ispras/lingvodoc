@@ -1,5 +1,6 @@
 from tests.tests import MyTestCase
 from tests.common import initValuesFactory
+from tests.common import load_correct_answers
 
 import json
 import os
@@ -16,12 +17,6 @@ from pyramid.httpexceptions import (
 )
 
 class LexicalEntriesTest(MyTestCase):
-
-    @staticmethod
-    def _load_correct_answers(test_name):
-        with open(os.path.join(os.path.dirname(__file__), test_name)) as data_file:
-            data = json.load(data_file)
-        return data
 
     def setUp(self):
         super(LexicalEntriesTest, self).setUp()
@@ -50,7 +45,7 @@ class LexicalEntriesTest(MyTestCase):
                                       params=params)
 
     def testLexicalEntriesAll(self):
-        correct_answers = self._load_correct_answers("answers_lexical_entries_all.json")
+        correct_answers = load_correct_answers("lexical_entries/answers_lexical_entries_all.json")
 
         test_name = "test_empty"
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all' %
