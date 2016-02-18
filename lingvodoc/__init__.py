@@ -409,7 +409,7 @@ def configure_routes(config):
 
     config.add_route(name='lexical_entries_published', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/published',
-                     factory='lingvodoc.models.PerspectivePublishAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectivePublishAcl')
 
     config.add_route(name='lexical_entries_published_count', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/published_count',
@@ -430,7 +430,7 @@ def configure_routes(config):
     # {"entity": [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>}, ] }
     config.add_route(name='approve_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                     '/perspective/{perspective_client_id}/{perspective_id}/approve',
-                     factory='lingvodoc.models.PerspectivePublishAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectivePublishAcl')
     # todo: DANGEROUS! Anyone can approve, if the have their own dictionary and know ids of entity, they want to approve
     # todo: fix this
     config.add_route(name='approve_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
