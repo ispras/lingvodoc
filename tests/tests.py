@@ -250,19 +250,14 @@ class MyTestCase(unittest.TestCase):
             params['tag'] = tag
         response = self.app.post_json('/group_entity', params=params)
 
-    def dict_convert(self):
+    def dict_convert(self, filename='test.sqlite'):
         from time import sleep
         user_id = self.signup_common()
         self.login_common()
         root_ids = self.create_language('Корень')
         response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
-                                 upload_files=([('blob', 'test.sqlite')]))
+                                 upload_files=([('blob', filename)]))
         blob_ids = response.json
-        response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
-                                                          blob_ids['object_id']))
-        file_response = self.app.get(response.json['content'])
-        response = self.app.post_json('/convert_check', params={'blob_client_id': blob_ids['client_id'],
-                                                         'blob_object_id': blob_ids['object_id']})
         response = self.app.post_json('/convert', params={'blob_client_id': blob_ids['client_id'],
                                                          'blob_object_id': blob_ids['object_id'],
                                                           'parent_client_id':root_ids['client_id'],
@@ -1027,8 +1022,6 @@ class TestBig(MyTestCase):
         self.signup_common()
         self.login_common()
         first_hash = hashlib.md5(open("test_user_blobs.pdf", 'rb').read()).hexdigest()
-        # response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
-        #                          upload_files=([('blob', 'test.sqlite')]))
         response = self.app.post('/blob', params = {'data_type':'pdf'},
                                  upload_files=([('blob', 'test_user_blobs.pdf')]))
         self.assertEqual(response.status_int, HTTPOk.code)
