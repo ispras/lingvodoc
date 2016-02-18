@@ -3822,7 +3822,7 @@ def approve_outer(request):  # TODO: create test.
 
 
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
-def approve_entity(request):  # TODO: test
+def approve_entity(request):
     try:
         if type(request.json_body) == str:
             req = json.loads(request.json_body)
