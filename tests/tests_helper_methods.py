@@ -14,6 +14,46 @@ import json
 
 class TestHelperMethods(MyTestCase):
 
+    def testsignup(self):
+        id = self.signup_common()
+        response = self.app.get('/user')
+        correct_answer = {'intl_name': 'test', 'login': 'test', 'organizations': [],
+                          'is_active': 'True',  'name': 'test', 'email': 'test@test.com',
+                          'default_locale_id': None, 'birthday': '1970-01-01', 'about': None}
+
+        self.assertDictEqual(response.json, correct_answer, stop_words=['id', 'signup_date'])
+
+    def testlogin(self):
+        id = self.signup_common('user1', 'user1')
+        self.login_common('user1')
+        response = self.app.get('/user')
+        correct_answer = {'intl_name': 'user1', 'login': 'user1', 'organizations': [],
+                          'is_active': 'True',  'name': 'test', 'email': 'user1@test.com',
+                          'default_locale_id': None, 'birthday': '1970-01-01', 'about': None}
+
+        self.assertDictEqual(response.json, correct_answer, stop_words=['id', 'signup_date'])
+
+    def testlanguage(self):
+        id = self.signup_common('user1', 'user1')
+        self.login_common('user1')
+        response = self.app.get('/user')
+        correct_answer = {'intl_name': 'user1', 'login': 'user1', 'organizations': [],
+                          'is_active': 'True',  'name': 'test', 'email': 'user1@test.com',
+                          'default_locale_id': None, 'birthday': '1970-01-01', 'about': None}
+
+        self.assertDictEqual(response.json, correct_answer, stop_words=['id', 'signup_date'])
+
+    def testlogout(self):
+        id = self.signup_common()
+        response = self.app.request('/logout')
+        self.assertEqual(response.status_int, HTTPFound.code)
+
+        response = self.app.get('/user', )
+        self.login_common()
+        response = self.app.get('/user')
+        self.assertEqual(response.json['id'], id)
+
+
     def testsignuplogin(self):
         id = self.signup_common()
         response = self.app.get('/user')
@@ -121,7 +161,7 @@ class TestHelperMethods(MyTestCase):
                                    dict_ids['object_id'],
                                    persp_ids['client_id'],
                                    persp_ids['object_id']))
-        json_file = open('test_dict_convert.json', 'r')
+        json_file = open('dictionary/test_dict_convert.json', 'r')
         correct_answer = json.loads(json_file.read())
         self.assertDictEqual(response.json, correct_answer, stop_words=['client_id',
                                                                         'object_id',
