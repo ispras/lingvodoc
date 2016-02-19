@@ -2694,6 +2694,8 @@ def create_perspective_fields(request):  # tested
 
 
 def object_file_path(obj, settings, data_type, filename, create_dir=False):
+    from werkzeug.utils import secure_filename
+    filename = secure_filename(filename)
     base_path = settings['storage']['path']
     storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
     if create_dir:
@@ -2737,13 +2739,12 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
     else:
         filename = filename or 'noname.noext'
         storage_path = object_file_path(obj, settings, data_type, filename, True)
-        directory = os.path.dirname(storage_path)
+        directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
         try:
             os.makedirs(directory)
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise
-
         with open(storage_path, 'wb+') as f:
             if json_input:
                 f.write(base64.urlsafe_b64decode(content))
