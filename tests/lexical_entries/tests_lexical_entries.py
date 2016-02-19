@@ -295,4 +295,28 @@ class LexicalEntriesTest(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertEqual(response.json, correct_answers[test_name])
 
-        # TODO: tests for levelentitytwo
+        # TODO: tests for leveltwoentity
+
+    def testApproveEntityAll(self):
+        correct_answers = load_correct_answers("lexical_entries/answers_approve_entity_all.json")
+        test_name = "approve_empty_persp"
+        response = self.app.patch_json(
+            '/dictionary/%s/%s/perspective/%s/%s/approve_all' % (self.dict_1['client_id'], self.dict_1['object_id'],
+                                                             self.persp_1['client_id'], self.persp_1['object_id']))
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/published' %
+                                      (self.dict_1['client_id'], self.dict_1['object_id'],
+                                       self.persp_1['client_id'], self.persp_1['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
+
+        test_name = "approve_filled_persp"
+        to_be_approved = self._load_entities(4)
+        response = self.app.patch_json(
+            '/dictionary/%s/%s/perspective/%s/%s/approve_all' % (self.dict_1['client_id'], self.dict_1['object_id'],
+                                                             self.persp_1['client_id'], self.persp_1['object_id']))
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/published' %
+                                      (self.dict_1['client_id'], self.dict_1['object_id'],
+                                       self.persp_1['client_id'], self.persp_1['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
+

@@ -1,0 +1,529 @@
+{
+  "approve_empty_persp": {
+    "lexical_entries": []
+  },
+  "approve_filled_persp": {
+    "lexical_entries": [
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Translation",
+            "level": "leveloneentity",
+            "content": "wajysnmtvb",
+            "client_id": 12,
+            "object_id": 19,
+            "parent_object_id": 20,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 20,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "iyornljisb",
+            "client_id": 12,
+            "object_id": 7,
+            "parent_object_id": 8,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 8,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "ylbrqdpzzp",
+            "client_id": 12,
+            "object_id": 17,
+            "parent_object_id": 18,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 18,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "bkrmwpshnh",
+            "client_id": 12,
+            "object_id": 5,
+            "parent_object_id": 6,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 6,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "hjwsojizle",
+            "client_id": 12,
+            "object_id": 12,
+            "parent_object_id": 13,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 13,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "kgrrdjafqz",
+            "client_id": 12,
+            "object_id": 2,
+            "parent_object_id": 3,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 3,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "kxmzpclrns",
+            "client_id": 12,
+            "object_id": 1,
+            "parent_object_id": 2,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 2,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "cpnltteyzj",
+            "client_id": 12,
+            "object_id": 6,
+            "parent_object_id": 7,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 7,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "wiymxkmzhs",
+            "client_id": 12,
+            "object_id": 11,
+            "parent_object_id": 12,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 12,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "hxjzmtthxp",
+            "client_id": 12,
+            "object_id": 9,
+            "parent_object_id": 10,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 10,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "jlsodufkah",
+            "client_id": 12,
+            "object_id": 10,
+            "parent_object_id": 11,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 11,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "ozidqyatiz",
+            "client_id": 12,
+            "object_id": 8,
+            "parent_object_id": 9,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 9,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "ylbrqdpzzp",
+            "client_id": 12,
+            "object_id": 13,
+            "parent_object_id": 14,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 14,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "zeomhyqhwl",
+            "client_id": 12,
+            "object_id": 14,
+            "parent_object_id": 15,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 15,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "dgjomjdnhy",
+            "client_id": 12,
+            "object_id": 18,
+            "parent_object_id": 19,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 19,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "zlswwsfjrc",
+            "client_id": 12,
+            "object_id": 4,
+            "parent_object_id": 5,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 5,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "ficbqfhrzv",
+            "client_id": 12,
+            "object_id": 15,
+            "parent_object_id": 16,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 16,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "upmedjsbli",
+            "client_id": 12,
+            "object_id": 16,
+            "parent_object_id": 17,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 17,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "uyzrljiirs",
+            "client_id": 11,
+            "object_id": 1,
+            "parent_object_id": 1,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 1,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      },
+      {
+        "contains": [
+          {
+            "contains": [],
+            "published": true,
+            "additional_metadata": null,
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "entity_type": "Word",
+            "level": "leveloneentity",
+            "content": "jdavwdmuqe",
+            "client_id": 12,
+            "object_id": 3,
+            "parent_object_id": 4,
+            "parent_client_id": 10
+          }
+        ],
+        "came_from": null,
+        "client_id": 10,
+        "published": true,
+        "object_id": 4,
+        "parent_object_id": 1,
+        "parent_client_id": 10,
+        "marked_for_deletion": false,
+        "level": "lexicalentry"
+      }
+    ]
+  }
+}
