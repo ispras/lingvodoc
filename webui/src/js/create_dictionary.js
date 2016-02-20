@@ -32,6 +32,8 @@ app.config(function($stateProvider, $urlRouterProvider) {
 
 app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
 
+app.directive('translatable', ['dictionaryService', getTranslation]);
+
 app.controller('CreateDictionaryController', ['$scope', '$http', '$modal', '$interval', '$state', '$window', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $modal, $interval, $state, $window, $log, dictionaryService, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');

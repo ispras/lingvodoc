@@ -50,6 +50,8 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
         };
     })
 
+    .directive('translatable', ['dictionaryService', getTranslation])
+
     .controller('ViewDictionaryController', ['$scope', '$window', '$http', '$modal', '$log', 'dictionaryService', 'responseHandler', function($scope, $window, $http, $modal, $log, dictionaryService, responseHandler) {
 
         var perspectiveClientId = $('#perspectiveClientId').data('lingvodoc');

@@ -32,9 +32,8 @@
 
 
     <div class="panel">
-        <button type="button" class="btn btn-primary" ng-click="loadMyDictionaries()">My dictionaries</button>
-        <button type="button" class="btn btn-primary" ng-click="loadAvailableDictionaries()">Avaliable dictionaries
-        </button>
+        <button type="button" class="btn btn-primary" ng-click="loadMyDictionaries()"><translatable>My dictionaries</translatable></button>
+        <button type="button" class="btn btn-primary" ng-click="loadAvailableDictionaries()"><translatable>Avaliable dictionaries</translatable></button>
     </div>
     <br>
 
@@ -52,11 +51,11 @@
                             data-toggle="dropdown">{{ dictionary.translation }}
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="#" ng-click="editDictionaryProperties(dictionary)">Edit information</a></li>
-                        <li><a href="#" ng-click="editDictionaryRoles(dictionary)">Edit roles</a></li>
-                        <li><a href="#" ng-click="removeDictionary(dictionary)">Remove dictionary</a></li>
+                        <li><a href="#" ng-click="editDictionaryProperties(dictionary)"><translatable>Edit information</translatable></a></li>
+                        <li><a href="#" ng-click="editDictionaryRoles(dictionary)"><translatable>Edit roles</translatable></a></li>
+                        <li><a href="#" ng-click="removeDictionary(dictionary)"><translatable>Remove dictionary</translatable></a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="#" ng-click="createPerspective(dictionary)">Create new perspective</a></li>
+                        <li><a href="#" ng-click="createPerspective(dictionary)"><translatable>Create new perspective</translatable></a></li>
                     </ul>
                 </div>
                 <div class="btn-group col-md-4 col-sm-4 col-lg-4">
@@ -69,9 +68,9 @@
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Hidden')">Hidden</a></li>
-                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'WiP')">WiP</a></li>
-                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Published')">Published</a></li>
+                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Hidden')"><translatable>Hidden</translatable></a></li>
+                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'WiP')"><translatable>WiP</translatable></a></li>
+                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Published')"><translatable>Published</translatable></a></li>
                     </ul>
                 </div>
 
@@ -92,16 +91,13 @@
                                 data-toggle="dropdown">{{ perspective.translation_string }}
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'view') }}">View
-                                published</a></li>
-                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}">Edit</a>
-                            </li>
-                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}">Publish</a>
-                            </li>
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'view') }}"><translatable>View published</translatable></a></li>
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'edit') }}"><translatable>Edit</translatable></a></li>
+                            <li><a href="#" ng-attr-href="{{ getActionLink(dictionary, perspective, 'publish') }}"><translatable>Publish</translatable></a></li>
                             <li role="separator" class="divider"></li>
-                            <li><a href="#" ng-click="editPerspectiveRoles(dictionary, perspective)">Edit roles</a></li>
-                            <li><a href="#" ng-click="editPerspectiveProperties(dictionary, perspective)">Edit properties</a></li>
-                            <li><a href="#" ng-click="removePerspective(dictionary, perspective)">Remove perspective</a></li>
+                            <li><a href="#" ng-click="editPerspectiveRoles(dictionary, perspective)"><translatable>Edit roles</translatable></a></li>
+                            <li><a href="#" ng-click="editPerspectiveProperties(dictionary, perspective)"><translatable>Edit properties</translatable></a></li>
+                            <li><a href="#" ng-click="removePerspective(dictionary, perspective)"><translatable>Remove perspective</translatable></a></li>
 
                         </ul>
                     </div>
@@ -117,9 +113,9 @@
                         </button>
                         <ul class="dropdown-menu">
                             <li><a href="#"
-                                   ng-click="setPerspectiveStatus(dictionary, perspective, 'Hidden')">Hidden</a></li>
-                            <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'WiP')">WiP</a></li>
-                            <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Published')">Published</a>
+                                   ng-click="setPerspectiveStatus(dictionary, perspective, 'Hidden')"><translatable>Hidden</translatable></a></li>
+                            <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'WiP')"><translatable>WiP</translatable></a></li>
+                            <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Published')"><translatable>Published</translatable></a>
                             </li>
                         </ul>
                     </div>
@@ -136,7 +132,7 @@
 
     <hr>
 
-    <a href="${request.route_url('new_dictionary')}" class="btn btn-primary">Create dictionary...</a>
+    <a href="${request.route_url('new_dictionary')}" class="btn btn-primary"><translatable>Create dictionary...</translatable></a>
 </div>
 
 
@@ -148,11 +144,11 @@
 
     <div class="modal-body">
 
-        <label for="dictionaryName">Dictionary name</label>
+        <label for="dictionaryName"><translatable>Dictionary name</translatable></label>
         <input type="text" id="dictionaryName" class="form-control" placeholder="" required autofocus
                ng-model="dictionaryProperties.translation">
 
-        <label for="language">Language</label>
+        <label for="language"><translatable>Language</translatable></label>
         <select id="language" class="form-control" ng-model="data.selectedLanguage"
                 ng-options="language.compositeId as language.translation_string for language in languages">
             <option></option>
@@ -160,8 +156,8 @@
     </div>
 
     <div class="modal-footer">
-        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-danger" type="button" ng-click="cancel()">Cancel</button>
+        <button class="btn btn-primary" type="button" ng-click="ok()"><translatable>OK</translatable></button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()"><translatable>Cancel</translatable></button>
     </div>
 
 </script>
@@ -176,17 +172,17 @@
     <div class="modal-body">
         <div>
             <div class="form-group">
-                <label for="perspectiveName">Perspective name</label>
+                <label for="perspectiveName"><translatable>Perspective name</translatable></label>
                 <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
                        ng-model="perspective.translation" ng-change="perspective.translation_string=perspective.translation">
 
-                <label for="perspectiveAuthors">Authors</label>
+                <label for="perspectiveAuthors"><translatable>Authors</translatable></label>
                 <input type="text" id="perspectiveAuthors" class="form-control" placeholder="" required autofocus
                        ng-model="authors">
             </div>
 
             <div class="form-group">
-                <label for="isTemplate">I want to share this perspective as template</label>
+                <label for="isTemplate"><translatable>I want to share this perspective as template</translatable></label>
                 <input type="checkbox" id="isTemplate" ng-model="perspective.is_template">
             </div>
 
@@ -275,28 +271,26 @@
                         <label class="checkbox-inline" ng-if="field.data_type == 'text'">
                             <input type="checkbox"
                                    ng-checked="field.translatable"
-                                   ng-model="perspective.fields[$index].translatable"> translatable</label>
+                                   ng-model="perspective.fields[$index].translatable"> <translatable>translatable</translatable></label>
 
 
                         <select class="form-control"
                                 ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)"
                                 ng-model="perspective.fields[$index].contains[0].data_type">
-                            <option value="text" ng-if="field.contains[0].data_type == 'text'" selected>Text</option>
-                            <option value="text" ng-if="field.contains[0].data_type != 'text'">Text</option>
-                            <option value="image" ng-if="field.contains[0].data_type == 'image'" selected>Image</option>
-                            <option value="image" ng-if="field.contains[0].data_type != 'image'">Image</option>
-                            <option value="sound" ng-if="field.contains[0].data_type == 'sound'" selected>Audio</option>
-                            <option value="sound" ng-if="field.contains[0].data_type != 'sound'">Audio</option>
+                            <option value="text" ng-if="field.contains[0].data_type == 'text'" selected><translatable>Text</translatable></option>
+                            <option value="text" ng-if="field.contains[0].data_type != 'text'"><translatable>Text</translatable></option>
+                            <option value="image" ng-if="field.contains[0].data_type == 'image'" selected><translatable>Image</translatable></option>
+                            <option value="image" ng-if="field.contains[0].data_type != 'image'"><translatable>Image</translatable></option>
+                            <option value="sound" ng-if="field.contains[0].data_type == 'sound'" selected><translatable>Audio</translatable></option>
+                            <option value="sound" ng-if="field.contains[0].data_type != 'sound'"><translatable>Audio</translatable></option>
                             <option value="grouping_tag" ng-if="field.contains[0].data_type == 'grouping_tag'" selected>
-                                Groupping tag
+                                <translatable>Groupping tag</translatable>
                             </option>
-                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'grouping_tag'">Groupping
-                                tag
-                            </option>
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'grouping_tag'"><translatable>Groupping tag</translatable></option>
                             <option value="grouping_tag" ng-if="field.contains[0].data_type == 'markup'" selected>
-                                Markup
+                                <translatable>Markup</translatable>
                             </option>
-                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'">Markup</option>
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'"><translatable>Markup</translatable></option>
                         </select>
                     </td>
 
@@ -326,7 +320,7 @@
                     <option></option>
                 </select>
 
-                <button type="button" class="btn btn-primary" ng-click="addBlob()">Add</button>
+                <button type="button" class="btn btn-primary" ng-click="addBlob()"><translatable>Add</translatable></button>
             </div>
 
         </div>
@@ -336,15 +330,15 @@
                 Location
             </div>
             <div class="panel-body">
-                <button type="button" class="btn btn-primary" ng-click="editGeoLabels()">Location...</button>
+                <button type="button" class="btn btn-primary" ng-click="editGeoLabels()"><translatable>Location...</translatable></button>
             </div>
         </div>
 
     </div>
 
     <div class="modal-footer">
-        <button class="btn btn-primary" type="button" ng-click="ok()" ng-disabled="!controls.ok">OK</button>
-        <button class="btn btn-danger" type="button" ng-click="cancel()" ng-disabled="!controls.cancel">Cancel</button>
+        <button class="btn btn-primary" type="button" ng-click="ok()" ng-disabled="!controls.ok"><translatable>OK</translatable></button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()" ng-disabled="!controls.cancel"><translatable>Cancel</translatable></button>
     </div>
 
 </script>
@@ -388,8 +382,8 @@
             <table class="table table-bordered">
                 <thead>
                 <tr>
-                    <td>User</td>
-                    <td>Name</td>
+                    <td><translatable>User</translatable></td>
+                    <td><translatable>Name</translatable></td>
                     <td></td>
                 </tr>
                 </thead>
@@ -412,8 +406,8 @@
     </div>
 
     <div class="modal-footer">
-        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
-        <button class="btn btn-danger" type="button" ng-click="cancel()">Cancel</button>
+        <button class="btn btn-primary" type="button" ng-click="ok()"><translatable>OK</translatable></button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()"><translatable>Cancel</translatable></button>
     </div>
 
 </script>
@@ -426,7 +420,7 @@
     </div>
 
     <div class="modal-body">
-        <label for="perspective">Import perspective</label>
+        <label for="perspective"><translatable>Import perspective</translatable></label>
         <select id="perspective" class="form-control" ng-options="p.getId() as p.translation_string for p in perspectives track by p.getId()" ng-model="perspectiveId">
             <option></option>
         </select>
@@ -435,13 +429,13 @@
 
         <div>
             <div class="form-group">
-                <label for="perspectiveName">Perspective name</label>
+                <label for="perspectiveName"><translatable>Perspective name</translatable></label>
                 <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
                        ng-model="perspectiveName">
             </div>
 
             <div class="form-group">
-                <label for="isTemplate">I want to share this perspective as template</label>
+                <label for="isTemplate"><translatable>I want to share this perspective as template</translatable></label>
                 <input type="checkbox" id="isTemplate" ng-model="isTemplate">
             </div>
 
@@ -478,17 +472,15 @@
 
                     <td>
                         <select class="form-control" ng-model="perspective.fields[$index].data_type">
-                            <option value="text" ng-if="field.data_type == 'text'" selected>Text</option>
-                            <option value="text" ng-if="field.data_type != 'text'">Text</option>
-                            <option value="image" ng-if="field.data_type == 'image'" selected>Image</option>
-                            <option value="image" ng-if="field.data_type != 'image'">Image</option>
-                            <option value="sound" ng-if="field.data_type == 'sound'" selected>Audio</option>
-                            <option value="sound" ng-if="field.data_type != 'sound'">Audio</option>
-                            <option value="grouping_tag" ng-if="field.data_type == 'grouping_tag'" selected>Grouping
-                                tag
+                            <option value="text" ng-if="field.data_type == 'text'" selected><translatable>Text</translatable></option>
+                            <option value="text" ng-if="field.data_type != 'text'"><translatable>Text</translatable></option>
+                            <option value="image" ng-if="field.data_type == 'image'" selected><translatable>Image</translatable></option>
+                            <option value="image" ng-if="field.data_type != 'image'"><translatable>Image</translatable></option>
+                            <option value="sound" ng-if="field.data_type == 'sound'" selected><translatable>Audio</translatable></option>
+                            <option value="sound" ng-if="field.data_type != 'sound'"><translatable>Audio</translatable></option>
+                            <option value="grouping_tag" ng-if="field.data_type == 'grouping_tag'" selected><translatable>Grouping tag</translatable>
                             </option>
-                            <option value="grouping_tag" ng-if="field.data_type != 'grouping_tag'">Groupping tag
-                            </option>
+                            <option value="grouping_tag" ng-if="field.data_type != 'grouping_tag'"><translatable>Groupping tag</translatable></option>
                         </select>
 
                     </td>
@@ -529,28 +521,27 @@
                         <label class="checkbox-inline" ng-if="field.data_type == 'text'">
                             <input type="checkbox"
                                    ng-checked="field.translatable"
-                                   ng-model="perspective.fields[$index].translatable"> translatable</label>
+                                   ng-model="perspective.fields[$index].translatable"> <translatable>translatable</translatable></label>
 
 
                         <select class="form-control"
                                 ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)"
                                 ng-model="perspective.fields[$index].contains[0].data_type">
-                            <option value="text" ng-if="field.contains[0].data_type == 'text'" selected>Text</option>
-                            <option value="text" ng-if="field.contains[0].data_type != 'text'">Text</option>
-                            <option value="image" ng-if="field.contains[0].data_type == 'image'" selected>Image</option>
-                            <option value="image" ng-if="field.contains[0].data_type != 'image'">Image</option>
-                            <option value="sound" ng-if="field.contains[0].data_type == 'sound'" selected>Audio</option>
-                            <option value="sound" ng-if="field.contains[0].data_type != 'sound'">Audio</option>
+                            <option value="text" ng-if="field.contains[0].data_type == 'text'" selected><translatable>Text</translatable></option>
+                            <option value="text" ng-if="field.contains[0].data_type != 'text'"><translatable>Text</translatable></option>
+                            <option value="image" ng-if="field.contains[0].data_type == 'image'" selected><translatable>Image</translatable></option>
+                            <option value="image" ng-if="field.contains[0].data_type != 'image'"><translatable>Image</translatable></option>
+                            <option value="sound" ng-if="field.contains[0].data_type == 'sound'" selected><translatable>Audio</translatable></option>
+                            <option value="sound" ng-if="field.contains[0].data_type != 'sound'"><translatable>Audio</translatable></option>
                             <option value="grouping_tag" ng-if="field.contains[0].data_type == 'grouping_tag'" selected>
-                                Groupping tag
+                                <translatable>Groupping tag</translatable>
                             </option>
-                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'grouping_tag'">Groupping
-                                tag
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'grouping_tag'"><translatable>Groupping tag</translatable>
                             </option>
                             <option value="grouping_tag" ng-if="field.contains[0].data_type == 'markup'" selected>
-                                Markup
+                                <translatable>Markup</translatable>
                             </option>
-                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'">Markup</option>
+                            <option value="grouping_tag" ng-if="field.contains[0].data_type != 'markup'"><translatable>Markup</translatable></option>
                         </select>
                     </td>
 
@@ -563,8 +554,8 @@
     </div>
 
     <div class="modal-footer">
-        <button class="btn btn-primary" type="button" ng-click="ok()" ng-disabled="!controls.ok">OK</button>
-        <button class="btn btn-danger" type="button" ng-click="cancel()">Cancel</button>
+        <button class="btn btn-primary" type="button" ng-click="ok()" ng-disabled="!controls.ok"><translatable>OK</translatable></button>
+        <button class="btn btn-danger" type="button" ng-click="cancel()"><translatable>Cancel</translatable></button>
     </div>
 
 </script>
@@ -592,7 +583,7 @@
     </div>
 
     <div class="modal-footer">
-        <button class="btn btn-primary" type="button" ng-click="ok()">OK</button>
+        <button class="btn btn-primary" type="button" ng-click="ok()"><translatable>OK</translatable></button>
     </div>
 </script>
 

@@ -30279,7 +30279,7 @@ angular.module("UserUploadModule", [ "ui.bootstrap" ]).directive("onReadFile", f
             });
         }
     };
-}).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("UserUploadController", [ "$scope", "$http", "responseHandler", function($scope, $http, responseHandler) {
+}).directive("translatable", [ "dictionaryService", getTranslation ]).factory("responseHandler", [ "$timeout", "$modal", responseHandler ]).controller("UserUploadController", [ "$scope", "$http", "responseHandler", function($scope, $http, responseHandler) {
     var listBlobsUrl = $("#listBlobsUrl").data("lingvodoc");
     $scope.files = [];
     $scope.uploadMsg = false;

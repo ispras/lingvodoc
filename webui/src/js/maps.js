@@ -25,6 +25,8 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         };
     })
 
+    .directive('translatable', ['dictionaryService', getTranslation])
+
     .directive('indeterminate', [function() {
         return {
             require: '?ngModel',

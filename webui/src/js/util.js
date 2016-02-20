@@ -78,3 +78,31 @@ var enableControls = function(controls, enabled) {
     });
 };
 
+var getTranslation = function(dictionaryService) {
+    return {
+        restrict: 'E',
+        link: function($scope, $element, $attrs) {
+            if ($element.context.innerText) {
+                var translationString = $element.context.innerText;
+                dictionaryService.getTranslation(translationString).then(function(data) {
+                    if (_.isArray(data)) {
+                        _.forEach(data, function(translation) {
+                            if (translation.translation_string == translationString) {
+                                if (translation.translation != translationString) {
+                                    $element.context.innerText = translation.translation;
+                                }
+
+                                //console.log(translationString + ' -> ' + translation.translation);
+                            }
+                        });
+                    }
+                }, function(reason) {
+                    console.error(reason);
+                });
+
+            }
+        }
+    };
+};
+
+

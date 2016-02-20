@@ -41,6 +41,9 @@ app.service('dictionaryService', lingvodocAPI);
 
 app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
 
+app.directive('translatable', ['dictionaryService', getTranslation]);
+
+
 app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval', '$state', '$log', 'dictionaryService', 'responseHandler', function ($scope, $http, $modal, $interval, $state, $log, dictionaryService, responseHandler) {
 
     var clientId = $('#clientId').data('lingvodoc');
