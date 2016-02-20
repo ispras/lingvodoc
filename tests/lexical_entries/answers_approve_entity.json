@@ -166,5 +166,82 @@
         "parent_object_id": 1
       }
     ]
+  },
+  "level_two_entities": {
+    "lexical_entries": [
+      {
+        "came_from": null,
+        "parent_client_id": 10,
+        "client_id": 12,
+        "published": true,
+        "marked_for_deletion": false,
+        "object_id": 1,
+        "level": "lexicalentry",
+        "contains": [
+          {
+            "additional_metadata": {
+              "hash": "50b9f25f4cc705614da07581f4754b8496fd088539b3f216d5adffb9"
+            },
+            "published": true,
+            "object_id": 20,
+            "content": "http://localhost:6543/objects/leveloneentity/sound/12/20/noname.noext",
+            "locale_id": 1,
+            "parent_object_id": 1,
+            "marked_for_deletion": false,
+            "parent_client_id": 12,
+            "client_id": 12,
+            "entity_type": "Sound",
+            "level": "leveloneentity",
+            "contains": []
+          }
+        ],
+        "parent_object_id": 2
+      },
+      {
+        "came_from": null,
+        "parent_client_id": 10,
+        "client_id": 12,
+        "published": true,
+        "marked_for_deletion": false,
+        "object_id": 3,
+        "level": "lexicalentry",
+        "contains": [
+          {
+            "additional_metadata": {
+              "hash": "50b9f25f4cc705614da07581f4754b8496fd088539b3f216d5adffb9"
+            },
+            "published": true,
+            "object_id": 22,
+            "content": "http://localhost:6543/objects/leveloneentity/sound/12/22/noname.noext",
+            "locale_id": 1,
+            "parent_object_id": 3,
+            "marked_for_deletion": false,
+            "parent_client_id": 12,
+            "client_id": 12,
+            "entity_type": "Sound",
+            "level": "leveloneentity",
+            "contains": [
+              {
+                "additional_metadata": {
+                  "hash": "7acf43270ec74c692ee3c7d6f6ae56cd8d3be25bb916e5ae92c113c3"
+                },
+                "published": true,
+                "object_id": 3,
+                "content": "http://localhost:6543/objects/leveltwoentity/markup/12/3/noname.noext",
+                "locale_id": 1,
+                "parent_object_id": 22,
+                "marked_for_deletion": false,
+                "parent_client_id": 12,
+                "client_id": 12,
+                "entity_type": "Markup",
+                "level": "leveltwoentity",
+                "contains": []
+              }
+            ]
+          }
+        ],
+        "parent_object_id": 2
+      }
+    ]
   }
 }

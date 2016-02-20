@@ -2,6 +2,7 @@ from tests.tests import MyTestCase
 from tests.common import initValuesFactory
 from tests.common import load_correct_answers
 
+import base64
 import json
 import os
 
@@ -26,12 +27,17 @@ class LexicalEntriesTest(MyTestCase):
         self.id_l1 = self.create_language('language1')
         self.dict_1 = self.create_dictionary('user1_dict1', self.id_l1)
         self.persp_1 = self.create_perspective('translation_string1', self.dict_1, "Published", False)
+        self.persp_2 = self.create_perspective('translation_string2', self.dict_1, "Published", False)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/fields'
                                 % (1, 1, 1, 1))
         fields = response.json
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/fields'
                                       % (self.dict_1['client_id'], self.dict_1['object_id'],
                                          self.persp_1['client_id'], self.persp_1['object_id']),
+                                      params=fields)
+        response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/fields'
+                                      % (self.dict_1['client_id'], self.dict_1['object_id'],
+                                         self.persp_2['client_id'], self.persp_2['object_id']),
                                       params=fields)
 
         self.strings = ["uyzrljiirs", "kxmzpclrns", "kgrrdjafqz", "jdavwdmuqe", "zlswwsfjrc", "bkrmwpshnh",
@@ -42,6 +48,9 @@ class LexicalEntriesTest(MyTestCase):
         params = initValuesFactory.get_role_params([self.id_u1, self.id_u2])
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (self.dict_1['client_id'],
                                    self.dict_1['object_id'], self.persp_1['client_id'], self.persp_1['object_id']),
+                                      params=params)
+        response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (self.dict_1['client_id'],
+                                   self.dict_1['object_id'], self.persp_2['client_id'], self.persp_2['object_id']),
                                       params=params)
 
     def _load_entities(self, count=None):
@@ -54,6 +63,7 @@ class LexicalEntriesTest(MyTestCase):
         added_entities = list()
         self.login_common('user2')
         added_entities.append(self.add_l1e(self.dict_1, self.persp_1, lex_entries[0][0], lex_entries[0][1], 'Word'))
+
         self.login_common('user1')
         for lex in lex_entries[1:-1]:
             added_entities.append(self.add_l1e(self.dict_1, self.persp_1, lex[0], lex[1], 'Word'))
@@ -62,6 +72,54 @@ class LexicalEntriesTest(MyTestCase):
         if count is not None:
             return added_entities[:count]
         return added_entities
+
+    def _add_level_one_two_entities(self, dict, persp):
+        """
+        Creates a lexical entry in the given dictionary and perspective described by dict and persp variables and
+        adds level one and level two entities to the perspective. Returns a tuple containing both entities.
+        :param dict: dictionary_id as a dict {'client_id': <xxx>, 'object_id': <xxx>}
+        :param persp: object_id as a object {'client_id': <xxx>, 'object_id': <xxx>}
+        :return: two entities with ids and types. ({'client_id': <xxx>, 'object_id': <xxx>, 'type': <xxx>}, -//-)
+        """
+        response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry' %
+                              (dict['client_id'], dict['object_id'], persp['client_id'], persp['object_id']))
+        lex_entry = response.json
+        with open(os.path.join(os.path.dirname(__file__), "../files/test.wav"), "rb") as f:
+            response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/leveloneentity'
+                                          % (dict['client_id'],
+                                             dict['object_id'],
+                                             persp['client_id'],
+                                             persp['object_id'],
+                                             lex_entry['client_id'],
+                                             lex_entry['object_id']),
+                                          params={'entity_type':'Sound',
+                                                  'data_type':'sound',
+                                                  'level': 'leveloneentity',
+                                                  'content': base64.urlsafe_b64encode(f.read()).decode(),
+                                                  'locale_id': 1})
+        level_one = response.json
+        with open(os.path.join(os.path.dirname(__file__), "../files/test.TextGrid"), "rb") as f:
+            response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/lexical_entry/%s/%s/'
+                                          'leveloneentity/%s/%s/leveltwoentity'
+                                          % (dict['client_id'],
+                                             dict['object_id'],
+                                             persp['client_id'],
+                                             persp['object_id'],
+                                             lex_entry['client_id'],
+                                             lex_entry['object_id'],
+                                             response.json['client_id'],
+                                             response.json['object_id']),
+                                          params={'entity_type':"Markup",
+                                                  'data_type':"markup",
+                                                  'level': 'leveltwoentity',
+                                                  'parent_client_id': response.json['client_id'],
+                                                  'parent_object_id': response.json['object_id'],
+                                                  'content': base64.urlsafe_b64encode(f.read()).decode(),
+                                                  'locale_id': 1})
+        level_two = response.json
+        level_one['type'] = 'leveloneentity'
+        level_two['type'] = 'leveltwoentity'
+        return level_one, level_two
 
     def testLexicalEntriesAll(self):
         correct_answers = load_correct_answers("lexical_entries/answers_lexical_entries_all.json")
@@ -295,7 +353,24 @@ class LexicalEntriesTest(MyTestCase):
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertEqual(response.json, correct_answers[test_name])
 
-        # TODO: tests for leveltwoentity
+        test_name = "level_two_entities"
+        entities = self._add_level_one_two_entities(self.dict_1, self.persp_2)
+        to_be_approved = [entities[0]]
+        entities = self._add_level_one_two_entities(self.dict_1, self.persp_2)
+        to_be_approved.append(entities[1])
+        entities = self._add_level_one_two_entities(self.dict_1, self.persp_2)
+        to_be_approved.extend(entities)
+
+        response = self.app.patch_json(
+            '/dictionary/%s/%s/perspective/%s/%s/approve' % (self.dict_1['client_id'], self.dict_1['object_id'],
+                                                             self.persp_2['client_id'], self.persp_2['object_id']),
+            params={"entities": to_be_approved}
+        )
+        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/published' %
+                                      (self.dict_1['client_id'], self.dict_1['object_id'],
+                                       self.persp_2['client_id'], self.persp_2['object_id']))
+        self.assertEqual(response.status_int, HTTPOk.code)
+        self.assertEqual(response.json, correct_answers[test_name])
 
     def testApproveEntityAll(self):
         correct_answers = load_correct_answers("lexical_entries/answers_approve_entity_all.json")
@@ -319,4 +394,3 @@ class LexicalEntriesTest(MyTestCase):
                                        self.persp_1['client_id'], self.persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertEqual(response.json, correct_answers[test_name])
-
