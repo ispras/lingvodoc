@@ -30207,6 +30207,8 @@ var app = angular.module("LanguagesModule", [ "ui.bootstrap" ]);
 
 app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
 
+app.directive("translatable", [ "dictionaryService", getTranslation ]);
+
 app.controller("LanguagesController", [ "$scope", "$http", "$modal", "$interval", "$log", "responseHandler", function($scope, $http, $modal, $interval, $log, responseHandler) {
     var clientId = $("#clientId").data("lingvodoc");
     var userId = $("#userId").data("lingvodoc");

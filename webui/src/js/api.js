@@ -1330,6 +1330,18 @@ function lingvodocAPI($http, $q) {
         return deferred.promise;
     };
 
+    var getTranslation = function(translationString) {
+        var deferred = $q.defer();
+        var req = [translationString];
+        $http.post('/translations', req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject('Failed to get translation');
+        });
+        return deferred.promise;
+    };
+
+
 
     // Return public API.
     return ({
@@ -1390,6 +1402,7 @@ function lingvodocAPI($http, $q) {
         'setPerspectiveMeta': setPerspectiveMeta,
         'removePerspectiveMeta': removePerspectiveMeta,
         'advancedSearch': advancedSearch,
-        'convertMarkup': convertMarkup
+        'convertMarkup': convertMarkup,
+        'getTranslation': getTranslation
     });
 }

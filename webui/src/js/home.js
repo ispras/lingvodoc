@@ -7,6 +7,8 @@ angular.module('HomeModule', ['ui.bootstrap'], function($rootScopeProvider) {
 
     .factory('responseHandler', ['$timeout', '$modal', responseHandler])
 
+    .directive('translatable', ['dictionaryService', getTranslation])
+
     .controller('HomeController', ['$scope', '$http', '$log', 'dictionaryService', 'responseHandler', function($scope, $http, $log, dictionaryService, responseHandler) {
 
         $scope.languages = [];

@@ -32110,6 +32110,31 @@ var enableControls = function(controls, enabled) {
     });
 };
 
+var getTranslation = function(dictionaryService) {
+    return {
+        restrict: "E",
+        link: function($scope, $element, $attrs) {
+            if ($element.context.innerText) {
+                var translationString = $element.context.innerText;
+                dictionaryService.getTranslation(translationString).then(function(data) {
+                    if (_.isArray(data)) {
+                        _.forEach(data, function(translation) {
+                            if (translation.translation_string == translationString) {
+                                if (translation.translation != translationString) {
+                                    $element.context.innerText = translation.translation;
+                                }
+                                console.log(translationString + " -> " + translation.translation);
+                            }
+                        });
+                    }
+                }, function(reason) {
+                    console.error(reason);
+                });
+            }
+        }
+    };
+};
+
 var lingvodoc = {};
 
 lingvodoc.Object = function(clientId, objectId) {
@@ -33251,6 +33276,16 @@ function lingvodocAPI($http, $q) {
         });
         return deferred.promise;
     };
+    var getTranslation = function(translationString) {
+        var deferred = $q.defer();
+        var req = [ translationString ];
+        $http.post("/translations", req).success(function(data, status, headers, config) {
+            deferred.resolve(data);
+        }).error(function(data, status, headers, config) {
+            deferred.reject("Failed to get translation");
+        });
+        return deferred.promise;
+    };
     return {
         getLexicalEntries: getLexicalEntries,
         getLexicalEntriesCount: getLexicalEntriesCount,
@@ -33309,7 +33344,8 @@ function lingvodocAPI($http, $q) {
         setPerspectiveMeta: setPerspectiveMeta,
         removePerspectiveMeta: removePerspectiveMeta,
         advancedSearch: advancedSearch,
-        convertMarkup: convertMarkup
+        convertMarkup: convertMarkup,
+        getTranslation: getTranslation
     };
 }
 
@@ -33407,6 +33443,8 @@ app.config(function($stateProvider, $urlRouterProvider) {
 app.service("dictionaryService", lingvodocAPI);
 
 app.factory("responseHandler", [ "$timeout", "$modal", responseHandler ]);
+
+app.directive("translatable", [ "dictionaryService", getTranslation ]);
 
 app.controller("MergeMasterController", [ "$scope", "$http", "$modal", "$interval", "$state", "$log", "dictionaryService", "responseHandler", function($scope, $http, $modal, $interval, $state, $log, dictionaryService, responseHandler) {
     var clientId = $("#clientId").data("lingvodoc");

@@ -23,6 +23,8 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
         };
     })
 
+    .directive('translatable', ['dictionaryService', getTranslation])
+
     .directive('onReadFile', function($parse) {
         return {
             restrict: 'A',

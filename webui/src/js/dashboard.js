@@ -6,6 +6,8 @@ app.service('dictionaryService', lingvodocAPI);
 
 app.factory('responseHandler', ['$timeout', '$modal', responseHandler]);
 
+app.directive('translatable', ['dictionaryService', getTranslation]);
+
 app.controller('DashboardController', ['$scope', '$http', '$q', '$modal', '$log', 'dictionaryService', 'responseHandler', function ($scope, $http, $q, $modal, $log, dictionaryService, responseHandler) {
 
     var userId = $('#userId').data('lingvodoc');

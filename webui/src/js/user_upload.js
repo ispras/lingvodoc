@@ -24,6 +24,8 @@ angular.module('UserUploadModule', ['ui.bootstrap'])
         };
     })
 
+    .directive('translatable', ['dictionaryService', getTranslation])
+
     .factory('responseHandler', ['$timeout', '$modal', responseHandler])
 
     .controller('UserUploadController', ['$scope', '$http', 'responseHandler', function($scope, $http, responseHandler) {
