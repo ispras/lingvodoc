@@ -435,7 +435,7 @@ def configure_routes(config):
     # todo: fix this
     config.add_route(name='approve_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                     '/perspective/{perspective_client_id}/{perspective_id}/approve_all',
-                     factory='lingvodoc.models.PerspectivePublishAcl')  # TODO: test
+                     factory='lingvodoc.models.PerspectivePublishAcl')
     config.add_route(name='approve_all_outer', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                     '/perspective/{perspective_client_id}/{perspective_id}/approve_all_outer',
                      factory='lingvodoc.models.PerspectivePublishAcl')  # TODO: test

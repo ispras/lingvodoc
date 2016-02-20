@@ -250,9 +250,10 @@ class MyTestCase(unittest.TestCase):
             params['tag'] = tag
         response = self.app.post_json('/group_entity', params=params)
 
-    def dict_convert(self, filename='test.sqlite'):
+    def dict_convert(self, filename='test.sqlite', user_id=None):
         from time import sleep
-        user_id = self.signup_common()
+        if user_id is None:
+            user_id = self.signup_common()
         self.login_common()
         root_ids = self.create_language('Корень')
         response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},

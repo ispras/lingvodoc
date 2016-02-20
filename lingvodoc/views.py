@@ -3745,7 +3745,7 @@ def edit_user_info(request):  # TODO: test
 
 
 @view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
-def approve_all(request):  # TODO: test
+def approve_all(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
