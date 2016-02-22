@@ -100,6 +100,10 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
             return values;
         };
 
+        $scope.setLocale = function(locale_id) {
+            setCookie("locale_id", locale_id);
+        };
+
         $scope.getPage = function(pageNumber) {
             if (pageNumber > 0 && pageNumber <= $scope.pageCount) {
                 $scope.pageIndex = pageNumber;
@@ -561,4 +565,9 @@ angular.module('ViewDictionaryModule', ['ui.bootstrap'])
         }, function(reason) {
             responseHandler.error(reason);
         });
-    }]);
+    }])
+    .run(function ($rootScope) {
+        $rootScope.setLocale = function(locale_id) {
+            setCookie("locale_id", locale_id);
+        };
+    });

@@ -9,6 +9,14 @@ function getCookie(name) {
     return null;
 }
 
+function setCookie(cname, cvalue, exdays) {
+    var d = new Date();
+    var days = exdays || 30;
+    d.setTime(d.getTime() + (days *  30 * 24 * 60 * 60 * 1000));
+    var expires = "expires=" + d.toUTCString();
+    document.cookie = cname + "=" + cvalue + "; " + expires;
+}
+
 var wrapPerspective = function (perspective) {
 
     if (typeof perspective.fields == 'undefined') {
@@ -104,5 +112,4 @@ var getTranslation = function(dictionaryService) {
         }
     };
 };
-
 

@@ -30320,6 +30320,12 @@ app.controller("CreateLanguageController", [ "$scope", "$http", "$interval", "$m
     });
 } ]);
 
+app.run(function($rootScope) {
+    $rootScope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
+});
+
 function responseHandler($timeout, $modal) {
     function show(status, message, t) {
         var timeout = t || 2e3;

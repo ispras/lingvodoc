@@ -74,6 +74,7 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
         $scope.pageSize = 20;
         $scope.pageCount = 1;
 
+
         $scope.getFieldValues = function(entry, field) {
 
             var value;
@@ -646,4 +647,10 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
 
         });
 
-    }]);
+    }])
+    .run(function ($rootScope) {
+        $rootScope.setLocale = function(locale_id) {
+            setCookie("locale_id", locale_id);
+        };
+    });
+

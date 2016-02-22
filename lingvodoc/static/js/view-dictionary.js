@@ -31506,6 +31506,14 @@ function getCookie(name) {
     return null;
 }
 
+function setCookie(cname, cvalue, exdays) {
+    var d = new Date();
+    var days = exdays || 30;
+    d.setTime(d.getTime() + days * 30 * 24 * 60 * 60 * 1e3);
+    var expires = "expires=" + d.toUTCString();
+    document.cookie = cname + "=" + cvalue + "; " + expires;
+}
+
 var wrapPerspective = function(perspective) {
     if (typeof perspective.fields == "undefined") {
         return;
@@ -31576,7 +31584,6 @@ var getTranslation = function(dictionaryService) {
                                 if (translation.translation != translationString) {
                                     $element.context.innerText = translation.translation;
                                 }
-                                console.log(translationString + " -> " + translation.translation);
                             }
                         });
                     }
@@ -32935,6 +32942,9 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
         }
         return values;
     };
+    $scope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
     $scope.getPage = function(pageNumber) {
         if (pageNumber > 0 && pageNumber <= $scope.pageCount) {
             $scope.pageIndex = pageNumber;
@@ -33291,7 +33301,11 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     }, function(reason) {
         responseHandler.error(reason);
     });
-} ]);
+} ]).run(function($rootScope) {
+    $rootScope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
+});
 
 function WaveSurferController($scope) {
     var activeUrl = null;

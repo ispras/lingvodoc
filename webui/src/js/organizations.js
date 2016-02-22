@@ -14,8 +14,6 @@ app.controller('OrganizationsController', ['$scope', '$http', '$q', '$modal', '$
     var userId = $('#userId').data('lingvodoc');
     var clientId = $('#clientId').data('lingvodoc');
 
-
-
     $scope.create = function() {
         $modal.open({
             animation: true,
@@ -178,3 +176,9 @@ app.controller('editOrganizationController', ['$scope', '$http', '$modalInstance
     });
 
 }]);
+
+app.run(function ($rootScope) {
+    $rootScope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
+});

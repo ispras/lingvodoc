@@ -723,7 +723,13 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
         $scope.ok = function() {
             $modalInstance.close();
         };
-    }]);
+    }])
+
+    .run(function ($rootScope) {
+        $rootScope.setLocale = function(locale_id) {
+            setCookie("locale_id", locale_id);
+        };
+    });
 
 
 

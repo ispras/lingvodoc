@@ -553,6 +553,12 @@ app.controller('ImportController', ['$scope', '$http', '$q', '$log', '$modalInst
 
 }]);
 
+app.run(function ($rootScope) {
+    $rootScope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
+});
+
 
 
 
