@@ -955,3 +955,9 @@ app.controller('perspectiveGeoLabelsController', ['$scope', '$http', '$q', '$mod
     });
 
 }]);
+
+app.run(function ($rootScope) {
+    $rootScope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
+});

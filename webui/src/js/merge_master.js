@@ -179,7 +179,6 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
         });
     };
 
-
     $scope.selectSource = function() {
         if ($scope.master.mergeMode == 'dictionaries') {
             $state.go('merge.selectDictionaries');
@@ -520,3 +519,9 @@ app.controller('MergeMasterController', ['$scope', '$http', '$modal', '$interval
     }, true);
 
 }]);
+
+app.run(function ($rootScope) {
+    $rootScope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
+});

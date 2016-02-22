@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" ng-app="CreateDictionaryModule">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -15,7 +15,7 @@
 
 </head>
 
-<body class="body-dashboard" ng-app="CreateDictionaryModule">
+<body class="body-dashboard" >
 
 <div id="clientId" data-lingvodoc="${client_id}"></div>
 <div id="userId" data-lingvodoc="${user.id}"></div>

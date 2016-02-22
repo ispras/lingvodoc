@@ -15,7 +15,6 @@ app.controller('ProfileController', ['$scope', '$http', '$q', '$modal', '$log', 
     var clientId = $('#clientId').data('lingvodoc');
     $scope.userInfo = {};
 
-
     $scope.save = function() {
         dictionaryService.setUserInfo(userId, clientId, $scope.userInfo).then(function(userInfo) {
 
@@ -40,4 +39,8 @@ app.controller('ProfileController', ['$scope', '$http', '$q', '$modal', '$log', 
 }]);
 
 
-
+app.run(function ($rootScope) {
+    $rootScope.setLocale = function(locale_id) {
+        setCookie("locale_id", locale_id);
+    };
+});
