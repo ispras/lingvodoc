@@ -250,9 +250,10 @@ class MyTestCase(unittest.TestCase):
             params['tag'] = tag
         response = self.app.post_json('/group_entity', params=params)
 
-    def dict_convert(self, filename='test.sqlite'):
+    def dict_convert(self, filename='test.sqlite', user_id=None):
         from time import sleep
-        user_id = self.signup_common()
+        if user_id is None:
+            user_id = self.signup_common()
         self.login_common()
         root_ids = self.create_language('Корень')
         response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
@@ -272,13 +273,28 @@ class MyTestCase(unittest.TestCase):
         if not_found:
             self.assertEqual('error', 'converting dictionary was not found')
         dict_ids = response.json['dictionaries'][0]
+
+        for i in range(3):
+            response = self.app.get('/dictionary/%s/%s/perspectives' % (dict_ids['client_id'], dict_ids['object_id']))
+            if response.json['perspectives']:
+                not_found = False
+                break
+            sleep(10)
+        if not_found:
+            self.assertEqual('error', 'converting perspective was not found')
+        persp_ids = response.json['perspectives'][0]
+
         for i in range(20):
-            response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
+            response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/state' %
+                                    (dict_ids['client_id'],
+                                     dict_ids['object_id'],
+                                     persp_ids['client_id'],
+                                     persp_ids['object_id']))
+            # response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
             if response.json['status'].lower() == 'published':
                 break
+
             sleep(60)
-        response = self.app.get('/dictionary/%s/%s/perspectives' % (dict_ids['client_id'], dict_ids['object_id']))
-        persp_ids = response.json['perspectives'][0]
         return dict_ids, persp_ids
 
 
