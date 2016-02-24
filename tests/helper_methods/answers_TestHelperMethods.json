@@ -1,0 +1,9 @@
+{
+  "test_create_dictionary": {"parent_object_id": 1, "translation": "dict name", "translation_string": "dict name", "status": "WiP", "client_id": 4, "object_id": 1, "parent_client_id": 4, "additional_metadata": null},
+  "test_create_language": {"parent_object_id": null, "translation": "lang name", "client_id": 4, "object_id": 1, "locale_exist": false, "parent_client_id": null, "translation_string": "lang name"},
+  "test_create_level_one_entity": {"parent_object_id": 1, "level": "leveloneentity", "content": "content", "parent_client_id": 4, "client_id": 4, "locale_id": 1, "object_id": 1, "entity_type": "entity type", "marked_for_deletion": false},
+  "test_create_perspective": {"parent_object_id": 1, "translation": "persp name", "translation_string": "persp name", "status": "WiP", "marked_for_deletion": false, "client_id": 4, "parent_client_id": 4, "object_id": 1, "is_template": false, "additional_metadata": "{}"},
+  "test_dictionary_change_state": {"status": "dict state"},
+  "test_perspective_change_state": {"status": "persp state"},
+  "testlogin": {"name": "test", "intl_name": "user1", "signup_date": "2016-02-19 14:51:43.570127", "birthday": "1970-01-01", "default_locale_id": null, "login": "user1", "organizations": [], "is_active": "True", "id": 2, "email": "user1@test.com", "about": null}
+}
