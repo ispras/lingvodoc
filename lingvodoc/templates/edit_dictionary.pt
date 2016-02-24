@@ -88,6 +88,9 @@
                     </button>
                     <button type="button" class="btn btn-primary" ng-click="detectDuplicates()">Detect duplicates</button>
                     <button type="button" class="btn btn-primary" ng-click="mergeEntries()" ng-disabled="selectedEntries.length < 2">Merge</button>
+
+                    <select class="form-control" ng-options="lang as lang.label for lang in translationLangs track by lang.id" ng-model="translationLanguage"></select>
+
                 </div>
             </div>
         </div>
