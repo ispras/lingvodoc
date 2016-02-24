@@ -277,7 +277,7 @@ class MyTestCase(unittest.TestCase):
             response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
             if response.json['status'].lower() == 'published':
                 break
-            sleep(60)
+            sleep(10)
         response = self.app.get('/dictionary/%s/%s/perspectives' % (dict_ids['client_id'], dict_ids['object_id']))
         persp_ids = response.json['perspectives'][0]
         return dict_ids, persp_ids
