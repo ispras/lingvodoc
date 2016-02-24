@@ -83,6 +83,9 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
         $scope.selectedEntries = [];
 
+        $scope.translationLangs = [{id: 1, label: 'Ру'}, {id: 2, label: 'En'}, {id: 3, label: 'De'}];
+        $scope.translationLanguage = $scope.translationLangs[0];
+
         var enabledInputs = [];
 
         $scope.getFieldValues = function(entry, field) {
@@ -270,7 +273,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
 
             var entryObject = value.export();
             entryObject['entity_type'] = field.entity_type;
-            entryObject['locale_id'] = getCookie('locale_id');
+            entryObject['locale_id'] = $scope.translationLanguage.id;
 
             dictionaryService.saveValue(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveId, entry, field, entryObject, parent).then(function(data) {
 

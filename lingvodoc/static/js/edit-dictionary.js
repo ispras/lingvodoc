@@ -32926,6 +32926,17 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.filterEntries = [];
     $scope.originalEntries = [];
     $scope.selectedEntries = [];
+    $scope.translationLangs = [ {
+        id: 1,
+        label: "Ру"
+    }, {
+        id: 2,
+        label: "En"
+    }, {
+        id: 3,
+        label: "De"
+    } ];
+    $scope.translationLanguage = $scope.translationLangs[0];
     var enabledInputs = [];
     $scope.getFieldValues = function(entry, field) {
         var value;
@@ -33078,7 +33089,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     $scope.saveValue = function(entry, field, value, parent) {
         var entryObject = value.export();
         entryObject["entity_type"] = field.entity_type;
-        entryObject["locale_id"] = getCookie("locale_id");
+        entryObject["locale_id"] = $scope.translationLanguage.id;
         dictionaryService.saveValue(dictionaryClientId, dictionaryObjectId, perspectiveClientId, perspectiveId, entry, field, entryObject, parent).then(function(data) {
             for (var i = 0; i < $scope.lexicalEntries.length; i++) {
                 if ($scope.lexicalEntries[i].object_id == entry.object_id && $scope.lexicalEntries[i].client_id == entry.client_id) {
