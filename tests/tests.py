@@ -255,6 +255,9 @@ class MyTestCase(unittest.TestCase):
         if user_id is None:
             user_id = self.signup_common()
         self.login_common()
+        response = self.app.post_json('/dictionaries', params={'user_created': [user_id]})
+        first_dicts = response.json['dictionaries']
+        first_len = len(response.json['dictionaries'])
         root_ids = self.create_language('Корень')
         response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
                                  upload_files=([('blob', filename)]))
@@ -266,13 +269,16 @@ class MyTestCase(unittest.TestCase):
         not_found = True
         for i in range(3):
             response = self.app.post_json('/dictionaries', params={'user_created': [user_id]})
-            if response.json['dictionaries']:
+            if len(response.json['dictionaries']) > first_len:
                 not_found = False
                 break
             sleep(10)
         if not_found:
             self.assertEqual('error', 'converting dictionary was not found')
-        dict_ids = response.json['dictionaries'][0]
+
+        sorted_ids = response.json['dictionaries'][:]
+        sorted_ids = sorted(sorted_ids, key=lambda x: (x['client_id'], x['object_id']))
+        dict_ids = sorted_ids[-1]
 
         for i in range(3):
             response = self.app.get('/dictionary/%s/%s/perspectives' % (dict_ids['client_id'], dict_ids['object_id']))
@@ -295,6 +301,9 @@ class MyTestCase(unittest.TestCase):
                 break
 
             sleep(60)
+            response = self.app.get('/dictionary/%s/%s/state' %
+                                    (dict_ids['client_id'],
+                                     dict_ids['object_id']))
         return dict_ids, persp_ids
 
 

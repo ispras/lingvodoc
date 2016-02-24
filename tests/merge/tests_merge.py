@@ -65,8 +65,5 @@ class MergeTest(MyTestCase):
         print("aaa")
 
     def testTest(self):
-        print(0)
-        # import pdb
-        # pdb.set_trace()
         dict_id, persp_id = self.dict_convert("/home/alexander/sources/lingvodoc/tests/databases/merge_2.sqlite", self.id_tester)
-        print(111)
+
