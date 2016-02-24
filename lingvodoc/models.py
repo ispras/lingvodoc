@@ -265,7 +265,8 @@ def find_by_translation_string_ui(locale_id, translation_string):
             trstr = DBSession.query(UITranslationString).\
                 filter_by(locale_id=1, translation_string=translation_string).first()
         if not trstr:
-            return {'translation_string': translation_string, 'translation': translation_string, 'warn': 'not found'}
+            return find_by_translation_string(locale_id, translation_string)
+            # return {'translation_string': translation_string, 'translation': translation_string, 'warn': 'not found'}
         return {'translation_string': translation_string, 'translation': trstr.translation}
 
 
@@ -276,9 +277,24 @@ def find_by_translation_string(locale_id, translation_string):
             trstr = DBSession.query(UserEntitiesTranslationString).\
                 filter_by(locale_id=1, translation_string=translation_string).first()
         if not trstr:
-            return find_by_translation_string_ui(locale_id, translation_string)
-            # return {'translation_string': translation_string, 'translation': translation_string}
+            return {'translation_string': translation_string, 'translation': translation_string, 'warn': 'not found'}
         return {'translation_string': translation_string, 'translation': trstr.translation}
+
+
+def add_translation_to_translation_string_ui(locale_id, translation, translation_string):
+
+        uets = DBSession.query(UITranslationString).filter_by(locale_id=locale_id,
+                                                                        translation_string=translation_string).first()
+        if not translation:
+            translation = translation_string
+        if not uets:
+            uets = UITranslationString(locale_id=locale_id,
+                                       translation_string=translation_string,
+                                       translation=translation)
+            DBSession.add(uets)
+            DBSession.flush()
+        else:
+            uets.translation = translation
 
 
 def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
