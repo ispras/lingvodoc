@@ -202,12 +202,13 @@ class ConvertedDictionaryTest(MyTestCase):
         import hashlib
         from time import sleep
         import json
+        filename = 'dictionary/test_dict_convert.sqlite'
         user_id = self.signup_common()
         self.login_common()
         root_ids = self.create_language('Корень')
-        first_hash = hashlib.md5(open("dictionary/test_dict_convert.sqlite", 'rb').read()).hexdigest()
+        first_hash = hashlib.md5(open(filename, 'rb').read()).hexdigest()
         response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
-                                 upload_files=([('blob', "dictionary/test_dict_convert.sqlite")]))
+                                 upload_files=([('blob', filename)]))
         self.assertEqual(response.status_int, HTTPOk.code)
         blob_ids = response.json
         response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
