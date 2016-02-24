@@ -3935,15 +3935,42 @@ def disapprove_entity(request):
 
 @view_config(route_name='get_translations', renderer='json', request_method='POST')
 def get_translations(request):
-    from .models import find_by_translation_string, find_locale_id
+    from .models import find_by_translation_string_ui, find_locale_id
     req = request.json_body
     response = []
     for entry in req:
-        response += [find_by_translation_string(find_locale_id(request), entry)]
+        response += [find_by_translation_string_ui(find_locale_id(request), entry)]
     request.response.status = HTTPOk.code
     return response
 
 
+@view_config(route_name='set_translations', renderer='json', request_method='POST')
+def set_translations(request):
+    from .models import add_translation_to_translation_string, find_locale_id
+    req = request.json_body
+    translation_string = req['translation_string']
+    translation = req['translation']
+    client_id = request.authenticated_userid
+
+    add_translation_to_translation_string(locale_id=find_locale_id(request),
+                                          translation=translation,
+                                          translation_string=translation_string,
+                                          client_id=client_id)
+    request.response.status = HTTPOk.code
+    return {}
+
+
+@view_config(route_name='admin_translations', renderer='json', request_method='POST', permission='create')
+def admin_translations(request):
+    from .models import add_translation_to_translation_string_ui, find_locale_id
+    req = request.json_body
+    translation_string = req['translation_string']
+    translation = req['translation']
+    add_translation_to_translation_string_ui(locale_id=find_locale_id(request),
+                                             translation=translation,
+                                             translation_string=translation_string)
+    request.response.status = HTTPOk.code
+    return {}
 
 
 

@@ -567,10 +567,15 @@ def configure_routes(config):
     #  "new_password": <new_password>, "old_password":<old_password>,
     #  "name":<name>, "birthday":<birthday>, "email":<email>, "about":<about>}
     config.add_route(name='get_user_info', pattern='/user')  # ready, not tested
-    # API #GET
+    # API #POST
     # Returns translations for a list of words for current or default or fallback locale
     # ["translation_string", "translation_string2", ...]
     config.add_route(name='get_translations', pattern='/translations')  # ready, not tested
+    # API #POST
+    config.add_route(name='set_translations', pattern='/translations/set')  # ready, not tested
+    # API #POST
+    config.add_route(name='admin_translations', pattern='/translations/admin',
+                     factory='lingvodoc.models.AdminAcl')  # ready, not tested
 
 
     # web-view #GET
