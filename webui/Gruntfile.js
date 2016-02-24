@@ -106,6 +106,7 @@ module.exports = function(grunt) {
                     'bower_components/angular-bootstrap/ui-bootstrap.js',
                     'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
                     'bower_components/autocomplete/script/autocomplete.js',
+                    'src/js/util.js',
                     'src/js/languages.js',
                     'src/js/response_handler.js'
                 ],
