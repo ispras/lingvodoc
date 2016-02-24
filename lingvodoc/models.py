@@ -258,6 +258,17 @@ class RelationshipPublishingMixin(RelationshipMixin):
                             )
 
 
+def find_by_translation_string_ui(locale_id, translation_string):
+        trstr = DBSession.query(UITranslationString).\
+            filter_by(locale_id=locale_id, translation_string=translation_string).first()
+        if not trstr:
+            trstr = DBSession.query(UITranslationString).\
+                filter_by(locale_id=1, translation_string=translation_string).first()
+        if not trstr:
+            return {'translation_string': translation_string, 'translation': translation_string, 'warn': 'not found'}
+        return {'translation_string': translation_string, 'translation': trstr.translation}
+
+
 def find_by_translation_string(locale_id, translation_string):
         trstr = DBSession.query(UserEntitiesTranslationString).\
             filter_by(locale_id=locale_id, translation_string=translation_string).first()
@@ -265,7 +276,8 @@ def find_by_translation_string(locale_id, translation_string):
             trstr = DBSession.query(UserEntitiesTranslationString).\
                 filter_by(locale_id=1, translation_string=translation_string).first()
         if not trstr:
-            return {'translation_string': translation_string, 'translation': translation_string}
+            return find_by_translation_string_ui(locale_id, translation_string)
+            # return {'translation_string': translation_string, 'translation': translation_string}
         return {'translation_string': translation_string, 'translation': trstr.translation}
 
 
