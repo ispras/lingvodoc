@@ -3960,7 +3960,7 @@ def set_translations(request):
     return {}
 
 
-@view_config(route_name='admin_translations', renderer='json', request_method='POST')
+@view_config(route_name='admin_translations', renderer='json', request_method='POST', permission='create')
 def admin_translations(request):
     from .models import add_translation_to_translation_string_ui, find_locale_id
     req = request.json_body

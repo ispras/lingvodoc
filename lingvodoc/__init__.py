@@ -574,7 +574,8 @@ def configure_routes(config):
     # API #POST
     config.add_route(name='set_translations', pattern='/translations/set')  # ready, not tested
     # API #POST
-    config.add_route(name='admin_translations', pattern='/translations/admin')  # ready, not tested
+    config.add_route(name='admin_translations', pattern='/translations/admin',
+                     factory='lingvodoc.models.AdminAcl')  # ready, not tested
 
 
     # web-view #GET
