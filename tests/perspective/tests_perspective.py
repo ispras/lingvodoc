@@ -123,35 +123,6 @@ class PerspectiveTest(MyTestCase):
         dict_1 = self.create_dictionary('user1_dict1', id_l1)
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
 
-        correct_answer = {
-            "roles_users": {
-                "Can view published lexical entries": [id_u1, id_u2],
-                "Can get perspective role list": [id_u1],
-                "Can view unpublished lexical entries": [id_u1, id_u2],
-                "Can create perspective roles and assign collaborators": [id_u1, id_u2, id_u3],
-                "Can approve lexical entries and publish": [id_u1, id_u3],
-                "Can resign users from dictionary editors": [id_u1, id_u2],
-                "Can create lexical entries": [id_u1],
-                "Can edit perspective": [id_u1, id_u2],
-                "Can deactivate lexical entries": [id_u1, id_u2],
-                "Can delete lexical entries": [id_u1, id_u2],
-                "Can delete perspective": [id_u1, id_u2]
-            },
-            "roles_organizations": {
-                "Can view published lexical entries": [],
-                "Can get perspective role list": [],
-                "Can view unpublished lexical entries": [],
-                "Can create perspective roles and assign collaborators": [],
-                "Can approve lexical entries and publish": [],
-                "Can resign users from dictionary editors": [],
-                "Can create lexical entries": [],
-                "Can edit perspective": [],
-                "Can deactivate lexical entries": [],
-                "Can delete lexical entries": [],
-                "Can delete perspective": []
-            }
-        }
-
         params = initValuesFactory.get_role_params([id_u2])
         params['roles_users']['Can create lexical entries'] = []
         params['roles_users']['Can get perspective role list'] = [id_u1]
