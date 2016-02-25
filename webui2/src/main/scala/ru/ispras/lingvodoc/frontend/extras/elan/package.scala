@@ -10,4 +10,3 @@ package object elan {
     }
   }
 }
-
