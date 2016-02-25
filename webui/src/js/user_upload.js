@@ -24,6 +24,8 @@ angular.module('UserUploadModule', ['ui.bootstrap'])
         };
     })
 
+    .service('dictionaryService', lingvodocAPI)
+
     .directive('translatable', ['dictionaryService', getTranslation])
 
     .factory('responseHandler', ['$timeout', '$modal', responseHandler])
