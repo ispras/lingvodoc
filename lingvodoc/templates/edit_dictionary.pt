@@ -45,7 +45,7 @@
     <div class="row">
         <h4>
             <span ng-repeat-start="e in path.slice().reverse()">
-                <span>{{ e.translation_string }}</span>
+                <span>{{ e.translation }}</span>
             </span>
             <span ng-repeat-end="" ng-if="$index < (path.length-1)">&gt;&gt;</span>
         </h4>
@@ -108,7 +108,7 @@
             <thead>
             <tr>
                 <td> <!-- select --> </td>
-                <td ng-repeat="field in fields">{{ field.entity_type }}</td>
+                <td ng-repeat="field in fields">{{ field.entity_type_translation }}</td>
                 <td> <!-- action --> </td>
             </tr>
             </thead>
@@ -511,8 +511,8 @@
                     <tr ng-repeat-start="entry in fieldsValues">
                         <td colspan="{{ fields.length }}">
                             <span ng-repeat-start="e in connectedEntries[$index].origin.slice().reverse()">
-                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation_string }}</a>
-                                <span ng-if="e.type != 'perspective'">{{ e.translation_string }}</span>
+                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation }}</a>
+                                <span ng-if="e.type != 'perspective'">{{ e.translation }}</span>
                             </span>
                             <span ng-repeat-end="" ng-if="$index < (connectedEntries[$parent.$index].origin.length-1)">&gt;&gt;</span>
                         </td>
@@ -610,8 +610,8 @@
                     <tr ng-repeat-start="entry in suggestedFieldsValues">
                         <td colspan="{{ fields.length }}">
                             <span ng-repeat-start="e in suggestedEntries[$index].origin.slice().reverse()">
-                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation_string }}</a>
-                                <span ng-if="e.type != 'perspective'">{{ e.translation_string }}</span>
+                                <a ng-attr-href="{{ getPerspectiveLink(e) }}" ng-if="e.type == 'perspective'">{{ e.translation }}</a>
+                                <span ng-if="e.type != 'perspective'">{{ e.translation }}</span>
                             </span>
                             <span ng-repeat-end="" ng-if="$index < (suggestedEntries[$parent.$index].origin.length-1)">&gt;&gt;</span>
                         </td>
