@@ -3951,8 +3951,10 @@ def set_translations(request):
     translation_string = req['translation_string']
     translation = req['translation']
     client_id = request.authenticated_userid
-
-    add_translation_to_translation_string(locale_id=find_locale_id(request),
+    locale_id = req.get('locale_id')
+    if not locale_id:
+        locale_id=find_locale_id(request)
+    add_translation_to_translation_string(locale_id=locale_id,
                                           translation=translation,
                                           translation_string=translation_string,
                                           client_id=client_id)
@@ -3966,11 +3968,21 @@ def admin_translations(request):
     req = request.json_body
     translation_string = req['translation_string']
     translation = req['translation']
-    add_translation_to_translation_string_ui(locale_id=find_locale_id(request),
+    locale_id = req.get('locale_id')
+    if not locale_id:
+        locale_id=find_locale_id(request)
+    add_translation_to_translation_string_ui(locale_id=locale_id,
                                              translation=translation,
                                              translation_string=translation_string)
     request.response.status = HTTPOk.code
     return {}
+
+
+@view_config(route_name='super_admin_translations', renderer='json', request_method='POST', permission='suchverypermission')
+def add_many_translations(request):
+
+    return {}
+
 
 
 
