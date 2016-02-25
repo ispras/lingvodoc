@@ -504,6 +504,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
         dictionaryService.getPerspectiveDictionaryFields($('#getPerspectiveFieldsUrl').data('lingvodoc')).then(function(fields) {
 
             $scope.fields = fields;
+
             dictionaryService.getLexicalEntries($('#allLexicalEntriesUrl').data('lingvodoc'), ($scope.pageIndex - 1) * $scope.pageSize, $scope.pageSize).then(function(lexicalEntries) {
                 $scope.lexicalEntries = lexicalEntries;
                 $scope.originalEntries = lexicalEntries;

@@ -30458,6 +30458,7 @@ function lingvodocAPI($http, $q) {
                 if (createNewGroup) {
                     fields.push({
                         entity_type: field.group,
+                        entity_type_translation: field.group_translation,
                         isGroup: true,
                         contains: [ field ]
                     });
@@ -31000,7 +31001,6 @@ function lingvodocAPI($http, $q) {
             } ]
         };
         $http.post("/merge/dictionaries", req).success(function(data, status, headers, config) {
-            console.log(data);
             deferred.resolve(data);
         }).error(function(data, status, headers, config) {
             deferred.reject("Failed to merge dictionaries");
