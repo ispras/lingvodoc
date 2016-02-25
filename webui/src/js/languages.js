@@ -146,8 +146,9 @@ app.controller('CreateLanguageController', ['$scope', '$http', '$interval', '$mo
     });
 }]);
 
-app.run(function ($rootScope) {
+app.run(function ($rootScope, $window) {
     $rootScope.setLocale = function(locale_id) {
         setCookie("locale_id", locale_id);
+        $window.location.reload();
     };
 });

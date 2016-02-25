@@ -34076,8 +34076,9 @@ app.controller("perspectiveGeoLabelsController", [ "$scope", "$http", "$q", "$mo
     });
 } ]);
 
-app.run(function($rootScope) {
+app.run(function($rootScope, $window) {
     $rootScope.setLocale = function(locale_id) {
         setCookie("locale_id", locale_id);
+        $window.location.reload();
     };
 });

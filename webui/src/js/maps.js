@@ -726,8 +726,9 @@ angular.module('MapsModule', ['ui.bootstrap', 'ngAnimate', 'ngMap'])
     }])
 
     .run(function ($rootScope) {
-        $rootScope.setLocale = function(locale_id) {
+        $rootScope.setLocale = function(locale_id, $window) {
             setCookie("locale_id", locale_id);
+            $window.location.reload();
         };
     });
 

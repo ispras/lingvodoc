@@ -33301,9 +33301,10 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     }, function(reason) {
         responseHandler.error(reason);
     });
-} ]).run(function($rootScope) {
+} ]).run(function($rootScope, $window) {
     $rootScope.setLocale = function(locale_id) {
         setCookie("locale_id", locale_id);
+        $window.location.reload();
     };
 });
 
