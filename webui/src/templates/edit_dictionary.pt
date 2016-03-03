@@ -130,6 +130,11 @@
                         <ul class="entries_list">
                             <li ng-repeat="fieldValue in fieldValues"
                                 ng-class="{removed: fieldValue.marked_for_deletion}">
+                                <span ng-if="fieldValue.locale_id">
+                                    <span ng-if="fieldValue.locale_id==1">[RU]</span>
+                                    <span ng-if="fieldValue.locale_id==2">[EN]</span>
+                                    <span ng-if="fieldValue.locale_id==3">[DE]</span>
+                                </span>
                                 {{ fieldValue.content }}
                             <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
                                     <button type="button" class="btn btn-default btn-xs"
@@ -152,7 +157,6 @@
                             <input type="text" value="" placeholder=""
                                    ng-blur="saveTextValue(lexicalEntry, field, $event)">
                         </div>
-
                     </div>
 
 
@@ -349,6 +353,11 @@
                             <div ng-if="field.data_type == 'text'">
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in fieldValues" ng-class="{removed: fieldValue.marked_for_deletion}">
+                                        <span ng-if="fieldValue.locale_id">
+                                            <span ng-if="fieldValue.locale_id==1">[RU]</span>
+                                            <span ng-if="fieldValue.locale_id==2">[EN]</span>
+                                            <span ng-if="fieldValue.locale_id==3">[DE]</span>
+                                        </span>
                                         {{ fieldValue.content }}
                             <span ng-if="addedByUser(lexicalEntry) && !fieldValue.marked_for_deletion">
                                     <button type="button" class="btn btn-default btn-xs"
@@ -532,6 +541,11 @@
                             <div ng-if="fieldsIdx[$index].data_type == 'text'">
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in field">
+                                        <span ng-if="fieldValue.locale_id">
+                                            <span ng-if="fieldValue.locale_id==1">[RU]</span>
+                                            <span ng-if="fieldValue.locale_id==2">[EN]</span>
+                                            <span ng-if="fieldValue.locale_id==3">[DE]</span>
+                                        </span>
                                         {{ fieldValue.content }}
                                     </li>
                                 </ul>
@@ -633,6 +647,11 @@
                             <div ng-if="fieldsIdx[$index].data_type == 'text'">
                                 <ul class="entries_list">
                                     <li ng-repeat="fieldValue in field">
+                                        <span ng-if="fieldValue.locale_id">
+                                            <span ng-if="fieldValue.locale_id==1">[RU]</span>
+                                            <span ng-if="fieldValue.locale_id==2">[EN]</span>
+                                            <span ng-if="fieldValue.locale_id==3">[DE]</span>
+                                        </span>
                                         {{ fieldValue.content }}
                                     </li>
                                 </ul>
@@ -712,6 +731,11 @@
                     <div ng-if="field.data_type == 'text'">
                         <ul class="entries_list">
                             <li ng-repeat="fieldValue in fieldValues" ng-if="!fieldValue.marked_for_deletion">
+                                <span ng-if="fieldValue.locale_id">
+                                    <span ng-if="fieldValue.locale_id==1">[RU]</span>
+                                    <span ng-if="fieldValue.locale_id==2">[EN]</span>
+                                    <span ng-if="fieldValue.locale_id==3">[DE]</span>
+                                </span>
                                 {{ fieldValue.content }}
                             </li>
                         </ul>
