@@ -64,6 +64,6 @@ class MergeTest(MyTestCase):
         self.dict_unit_2 = self._create_sample_dict(self.id_l1)
         print("aaa")
 
-    def testTest(self):
-        dict_id, persp_id = self.dict_convert("/home/alexander/sources/lingvodoc/tests/databases/merge_2.sqlite", self.id_tester)
+    # def testTest(self):
+    #     dict_id, persp_id = self.dict_convert("/home/alexander/sources/lingvodoc/tests/databases/merge_2.sqlite", self.id_tester)
 

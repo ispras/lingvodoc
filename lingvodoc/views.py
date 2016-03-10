@@ -2702,7 +2702,7 @@ def object_file_path(obj, settings, data_type, filename, create_dir=False):
         os.makedirs(storage_dir, exist_ok=True)
     storage_path = os.path.join(storage_dir, filename)
 
-    return storage_path
+    return storage_path, filename
 
 
 def openstack_upload(settings, file, file_name, content_type,  container_name):
@@ -2738,7 +2738,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
         real_location = openstack_upload(settings, content, filename, obj.data_type, 'test')
     else:
         filename = filename or 'noname.noext'
-        storage_path = object_file_path(obj, settings, data_type, filename, True)
+        storage_path, filename = object_file_path(obj, settings, data_type, filename, True)
         directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
         try:
             os.makedirs(directory)

@@ -1,0 +1,4310 @@
+FORMAT: 1A
+HOST: http://polls.apiblueprint.org/
+
+# lingvodoc
+This project is dedicated to natural languages and dialects documentation. It's the continuation of Dialeqt project (which was written in C++/QT5/Pure SQL). LingvoDoc is intended to provide natural language documentation service as Web-service and provides REST API and ajax-based client application.
+
+## Signup [/signup]
+Method for signin up. 
+
+### signup [POST]
+
++ Request (application/x-www-form-urlencoded)
+
+        login=tester&name=tester&email=tester%40test.com&password=password&confirmpassword=password&month=1&day=1&year=1900
+
++ Response 302(text/plain; charset=UTF-8) 
+
+        302 Found
+
+
+
+## Login [/login]
+
+### login [POST]
++ Request (application/x-www-form-urlencoded)
+
+        login=qwerty&password=qwerty&
+        
++ Response 302(text/plain; charset=UTF-8) 
+
+        302 Found
+
+## Logout [/logout]
+
++ Response 304
+
+## User info [/user]
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "id": 2,
+            "name": "Анна Владимировна Дыбо",
+            "signup_date": "2015-10-15 10:53:39.508463",
+            "default_locale_id": null,
+            "is_active": "True",
+            "intl_name": "adybo",
+            "organizations": [],
+            "about": null,
+            "birthday": "1970-01-01",
+            "email": "adybo@mail.ru",
+            "login": "adybo"
+        }
+
+### edit [PUT]
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "user_id": 2,
+            "name": "Новое имя",
+            "about": "some about",
+            "birthday": "1970-01-01",
+            "email": "new@mail.ru"
+        }
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "client_id": 2,
+            "new_password": "sets_new_password",
+            "old_password": "password"
+        }
+
+## Create language [/language]
+Creates language, needs name of the language and ids of parent
+### create [POST]
++ Request (application/json; charset=UTF-8)
+
+        {
+            "parent_client_id": 1,
+            "parent_object_id": 1,
+            "translation_string": "testing dredd"
+        }
+        
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "client_id": 312,
+            "object_id": 1
+        }
+        
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "client_id": 32,
+            "object_id": 15
+        }
+
+## Language views [/language/{client_id}/{object_id}]
+Basic methods for working with language.
+
++ Parameters
+    + client_id: 1 (number) - ID of the client in the form of an integer
+    + object_id: 1 (number) - ID of the object in the form of an integer
+
+### view [GET]
+Views info about language. Any user can do it.
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "translation": "Russian language",
+            "translation_string": "Russian language",
+            "parent_client_id": null,
+            "parent_object_id": null,
+            "client_id": 1,
+            "object_id": 1,
+            "locale_exist": true
+        }
+        
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "translation": "Кильдинский диалект",
+            "translation_string": "Кильдинский диалект",
+            "parent_client_id": 31,
+            "parent_object_id": 1,
+            "client_id": 33,
+            "object_id": 1,
+            "locale_exist": false
+        }
+    
+### delete [DELETE]
+Deletes language
+
++ Response 200 
+    
+### edit [PUT]
+
+Edits language. Only admins and user, who created language, can edit it. 
++ Request (application/json; charset=UTF-8)
+
+        {
+            "parent_client_id": 1,
+            "parent_object_id": 1,
+            "translation_string": "russian"
+        }
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+
+## Languages list [/languages]
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "languages": 
+                [
+                    {
+                        "object_id": 1,
+                        "translation": "Russian language",
+                        "locale_exist": true,
+                        "client_id": 1,
+                        "translation_string": "Russian language"
+                    },
+                    {
+                        "object_id": 2,
+                        "translation": "English language",
+                        "locale_exist": true,
+                        "client_id": 1,
+                        "translation_string": "English language"
+                    },
+                    {
+                        "object_id": 1,
+                        "locale_exist": false,
+                        "client_id": 31,
+                        "translation": "Саамский язык",
+                        "translation_string": "Саамский язык",
+                        "contains":
+                            [
+                                {
+                                    "object_id": 1,
+                                    "locale_exist": false,
+                                    "client_id": 33,
+                                    "translation": "Кильдинский диалект",
+                                    "translation_string": "Кильдинский диалект",
+                                    "contains": 
+                                        [
+                                            {
+                                                "object_id": 2,
+                                                "translation": "Воронинский говор",
+                                                "locale_exist": false,
+                                                "client_id": 33,
+                                                "translation_string": "Воронинский говор"
+                                            }
+                                        ]
+                                }
+                            ]
+                    }
+                ]
+        }
+
+
+## Create dictionary [/dictionary]
+
+### create [POST]
++ Request (application/json; charset=UTF-8)
+
+        {
+            "parent_client_id": 1,
+            "parent_object_id": 1,
+            "translation_string": "Dictionary for russian language"
+        }
+        
++ Response 200
+
+## Dictionary views [/dictionary/{client_id}/{object_id}]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "translation": "уйгурский",
+            "translation_string": "уйгурский"
+            "parent_client_id": 33,
+            "parent_object_id": 30,
+            "status": "Published",
+            "client_id": 80,
+            "object_id": 1,
+            "additional_metadata": null
+        }
+
+### delete [DELETE]
+
++ Response 200 
+
+### edit [PUT]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "parent_client_id": 42,
+            "parent_object_id": 42,
+            "translation_string": "new name for dictionary"
+        }
+        
++ Response 200
+
+## Create perspective [/dictionary/{client_id}/{object_id}/perspective]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### create [POST]
++ Request (application/json; charset=UTF-8)
+
+        {
+            "parent_client_id": 33,
+            "parent_object_id": 30,
+            "translation_string": "some perspective name"
+        }
+        
++ Response 200
+
+## Perspective views [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "translation": "Этимологический словарь из Lingvodoc 0.98",
+            "translation_string": "Lingvodoc 0.98 etymology dictionary",
+            "marked_for_deletion": false,
+            "is_template": false,
+            "parent_client_id": 80,
+            "parent_object_id": 1,
+            "status": "Published",
+            "client_id": 80,
+            "object_id": 1,
+            "additional_metadata": null
+        }
+    
+### delete [DELETE]
+
++ Response 200 
+    
+### edit [PUT]
++ Request (application/json; charset=UTF-8)
+
+        {
+            "parent_client_id": 42,
+            "parent_object_id": 42,
+            "translation_string": "new name for perspective",
+            "is_template": true
+        }
+        
++ Response 200
+
+## Dictionary status [/dictionary/{client_id}/{object_id}/state]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "status": "WiP"
+        }
+
+### edit [PUT]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "status": "Published"
+        }
+
++ Response 200
+
+## Perspective status [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/state]
+
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "status": "WiP"
+        }
+
+### edit [PUT]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "status": "Published"
+        }
+
++ Response 200
+
+## Perspective tree [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/tree]
+
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        [
+            {
+                "translation":  "Этимологический словарь из Lingvodoc 0.98",
+                "object_id": 1,
+                "marked_for_deletion": false,
+                "is_template": false,
+                "translation_string": "Lingvodoc 0.98 etymology dictionary",
+                "parent_object_id": 1,
+                "status": "Hidden",
+                "client_id": 277,
+                "parent_client_id": 277,
+                "type": "perspective"
+            },
+            {
+                "parent_object_id": 28,
+                "object_id": 1,
+                "client_id": 277,
+                "status": "Hidden",
+                "additional_metadata": null,
+                "type": "dictionary",
+                "translation_string": "Selkup",
+                "parent_client_id": 33,
+                "translation": "Selkup"
+            },
+            {
+                "parent_object_id": 9,
+                "object_id": 28,
+                "translation_string": "Нарымский диалект",
+                "locale_exist": false,
+                "client_id": 33,
+                "type": "language",
+                "parent_client_id": 31,
+                "translation": "Нарымский диалект"
+            },
+            {
+                "parent_object_id": null,
+                "object_id": 9,
+                "translation_string": "Селькупский язык",
+                "locale_exist": false,
+                "client_id": 31,
+                "type": "language",
+                "parent_client_id": null,
+                "translation": "Селькупский язык"
+            }
+        ]
+        
+## Perspectives [/perspectives]
+
+### Perspectives list [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "perspectives": 
+            [
+                {
+                    "parent_object_id": 1,
+                    "object_id": 1,
+                    "marked_for_deletion": false,
+                    "is_template": true,
+                    "translation_string": "Lingvodoc desktop version",
+                    "status": "Service",
+                    "client_id": 1,
+                    "parent_client_id": 1,
+                    "additional_metadata": null,
+                    "translation": "Lingvodoc desktop version"
+                },
+                {
+                    "parent_object_id": 1,
+                    "object_id": 2,
+                    "marked_for_deletion": false,
+                    "is_template": true,
+                    "translation_string": "Regular dictionary",
+                    "status": "Service",
+                    "client_id": 1,
+                    "parent_client_id": 1,
+                    "additional_metadata": null,
+                    "translation": "Regular dictionary"
+                },
+                {
+                    "parent_object_id": 1,
+                    "object_id": 3,
+                    "marked_for_deletion": false,
+                    "is_template": true,
+                    "translation_string": "Morhological dictionary",
+                    "status": "Service",
+                    "client_id": 1,
+                    "parent_client_id": 1,
+                    "additional_metadata": null,
+                    "translation": "Morhological dictionary"
+                }
+            ]
+        }
+
+## Perspective meta [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/meta]
+
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "authors": 
+                {
+                    "type": "authors",
+                    "content": ""
+                },
+            "location": 
+                {
+                    "type": "location",
+                    "content": 
+                        {
+                            "lat": 51.733226687439895,
+                            "lng": 87.18411827139789
+                        }
+                },
+            "info": 
+                {
+                    "type": "list",
+                    "content": 
+                        [
+                            {
+                                "info": 
+                                    {
+                                        "type": "blob",
+                                        "content": 
+                                            {
+                                                "object_id": 3,
+                                                "client_id": 238
+                                            }
+                                    }
+                            },
+                            {
+                                "info": 
+                                    {
+                                        "type": "blob",
+                                        "content": 
+                                            {
+                                                "object_id": 2,
+                                                "client_id": 238
+                                            }
+                                    }
+                            }, 
+                            {
+                                "info": 
+                                    {
+                                        "type": "blob",
+                                        "content":
+                                            {
+                                                "object_id": 1,
+                                                "client_id": 238
+                                            }
+                                    }
+                            }
+                        ]
+                }
+        }
+        
+### edit [PUT]
+
++ Request  (application/json; charset=UTF-8)
+
+    
+        {
+            "authors": 
+                {
+                    "type": "authors",
+                    "content": "Руслан Идрисов"
+                }
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+        
+### delete [DELETE]
++ Request  (application/json; charset=UTF-8)
+
+        [ "authors","info"]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+
+## Dictionary roles [/dictionary/{client_id}/{object_id}/roles]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        
+        {
+            "roles_users": 
+            {
+                "Can create perspectives": [12, 14],
+                "Can resign users from perspective editors": [12],
+                "Can create dictionary roles and assign collaborators": [12],
+                "Can get dictionary role list": [12],
+                "Can merge dictionaries and perspectives": [12],
+                "Can delete dictionary": [12],
+                "Can edit dictionary options": [12]
+            },
+            "roles_organizations": 
+            {
+                "Can create perspectives": [],
+                "Can resign users from perspective editors": [],
+                "Can create dictionary roles and assign collaborators": [],
+                "Can get dictionary role list": [],
+                "Can merge dictionaries and perspectives": [],
+                "Can delete dictionary": [],
+                "Can edit dictionary options": []
+            }
+        }
+
+### edit [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "roles_users": 
+            {
+                "Can create perspectives": [14],
+                "Can resign users from perspective editors": [],
+                "Can create dictionary roles and assign collaborators": [],
+                "Can get dictionary role list": [],
+                "Can merge dictionaries and perspectives": [],
+                "Can delete dictionary": [],
+                "Can edit dictionary options": []
+            },
+            "roles_organizations": 
+            {
+                "Can create perspectives": [],
+                "Can resign users from perspective editors": [],
+                "Can create dictionary roles and assign collaborators": [],
+                "Can get dictionary role list": [],
+                "Can merge dictionaries and perspectives": [],
+                "Can delete dictionary": [],
+                "Can edit dictionary options": []
+            }
+        }
+
++ Response 200
+
+### delete [DELETE]
+
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "roles_users": 
+            {
+                "Can create perspectives": [14],
+                "Can resign users from perspective editors": [],
+                "Can create dictionary roles and assign collaborators": [],
+                "Can get dictionary role list": [],
+                "Can merge dictionaries and perspectives": [],
+                "Can delete dictionary": [],
+                "Can edit dictionary options": []
+            },
+            "roles_organizations": 
+            {
+                "Can create perspectives": [],
+                "Can resign users from perspective editors": [],
+                "Can create dictionary roles and assign collaborators": [],
+                "Can get dictionary role list": [],
+                "Can merge dictionaries and perspectives": [],
+                "Can delete dictionary": [],
+                "Can edit dictionary options": []
+            }
+        }
+
++ Response 200
+
+
+## Perspective roles [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/roles]
+
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        
+        {
+            "roles_users": 
+            {
+                "Can view unpublished lexical entries": [12, 14],
+                "Can edit perspective": [12],
+                "Can resign users from dictionary editors": [12],
+                "Can create lexical entries": [12],
+                "Can view published lexical entries": [12],
+                "Can get perspective role list": [12],
+                "Can deactivate lexical entries": [12],
+                "Can approve lexical entries and publish": [12],
+                "Can create perspective roles and assign collaborators": [12],
+                "Can deactivate lexical entries": [12]
+            },
+            "roles_organizations": 
+            {
+                "Can view unpublished lexical entries": [],
+                "Can edit perspective": [],
+                "Can resign users from dictionary editors": [],
+                "Can create lexical entries": [],
+                "Can view published lexical entries": [],
+                "Can get perspective role list": [],
+                "Can deactivate lexical entries": [],
+                "Can approve lexical entries and publish": [],
+                "Can create perspective roles and assign collaborators": [],
+                "Can delete perspective": []
+            }
+        }
+
+### edit [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "roles_users": 
+            {
+                "Can view unpublished lexical entries": [14],
+                "Can edit perspective": [],
+                "Can resign users from dictionary editors": [],
+                "Can create lexical entries": [],
+                "Can view published lexical entries": [],
+                "Can get perspective role list": [],
+                "Can deactivate lexical entries": [],
+                "Can approve lexical entries and publish": [],
+                "Can create perspective roles and assign collaborators": [],
+                "Can deactivate lexical entries": []
+            },
+            "roles_organizations": 
+            {
+                "Can view unpublished lexical entries": [],
+                "Can edit perspective": [],
+                "Can resign users from dictionary editors": [],
+                "Can create lexical entries": [],
+                "Can view published lexical entries": [],
+                "Can get perspective role list": [],
+                "Can deactivate lexical entries": [],
+                "Can approve lexical entries and publish": [],
+                "Can create perspective roles and assign collaborators": [],
+                "Can delete perspective": []
+            }
+        }
+
++ Response 200
+
+### delete [DELETE]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "roles_users": 
+            {
+                "Can view unpublished lexical entries": [14],
+                "Can edit perspective": [],
+                "Can resign users from dictionary editors": [],
+                "Can create lexical entries": [],
+                "Can view published lexical entries": [],
+                "Can get perspective role list": [],
+                "Can deactivate lexical entries": [],
+                "Can approve lexical entries and publish": [],
+                "Can create perspective roles and assign collaborators": [],
+                "Can deactivate lexical entries": []
+            },
+            "roles_organizations": 
+            {
+                "Can view unpublished lexical entries": [],
+                "Can edit perspective": [],
+                "Can resign users from dictionary editors": [],
+                "Can create lexical entries": [],
+                "Can view published lexical entries": [],
+                "Can get perspective role list": [],
+                "Can deactivate lexical entries": [],
+                "Can approve lexical entries and publish": [],
+                "Can create perspective roles and assign collaborators": [],
+                "Can delete perspective": []
+            }
+        }
+
++ Response 200
+
+## Perspective fields [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/fields]
+
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        
+        {
+            "fields": [
+                {
+                    "status": "enabled",
+                    "object_id": 1,
+                    "entity_type_translation": "Word",
+                    "client_id": 67,
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "data_type_translation": "text",
+                    "position": 1,
+                    "contains": [],
+                    "entity_type": "Word"
+                },
+                {
+                    "status": "enabled",
+                    "object_id": 2,
+                    "entity_type_translation": "Transcription",
+                    "client_id": 67,
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "data_type_translation": "text",
+                    "position": 2,
+                    "contains": [],
+                    "entity_type": "Transcription"
+                },
+                {
+                    "status": "enabled",
+                    "object_id": 3,
+                    "entity_type_translation": "Translation",
+                    "client_id": 67,
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "data_type_translation": "text",
+                    "position": 3,
+                    "contains": [],
+                    "entity_type": "Translation"
+                },
+                {
+                    "status": "enabled",
+                    "object_id": 4,
+                    "entity_type_translation": "Sound",
+                    "client_id": 67,
+                    "level": "leveloneentity",
+                    "data_type": "sound",
+                    "data_type_translation": "sound",
+                    "position": 4,
+                    "contains": [
+                        {
+                            "status": "enabled",
+                            "object_id": 5,
+                            "entity_type_translation": "Praat markup",
+                            "level": "leveltwoentity",
+                            "data_type": "markup",
+                            "data_type_translation": "sound",
+                            "position": 5,
+                            "client_id": 67,
+                            "entity_type": "Praat markup"
+                        },
+                    ],
+                "entity_type": "Sound",
+                },
+                {
+                    "object_id": 6,
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "data_type_translation": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type_translation": "Paradigm word",
+                    "group_translation": "Paradigm",
+                    "entity_type": "Paradigm word",
+                    "position": 6,
+                    "group": "Paradigm",
+                    "client_id": 67
+                },
+                {
+                    "object_id": 7,
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "data_type_translation": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type_translation": "Paradigm transcription",
+                    "group_translation": "Paradigm",
+                    "entity_type": "Paradigm transcription",
+                    "position": 7,
+                    "group": "Paradigm",
+                    "client_id": 67
+                },
+                {
+                    "object_id": 8,
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "data_type_translation": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type_translation": "Paradigm translation",
+                    "group_translation": "Paradigm",
+                    "entity_type": "Paradigm translation",
+                    "position": 8,
+                    "group": "Paradigm",
+                    "client_id": 67
+                },
+                {
+                    "object_id": 9,
+                    "level": "leveloneentity",
+                    "data_type": "sound",
+                    "data_type_translation": "sound",
+                    "contains": [
+                        {
+                            "status": "enabled",
+                            "object_id": 10,
+                            "entity_type_translation": "Paradigm Praat markup",
+                            "level": "leveltwoentity",
+                            "data_type": "markup",
+                            "data_type_translation": "sound",
+                            "position": 10,
+                            "client_id": 67,
+                            "entity_type": "Paradigm Praat markup"
+                        }
+                    ],
+                    "status": "enabled",
+                    "entity_type_translation": "Paradigm sound",
+                    "group_translation": "Paradigm",
+                    "entity_type": "Paradigm sound",
+                    "position": 9,
+                    "group": "Paradigm",
+                    "client_id": 67
+                },
+             {
+                    "status": "enabled",
+                    "object_id": 11,
+                    "entity_type_translation": "Etymology",
+                    "client_id": 67,
+                    "level": "groupingentity",
+                    "data_type": "grouping_tag",
+                    "data_type_translation": "grouping_tag",
+                    "position": 11,
+                    "contains": [],
+                    "entity_type": "Etymology"
+                },
+            ]
+        }
+
+### edit [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "fields": [
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "position": 1,
+                    "contains": [],
+                    "entity_type": "Word"
+                },
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "position": 2,
+                    "contains": [],
+                    "entity_type": "Transcription"
+                },
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "position": 3,
+                    "contains": [],
+                    "entity_type": "Translation"
+                },
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "sound",
+                    "position": 4,
+                    "contains": [
+                        {
+                            "status": "enabled",
+                            "level": "leveltwoentity",
+                            "data_type": "markup",
+                            "position": 5,
+                            "entity_type": "Praat markup"
+                        },
+                    ],
+                "entity_type": "Sound"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type": "Paradigm word",
+                    "position": 6,
+                    "group": "Paradigm"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type": "Paradigm transcription",
+                    "position": 7,
+                    "group": "Paradigm"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type": "Paradigm translation",
+                    "position": 8,
+                    "group": "Paradigm"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "sound",
+                    "contains": [
+                        {
+                            "status": "enabled",
+                            "level": "leveltwoentity",
+                            "data_type": "markup",
+                            "position": 10,
+                            "entity_type": "Paradigm Praat markup"
+                        }
+                    ],
+                    "status": "enabled",
+                    "entity_type": "Paradigm sound",
+                    "position": 9,
+                    "group": "Paradigm"
+                },
+             {
+                    "status": "enabled",
+                    "level": "groupingentity",
+                    "data_type": "grouping_tag",
+                    "position": 11,
+                    "contains": [],
+                    "entity_type": "Etymology"
+                },
+            ]
+        }
+
++ Response 200
+
+### delete [DELETE]
+
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "fields": [
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "position": 1,
+                    "contains": [],
+                    "entity_type": "Word"
+                },
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "position": 2,
+                    "contains": [],
+                    "entity_type": "Transcription"
+                },
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "position": 3,
+                    "contains": [],
+                    "entity_type": "Translation"
+                },
+                {
+                    "status": "enabled",
+                    "level": "leveloneentity",
+                    "data_type": "sound",
+                    "position": 4,
+                    "contains": [
+                        {
+                            "status": "enabled",
+                            "level": "leveltwoentity",
+                            "data_type": "markup",
+                            "position": 5,
+                            "entity_type": "Praat markup"
+                        },
+                    ],
+                "entity_type": "Sound"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type": "Paradigm word",
+                    "position": 6,
+                    "group": "Paradigm"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type": "Paradigm transcription",
+                    "position": 7,
+                    "group": "Paradigm"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "text",
+                    "contains": [],
+                    "status": "enabled",
+                    "entity_type": "Paradigm translation",
+                    "position": 8,
+                    "group": "Paradigm"
+                },
+                {
+                    "level": "leveloneentity",
+                    "data_type": "sound",
+                    "contains": [
+                        {
+                            "status": "enabled",
+                            "level": "leveltwoentity",
+                            "data_type": "markup",
+                            "position": 10,
+                            "entity_type": "Paradigm Praat markup"
+                        }
+                    ],
+                    "status": "enabled",
+                    "entity_type": "Paradigm sound",
+                    "position": 9,
+                    "group": "Paradigm"
+                },
+             {
+                    "status": "enabled",
+                    "level": "groupingentity",
+                    "data_type": "grouping_tag",
+                    "position": 11,
+                    "contains": [],
+                    "entity_type": "Etymology"
+                },
+            ]
+        }
+
++ Response 200
+
+## List of dictionaries [/dictionaries]
+Can be filtered
+
+### list with filters [POST]
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "user_created":[1,2,3],
+            "author":1,
+            "published":true,
+            "user_participated":[1,2,3],
+            "organizations_participated":[],
+            "languages":
+                [
+                    {
+                        "client_id":1,
+                        "object_id":1
+                    },
+                    {
+                        "client_id":42,
+                        "object_id":73
+                    }
+                ]
+        }
+        
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "dictionaries": 
+                [
+                    {
+                        "object_id": 1,
+                        "status": "Service",
+                        "additional_metadata": null,
+                        "client_id": 1,
+                        "parent_client_id": null,
+                        "translation": "Fake dictionary",
+                        "parent_object_id": null,
+                        "translation_string": "Fake dictionary"
+                    },
+                    {
+                        "object_id": 1,
+                        "status": "Published",
+                        "additional_metadata": null,
+                        "client_id": 57,
+                        "parent_client_id": 33,
+                        "translation": "Словарь ямальского диалекта тундрового наречия ненецкого языка",
+                        "parent_object_id": 25,
+                        "translation_string": "Словарь ямальского диалекта тундрового наречия ненецкого языка"
+                    }
+                ]
+        }
+
+
+
+## Upload user blob [/blob]
+Method for file uploading. Returns ids of blob - structure, which holds information about file and url to get it.
+
+### upload [POST]
+Don't know how to describe file upload properly
+must be uploaded through multiform
+blob=file&data_type=data_type&
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "client_id":1,
+            "object_id":42,
+            "content":"url/to/download/file"
+        }
+
+## View user blob [/blobs/{client_id}/{object_id}]
+
++ Parameters
+    + client_id: 22  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+                "name": "Argut - Aruna.sqlite",
+                "client_id": 22,
+                "data_type": "dialeqt_dictionary",
+                "object_id": 1,
+                "content": "http://lingvodoc.ispras.ru/objects/userblobs/dialeqt_dictionary/22/1/Argut - Aruna.sqlite"
+        }
+
+## View user blobs [/blobs]
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        [
+            {
+                "name": "Argut - Aruna.sqlite",
+                "client_id": 22,
+                "data_type": "dialeqt_dictionary",
+                "object_id": 1,
+                "content": "http://lingvodoc.ispras.ru/objects/userblobs/dialeqt_dictionary/22/1/Argut - Aruna.sqlite"
+            },
+            {
+                "name": "Jazator - A. I. Sadukov.sqlite",
+                "client_id": 22,
+                "data_type": "dialeqt_dictionary",
+                "object_id": 2,
+                "content": "http://lingvodoc.ispras.ru/objects/userblobs/dialeqt_dictionary/22/2/Jazator - A. I. Sadukov.sqlite"
+            }
+        ]
+
+## List of published dictionaries [/published_dictionaries]
+Can be grouped by languages or by organisations.
+If there are no flags for grouping answer the same as with dictionary list with filtering by status 'Published'.
+(Organizations are not ready now)
+
+### published dictionaries list [POST]
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "group_by_org": true
+        }
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "group_by_lang": true
+        }
+        
++ Response 200 (application/json; charset=UTF-8)
+
+        [
+            {
+                "object_id": 1,
+                "locale_exist": false,
+                "client_id": 31,
+                "translation": "Саамский язык",
+                "dicts":[
+                    {
+                        "object_id": 1,
+                        "status": "Published",
+                        "additional_metadata": null,
+                        "client_id": 144,
+                        "parent_client_id": 31,
+                        "translation": "Словарь к Евангелию Генетца 1878",
+                        "parent_object_id": 1,
+                        "translation_string": "Словарь к Евангелию Генетца 1878"
+                    }
+                ],
+                
+                "translation_string": "Саамский язык",
+                "contains": [
+                    {
+                        "object_id": 1,
+                        "locale_exist": false,
+                        "client_id": 33,
+                        "translation": "Кильдинский диалект",
+                        "dicts": [
+                            {
+                                "object_id": 1,
+                                "status": "Published",
+                                "additional_metadata": null,
+                                "client_id": 105,
+                                "parent_client_id": 33,
+                                "translation": "Кильдинский диалект (воронинский говор) саамского языка ",
+                                "parent_object_id": 1
+                                "translation_string": "Кильдинский диалект (воронинский говор) саамского языка ",
+                            }
+                        ],
+                    
+                        "translation_string": "Кильдинский диалект"
+                    }
+                ]
+            }
+        ]
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "group_by_org": true,
+            "group_by_lang": true
+        }
+        
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "dictionaries":[
+                {
+                    "object_id": 1,
+                    "status": "Published",
+                    "additional_metadata": null,
+                    "client_id": 57,
+                    "parent_client_id": 33,
+                    "translation": "Словарь ямальского диалекта тундрового наречия ненецкого языка",
+                    "parent_object_id": 25,
+                    "translation_string": "Словарь ямальского диалекта тундрового наречия ненецкого языка"
+                },
+                {
+                    "object_id": 1,
+                    "status": "Published",
+                    "additional_metadata": null,
+                    "client_id": 58,
+                    "parent_client_id": 33,
+                    "translation": "Словарь канинского диалекта тундрового наречия ненецкого языка",
+                    "parent_object_id": 24,
+                    "translation_string": "Словарь канинского диалекта тундрового наречия ненецкого языка"
+                }
+            ]
+        }
+
+
+
+## User list [/users]
+### get [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "users": [
+                {
+                    "login": "modis",
+                    "name": "Администратор",
+                    "id": 1,
+                    "intl_name": "System Administrator"
+                },
+                {
+                    "login": "erle",
+                    "name": "Пчелинцев Д.",
+                    "id": 3,
+                    "intl_name": "erle"
+                },
+                {
+                    "login": "pustogachevaon",
+                    "name": "Пустогачева О. М.",
+                    "id": 4,
+                    "intl_name": "pustogachevaon"
+                },
+                {
+                    "login": "julianor",
+                    "name": "Норманская Юлия Викторовна",
+                    "id": 5,
+                    "intl_name": "julianor"
+                }
+            ]
+        }
+
+
+## Dictionary info [/dictionary/{client_id}/{object_id}/info]
+Statistic on users, who contributed to this dictionary: how much of each entity type, created by them, were approved
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        
+        {
+            "count": [
+                {
+                "name": "Анна Владимировна Дыбо",
+                "login": "adybo",
+                "id": 2,
+                "counters": {
+                    "lexical_entry": 485,
+                    "Translation": 485,
+                    "Transcription": 367,
+                    "Paradigm word": 544,
+                    "Praat markup": 0,
+                    "Paradigm translation": 544,
+                    "Etymology": 0,
+                    "Paradigm Praat markup": 0,
+                    "Paradigm sound": 558,
+                    "Word": 485,
+                    "Paradigm transcription": 544,
+                    "Sound": 378
+                },
+                "intl_name": "adybo"
+                }
+            ]
+        }
+
+
+## Perspective info [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/info]
+
+Statistic on users, who contributed to this perspective: how much of each entity type, created by them, were approved
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        
+        {
+            "count": [
+                {
+                "name": "Анна Владимировна Дыбо",
+                "login": "adybo",
+                "id": 2,
+                "counters": {
+                    "lexical_entry": 485,
+                    "Translation": 485,
+                    "Transcription": 367,
+                    "Paradigm word": 544,
+                    "Praat markup": 0,
+                    "Paradigm translation": 544,
+                    "Etymology": 0,
+                    "Paradigm Praat markup": 0,
+                    "Paradigm sound": 558,
+                    "Word": 485,
+                    "Paradigm transcription": 544,
+                    "Sound": 378
+                },
+                "intl_name": "adybo"
+                }
+            ]
+        }
+        
+## Organization list [/organization_list]
+No organizations yet
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Organization create [/organization]
+No organizations yet
+### create [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "name": "name",
+            "about": "about"
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "organization_id": 1
+        }
+        
+## Organization main methods [/organization/{organization_id}]
+
++ Parameters
+    + organization_id: 1  (number) - ID of the client in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "name": "name",
+            "about": "about",
+            "organization_id": 1
+        }
+
+### edit [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "name": "name",
+            "about": "about"
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+### delete [DELETE]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+
+## Dictionary perspectives [/dictionary/{client_id}/{object_id}/perspectives]
+List of perspectives of this dictionary
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
+            "perspectives": [
+                {
+                    "object_id": 1,
+                    "translation_string": "Lingvodoc 0.98 etymology dictionary",
+                    "translation": "Этимологический словарь из Lingvodoc 0.98",
+                    "parent_object_id": 1,
+                    "client_id": 67,
+                    "marked_for_deletion": false,
+                    "parent_client_id": 67,
+                    "is_template": false,
+                    "additional_metadata": null,
+                    "status": "Hidden"
+                }
+            ]
+        }
+
+## Convert markup [/convert/markup]
+ Converting praat markup to elan.
+ Needs ids of user blob, where praat markup is.
+ Returns elan markup.
+### convert [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        
+        {
+            "client_id": 78,
+            "object_id": 161
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ANNOTATION_DOCUMENT AUTHOR=\"TextGridTools\" DATE=\"2016-03-02T16:24:43+00:00\" FORMAT=\"2.7\" VERSION=\"2.7\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://www.mpi.nl/tools/elan/EAFv2.7.xsd\">\n<HEADER MEDIA_FILE=\"\" TIME_UNITS=\"milliseconds\">\n\t<PROPERTY NAME=\"lastUsedAnnotationId\">0</PROPERTY>\n</HEADER>\n<TIME_ORDER>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts1\" TIME_VALUE=\"194\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts2\" TIME_VALUE=\"247\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts3\" TIME_VALUE=\"248\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts4\" TIME_VALUE=\"416\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts5\" TIME_VALUE=\"542\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts6\" TIME_VALUE=\"544\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts7\" TIME_VALUE=\"584\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts8\" TIME_VALUE=\"585\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts9\" TIME_VALUE=\"820\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts10\" TIME_VALUE=\"1060\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts11\" TIME_VALUE=\"1140\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts12\" TIME_VALUE=\"1143\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts13\" TIME_VALUE=\"1311\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts14\" TIME_VALUE=\"1312\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts15\" TIME_VALUE=\"1424\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts16\" TIME_VALUE=\"1426\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts17\" TIME_VALUE=\"1493\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts18\" TIME_VALUE=\"1496\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts19\" TIME_VALUE=\"1679\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts20\" TIME_VALUE=\"1767\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts21\" TIME_VALUE=\"1822\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts22\" TIME_VALUE=\"1827\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts23\" TIME_VALUE=\"1988\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts24\" TIME_VALUE=\"1989\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts25\" TIME_VALUE=\"2110\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts26\" TIME_VALUE=\"2116\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts27\" TIME_VALUE=\"2168\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts28\" TIME_VALUE=\"2172\"/>\n\t<TIME_SLOT TIME_SLOT_ID=\"ts29\" TIME_VALUE=\"2364\"/>\n</TIME_ORDER>\n<TIER DEFAULT_LOCALE=\"en\" LINGUISTIC_TYPE_REF=\"default-lt\" TIER_ID=\"\u0431\u0435\u0433\u0430\u0442\u044c\">\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a1\" TIME_SLOT_REF1=\"ts1\" TIME_SLOT_REF2=\"ts2\">\n\t\t<ANNOTATION_VALUE>k</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a2\" TIME_SLOT_REF1=\"ts3\" TIME_SLOT_REF2=\"ts4\">\n\t\t<ANNOTATION_VALUE>o</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a3\" TIME_SLOT_REF1=\"ts4\" TIME_SLOT_REF2=\"ts5\">\n\t\t<ANNOTATION_VALUE>\u0283</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a4\" TIME_SLOT_REF1=\"ts6\" TIME_SLOT_REF2=\"ts7\">\n\t\t<ANNOTATION_VALUE>t</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a5\" TIME_SLOT_REF1=\"ts8\" TIME_SLOT_REF2=\"ts9\">\n\t\t<ANNOTATION_VALUE>a\u0301</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a6\" TIME_SLOT_REF1=\"ts10\" TIME_SLOT_REF2=\"ts11\">\n\t\t<ANNOTATION_VALUE>k</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a7\" TIME_SLOT_REF1=\"ts12\" TIME_SLOT_REF2=\"ts13\">\n\t\t<ANNOTATION_VALUE>o</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a8\" TIME_SLOT_REF1=\"ts14\" TIME_SLOT_REF2=\"ts15\">\n\t\t<ANNOTATION_VALUE>f</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a9\" TIME_SLOT_REF1=\"ts16\" TIME_SLOT_REF2=\"ts17\">\n\t\t<ANNOTATION_VALUE>t</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a10\" TIME_SLOT_REF1=\"ts18\" TIME_SLOT_REF2=\"ts19\">\n\t\t<ANNOTATION_VALUE>a\u0301</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a11\" TIME_SLOT_REF1=\"ts20\" TIME_SLOT_REF2=\"ts21\">\n\t\t<ANNOTATION_VALUE>k</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a12\" TIME_SLOT_REF1=\"ts22\" TIME_SLOT_REF2=\"ts23\">\n\t\t<ANNOTATION_VALUE>o</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a13\" TIME_SLOT_REF1=\"ts24\" TIME_SLOT_REF2=\"ts25\">\n\t\t<ANNOTATION_VALUE>\u0283</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a14\" TIME_SLOT_REF1=\"ts26\" TIME_SLOT_REF2=\"ts27\">\n\t\t<ANNOTATION_VALUE>t</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n<ANNOTATION>\n\t<ALIGNABLE_ANNOTATION ANNOTATION_ID=\"a15\" TIME_SLOT_REF1=\"ts28\" TIME_SLOT_REF2=\"ts29\">\n\t\t<ANNOTATION_VALUE>a\u0301</ANNOTATION_VALUE>\n\t</ALIGNABLE_ANNOTATION>\n</ANNOTATION>\n</TIER>\n<LINGUISTIC_TYPE GRAPHIC_REFERENCES=\"false\" LINGUISTIC_TYPE_ID=\"default-lt\" TIME_ALIGNABLE=\"true\"/>\n<LOCALE COUNTRY_CODE=\"US\" LANGUAGE_CODE=\"en\"/>\n</ANNOTATION_DOCUMENT>"
+        }
+
+
+## Level one entity methods [/leveloneentity/{client_id}/{object_id}]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "object_id": 2777,
+            "contains": [
+                {
+                    "locale_id": null
+                    "entity_type": null
+                    "additional_metadata": null
+                    "content": null
+                    "client_id": 65
+                    "level": "publishleveloneentity"
+                    "published": false
+                    "parent_object_id": 1
+                    "marked_for_deletion": false
+                    "object_id": 5
+                    "contains": null
+                    "parent_client_id": 70
+                },
+            ],
+            "additional_metadata": "{"hash": "67f2a8267e00e4e6814b96e4fc721583e5d5263037807aaee61152e7"}",
+            "entity_type": "Sound",
+            "content": "http://lingvodoc.ispras.ru/objects/leveloneentity/sound/70/2777/бабушка.wav",
+            "parent_client_id": 70,
+            "client_id": 70,
+            "level": "leveloneentity",
+            "parent_object_id": 1
+        }
+### delete [DELETE]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Create lexical entry [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+
+### create [POST]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "client_id":132,
+            "object_id":1234
+        }
+
+## Create lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entries]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+
+### create [POST]
+
++ Request  (application/json; charset=UTF-8)
+
+        {
+            "count": 3
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        [
+            {
+                "client_id":132,
+                "object_id":1
+            },
+            {
+                "client_id":132,
+                "object_id":2
+            },
+            {
+                "client_id":132,
+                "object_id":3
+            }
+        ]
+        
+## Create level one entity [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
+    + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
+
+### create [POST]
+
++ Request  (application/json; charset=UTF-8)
+
+        {
+            "additional_metadata":"{\"json\":\"encoded\", \"or\":\"empty\"}",
+            "entity_type":"Word",
+            "locale_id":1,
+            "content":"some content"
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "client_id":132,
+            "object_id":1
+        }
+        
+## Create level two entity [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{level_one_client_id}/{level_one_object_id}/leveltwoentity]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
+    + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
+    + level_one_client_id: 1  (number) - ID of the client in the form of an integer
+    + level_one_object_id: 1  (number) - ID of the lexical one entity in the form of an integer
+
+### create [POST]
+
++ Request  (application/json; charset=UTF-8)
+
+        {
+            "additional_metadata":"{\"json\":\"encoded\", \"or\":\"empty\"}",
+            "entity_type":"Sound markup",
+            "locale_id":1,
+            "content":"some content"
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "client_id":132,
+            "object_id":1
+        }
+
+## Create entities bulk [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/entities]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+
+### create [POST]
+
++ Request  (application/json; charset=UTF-8)
+
+        [
+            {
+                "level":"leveloneentity",
+                "locale_id":1,
+                "entity_type":"Word",
+                "additional_metadata":"{}",
+                "parent_client_id":"346",
+                "parent_object_id":"1",
+                "data_type":"text",
+                "content":"some content"
+             },{
+                "level":"leveltwoentity",
+                "locale_id":1,
+                "entity_type":"Sound markup",
+                "additional_metadata":"{}",
+                "parent_client_id":"346",
+                "parent_object_id":"2",
+                "data_type":"markup ",
+                "content":"markup"
+             },{
+                "level":"groupingentity",
+                "locale_id":1,
+                "entity_type":"Etymology",
+                "additional_metadata":"{}",
+                "parent_client_id":"346",
+                "parent_object_id":"1",
+                "data_type":"etymology",
+                "content":"tag"
+            }
+        ]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        [
+            {
+                "client_id":132,
+                "object_id":1
+            },
+            {
+                "client_id":132,
+                "object_id":2
+            },
+            {
+                "client_id":132,
+                "object_id":3
+            }
+        ]
+
+## View lexical entry  [/lexical_entry/{client_id}/{object_id}]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the lexical entry in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+                "lexical_entry": {
+                    "marked_for_deletion": false
+                    "object_id": 207
+                    "contains": [
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1043,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1044,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1045,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1046,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Word",
+                            "additional_metadata": null,
+                            "content": "",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 207,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1043,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Transcription",
+                            "additional_metadata": null,
+                            "content": "ʨaɕváq",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 657,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1044,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Translation",
+                            "additional_metadata": null,
+                            "content": "бочка, кадка",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1107,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1045,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Sound",
+                            "additional_metadata": {
+                                    "hash": "cf748707af77bd0095537b3ae76f6477af539dec93ee7496bdc8a874"
+                                },
+                            "content": "http://lingvodoc.ispras.ru/objects/leveloneentity/sound/217/2064/115_бочка_1.wav",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 2064,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1046,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                    ],
+                    "came_from": null
+                    "parent_client_id": 217
+                    "client_id": 217
+                    "level": "lexicalentry"
+                    "published": true
+                    "parent_object_id": 1
+                }
+        }
+
+
+## View lexical entry alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{client_id}/{object_id}]
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the lexical entry in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+                "lexical_entry": {
+                    "marked_for_deletion": false
+                    "object_id": 207
+                    "contains": [
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1043,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1044,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1045,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1046,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Word",
+                            "additional_metadata": null,
+                            "content": "",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 207,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1043,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Transcription",
+                            "additional_metadata": null,
+                            "content": "ʨaɕváq",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 657,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1044,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Translation",
+                            "additional_metadata": null,
+                            "content": "бочка, кадка",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1107,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1045,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Sound",
+                            "additional_metadata": {
+                                    "hash": "cf748707af77bd0095537b3ae76f6477af539dec93ee7496bdc8a874"
+                                },
+                            "content": "http://lingvodoc.ispras.ru/objects/leveloneentity/sound/217/2064/115_бочка_1.wav",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 2064,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1046,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                    ],
+                    "came_from": null
+                    "parent_client_id": 217
+                    "client_id": 217
+                    "level": "lexicalentry"
+                    "published": true
+                    "parent_object_id": 1
+                }
+        }
+
+
+## Level one entity methods alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{client_id}/{object_id}]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
+    + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the level one entity in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "locale_id": 1,
+            "marked_for_deletion": false,
+            "object_id": 2777,
+            "contains": [
+                {
+                    "locale_id": null
+                    "entity_type": null
+                    "additional_metadata": null
+                    "content": null
+                    "client_id": 65
+                    "level": "publishleveloneentity"
+                    "published": false
+                    "parent_object_id": 1
+                    "marked_for_deletion": false
+                    "object_id": 5
+                    "contains": null
+                    "parent_client_id": 70
+                },
+            ],
+            "additional_metadata": "{"hash": "67f2a8267e00e4e6814b96e4fc721583e5d5263037807aaee61152e7"}",
+            "entity_type": "Sound",
+            "content": "http://lingvodoc.ispras.ru/objects/leveloneentity/sound/70/2777/бабушка.wav",
+            "parent_client_id": 70,
+            "client_id": 70,
+            "level": "leveloneentity",
+            "parent_object_id": 1
+        }
+### delete [DELETE]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+        
+
+## Grouping entity methods [/group_entity/{client_id}/{object_id}]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "tag": "1419345768354",
+            "connections": [
+                {
+                    "client_id": 69
+                    "object_id": 2
+                },
+                {
+                    "client_id": 70
+                    "object_id": 47
+                },
+                {
+                    "client_id": 75
+                    "object_id": 1
+                },
+            ],
+            "entity_type": "Etymology"
+        }
+### delete [DELETE]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Level two entity methods [/leveltwoentity/{client_id}/{object_id}]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "locale_id": 1,
+            "parent_client_id": 58,
+            "parent_object_id": 372,
+            "entity_type": "Praat markup",
+            "content": "http://lingvodoc.ispras.ru/objects/leveltwoentity/markup/58/114/бабушка_БИН.TextGrid"
+        }
+        
+### delete [DELETE]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+        
+## Level two entity methods alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{leveloneentity_client_id}/{leveloneentity_object_id}/leveltwoentity/{client_id}/{object_id}]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
+    + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
+    + leveloneentity_client_id: 1  (number) - ID of the client in the form of an integer
+    + leveloneentity_object_id: 1  (number) - ID of the level one entity in the form of an integer
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the level two entity in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "locale_id": 1,
+            "parent_client_id": 58,
+            "parent_object_id": 372,
+            "entity_type": "Praat markup",
+            "content": "http://lingvodoc.ispras.ru/objects/leveltwoentity/markup/58/114/бабушка_БИН.TextGrid"
+        }
+        
+### delete [DELETE]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+        
+        
+## Words connected by grouping entity [/lexical_entry/{client_id}/{object_id}/connected]
+
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the object in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "words": [
+                    {
+                        "lexical_entry": {
+                            "marked_for_deletion": false,
+                            "object_id": 250,
+                            "contains": ["was too big to insert here"],
+                            "came_from": null,
+                            "parent_client_id": 69,
+                            "client_id": 69,
+                            "level": "lexicalentry",
+                            "published": true,
+                            "parent_object_id": 1
+                        },
+                },
+                    {
+                        "lexical_entry": {
+                            "marked_for_deletion": false,
+                            "object_id": 170,
+                            "contains": ["was too big to insert here"],
+                            "came_from": null,
+                            "parent_client_id": 75,
+                            "client_id": 75,
+                            "level": "lexicalentry",
+                            "published": true,
+                            "parent_object_id": 1
+                        }
+                }
+            ]
+        }
+        
+## Words connected by grouping entity alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{client_id}/{object_id}/connected]
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the lexical entry in the form of an integer
+
+### view [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "words": [
+                    {
+                        "lexical_entry": {
+                            "marked_for_deletion": false,
+                            "object_id": 250,
+                            "contains": ["was too big to insert here"],
+                            "came_from": null,
+                            "parent_client_id": 69,
+                            "client_id": 69,
+                            "level": "lexicalentry",
+                            "published": true,
+                            "parent_object_id": 1
+                        },
+                },
+                    {
+                        "lexical_entry": {
+                            "marked_for_deletion": false,
+                            "object_id": 170,
+                            "contains": ["was too big to insert here"],
+                            "came_from": null,
+                            "parent_client_id": 75,
+                            "client_id": 75,
+                            "level": "lexicalentry",
+                            "published": true,
+                            "parent_object_id": 1
+                        }
+                }
+            ]
+        }
+
+## Add word connection [/group_entity]
+
+### add [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "entity_type": "Etymology",
+            "connections":[
+                {
+                    "client_id": 42,
+                    "object_id": 73
+                },
+                {
+                    "client_id": 73,
+                    "object_id": 42
+                    
+                }
+            ]
+        }
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "tag": "if this field is empty tag will be generated automatically",
+            "entity_type": "Etymology",
+            "connections":[
+                {
+                    "client_id": 42,
+                    "object_id": 73
+                },
+                {
+                    "client_id": 73,
+                    "object_id": 42
+                    
+                }
+            ]
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+        
+## Add word connection alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{client_id}/{object_id}/connect]
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the lexical entry in the form of an integer
+
+### add [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "entity_type": "Etymology",
+            "connections":[
+                {
+                    "client_id": 42,
+                    "object_id": 73
+                },
+                {
+                    "client_id": 73,
+                    "object_id": 42
+                    
+                }
+            ]
+        }
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "tag": "if this field is empty tag will be generated automatically",
+            "entity_type": "Etymology",
+            "connections":[
+                {
+                    "client_id": 42,
+                    "object_id": 73
+                },
+                {
+                    "client_id": 73,
+                    "object_id": 42
+                    
+                }
+            ]
+        }
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+        
+## Approve entities [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/approve]
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+
+
+### Approve entities [PATCH]
+Approves bunch of entities, given their ids and types
++ Request (application/json; charset=UTF-8)
+
+        {
+            "entities":[
+                {
+                    "type":"leveloneentity",
+                    "client_id":346,
+                    "object_id":5
+                },
+                {
+                    "type":"leveltwoentity",
+                    "client_id":346,
+                    "object_id":4
+                },
+                {
+                    "type":"groupingentity",
+                    "client_id":346,
+                    "object_id":3
+                }
+            ]
+        }
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+### Approve entities [DELETE]
+Disapproves bunch of entities, given their ids and types
++ Request (application/json; charset=UTF-8)
+
+        {
+            "entities":[
+                {
+                    "type":"leveloneentity",
+                    "client_id":346,
+                    "object_id":5
+                },
+                {
+                    "type":"leveltwoentity",
+                    "client_id":346,
+                    "object_id":4
+                },
+                {
+                    "type":"groupingentity",
+                    "client_id":346,
+                    "object_id":3
+                }
+            ]
+        }
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Approve all [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/approve_all]
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+
+
+### Approve all [PATCH]
+Approves all entities of perspective
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Move lexical entry [/lexical_entry/{client_id}/{object_id}/move]
++ Parameters
+    + client_id: 1  (number) - ID of the client in the form of an integer
+    + object_id: 1  (number) - ID of the lexical entry in the form of an integer
+
+
+
+### move [PATCH]
+Moves every entity from one lexical entry to another. Sets moved_to field in first lexical_entry
+DANGER: if real_delete set to true entities from first lexical entries gets deleted from database if they are the same as in second lexical entry
++ Request (application/json; charset=UTF-8)
+
+        {
+            "client_id":1,
+            "object_id":1, 
+            "real_delete": false}
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Move lexical entries [/move/lexical_entries]
+
+### move [PATCH]
+For every item in list moves entities from every lexical entry from lexical_entries to lexical entry specified by client_id and object_id
+DANGER: double entities deleted from database
+
++ Request (application/json; charset=UTF-8)
+
+        
+        {   "real_delete":true/false,
+            "move_list":[
+                {
+                    "client_id": 34,
+                    "object_id:: 645
+                    "lexical_entries": [
+                        {
+                            "client_id": 43,
+                            "object_id": 334
+                        }
+                    ]
+                },
+                {
+                    "client_id": 547,
+                    "object_id:: 23
+                    "lexical_entries": [
+                        {
+                            "client_id": 346,
+                            "object_id": 13
+                        },
+                        {
+                            "client_id": 24,
+                            "object_id": 134
+                        },
+                        {
+                            "client_id": 16,
+                            "object_id": 13
+                        }
+                    ]
+                }
+          ]
+        }
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Basic search [/basic_search{?can_add_tags,leveloneentity,perspective_client_id,perspective_object_id}]
+Searches by text in level one entity. Gives error if search string is too short.  
+
++ Parameters
+    + can_add_tags: "true" (text)(optional) -  leaves lexical entries that user can add grouping entity
+    + leveloneentity: "sometext" (text) - string for searching
+    + perspective_client_id: 1 (number)(optional) - searches only in perspective by this client_id and object_id. Needs both or none.
+    + perspective_object_id: 1 (number)(optional) - searches only in perspective by this client_id and object_id. Needs both or none.
+       
+
+### search [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        [
+            {
+                "lexical_entry": {
+                    "marked_for_deletion": false
+                    "object_id": 207
+                    "contains": [
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1043,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1044,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1045,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": null,
+                            "entity_type": null,
+                            "additional_metadata": null,
+                            "content": null,
+                            "client_id": 216,
+                            "level": "publishleveloneentity",
+                            "published": false,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1046,
+                            "contains": null,
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Word",
+                            "additional_metadata": null,
+                            "content": "",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 207,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1043,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Transcription",
+                            "additional_metadata": null,
+                            "content": "ʨaɕváq",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 657,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1044,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Translation",
+                            "additional_metadata": null,
+                            "content": "бочка, кадка",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 1107,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1045,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Sound",
+                            "additional_metadata": {
+                                    "hash": "cf748707af77bd0095537b3ae76f6477af539dec93ee7496bdc8a874"
+                                },
+                            "content": "http://lingvodoc.ispras.ru/objects/leveloneentity/sound/217/2064/115_бочка_1.wav",
+                            "client_id": 217,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 207,
+                            "marked_for_deletion": false,
+                            "object_id": 2064,
+                            "contains": [
+                                {
+                                    "locale_id": null,
+                                    "entity_type": null,
+                                    "additional_metadata": null,
+                                    "content": null,
+                                    "client_id": 216,
+                                    "level": "publishleveloneentity",
+                                    "published": false,
+                                    "parent_object_id": 207,
+                                    "marked_for_deletion": false,
+                                    "object_id": 1046,
+                                    "contains": null,
+                                    "parent_client_id": 217
+                                },
+                            ],
+                            "parent_client_id": 217
+                        },
+                    ],
+                    "came_from": null
+                    "parent_client_id": 217
+                    "client_id": 217
+                    "level": "lexicalentry"
+                    "published": true
+                    "parent_object_id": 1
+                },
+                "client_id": 217,
+                "translation_string": "Lingvodoc 0.98 etymology dictionary",
+                "translation": "Этимологический словарь из Lingvodoc 0.98",
+                "parent_translation_string": "Чулымский словарь от К.П. Сергеевой",
+                "parent_translation": "Среднечулымский язык (мелетский диалект, К.П. Сергеева)",
+                "marked_for_deletion": false,
+                "object_id": 1,
+                "is_template": false,
+                "parent_object_id": 1,
+                "parent_client_id": 217,
+                "status": "Published"
+            }
+        ]
+        
++ Response 400 (application/json; charset=UTF-8)
+
+        {
+            "error": "search is too short"
+        }
+        
+## Advanced search [/advanced_search]
+Searches by many search strings.
+Searches by uniting search results for every seacrh string in searchstrings parameter.
+If entity type is not specified it searches in every entity type.
+For every searchstring it can unite or intersect result according to search_by_or param (if it is true, then it unites, if false then intersects, if none, then searches by whole string)
+If perspective params is specified, then it searches only in specified perspectives.
+If adopted param is true then it searches only in lexical entries, where words are adopted (have "заим." in one of entity contents), if false - only in not adopted, if none - do not filter by adoption
+adopted_type param used to specify where to look for "заим."
+If count param is true then it only gives count of found words and not words itself
+with_etimology params filters by presence of grouping tag
+
+### search [POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "searchstrings":[
+                {
+                    "searchstring":"ghdfdhdf",
+                    "search_by_or":false,
+                    "entity_type":"Translation"
+                },
+                {
+                "searchstring":"бабуш"
+                }
+            ],
+            "adopted":false,
+            "adopted_type":"Word",
+            "count":true,
+            "with_etimology":true
+        }
+        
++ Response 200 (application/json; charset=UTF-8)
+
+        [
+            {
+                "lexical_entry": {
+                    "marked_for_deletion": false,
+                    "object_id": 124,
+                    "contains": [
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Sound",
+                            "additional_metadata": {
+                            "hash": "d4a00fc19ecdf5a44fb94bf1e7203fff2763bf9ea2f0e318da8a9cc0"
+                            },
+                            "content": "http://lingvodoc.ispras.ru/objects/leveloneentity/sound/136/3092/бабушка-ВЛА.wav",
+                            "client_id": 136,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 124,
+                            "marked_for_deletion": false,
+                            "object_id": 3092,
+                            "contains": [],
+                            "parent_client_id": 136
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Sound",
+                            "additional_metadata": {
+                            "hash": "fd1f532412be1092fe6b50c6c045b028bc20724dbfe5ea8dddf5b7a6"
+                            },
+                            "content": "http://lingvodoc.ispras.ru/objects/leveloneentity/sound/136/3091/бабушка-КФИ.wav",
+                            "client_id": 136,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 124,
+                            "marked_for_deletion": false,
+                            "object_id": 3091,
+                            "contains": [],
+                            "parent_client_id": 136
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Word",
+                            "additional_metadata": null,
+                            "content": "баб",
+                            "client_id": 136,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 124,
+                            "marked_for_deletion": false,
+                            "object_id": 124,
+                            "contains": [],
+                            "parent_client_id": 136
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Transcription",
+                            "additional_metadata": null,
+                            "content": "bab",
+                            "client_id": 136,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 124,
+                            "marked_for_deletion": false,
+                            "object_id": 1049,
+                            "contains": [],
+                            "parent_client_id": 136
+                        },
+                        {
+                            "locale_id": 1,
+                            "entity_type": "Translation",
+                            "additional_metadata": null,
+                            "content": "бабушка",
+                            "client_id": 136,
+                            "level": "leveloneentity",
+                            "published": true,
+                            "parent_object_id": 124,
+                            "marked_for_deletion": false,
+                            "object_id": 1974,
+                            "contains": [],
+                            "parent_client_id": 136
+                        },
+                    ],
+                    "came_from": null,
+                    "parent_client_id": 136,
+                    "client_id": 136,
+                    "level": "lexicalentry",
+                    "published": true,
+                    "parent_object_id": 1
+                    },
+                "client_id": 136,
+                "translation_string": "Lingvodoc 0.98 etymology dictionary",
+                "translation": "Этимологический словарь из Lingvodoc 0.98",
+                "parent_translation_string": "Ижемский диалект коми-зырянского языка, говор с. Белоярск Приуральского р-на ЯНАО",
+                "parent_translation": "Ижемский диалект коми-зырянского языка, говор с. Белоярск Приуральского р-на ЯНАО",
+                "marked_for_deletion": false,
+                "object_id": 1,
+                "is_template": false,
+                "parent_object_id": 1,
+                "parent_client_id": 136,
+                "status": "Published"
+            }
+        ]
+
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "searchstrings":[
+                {
+                    "searchstring":"ghdfdhdf",
+                    "search_by_or":true
+                },
+                {
+                "searchstring":"бабуш",
+                "search_by_or":false
+                }
+            ],
+            "perspectives":[
+                {
+                    "client_id":136,
+                    "object_id":1
+                },
+                {
+                "client_id":94,
+                "object_id":1
+                }
+            ]
+        }
+        
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "count": 123
+        }
+        
+## Metadata search [/meta_search{?searchstring,searchtype}]
+Searches by text in metadata of entity of given type.
+Seems to not work right now, always gives empty list
+
++ Parameters
+    + searchstring: sometext (text) - string for searching
+    + searchtype: entity_type (text) - searches only in this type, if specified
+       
+
+### search [GET]
+
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
+
+## Get translations [/translations]
+Gives translation according to locale_id in cookie.
+When no translations available gives fallback translation.
+### view [POST]
++ Request (application/json; charset=UTF-8)
+
+        ["Word", "Transcription"]
+
++ Response 200  (application/json; charset=UTF-8)
+
+        [
+            {
+                "translation": "Word",
+                "translation_string": "Word"
+            },
+            {
+                "translation": "Transcription",
+                "translation_string": "Transcription"
+            }
+        ]
+
+
++ Response 200  (application/json; charset=UTF-8)
+
+        [
+            {
+                "translation": "Word",
+                "translation_string": "Word"
+            },
+            {
+                "translation": "Transcription",
+                "translation_string": "Transcription"
+            }
+        ]
+
+
++ Response 200  (application/json; charset=UTF-8)
+
+        [
+            {
+                "translation": "Wort",
+                "translation_string": "Word"
+            },
+            {
+                "translation": "Transkription",
+                "translation_string": "Transcription"
+            }
+        ]
+
+
++ Response 200  (application/json; charset=UTF-8)
+
+        [
+            {
+                "translation": "Слово",
+                "translation_string": "Word"
+            },
+            {
+                "translation": "Транскрипция",
+                "translation_string": "Transcription"
+            }
+        ]
+
+## Set translation [/translations/set]
+Set translation according to locale_id in request. If no locale_id specified in request, uses locale_id from cookie.
+### set [POST]
++ Request (application/json; charset=UTF-8)
+
+        {
+            "translation_string": "Word",
+            "translation": "Слово"
+        }
++ Request (application/json; charset=UTF-8)
+
+        {
+            "translation_string": "Word",
+            "translation": "Wort",
+            "locale_id": 3
+        }
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+        }
+        
+## Check before dictionary convert [/convert_check]
+Looks, if there are same dictionaries (maybe different version) in the system
+blob ids specifies blob with sql file, parent ids specifies language for dictionary
+### check[POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "blob_client_id":346,
+            "blob_object_id":1,
+            "parent_client_id":1,
+            "parent_object_id":1
+        }
+
++ Response 200  (application/json; charset=UTF-8)
+
+        [
+            {
+                "is_template": true,
+                "location": {
+                    "type": "location",
+                    "content": {
+                    "lat": 58.676937672586924,
+                    "lng": 81.5350341796875
+                    },
+                },
+                "additional_metadata": "{"location": {"type": "location", "content": {"lat": 58.676937672586924, "lng": 81.5350341796875}}, "authors": {"type": "authors", "content": "\u041d.\u041b.\u0424\u0435\u0434\u043e\u0442\u043e\u0432\u0430, \u041d.\u0412.\u0414\u0443\u0431\u043e\u0440\u043e\u0432\u0441\u043a\u0430\u044f, \u042e.\u0412.\u041d\u043e\u0440\u043c\u0430\u043d\u0441\u043a\u0430\u044f, \u0420.\u0418.\u0418\u0434\u0440\u0438\u0441\u043e\u0432"}, "info": {"type": "list", "content": [{"info": {"type": "blob", "content": {"object_id": 4, "client_id": 167}}}, {"info": {"type": "blob", "content": {"object_id": 3, "client_id": 167}}}]}}",
+                "client_id": 81,
+                "translation_string": "Lingvodoc 0.98 etymology dictionary",
+                "object_id": 1,
+                "parent_object_id": 1,
+                "marked_for_deletion": false,
+                "translation": "Этимологический словарь из Lingvodoc 0.98",
+                "info": {
+                    "type": "list",
+                    "content": [
+                        {
+                            "info": {
+                                "type": "blob",
+                                "content": {
+                                    "name": "Социолингвистическая информация о нарымском диалекте селькупского языка.pdf",
+                                    "client_id": 167,
+                                    "data_type": "pdf",
+                                    "object_id": 4,
+                                    "content": "http://lingvodoc.ispras.ru/objects/userblobs/pdf/167/4/Социолингвистическая информация о нарымском диалекте селькупского языка.pdf"
+                                },
+                            },
+                        },
+                    1:  {
+                            "info": {
+                                "type": "blob",
+                                "content": {
+                                    "name": "Фонологическая система нарымского диалекта селькупского языка.pdf",
+                                    "client_id": 167,
+                                    "data_type": "pdf",
+                                    "object_id": 3,
+                                    "content": "http://lingvodoc.ispras.ru/objects/userblobs/pdf/167/3/Фонологическая система нарымского диалекта селькупского языка.pdf"
+                                },
+                            },
+                        },
+                    ],
+                },
+                "parent_client_id": 81,
+                "status": "Hidden"
+            }
+        ]
+        
+## Dictionary convert [/convert]
+blob ids specifies blob with sql file, parent ids specifies language for dictionary
+If dictionary and perspective are specified - updates existing perspective
+If only dictionary is specified - creates new perspective in that dictionary
+If nor dictionary, nor perspective are specified - creates new dictionary and perspective
+### convert[POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "blob_client_id":346,
+            "blob_object_id":1,
+            "parent_client_id":1,
+            "parent_object_id":1,
+            "dictionary_object_id":1,
+            "dictionary_client_id":1,
+            "perspective_object_id":1,
+            "perspective_client_id":1
+        }
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "blob_client_id":346,
+            "blob_object_id":1,
+            "parent_client_id":1,
+            "parent_object_id":1,
+            "dictionary_object_id":1,
+            "dictionary_client_id":1
+        }
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "blob_client_id":346,
+            "blob_object_id":1,
+            "parent_client_id":1,
+            "parent_object_id":1
+        }
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+            "status": "Your dictionary is being converted. Wait 5-15 minutes and you will see new dictionary in your dashboard."
+        }
+        
+## Dictionary merge [/merge/dictionaries]
+Dictionaries must be of the same language, specified by language ids in request
+if client_id and object_id is specified - will not create new dict.
+Dictionaries will be merged in one, specified by those ids.
+It's name won't be changed, but translation_string is required nevertheless.
+### merge[POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "blob_object_id":1,
+            "language_client_id":1,
+            "language_object_id":1,
+            "translation_string":"name for new dict",
+            "dictionaries":[
+                {
+                    "client_id":67,
+                    "object_id":1
+                },
+                {
+                    "client_id":66,
+                    "object_id":1
+                }
+            ]
+        }
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "client_id":351,
+            "object_id":4,
+            "blob_object_id":1,
+            "language_client_id":1,
+            "language_object_id":1,
+            "translation_string":"name for new dict",
+            "dictionaries":[
+                {
+                    "client_id":67,
+                    "object_id":1
+                },
+                {
+                    "client_id":66,
+                    "object_id":1
+                }
+            ]
+        }
+
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+            "object_id": 42,
+            "client_id": 42
+        }
+        
+## Perspective merge [/merge/perspectives]
+Perspectives must be of the same dictionary, specified by dictionary ids in request
+if client_id and object_id is specified - will not create new persp.
+Perspectives will be merged in one, specified by those ids.
+It's name won't be changed, but translation_string is required nevertheless.
+for every field in fields if new_type_name is specified, then all entities of old type of this field will change entity type automatically.
+### merge[POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "blob_object_id":1,
+            "dictionary_client_id":1,
+            "dictionary_object_id":1,
+            "translation_string":"name for new persp",
+            "perspectives":[
+                {
+                    "client_id":67,
+                    "object_id":1,
+                    "fields":[
+                        {
+                            contains: [],
+                            entity_type: "Word",
+                            level: "leveloneentity"
+                            new_type_name: "Слово"
+                        }
+                    ]
+                },
+                {
+                    "client_id":66,
+                    "object_id":1,
+                    "fields":[
+                        {
+                            contains: [],
+                            entity_type: "Слово",
+                            level: "leveloneentity"
+                        }
+                    ]
+                }
+            ]
+        }
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "client_id":351,
+            "object_id":4
+            "blob_object_id":1,
+            "dictionary_client_id":1,
+            "dictionary_object_id":1,
+            "translation_string":"name for new persp",
+            "perspectives":[
+                {
+                    "client_id":67,
+                    "object_id":1,
+                    "fields":[
+                        {
+                            contains: [],
+                            entity_type: "Word",
+                            level: "leveloneentity"
+                            new_type_name: "Слово"
+                        }
+                    ]
+                },
+                {
+                    "client_id":66,
+                    "object_id":1,
+                    "fields":[
+                        {
+                            contains: [],
+                            entity_type: "Слово",
+                            level: "leveloneentity"
+                        }
+                    ]
+                }
+            ]
+        }
+
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+            "object_id": 42,
+            "client_id": 42
+        }
+        
+## Lexical entries merge suggestions [/merge/suggestions]
+### check[POST]
+
++ Request (application/json; charset=UTF-8)
+
+        {
+            "entity_type_primary":"Translation",
+            "entity_type_secondary":"Transcription",
+            "threshold":0.6,
+            "levenstein":3,
+            "client_id":351,
+            "object_id":1
+        }
+
+
++ Response 200  (application/json; charset=UTF-8)
+
+        [
+            {
+                "confidence": 0.6666666666666666,
+                "suggestion": [
+                    {
+                        "lexical_entry_object_id": 17,
+                        "lexical_entry_client_id": 66
+                    },
+                    {
+                        "lexical_entry_object_id": 42,
+                        "lexical_entry_client_id": 67
+                    }
+                ]
+            },
+            {
+                "confidence": 0.6666666666666666,
+                "suggestion": [
+                    {
+                        "lexical_entry_object_id": 36,
+                        "lexical_entry_client_id": 66
+                    },
+                    {
+                        "lexical_entry_object_id": 11,
+                        "lexical_entry_client_id": 67
+                    }
+                ]
+            },
+            {
+                "confidence": 1,
+                "suggestion": [
+                    {
+                        "lexical_entry_object_id": 41,
+                        "lexical_entry_client_id": 66
+                    },
+                    {
+                        "lexical_entry_object_id": 105,
+                        "lexical_entry_client_id": 67
+                    }
+                ]
+            },
+            {
+                "confidence": 1,
+                "suggestion": [
+                    {
+                        "lexical_entry_object_id": 39,
+                        "lexical_entry_client_id": 66
+                    },
+                    {
+                        "lexical_entry_object_id": 209,
+                        "lexical_entry_client_id": 67
+                    }
+                ]
+            }
+        ]
+        
+
+## All lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/all{?sort_by,start_from,count}]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + sort_by: "Word" (text)(optional) -  by what column should be sorted
+    + start_from: 0 (number) -  where to start
+    + count:200 (number) -  how many to return
+
+
+### view[GET]
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+            "lexical_entries": [{
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "bkrmwpshnh",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 6,
+                    "object_id": 5,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 6,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "cpnltteyzj",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 7,
+                    "object_id": 6,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 7,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "dgjomjdnhy",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 19,
+                    "object_id": 18,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 19,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "ficbqfhrzv",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 16,
+                    "object_id": 15,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 16,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "hjwsojizle",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 13,
+                    "object_id": 12,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 13,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "hxjzmtthxp",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 10,
+                    "object_id": 9,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 10,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "iyornljisb",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 8,
+                    "object_id": 7,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 8,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "jdavwdmuqe",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 4,
+                    "object_id": 3,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 4,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "jlsodufkah",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 11,
+                    "object_id": 10,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 11,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "kgrrdjafqz",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 3,
+                    "object_id": 2,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 3,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "kxmzpclrns",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 2,
+                    "object_id": 1,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 2,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "ozidqyatiz",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 9,
+                    "object_id": 8,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 9,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "upmedjsbli",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 17,
+                    "object_id": 16,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 17,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "uyzrljiirs",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 11,
+                    "published": false,
+                    "parent_object_id": 1,
+                    "object_id": 1,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 1,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "wiymxkmzhs",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 12,
+                    "object_id": 11,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 12,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "ylbrqdpzzp",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 14,
+                    "object_id": 13,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 14,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "ylbrqdpzzp",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 18,
+                    "object_id": 17,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 18,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "zeomhyqhwl",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 15,
+                    "object_id": 14,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 15,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "zlswwsfjrc",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Word",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 5,
+                    "object_id": 4,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 5,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }, {
+                "parent_object_id": 1,
+                "came_from": null,
+                "level": "lexicalentry",
+                "published": false,
+                "contains": [{
+                    "content": "wajysnmtvb",
+                    "locale_id": 1,
+                    "level": "leveloneentity",
+                    "contains": null,
+                    "marked_for_deletion": false,
+                    "entity_type": "Translation",
+                    "client_id": 12,
+                    "published": false,
+                    "parent_object_id": 20,
+                    "object_id": 19,
+                    "additional_metadata": null,
+                    "parent_client_id": 10
+                }],
+                "object_id": 20,
+                "marked_for_deletion": false,
+                "parent_client_id": 10,
+                "client_id": 10
+            }]
+        }
+
+## All lexical entries count [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/all_count]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+
+### view[GET]
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+            "count": 10
+        }
+
+
+## Published lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/published{?sort_by,start_from,count}]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + sort_by: "Word" (text)(optional) -  by what column should be sorted
+    + start_from: 0 (number) -  where to start
+    + count:200 (number) -  how many to return
+
+
+### view[GET]
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+            "lexical_entries": [
+              {
+                "object_id": 7,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 6,
+                    "parent_object_id": 7,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "cpnltteyzj",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 19,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 18,
+                    "parent_object_id": 19,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "dgjomjdnhy",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 13,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 12,
+                    "parent_object_id": 13,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "hjwsojizle",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 11,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 10,
+                    "parent_object_id": 11,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "jlsodufkah",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 3,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 2,
+                    "parent_object_id": 3,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "kgrrdjafqz",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 9,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 8,
+                    "parent_object_id": 9,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "ozidqyatiz",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 17,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 16,
+                    "parent_object_id": 17,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "upmedjsbli",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 1,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 11,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 1,
+                    "parent_object_id": 1,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "uyzrljiirs",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 15,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 14,
+                    "parent_object_id": 15,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "zeomhyqhwl",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              },
+              {
+                "object_id": 5,
+                "parent_object_id": 1,
+                "client_id": 10,
+                "contains": [
+                  {
+                    "client_id": 12,
+                    "contains": [],
+                    "parent_client_id": 10,
+                    "published": true,
+                    "additional_metadata": null,
+                    "object_id": 4,
+                    "parent_object_id": 5,
+                    "entity_type": "Word",
+                    "marked_for_deletion": false,
+                    "locale_id": 1,
+                    "content": "zlswwsfjrc",
+                    "level": "leveloneentity"
+                  }
+                ],
+                "marked_for_deletion": false,
+                "published": true,
+                "parent_client_id": 10,
+                "came_from": null,
+                "level": "lexicalentry"
+              }
+            ]
+        }
+
+
+## Published lexical entries count [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/published_count]
+
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
+    + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
+    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+
+
+### view[GET]
+
++ Response 200  (application/json; charset=UTF-8)
+
+        {
+            "count": 10
+        }
+
+        

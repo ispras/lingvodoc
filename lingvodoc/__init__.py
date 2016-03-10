@@ -132,18 +132,18 @@ def configure_routes(config):
     config.add_route(name='organizations', pattern='/organizations')
 
     # API #GET
-    config.add_route(name='organization_list', pattern='/organization_list')  # TODO: test
+    config.add_route(name='organization_list', pattern='/organization_list')  # TODO: ?test
 
 
     # API #POST
     # Creating organization
     config.add_route(name='create_organization', pattern='/organization',
-                     factory='lingvodoc.models.OrganizationAcl')  # TODO: test
+                     factory='lingvodoc.models.OrganizationAcl')  # ?TODO: ?test
 
     # API #GET && PUT && DELETE
     # Gets/puts info about organization
     config.add_route(name='organization', pattern='/organization/{organization_id}',
-                     factory='lingvodoc.models.OrganizationAcl')  # TODO: test
+                     factory='lingvodoc.models.OrganizationAcl')  # TODO: ?test
 
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create and modify perspectives)
@@ -218,7 +218,7 @@ def configure_routes(config):
     # list perspectives
     config.add_route(name='perspectives',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspectives')  # TODO: test
+                             'perspectives')  # tested TODO: recheck
 
     # API #GET && POST && DELETE
     # Gets, creates and deletes roles related to dictionary (for now: who can create entities, view entities, create
@@ -266,14 +266,14 @@ def configure_routes(config):
     # API #POST
     # should be done with standard form enctype="multipart/form-data"
     config.add_route(name="upload_user_blob",
-                     pattern="/blob")  # TODO: test
+                     pattern="/blob")
 
     # seems to be redundant
     # not anymore
     # API #GET
     # no params, returns file
     config.add_route(name="get_user_blob",
-                    pattern="/blobs/{client_id}/{object_id}")  # TODO: test
+                    pattern="/blobs/{client_id}/{object_id}")
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",

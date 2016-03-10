@@ -202,13 +202,16 @@ class ConvertedDictionaryTest(MyTestCase):
         import hashlib
         from time import sleep
         import json
-        filename = 'dictionary/test_dict_convert.sqlite'
+        import os
+        from werkzeug.utils import secure_filename
+        real_filename = 'dictionary/test_dict_convert.sqlite'
+        filename = secure_filename(real_filename)
         user_id = self.signup_common()
         self.login_common()
         root_ids = self.create_language('Корень')
-        first_hash = hashlib.md5(open(filename, 'rb').read()).hexdigest()
+        first_hash = hashlib.md5(open(real_filename, 'rb').read()).hexdigest()
         response = self.app.post('/blob', params = {'data_type':'dialeqt_dictionary'},
-                                 upload_files=([('blob', filename)]))
+                                 upload_files=([('blob', real_filename)]))
         self.assertEqual(response.status_int, HTTPOk.code)
         blob_ids = response.json
         response = self.app.get('/blobs/%s/%s' % (blob_ids['client_id'],
@@ -252,9 +255,9 @@ class ConvertedDictionaryTest(MyTestCase):
                                    persp_ids['client_id'],
                                    persp_ids['object_id']))
         # Uncomment to create json
-        # json_file = open('dictionary/test_dict_convert.json', 'w')
-        # json_file.write(json.dumps(response.json))
-        # json_file.close()
+        json_file = open('dictionary/test_dict_convert.json', 'w')
+        json_file.write(json.dumps(response.json))
+        json_file.close()
 
         json_file = open('dictionary/test_dict_convert.json', 'r')
         correct_answer = json.loads(json_file.read())
