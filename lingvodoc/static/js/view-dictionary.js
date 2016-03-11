@@ -33095,6 +33095,7 @@ angular.module("ViewDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
     };
     $scope.paused = true;
     $scope.annotation = null;
+    $scope.markup = params.markup;
     $scope.playPause = function() {
         if ($scope.wavesurfer) {
             $scope.wavesurfer.playPause();

@@ -272,7 +272,7 @@
                             <input type="checkbox"
                                    ng-checked="field.translatable"
                                    ng-model="perspective.fields[$index].translatable"> <translatable>translatable</translatable></label>
-
+3877466
 
                         <select class="form-control"
                                 ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)"

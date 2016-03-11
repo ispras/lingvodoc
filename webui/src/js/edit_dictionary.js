@@ -561,6 +561,7 @@ angular.module('EditDictionaryModule', ['ui.bootstrap'])
             }
         };
 
+        $scope.markup = params.markup;
         $scope.paused = true;
         $scope.annotation = null;
 
