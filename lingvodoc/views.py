@@ -2459,7 +2459,7 @@ def dictionaries_list(request):
     # TODO: fix
     dictionaries = list()
     # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
-    dicts = dicts.order_by("client_id", "object_id")
+    dicts = dicts.order_by(Dictionary.client_id, Dictionary.object_id)
     for dct in dicts:
         path = request.route_url('dictionary',
                                  client_id=dct.client_id,
@@ -2782,6 +2782,7 @@ def create_object(request, content, obj, data_type, filename, json_input=True):
 
 @view_config(route_name='upload_user_blob', renderer='json', request_method='POST')
 def upload_user_blob(request):
+    print('imahere')
     variables = {'auth': authenticated_userid(request)}
     response = dict()
     filename = request.POST['blob'].filename
@@ -3951,8 +3952,10 @@ def set_translations(request):
     translation_string = req['translation_string']
     translation = req['translation']
     client_id = request.authenticated_userid
-
-    add_translation_to_translation_string(locale_id=find_locale_id(request),
+    locale_id = req.get('locale_id')
+    if not locale_id:
+        locale_id=find_locale_id(request)
+    add_translation_to_translation_string(locale_id=locale_id,
                                           translation=translation,
                                           translation_string=translation_string,
                                           client_id=client_id)
@@ -3966,11 +3969,21 @@ def admin_translations(request):
     req = request.json_body
     translation_string = req['translation_string']
     translation = req['translation']
-    add_translation_to_translation_string_ui(locale_id=find_locale_id(request),
+    locale_id = req.get('locale_id')
+    if not locale_id:
+        locale_id=find_locale_id(request)
+    add_translation_to_translation_string_ui(locale_id=locale_id,
                                              translation=translation,
                                              translation_string=translation_string)
     request.response.status = HTTPOk.code
     return {}
+
+
+@view_config(route_name='super_admin_translations', renderer='json', request_method='POST', permission='suchverypermission')
+def add_many_translations(request):
+
+    return {}
+
 
 
 
@@ -4592,8 +4605,8 @@ def cache_clients():
     return clients_to_users_dict
 
 
-@view_config(route_name='perspective_info', renderer='json', request_method='GET', permission='view')
-def perspective_info(request):
+@view_config(route_name='perspective_info', renderer='json', request_method='GET')
+def perspective_info(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -4657,25 +4670,50 @@ def perspective_info(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='dictionary_info', renderer='json', request_method='GET', permission='view')
-def dictionary_info(request):
+@view_config(route_name='dictionary_info', renderer='json', request_method='GET')
+def dictionary_info(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    starting_date = request.GET.matchdict.get('starting_date')
+    starting_date = request.GET.get('starting_date')
     if starting_date:
         starting_date = datetime.datetime(starting_date)
-    ending_date = request.GET.matchdict.get('ending_date')
+    ending_date = request.GET.get('ending_date')
     if ending_date:
         ending_date = datetime.datetime(ending_date)
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    result = []
     if dictionary:
         if not dictionary.marked_for_deletion:
             clients_to_users_dict = cache_clients()
+            # todo: in one iteration
+
+            types = []
+            result = []
+            for perspective in dictionary.dictionaryperspective:
+                path = request.route_url('perspective_fields',
+                                         dictionary_client_id=perspective.parent_client_id,
+                                         dictionary_object_id=perspective.parent_object_id,
+                                         perspective_client_id=perspective.client_id,
+                                         perspective_id=perspective.object_id
+                                         )
+                subreq = Request.blank(path)
+                subreq.method = 'GET'
+                subreq.headers = request.headers
+                resp = request.invoke_subrequest(subreq)
+                fields = resp.json["fields"]
+                for field in fields:
+                    entity_type = field['entity_type']
+                    if entity_type not in types:
+                        types.append(entity_type)
+                    if 'contains' in field:
+                        for field2 in field['contains']:
+                            entity_type = field2['entity_type']
+                            if entity_type not in types:
+                                types.append(entity_type)
+
             for perspective in dictionary.dictionaryperspective:
                 for lex in perspective.lexicalentry:
-                    user_counter(lex.track(True), result, starting_date, ending_date, clients_to_users_dict)
+                    result = user_counter(lex.track(True), result, starting_date, ending_date, types, clients_to_users_dict)
 
             response['count'] = result
             request.response.status = HTTPOk.code
