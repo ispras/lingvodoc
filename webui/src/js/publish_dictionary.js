@@ -330,6 +330,8 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
 
         $scope.paused = true;
         $scope.annotation = null;
+        $scope.markup = params.markup;
+
 
         $scope.playPause = function() {
             if ($scope.wavesurfer) {

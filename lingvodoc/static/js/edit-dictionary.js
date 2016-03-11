@@ -33307,6 +33307,7 @@ angular.module("EditDictionaryModule", [ "ui.bootstrap" ]).service("dictionarySe
             });
         }
     };
+    $scope.markup = params.markup;
     $scope.paused = true;
     $scope.annotation = null;
     $scope.playPause = function() {
