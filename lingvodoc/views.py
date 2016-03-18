@@ -2078,7 +2078,9 @@ def signin(request):  # TODO: find out if it used anywhere. And the get rid of i
         response = dict()
         response['client_id'] = client.id
         request.response.status = HTTPOk.code
-        return response
+        # request.response.headers = headers
+        # return response
+        return HTTPOk(headers=headers, json_body=response)
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
