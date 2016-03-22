@@ -73,6 +73,11 @@
             <div class="col-md-3 ">
                 <a href="#" ng-href="{{ markup.content }}" class="btn btn-default"><translatable>Download source</translatable></a>
             </div>
+
+            <div class="col-md-3 ">
+                <a href="#" ng-href="{{ sound.content }}" class="btn btn-default" download="{{ sound.content.substring(sound.content.lastIndexOf('/')+1) }}"><translatable>Download audio</translatable></a>
+            </div>
+
         </div>
 
     </div>

@@ -33127,6 +33127,7 @@ angular.module("PublishDictionaryModule", [ "ui.bootstrap" ]).service("dictionar
     $scope.paused = true;
     $scope.annotation = null;
     $scope.markup = params.markup;
+    $scope.sound = params.sound;
     $scope.playPause = function() {
         if ($scope.wavesurfer) {
             $scope.wavesurfer.playPause();

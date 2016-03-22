@@ -331,6 +331,8 @@ angular.module('PublishDictionaryModule', ['ui.bootstrap'])
         $scope.paused = true;
         $scope.annotation = null;
         $scope.markup = params.markup;
+        $scope.sound = params.sound;
+
 
 
         $scope.playPause = function() {
