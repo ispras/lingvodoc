@@ -26,14 +26,9 @@ angular.module('HomeModule', ['ui.bootstrap'], function($rootScopeProvider) {
 
         var getPublishedPerspectives = function(dictionary) {
             dictionaryService.getDictionaryPerspectives(dictionary).then(function(perspectives) {
-
-                var published = [];
-                _.forEach(perspectives, function(perspective) {
-                    if (perspective.status.toUpperCase() == 'published'.toUpperCase()) {
-                        published.push(perspective);
-                    }
+                dictionary.perspectives =_.filter(perspectives, function(perspective) {
+                    return perspective.status.toUpperCase() == 'published'.toUpperCase() || perspective.status.toUpperCase() == 'Limited access'.toUpperCase();
                 });
-                dictionary.perspectives = published;
             }, function() {
 
             });
