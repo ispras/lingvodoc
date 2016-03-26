@@ -71,6 +71,7 @@
                         <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Hidden')"><translatable>Hidden</translatable></a></li>
                         <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'WiP')"><translatable>WiP</translatable></a></li>
                         <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Published')"><translatable>Published</translatable></a></li>
+                        <li><a href="#" ng-click="setDictionaryStatus(dictionary, 'Limited access')"><translatable>Limited access</translatable></a></li>
                     </ul>
                 </div>
 
@@ -112,10 +113,11 @@
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="#"
-                                   ng-click="setPerspectiveStatus(dictionary, perspective, 'Hidden')"><translatable>Hidden</translatable></a></li>
+                            <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Hidden')"><translatable>Hidden</translatable></a></li>
                             <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'WiP')"><translatable>WiP</translatable></a></li>
                             <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Published')"><translatable>Published</translatable></a>
+                            <li><a href="#" ng-click="setPerspectiveStatus(dictionary, perspective, 'Limited access')"><translatable>Limited access</translatable></a></li>
+
                             </li>
                         </ul>
                     </div>
@@ -272,7 +274,6 @@
                             <input type="checkbox"
                                    ng-checked="field.translatable"
                                    ng-model="perspective.fields[$index].translatable"> <translatable>translatable</translatable></label>
-3877466
 
                         <select class="form-control"
                                 ng-if="field.data_type == 'sound' && (field.contains && field.contains.length > 0 || perspective.fields[$index]._containsEnabled)"
