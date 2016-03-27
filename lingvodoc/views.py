@@ -1682,13 +1682,13 @@ def edit_dictionary_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
-
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
@@ -1717,13 +1717,14 @@ def edit_dictionary_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
 
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
@@ -1774,12 +1775,14 @@ def delete_dictionary_roles(request):
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
 
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
+
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
@@ -1811,13 +1814,14 @@ def delete_dictionary_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
 
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
@@ -1918,13 +1922,14 @@ def edit_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
 
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
@@ -1953,13 +1958,14 @@ def edit_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
 
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
@@ -2016,13 +2022,14 @@ def delete_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
 
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
@@ -2054,13 +2061,14 @@ def delete_perspective_roles(request):
                     group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                              subject_object_id=object_id,
                                                              subject_client_id=client_id).first()
+                    adm_group = DBSession.query(Group).filter_by(base_group_id=base.id, subject_override=True).first()
 
                     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
                     userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
                     permitted = False
-                    if userlogged in group.users:
+                    if userlogged in group.users or userlogged in adm_group.users:
                         permitted = True
                     if not permitted:
                         for org in userlogged.organizations:
