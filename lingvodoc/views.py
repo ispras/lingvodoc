@@ -2205,7 +2205,7 @@ def participated_clients_rec(entry):
 def participated_clients_list(dictionary, request):
     clients = [dictionary.client_id]
     for persp in dictionary.dictionaryperspective:
-        if persp.state.lowercase() == 'published':
+        if persp.state.lowercase() == 'published' or 'limited access':
             path = request.route_url('lexical_entries_published',
                                      dictionary_client_id = dictionary.client_id,
                                      dictionary_object_id = dictionary.object_id,
@@ -2276,8 +2276,11 @@ def published_dictionaries_list(request):
     if 'group_by_lang' in req:
         group_by_lang = req['group_by_lang']
     dicts = DBSession.query(Dictionary)
-    dicts = dicts.filter(func.lower(Dictionary.state)==func.lower('published')).join(DictionaryPerspective)\
-        .filter(func.lower(DictionaryPerspective.state) == func.lower('published'))
+    dicts = dicts.filter(or_(func.lower(Dictionary.state)==func.lower('published'),
+                         func.lower(Dictionary.state)==func.lower('limited access'))
+                         ).join(DictionaryPerspective)\
+        .filter(or_(func.lower(DictionaryPerspective.state) == func.lower('published'),
+                func.lower(DictionaryPerspective.state) == func.lower('limited access')))
     if group_by_lang and not group_by_org:
         return group_by_languages(dicts, request)
     if not group_by_lang and group_by_org:
@@ -3514,6 +3517,13 @@ def lexical_entries_published(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
 
+    #TODO: that's very ugly hack, need to fix it
+    preview_mode = False
+    if request.has_permission('preview') and "view:lexical_entries_and_entities:" + client_id + ":" + object_id not in request.effective_principals:
+        log.debug("PREVIEW MODE")
+        preview_mode = True
+
+
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
@@ -3547,11 +3557,19 @@ def lexical_entries_published(request):
                 result.append(entry.track(True))
             response['lexical_entries'] = list(result)
 
+            #TODO: that's very ugly hack, need to fix it
+            if preview_mode:
+                if int(start_from) > 0 or int(count) > 20:
+                    for i in response['lexical_entries']:
+                        for j in i['contains']:
+                            j['content'] = 'Entity hidden: you \nhave only demo access'
+
             request.response.status = HTTPOk.code
             return response
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
+
 
 
 @view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')

@@ -1,5 +1,5 @@
 
-from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS, Everyone
+from pyramid.security import Allow, Deny, Authenticated,  ALL_PERMISSIONS, Everyone
 
 
 from sqlalchemy.orm import (
@@ -867,11 +867,16 @@ def acl_by_groups(object_id, client_id, subject):
             if persp:
                 if persp.state == 'Published':
                     acls += [(Allow, Everyone, 'view')]
+                if persp.state == 'Limited access':
+                    lim_access_marker = True
+                    #acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
         elif subject in ['dictionary', 'other dictionary subjects']:
             dict = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
             if dict:
                 if dict.state == 'Published':
                     acls += [(Allow, Everyone, 'view')]
+                if dict.state == 'Limited access':
+                    lim_access_marker = True
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
@@ -883,6 +888,9 @@ def acl_by_groups(object_id, client_id, subject):
             group_name = base_group.action + ":" + base_group.subject \
                      + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
+    #TODO: that's very ugly hack, need to fix it
+    if lim_access_marker:
+        acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
     log.debug("ACLS: %s", acls)
     return acls
 

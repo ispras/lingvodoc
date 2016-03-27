@@ -413,11 +413,11 @@ def configure_routes(config):
 
     config.add_route(name='lexical_entries_published', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/published',
-                     factory='lingvodoc.models.PerspectivePublishAcl')  # filter not ready
+                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')  # filter not ready
 
     config.add_route(name='lexical_entries_published_count', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                                '/perspective/{perspective_client_id}/{perspective_id}/published_count',
-                     factory='lingvodoc.models.PerspectivePublishAcl')  # filter not ready
+                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')  # filter not ready
     # made only return list of ids, because another route fol full info exist
 
     # API #GET, DELETE
