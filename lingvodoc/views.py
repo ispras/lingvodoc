@@ -239,202 +239,76 @@ def basic_search(request):  # TODO: test
 
 
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
-def advanced_search(request):  # TODO: test
+def advanced_search(request):
     req = request.json
-    perspectives = req.get('perspectives')
     searchstrings = req.get('searchstrings') or []
-    adopted = req.get('adopted')
-    adopted_type = req.get('adopted_type') or 'Word'
-    with_etimology = req.get('with_etimology')
-    count = req.get('count') or False
-    results = []
-    results_cursor = DBSession.query(LexicalEntry)\
-        .join(DictionaryPerspective, and_(LexicalEntry.parent_client_id == DictionaryPerspective.client_id,
-                                      LexicalEntry.parent_object_id == DictionaryPerspective.object_id))\
-        .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-                               LevelOneEntity.parent_object_id == LexicalEntry.object_id))\
-        .join(PublishLevelOneEntity,
-              and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-               PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-        .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.marked_for_deletion == False,
-                DictionaryPerspective.state == 'Published')
-    if perspectives:
-        perspectives = [(o["client_id"], o["object_id"]) for o in perspectives]
-        results_cursor = results_cursor\
-            .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(perspectives))
-    if searchstrings == []:
-        request.response.status = HTTPBadRequest.code
-        return {'error': 'No search'}
-    length_search = [len(o['searchstring']) for o in searchstrings if len(o['searchstring']) >= 1]
-    # if length_search == []:
-    #     request.response.status = HTTPBadRequest.code
-    #     return {'error': 'search is too short'}
-    if adopted is not None:
-        if adopted:
-            sub = results_cursor.subquery()
-            sublexes = aliased(LexicalEntry, sub)
-            results_cursor = DBSession.query(sublexes)\
-        .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
-                               LevelOneEntity.parent_object_id == sublexes.object_id))\
-        .join(PublishLevelOneEntity,
-              and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-               PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-        .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.content.like('%заим.%'),
-                LevelOneEntity.entity_type == adopted_type)
-        else:
-            sub = results_cursor.subquery()
-            sublexes = aliased(LexicalEntry, sub)
-            wronglexes = DBSession.query(sublexes)\
-        .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
-                               LevelOneEntity.parent_object_id == sublexes.object_id))\
-        .join(PublishLevelOneEntity,
-              and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-               PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-        .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.content.like('%заим.%'),
-                LevelOneEntity.entity_type == adopted_type)
-            results_cursor = results_cursor.except_(wronglexes)
-    if with_etimology is not None:
-        grouping_tags = DBSession.query(GroupingEntity.content,func.count(tuple_(LexicalEntry.client_id, LexicalEntry.object_id)) )\
-            .join(PublishGroupingEntity,
-              and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
-               PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
-            .join(LexicalEntry,  and_(GroupingEntity.parent_client_id == LexicalEntry.client_id,
-                               GroupingEntity.parent_object_id == LexicalEntry.object_id))\
-            .filter(PublishGroupingEntity.marked_for_deletion == False,
-                GroupingEntity.marked_for_deletion == False)\
-            .group_by(GroupingEntity.content)\
-            .having(func.count(tuple_(LexicalEntry.client_id, LexicalEntry.object_id)) >= 2).all()
-        grouping_tags = [o.content for o in grouping_tags]
-        if with_etimology:
-            sub = results_cursor.subquery()
-            sublexes = aliased(LexicalEntry, sub)
-            results_cursor = DBSession.query(sublexes)\
-        .join(GroupingEntity,  and_(GroupingEntity.parent_client_id == sublexes.client_id,
-                               GroupingEntity.parent_object_id == sublexes.object_id))\
-        .join(PublishGroupingEntity,
-              and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
-               PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
-        .filter(PublishGroupingEntity.marked_for_deletion == False,
-                GroupingEntity.marked_for_deletion == False,
-                GroupingEntity.content.in_(grouping_tags))
-        else:
-            sub = results_cursor.subquery()
-            sublexes = aliased(LexicalEntry, sub)
-            wronglexes = DBSession.query(sublexes)\
-        .join(GroupingEntity,  and_(GroupingEntity.parent_client_id == sublexes.client_id,
-                               GroupingEntity.parent_object_id == sublexes.object_id))\
-        .join(PublishGroupingEntity,
-              and_(PublishGroupingEntity.entity_client_id == GroupingEntity.client_id,
-               PublishGroupingEntity.entity_object_id == GroupingEntity.object_id))\
-        .filter(PublishGroupingEntity.marked_for_deletion == False,
-                GroupingEntity.marked_for_deletion == False,
-                GroupingEntity.content.in_(grouping_tags))
-            results_cursor = results_cursor.except_(wronglexes)
 
-    sub = results_cursor.subquery()
-    sublexes = aliased(LexicalEntry, sub)
-    new_results_cursor = DBSession.query(LexicalEntry).filter(False)
-    for search in searchstrings:
-        new_results_cursor = new_results_cursor.subquery().select()
-        search_by_or = search.get('search_by_or')
-        searchstring = search.get('searchstring')
-        entity_type = search.get('entity_type')
-        if searchstring:
-            if len(searchstring) >= 1:
-                searchstring = searchstring.split(' ')
-                print(searchstring)
-                if entity_type:
-                    if search_by_or:
-                        new_results_cursor = DBSession.query(sublexes)\
-                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
-                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
-                    .join(PublishLevelOneEntity,
-                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                            LevelOneEntity.marked_for_deletion == False,
-                            or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]),
-                            LevelOneEntity.entity_type == entity_type).union_all(new_results_cursor)
-                        for e in new_results_cursor:
-                            print(e)
-                        # .filter(or_(*[MyTable.my_column.like(name) for name in foo]))
-                    else:
-                        new_results_cursor = DBSession.query(sublexes)\
-                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
-                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
-                    .join(PublishLevelOneEntity,
-                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.marked_for_deletion == False,
-                            and_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]),
-                            LevelOneEntity.entity_type == entity_type).union_all(new_results_cursor)
-                        for e in new_results_cursor:
-                            print(e)
-                else:
-                    if search_by_or:
-                        new_results_cursor = DBSession.query(sublexes)\
-                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
-                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
-                    .join(PublishLevelOneEntity,
-                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.marked_for_deletion == False,
-                            or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring])).union_all(new_results_cursor)
-                        for e in new_results_cursor:
-                            print(e)
-                        what = DBSession.query(LevelOneEntity)\
-                    .filter(
-                            or_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring]))
-                        for e in what:
-                            print(e.client_id, e.object_id)
-                        # .filter(or_(*[MyTable.my_column.like(name) for name in foo]))
-                    else:
-                        new_results_cursor = DBSession.query(sublexes)\
-                    .join(LevelOneEntity,  and_(LevelOneEntity.parent_client_id == sublexes.client_id,
-                                           LevelOneEntity.parent_object_id == sublexes.object_id))\
-                    .join(PublishLevelOneEntity,
-                          and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-                           PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id))\
-                    .filter(PublishLevelOneEntity.marked_for_deletion == False,
-                LevelOneEntity.marked_for_deletion == False,
-                            and_(*[LevelOneEntity.content.like('%'+name+'%') for name in searchstring])).union_all(new_results_cursor)
-                        for e in new_results_cursor:
-                            print(e)
-    results_cursor = new_results_cursor
-    results_cursor = results_cursor.group_by(LexicalEntry)
-    # return {'result': str(results_cursor.statement)}
-    if count:
-        request.response.status = HTTPOk.code
-        return{'count': results_cursor.count()}
-    entries = set()
-    for item in results_cursor:
-        entries.add(item)
-    for entry in entries:
-        if not entry.marked_for_deletion:
-            result = dict()
-            result['lexical_entry'] = entry.track(True)
-            result['client_id'] = entry.parent_client_id
-            result['object_id'] = entry.parent_object_id
-            perspective_tr = entry.parent.get_translation(request)
-            result['translation_string'] = perspective_tr['translation_string']
-            result['translation'] = perspective_tr['translation']
-            result['is_template'] = entry.parent.is_template
-            result['status'] = entry.parent.state
-            result['marked_for_deletion'] = entry.parent.marked_for_deletion
-            result['parent_client_id'] = entry.parent.parent_client_id
-            result['parent_object_id'] = entry.parent.parent_object_id
-            dict_tr = entry.parent.parent.get_translation(request)
-            result['parent_translation_string'] = dict_tr['translation_string']
-            result['parent_translation'] = dict_tr['translation']
-            results.append(result)
+    def make_expression_component(searchstring):
+        if not searchstring['searchstring']:
+            raise HTTPBadRequest
+        search_parts = searchstring['searchstring'].split()
+        search_expression = LevelOneEntity.content.like('%' + search_parts[0] + '%')
+        for part in search_parts[1:]:
+            search_expression = or_(search_expression, LevelOneEntity.content.like('%' + part + '%'))
+        if 'entity_type' in searchstring:
+            print(searchstring['entity_type'])
+            search_expression = and_(search_expression, LevelOneEntity.entity_type == searchstring['entity_type'])
+        return search_expression, searchstring['search_by_or']
+
+    if not searchstrings:
+        request.response.status = HTTPBadRequest.code
+        return {'error': 'The query string couldn\'t be empty'}
+
+    try:
+        search_expression, to_do_or = make_expression_component(searchstrings[0])
+    except HTTPBadRequest:
+        request.response.status = HTTPBadRequest.code
+        return {'error': 'The query string couldn\'t be empty'}
+    for search_string in searchstrings[1:]:
+        if to_do_or:
+            operator_func = or_
+        else:
+            operator_func = and_
+        tmp_expression, to_do_or = make_expression_component(search_string)
+        search_expression = operator_func(search_expression, tmp_expression)
+
+    results_cursor = DBSession.query(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
+        .distinct(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
+        .filter(search_expression)
+    tmp_list = list()
+    for item in results_cursor.all():
+        tmp_list.append(item)
+
+    results_cursor = DBSession.query(LexicalEntry) \
+        .options(joinedload('leveloneentity').joinedload('leveltwoentity').subqueryload('publishleveltwoentity')) \
+        .options(joinedload('leveloneentity').subqueryload('publishleveloneentity')) \
+        .options(joinedload('groupingentity').subqueryload('publishgroupingentity')) \
+        .options(subqueryload('publishleveloneentity')) \
+        .options(subqueryload('publishleveltwoentity')) \
+        .options(subqueryload('publishgroupingentity')) \
+        .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(tmp_list))
+    result_list = list()
+
+    results = list()
+    for item in results_cursor.all():
+        tmp_result = dict()
+        tmp_result['lexical_entry'] = item.track(True)
+        tmp_result['client_id'] = item.parent_client_id
+        tmp_result['object_id'] = item.parent_object_id
+        perspective_tr = item.parent.get_translation(request)
+        tmp_result['translation_string'] = perspective_tr['translation_string']
+        tmp_result['translation'] = perspective_tr['translation']
+        tmp_result['is_template'] = item.parent.is_template
+        tmp_result['status'] = item.parent.state
+        tmp_result['marked_for_deletion'] = item.parent.marked_for_deletion
+        tmp_result['parent_client_id'] = item.parent.parent_client_id
+        tmp_result['parent_object_id'] = item.parent.parent_object_id
+        dict_tr = item.parent.parent.get_translation(request)
+        tmp_result['parent_translation_string'] = dict_tr['translation_string']
+        tmp_result['parent_translation'] = dict_tr['translation']
+        results.append(tmp_result)
     request.response.status = HTTPOk.code
+
     return results
 
 
