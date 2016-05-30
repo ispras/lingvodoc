@@ -31,10 +31,6 @@ def configure_routes(config):
     # registration page
     config.add_route(name='signup', pattern='/signup')
 
-    # internal #POST
-    # validation for registration parameters: unique email, unique login
-    config.add_route(name='signup/validate', pattern='/signup/validate/{param}')
-
     # web-view #GET
     # login page
     config.add_route(name='login', pattern='/login')  # tested
@@ -104,9 +100,6 @@ def configure_routes(config):
 
     # web-view
     config.add_route(name='new_dictionary', pattern='/create_dictionary')
-
-    # web-view
-    config.add_route(name='edit_dictionary_properties', pattern='/dictionary/{client_id}/{object_id}/edit')
 
     # API #POST
     # Creating dictionary
@@ -356,11 +349,6 @@ def configure_routes(config):
     # like
     config.add_route(name='entity_metadata_search', pattern='/meta_search')  # TODO: test
 
-    # API #GET
-    # like
-    config.add_route(name='basic_search_old', pattern='/basic_search_old') # TODO: remove
-
-
     # API #POST
     # no parameters needed.
     # ids are returned.
@@ -551,13 +539,6 @@ def configure_routes(config):
     config.add_route(name='dictionary_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}')  # TODO: do it
     config.add_route(name='perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_id}')  # TODO: just do it
-
-    # API #GET
-    # params:
-    # object_type = <type>
-    # client_id = <client_id>
-    # object_id = <object_id>
-    config.add_route(name='get_object_info', pattern='/info')
 
     # API #GET
     # This methods gets info about user by his client_id

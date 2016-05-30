@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="BlobUploadModule">
+
+<div metal:use-macro="load: nav.pt"></div>
+
+
+<div class="container" ng-controller="BlobUploadController">
+
+    <form action="/blob" method="post" accept-charset="utf-8" enctype="multipart/form-data">
+
+        <label for="mp3">Mp3</label>
+        <input id="mp3" name="blob" type="file" value="" />
+        <input type="hidden" name="data_type" value="dialeqt_dictionary">
+
+        <input type="submit" value="submit" />
+    </form>
+
+
+
+</div>
+
+</body>
+
+</html>

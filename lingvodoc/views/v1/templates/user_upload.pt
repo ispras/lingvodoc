@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc future</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/user-upload.js')}"></script>
+
+</head>
+
+<body class="body-dashboard" ng-app="UserUploadModule">
+
+<div id="listBlobsUrl" data-lingvodoc="${request.route_url('list_user_blobs')}"></div>
+
+
+<div metal:use-macro="load: nav.pt"></div>
+
+
+<div class="container" ng-controller="UserUploadController">
+
+    <table class="table table-striped table-bordered">
+        <thead>
+        <tr>
+            <td>
+                File name
+            </td>
+
+            <td>
+                Type
+            </td>
+
+            <td>
+                Link
+            </td>
+        </tr>
+        </thead>
+
+
+        <tbody>
+
+
+
+
+
+        <tr ng-repeat="file in files">
+            <td>
+                {{ file.name }}
+            </td>
+
+            <td>
+                {{ file.data_type }}
+            </td>
+
+            <td>
+                <a ng-href="{{ file.content }}"><span class="glyphicon glyphicon-download"></span></a>
+            </td>
+
+        </tr>
+
+        </tbody>
+
+    </table>
+
+    <p class="bg-warning" ng-if="uploadMsg">Upload started. You will be redirected automatically.</p>
+
+
+    <span class="btn btn-default btn-file">
+        Upload <input type="file" on-read-file="upload($file)" ng-disabled="!dataType"></span>
+
+
+    <select ng-model="dataType">
+        <option value="dialeqt_dictionary">dialeqt_dictionary</option>
+        <option value="pdf">pdf</option>
+    </select>
+
+
+
+</div>
+
+<div metal:use-macro="load: response_handler.pt"></div>
+
+</body>
+
+</html>
