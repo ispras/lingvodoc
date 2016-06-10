@@ -1,6 +1,11 @@
 package ru.ispras.lingvodoc.frontend.app.utils
 
 import ru.ispras.lingvodoc.frontend.app.model.{Field, Language}
+import scala.scalajs.js.URIUtils
+import scala.scalajs.js.URIUtils._
+
+
+import org.scalajs.dom
 
 object Utils {
 
@@ -21,42 +26,16 @@ object Utils {
     0
   }
 
-  /*
-  var perspectiveToDictionaryFields = function(perspectiveFields) {
-        var fields = [];
-        angular.forEach(perspectiveFields, function(field, index) {
-            if (typeof field.group == 'string') {
-
-                var createNewGroup = true;
-                for (var j = 0; j < fields.length; j++) {
-                    if (fields[j].entity_type == field.group && fields[j].isGroup) {
-                        fields[j].contains.push(field);
-                        createNewGroup = false;
-                        break;
-                    }
-                }
-
-                if (createNewGroup) {
-                    fields.push({
-                        'entity_type': field.group,
-                        'isGroup': true,
-                        'contains': [field]
-                    });
-                }
-
-            } else {
-                fields.push(field);
-            }
-        });
-        return fields;
-    };
+  /**
+   * Gets data stored into data-lingvodoc attribute
+   * @param key id of element
+   * @return
    */
-
-//  def perspectiveToDictionaryFields(fields: Seq[Field]) = {
-//
-//    var dh: Seq[Field] = Seq[Field]()
-//    for (field <- fields) {
-//
-//    }
-//  }
+  def getData(key: String): Option[String] = {
+    val e = Option(dom.document.getElementById(key))
+    e match {
+      case Some(x) => Option(x.getAttribute("data-lingvodoc"))
+      case None => None
+    }
+  }
 }

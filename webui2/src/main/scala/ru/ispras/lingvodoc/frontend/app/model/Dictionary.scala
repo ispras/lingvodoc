@@ -15,4 +15,12 @@ case class Dictionary(@key("client_id") override val clientId: Int,
                       @key("status") var status: String) extends Object(clientId, objectId) {
 
   var perspectives = js.Array[Perspective]()
+
+
+}
+
+object Dictionary {
+  def emptyDictionary(clientId: Int, objectId: Int): Dictionary = {
+    Dictionary(clientId, objectId, Int.MinValue, Int.MinValue, "", "", "")
+  }
 }
