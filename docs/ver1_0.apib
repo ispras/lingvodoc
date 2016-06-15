@@ -56,7 +56,7 @@ Method for signin up.
 
 ### edit [PUT]
 
-+ Response 200(application/json; charset=UTF-8)
++  Request(application/json; charset=UTF-8)
 
         {
             "user_id": 2,
@@ -66,12 +66,17 @@ Method for signin up.
             "email": "new@mail.ru"
         }
 
-+ Response 200(application/json; charset=UTF-8)
++ Request(application/json; charset=UTF-8)
 
         {
             "client_id": 2,
             "new_password": "sets_new_password",
             "old_password": "password"
+        }
+
++ Response 200(application/json; charset=UTF-8)
+
+        {
         }
 
 ## Create language [/language]
@@ -219,7 +224,12 @@ Edits language. Only admins and user, who created language, can edit it.
             "translation_string": "Dictionary for russian language"
         }
         
-+ Response 200
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "client_id":1,
+            "object_id":1
+        }
 
 ## Dictionary views [/dictionary/{client_id}/{object_id}]
 
@@ -273,7 +283,12 @@ Edits language. Only admins and user, who created language, can edit it.
             "translation_string": "some perspective name"
         }
         
-+ Response 200
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+            "client_id":1,
+            "object_id":1
+        }
 
 ## Perspective views [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}]
 
@@ -2610,6 +2625,20 @@ Disapproves bunch of entities, given their ids and types
         {
         }
 
+## Approve all outer [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/approve_all_outer]
++ Parameters
+    + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
+    + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
+    + perspective_client_id: 1  (number) - ID of the client in the form of an integer
+    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+
+
+### Approve all outer [PATCH]
+Approves all entities of perspective
++ Response 200 (application/json; charset=UTF-8)
+
+        {
+        }
 ## Approve all [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/approve_all]
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
