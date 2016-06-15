@@ -23,7 +23,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@view_config(route_name='get_translations', renderer='json', request_method='GET')
+@view_config(route_name='get_translations', renderer='json', request_method='POST')
 def get_translations(request):  # TODO: test
     from lingvodoc.models import find_by_translation_string, find_locale_id
     req = request.json_body
