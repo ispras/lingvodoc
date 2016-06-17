@@ -1,3 +1,5 @@
+import logging
+
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -8,11 +10,18 @@ from .models import (
     Base,
     )
 
+from lingvodoc.caching import (
+    initialize_cache
+)
+
 from .acl import (
     groupfinder
 )
 
-from configparser import ConfigParser
+from configparser import (
+    ConfigParser,
+    NoSectionError
+)
 
 def configure_routes(config):
     """
@@ -581,6 +590,23 @@ def main(global_config, **settings):
         storage[k] = v
     settings['storage'] = storage
     config = Configurator(settings=settings)
+    log = logging.getLogger(__name__)
+
+    #TODO: Find a more neat way
+    try:
+        cache_kwargs = dict()
+        for k, v in parser.items('dogpile'):
+            cache_kwargs[k] = v
+        cache_args = dict()
+        for k, v in parser.items('dogpile:args'):
+            cache_args[k] = v
+        cache_kwargs['arguments'] = cache_args
+        cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
+    except NoSectionError:
+        log.warn("No dogpile or/and dogpile:args sections in config; disabling caching")
+        initialize_cache(None)
+    else:
+        initialize_cache(cache_kwargs)
 
     authentication_policy = AuthTktAuthenticationPolicy(settings['secret'],
                                                         hashalg='sha512', callback=groupfinder)
