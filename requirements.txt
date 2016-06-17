@@ -13,6 +13,7 @@ bcrypt==2.0.0
 beautifulsoup4==4.4.1
 cffi==1.3.1
 debtcollector==1.0.0
+dogpile.cache==0.6.1
 futures==3.0.3
 gunicorn==19.4.2
 iso8601==0.1.11
@@ -40,6 +41,7 @@ pyramid-mako==1.0.2
 pyramid-tm==0.12
 python-editor==0.4
 python-keystoneclient==1.8.1
+python-memcached==1.58
 python-swiftclient==2.6.0
 pytz==2015.7
 repoze.lru==0.6
