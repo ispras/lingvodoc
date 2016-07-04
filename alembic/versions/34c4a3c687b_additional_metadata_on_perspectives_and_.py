@@ -14,6 +14,7 @@ depends_on = None
 
 from alembic import op
 import sqlalchemy as sa
+from lingvodoc.models import is_sqlite
 
 
 def upgrade():
@@ -23,6 +24,10 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column('dictionary', 'additional_metadata')
-    op.drop_column('dictionaryperspective', 'additional_metadata')
+    with op.batch_alter_table("dictionary") as batch_op:
+        batch_op.drop_column("additional_metadata")
+    with op.batch_alter_table("dictionaryperspective") as batch_op:
+        batch_op.drop_column("additional_metadata")
+    # op.drop_column('dictionary', 'additional_metadata')
+    # op.drop_column('dictionaryperspective', 'additional_metadata')
     pass

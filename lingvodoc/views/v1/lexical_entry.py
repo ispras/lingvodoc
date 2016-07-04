@@ -50,7 +50,11 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
                 new_tags = []
                 lexes = []
                 for tag in tags:
-                    entity = DBSession.query(GroupingEntity).filter_by(content = tag).first()
+                    print('tag', tag)
+                    entities_debug = DBSession.query(GroupingEntity).filter(GroupingEntity.content==tag).all()
+                    for ent_debug in entities_debug:
+                        print('ent_debug', ent_debug.client_id, ent_debug.object_id)
+                    entity = DBSession.query(GroupingEntity).filter(GroupingEntity.content==tag).first()
                     path = request.route_url('get_group_entity',
                                          client_id = entity.client_id,
                                          object_id = entity.object_id)

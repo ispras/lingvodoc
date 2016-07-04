@@ -74,6 +74,7 @@ def edit_language(request):  # tested & in docs
         client_id = request.matchdict.get('client_id')
         object_id = request.matchdict.get('object_id')
         client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
         language = DBSession.query(Language).filter_by(client_id=client_id, object_id=object_id).first()

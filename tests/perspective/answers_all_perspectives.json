@@ -5,136 +5,136 @@
   "template_true": {
     "perspectives": [
       {
-        "client_id": 1,
-        "object_id": 1,
-        "parent_object_id": 1,
-        "parent_client_id": 1,
+        "parent_object_id": 6,
         "status": "Service",
-        "is_template": true,
         "translation_string": "Lingvodoc desktop version",
+        "object_id": 7,
+        "marked_for_deletion": false,
         "translation": "Lingvodoc desktop version",
         "additional_metadata": null,
-        "marked_for_deletion": false
+        "client_id": 1,
+        "parent_client_id": 1,
+        "is_template": true
       },
       {
-        "client_id": 1,
-        "object_id": 2,
-        "parent_object_id": 1,
-        "parent_client_id": 1,
+        "parent_object_id": 6,
         "status": "Service",
-        "is_template": true,
         "translation_string": "Regular dictionary",
+        "object_id": 19,
+        "marked_for_deletion": false,
         "translation": "Regular dictionary",
         "additional_metadata": null,
-        "marked_for_deletion": false
+        "client_id": 1,
+        "parent_client_id": 1,
+        "is_template": true
       },
       {
-        "client_id": 1,
-        "object_id": 3,
-        "parent_object_id": 1,
-        "parent_client_id": 1,
+        "parent_object_id": 6,
         "status": "Service",
-        "is_template": true,
         "translation_string": "Morhological dictionary",
+        "object_id": 36,
+        "marked_for_deletion": false,
         "translation": "Morhological dictionary",
         "additional_metadata": null,
-        "marked_for_deletion": false
+        "client_id": 1,
+        "parent_client_id": 1,
+        "is_template": true
       },
       {
-        "client_id": 7,
-        "object_id": 2,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Published",
-        "is_template": true,
         "translation_string": "translation_string2",
+        "object_id": 7,
+        "marked_for_deletion": false,
         "translation": "translation_string2",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": true
       },
       {
-        "client_id": 7,
-        "object_id": 4,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Marked",
-        "is_template": true,
         "translation_string": "translation_string4",
+        "object_id": 11,
+        "marked_for_deletion": false,
         "translation": "translation_string4",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": true
       }
     ]
   },
   "template_false": {
     "perspectives": [
       {
-        "client_id": 7,
-        "object_id": 1,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Published",
-        "is_template": false,
         "translation_string": "translation_string1",
+        "object_id": 5,
+        "marked_for_deletion": false,
         "translation": "translation_string1",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": false
       },
       {
-        "client_id": 7,
-        "object_id": 3,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Marked",
-        "is_template": false,
         "translation_string": "translation_string3",
+        "object_id": 9,
+        "marked_for_deletion": false,
         "translation": "translation_string3",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": false
       }
     ]
   },
   "combined_condition_1": {
     "perspectives": [
       {
-        "client_id": 7,
-        "object_id": 1,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Published",
-        "is_template": false,
         "translation_string": "translation_string1",
+        "object_id": 5,
+        "marked_for_deletion": false,
         "translation": "translation_string1",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": false
       },
       {
-        "client_id": 7,
-        "object_id": 2,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Published",
-        "is_template": true,
         "translation_string": "translation_string2",
+        "object_id": 7,
+        "marked_for_deletion": false,
         "translation": "translation_string2",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": true
       }
     ]
   },
   "combined_condition_2": {
     "perspectives": [
       {
-        "client_id": 7,
-        "object_id": 3,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Marked",
-        "is_template": false,
         "translation_string": "translation_string3",
+        "object_id": 9,
+        "marked_for_deletion": false,
         "translation": "translation_string3",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": false
       }
     ]
   },
@@ -144,88 +144,88 @@
   "all": {
     "perspectives": [
       {
-        "client_id": 1,
-        "object_id": 1,
-        "parent_object_id": 1,
-        "parent_client_id": 1,
+        "parent_object_id": 6,
         "status": "Service",
-        "is_template": true,
         "translation_string": "Lingvodoc desktop version",
+        "object_id": 7,
+        "marked_for_deletion": false,
         "translation": "Lingvodoc desktop version",
         "additional_metadata": null,
-        "marked_for_deletion": false
+        "client_id": 1,
+        "parent_client_id": 1,
+        "is_template": true
       },
       {
-        "client_id": 1,
-        "object_id": 2,
-        "parent_object_id": 1,
-        "parent_client_id": 1,
+        "parent_object_id": 6,
         "status": "Service",
-        "is_template": true,
         "translation_string": "Regular dictionary",
+        "object_id": 19,
+        "marked_for_deletion": false,
         "translation": "Regular dictionary",
         "additional_metadata": null,
-        "marked_for_deletion": false
+        "client_id": 1,
+        "parent_client_id": 1,
+        "is_template": true
       },
       {
-        "client_id": 1,
-        "object_id": 3,
-        "parent_object_id": 1,
-        "parent_client_id": 1,
+        "parent_object_id": 6,
         "status": "Service",
-        "is_template": true,
         "translation_string": "Morhological dictionary",
+        "object_id": 36,
+        "marked_for_deletion": false,
         "translation": "Morhological dictionary",
         "additional_metadata": null,
-        "marked_for_deletion": false
+        "client_id": 1,
+        "parent_client_id": 1,
+        "is_template": true
       },
       {
-        "client_id": 7,
-        "object_id": 1,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Published",
-        "is_template": false,
         "translation_string": "translation_string1",
+        "object_id": 5,
+        "marked_for_deletion": false,
         "translation": "translation_string1",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": false
       },
       {
-        "client_id": 7,
-        "object_id": 2,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Published",
-        "is_template": true,
         "translation_string": "translation_string2",
+        "object_id": 7,
+        "marked_for_deletion": false,
         "translation": "translation_string2",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": true
       },
       {
-        "client_id": 7,
-        "object_id": 3,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Marked",
-        "is_template": false,
         "translation_string": "translation_string3",
+        "object_id": 9,
+        "marked_for_deletion": false,
         "translation": "translation_string3",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": false
       },
       {
-        "client_id": 7,
-        "object_id": 4,
-        "parent_object_id": 1,
-        "parent_client_id": 7,
+        "parent_object_id": 3,
         "status": "Marked",
-        "is_template": true,
         "translation_string": "translation_string4",
+        "object_id": 11,
+        "marked_for_deletion": false,
         "translation": "translation_string4",
         "additional_metadata": "{}",
-        "marked_for_deletion": false
+        "client_id": 7,
+        "parent_client_id": 7,
+        "is_template": true
       }
     ]
   }

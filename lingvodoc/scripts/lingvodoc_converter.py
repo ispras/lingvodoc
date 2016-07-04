@@ -215,7 +215,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                                       perspective['client_id'], perspective['object_id'])
     change_dict_status(session, converting_perspective_status_url, 'Converting')
 
-    create_perspective_fields_request = session.get(server_url + 'dictionary/1/1/perspective/1/1/fields')
+    create_perspective_fields_request = session.get(server_url + 'dictionary/1/6/perspective/1/7/fields')
     perspective_fields_create_url = perspective_create_url + '/%s/%s/fields' % (perspective['client_id'],
                                                                                 perspective['object_id'])
     status = session.post(perspective_fields_create_url, json=create_perspective_fields_request.text)
@@ -474,6 +474,9 @@ if __name__ == "__main__":
     log.setLevel(logging.DEBUG)
     logging.basicConfig(format='%(asctime)s\t%(levelname)s\t[%(name)s]\t%(message)s')
     log.debug("!!!!!!!!!! YOU SHOULD NOT SEE IT !!!!!!!!")
-    convert_one(filename="/Users/al/Movies/dicts-current/nenets_kaninski.sqlite", login="",
-                password_hash="",
-                language_client_id=33, language_object_id=24, server_url="http://lingvodoc.ispras.ru/")
+    convert_one(filename="/home/student/dicts-current/nenets_kaninski.sqlite", login="Test",
+                password_hash="$2a$12$zBMnhV9oUfKehlHJCHnsPuGM98Wwq/g9hlWWNqg8ZGDuLNyUSfxza",
+                language_client_id=1, language_object_id=1,
+                dictionary_client_id=None, dictionary_object_id=None,
+                perspective_client_id=None, perspective_object_id=None,
+                server_url="http://lingvodoc.ispras.ru/")

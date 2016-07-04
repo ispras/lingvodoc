@@ -16,7 +16,7 @@ class initValuesFactory:
         return {'roles_users':
                 {"Can create lexical entries": users,
                  "Can get perspective role list": users,
-                 "Can resign users from dictionary editors": users,
+                 "Can resign users from perspective editors": users,
                  "Can approve lexical entries and publish": users,
                  "Can create perspective roles and assign collaborators": users,
                  "Can edit perspective": users,
