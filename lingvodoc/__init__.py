@@ -14,6 +14,10 @@ from lingvodoc.caching import (
     initialize_cache
 )
 
+from lingvodoc.queue.cache import (
+    initialize_queue
+)
+
 from .acl import (
     groupfinder
 )
@@ -573,6 +577,10 @@ def configure_routes(config):
     config.add_route(name='convert_dictionary', pattern='/convert')  # tested
     config.add_route(name='convert_dictionary_check', pattern='/convert_check')  # tested
 
+    #Check the documentation in celery_test.view.py
+    config.add_route(name='test_queue_set', pattern='/test_queue_set')
+    config.add_route(name='test_queue_get', pattern='/test_queue_get')
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
@@ -595,18 +603,51 @@ def main(global_config, **settings):
     #TODO: Find a more neat way
     try:
         cache_kwargs = dict()
-        for k, v in parser.items('dogpile'):
+        for k, v in parser.items('cache:dogpile'):
             cache_kwargs[k] = v
         cache_args = dict()
-        for k, v in parser.items('dogpile:args'):
+        for k, v in parser.items('cache:dogpile:args'):
             cache_args[k] = v
         cache_kwargs['arguments'] = cache_args
-        cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
+        if 'expiration_time' in cache_kwargs:
+            cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
+        if 'redis_expiration_time' in cache_kwargs:
+            cache_kwargs['redis_expiration_time'] = int(cache_kwargs['redis_expiration_time'])
     except NoSectionError:
-        log.warn("No dogpile or/and dogpile:args sections in config; disabling caching")
+        log.warn("No 'cache:dogpile' or/and 'cache:dogpile:args' sections in config; disabling caching")
         initialize_cache(None)
     else:
         initialize_cache(cache_kwargs)
+
+    queue_kwargs = {'broker': {}, 'cache_user': {}, 'cache_task': {}}
+    try:
+        for k, v in parser.items('celery'):
+            queue_kwargs['broker'][k] = v
+        for k, v in parser.items('queue:dogpile'):
+            queue_kwargs['cache_user'][k] = v
+            queue_kwargs['cache_task'][k] = v
+        cache_args = dict()
+        for k, v in parser.items('queue:dogpile_user:args'):
+            cache_args[k] = v
+        queue_kwargs['cache_user']['arguments'] = cache_args
+        for k, v in parser.items('queue:dogpile_task:args'):
+            cache_args[k] = v
+        queue_kwargs['cache_task']['arguments'] = cache_args
+        if 'expiration_time' in queue_kwargs['cache_user']:
+            queue_kwargs['cache_user']['expiration_time'] = int(queue_kwargs['expiration_time'])
+        if 'expiration_time' in queue_kwargs['cache_task']:
+            queue_kwargs['cache_task']['expiration_time'] = int(queue_kwargs['expiration_time'])
+        if 'redis_expiration_time' in queue_kwargs['cache_user']:
+            queue_kwargs['cache_user']['redis_expiration_time'] = int(queue_kwargs['redis_expiration_time'])
+        if 'redis_expiration_time' in queue_kwargs['cache_task']:
+            queue_kwargs['cache_task']['redis_expiration_time'] = int(queue_kwargs['redis_expiration_time'])
+    except NoSectionError:
+        log.warn("No 'queue:dogpile' or/and 'queue:dogpile_user/task:args' and 'celery' sections in config;"
+                 "disabling queue")
+        initialize_queue(None)
+    else:
+        initialize_queue(queue_kwargs)
+    config.configure_celery('development_test.ini')
 
     authentication_policy = AuthTktAuthenticationPolicy(settings['secret'],
                                                         hashalg='sha512', callback=groupfinder)
@@ -628,8 +669,6 @@ def main(global_config, **settings):
 #    config.add_route('dictionary', 'dictionary')
 
 #    config.add_route('metaword', 'dictionary/{dictionary_id}/etymology/metaword')
-
-
 
     config.scan('.views')
     return config.make_wsgi_app()

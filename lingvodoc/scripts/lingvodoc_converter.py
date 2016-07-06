@@ -442,6 +442,7 @@ def convert_one(filename, login, password_hash, language_client_id, language_obj
                 dictionary_client_id, dictionary_object_id, perspective_client_id, perspective_object_id,
                 server_url="http://localhost:6543/"):
     log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)
     log.debug("Starting convert_one")
     log.debug("Creating session")
     session = requests.Session()
@@ -451,6 +452,9 @@ def convert_one(filename, login, password_hash, language_client_id, language_obj
     log.debug("Going to login")
     login_data = {"login": login, "passwordhash": password_hash}
     log.debug("Login data: " + login_data['login'] + login_data['passwordhash'])
+    print("PRINTING")
+    print(server_url)
+    print(login_data)
     cookie_set = session.post(server_url + 'cheatlogin', json=login_data)
     log.debug("Login status:" + str(cookie_set.status_code))
     if cookie_set.status_code != 200:

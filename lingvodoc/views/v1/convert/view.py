@@ -1,6 +1,13 @@
 __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
+from lingvodoc.views.v1.convert.core import async_convert_dictionary
+from lingvodoc.views.v1.utils import (
+    get_user_by_client_id
+)
+from lingvodoc.queue.cache import (
+    QUEUED_TASKS
+)
 from lingvodoc.models import (
     Client,
     DBSession,
@@ -75,39 +82,23 @@ def convert_dictionary_check(request):  # TODO: test
 @view_config(route_name='convert_dictionary', renderer='json', request_method='POST')
 def convert_dictionary(request):  # TODO: test
     req = request.json_body
-
-    client_id = req['blob_client_id']
-    object_id = req['blob_object_id']
-    parent_client_id = req['parent_client_id']
-    parent_object_id = req['parent_object_id']
-    dictionary_client_id = req.get('dictionary_client_id')
-    dictionary_object_id = req.get('dictionary_object_id')
-    perspective_client_id = req.get('perspective_client_id')
-    perspective_object_id = req.get('perspective_object_id')
-    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
-    user = client.user
-
-    blob = DBSession.query(UserBlobs).filter_by(client_id=client_id, object_id=object_id).first()
-
-    # convert_one(blob.real_storage_path,
-    #             user.login,
-    #             user.password.hash,
-    #             parent_client_id,
-    #             parent_object_id)
-
-    # NOTE: doesn't work on Mac OS otherwise
-
-    p = multiprocessing.Process(target=convert_one, args=(blob.real_storage_path,
-                                                          user.login,
-                                                          user.password.hash,
-                                                          parent_client_id,
-                                                          parent_object_id,
-                                                          dictionary_client_id,
-                                                          dictionary_object_id,
-                                                          perspective_client_id,
-                                                          perspective_object_id))
+    args = dict()
+    args['client_id'] = req['blob_client_id']
+    args['object_id'] = req['blob_object_id']
+    args['parent_client_id'] = req['parent_client_id']
+    args['parent_object_id'] = req['parent_object_id']
+    args['dictionary_client_id'] = req.get('dictionary_client_id')
+    args['dictionary_object_id'] = req.get('dictionary_object_id')
+    args['perspective_client_id'] = req.get('perspective_client_id')
+    args['perspective_object_id'] = req.get('perspective_object_id')
+    args['user_id'] = authenticated_userid(request)
+    #import pdb
+    #pdb.set_trace()
+    #import time
+    #time.sleep(1)
+    res = async_convert_dictionary.delay(**args)
     log.debug("Conversion started")
-    p.start()
+    QUEUED_TASKS.set(get_user_by_client_id(args['user_id']), res)
     request.response.status = HTTPOk.code
     return {"status": "Your dictionary is being converted."
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
