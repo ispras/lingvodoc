@@ -619,35 +619,19 @@ def main(global_config, **settings):
     else:
         initialize_cache(cache_kwargs)
 
-    queue_kwargs = {'broker': {}, 'cache_user': {}, 'cache_task': {}}
+    queue_kwargs = {'user_cache': {}, 'task_cache': {}}
     try:
-        for k, v in parser.items('celery'):
-            queue_kwargs['broker'][k] = v
-        for k, v in parser.items('queue:dogpile'):
-            queue_kwargs['cache_user'][k] = v
-            queue_kwargs['cache_task'][k] = v
-        cache_args = dict()
-        for k, v in parser.items('queue:dogpile_user:args'):
-            cache_args[k] = v
-        queue_kwargs['cache_user']['arguments'] = cache_args
-        for k, v in parser.items('queue:dogpile_task:args'):
-            cache_args[k] = v
-        queue_kwargs['cache_task']['arguments'] = cache_args
-        if 'expiration_time' in queue_kwargs['cache_user']:
-            queue_kwargs['cache_user']['expiration_time'] = int(queue_kwargs['expiration_time'])
-        if 'expiration_time' in queue_kwargs['cache_task']:
-            queue_kwargs['cache_task']['expiration_time'] = int(queue_kwargs['expiration_time'])
-        if 'redis_expiration_time' in queue_kwargs['cache_user']:
-            queue_kwargs['cache_user']['redis_expiration_time'] = int(queue_kwargs['redis_expiration_time'])
-        if 'redis_expiration_time' in queue_kwargs['cache_task']:
-            queue_kwargs['cache_task']['redis_expiration_time'] = int(queue_kwargs['redis_expiration_time'])
+        for k, v in parser.items('queue:user_redis'):
+            queue_kwargs['user_cache'][k] = v
+        for k, v in parser.items('queue:task_redis'):
+            queue_kwargs['task_cache'][k] = v
     except NoSectionError:
-        log.warn("No 'queue:dogpile' or/and 'queue:dogpile_user/task:args' and 'celery' sections in config;"
+        log.warn("No 'queue:user_redis' or/and 'queue:task_redis' sections in config;"
                  "disabling queue")
         initialize_queue(None)
     else:
         initialize_queue(queue_kwargs)
-    config.configure_celery('development_test.ini')
+    #config.configure_celery('development_test.ini')
 
     authentication_policy = AuthTktAuthenticationPolicy(settings['secret'],
                                                         hashalg='sha512', callback=groupfinder)

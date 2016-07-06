@@ -36,9 +36,6 @@ def _parse_celery_args():
                 kwargs[k] = v.split('\n')
             else:
                 kwargs[k] = v
-
-        # kwargs['include'] = ['lingvodoc.views.v1.celery_test.core',
-        #                      'lingvodoc.views.v1.convert.core']
         return kwargs
     except NoSectionError:
         log.warn("No 'celery' sections in config; disabling queue")
@@ -53,4 +50,5 @@ if kwargs is None:
 else:
     celery = Celery(**kwargs)
 
+# TODO: get a connection string from the configuration file
 celery_engine = create_engine('postgresql://postgres:@localhost/lingvodoc')
