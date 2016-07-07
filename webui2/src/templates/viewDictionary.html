@@ -74,11 +74,11 @@
                         <ul class="entries_list">
                             <li ng-repeat="value in cell.values" ng-if="!value.markedForDeletion">
 
-                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.play(value.content)">
+                                <button type="button" class="btn btn-default btn-sm" ng-if="value.values.length > 0" ng-click="controller.play(value.content, value.values[0].content)">
                                     <span class="glyphicon glyphicon-play">Play sound</span>
                                 </button>
 
-                                <button type="button" class="btn btn-default btn-sm" ng-if="value.values.length > 0" ng-click="controller.viewMarkup(value, value.values[0])">
+                                <button type="button" class="btn btn-default btn-sm" ng-if="value.values.length > 0" ng-click="controller.viewSoundMarkup(value.content, value.values[0].content)">
                                     <span class="glyphicon glyphicon-list">View markup</span>
                                 </button>
 

@@ -27,3 +27,6 @@ jsDependencies += "org.webjars" % "bootstrap" % "3.3.6" / "bootstrap.js" depends
 jsDependencies += "org.webjars" % "angular-ui-bootstrap" % "0.13.4" / "ui-bootstrap.js" dependsOn "bootstrap.js"
 jsDependencies += "org.webjars" % "angular-ui-bootstrap" % "0.13.4" / "ui-bootstrap-tpls.js" dependsOn "ui-bootstrap.js"
 
+// Wavesurfer is not in webjars yet; perhaps we should create it ourselves
+jsDependencies += ProvidedJS / "wavesurfer.min.js"
+libraryDependencies += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"

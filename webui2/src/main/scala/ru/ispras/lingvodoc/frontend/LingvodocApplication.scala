@@ -37,6 +37,7 @@ object LingvodocApplication {
       .controller[EditDictionaryController]
       .controller[PerspectiveMapController]
       .controller[ViewDictionaryController]
+      .controller[SoundMarkupController]
       .factory[BackendServiceFactory]
   }
 }

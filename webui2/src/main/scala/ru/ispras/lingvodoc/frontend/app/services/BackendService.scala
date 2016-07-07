@@ -541,6 +541,33 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
   /**
+    * Get list of dictionaries
+    *
+    * @param clientID client's id
+    * @param objectID object's id
+    *
+    * @return sound markup in ELAN format
+    */
+  def getSoundMarkup(clientID: Int, objectID: Int): Future[String] = {
+    val req = JSON.stringify(js.Dynamic.literal(client_id = clientID, object_id = objectID))
+    val p = Promise[String]()
+
+    $http.post[js.Dynamic](getMethodUrl("convert/markup"), req) onComplete {
+      case Success(response) =>
+        try {
+          val markup = read[String](js.JSON.stringify(response.content))
+          p.success(markup)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed markup json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed markup data. Missing some " +
+            "required fields: " + e.getMessage))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get sound markup: " + e.getMessage))
+    }
+    p.future
+  }
+
+  /**
     * Log in
     *
     * @param username
