@@ -10,3 +10,9 @@ venv/
 webui/node_modules/
 webui/bower_components/
 webui/.sass-cache/
+
+# build stuff
+dist/
+build/
+lingvodoc.egg-info/
+alembic.ini
