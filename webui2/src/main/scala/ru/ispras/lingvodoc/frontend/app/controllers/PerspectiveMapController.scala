@@ -86,11 +86,16 @@ class PerspectiveMapController(scope: PerspectiveMapScope,
     // FIXME: An extremely ugly workaround to prevent incorrect initialization of google maps object
     // Better way: somehow hook bs.modal.shown event
     // Even better: do not re-create google maps object and re-use an old one as google documentation suggests
-    setTimeout(() => {
+    // setTimeout(() => {
+    //   google.maps.event.trigger(scope.map, "resize")
+    //   drawLocations()
+    // }, 2000)
+
+    // there is no saveTimeout in 0.6.10 version of scalajs plugin, here is a workaround
+    scala.scalajs.js.timers.setTimeout(2000)
+    {
       google.maps.event.trigger(scope.map, "resize")
-
-
       drawLocations()
-    }, 2000)
+    }
   }
 }
