@@ -5,8 +5,8 @@ from lingvodoc.views.v1.convert.core import async_convert_dictionary
 from lingvodoc.views.v1.utils import (
     get_user_by_client_id
 )
-from lingvodoc.queue.cache import (
-    QUEUED_TASKS
+from lingvodoc.queue.client import (
+    QueueClient
 )
 from lingvodoc.models import (
     Client,
@@ -96,9 +96,10 @@ def convert_dictionary(request):  # TODO: test
     #pdb.set_trace()
     #import time
     #time.sleep(1)
-    res = async_convert_dictionary.delay(**args)
+    task_id = QueueClient.generate_task_id(args['user_id'])
+    res = async_convert_dictionary.delay(task_id=task_id, **args)
     log.debug("Conversion started")
-    QUEUED_TASKS.set(get_user_by_client_id(args['user_id']), res)
+    QueueClient.add_task(get_user_by_client_id(args['user_id']), task_id, res)
     request.response.status = HTTPOk.code
     return {"status": "Your dictionary is being converted."
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}

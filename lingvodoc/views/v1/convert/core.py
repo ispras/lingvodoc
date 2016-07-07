@@ -26,7 +26,8 @@ log = logging.getLogger(__name__)
 
 @celery.task
 def async_convert_dictionary(client_id, object_id, parent_client_id, parent_object_id, dictionary_client_id,
-                             dictionary_object_id, perspective_client_id, perspective_object_id, user_id):
+                             dictionary_object_id, perspective_client_id, perspective_object_id, user_id,
+                             task_id=None):
     DBSession.configure(bind=celery_engine)
     client = DBSession.query(Client).filter_by(id=user_id).first()
     user = client.user
@@ -48,6 +49,7 @@ def async_convert_dictionary(client_id, object_id, parent_client_id, parent_obje
                 dictionary_client_id,
                 dictionary_object_id,
                 perspective_client_id,
-                perspective_object_id)
+                perspective_object_id,
+                task_id=task_id)
 
     return

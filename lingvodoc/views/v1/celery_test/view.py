@@ -11,8 +11,9 @@ from lingvodoc.views.v1.celery_test.core import test_queue_set_logic
 from lingvodoc.views.v1.utils import (
     get_user_by_client_id
 )
-from lingvodoc.queue.cache import (
-    QUEUED_TASKS
+
+from lingvodoc.queue.client import (
+    QueueClient
 )
 
 from pyramid.httpexceptions import (
@@ -26,8 +27,9 @@ from pyramid.view import view_config
 def test_queue_set(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
-    res = test_queue_set_logic.delay()
-    QUEUED_TASKS.set(user, res)
+    task_id = QueueClient.generate_task_id(client_id)
+    res = test_queue_set_logic.delay(task_id)
+    QueueClient.add_task(user, task_id, res)
     response = dict()
     request.response.status = HTTPOk.code
     return response
@@ -37,6 +39,6 @@ def test_queue_set(request):
 def test_queue_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
-    res = QUEUED_TASKS.get(user, True)
+    res = QueueClient.get_tasks_info(user)
     request.response.status = HTTPOk.code
     return res

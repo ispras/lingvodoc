@@ -22,6 +22,7 @@ from lingvodoc.queue.mock_task import (
     MockApp
 )
 from sqlalchemy import create_engine
+from redis import StrictRedis
 
 log = logging.getLogger(__name__)
 parser = ConfigParser()
@@ -29,26 +30,30 @@ parser.read('celery.ini')
 
 
 def _parse_celery_args():
-    kwargs = dict()
+    celery_kwargs = dict()
+    redis_kwargs = dict()
     try:
         for k, v in parser.items('celery'):
             if k == 'include':
-                kwargs[k] = v.split('\n')
+                celery_kwargs[k] = v.split('\n')
             else:
-                kwargs[k] = v
-        return kwargs
+                celery_kwargs[k] = v
+        for k, v in parser.items('queue:progress_redis'):
+            redis_kwargs[k] = v
+        return {'celery': celery_kwargs, 'redis': redis_kwargs}
     except NoSectionError:
-        log.warn("No 'celery' sections in config; disabling queue")
+        log.warn("No 'celery' or 'queue:progress_redis' sections in config; disabling queue")
         return None
 
 
 celery = None
+PROGRESS_STORE = None
 kwargs = _parse_celery_args()
-print(kwargs)
 if kwargs is None:
     celery = MockApp()
 else:
-    celery = Celery(**kwargs)
+    celery = Celery(**kwargs['celery'])
+    PROGRESS_STORE = StrictRedis(**kwargs['redis'])
 
 # TODO: get a connection string from the configuration file
 celery_engine = create_engine('postgresql://postgres:@localhost/lingvodoc')

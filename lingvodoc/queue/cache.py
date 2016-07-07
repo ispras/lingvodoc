@@ -5,6 +5,9 @@ import pickle
 # from dogpile.cache.api import NO_VALUE
 # from dogpile.cache import make_region
 
+from lingvodoc.queue.celery import (
+    PROGRESS_STORE
+)
 from redis import StrictRedis
 
 QUEUED_TASKS = None
@@ -22,8 +25,8 @@ class TaskCache:
         :param user: User whose tasks we're looking for
         :param remove_finished: If True then all finished tasks will be deleted from the store and
         its IDs will be removed from the user's list of tasks.
-        :return: a dictionary of tasks {'Task ID (hash)': 'Finished (True/False)'}. If there is no tasks
-        then the return value is an empty dict.
+        :return: a dictionary of tasks {'Task ID (hash)': {'Finished': (True/False), 'Percent': int}}.
+        If there is no tasks then the return value is an empty dict.
         """
         result = dict()
         tasks = self.user_store.get(user.id)
@@ -36,7 +39,12 @@ class TaskCache:
             if val is None:
                 continue
             async_result = pickle.loads(val)
-            result[t] = async_result.ready()
+            progress = PROGRESS_STORE.get(t)
+            # Redis client returns byte array. We need to decode it
+            if progress is not None:
+                progress = int(progress.decode())
+            result[t] = {'finished': async_result.ready(),
+                         'progress': progress}
             if remove_finished:
                 if async_result.ready():
                     self.task_store.delete(t)
@@ -47,10 +55,9 @@ class TaskCache:
         return result
 
 
-    #TODO: add try/catch handlers.
+    # TODO: add try/catch handlers.
     # we should remove the task from caches (and queue?) if exception is raised
-    def set(self, user, async_task):
-        task_key = hash(async_task)
+    def set(self, user, task_key, async_task):
         self.task_store.set(task_key, pickle.dumps(async_task))
         cached = self.user_store.get(user.id)
         if cached is None:
@@ -60,7 +67,7 @@ class TaskCache:
             tmp_tasks.append(task_key)
         self.user_store.set(user.id, pickle.dumps(tmp_tasks))
 
-
+# TODO: add handling if cache is not used
 def initialize_queue(args):
     global QUEUED_TASKS
     QUEUED_TASKS = TaskCache(args['user_cache'], args['task_cache'])
