@@ -16,3 +16,6 @@ dist/
 build/
 lingvodoc.egg-info/
 alembic.ini
+
+# webui2
+target/
