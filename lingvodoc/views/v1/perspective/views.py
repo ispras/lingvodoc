@@ -22,16 +22,12 @@ from lingvodoc.models import (
     PublishLevelTwoEntity,
     User
 )
-from lingvodoc.views.v1.celery_test.core import test_queue_set_logic
 from lingvodoc.views.v1.utils import (
     cache_clients,
     create_object,
     get_user_by_client_id,
     user_counter,
     view_perspective_from_object
-)
-from lingvodoc.queue.cache import (
-    QUEUED_TASKS
 )
 
 from pyramid.httpexceptions import (
@@ -1301,7 +1297,6 @@ def disapprove_entity(request):  # TODO: test
         return {'error': str(e)}
 
 
-#TODO: we should change this approach since all queued methods will have this part
 @view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
 def approve_all(request):
     response = dict()

@@ -1,8 +1,6 @@
 __author__ = 'alexander'
 
-from lingvodoc.queue.celery import (
-    celery
-)
+from lingvodoc.queue.celery import celery
 from lingvodoc.queue.client import QueueClient
 
 import time

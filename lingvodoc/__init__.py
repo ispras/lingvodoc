@@ -14,10 +14,6 @@ from lingvodoc.caching import (
     initialize_cache
 )
 
-from lingvodoc.queue.cache import (
-    initialize_queue
-)
-
 from .acl import (
     groupfinder
 )
@@ -578,8 +574,8 @@ def configure_routes(config):
     config.add_route(name='convert_dictionary_check', pattern='/convert_check')  # tested
 
     #Check the documentation in celery_test.view.py
-    config.add_route(name='test_queue_set', pattern='/test_queue_set')
-    config.add_route(name='test_queue_get', pattern='/test_queue_get')
+    #config.add_route(name='test_queue_set', pattern='/test_queue_set')
+    #config.add_route(name='test_queue_get', pattern='/test_queue_get')
 
 
 def main(global_config, **settings):
@@ -619,18 +615,6 @@ def main(global_config, **settings):
     else:
         initialize_cache(cache_kwargs)
 
-    queue_kwargs = {'user_cache': {}, 'task_cache': {}}
-    try:
-        for k, v in parser.items('queue:user_redis'):
-            queue_kwargs['user_cache'][k] = v
-        for k, v in parser.items('queue:task_redis'):
-            queue_kwargs['task_cache'][k] = v
-    except NoSectionError:
-        log.warn("No 'queue:user_redis' or/and 'queue:task_redis' sections in config;"
-                 "disabling queue")
-        initialize_queue(None)
-    else:
-        initialize_queue(queue_kwargs)
     #config.configure_celery('development_test.ini')
 
     authentication_policy = AuthTktAuthenticationPolicy(settings['secret'],

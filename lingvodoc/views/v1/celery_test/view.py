@@ -12,9 +12,7 @@ from lingvodoc.views.v1.utils import (
     get_user_by_client_id
 )
 
-from lingvodoc.queue.client import (
-    QueueClient
-)
+from lingvodoc.queue.client import QueueClient
 
 from pyramid.httpexceptions import (
     HTTPOk
@@ -23,7 +21,7 @@ from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 
 
-@view_config(route_name='test_queue_set', renderer='json', request_method='GET')
+#@view_config(route_name='test_queue_set', renderer='json', request_method='GET')
 def test_queue_set(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
@@ -35,7 +33,7 @@ def test_queue_set(request):
     return response
 
 
-@view_config(route_name='test_queue_get', renderer='json', request_method='GET')
+#@view_config(route_name='test_queue_get', renderer='json', request_method='GET')
 def test_queue_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)

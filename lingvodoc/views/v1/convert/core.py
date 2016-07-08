@@ -12,12 +12,6 @@ from lingvodoc.queue.celery import (
     celery_engine
 )
 
-from pyramid.httpexceptions import (
-    HTTPOk
-)
-from pyramid.security import (
-    authenticated_userid,
-)
 
 import logging
 
