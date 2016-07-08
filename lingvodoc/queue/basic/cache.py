@@ -9,6 +9,11 @@ from redis import StrictRedis
 
 
 class TaskCache(ITaskCache):
+    """
+    `self.user_store': {'user_id': <list of task_ids>}
+    `self.task_store`: {'task_id`: <AsyncResult>}
+    `self.progress_store`: {`task_id`: `progress_value(int)`}
+    """
     def __init__(self, user_kwargs, task_kwargs ,progress_kwargs):
         self.user_store = StrictRedis(**user_kwargs)
         self.task_store = StrictRedis(**task_kwargs)
