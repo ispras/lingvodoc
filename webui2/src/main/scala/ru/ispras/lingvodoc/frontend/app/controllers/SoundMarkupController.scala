@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
+import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.extensions.{ModalService, ModalInstance}
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
@@ -57,7 +57,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   @JSExport
   def cancel(): Unit = {
-    instance.dismiss(())
+    instance.close(())
   }
 }
 

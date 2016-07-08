@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.{injectable, AbstractController}
 import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
 import google.maps
 import google.maps.LatLng
 import google.maps.Data.Feature
