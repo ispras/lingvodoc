@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._

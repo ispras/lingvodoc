@@ -1,13 +1,14 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{RouteParams, Scope}
-import com.greencatsoft.angularjs.extensions.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
+import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalService, ModalInstance}
+import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
 import scala.scalajs.js
@@ -30,7 +31,7 @@ trait ViewDictionaryScope extends Scope {
 }
 
 @injectable("ViewDictionaryController")
-class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, backend: BackendService) extends AbstractController[ViewDictionaryScope](scope) {
+class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService) extends AbstractController[ViewDictionaryScope](scope) {
 
   scope.dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   scope.dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -49,14 +50,31 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
     console.log((content :: Nil).toJSArray)
   }
 
-  @JSExport
-  def viewMarkup() = {
 
+  @JSExport
+  def play(soundAddress: String, soundMarkupAddress: String) = {
+    console.log(s"playing $soundAddress with markup $soundMarkupAddress")
   }
 
   @JSExport
-  def playSound() = {
+  def viewSoundMarkup(soundAddress: String, soundMarkupAddress: String) = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/soundMarkup.html"
+    options.controller = "SoundMarkupController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          soundAddress = soundAddress.asInstanceOf[js.Object],
+          dictionaryClientId = scope.dictionaryClientId.asInstanceOf[js.Object],
+          dictionaryObjectId = scope.dictionaryObjectId.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
 
+    val instance = modal.open[Unit](options)
   }
 
 
