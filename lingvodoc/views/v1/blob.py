@@ -103,7 +103,7 @@ def convert(request):  # TODO: test when convert in blobs will be needed
 
 
 @view_config(route_name='upload_user_blob', renderer='json', request_method='POST')
-def upload_user_blob(request):  # TODO: test
+def upload_user_blob(request):  # TODO: remove blob Object
     variables = {'auth': authenticated_userid(request)}
     response = dict()
     filename = request.POST['blob'].filename
@@ -129,13 +129,13 @@ def upload_user_blob(request):  # TODO: test
                             user_id=current_user.id)
 
     current_user.userblobs.append(blob_object)
-    DBSession.flush()
     blob_object.real_storage_path, blob_object.content = create_object(request, input_file, blob_object, blob.data_type,
                                                                        blob.filename, json_input=False)
     DBSession.add(blob_object)
     DBSession.add(current_user)
+    DBSession.flush()
     request.response.status = HTTPOk.code
-    response = {"client_id": blob.client_id, "object_id": blob.object_id, "content": blob_object.content}
+    response = {"client_id": blob_object.client_id, "object_id": blob_object.object_id, "content": blob_object.content}
     return response
 
 

@@ -135,6 +135,7 @@ def upgrade():
     op.create_table('client',
     sa.Column('id', lingvodoc.models.SLBigInteger(), nullable=False),
     sa.Column('user_id', sa.BigInteger(), nullable=True),
+    sa.Column('counter', sa.BigInteger(), nullable=True),
     sa.Column('creation_time', sa.DateTime(), nullable=True),
     sa.Column('is_browser_client', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),

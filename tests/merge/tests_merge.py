@@ -20,7 +20,7 @@ class MergeTest(MyTestCase):
         persp_1 = self.create_perspective('translation_string1', dict, "Published", False)
         persp_2 = self.create_perspective('translation_string2', dict, "Published", False)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/fields'
-                                % (1, 1, 1, 1))
+                                % (1, 6, 1, 7)) # 1 1 1 1 with old
         fields = response.json
 
         words_1 = ["uyzrljiirs", "kxmzpclrns"]

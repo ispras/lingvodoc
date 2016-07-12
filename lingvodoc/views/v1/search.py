@@ -140,28 +140,29 @@ def advanced_search(request):
         .options(joinedload('groupingentity').subqueryload('publishgroupingentity')) \
         .options(subqueryload('publishleveloneentity')) \
         .options(subqueryload('publishleveltwoentity')) \
-        .options(subqueryload('publishgroupingentity')) \
-        .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(tmp_list))
+        .options(subqueryload('publishgroupingentity')) #\
+        # .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(tmp_list))
     result_list = list()
 
     results = list()
     for item in results_cursor.all():
-        tmp_result = dict()
-        tmp_result['lexical_entry'] = item.track(True)
-        tmp_result['client_id'] = item.parent_client_id
-        tmp_result['object_id'] = item.parent_object_id
-        perspective_tr = item.parent.get_translation(request)
-        tmp_result['translation_string'] = perspective_tr['translation_string']
-        tmp_result['translation'] = perspective_tr['translation']
-        tmp_result['is_template'] = item.parent.is_template
-        tmp_result['status'] = item.parent.state
-        tmp_result['marked_for_deletion'] = item.parent.marked_for_deletion
-        tmp_result['parent_client_id'] = item.parent.parent_client_id
-        tmp_result['parent_object_id'] = item.parent.parent_object_id
-        dict_tr = item.parent.parent.get_translation(request)
-        tmp_result['parent_translation_string'] = dict_tr['translation_string']
-        tmp_result['parent_translation'] = dict_tr['translation']
-        results.append(tmp_result)
+        if (item.client_id, item.object_id) in tmp_list:
+            tmp_result = dict()
+            tmp_result['lexical_entry'] = item.track(True)
+            tmp_result['client_id'] = item.parent_client_id
+            tmp_result['object_id'] = item.parent_object_id
+            perspective_tr = item.parent.get_translation(request)
+            tmp_result['translation_string'] = perspective_tr['translation_string']
+            tmp_result['translation'] = perspective_tr['translation']
+            tmp_result['is_template'] = item.parent.is_template
+            tmp_result['status'] = item.parent.state
+            tmp_result['marked_for_deletion'] = item.parent.marked_for_deletion
+            tmp_result['parent_client_id'] = item.parent.parent_client_id
+            tmp_result['parent_object_id'] = item.parent.parent_object_id
+            dict_tr = item.parent.parent.get_translation(request)
+            tmp_result['parent_translation_string'] = dict_tr['translation_string']
+            tmp_result['parent_translation'] = dict_tr['translation']
+            results.append(tmp_result)
     request.response.status = HTTPOk.code
     return results
 

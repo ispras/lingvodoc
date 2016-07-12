@@ -74,7 +74,7 @@ class DictionaryTest(MyTestCase):
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u3]})
         self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertEqual(response.json, correct_answers[test_name])
+        self.assertDictEqual(response.json, correct_answers[test_name], set_like=True)
 
         test_name = "filter_by_user_3"
         response = self.app.post_json('/dictionaries',
@@ -138,7 +138,7 @@ class DictionaryTest(MyTestCase):
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
         persp_2 = self.create_perspective('translation_string2', dict_1, "Published", False)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/fields'
-                                % (1, 1, 1, 1))
+                                % (1, 6, 1, 7)) # 1 1 1 1 with old
         fields = response.json
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/fields'
                                       % (dict_1['client_id'],

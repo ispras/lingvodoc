@@ -214,6 +214,7 @@ class TestHelperMethods(MyTestCase):
         # json_file.close()
         json_file = open('helper_methods/test_dict_convert.json', 'r')
         correct_answer = json.loads(json_file.read())
+        # print('COPY THIS:', response.json)
         self.assertDictEqual(response.json, correct_answer, stop_words=['client_id',
                                                                         'object_id',
                                                                         'parent_client_id',

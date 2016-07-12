@@ -43,6 +43,7 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/perspectives',
                                 params = {'is_template': False})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
@@ -54,35 +55,41 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/perspectives',
                                 params = {'is_template': True})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         test_name = "template_false"
         response = self.app.get('/perspectives',
                                 params = {'is_template': False})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         test_name = "combined_condition_1"
         response = self.app.get('/perspectives',
                                 params = {'state': "Published"})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         test_name = "combined_condition_2"
         response = self.app.get('/perspectives',
                                 params = {'state': "Marked", 'is_template': False})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         test_name = "missing_state"
         response = self.app.get('/perspectives',
                                 params = {'state': "NoState"})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         test_name = "all"
         response = self.app.get('/perspectives')
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
     def testPerspectives(self):
@@ -99,11 +106,13 @@ class PerspectiveTest(MyTestCase):
         test_name = "filled_perspective"
         response = self.app.get('/dictionary/%(client_id)s/%(object_id)s/perspectives' % dict_1)
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         test_name = "empty_perspective"
         response = self.app.get('/dictionary/%(client_id)s/%(object_id)s/perspectives' % dict_2)
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         #TODO: catch bad response exception and check it
@@ -136,6 +145,7 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         params = {'roles_users':
@@ -146,6 +156,7 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         params = {'roles_users': {}}
@@ -155,6 +166,7 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         params = {}
@@ -164,6 +176,7 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         # Testing get and delete
@@ -175,16 +188,18 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         params = {'roles_users':
-                              {"Can resign users from dictionary editors": [id_u3]}}
+                              {"Can resign users from perspective editors": [id_u3]}}
         test_name = "delete_missing_user"
         response = self.app.delete_json('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']), params=params)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         params = {'roles_users':
@@ -195,6 +210,7 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         params = {'roles_users':
@@ -205,6 +221,7 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
         params = {}
@@ -214,8 +231,8 @@ class PerspectiveTest(MyTestCase):
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/roles' % (dict_1['client_id'],
                                    dict_1['object_id'], persp_1['client_id'], persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
-
         # TODO: add test for prohibited deletion of the owner from user roles
 
     def testPerspectiveInfo(self):
@@ -228,7 +245,7 @@ class PerspectiveTest(MyTestCase):
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
 
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/fields'
-                                % (1, 1, 1, 1))
+                                % (1, 6, 1, 7)) # 1 1 1 1 with old
         fields = response.json
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/fields'
                                       % (dict_1['client_id'],

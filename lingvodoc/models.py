@@ -69,6 +69,7 @@ def bi_c(element, compiler, **kw):
     return compiler.visit_BIGINT(element, **kw)
 
 
+
 from collections import deque
 
 # NOT DONE
@@ -177,15 +178,20 @@ def recursive_content(self, publish):
 # TODO: make this part detecting the engine automatically or from config (need to get after engine_from_config)
 # DANGER: This pragma should be turned off for all the bases except sqlite3: it produces unpredictable bugs
 # In this variant it leads to overhead on each connection establishment.
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    if dbapi_connection.__class__.__module__ == "sqlite3":
-        cursor = dbapi_connection.cursor()
-        try:
-            cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.close()
-        except:
-            print("It's not an sqlalchemy")
+
+is_sqlite = False
+
+
+# @event.listens_for(Engine, "connect")
+# def set_sqlite_pragma(dbapi_connection, connection_record):
+#     if dbapi_connection.__class__.__module__ == "sqlite3":
+#         cursor = dbapi_connection.cursor()
+#         try:
+#             cursor.execute("PRAGMA foreign_keys=ON")
+#             cursor.close()
+#             is_sqlite = True
+#         except:
+#             print("It's not an sqlalchemy")
 
 
 class TableNameMixin(object):
@@ -206,6 +212,9 @@ class IdMixin(object):
     id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
 
 
+def get_client_counter(check_id):
+    return DBSession.query(Client).filter_by(id=check_id).first()
+
 class CompositeIdMixin(object):
     """
     It's used for automatically set client_id and object_id as composite primary key.
@@ -213,6 +222,17 @@ class CompositeIdMixin(object):
     #object_id = Column(BigInteger, primary_key=True)
     object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
     client_id = Column(BigInteger, primary_key=True)  # SLBigInteger() ?
+
+    def __init__(self, **kwargs):
+        kwargs.pop("object_id", None)
+        client_by_id = get_client_counter(kwargs['client_id'])
+        kwargs["object_id"] = client_by_id.counter
+        # self.object_id = client_by_id.counter
+        # print('working', kwargs)
+        # print(client_by_id.counter, kwargs)
+        client_by_id.counter += 1
+        super().__init__(**kwargs)
+        # DBSession.commit()
 
 
 class CompositeKeysHelper(object):
@@ -321,19 +341,16 @@ class TranslationStringMixin(object):
         return
 
 
-class Language(Base, TableNameMixin):
+class Language(CompositeIdMixin, Base, TableNameMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
     __parentname__ = 'Language'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
-    client_id = Column(BigInteger, primary_key=True)
     translation_string = Column(UnicodeText)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
-    parent = relationship('Language', remote_side=[client_id,  object_id], backref=backref('language'))
 
     def get_translation(cls, request):
         return find_by_translation_string(find_locale_id(request), cls.translation_string)
@@ -377,6 +394,7 @@ class Language(Base, TableNameMixin):
             self.translation_string = translation_string
             uets.translation = translation
         return
+Language.parent = relationship('Language', remote_side=[Language.client_id,  Language.object_id], backref=backref('language'))
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
@@ -402,7 +420,7 @@ class UITranslationString(Base, TableNameMixin, IdMixin):
     translation = Column(UnicodeText)
 
 
-class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
+class UserEntitiesTranslationString(CompositeIdMixin, Base, TableNameMixin):
     """
     This table holds translation strings for user-created entities such as dictionaries names, column names etc.
     Separate classes are needed not to allow users to interfere UI directly.
@@ -413,7 +431,7 @@ class UserEntitiesTranslationString(Base, TableNameMixin, CompositeIdMixin):
     translation = Column(UnicodeText)
 
 
-class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
+class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, TranslationStringMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -432,7 +450,7 @@ class Dictionary(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, Tran
     # about = Column(UnicodeText)
 
 
-class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin, TranslationStringMixin):
+class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, TranslationStringMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -456,7 +474,7 @@ class DictionaryPerspective(Base, TableNameMixin, CompositeIdMixin, Relationship
     # about = Column(UnicodeText)
 
 
-class DictionaryPerspectiveField(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
+class DictionaryPerspectiveField(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -523,7 +541,7 @@ DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveFi
                                                         backref=backref('dictionaryperspectivefield'))
 
 
-class LexicalEntry(Base, TableNameMixin, CompositeIdMixin, RelationshipMixin):
+class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -581,8 +599,6 @@ class EntityMixin(object):
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
-    object_id = Column(BigInteger, primary_key=True)
-    client_id = Column(BigInteger, primary_key=True)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     entity_type = Column(UnicodeText)
@@ -619,8 +635,6 @@ class PublishingEntityMixin(object):
     This mixin groups common fields and operations for *Entity classes.
     It makes sense to include __acl__ rules right here for code deduplication.
     """
-    object_id = Column(BigInteger, primary_key=True)
-    client_id = Column(BigInteger, primary_key=True)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     entity_object_id = Column(BigInteger)
@@ -631,7 +645,7 @@ class PublishingEntityMixin(object):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-class LevelOneEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
+class LevelOneEntity(CompositeIdMixin, Base, TableNameMixin, EntityMixin, RelationshipMixin):
     """
     This type of entity is used for level-one word entries (e.g. transcription, translation, sounds,
     paradigm transcription, etc). The main convention for this type is to have word entry as a logical parent.
@@ -643,7 +657,7 @@ class LevelOneEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
     __parentname__ = 'LexicalEntry'
 
 
-class LevelTwoEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
+class LevelTwoEntity(CompositeIdMixin, Base, TableNameMixin, EntityMixin, RelationshipMixin):
     """
     This type of entity is used as level-two entity: logically it has as parent a level-one entity object. For
     now there is the only type of such entities - it's praat markup because it can not be separated from sound
@@ -655,7 +669,7 @@ class LevelTwoEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):
     __parentname__ = 'LevelOneEntity'
 
 
-class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):  # RelationshipMixin
+class GroupingEntity(CompositeIdMixin, Base, TableNameMixin, EntityMixin, RelationshipMixin):  # RelationshipMixin
     """
     This type of entity is used for grouping word entries (e.g. etymology tags). With it we can group bunch of
     LexicalEntries as connected with each other.
@@ -680,7 +694,7 @@ class GroupingEntity(Base, TableNameMixin, EntityMixin, RelationshipMixin):  # R
     tag = Column(UnicodeText)
 
 
-class PublishLevelOneEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
+class PublishLevelOneEntity(CompositeIdMixin, Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
     """
     This type is needed for publisher view: publisher should be able to mark word variants for each of datatypes
     as 'correct' ones. For example, a word can have 5 correct translations, two sounds and one.
@@ -692,7 +706,7 @@ class PublishLevelOneEntity(Base, TableNameMixin, PublishingEntityMixin, Relatio
     __entityname__ = 'LevelOneEntity'
 
 
-class PublishLevelTwoEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
+class PublishLevelTwoEntity(CompositeIdMixin, Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
     """
     The same for markups.
     """
@@ -702,7 +716,7 @@ class PublishLevelTwoEntity(Base, TableNameMixin, PublishingEntityMixin, Relatio
     __entityname__ = 'LevelTwoEntity'
 
 
-class PublishGroupingEntity(Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
+class PublishGroupingEntity(CompositeIdMixin, Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
     """
     The same for etymology tags.
     """
@@ -811,9 +825,10 @@ class Client(Base, TableNameMixin, IdMixin):
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
+    counter = Column(BigInteger, default=1)
 
 
-class UserBlobs(Base, TableNameMixin, CompositeIdMixin):
+class UserBlobs(CompositeIdMixin, Base, TableNameMixin):
     name = Column(UnicodeText)
     # content holds url for the object
     content = Column(UnicodeText)

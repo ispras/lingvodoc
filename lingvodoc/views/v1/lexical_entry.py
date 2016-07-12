@@ -44,13 +44,17 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
     lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if lexical_entry:
         if not lexical_entry.marked_for_deletion:
-            tags = DBSession.query(GroupingEntity.content).filter_by(parent = lexical_entry).all()
+            pre_tags = DBSession.query(GroupingEntity.content).filter_by(parent = lexical_entry).all()
+            tags = list()
+            # TODO: rewrite this. This is bad
+            for tag in pre_tags:
+                tags.append(tag[0])
             equal = False
             while not equal:
                 new_tags = []
                 lexes = []
                 for tag in tags:
-                    entity = DBSession.query(GroupingEntity).filter_by(content = tag).first()
+                    entity = DBSession.query(GroupingEntity).filter(GroupingEntity.content==tag).first()
                     path = request.route_url('get_group_entity',
                                          client_id = entity.client_id,
                                          object_id = entity.object_id)
@@ -62,9 +66,13 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
                         if lex not in lexes:
                             lexes.append((lex['client_id'], lex['object_id']))
                 for lex in lexes:
-                    tags = DBSession.query(GroupingEntity.content)\
+                    pre_tags = DBSession.query(GroupingEntity.content)\
                                .filter_by(parent_client_id=lex[0],
                                           parent_object_id=lex[1]).all()
+                    tags = list()
+                    for tag in pre_tags:
+                        tags.append(tag[0])
+
                     for tag in tags:
                         if tag not in new_tags:
                             new_tags.append(tag)

@@ -123,30 +123,34 @@ class MyTestCase(unittest.TestCase):
         return MyTestCase.server_is_up
 
     def setUp(self):
-        import os
-        self.config = testing.setUp()
-        import webtest.http
-        from pyramid import paster
-        from sqlalchemy import create_engine
-        engine = create_engine(dbname)
+        # try:
+            import os
+            self.config = testing.setUp()
+            import webtest.http
+            from pyramid import paster
+            from sqlalchemy import create_engine
+            engine = create_engine(dbname)
 
-        myapp = paster.get_app('../' + alembicini)
-        if not self.get_server_is_up():
-            self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")  # todo: change to pserve
-            self.ws.wait()
-            self.set_server_is_up(True)
-        self.app = webtest.TestApp(myapp)
-        DBSession.remove()
-        DBSession.configure(bind=engine)
-        bashcommand = "alembic -c %s upgrade head" % alembicini
-        args = bashcommand.split()
-        pathdir = os.path.dirname(os.path.realpath(__file__))
-        pathdir = pathdir[:(len(pathdir) - 6)]
-        my_env = os.environ
-        proc = Popen(args, cwd=pathdir, env=my_env)
-        proc.communicate()
-        accounts = get_appsettings('../' + alembicini, 'accounts')
-        data_init(transaction.manager, accounts)
+            myapp = paster.get_app('../' + alembicini)
+            if not self.get_server_is_up():
+                self.ws = webtest.http.StopableWSGIServer.create(myapp, port=6543, host="0.0.0.0")  # todo: change to pserve
+                self.ws.wait()
+                self.set_server_is_up(True)
+            self.app = webtest.TestApp(myapp)
+            # DBSession.remove()
+            # bashcommand = "alembic -c %s downgrade base" % alembicini
+            DBSession.configure(bind=engine)
+            bashcommand = "alembic -c %s upgrade head" % alembicini
+            args = bashcommand.split()
+            pathdir = os.path.dirname(os.path.realpath(__file__))
+            pathdir = pathdir[:(len(pathdir) - 6)]
+            my_env = os.environ
+            proc = Popen(args, cwd=pathdir, env=my_env)
+            proc.communicate()
+            accounts = get_appsettings('../' + alembicini, 'accounts')
+            data_init(transaction.manager, accounts)
+        # except:
+        #     self.tearDown()
 
     def tearDown(self):
         import os
@@ -159,6 +163,15 @@ class MyTestCase(unittest.TestCase):
         proc = Popen(args, cwd=pathdir, env=my_env)
         proc.communicate()
         testing.tearDown()
+
+    def assertEqual(self, d1, d2, msg=None, stop_words=list(), set_like=True, debug_flag=False):
+        if type(d1) == dict and type(d2) == dict:
+            self.assertEqual(dict_diff(d1, d2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
+        else:
+            if type(d1) == list and type(d2) == list:
+                self.assertEqual(list_diff(d1, d2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
+            else:
+                unittest.TestCase.assertEqual(self, d1, d2)
 
     def assertDictEqual(self, d1, d2, msg=None, stop_words=list(), set_like=False, debug_flag=False):
         self.assertEqual(dict_diff(d1, d2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
@@ -214,7 +227,7 @@ class MyTestCase(unittest.TestCase):
                                                                'parent_object_id': par_ids['object_id']})
             ids = response.json
             if state:
-                self.dictionary_change_state(ids,state)
+                self.dictionary_change_state(ids, state)
             return ids
 
     def create_perspective(self, translation_string, par_ids, state=None, is_template=False):
@@ -344,8 +357,7 @@ class TestBig(MyTestCase):
                                {'translation': lang_name, 'client_id': par_ids['client_id'],
                                 'translation_string': lang_name,
                                 'object_id': par_ids['object_id'], 'locale_exist': False}]}
-
-        self.assertDictEqual(response.json, correct_answer, stop_words=['client_id', 'object_id'])
+        self.assertDictEqual(response.json, correct_answer) #, stop_words=['client_id', 'object_id']
         firstlang = response.json['languages'][0]
         firstlangids = {'client_id': firstlang['client_id'], 'object_id': firstlang['object_id']}
         # test all params when editing language
@@ -427,31 +439,27 @@ class TestBig(MyTestCase):
         # test creating perspective
         persp_ids = self.create_perspective(persp_name, dict_ids)
         # test perspective edit
+
+        dict2_name = 'test_dict_2'
+        dict_ids2 = self.create_dictionary(dict2_name, par_ids)
         response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s'
                                      % (dict_ids['client_id'],
                                         dict_ids['object_id'],
                                         persp_ids['client_id'], persp_ids['object_id']),
                                      params={'translation':'new_translation',
-                                             'parent_client_id': firstlangids['client_id'],
-                                             'parent_object_id': firstlangids['object_id'],
+                                             'parent_client_id': dict_ids2['client_id'],
+                                             'parent_object_id': dict_ids2['object_id'],
                                              'is_template': True})
         self.assertEqual(response.status_int, HTTPOk.code)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s' % (dict_ids['client_id'], dict_ids['object_id'],
                                                                          persp_ids['client_id'], persp_ids['object_id']))
-        correct_answer = {'client_id': persp_ids['client_id'], 'object_id': persp_ids['object_id'],
-                          'additional__metadata': '[]',
-                          'translation': 'new_translation',
-                          'parent_client_id': firstlangids['client_id'], 'translation_string': persp_name,
-                          'parent_object_id': firstlangids['object_id'],
-                          'is_template': True,
-                          'marked_for_deletion': False,
-                          'status': 'WiP'}
+        correct_answer = {'translation': 'new_translation', 'parent_client_id': 5, 'object_id': 7, 'client_id': 5, 'translation_string': 'test_persp', 'status': 'WiP', 'marked_for_deletion': False, 'is_template': True, 'parent_object_id': 9, 'additional_metadata': '{}'}
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, correct_answer)
         # return old parent to perspective
         response = self.app.put_json('/dictionary/%s/%s/perspective/%s/%s'
-                                     % (firstlangids['client_id'],
-                                        firstlangids['object_id'],
+                                     % (dict_ids2['client_id'],
+                                        dict_ids2['object_id'],
                                         persp_ids['client_id'],
                                         persp_ids['object_id']),
                                      params={'parent_client_id': dict_ids['client_id'],
@@ -573,7 +581,7 @@ class TestBig(MyTestCase):
                                    dict_ids['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'roles_users':
-                              {'Can resign users from perspective editors': [user_id],
+                              {'Can resign users from dictionary editors': [user_id],
                                'Can create perspectives': [user_id],
                                'Can merge dictionaries and perspectives': [user_id],
                                'Can delete dictionary': [user_id],
@@ -581,7 +589,7 @@ class TestBig(MyTestCase):
                                'Can get dictionary role list': [user_id],
                                'Can edit dictionary options': [user_id]},
                           'roles_organizations':
-                              {'Can resign users from perspective editors': [],
+                              {'Can resign users from dictionary editors': [],
                                'Can create perspectives': [],
                                'Can merge dictionaries and perspectives': [],
                                'Can delete dictionary': [],
@@ -593,7 +601,7 @@ class TestBig(MyTestCase):
         user_id2 = self.signup_common('test2')
         user_id3 = self.signup_common('test3')
         params = {'roles_users':
-                              {'Can resign users from perspective editors': [user_id2],
+                              {'Can resign users from dictionary editors': [user_id2],
                                'Can create perspectives': [user_id2],
                                'Can merge dictionaries and perspectives': [user_id3],
                                'Can create dictionary roles and assign collaborators': [user_id2],
@@ -603,7 +611,7 @@ class TestBig(MyTestCase):
                                                              dict_ids['object_id']), params=params)
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'roles_users':
-                              {'Can resign users from perspective editors': [user_id, user_id2],
+                              {'Can resign users from dictionary editors': [user_id, user_id2],
                                'Can create perspectives': [user_id, user_id2],
                                'Can merge dictionaries and perspectives': [user_id, user_id3],
                                'Can delete dictionary': [user_id],
@@ -611,7 +619,7 @@ class TestBig(MyTestCase):
                                'Can get dictionary role list': [user_id, user_id2],
                                'Can edit dictionary options': [user_id, user_id3]},
                           'roles_organizations':
-                              {'Can resign users from perspective editors': [],
+                              {'Can resign users from dictionary editors': [],
                                'Can create perspectives': [],
                                'Can merge dictionaries and perspectives': [],
                                'Can delete dictionary': [],
@@ -625,13 +633,13 @@ class TestBig(MyTestCase):
         self.login_common('test2')
         # import pdb; pdb.set_trace()
         params = {'roles_users':
-                              {'Can resign users from perspective editors': [user_id3],
+                              {'Can resign users from dictionary editors': [user_id3],
                                'Can create perspectives': [user_id3]}}
         response = self.app.post_json('/dictionary/%s/%s/roles' % (dict_ids['client_id'],
                                                              dict_ids['object_id']), params=params)
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'roles_users':
-                              {'Can resign users from perspective editors': [user_id, user_id2, user_id3],
+                              {'Can resign users from dictionary editors': [user_id, user_id2, user_id3],
                                'Can create perspectives': [user_id, user_id2, user_id3],
                                'Can merge dictionaries and perspectives': [user_id, user_id3],
                                'Can delete dictionary': [user_id],
@@ -639,7 +647,7 @@ class TestBig(MyTestCase):
                                'Can get dictionary role list': [user_id, user_id2],
                                'Can edit dictionary options': [user_id, user_id3]},
                           'roles_organizations':
-                              {'Can resign users from perspective editors': [],
+                              {'Can resign users from dictionary editors': [],
                                'Can create perspectives': [],
                                'Can merge dictionaries and perspectives': [],
                                'Can delete dictionary': [],
@@ -660,7 +668,7 @@ class TestBig(MyTestCase):
                                                                      dict_ids['object_id']), params=params)
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'roles_users':
-                              {'Can resign users from perspective editors': [user_id, user_id2, user_id3],
+                              {'Can resign users from dictionary editors': [user_id, user_id2, user_id3],
                                'Can create perspectives': [user_id, user_id2, user_id3],
                                'Can merge dictionaries and perspectives': [user_id, user_id3],
                                'Can delete dictionary': [user_id],
@@ -668,7 +676,7 @@ class TestBig(MyTestCase):
                                'Can get dictionary role list': [user_id, user_id2],
                                'Can edit dictionary options': [user_id]},
                           'roles_organizations':
-                              {'Can resign users from perspective editors': [],
+                              {'Can resign users from dictionary editors': [],
                                'Can create perspectives': [],
                                'Can merge dictionaries and perspectives': [],
                                'Can delete dictionary': [],
@@ -690,7 +698,7 @@ class TestBig(MyTestCase):
         self.assertDictEqual(response.json, correct_answer)
 
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/fields'
-                                % (1, 1, 1, 1))  # TODO: remove ids. use dictionaries list, probably.
+                                % (1, 6, 1, 7))  # TODO: remove ids. use dictionaries list, probably.
         # todo: Or just create new db with new object_ids and find needed pairs of ids
 
         self.assertEqual(response.status_int, HTTPOk.code)
@@ -740,15 +748,14 @@ class TestBig(MyTestCase):
                                    l1e_ids['object_id'],))
         self.assertEqual(response.status_int, HTTPOk.code)
         correct_answer = {'client_id': l1e_ids['client_id'],
-                          'parent_client_id': l1e_ids['client_id'],
-                          'parent_object_id': l1e_ids['object_id'],
+                          'parent_client_id': lex_ids['client_id'],
+                          'parent_object_id': lex_ids['object_id'],
                           'object_id': l1e_ids['object_id'],
                           'entity_type': 'Word',
                           'level': 'leveloneentity',
                           'marked_for_deletion': False,
                           'locale_id': 1,
                           'content': 'testing level one entity'}
-
         self.assertDictEqual(response.json, correct_answer)
 
         response = self.app.get('/leveloneentity/%s/%s'
@@ -1030,17 +1037,16 @@ class TestBig(MyTestCase):
         response = self.app.post_json('/published_dictionaries', params = {})
         self.assertEqual(response.status_int, HTTPOk.code)
         # TODO: change from numbers to ids, returned in previous responses.
-        correct_answer = {'dictionaries': [{'object_id': 1, 'parent_client_id': 5, 'translation': 'Словарь корня', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь корня', 'client_id': 5, 'parent_object_id': 1}, {'object_id': 2, 'parent_client_id': 5, 'translation': 'Словарь первого ребенка', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь первого ребенка', 'client_id': 5, 'parent_object_id': 2}, {'object_id': 3, 'parent_client_id': 5, 'translation': 'Словарь второго ребенка', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь второго ребенка', 'client_id': 5, 'parent_object_id': 3}, {'object_id': 4, 'parent_client_id': 5, 'translation': 'Словарь №0', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №0', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 5, 'parent_client_id': 5, 'translation': 'Словарь №1', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №1', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 6, 'parent_client_id': 5, 'translation': 'Словарь №2', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №2', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 7, 'parent_client_id': 5, 'translation': 'Словарь №3', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №3', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 8, 'parent_client_id': 5, 'translation': 'Словарь №4', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №4', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 9, 'parent_client_id': 5, 'translation': 'Словарь №5', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №5', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 10, 'parent_client_id': 5, 'translation': 'Словарь №6', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №6', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 11, 'parent_client_id': 5, 'translation': 'Словарь №7', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №7', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 12, 'parent_client_id': 5, 'translation': 'Словарь №8', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №8', 'client_id': 5, 'parent_object_id': 5}, {'object_id': 13, 'parent_client_id': 5, 'translation': 'Словарь №9', 'status': 'Published', 'additional_metadata': None, 'translation_string': 'Словарь №9', 'client_id': 5, 'parent_object_id': 5}]}
+        correct_answer = {'dictionaries': [{'translation_string': 'Словарь корня', 'parent_object_id': 1, 'object_id': 7, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь корня', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь первого ребенка', 'parent_object_id': 3, 'object_id': 9, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь первого ребенка', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь второго ребенка', 'parent_object_id': 5, 'object_id': 11, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь второго ребенка', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №0', 'parent_object_id': 21, 'object_id': 25, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №0', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №1', 'parent_object_id': 21, 'object_id': 27, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №1', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №2', 'parent_object_id': 21, 'object_id': 29, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №2', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №3', 'parent_object_id': 21, 'object_id': 31, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №3', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №4', 'parent_object_id': 21, 'object_id': 33, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №4', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №5', 'parent_object_id': 21, 'object_id': 35, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №5', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №6', 'parent_object_id': 21, 'object_id': 37, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №6', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №7', 'parent_object_id': 21, 'object_id': 39, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №7', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №8', 'parent_object_id': 21, 'object_id': 41, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №8', 'parent_client_id': 5, 'client_id': 5}, {'translation_string': 'Словарь №9', 'parent_object_id': 21, 'object_id': 43, 'additional_metadata': None, 'status': 'Published', 'translation': 'Словарь №9', 'parent_client_id': 5, 'client_id': 5}]}
         self.assertDictEqual(response.json, correct_answer)
         response = self.app.post_json('/published_dictionaries', params = {'group_by_lang':True})
         self.assertEqual(response.status_int, HTTPOk.code)
-        correct_answer = [{'translation_string': 'Корень', 'client_id': 5, 'locale_exist': False, 'contains': [{'translation_string': 'Первый ребенок', 'client_id': 5, 'locale_exist': False, 'contains': [{'translation_string': 'Пустой язык', 'client_id': 5, 'locale_exist': False, 'contains': [{'translation_string': 'Язык с многими словарями', 'dicts': [{'parent_object_id': 5, 'translation_string': 'Словарь №0', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №0', 'object_id': 4, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №1', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №1', 'object_id': 5, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №2', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №2', 'object_id': 6, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №3', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №3', 'object_id': 7, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №4', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №4', 'object_id': 8, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №5', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №5', 'object_id': 9, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №6', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №6', 'object_id': 10, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №7', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №7', 'object_id': 11, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №8', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №8', 'object_id': 12, 'status': 'Published'}, {'parent_object_id': 5, 'translation_string': 'Словарь №9', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь №9', 'object_id': 13, 'status': 'Published'}], 'client_id': 5, 'translation': 'Язык с многими словарями', 'object_id': 5, 'locale_exist': False}], 'translation': 'Пустой язык', 'object_id': 4, 'dicts': []}], 'translation': 'Первый ребенок', 'object_id': 2, 'dicts': [{'parent_object_id': 2, 'translation_string': 'Словарь первого ребенка', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь первого ребенка', 'object_id': 2, 'status': 'Published'}]}, {'translation_string': 'Второй ребенок', 'dicts': [{'parent_object_id': 3, 'translation_string': 'Словарь второго ребенка', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь второго ребенка', 'object_id': 3, 'status': 'Published'}], 'client_id': 5, 'translation': 'Второй ребенок', 'object_id': 3, 'locale_exist': False}], 'translation': 'Корень', 'object_id': 1, 'dicts': [{'parent_object_id': 1, 'translation_string': 'Словарь корня', 'client_id': 5, 'additional_metadata': None, 'parent_client_id': 5, 'translation': 'Словарь корня', 'object_id': 1, 'status': 'Published'}]}]
+        correct_answer = [{'translation_string': 'Корень', 'translation': 'Корень', 'locale_exist': False, 'dicts': [{'translation_string': 'Словарь корня', 'parent_client_id': 5, 'translation': 'Словарь корня', 'client_id': 5, 'status': 'Published', 'object_id': 7, 'parent_object_id': 1, 'additional_metadata': None}], 'client_id': 5, 'contains': [{'translation_string': 'Первый ребенок', 'translation': 'Первый ребенок', 'locale_exist': False, 'dicts': [{'translation_string': 'Словарь первого ребенка', 'parent_client_id': 5, 'translation': 'Словарь первого ребенка', 'client_id': 5, 'status': 'Published', 'object_id': 9, 'parent_object_id': 3, 'additional_metadata': None}], 'client_id': 5, 'contains': [{'translation_string': 'Пустой язык', 'translation': 'Пустой язык', 'locale_exist': False, 'dicts': [], 'client_id': 5, 'contains': [{'translation_string': 'Язык с многими словарями', 'translation': 'Язык с многими словарями', 'locale_exist': False, 'dicts': [{'translation_string': 'Словарь №0', 'parent_client_id': 5, 'translation': 'Словарь №0', 'client_id': 5, 'status': 'Published', 'object_id': 25, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №1', 'parent_client_id': 5, 'translation': 'Словарь №1', 'client_id': 5, 'status': 'Published', 'object_id': 27, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №2', 'parent_client_id': 5, 'translation': 'Словарь №2', 'client_id': 5, 'status': 'Published', 'object_id': 29, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №3', 'parent_client_id': 5, 'translation': 'Словарь №3', 'client_id': 5, 'status': 'Published', 'object_id': 31, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №4', 'parent_client_id': 5, 'translation': 'Словарь №4', 'client_id': 5, 'status': 'Published', 'object_id': 33, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №5', 'parent_client_id': 5, 'translation': 'Словарь №5', 'client_id': 5, 'status': 'Published', 'object_id': 35, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №6', 'parent_client_id': 5, 'translation': 'Словарь №6', 'client_id': 5, 'status': 'Published', 'object_id': 37, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №7', 'parent_client_id': 5, 'translation': 'Словарь №7', 'client_id': 5, 'status': 'Published', 'object_id': 39, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №8', 'parent_client_id': 5, 'translation': 'Словарь №8', 'client_id': 5, 'status': 'Published', 'object_id': 41, 'parent_object_id': 21, 'additional_metadata': None}, {'translation_string': 'Словарь №9', 'parent_client_id': 5, 'translation': 'Словарь №9', 'client_id': 5, 'status': 'Published', 'object_id': 43, 'parent_object_id': 21, 'additional_metadata': None}], 'client_id': 5, 'object_id': 21}], 'object_id': 19}], 'object_id': 3}, {'translation_string': 'Второй ребенок', 'translation': 'Второй ребенок', 'locale_exist': False, 'dicts': [{'translation_string': 'Словарь второго ребенка', 'parent_client_id': 5, 'translation': 'Словарь второго ребенка', 'client_id': 5, 'status': 'Published', 'object_id': 11, 'parent_object_id': 5, 'additional_metadata': None}], 'client_id': 5, 'object_id': 5}], 'object_id': 1}]
         self.assertListEqual(response.json, correct_answer)
         response = self.app.get('/perspectives')
         self.assertEqual(response.status_int, HTTPOk.code)
-        correct_answer = {'perspectives': [{'is_template': True, 'translation': 'Lingvodoc desktop version', 'parent_client_id': 1, 'translation_string': 'Lingvodoc desktop version', 'additional_metadata': None, 'status': 'Service', 'object_id': 1, 'client_id': 1, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': True, 'translation': 'Regular dictionary', 'parent_client_id': 1, 'translation_string': 'Regular dictionary', 'additional_metadata': None, 'status': 'Service', 'object_id': 2, 'client_id': 1, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': True, 'translation': 'Morhological dictionary', 'parent_client_id': 1, 'translation_string': 'Morhological dictionary', 'additional_metadata': None, 'status': 'Service', 'object_id': 3, 'client_id': 1, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Root Perspective', 'parent_client_id': 5, 'translation_string': 'Root Perspective', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 1, 'client_id': 5, 'parent_object_id': 1, 'marked_for_deletion': False}, {'is_template': False, 'translation': '1st Perspective', 'parent_client_id': 5, 'translation_string': '1st Perspective', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 2, 'client_id': 5, 'parent_object_id': 2, 'marked_for_deletion': False}, {'is_template': False, 'translation': '2nd Perspective', 'parent_client_id': 5, 'translation_string': '2nd Perspective', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 3, 'client_id': 5, 'parent_object_id': 3, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №1', 'parent_client_id': 5, 'translation_string': 'Перспектива №1', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 4, 'client_id': 5, 'parent_object_id': 4, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №2', 'parent_client_id': 5, 'translation_string': 'Перспектива №2', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 5, 'client_id': 5, 'parent_object_id': 5, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №3', 'parent_client_id': 5, 'translation_string': 'Перспектива №3', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 6, 'client_id': 5, 'parent_object_id': 6, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №4', 'parent_client_id': 5, 'translation_string': 'Перспектива №4', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 7, 'client_id': 5, 'parent_object_id': 7, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №5', 'parent_client_id': 5, 'translation_string': 'Перспектива №5', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 8, 'client_id': 5, 'parent_object_id': 8, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №6', 'parent_client_id': 5, 'translation_string': 'Перспектива №6', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 9, 'client_id': 5, 'parent_object_id': 9, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №7', 'parent_client_id': 5, 'translation_string': 'Перспектива №7', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 10, 'client_id': 5, 'parent_object_id': 10, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №8', 'parent_client_id': 5, 'translation_string': 'Перспектива №8', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 11, 'client_id': 5, 'parent_object_id': 11, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №9', 'parent_client_id': 5, 'translation_string': 'Перспектива №9', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 12, 'client_id': 5, 'parent_object_id': 12, 'marked_for_deletion': False}, {'is_template': False, 'translation': 'Перспектива №10', 'parent_client_id': 5, 'translation_string': 'Перспектива №10', 'additional_metadata': '{}', 'status': 'Published', 'object_id': 13, 'client_id': 5, 'parent_object_id': 13, 'marked_for_deletion': False}]}
+        correct_answer = {'perspectives': [{'is_template': True, 'translation_string': 'Lingvodoc desktop version', 'marked_for_deletion': False, 'translation': 'Lingvodoc desktop version', 'client_id': 1, 'additional_metadata': None, 'status': 'Service', 'object_id': 7, 'parent_client_id': 1, 'parent_object_id': 6}, {'is_template': True, 'translation_string': 'Regular dictionary', 'marked_for_deletion': False, 'translation': 'Regular dictionary', 'client_id': 1, 'additional_metadata': None, 'status': 'Service', 'object_id': 19, 'parent_client_id': 1, 'parent_object_id': 6}, {'is_template': True, 'translation_string': 'Morhological dictionary', 'marked_for_deletion': False, 'translation': 'Morhological dictionary', 'client_id': 1, 'additional_metadata': None, 'status': 'Service', 'object_id': 36, 'parent_client_id': 1, 'parent_object_id': 6}, {'is_template': False, 'translation_string': 'Root Perspective', 'marked_for_deletion': False, 'translation': 'Root Perspective', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 13, 'parent_client_id': 5, 'parent_object_id': 7}, {'is_template': False, 'translation_string': '1st Perspective', 'marked_for_deletion': False, 'translation': '1st Perspective', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 15, 'parent_client_id': 5, 'parent_object_id': 9}, {'is_template': False, 'translation_string': '2nd Perspective', 'marked_for_deletion': False, 'translation': '2nd Perspective', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 17, 'parent_client_id': 5, 'parent_object_id': 11}, {'is_template': False, 'translation_string': 'Перспектива №1', 'marked_for_deletion': False, 'translation': 'Перспектива №1', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 45, 'parent_client_id': 5, 'parent_object_id': 25}, {'is_template': False, 'translation_string': 'Перспектива №2', 'marked_for_deletion': False, 'translation': 'Перспектива №2', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 47, 'parent_client_id': 5, 'parent_object_id': 27}, {'is_template': False, 'translation_string': 'Перспектива №3', 'marked_for_deletion': False, 'translation': 'Перспектива №3', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 49, 'parent_client_id': 5, 'parent_object_id': 29}, {'is_template': False, 'translation_string': 'Перспектива №4', 'marked_for_deletion': False, 'translation': 'Перспектива №4', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 51, 'parent_client_id': 5, 'parent_object_id': 31}, {'is_template': False, 'translation_string': 'Перспектива №5', 'marked_for_deletion': False, 'translation': 'Перспектива №5', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 53, 'parent_client_id': 5, 'parent_object_id': 33}, {'is_template': False, 'translation_string': 'Перспектива №6', 'marked_for_deletion': False, 'translation': 'Перспектива №6', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 55, 'parent_client_id': 5, 'parent_object_id': 35}, {'is_template': False, 'translation_string': 'Перспектива №7', 'marked_for_deletion': False, 'translation': 'Перспектива №7', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 57, 'parent_client_id': 5, 'parent_object_id': 37}, {'is_template': False, 'translation_string': 'Перспектива №8', 'marked_for_deletion': False, 'translation': 'Перспектива №8', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 59, 'parent_client_id': 5, 'parent_object_id': 39}, {'is_template': False, 'translation_string': 'Перспектива №9', 'marked_for_deletion': False, 'translation': 'Перспектива №9', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 61, 'parent_client_id': 5, 'parent_object_id': 41}, {'is_template': False, 'translation_string': 'Перспектива №10', 'marked_for_deletion': False, 'translation': 'Перспектива №10', 'client_id': 5, 'additional_metadata': '{}', 'status': 'Published', 'object_id': 63, 'parent_client_id': 5, 'parent_object_id': 43}]}
         self.assertDictEqual(response.json, correct_answer)
-        # print(response.json)
 
     def test_user_blobs(self):
         import hashlib
@@ -1057,6 +1063,19 @@ class TestBig(MyTestCase):
         file_response = self.app.get(response.json['content'])
         second_hash = hashlib.md5(file_response.body).hexdigest()
         self.assertEqual(first_hash, second_hash)
+
+    def test_ids(self):
+        import hashlib
+        self.signup_common()
+        self.login_common()
+        ids = []
+        for i in range(12):
+            root_ids = self.create_language('Корень %i' % i)
+            ids += [root_ids]
+            ids += [self.create_dictionary('Словарь корня %i' % i, root_ids, 'Published')]
+        correct = [{'object_id': 1, 'client_id': 5}, {'object_id': 3, 'client_id': 5}, {'object_id': 5, 'client_id': 5}, {'object_id': 7, 'client_id': 5}, {'object_id': 9, 'client_id': 5}, {'object_id': 11, 'client_id': 5}, {'object_id': 13, 'client_id': 5}, {'object_id': 15, 'client_id': 5}, {'object_id': 17, 'client_id': 5}, {'object_id': 19, 'client_id': 5}, {'object_id': 21, 'client_id': 5}, {'object_id': 23, 'client_id': 5}, {'object_id': 25, 'client_id': 5}, {'object_id': 27, 'client_id': 5}, {'object_id': 29, 'client_id': 5}, {'object_id': 31, 'client_id': 5}, {'object_id': 33, 'client_id': 5}, {'object_id': 35, 'client_id': 5}, {'object_id': 37, 'client_id': 5}, {'object_id': 39, 'client_id': 5}, {'object_id': 41, 'client_id': 5}, {'object_id': 43, 'client_id': 5}, {'object_id': 45, 'client_id': 5}, {'object_id': 47, 'client_id': 5}]
+        self.assertListEqual(ids, correct, set_like=True)
+
 
 class TestHelperFuncs(unittest.TestCase):
 

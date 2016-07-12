@@ -158,11 +158,11 @@ def data_init(manager, accounts):
         base_groups.append(BaseGroup(translation_string="Can resign users from dictionary editors",
                                      subject="dictionary_role",
                                      action="delete",
-                                     perspective_default=True))
+                                     dictionary_default=True))
         base_groups.append(BaseGroup(translation_string="Can resign users from perspective editors",
                                      subject="perspective_role",
                                      action="delete",
-                                     dictionary_default=True))
+                                     perspective_default=True))
         base_groups.append(BaseGroup(translation_string="Can edit organization",
                                      subject="organization",
                                      action="edit"))
