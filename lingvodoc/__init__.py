@@ -1,3 +1,5 @@
+import logging
+
 from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -8,11 +10,18 @@ from .models import (
     Base,
     )
 
+from lingvodoc.caching import (
+    initialize_cache
+)
+
 from .acl import (
     groupfinder
 )
 
-from configparser import ConfigParser
+from configparser import (
+    ConfigParser,
+    NoSectionError
+)
 
 def configure_routes(config):
     """
@@ -564,6 +573,10 @@ def configure_routes(config):
     config.add_route(name='convert_dictionary', pattern='/convert')  # tested
     config.add_route(name='convert_dictionary_check', pattern='/convert_check')  # tested
 
+    #Check the documentation in celery_test.view.py
+    #config.add_route(name='test_queue_set', pattern='/test_queue_set')
+    #config.add_route(name='test_queue_get', pattern='/test_queue_get')
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
@@ -581,6 +594,28 @@ def main(global_config, **settings):
         storage[k] = v
     settings['storage'] = storage
     config = Configurator(settings=settings)
+    log = logging.getLogger(__name__)
+
+    #TODO: Find a more neat way
+    try:
+        cache_kwargs = dict()
+        for k, v in parser.items('cache:dogpile'):
+            cache_kwargs[k] = v
+        cache_args = dict()
+        for k, v in parser.items('cache:dogpile:args'):
+            cache_args[k] = v
+        cache_kwargs['arguments'] = cache_args
+        if 'expiration_time' in cache_kwargs:
+            cache_kwargs['expiration_time'] = int(cache_kwargs['expiration_time'])
+        if 'redis_expiration_time' in cache_kwargs:
+            cache_kwargs['redis_expiration_time'] = int(cache_kwargs['redis_expiration_time'])
+    except NoSectionError:
+        log.warn("No 'cache:dogpile' or/and 'cache:dogpile:args' sections in config; disabling caching")
+        initialize_cache(None)
+    else:
+        initialize_cache(cache_kwargs)
+
+    #config.configure_celery('development_test.ini')
 
     authentication_policy = AuthTktAuthenticationPolicy(settings['secret'],
                                                         hashalg='sha512', callback=groupfinder)
@@ -602,8 +637,6 @@ def main(global_config, **settings):
 #    config.add_route('dictionary', 'dictionary')
 
 #    config.add_route('metaword', 'dictionary/{dictionary_id}/etymology/metaword')
-
-
 
     config.scan('.views')
     return config.make_wsgi_app()

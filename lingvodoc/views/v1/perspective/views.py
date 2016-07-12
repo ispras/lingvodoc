@@ -2,6 +2,7 @@ __author__ = 'alexander'
 
 from collections import deque
 
+from lingvodoc.caching import MEMOIZE
 from lingvodoc.exceptions import CommonException
 from lingvodoc.models import (
     BaseGroup,
@@ -1100,6 +1101,7 @@ def lexical_entries_all_count(request): # tested
 
 
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
+@MEMOIZE
 def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')

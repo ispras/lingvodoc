@@ -162,7 +162,7 @@ def signin(request):  # TODO: find out if it used anywhere. And the get rid of i
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
-@view_config(route_name='cheatlogin', request_method='POST')
+@view_config(route_name='cheatlogin', request_method='POST', renderer='json')
 def login_cheat(request):  # TODO: test
     next = request.params.get('next') or request.route_url('dashboard')
     login = request.json_body.get('login', '')
@@ -183,7 +183,7 @@ def login_cheat(request):  # TODO: test
             locale_id = 1
         response.set_cookie(key='locale_id', value=str(locale_id))
         headers = remember(request, principal=client.id)
-        return HTTPFound(location=next, headers=response.headers)
+        return response
 
     log.debug("Login unsuccessful for " + login)
     return HTTPUnauthorized(location=request.route_url('login'))

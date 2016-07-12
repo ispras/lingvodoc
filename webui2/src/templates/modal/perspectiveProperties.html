@@ -1,0 +1,167 @@
+<div class="modal-header">
+    <h3 class="modal-title"></h3>
+</div>
+
+<div class="modal-body">
+    <div>
+        <div class="form-group">
+            <label for="perspectiveName">Perspective name</label>
+            <input type="text" id="perspectiveName" class="form-control" placeholder="" required autofocus
+                   ng-model="perspective.translation" ng-change="perspective.translationString=perspective.translation">
+
+            <label for="perspectiveAuthors">Authors</label>
+            <input type="text" id="perspectiveAuthors" class="form-control" placeholder="" required autofocus
+                   ng-model="authors">
+        </div>
+
+        <div class="form-group">
+            <label for="isTemplate">I want to share this perspective as template</label>
+            <input type="checkbox" id="isTemplate" ng-model="perspective.isTemplate">
+        </div>
+
+        <div class="form-group">
+            <span class="glyphicon glyphicon-plus-sign" ng-click="controller.addField()"></span>
+        </div>
+
+        <table class="table">
+            <thead>
+            <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            </thead>
+
+            <tbody ng-repeat="f in fields">
+            <tr>
+
+                <td>
+                    <input type="checkbox" ng-checked="f.statusEnabled" ng-model="f.statusEnabled">
+                </td>
+
+                <td>
+                    <input type="text" class="form-control" ng-model="f.field.entityType">
+                </td>
+
+                <td>
+                    <select class="form-control" ng-model="f.field.dataType">
+                        <option value="text" ng-if="f.field.dataType == 'text'" selected>Text</option>
+                        <option value="text" ng-if="f.field.dataType != 'text'">Text</option>
+                        <option value="image" ng-if="f.field.dataType == 'image'" selected>Image</option>
+                        <option value="image" ng-if="f.field.dataType != 'image'">Image</option>
+                        <option value="sound" ng-if="f.field.dataType == 'sound'" selected>Audio</option>
+                        <option value="sound" ng-if="f.field.dataType != 'sound'">Audio</option>
+                        <option value="grouping_tag" ng-if="f.field.dataType == 'grouping_tag'" selected>Grouping tag</option>
+                        <option value="grouping_tag" ng-if="f.field.dataType != 'grouping_tag'">Groupping tag</option>
+                    </select>
+
+                </td>
+
+                <td>
+                    <input type="checkbox" ng-checked="f.groupEnabled" ng-model="f.groupEnabled" ng-change="controller.enableGroup(f)">
+                </td>
+
+
+                <td>
+                    <input type="text" ng-model="field.group" class="form-control" ng-if="f.groupEnabled">
+                </td>
+
+                <td>
+                    <input type="checkbox" ng-checked="field.fields.length > 0 || f.subfieldsEnabled"
+                           ng-if="f.field.dataType == 'sound'" ng-model="f.subfieldsEnabled"
+                           ng-change="controller.enableLinkedField(f)">
+                </td>
+
+                <td>
+                        <span class="glyphicon glyphicon-circle-arrow-right"
+                              ng-if="f.field.dataType == 'sound' && f.field.fields.length > 0 && f.field.fields.length > 0"></span>
+                </td>
+
+                <td>
+
+                    <input type="text" ng-value="f.field.fields[0].entityType" class="form-control"
+                           ng-if="f.field.dataType == 'sound' && (f.field.fields.length > 0 || f.subfieldsEnabled)"
+                           ng-model="f.field.fields[0].entityType">
+                </td>
+
+                <td>
+
+                    <label class="checkbox-inline" ng-if="f.field.dataType == 'text'">
+                        <input type="checkbox"
+                               ng-checked="f.translatable"
+                               ng-model="f.translatable"> translatable</label>
+
+                    <select class="form-control"
+                            ng-if="f.field.dataType == 'sound' && (f.field.fields.length > 0 || f.subfieldsEnabled)"
+                            ng-model="f.field.fields[0].dataType">
+                        <option value="text" ng-if="f.field.fields[0].dataType == 'text'" selected>Text</option>
+                        <option value="text" ng-if="f.field.fields[0].dataType != 'text'">Text</option>
+                        <option value="image" ng-if="f.field.fields[0].dataType == 'image'" selected>Image</option>
+                        <option value="image" ng-if="f.field.fields[0].dataType != 'image'">Image</option>
+                        <option value="sound" ng-if="f.field.fields[0].dataType == 'sound'" selected>Audio</option>
+                        <option value="sound" ng-if="f.field.fields[0].dataType != 'sound'">Audio</option>
+                        <option value="grouping_tag" ng-if="f.field.fields[0].dataType == 'grouping_tag'" selected>
+                            Groupping tag
+                        </option>
+                        <option value="grouping_tag" ng-if="f.field.fields[0].dataType != 'grouping_tag'">Groupping
+                            tag
+                        </option>
+                        <option value="grouping_tag" ng-if="f.field.fields[0].dataType == 'markup'" selected>
+                            Markup
+                        </option>
+                        <option value="grouping_tag" ng-if="f.field.fields[0].dataType != 'markup'">Markup</option>
+                    </select>
+                </td>
+
+                <td>
+                    <span class="glyphicon glyphicon-remove" ng-click="controller.removeField($index)"></span>
+                </td>
+
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            Files
+        </div>
+        <div class="panel-body">
+            <table class="table table-bordered">
+                <tr ng-repeat="blob in perspective.blobs">
+                    <td>{{ blob.name }}</td>
+                    <td> <span class="glyphicon glyphicon-remove" ng-click="removeBlob(blob)"></span> </td>
+                </tr>
+            </table>
+
+            <select id="blob" class="form-control" ng-model="blobId" ng-options="blob.getId() as blob.name for blob in blobs track by blob.getId()">
+                <option></option>
+            </select>
+
+            <button type="button" class="btn btn-primary" ng-click="controller.addBlob()">Add</button>
+        </div>
+
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            Location
+        </div>
+        <div class="panel-body">
+            <button type="button" class="btn btn-primary" ng-click="controller.editGeoLabels()">Location...</button>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="controller.ok()" >OK</button>
+    <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+</div>

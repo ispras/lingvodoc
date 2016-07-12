@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="LingvodocModule" ng-cloak>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Lingvodoc</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-jsdeps.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-fastopt.js')}"></script>
+
+    <script type="text/javascript">
+        ru.ispras.lingvodoc.frontend.LingvodocApplication().main();
+    </script>
+
+</head>
+
+<body>
+
+<!-- navigation -->
+<nav class="lingvodoc-navbar" ng-controller="NavigationController">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#/home">Lingvodoc</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li class="dropdown" ng-if="controller.isAuthenticated()">
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">
+                        Dashboard<span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#/dashboard">My dictionaries</a></li>
+                        <li><a href="#/create_dictionary">Create dictionary</a></li>
+                        <li><a href="#/merge_master">Merge master</a></li>
+                    </ul>
+                </li>
+
+                <li ng-if="controller.isAuthenticated()"><a href="#/languages">Languages</a></li>
+                <li ng-if="controller.isAuthenticated()"><a href="#/organizations">Organizations</a></li>
+                <li ng-if="controller.isAuthenticated()"><a href="#/maps">Maps search</a></li>
+                <li ng-if="controller.isAuthenticated()"><a href="#/blob_upload">My files</a></li>
+            </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+
+                <li class="dropdown" ng-if="controller.isAuthenticated()">
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">{{ controller.getAuthenticatedUser().name }}<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#/blob_upload">My files</a></li>
+                        <li><a href="#/logout">Sign out</a></li>
+                    </ul>
+                </li>
+
+                <li class="dropdown" ng-if="!controller.isAuthenticated()">
+                    <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                       aria-expanded="false">Guest<span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#/login">Sign in</a></li>
+                        <li><a href="#/signup">Sign up</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<!-- end navigation -->
+
+
+<div ng-view></div>
+
+</body>
+
+</html>

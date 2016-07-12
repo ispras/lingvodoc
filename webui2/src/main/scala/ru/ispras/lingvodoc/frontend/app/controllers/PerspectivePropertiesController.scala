@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.extensions.ModalInstance
+import ru.ispras.lingvodoc.frontend.app.services.{ModalService, ModalOptions, ModalInstance}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model.{Field, Perspective, Dictionary, Language}
@@ -39,6 +39,7 @@ class FieldWrapper(val field: Field) {
 @injectable("PerspectivePropertiesController")
 class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
                                       instance: ModalInstance[Perspective],
+                                      modal: ModalService,
                                       backend: BackendService,
                                       params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[PerspectivePropertiesScope](scope) {
@@ -72,12 +73,28 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
   @JSExport
-  def ok() = {
+  def editGeoLabels() = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/perspectiveMap.html"
+    options.controller = "PerspectiveMapController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionary = scope.dictionary.asInstanceOf[js.Object],
+          perspective = scope.perspective.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
 
-//    var s = Seq[Perspective]()
-//    s = s :+ scope.perspective
-//    s = s :+ backupPerspective
-//    console.log(s.toJSArray)
+    val instance = modal.open(options)
+  }
+
+
+  @JSExport
+  def ok() = {
 
     var futures: Seq[Future[Any]] = Seq()
 
@@ -87,11 +104,8 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
       backupPerspective.translation != scope.perspective.translation ||
       backupPerspective.translationString != scope.perspective.translationString) {
 
-      console.log("1")
       futures = futures :+ backend.updatePerspective(scope.dictionary, scope.perspective)
     }
-
-
 
     // check if fields were changed
     val originalFields = scope.perspective.fields.map(new FieldWrapper(_)).zipWithIndex

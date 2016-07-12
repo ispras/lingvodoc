@@ -1,0 +1,20 @@
+<div class="modal-header">
+    <h3 class="modal-title"></h3>
+</div>
+
+<div class="modal-body">
+
+    <label for="dictionaryName">Dictionary name</label>
+    <input type="text" id="dictionaryName" class="form-control" placeholder="" required autofocus ng-model="dictionary.translation">
+
+    <label for="language">Language</label>
+    <select id="language" class="form-control" ng-model="selectedLanguageId"
+            ng-options="language.getId as language.translation for language in languages">
+        <option></option>
+    </select>
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="controller.ok()">OK</button>
+    <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+</div>

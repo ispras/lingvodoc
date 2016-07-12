@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._
@@ -25,6 +25,7 @@ trait DashboardScope extends Scope {
 @injectable("DashboardController")
 class DashboardController(scope: DashboardScope, modal: ModalService, backend: BackendService) extends
 AbstractController[DashboardScope](scope) {
+
   val userId = 1
 
   scope.dictionaries = js.Array[Dictionary]()
@@ -42,7 +43,7 @@ AbstractController[DashboardScope](scope) {
   @JSExport
   def editDictionaryProperties(dictionary: Dictionary) = {
     val options = ModalOptions()
-    options.templateUrl = "DictionaryPropertiesModal.html"
+    options.templateUrl = "/static/templates/modal/dictionaryProperties.html"
     options.controller = "DictionaryPropertiesController"
     options.backdrop = false
     options.keyboard = false
@@ -63,7 +64,7 @@ AbstractController[DashboardScope](scope) {
   @JSExport
   def editPerspectiveProperties(dictionary: Dictionary, perspective: Perspective) = {
     val options = ModalOptions()
-    options.templateUrl = "PerspectivePropertiesModal.html"
+    options.templateUrl = "/static/templates/modal/perspectiveProperties.html"
     options.controller = "PerspectivePropertiesController"
     options.backdrop = false
     options.keyboard = false
@@ -86,7 +87,7 @@ AbstractController[DashboardScope](scope) {
   @JSExport
   def createPerspective(dictionary: Dictionary) = {
     val options = ModalOptions()
-    options.templateUrl = "CreatePerspectiveModal.html"
+    options.templateUrl = "/static/templates/modal/createPerspective.html"
     options.controller = "CreatePerspectiveController"
     options.backdrop = false
     options.keyboard = false
@@ -129,9 +130,7 @@ AbstractController[DashboardScope](scope) {
   // load dynamic data
   backend.getCurrentUser onComplete {
     case Success(user) =>
-
       scope.user = user
-
       // load dictionary list
       val query = DictionaryQuery(user.id, Seq[Int]())
       backend.getDictionariesWithPerspectives(query) onComplete {
