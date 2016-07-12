@@ -1,13 +1,16 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
+import org.scalajs.dom
 import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.core.Scope
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
+import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.console
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
+import org.scalajs.jquery.jQuery
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -26,13 +29,54 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[SoundMarkupScope](scope) {
   var waveSurfer: Option[WaveSurfer] = None
-  val soundAddress = params.get("soundAddress").map(_.toString).get
-  val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt).get
-  val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt).get
-  console.log(dictionaryClientId)
-  console.log(dictionaryObjectId)
-  backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
-    case markup => console.log(markup)
+  var soundMarkup: Option[String] = None
+  val soundAddress = params.get("soundAddress").map(_.toString)
+  val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
+  val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
+
+  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
+    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
+    case markup => parseMarkup(markup)
+    }
+  })
+
+
+  def parseMarkup(markup: String): Unit = {
+//    val markup = "<test>this is a test.</test>"
+    val markup =
+      """<?xml version="1.0" encoding="UTF-8"?>
+        |<ANNOTATION_DOCUMENT AUTHOR="TextGridTools" DATE="2016-07-11T14:44:15+00:00" FORMAT="2.7" VERSION="2.7" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.7.xsd">
+        |<HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">
+        |  <PROPERTY NAME="nextTimeSlotId">6</PROPERTY>
+        |  <PROPERTY NAME="nextAnnotationId">5</PROPERTY>
+        |  <PROPERTY NAME="lastUsedTierId">1</PROPERTY>
+        |</HEADER>
+        |<TIME_ORDER>
+        |  <TIME_SLOT TIME_SLOT_ID="ts1" TIME_VALUE="0"/>
+        |  <TIME_SLOT TIME_SLOT_ID="ts2" TIME_VALUE="64"/>
+        |  <TIME_SLOT TIME_SLOT_ID="ts3" TIME_VALUE="135"/>
+        |  <TIME_SLOT TIME_SLOT_ID="ts4" TIME_VALUE="303"/>
+        |  <TIME_SLOT TIME_SLOT_ID="ts5" TIME_VALUE="389"/>
+        |  <TIME_SLOT TIME_SLOT_ID="ts6" TIME_VALUE="472"/>
+        |  <TIME_SLOT TIME_SLOT_ID="ts7" TIME_VALUE="574"/>
+        |</TIME_ORDER>
+        |<LINGUISTIC_TYPE GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="default-lt" TIME_ALIGNABLE="true"/>
+        |</ANNOTATION_DOCUMENT>
+      """.stripMargin
+      val elan = new ELANDocumentJquery(markup)
+//    val lt = xml.find("LINGUISTIC_TYPE")
+////    val test = xml.find("test")
+//    console.log(markup)
+//    console.log("AAAA")
+//    console.log(lt)
+//    console.log(lt.attr("LINGUISTIC_TYPE_ID"))
+//
+//    val props = xml.find("PROPERTY")
+//    props.each((el: dom.Element) => {
+//      val jqEl = jQuery(el)
+//      console.log(jqEl.text())
+//    })
+
   }
 
   // hack to initialize controller after loading the view
@@ -40,10 +84,11 @@ class SoundMarkupController(scope: SoundMarkupScope,
   @JSExport
   def createWaveSurfer(): Unit = {
     if (waveSurfer.isEmpty) {
-      console.log("FFFFFFFFFFFFFFFFFf")
       val wso = WaveSurferOpts("#waveform", "violet", "purple")
       waveSurfer = Some(WaveSurfer.create(wso))
-      waveSurfer.foreach(_.load(soundAddress))
+      (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
+        ws.load(sa)
+      })
     }
   }
 
