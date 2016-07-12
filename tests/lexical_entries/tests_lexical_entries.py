@@ -143,6 +143,7 @@ class LexicalEntriesTest(MyTestCase):
                                        self.persp_1['client_id'], self.persp_1['object_id']),
                                       params={'sort_by': 'Word'})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
         self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
                          [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
@@ -153,6 +154,7 @@ class LexicalEntriesTest(MyTestCase):
                                        self.persp_1['client_id'], self.persp_1['object_id']),
                                       params={'sort_by': 'Word', "count": "0", "start_from": "0"})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
         self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
                          [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
@@ -163,6 +165,7 @@ class LexicalEntriesTest(MyTestCase):
                                        self.persp_1['client_id'], self.persp_1['object_id']),
                                       params={'sort_by': 'Word', "count": "20", "start_from": "18"})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
         self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
                          [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
@@ -173,19 +176,20 @@ class LexicalEntriesTest(MyTestCase):
                                        self.persp_1['client_id'], self.persp_1['object_id']),
                                       params={'sort_by': 'Word', "count": "2", "start_from": "30"})
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print(test_name, response.json)
         self.assertEqual(response.json, correct_answers[test_name])
         self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
                          [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
 
-        test_name = "test_sort_by_fake_column"
-        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all' %
-                                      (self.dict_1['client_id'], self.dict_1['object_id'],
-                                       self.persp_1['client_id'], self.persp_1['object_id']),
-                                      params={'sort_by': 'Fake', "count": "3", "start_from": "10"})
-        self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertEqual(response.json, correct_answers[test_name])
-        self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
-                         [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
+        # test_name = "test_sort_by_fake_column"
+        # response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/all' %
+        #                               (self.dict_1['client_id'], self.dict_1['object_id'],
+        #                                self.persp_1['client_id'], self.persp_1['object_id']),
+        #                               params={'sort_by': 'Fake', "count": "3", "start_from": "10"})
+        # self.assertEqual(response.status_int, HTTPOk.code)
+        # self.assertEqual(response.json, correct_answers[test_name])
+        # self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
+        #                  [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
 
     def testLexicalEntriesAllCount(self):
         correct_answers = load_correct_answers("lexical_entries/answers_lexical_entries_all_count.json")
@@ -277,16 +281,15 @@ class LexicalEntriesTest(MyTestCase):
         self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
                          [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
 
-        test_name = "test_sort_by_fake_column"
-        response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/published' %
-                                      (self.dict_1['client_id'], self.dict_1['object_id'],
-                                       self.persp_1['client_id'], self.persp_1['object_id']),
-                                      params={'sort_by': 'Fake', "count": "3", "start_from": "5"})
-        self.assertEqual(response.status_int, HTTPOk.code)
-        # print('test_sort_by_fake_column: ', response.json)
-        self.assertEqual(response.json, correct_answers[test_name])
-        self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
-                         [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
+        # test_name = "test_sort_by_fake_column"
+        # response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/published' %
+        #                               (self.dict_1['client_id'], self.dict_1['object_id'],
+        #                                self.persp_1['client_id'], self.persp_1['object_id']),
+        #                               params={'sort_by': 'Fake', "count": "3", "start_from": "5"})
+        # self.assertEqual(response.status_int, HTTPOk.code)
+        # self.assertEqual(response.json, correct_answers[test_name])
+        # self.assertEqual([(i['client_id'], i['object_id']) for i in response.json['lexical_entries']],
+        #                  [(i['client_id'], i['object_id']) for i in correct_answers[test_name]['lexical_entries']])
 
     def testLexicalEntriesPublishedCount(self):
         correct_answers = load_correct_answers("lexical_entries/answers_lexical_entries_published_count.json")
@@ -377,6 +380,7 @@ class LexicalEntriesTest(MyTestCase):
                                       (self.dict_1['client_id'], self.dict_1['object_id'],
                                        self.persp_2['client_id'], self.persp_2['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print('correct:', response.json)
         self.assertEqual(response.json, correct_answers[test_name])
 
     def testApproveEntityAll(self):
@@ -400,4 +404,5 @@ class LexicalEntriesTest(MyTestCase):
                                       (self.dict_1['client_id'], self.dict_1['object_id'],
                                        self.persp_1['client_id'], self.persp_1['object_id']))
         self.assertEqual(response.status_int, HTTPOk.code)
+        # print('correct:', response.json)
         self.assertEqual(response.json, correct_answers[test_name])

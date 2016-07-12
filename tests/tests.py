@@ -164,6 +164,15 @@ class MyTestCase(unittest.TestCase):
         proc.communicate()
         testing.tearDown()
 
+    def assertEqual(self, d1, d2, msg=None, stop_words=list(), set_like=True, debug_flag=False):
+        if type(d1) == dict and type(d2) == dict:
+            self.assertEqual(dict_diff(d1, d2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
+        else:
+            if type(d1) == list and type(d2) == list:
+                self.assertEqual(list_diff(d1, d2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
+            else:
+                unittest.TestCase.assertEqual(self, d1, d2)
+
     def assertDictEqual(self, d1, d2, msg=None, stop_words=list(), set_like=False, debug_flag=False):
         self.assertEqual(dict_diff(d1, d2, stop_words=stop_words, set_like=set_like, debug_flag=debug_flag), True, msg)
 
