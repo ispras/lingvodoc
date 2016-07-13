@@ -304,13 +304,11 @@ class MyTestCase(unittest.TestCase):
         persp_ids = response.json['perspectives'][0]
 
         for i in range(20):
-            response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/state' %
+            response = self.app.get('/dictionary/%s/%s/state' %
                                     (dict_ids['client_id'],
-                                     dict_ids['object_id'],
-                                     persp_ids['client_id'],
-                                     persp_ids['object_id']))
+                                     dict_ids['object_id']))
             # response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
-            if response.json['status'].lower() == 'published':
+            if response.json['status'].lower() == 'Converting 100%'.lower():
                 break
 
             sleep(60)
