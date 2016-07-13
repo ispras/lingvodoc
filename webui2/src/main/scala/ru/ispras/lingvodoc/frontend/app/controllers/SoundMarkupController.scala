@@ -9,8 +9,8 @@ import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.console
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
 import org.scalajs.jquery.jQuery
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport

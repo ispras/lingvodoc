@@ -5,7 +5,7 @@ import ru.ispras.lingvodoc.frontend.app.model._
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.{Date, JSON}
