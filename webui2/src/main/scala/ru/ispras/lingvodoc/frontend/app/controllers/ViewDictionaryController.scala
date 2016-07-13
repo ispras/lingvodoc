@@ -10,7 +10,7 @@ import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalService, ModalInstance}
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import scala.scalajs.js
 import scala.scalajs.js.Array
 import scala.scalajs.js.annotation.{JSExport, JSExportAll}

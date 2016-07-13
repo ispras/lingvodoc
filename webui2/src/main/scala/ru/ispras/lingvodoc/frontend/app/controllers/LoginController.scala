@@ -4,7 +4,7 @@ import com.greencatsoft.angularjs.core.{Scope, Window}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
