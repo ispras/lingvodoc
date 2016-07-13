@@ -988,7 +988,6 @@ def dictionaries_list(request):  # TODO: test
                     dcttmp = (dicti.client_id, dicti.object_id)
                     if dcttmp not in dictstemp:
                         dictstemp += [dcttmp]
-        print('Important: %s %s' % (str(dictstemp), str(isadmin)))
         if not isadmin:
             # dictstemp = [o for o in dictstemp]
             # print(len(dictstemp))
@@ -999,15 +998,7 @@ def dictionaries_list(request):  # TODO: test
             #     prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
             #
             # dicts = prevdicts
-            print(dictstemp)
-            print(dictionaries)
-            print([(o['client_id'], o['object_id']) for o in dictionaries])
             dictionaries = [o for o in dictionaries if (o['client_id'], o['object_id']) in dictstemp]
-
-
-
-
-
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
