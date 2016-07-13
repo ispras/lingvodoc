@@ -3,10 +3,11 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core.Scope
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.model.{Language, Perspective}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
