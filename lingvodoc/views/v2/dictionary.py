@@ -21,7 +21,7 @@ from lingvodoc.models import (
     User
 )
 
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     all_languages,
     cache_clients,
     check_for_client,

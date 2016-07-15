@@ -205,6 +205,14 @@ class TableNameMixin(object):
         return cls.__name__.lower()
 
 
+class CreatedAtMixin(object):
+    """
+    It's used for automatically set created_at column.
+    """
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+
 class IdMixin(object):
     """
     It's used for automatically set id as primary key.
@@ -228,11 +236,8 @@ class CompositeIdMixin(object):
         client_by_id = get_client_counter(kwargs['client_id'])
         kwargs["object_id"] = client_by_id.counter
         # self.object_id = client_by_id.counter
-        # print('working', kwargs)
-        # print(client_by_id.counter, kwargs)
         client_by_id.counter += 1
         super().__init__(**kwargs)
-        # DBSession.commit()
 
 
 class CompositeKeysHelper(object):
@@ -278,34 +283,34 @@ class RelationshipPublishingMixin(RelationshipMixin):
                             )
 
 
-def find_by_translation_string(locale_id, translation_string):
-        trstr = DBSession.query(UserEntitiesTranslationString).\
-            filter_by(locale_id=locale_id, translation_string=translation_string).first()
-        if not trstr:
-            trstr = DBSession.query(UserEntitiesTranslationString).\
-                filter_by(locale_id=1, translation_string=translation_string).first()
-        if not trstr:
-            return {'translation_string': translation_string, 'translation': translation_string}
-        return {'translation_string': translation_string, 'translation': trstr.translation}
-
-
-def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
-                                                                        translation_string=translation_string).first()
-        if not translation:
-            translation = translation_string
-        if not uets:
-            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
-                                                 client_id=client.id,
-                                                 locale_id=locale_id,
-                                                 translation_string=translation_string,
-                                                 translation=translation)
-            DBSession.add(uets)
-            DBSession.flush()
-        else:
-            uets.translation = translation
+# def find_by_translation_string(locale_id, translation_string):
+#         trstr = DBSession.query(UserEntitiesTranslationString).\
+#             filter_by(locale_id=locale_id, translation_string=translation_string).first()
+#         if not trstr:
+#             trstr = DBSession.query(UserEntitiesTranslationString).\
+#                 filter_by(locale_id=1, translation_string=translation_string).first()
+#         if not trstr:
+#             return {'translation_string': translation_string, 'translation': translation_string}
+#         return {'translation_string': translation_string, 'translation': trstr.translation}
+#
+#
+# def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
+#
+#         client = DBSession.query(Client).filter_by(id=client_id).first()
+#         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
+#                                                                         translation_string=translation_string).first()
+#         if not translation:
+#             translation = translation_string
+#         if not uets:
+#             uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
+#                                                  client_id=client.id,
+#                                                  locale_id=locale_id,
+#                                                  translation_string=translation_string,
+#                                                  translation=translation)
+#             DBSession.add(uets)
+#             DBSession.flush()
+#         else:
+#             uets.translation = translation
 
 
 def find_locale_id(request):
@@ -315,89 +320,111 @@ def find_locale_id(request):
         return 1
 
 
-class TranslationStringMixin(object):
+class TranslationMixin(object):
+    translation_gist_client_id = Column(BigInteger)
+    translation_gist_object_id = Column(BigInteger)
 
-    def get_translation(cls, request):
-        return find_by_translation_string(find_locale_id(request), cls.translation_string)
+    # def get_translation(cls, request):
+    #     return find_by_translation_string(find_locale_id(request), cls.translation_string)
+    #
+    # def set_translation(cls, request):
+    #
+    #     if type(request.json_body) == str:
+    #         req = json.loads(request.json_body)
+    #     else:
+    #         req = request.json_body
+    #
+    #     translation = None
+    #     if 'translation' in req:
+    #         translation = req['translation']
+    #     translation_string = req.get('translation_string')
+    #     if cls.translation_string:
+    #         translation_string = cls.translation_string
+    #     add_translation_to_translation_string(find_locale_id(request),
+    #                                           translation,
+    #                                           translation_string,
+    #                                           request.authenticated_userid)
+    #     cls.translation_string = translation_string
+    #     return
 
-    def set_translation(cls, request):
 
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
-            req = request.json_body
-
-        translation = None
-        if 'translation' in req:
-            translation = req['translation']
-        translation_string = req.get('translation_string')
-        if cls.translation_string:
-            translation_string = cls.translation_string
-        add_translation_to_translation_string(find_locale_id(request),
-                                              translation,
-                                              translation_string,
-                                              request.authenticated_userid)
-        cls.translation_string = translation_string
-        return
+class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
+    """
+    This is base of translations
+    """
+    type = Column(UnicodeText)
+    marked_for_deletion = Column(Boolean, default=False)
 
 
-class Language(CompositeIdMixin, Base, TableNameMixin):
+class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
+    """
+    This is translations
+    """
+    __parentname__ = 'TranslationGist'
+    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name='TranslationGist')
+    parent_object_id = Column(BigInteger)
+    parent_client_id = Column(BigInteger)
+    content = Column(UnicodeText)
+    locale_id = Column(BigInteger)
+    marked_for_deletion = Column(Boolean, default=False)
+
+
+class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
     __parentname__ = 'Language'
     __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    translation_string = Column(UnicodeText)
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
 
-    def get_translation(cls, request):
-        return find_by_translation_string(find_locale_id(request), cls.translation_string)
-
-    def set_translation(self, request):
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
-            req = request.json_body
-
-        translation = None
-        if 'translation' in req:
-            translation = req['translation']
-        translation_string = req.get('translation_string')
-        if not translation_string:
-            if self.translation_string:
-                translation_string = self.translation_string
-            else:
-                return
-        client_id = request.authenticated_userid
-        locale_id = find_locale_id(request)
-        client = DBSession.query(Client).filter_by(id=client_id).first()
-        search_translation_string = self.translation_string
-        if not search_translation_string:
-            search_translation_string = translation_string
-        uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
-                                                                        translation_string=search_translation_string).first()
-        if not translation:
-            translation = translation_string
-        if not uets:
-            uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
-                                                 client_id=client.id,
-                                                 locale_id=locale_id,
-                                                 translation_string=translation_string,
-                                                 translation=translation)
-            self.translation_string = translation_string
-            DBSession.add(uets)
-            DBSession.flush()
-        else:
-            uets.translation_string = translation_string
-            self.translation_string = translation_string
-            uets.translation = translation
-        return
+    # def get_translation(cls, request):
+    #     return find_by_translation_string(find_locale_id(request), cls.translation_string)
+    #
+    # def set_translation(self, request):
+    #     if type(request.json_body) == str:
+    #         req = json.loads(request.json_body)
+    #     else:
+    #         req = request.json_body
+    #
+    #     translation = None
+    #     if 'translation' in req:
+    #         translation = req['translation']
+    #     translation_string = req.get('translation_string')
+    #     if not translation_string:
+    #         if self.translation_string:
+    #             translation_string = self.translation_string
+    #         else:
+    #             return
+    #     client_id = request.authenticated_userid
+    #     locale_id = find_locale_id(request)
+    #     client = DBSession.query(Client).filter_by(id=client_id).first()
+    #     search_translation_string = self.translation_string
+    #     if not search_translation_string:
+    #         search_translation_string = translation_string
+    #     uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
+    #                                                                     translation_string=search_translation_string).first()
+    #     if not translation:
+    #         translation = translation_string
+    #     if not uets:
+    #         uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
+    #                                              client_id=client.id,
+    #                                              locale_id=locale_id,
+    #                                              translation_string=translation_string,
+    #                                              translation=translation)
+    #         self.translation_string = translation_string
+    #         DBSession.add(uets)
+    #         DBSession.flush()
+    #     else:
+    #         uets.translation_string = translation_string
+    #         self.translation_string = translation_string
+    #         uets.translation = translation
+    #     return
 Language.parent = relationship('Language', remote_side=[Language.client_id,  Language.object_id], backref=backref('language'))
 
 
-class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
+class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
     """
     This entity specifies list of available translations (for words in dictionaries and for UI).
     Should be added as admin only.
@@ -410,28 +437,28 @@ class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin):
     intl_name = Column(UnicodeText)
 
 
-class UITranslationString(Base, TableNameMixin, IdMixin):
-    """
-    This table holds translation strings for UI. If couldn't be found by pair, should be searched by translation string.
-    Should be used as admin only.
-    """
-    locale_id = Column(BigInteger)
-    translation_string = Column(UnicodeText)
-    translation = Column(UnicodeText)
+# class UITranslationString(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+#     """
+#     This table holds translation strings for UI. If couldn't be found by pair, should be searched by translation string.
+#     Should be used as admin only.
+#     """
+#     locale_id = Column(BigInteger)
+#     translation_string = Column(UnicodeText)
+#     translation = Column(UnicodeText)
+#
+#
+# class UserEntitiesTranslationString(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
+#     """
+#     This table holds translation strings for user-created entities such as dictionaries names, column names etc.
+#     Separate classes are needed not to allow users to interfere UI directly.
+#     Not intended to use for translations inside the dictionaries (these translations are hold inside entities tables).
+#     """
+#     locale_id = Column(BigInteger)
+#     translation_string = Column(UnicodeText)
+#     translation = Column(UnicodeText)
 
 
-class UserEntitiesTranslationString(CompositeIdMixin, Base, TableNameMixin):
-    """
-    This table holds translation strings for user-created entities such as dictionaries names, column names etc.
-    Separate classes are needed not to allow users to interfere UI directly.
-    Not intended to use for translations inside the dictionaries (these translations are hold inside entities tables).
-    """
-    locale_id = Column(BigInteger)
-    translation_string = Column(UnicodeText)
-    translation = Column(UnicodeText)
-
-
-class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, TranslationStringMixin):
+class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, TranslationMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -444,13 +471,12 @@ class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Tran
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     authors = Column(UnicodeText)
-    translation_string = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     additional_metadata = Column(UnicodeText)
     # about = Column(UnicodeText)
 
 
-class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, TranslationStringMixin):
+class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, TranslationMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -466,7 +492,6 @@ class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, Relationship
     parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    translation_string = Column(UnicodeText)
     is_template = Column(Boolean, default=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
@@ -474,7 +499,7 @@ class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, Relationship
     # about = Column(UnicodeText)
 
 
-class DictionaryPerspectiveField(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin):
+class DictionaryPerspectiveField(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, TranslationMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -499,41 +524,9 @@ class DictionaryPerspectiveField(CompositeIdMixin, Base, TableNameMixin, Relatio
     level = Column(UnicodeText)
     group = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
+    is_translatable = Column(Boolean, default=False)
     state = Column(UnicodeText)
     position = Column(BigInteger)
-
-    def set_entity_type(self, request, translation, translation_string):
-        add_translation_to_translation_string(find_locale_id(request),
-                                              translation,
-                                              translation_string,
-                                              request.authenticated_userid)
-        self.entity_type = translation_string
-        return
-
-    def get_entity_type(self, request):
-        return find_by_translation_string(find_locale_id(request), self.entity_type)
-
-    def set_data_type(self, request, translation, translation_string):
-        add_translation_to_translation_string(find_locale_id(request),
-                                              translation,
-                                              translation_string,
-                                              request.authenticated_userid)
-        self.data_type = translation_string
-        return
-
-    def get_data_type(self, request):
-        return find_by_translation_string(find_locale_id(request), self.data_type)
-
-    def set_group(self, request, translation, translation_string):
-        add_translation_to_translation_string(find_locale_id(request),
-                                              translation,
-                                              translation_string,
-                                              request.authenticated_userid)
-        self.group = translation_string
-        return
-
-    def get_group(self, request):
-        return find_by_translation_string(find_locale_id(request), self.group)
 
 DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
                                                         remote_side=[DictionaryPerspectiveField.client_id,
@@ -541,7 +534,7 @@ DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveFi
                                                         backref=backref('dictionaryperspectivefield'))
 
 
-class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin):
+class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -592,22 +585,17 @@ class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin):
         return response
 
 
-class EntityMixin(object):
-    """
-    Look forward to:
-    http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-    This mixin groups common fields and operations for *Entity classes.
-    It makes sense to include __acl__ rules right here for code deduplication.
-    """
+class Entity(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
     parent_object_id = Column(BigInteger)
     parent_client_id = Column(BigInteger)
-    entity_type = Column(UnicodeText)
+    entity_object_id = Column(BigInteger)
+    entity_client_id = Column(BigInteger)
+    field_object_id = Column(BigInteger)
+    field_client_id = Column(BigInteger)
     content = Column(UnicodeText)
     additional_metadata = Column(UnicodeText)
-    is_translatable = Column(Boolean, default=False)
     locale_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     def track(self, publish):
         dictionary = {'level': self.__tablename__,
@@ -627,103 +615,17 @@ class EntityMixin(object):
             dictionary['contains'] = children
         return dictionary
 
-
-class PublishingEntityMixin(object):
-    """
-    Look forward to:
-    http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
-    This mixin groups common fields and operations for *Entity classes.
-    It makes sense to include __acl__ rules right here for code deduplication.
-    """
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
-    entity_object_id = Column(BigInteger)
-    entity_client_id = Column(BigInteger)
-    entity_type = Column(UnicodeText)
-    content = Column(UnicodeText)
-    marked_for_deletion = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        publishingentity = PublishingEntity(client_id=self.client_id, object_id=self.object_id)
+        DBSession.add(publishingentity)
 
 
-class LevelOneEntity(CompositeIdMixin, Base, TableNameMixin, EntityMixin, RelationshipMixin):
-    """
-    This type of entity is used for level-one word entries (e.g. transcription, translation, sounds,
-    paradigm transcription, etc). The main convention for this type is to have word entry as a logical parent.
-    Some entity types should provide special behaviour - for example sounds: as a content they should store path
-    for the stored object (not the sound file itself). One more special type: translation should point locale_id.
-    Parent: LexicalEntry.
-    """
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
-    __parentname__ = 'LexicalEntry'
-
-
-class LevelTwoEntity(CompositeIdMixin, Base, TableNameMixin, EntityMixin, RelationshipMixin):
-    """
-    This type of entity is used as level-two entity: logically it has as parent a level-one entity object. For
-    now there is the only type of such entities - it's praat markup because it can not be separated from sound
-    it belongs to. Each type of such entity most likely will have it's own behaviour. For now the markup should
-    be stored separately and as content it should store path to the object.
-    Parent: LevelOneEntity.
-    """
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LevelOneEntity")
-    __parentname__ = 'LevelOneEntity'
-
-
-class GroupingEntity(CompositeIdMixin, Base, TableNameMixin, EntityMixin, RelationshipMixin):  # RelationshipMixin
-    """
-    This type of entity is used for grouping word entries (e.g. etymology tags). With it we can group bunch of
-    LexicalEntries as connected with each other.
-    Main points for usage:
-        1. If you are trying to connect two LexicalEntries you should check if there is already a connection
-           for one of LexicalEntries.
-          1a. If you found only one GroupingEntity (for one word only), you should create one more object for
-              GroupingEntity with the same content as the found one.
-          1b. If you found no GroupingEntities (both of words are not connected with any others), you should
-              generate an unique string for a content field. Unix epoch + words concat are good enough in most
-              cases.
-          1c. If you found that one (or both) of the words has many GroupingEntries connected and the content field
-              differs, you should create all the GroupingEntries for each different content fields for both words.
-        2. We shall provide an ability to define "content" field explicitly. If it is provided, we shall accept it
-           and check the 1c case after it. It will be an often case during dictionaries conversion.
-    Note: (1c) case will be rather frequent when desktop clients will appear. But moreover it will be a result of
-          Dialeqt desktop databases conversion.
-    Parent: LexicalEntry.
-    """
-    __parentname__ = 'LexicalEntry'
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="LexicalEntry")
-    tag = Column(UnicodeText)
-
-
-class PublishLevelOneEntity(CompositeIdMixin, Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
-    """
-    This type is needed for publisher view: publisher should be able to mark word variants for each of datatypes
-    as 'correct' ones. For example, a word can have 5 correct translations, two sounds and one.
-    Also publisher should be able to change perspective status: WIP, published.
-    """
-    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
-                                                                                         entity_name="LevelOneEntity")
-    __parentname__ = 'LexicalEntry'
-    __entityname__ = 'LevelOneEntity'
-
-
-class PublishLevelTwoEntity(CompositeIdMixin, Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
-    """
-    The same for markups.
-    """
-    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
-                                                                                         entity_name="LevelTwoEntity")
-    __parentname__ = 'LexicalEntry'
-    __entityname__ = 'LevelTwoEntity'
-
-
-class PublishGroupingEntity(CompositeIdMixin, Base, TableNameMixin, PublishingEntityMixin, RelationshipPublishingMixin):
-    """
-    The same for etymology tags.
-    """
-    __table_args__ = CompositeKeysHelper.set_table_args_for_publishing_fk_composite_key(parent_name="LexicalEntry",
-                                                                                         entity_name="GroupingEntity")
-    __parentname__ = 'LexicalEntry'
-    __entityname__ = 'GroupingEntity'
+class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
+    object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
+    client_id = Column(BigInteger, primary_key=True)  # SLBigInteger() ?
+    # marked_for_deletion = Column(Boolean, default=False)
+    published = Column(Boolean, default=False)
 
 
 user_to_group_association = Table('user_to_group_association', Base.metadata,
@@ -750,7 +652,8 @@ user_to_dictionary_association = Table('user_to_dictionary_association', Base.me
                                                             ('dictionary.client_id', 'dictionary.object_id'))
                                        )
 
-class User(Base, TableNameMixin, IdMixin):
+
+class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     login = Column(UnicodeText, unique=True)
     name = Column(UnicodeText)
     # this stands for name in English
@@ -770,7 +673,7 @@ class User(Base, TableNameMixin, IdMixin):
     # TODO: last_sync_datetime
 
 
-class BaseGroup(Base, TableNameMixin, IdMixin):
+class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     name = Column(UnicodeText)
     # readable name
     translation_string = Column(UnicodeText)
@@ -781,7 +684,7 @@ class BaseGroup(Base, TableNameMixin, IdMixin):
     perspective_default = Column(Boolean, default=False)
 
 
-class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
+class Group(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
     __parentname__ = 'BaseGroup'
     base_group_id = Column(ForeignKey("basegroup.id"))
     subject_client_id = Column(BigInteger)
@@ -791,7 +694,7 @@ class Group(Base, TableNameMixin, IdMixin, RelationshipMixin):
     organizations = relationship("Organization",  secondary=organization_to_group_association, backref=backref("groups"))
 
 
-class Organization(Base, TableNameMixin, IdMixin):
+class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     name = Column(UnicodeText)
     users = relationship("User", secondary=user_to_organization_association, backref=backref("organizations"))
     about = Column(UnicodeText)
@@ -799,14 +702,14 @@ class Organization(Base, TableNameMixin, IdMixin):
     # locale_id = Column(ForeignKey("locale.id"))
 
 
-class About(Base, TableNameMixin, IdMixin):
+class About(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user_id = Column(BigInteger, ForeignKey("user.id"), primary_key=True)
     user = relationship("User", backref='about')
     content = Column(UnicodeText)
     locale_id = Column(ForeignKey("locale.id"))
 
 
-class Passhash(Base, TableNameMixin, IdMixin):
+class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
     hash = Column(UnicodeText)
 
@@ -814,13 +717,13 @@ class Passhash(Base, TableNameMixin, IdMixin):
         self.hash = bcrypt.encrypt(password)
 
 
-class Email(Base, TableNameMixin, IdMixin):
+class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
     email = Column(UnicodeText, unique=True)
     user = relationship("User", backref='email')
 
 
-class Client(Base, TableNameMixin, IdMixin):
+class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user_id = Column(BigInteger, ForeignKey('user.id'))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
@@ -828,7 +731,7 @@ class Client(Base, TableNameMixin, IdMixin):
     counter = Column(BigInteger, default=1)
 
 
-class UserBlobs(CompositeIdMixin, Base, TableNameMixin):
+class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
     name = Column(UnicodeText)
     # content holds url for the object
     content = Column(UnicodeText)
@@ -836,7 +739,7 @@ class UserBlobs(CompositeIdMixin, Base, TableNameMixin):
     data_type = Column(UnicodeText)
     additional_metadata = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    # created_at = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(BigInteger, ForeignKey('user.id'))
     user = relationship("User", backref='userblobs')
 
@@ -1202,3 +1105,10 @@ class LexicalViewAcl(object):
         lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id,object_id=object_id).first()
         parent = lex.parent
         return acls + acl_by_groups(parent.object_id, parent.client_id, 'lexical_entries_and_entities')
+
+class ApproveAllAcl(object):
+    def __init__(self, request):
+        self.request = request
+
+    def __acl__(self):
+        return [(Allow, Everyone, ALL_PERMISSIONS)]

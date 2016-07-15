@@ -577,6 +577,18 @@ def configure_routes(config):
     #config.add_route(name='test_queue_set', pattern='/test_queue_set')
     #config.add_route(name='test_queue_get', pattern='/test_queue_get')
 
+    config.add_route(name='create_translationgist', pattern='/translationgist',
+                     factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='translationgist', pattern='/translationgist/{client_id}/{object_id}',
+                     factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='create_translationatom', pattern='/translationatom',
+                     factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='translationatom', pattern='/translationatom/{client_id}/{object_id}',
+                     factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='translation_search', pattern='/translation_search',
+                     factory='lingvodoc.models.ApproveAllAcl')
+
+
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.

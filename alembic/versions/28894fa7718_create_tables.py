@@ -26,6 +26,7 @@ def upgrade():
     sa.Column('action', sa.UnicodeText(), nullable=True),
     sa.Column('dictionary_default', sa.Boolean(), nullable=True),
     sa.Column('perspective_default', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('language',
@@ -35,6 +36,7 @@ def upgrade():
     sa.Column('parent_object_id', sa.BigInteger(), nullable=True),
     sa.Column('parent_client_id', sa.BigInteger(), nullable=True),
     sa.Column('marked_for_deletion', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['language.object_id', 'language.client_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )
@@ -43,6 +45,7 @@ def upgrade():
     sa.Column('name', sa.UnicodeText(), nullable=True),
     sa.Column('about', sa.UnicodeText(), nullable=True),
     sa.Column('marked_for_deletion', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('uitranslationstring',
@@ -50,6 +53,7 @@ def upgrade():
     sa.Column('locale_id', sa.BigInteger(), nullable=True),
     sa.Column('translation_string', sa.UnicodeText(), nullable=True),
     sa.Column('translation', sa.UnicodeText(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('userentitiestranslationstring',
@@ -58,6 +62,7 @@ def upgrade():
     sa.Column('locale_id', sa.BigInteger(), nullable=True),
     sa.Column('translation_string', sa.UnicodeText(), nullable=True),
     sa.Column('translation', sa.UnicodeText(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )
     op.create_table('dictionary',
@@ -69,6 +74,7 @@ def upgrade():
     sa.Column('authors', sa.UnicodeText(), nullable=True),
     sa.Column('translation_string', sa.UnicodeText(), nullable=True),
     sa.Column('marked_for_deletion', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['language.object_id', 'language.client_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )
@@ -78,6 +84,7 @@ def upgrade():
     sa.Column('subject_client_id', sa.BigInteger(), nullable=True),
     sa.Column('subject_object_id', sa.BigInteger(), nullable=True),
     sa.Column('subject_override', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['base_group_id'], ['basegroup.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -87,6 +94,7 @@ def upgrade():
     sa.Column('parent_client_id', sa.BigInteger(), nullable=True),
     sa.Column('shortcut', sa.UnicodeText(), nullable=True),
     sa.Column('intl_name', sa.UnicodeText(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['language.object_id', 'language.client_id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -101,12 +109,14 @@ def upgrade():
     sa.Column('is_template', sa.Boolean(), nullable=True),
     sa.Column('import_source', sa.UnicodeText(), nullable=True),
     sa.Column('import_hash', sa.UnicodeText(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['dictionary.object_id', 'dictionary.client_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )
     op.create_table('organization_to_group_association',
     sa.Column('organization_id', sa.BigInteger(), nullable=True),
     sa.Column('group_id', sa.BigInteger(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['group_id'], ['group.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], )
     )
@@ -119,6 +129,7 @@ def upgrade():
     sa.Column('birthday', sa.Date(), nullable=True),
     sa.Column('signup_date', sa.DateTime(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['default_locale_id'], ['locale.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('login')
@@ -128,6 +139,7 @@ def upgrade():
     sa.Column('user_id', sa.BigInteger(), nullable=False),
     sa.Column('content', sa.UnicodeText(), nullable=True),
     sa.Column('locale_id', lingvodoc.models.SLBigInteger(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['locale_id'], ['locale.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id', 'user_id')
@@ -138,6 +150,7 @@ def upgrade():
     sa.Column('counter', sa.BigInteger(), nullable=True),
     sa.Column('creation_time', sa.DateTime(), nullable=True),
     sa.Column('is_browser_client', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -155,6 +168,7 @@ def upgrade():
     sa.Column('marked_for_deletion', sa.Boolean(), nullable=True),
     sa.Column('state', sa.UnicodeText(), nullable=True),
     sa.Column('position', sa.BigInteger(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['entity_object_id', 'entity_client_id'], ['dictionaryperspectivefield.object_id', 'dictionaryperspectivefield.client_id'], ),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['dictionaryperspective.object_id', 'dictionaryperspective.client_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
@@ -163,6 +177,7 @@ def upgrade():
     sa.Column('id', lingvodoc.models.SLBigInteger(), nullable=False),
     sa.Column('user_id', sa.BigInteger(), nullable=True),
     sa.Column('email', sa.UnicodeText(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
@@ -175,6 +190,7 @@ def upgrade():
     sa.Column('moved_to', sa.UnicodeText(), nullable=True),
     sa.Column('marked_for_deletion', sa.Boolean(), nullable=True),
     sa.Column('additional_metadata', sa.UnicodeText(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['dictionaryperspective.object_id', 'dictionaryperspective.client_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )
@@ -182,6 +198,7 @@ def upgrade():
     sa.Column('id', lingvodoc.models.SLBigInteger(), nullable=False),
     sa.Column('user_id', sa.BigInteger(), nullable=True),
     sa.Column('hash', sa.UnicodeText(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

@@ -7,8 +7,8 @@ queue previously. To make this work you should uncomment decorators and uncommen
 __init__ file.
 '''
 
-from lingvodoc.views.v1.celery_test.core import test_queue_set_logic
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.celery_test.core import test_queue_set_logic
+from lingvodoc.views.v2.utils import (
     get_user_by_client_id
 )
 

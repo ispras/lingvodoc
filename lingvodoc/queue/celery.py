@@ -64,6 +64,7 @@ QUEUED_TASKS = None
 
 celery = None
 kwargs = _parse_celery_args()
+kwargs = None
 if kwargs is None:
     celery = MockApp()
     QUEUED_TASKS = MockTaskCache()
@@ -72,4 +73,5 @@ else:
     QUEUED_TASKS = TaskCache(kwargs['user_cache'], kwargs['task_cache'], kwargs['progress'])
 
 # TODO: get a connection string from the configuration file
-celery_engine = create_engine('postgresql://postgres:@localhost/lingvodoc')
+# celery_engine = create_engine('postgresql://postgres:@localhost/lingvodoc')
+celery_engine = None

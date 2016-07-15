@@ -7,7 +7,7 @@ from lingvodoc.models import (
     User,
     UserBlobs
 )
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     create_object,
     get_user_by_client_id
 )

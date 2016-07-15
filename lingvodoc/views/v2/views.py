@@ -1,4 +1,4 @@
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     get_user_by_client_id
 )
 

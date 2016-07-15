@@ -14,7 +14,7 @@ from lingvodoc.models import (
     LexicalEntry,
     User
 )
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     remove_deleted
 )
 
