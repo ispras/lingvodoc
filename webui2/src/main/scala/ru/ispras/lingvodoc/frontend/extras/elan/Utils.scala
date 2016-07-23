@@ -19,6 +19,7 @@ object Utils {
     s"""|<$tagName $attrs>
         |  $content
         |</$tagName>
+        |
      """.stripMargin
 
   // sometimes, when we search for the tag, we expect several results. They come in one JQuery object, and the only

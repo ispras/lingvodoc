@@ -31,10 +31,9 @@ case class LinguisticType(id: String, graphicReferences: Boolean, typeAlignable:
 
 
 class ELANDocumentJquery private(annotDocXML: JQuery) {
-  val date, author, version, format = parseAttrs(annotDocXML)
+  val (date, author, version, format) = parseAttrs(annotDocXML)
   val header = new Header(annotDocXML.find(Header.tagName))
-  console.log(header.toXMLString)
-  val timeOrder = Map[String, Option[Long]]() // timeslots without values are allowed
+  val timeOrder = new TimeOrder(annotDocXML.find(TimeOrder.tagName)) // timeslots without values are allowed
 
   //  var linguisticType = LinguisticType("", graphicReferences = false, typeAlignable = false)
   //    var locale = Locale("", "", "")
@@ -45,8 +44,16 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
     new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.dateAttrName).get) { val name = ELANDocumentJquery.dateAttrName },
     new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.authorAttrName).get) { val name = ELANDocumentJquery.authorAttrName },
     new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.versionAttrName).get) { val name = ELANDocumentJquery.versionAttrName },
-    new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.formatAttrName).toOption.getOrElse("2.7")) { val name = ELANDocumentJquery.dateAttrName }
+    new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.formatAttrName).toOption.getOrElse("2.7")) { val name = ELANDocumentJquery.formatAttrName }
     )
+
+  def content = s"$header $timeOrder"
+  def attrs = s"$date $author $version $format ${ELANDocumentJquery.xmlnsXsi} ${ELANDocumentJquery.schemaLoc}"
+
+  override def toString =
+    s"""|<?xml version="1.0" encoding="UTF-8"?>
+        |${Utils.wrap(ELANDocumentJquery.annotDocTagName, content, attrs)}
+    """.stripMargin
 }
 
 object ELANDocumentJquery {
@@ -62,6 +69,7 @@ object ELANDocumentJquery {
   def apply(xmlString: String) = new ELANDocumentJquery(jQuery(jQuery.parseXML(xmlString)).find(annotDocTagName))
 }
 
+// Represents HEADER element
 class Header(headerXML: JQuery) {
   headerXML.attr(Header.mfAttrName).foreach(mf => console.log(s"WARN: ${Header.mfAttrName} attribute is deprecated and ignored by ELAN"))
   headerXML.attr(Header.timeUnits.name).filterNot(_ == Header.timeUnits.value).
@@ -69,7 +77,7 @@ class Header(headerXML: JQuery) {
   val mediaDescriptor = MediaDescriptor.fromMultiple(headerXML.find(MediaDescriptor.tagName))
   val linkedFileDescriptor = LinkedFileDescriptor.fromMultiple(headerXML.find(LinkedFileDescriptor.tagName))
   val props = Utils.jQuery2XML(headerXML.find(Header.propTagName)) // User-defined properties
-  def toXMLString: String =
+  override def toString: String =
     Utils.wrap(Header.tagName,
       s"${mediaDescriptor.getOrElse("")} ${linkedFileDescriptor.getOrElse("")} $props",
       Header.timeUnits.toString)
@@ -142,19 +150,17 @@ object LinkedFileDescriptor {
 }
 
 // Represents TIME_ORDER element
-class TimeOrder(var timeSlots: Map[String, Option[Long]])
+class TimeOrder(timeOrderXML: JQuery) {
+  var timeSlots = Utils.jQuery2List(timeOrderXML.find(TimeOrder.tsTagName)).map(tsJquery => {
+    tsJquery.attr(TimeOrder.tsIdAttrName).get -> tsJquery.attr(TimeOrder.tvAttrName).toOption
+  }).toMap
+  def content = timeSlots.map{ case (id, value) =>
+    s"<${TimeOrder.tsTagName} ${new RequiredXMLAttr(id) { val name = TimeOrder.tsIdAttrName }} ${ new OptionalXMLAttr(value) { val name = TimeOrder.tvAttrName }}/>"}
+  override def toString = Utils.wrap(TimeOrder.tagName, content.mkString("\n"))
+}
 
 object TimeOrder {
   val (tagName, tsTagName, tsIdAttrName, tvAttrName) = ("TIME_ORDER", "TIME_SLOT", "TIME_SLOT_ID", "TIME_VALUE")
-  def apply(timeOrderXML: JQuery) = {
-    var res = HashMap[String, Option[Long]]()
-    timeOrderXML.each((el: dom.Element) => {
-      val jqEl = jQuery(el) // working with jQuery is more handy since .attr returns Option
-      res += jqEl.attr(tsIdAttrName).get -> jqEl.attr(tvAttrName).toOption.map(_.toLong)
-      console.log("heyheyhey")
-    })
-    Map[String, Option[Long]]()
-  }
 }
 
 // this trait and two its descendants wrap XML attribute providing convenient toString method

@@ -65,6 +65,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 </ANNOTATION_DOCUMENT>
       """
       val elan = ELANDocumentJquery(test_markup)
+      console.log(elan.toString)
 //    val lt = xml.find("LINGUISTIC_TYPE")
 ////    val test = xml.find("test")
 //    console.log(markup)
