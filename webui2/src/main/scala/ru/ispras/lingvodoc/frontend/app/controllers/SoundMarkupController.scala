@@ -34,22 +34,21 @@ class SoundMarkupController(scope: SoundMarkupScope,
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
-//  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
-//    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
-//    case markup => parseMarkup(markup)
-//    }
-//  })
-  parseMarkup("uncomment above")
+  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
+    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
+    case markup => parseMarkup(markup)
+    }
+  })
 
 
   def parseMarkup(markup: String): Unit = {
-//    val markup = "<test>this is a test.</test>"
-    val markup =
+    val test_markup =
       """<?xml version="1.0" encoding="UTF-8"?>
 <ANNOTATION_DOCUMENT AUTHOR="TextGridTools" DATE="2016-07-11T14:44:15+00:00" FORMAT="2.7" VERSION="2.7" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.7.xsd">
 <HEADER TIME_UNITS="milliseconds">
-  <MEDIA_DESCRIPTOR MEDIA_URL="ya.ru" MIME_TYPE="text" RELATIVE_MEDIA_URL="rmuuuuu"/>
-  <MEDIA_DESCRIPTOR MEDIA_URL="huya.ru" MIME_TYPE="text" TIME_ORIGIN="1948"/>
+  <MEDIA_DESCRIPTOR MEDIA_URL="ya.ru" MIME_TYPE="text" RELATIVE_MEDIA_URL="rmuuuuu" TIME_ORIGIN="1948"/>
+  <MEDIA_DESCRIPTOR MEDIA_URL="yaya.ru" MIME_TYPE="text"/>
+  <LINKED_FILE_DESCRIPTOR LINK_URL="foo.ru" MIME_TYPE="text" TIME_ORIGIN="20148" />
   <PROPERTY NAME="nextTimeSlotId">6</PROPERTY>
   <PROPERTY NAME="nextAnnotationId">5</PROPERTY>
 </HEADER>
@@ -65,7 +64,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 <LINGUISTIC_TYPE GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="default-lt" TIME_ALIGNABLE="true"/>
 </ANNOTATION_DOCUMENT>
       """
-      val elan = new ELANDocumentJquery(markup)
+      val elan = ELANDocumentJquery(test_markup)
 //    val lt = xml.find("LINGUISTIC_TYPE")
 ////    val test = xml.find("test")
 //    console.log(markup)
@@ -85,13 +84,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
   @JSExport
   def createWaveSurfer(): Unit = {
-//    if (waveSurfer.isEmpty) {
-//      val wso = WaveSurferOpts("#waveform", "violet", "purple")
-//      waveSurfer = Some(WaveSurfer.create(wso))
-//      (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
-//        ws.load(sa)
-//      })
-//    }
+    if (waveSurfer.isEmpty) {
+      val wso = WaveSurferOpts("#waveform", "violet", "purple")
+      waveSurfer = Some(WaveSurfer.create(wso))
+      (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
+        ws.load(sa)
+      })
+    }
   }
 
   @JSExport

@@ -1,7 +1,7 @@
 //package ru.ispras.lingvodoc.frontend.extras.elan
 //
 //case class ELANPArserException(message: String) extends Exception(message)
-
+//
 //case class LinguisticType(id: String, graphicReferences: Boolean, typeAlignable: Boolean) {
 //  def toXML: xml.Elem = <LINGUISTIC_TYPE GRAPHIC_REFERENCES={graphicReferences.toString}
 //                                         LINGUISTIC_TYPE_ID={id} TIME_ALIGNABLE={typeAlignable.toString}/>
