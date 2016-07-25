@@ -1,8 +1,8 @@
 __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
-from lingvodoc.views.v1.convert.core import async_convert_dictionary
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.convert.core import async_convert_dictionary
+from lingvodoc.views.v2.utils import (
     get_user_by_client_id
 )
 from lingvodoc.queue.client import (

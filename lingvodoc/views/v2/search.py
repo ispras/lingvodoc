@@ -106,7 +106,7 @@ def advanced_search(request):
         for part in search_parts[1:]:
             search_expression = or_(search_expression, LevelOneEntity.content.like('%' + part + '%'))
         if 'entity_type' in searchstring:
-            print(searchstring['entity_type'])
+            # print(searchstring['entity_type'])
             search_expression = and_(search_expression, LevelOneEntity.entity_type == searchstring['entity_type'])
         return search_expression, searchstring['search_by_or']
 

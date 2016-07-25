@@ -202,6 +202,12 @@ def data_init(manager, accounts):
                                      subject="merge",
                                      action="create",
                                      dictionary_default=True))
+        base_groups.append(BaseGroup(translation_string="Can edit translationatom",
+                                     subject="translations",
+                                     action="edit"))
+        base_groups.append(BaseGroup(translation_string="Can delete translationgist",
+                                     subject="translations",
+                                     action="delete"))
 
         for base_group in base_groups:
             DBSession.add(base_group)

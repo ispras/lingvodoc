@@ -21,7 +21,7 @@ from lingvodoc.models import (
     User
 )
 
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     all_languages,
     cache_clients,
     check_for_client,
@@ -69,6 +69,8 @@ def create_dictionary(request):  # tested & in docs
             req = request.json_body
         parent_client_id = req['parent_client_id']
         parent_object_id = req['parent_object_id']
+        translation_gist_client_id = req['translation_gist_client_id']
+        translation_gist_object_id = req['translation_gist_object_id']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -80,12 +82,12 @@ def create_dictionary(request):  # tested & in docs
         if additional_metadata:
             additional_metadata = json.dumps(additional_metadata)
 
-        dictionary = Dictionary(object_id=DBSession.query(Dictionary).filter_by(client_id=client.id).count() + 1,
-                                client_id=variables['auth'],
+        dictionary = Dictionary(client_id=variables['auth'],
                                 state='WiP',
                                 parent=parent,
+                                translation_gist_client_id=translation_gist_client_id,
+                                translation_gist_object_id=translation_gist_object_id,
                                 additional_metadata=additional_metadata)
-        dictionary.set_translation(request)
         DBSession.add(dictionary)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -120,12 +122,11 @@ def view_dictionary(request):  # tested & in docs
     if dictionary:
         if not dictionary.marked_for_deletion:
             response['parent_client_id'] = dictionary.parent_client_id
-            response['parent_object_id'] = dictionary.parent_object_id
+            response['parent_object_id'] = dictionary.parent_object_id,
+            response['translation_gist_client_id'] = dictionary.translation_gist_client_id,
+            response['translation_gist_object_id'] = dictionary.translation_gist_object_id,
             response['client_id'] = dictionary.client_id
             response['object_id'] = dictionary.object_id
-            translation_string = dictionary.get_translation(request)
-            response['translation_string'] = translation_string['translation_string']
-            response['translation'] = translation_string['translation']
             response['status'] = dictionary.state
             response['additional_metadata'] = dictionary.additional_metadata
             request.response.status = HTTPOk.code
@@ -151,8 +152,11 @@ def edit_dictionary(request):  # tested & in docs
                     dictionary.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     dictionary.parent_object_id = req['parent_object_id']
-                if 'translation' in req:
-                    dictionary.set_translation(request)
+                if 'translation_gist_client_id' in req:
+                    dictionary.translation_gist_client_id = req['translation_gist_client_id']
+                if 'translation_gist_object_id' in req:
+                    dictionary.translation_gist_object_id = req['translation_gist_object_id']
+
                 additional_metadata = req.get('additional_metadata')
                 if additional_metadata:
                     # additional_metadata = json.dumps(additional_metadata)
@@ -195,7 +199,8 @@ def copy_dictionary(request):  # TODO: test. or not. was this ever finished?
         path = request.route_url('create_dictionary')
         subreq = Request.blank(path)
         subreq.method = 'POST'
-        subreq.json = json.dumps({'translation_string': parent.translation_string,
+        subreq.json = json.dumps({'translation_gist_client_id': parent.translation_gist_client_id,
+                                  'translation_gist_object_id': parent.translation_gist_object_id,
                                   'parent_client_id': parent.parent_client_id,
                                   'parent_object_id': parent.parent_object_id})
         headers = {'Cookie': request.headers['Cookie']}
@@ -251,7 +256,8 @@ def copy_dictionary(request):  # TODO: test. or not. was this ever finished?
                                      dictionary_object_id=new_dict.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            subreq.json = json.dumps({'translation_string': perspective.translation_string})
+            subreq.json = json.dumps({'translation_gist_client_id': parent.translation_gist_client_id,
+                                  'translation_gist_object_id': parent.translation_gist_object_id})
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -558,7 +564,7 @@ def view_dictionary_roles(request):  # tested & in docs
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                          subject_object_id=object_id,
                                                          subject_client_id=client_id).first()
-                perm = base.translation_string
+                perm = base.name
                 users = []
                 for user in group.users:
                     users += [user.id]
@@ -597,7 +603,7 @@ def edit_dictionary_roles(request):  # tested & in docs
         if not dictionary.marked_for_deletion:
             if roles_users:
                 for role_name in roles_users:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name,
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name,
                                                                 dictionary_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
@@ -633,7 +639,7 @@ def edit_dictionary_roles(request):  # tested & in docs
 
             if roles_organizations:
                 for role_name in roles_organizations:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name,
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name,
                                                                 dictionary_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
@@ -690,7 +696,7 @@ def delete_dictionary_roles(request):  # & in docs
         if not dictionary.marked_for_deletion:
             if roles_users:
                 for role_name in roles_users:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name,
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name,
                                                                 dictionary_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
@@ -729,7 +735,7 @@ def delete_dictionary_roles(request):  # & in docs
 
             if roles_organizations:
                 for role_name in roles_organizations:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name,
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name,
                                                                 dictionary_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
@@ -777,7 +783,7 @@ def view_dictionary_status(request):  # tested & in docs
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
     if dictionary:
         if not dictionary.marked_for_deletion:
-            response['status'] = dictionary.state
+            response['status'] = dictionary.state  # TODO: probably change
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -798,7 +804,7 @@ def edit_dictionary_status(request):  # tested & in docs
             else:
                 req = request.json_body
             status = req['status']
-            dictionary.state = status
+            dictionary.state = status  # TODO: probably change
             DBSession.add(dictionary)
             request.response.status = HTTPOk.code
             response['status'] = status

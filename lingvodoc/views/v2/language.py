@@ -1,7 +1,7 @@
 __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     get_user_by_client_id,
     language_info
 )
@@ -53,9 +53,8 @@ def view_language(request):  # tested & in docs
             response['parent_object_id'] = language.parent_object_id
             response['client_id'] = language.client_id
             response['object_id'] = language.object_id
-            translation_string = language.get_translation(request)
-            response['translation_string'] = translation_string['translation_string']
-            response['translation'] = translation_string['translation']
+            response['translation_gist_client_id'] = language.translation_gist_client_id
+            response['translation_gist_object_id'] = language.translation_gist_object_id
             if language.locale:
                 response['locale_exist'] = True
             else:
@@ -85,8 +84,10 @@ def edit_language(request):  # tested & in docs
                     language.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
                     language.parent_object_id = req['parent_object_id']
-                if 'translation' in req:
-                    language.set_translation(request)
+                if 'translation_gist_client_id' in req:
+                    language.translation_gist_client_id = req['translation_gist_client_id']
+                if 'translation_gist_object_id' in req:
+                    language.translation_gist_object_id = req['translation_gist_object_id']
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code
@@ -123,6 +124,8 @@ def create_language(request):  # tested & in docs
         except:
             parent_client_id = None
             parent_object_id = None
+        translation_gist_client_id = req['translation_gist_client_id']
+        translation_gist_object_id = req['translation_gist_object_id']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -134,15 +137,16 @@ def create_language(request):  # tested & in docs
         parent = None
         if parent_client_id and parent_object_id:
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        language = Language(object_id=DBSession.query(Language).filter_by(client_id=client.id).count()+1, client_id=variables['auth'])
-        language.set_translation(request)
+        language = Language(client_id=variables['auth'],
+                                translation_gist_client_id=translation_gist_client_id,
+                                translation_gist_object_id=translation_gist_object_id)
         DBSession.add(language)
         if parent:
             language.parent = parent
         DBSession.flush()
         basegroups = []
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can edit languages").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can delete languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
         groups = []
         for base in basegroups:
             group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)

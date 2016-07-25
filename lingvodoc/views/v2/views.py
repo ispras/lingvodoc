@@ -1,4 +1,4 @@
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     get_user_by_client_id
 )
 
@@ -23,15 +23,15 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@view_config(route_name='get_translations', renderer='json', request_method='POST')
-def get_translations(request):  # TODO: test
-    from lingvodoc.models import find_by_translation_string, find_locale_id
-    req = request.json_body
-    response = []
-    for entry in req:
-        response += [find_by_translation_string(find_locale_id(request), entry)]
-    request.response.status = HTTPOk.code
-    return response
+# @view_config(route_name='get_translations', renderer='json', request_method='POST')
+# def get_translations(request):  # TODO: test
+#     from lingvodoc.models import find_by_translation_string, find_locale_id
+#     req = request.json_body
+#     response = []
+#     for entry in req:
+#         response += [find_by_translation_string(find_locale_id(request), entry)]
+#     request.response.status = HTTPOk.code
+#     return response
 
 
 @view_config(route_name='testing', renderer='json')

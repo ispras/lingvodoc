@@ -1,7 +1,7 @@
 __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
-from lingvodoc.views.v1.utils import (
+from lingvodoc.views.v2.utils import (
     create_object
 )
 from lingvodoc.models import (
