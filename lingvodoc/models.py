@@ -1,13 +1,11 @@
-
-from pyramid.security import Allow, Authenticated,  ALL_PERMISSIONS, Everyone
-
+from pyramid.security import Allow, Authenticated, ALL_PERMISSIONS, Everyone
 
 from sqlalchemy.orm import (
     scoped_session,
     sessionmaker,
     relationship,
     backref,
-    query,
+    query
 )
 
 from sqlalchemy import (
@@ -16,6 +14,8 @@ from sqlalchemy import (
     event,
     ForeignKey,
     Table,
+    UniqueConstraint,
+    and_
 )
 
 from sqlalchemy.types import (
@@ -23,7 +23,7 @@ from sqlalchemy.types import (
     BigInteger,
     DateTime,
     Boolean,
-    Date,
+    Date
 )
 
 from sqlalchemy.ext.declarative import (
@@ -34,7 +34,6 @@ from sqlalchemy.ext.declarative import (
 from sqlalchemy.engine import (
     Engine
 )
-
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
@@ -49,6 +48,7 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.ext.compiler import compiles
 
 import logging
+
 log = logging.getLogger(__name__)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
@@ -69,8 +69,8 @@ def bi_c(element, compiler, **kw):
     return compiler.visit_BIGINT(element, **kw)
 
 
-
 from collections import deque
+
 
 # NOT DONE
 # def new_recursive_content(self, publish):
@@ -117,7 +117,7 @@ from collections import deque
 #     return vec
 
 
-def recursive_content(self, publish):
+def recursive_content(self, publish):  # TODO: completely redo
     vec = []
     # This code may IS much faster.
     m = inspect(type(self)).relationships
@@ -179,9 +179,7 @@ def recursive_content(self, publish):
 # DANGER: This pragma should be turned off for all the bases except sqlite3: it produces unpredictable bugs
 # In this variant it leads to overhead on each connection establishment.
 
-is_sqlite = False
-
-
+# is_sqlite = False
 # @event.listens_for(Engine, "connect")
 # def set_sqlite_pragma(dbapi_connection, connection_record):
 #     if dbapi_connection.__class__.__module__ == "sqlite3":
@@ -200,6 +198,7 @@ class TableNameMixin(object):
     http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
     It's used for automatically set tables names based on class names. Use it everywhere.
     """
+
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
@@ -212,24 +211,26 @@ class CreatedAtMixin(object):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 
-
 class IdMixin(object):
     """
     It's used for automatically set id as primary key.
     """
     id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
+    __table_args__ = (
+        dict(
+            sqlite_autoincrement=True))
 
 
 def get_client_counter(check_id):
     return DBSession.query(Client).filter_by(id=check_id).first()
 
+
 class CompositeIdMixin(object):
     """
     It's used for automatically set client_id and object_id as composite primary key.
     """
-    #object_id = Column(BigInteger, primary_key=True)
     object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
-    client_id = Column(BigInteger, primary_key=True)  # SLBigInteger() ?
+    client_id = Column(SLBigInteger(), primary_key=True)  # SLBigInteger() ? look sqlite sequences
 
     def __init__(self, **kwargs):
         kwargs.pop("object_id", None)
@@ -251,16 +252,7 @@ class CompositeKeysHelper(object):
     @classmethod
     def set_table_args_for_simple_fk_composite_key(cls, parent_name):
         return (ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
-                                     [parent_name.lower()+'.object_id', parent_name.lower()+'.client_id']),)
-
-    # This is used for classes that correspond to publishing words. Need to check if it even works.
-    # Seems to be working
-    @classmethod
-    def set_table_args_for_publishing_fk_composite_key(cls, parent_name, entity_name):
-        return (ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
-                                     [parent_name.lower()+'.object_id', parent_name.lower()+'.client_id']),
-                ForeignKeyConstraint(['entity_object_id', 'entity_client_id'],
-                                     [entity_name.lower()+'.object_id', entity_name.lower()+'.client_id']))
+                                     [parent_name.lower() + '.object_id', parent_name.lower() + '.client_id']),)
 
 
 class RelationshipMixin(object):
@@ -268,84 +260,31 @@ class RelationshipMixin(object):
     It's used for automatically set parent attribute as relationship.
     Each class using this mixin should have __parentname__ attribute
     """
+
+    @declared_attr
+    def __table_args__(cls):
+        if hasattr(cls, 'id'):
+            return cls.__table_args__ + CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(
+                parent_name=cls.__parentname__)
+        else:
+            return CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name=cls.__parentname__)
+
     @declared_attr
     def parent(cls):
-        return relationship(cls.__parentname__,
-                            backref= backref(cls.__tablename__.lower())
-                            )
+        if cls.__parentname__.lower() == cls.__tablename__.lower():
+            return relationship(cls.__parentname__,
+                                backref=backref(cls.__tablename__.lower()), remote_side=[cls.client_id, cls.object_id])
+        else:
+            return relationship(cls.__parentname__,
+                                backref=backref(cls.__tablename__.lower()))
 
-
-class RelationshipPublishingMixin(RelationshipMixin):
-    @declared_attr
-    def entity(cls):
-        return relationship(cls.__entityname__,
-                            backref=backref(cls.__tablename__.lower())
-                            )
-
-
-# def find_by_translation_string(locale_id, translation_string):
-#         trstr = DBSession.query(UserEntitiesTranslationString).\
-#             filter_by(locale_id=locale_id, translation_string=translation_string).first()
-#         if not trstr:
-#             trstr = DBSession.query(UserEntitiesTranslationString).\
-#                 filter_by(locale_id=1, translation_string=translation_string).first()
-#         if not trstr:
-#             return {'translation_string': translation_string, 'translation': translation_string}
-#         return {'translation_string': translation_string, 'translation': trstr.translation}
-#
-#
-# def add_translation_to_translation_string(locale_id, translation, translation_string, client_id):
-#
-#         client = DBSession.query(Client).filter_by(id=client_id).first()
-#         uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
-#                                                                         translation_string=translation_string).first()
-#         if not translation:
-#             translation = translation_string
-#         if not uets:
-#             uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
-#                                                  client_id=client.id,
-#                                                  locale_id=locale_id,
-#                                                  translation_string=translation_string,
-#                                                  translation=translation)
-#             DBSession.add(uets)
-#             DBSession.flush()
-#         else:
-#             uets.translation = translation
-
-
-def find_locale_id(request):
-    try:
-        return int(request.cookies['locale_id'])
-    except:
-        return 1
+    parent_object_id = Column(SLBigInteger())
+    parent_client_id = Column(SLBigInteger())
 
 
 class TranslationMixin(object):
-    translation_gist_client_id = Column(BigInteger)
-    translation_gist_object_id = Column(BigInteger)
-
-    # def get_translation(cls, request):
-    #     return find_by_translation_string(find_locale_id(request), cls.translation_string)
-    #
-    # def set_translation(cls, request):
-    #
-    #     if type(request.json_body) == str:
-    #         req = json.loads(request.json_body)
-    #     else:
-    #         req = request.json_body
-    #
-    #     translation = None
-    #     if 'translation' in req:
-    #         translation = req['translation']
-    #     translation_string = req.get('translation_string')
-    #     if cls.translation_string:
-    #         translation_string = cls.translation_string
-    #     add_translation_to_translation_string(find_locale_id(request),
-    #                                           translation,
-    #                                           translation_string,
-    #                                           request.authenticated_userid)
-    #     cls.translation_string = translation_string
-    #     return
+    translation_gist_client_id = Column(SLBigInteger())
+    translation_gist_object_id = Column(SLBigInteger())
 
 
 class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
@@ -361,67 +300,17 @@ class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin,
     This is translations
     """
     __parentname__ = 'TranslationGist'
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name='TranslationGist')
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
     content = Column(UnicodeText)
-    locale_id = Column(BigInteger)
+    locale_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False)
 
 
-class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin):
+class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, RelationshipMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
     __parentname__ = 'Language'
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
     marked_for_deletion = Column(Boolean, default=False)
-
-    # def get_translation(cls, request):
-    #     return find_by_translation_string(find_locale_id(request), cls.translation_string)
-    #
-    # def set_translation(self, request):
-    #     if type(request.json_body) == str:
-    #         req = json.loads(request.json_body)
-    #     else:
-    #         req = request.json_body
-    #
-    #     translation = None
-    #     if 'translation' in req:
-    #         translation = req['translation']
-    #     translation_string = req.get('translation_string')
-    #     if not translation_string:
-    #         if self.translation_string:
-    #             translation_string = self.translation_string
-    #         else:
-    #             return
-    #     client_id = request.authenticated_userid
-    #     locale_id = find_locale_id(request)
-    #     client = DBSession.query(Client).filter_by(id=client_id).first()
-    #     search_translation_string = self.translation_string
-    #     if not search_translation_string:
-    #         search_translation_string = translation_string
-    #     uets = DBSession.query(UserEntitiesTranslationString).filter_by(locale_id=locale_id,
-    #                                                                     translation_string=search_translation_string).first()
-    #     if not translation:
-    #         translation = translation_string
-    #     if not uets:
-    #         uets = UserEntitiesTranslationString(object_id=DBSession.query(UserEntitiesTranslationString).filter_by(client_id=client.id).count()+1,
-    #                                              client_id=client.id,
-    #                                              locale_id=locale_id,
-    #                                              translation_string=translation_string,
-    #                                              translation=translation)
-    #         self.translation_string = translation_string
-    #         DBSession.add(uets)
-    #         DBSession.flush()
-    #     else:
-    #         uets.translation_string = translation_string
-    #         self.translation_string = translation_string
-    #         uets.translation = translation
-    #     return
-Language.parent = relationship('Language', remote_side=[Language.client_id,  Language.object_id], backref=backref('language'))
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
@@ -430,32 +319,8 @@ class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
     Should be added as admin only.
     """
     __parentname__ = 'Language'
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
     shortcut = Column(UnicodeText)
     intl_name = Column(UnicodeText)
-
-
-# class UITranslationString(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-#     """
-#     This table holds translation strings for UI. If couldn't be found by pair, should be searched by translation string.
-#     Should be used as admin only.
-#     """
-#     locale_id = Column(BigInteger)
-#     translation_string = Column(UnicodeText)
-#     translation = Column(UnicodeText)
-#
-#
-# class UserEntitiesTranslationString(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
-#     """
-#     This table holds translation strings for user-created entities such as dictionaries names, column names etc.
-#     Separate classes are needed not to allow users to interfere UI directly.
-#     Not intended to use for translations inside the dictionaries (these translations are hold inside entities tables).
-#     """
-#     locale_id = Column(BigInteger)
-#     translation_string = Column(UnicodeText)
-#     translation = Column(UnicodeText)
 
 
 class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, TranslationMixin):
@@ -466,9 +331,6 @@ class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Crea
     for the same language so we use some grouping. This grouping is provided via Language objects.
     """
     __parentname__ = 'Language'
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Language")
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     authors = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
@@ -476,7 +338,8 @@ class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Crea
     # about = Column(UnicodeText)
 
 
-class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, TranslationMixin):
+class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin,
+                            TranslationMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -486,20 +349,18 @@ class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, Relationship
     Parent: Dictionary.
     """
     __parentname__ = 'Dictionary'
-
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="Dictionary")
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
     state = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     is_template = Column(Boolean, default=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
     additional_metadata = Column(UnicodeText)
+    linked_to_client_id = Column(BigInteger)
+    linked_to_object_id = Column(BigInteger)
     # about = Column(UnicodeText)
 
 
-class DictionaryPerspectiveField(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, TranslationMixin):
+class Field(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -510,28 +371,26 @@ class DictionaryPerspectiveField(CompositeIdMixin, Base, TableNameMixin, Relatio
         3. With it we can restrict to use any entity types except listed here (security concerns).
     Parent: DictionaryPerspective.
     """
-    __parentname__ = 'DictionaryPerspective'
-    __entityname__ = 'DictionaryPerspectiveField'
-    __table_args__ = CompositeKeysHelper.\
-        set_table_args_for_publishing_fk_composite_key(parent_name="DictionaryPerspective",
-                                                       entity_name="DictionaryPerspectiveField")
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
-    entity_object_id = Column(BigInteger)
-    entity_client_id = Column(BigInteger)
-    entity_type = Column(UnicodeText)
     data_type = Column(UnicodeText)
-    level = Column(UnicodeText)
-    group = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     is_translatable = Column(Boolean, default=False)
-    state = Column(UnicodeText)
-    position = Column(BigInteger)
 
-DictionaryPerspectiveField.parent_entity = relationship('DictionaryPerspectiveField',
-                                                        remote_side=[DictionaryPerspectiveField.client_id,
-                                                                     DictionaryPerspectiveField.object_id],
-                                                        backref=backref('dictionaryperspectivefield'))
+
+lexicalentry_to_lexicalentry_association = Table('lexicalentry_to_lexicalentry_association',
+                                                 Base.metadata,
+                                                 Column('lexicalentry_1_client_id', BigInteger),
+                                                 Column('lexicalentry_1_object_id', BigInteger),
+                                                 Column('lexicalentry_2_client_id', BigInteger),
+                                                 Column('lexicalentry_2_object_id', BigInteger),
+                                                 ForeignKeyConstraint(['lexicalentry_1_client_id',
+                                                                       'lexicalentry_1_object_id'],
+                                                                      ['lexicalentry.client_id',
+                                                                       'lexicalentry.object_id']),
+                                                 ForeignKeyConstraint(['lexicalentry_2_client_id',
+                                                                       'lexicalentry_2_object_id'],
+                                                                      ['lexicalentry.client_id',
+                                                                       'lexicalentry.object_id'])
+                                                 )
 
 
 class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
@@ -542,89 +401,108 @@ class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Cr
     Parent: DictionaryPerspective.
     """
     __parentname__ = 'DictionaryPerspective'
-    __table_args__ = CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name="DictionaryPerspective")
-
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     additional_metadata = Column(UnicodeText)
 
-    def track(self, publish):
-        vec = []
-        vec += recursive_content(self, publish)
-        published = False
-        if vec:
-            ents = []
-            for ent in vec:
-                ents += [ent]
-            for ent in ents:
-                try:
-                    if 'publish' in ent['level']:
-                            if not ent['marked_for_deletion']:
-                                published = True
-                                if not publish:
-                                    break
-                            if publish:
-                                vec.remove(ent)
-                except:
-                    log.debug('IDK: %s' % ent)
-        came_from = None
-        meta = None
-        if self.additional_metadata:
-            meta = json.loads(self.additional_metadata)
-        if meta:
-            if 'came_from' in meta:
-                came_from = meta['came_from']
-        response = {"level": self.__tablename__,
-                    "client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
-                    "parent_client_id": self.parent_client_id,
-                    "parent_object_id": self.parent_object_id,
-                    "marked_for_deletion": self.marked_for_deletion,
-                    "came_from": came_from}
-        return response
+
+LexicalEntry.linked_to = relationship("LexicalEntry",
+                                      secondary=lexicalentry_to_lexicalentry_association,
+                                      primaryjoin=and_(
+                                          LexicalEntry.client_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_1_client_id,
+                                          LexicalEntry.object_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_1_object_id),
+                                      secondaryjoin=and_(
+                                          LexicalEntry.client_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_2_client_id,
+                                          LexicalEntry.object_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_2_object_id),
+                                      backref=backref("linked_from"))
 
 
-class Entity(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
-    parent_object_id = Column(BigInteger)
-    parent_client_id = Column(BigInteger)
-    entity_object_id = Column(BigInteger)
-    entity_client_id = Column(BigInteger)
-    field_object_id = Column(BigInteger)
-    field_client_id = Column(BigInteger)
+# def track(self, publish):
+#     vec = []
+#     vec += recursive_content(self, publish)
+#     published = False
+#     if vec:
+#         ents = []
+#         for ent in vec:
+#             ents += [ent]
+#         for ent in ents:
+#             try:
+#                 if 'publish' in ent['level']:
+#                         if not ent['marked_for_deletion']:
+#                             published = True
+#                             if not publish:
+#                                 break
+#                         if publish:
+#                             vec.remove(ent)
+#             except:
+#                 log.debug('IDK: %s' % ent)
+#     came_from = None
+#     meta = None
+#     if self.additional_metadata:
+#         meta = json.loads(self.additional_metadata)
+#     if meta:
+#         if 'came_from' in meta:
+#             came_from = meta['came_from']
+#     response = {"level": self.__tablename__,
+#                 "client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
+#                 "parent_client_id": self.parent_client_id,
+#                 "parent_object_id": self.parent_object_id,
+#                 "marked_for_deletion": self.marked_for_deletion,
+#                 "came_from": came_from}
+#     return response
+
+
+class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
+    __parentname__ = "LexicalEntry"
+    __table_args__ = (ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
+                                           ["LexicalEntry".lower() + '.object_id',
+                                            "LexicalEntry".lower() + '.client_id']),
+                      ForeignKeyConstraint(['entity_object_id', 'entity_client_id'],
+                                           ["Entity".lower() + '.object_id', "Entity".lower() + '.client_id'])
+                      )
+    parent = relationship(__parentname__, backref=backref('entity'))
+    parent_object_id = Column(SLBigInteger())
+    parent_client_id = Column(SLBigInteger())
+    entity_object_id = Column(SLBigInteger())  # infinite nesting
+    entity_client_id = Column(SLBigInteger())  # infinite nesting
+    field_object_id = Column(SLBigInteger())  # could be changed at merge (and field structure changes?)
+    field_client_id = Column(SLBigInteger())  # same as above
     content = Column(UnicodeText)
     additional_metadata = Column(UnicodeText)
-    locale_id = Column(BigInteger)
+    locale_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False)
 
-    def track(self, publish):
-        dictionary = {'level': self.__tablename__,
-                      'content': self.content,
-                      'object_id': self.object_id,
-                      'client_id': self.client_id,
-                      'parent_object_id': self.parent_object_id,
-                      'parent_client_id': self.parent_client_id,
-                      'entity_type': self.entity_type,
-                      'marked_for_deletion': self.marked_for_deletion,
-                      'locale_id': self.locale_id
-                      }
-        if self.additional_metadata:
-            dictionary['additional_metadata'] = self.additional_metadata
-        children = recursive_content(self, publish)
-        if children:
-            dictionary['contains'] = children
-        return dictionary
+    @declared_attr
+    def parent_entity(cls):
+        return relationship(cls.__parentname__, backref=backref('entity'), remote_side=[cls.client_id, cls.object_id])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         publishingentity = PublishingEntity(client_id=self.client_id, object_id=self.object_id)
         DBSession.add(publishingentity)
 
+        # def track(self, publish):
+        #     dictionary = {'level': self.__tablename__,
+        #                   'content': self.content,
+        #                   'object_id': self.object_id,
+        #                   'client_id': self.client_id,
+        #                   'parent_object_id': self.parent_object_id,
+        #                   'parent_client_id': self.parent_client_id,
+        #                   'entity_type': self.entity_type,
+        #                   'marked_for_deletion': self.marked_for_deletion,
+        #                   'locale_id': self.locale_id
+        #                   }
+        #     if self.additional_metadata:
+        #         dictionary['additional_metadata'] = self.additional_metadata
+        #     children = recursive_content(self, publish)
+        #     if children:
+        #         dictionary['contains'] = children
+        #     return dictionary
+
 
 class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
-    object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
-    client_id = Column(BigInteger, primary_key=True)  # SLBigInteger() ?
-    # marked_for_deletion = Column(Boolean, default=False)
+    object_id = Column(SLBigInteger(), primary_key=True)
+    client_id = Column(SLBigInteger(), primary_key=True)
     published = Column(Boolean, default=False)
 
 
@@ -644,15 +522,6 @@ user_to_organization_association = Table('user_to_organization_association', Bas
                                          )
 
 
-user_to_dictionary_association = Table('user_to_dictionary_association', Base.metadata,
-                                       Column('user_id', BigInteger, ForeignKey('user.id')),
-                                       Column('dictionary_client_id', BigInteger),
-                                       Column('dictionary_object_id', BigInteger),
-                                       ForeignKeyConstraint(('dictionary_client_id', 'dictionary_object_id'),
-                                                            ('dictionary.client_id', 'dictionary.object_id'))
-                                       )
-
-
 class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     login = Column(UnicodeText, unique=True)
     name = Column(UnicodeText)
@@ -664,19 +533,17 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean, default=True)
     password = relationship("Passhash", uselist=False)
-    dictionaries = relationship("Dictionary",
-                                secondary=user_to_dictionary_association, backref=backref("participated"))
+    # dictionaries = relationship("Dictionary",
+    #                             secondary=user_to_dictionary_association, backref=backref("participated"))
 
     def check_password(self, passwd):
         return bcrypt.verify(passwd, self.password.hash)
 
-    # TODO: last_sync_datetime
+        # TODO: last_sync_datetime
 
 
-class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    name = Column(UnicodeText)
-    # readable name
-    translation_string = Column(UnicodeText)
+class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin, TranslationMixin):
+    name = Column(UnicodeText)  # readable name
     groups = relationship('Group', backref=backref("BaseGroup"))
     subject = Column(UnicodeText)
     action = Column(UnicodeText)
@@ -684,33 +551,39 @@ class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     perspective_default = Column(Boolean, default=False)
 
 
-class Group(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
+class Group(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     __parentname__ = 'BaseGroup'
     base_group_id = Column(ForeignKey("basegroup.id"))
-    subject_client_id = Column(BigInteger)
-    subject_object_id = Column(BigInteger)
+    subject_client_id = Column(SLBigInteger())
+    subject_object_id = Column(SLBigInteger())
     subject_override = Column(Boolean, default=False)
-    users = relationship("User",  secondary=user_to_group_association, backref=backref("groups"))
-    organizations = relationship("Organization",  secondary=organization_to_group_association, backref=backref("groups"))
+    users = relationship("User",
+                         secondary=user_to_group_association,
+                         backref=backref("groups"))
+    organizations = relationship("Organization",
+                                 secondary=organization_to_group_association,
+                                 backref=backref("groups"))
 
 
 class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     name = Column(UnicodeText)
-    users = relationship("User", secondary=user_to_organization_association, backref=backref("organizations"))
+    users = relationship("User",
+                         secondary=user_to_organization_association,
+                         backref=backref("organizations"))
     about = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     # locale_id = Column(ForeignKey("locale.id"))
 
 
 class About(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(BigInteger, ForeignKey("user.id"), primary_key=True)
+    user_id = Column(SLBigInteger(), ForeignKey("user.id"))
     user = relationship("User", backref='about')
     content = Column(UnicodeText)
     locale_id = Column(ForeignKey("locale.id"))
 
 
 class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(BigInteger, ForeignKey('user.id'))
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
     hash = Column(UnicodeText)
 
     def __init__(self, password):
@@ -718,17 +591,17 @@ class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 
 class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(BigInteger, ForeignKey('user.id'))
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
     email = Column(UnicodeText, unique=True)
     user = relationship("User", backref='email')
 
 
 class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(BigInteger, ForeignKey('user.id'))
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
-    counter = Column(BigInteger, default=1)
+    counter = Column(SLBigInteger(), default=1)  # TODO: not do sequence
 
 
 class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
@@ -740,12 +613,12 @@ class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
     additional_metadata = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    user_id = Column(BigInteger, ForeignKey('user.id'))
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
     user = relationship("User", backref='userblobs')
 
 
 def acl_by_groups(object_id, client_id, subject):
-    acls = [] #DANGER if acls do not work -- uncomment string below
+    acls = []  # DANGER if acls do not work -- uncomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
@@ -759,7 +632,7 @@ def acl_by_groups(object_id, client_id, subject):
             if dict:
                 if dict.state == 'Published':
                     acls += [(Allow, Everyone, 'view')]
-    groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id).\
+    groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id). \
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
         base_group = group.parent
@@ -767,17 +640,17 @@ def acl_by_groups(object_id, client_id, subject):
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \
-                     + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
+                         + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
     log.debug("ACLS: %s", acls)
     return acls
 
 
 def acl_by_groups_single_id(object_id, subject):
-    acls = [] #DANGER if acls do not work -- uncomment string below
+    acls = []  # DANGER if acls do not work -- uncomment string below
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
-    groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id).\
+    groups += DBSession.query(Group).filter_by(subject_client_id=None, subject_object_id=object_id). \
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:
         base_group = group.parent
@@ -785,7 +658,7 @@ def acl_by_groups_single_id(object_id, subject):
             group_name = base_group.action + ":" + base_group.subject + ":" + str(group.subject_override)
         else:
             group_name = base_group.action + ":" + base_group.subject \
-                     + ":"  + str(group.subject_object_id)
+                         + ":" + str(group.subject_object_id)
         acls += [(Allow, group_name, base_group.action)]
     log.debug("ACLS: %s", acls)
     return acls
@@ -797,12 +670,12 @@ class LanguageAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['object_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['client_id']
         except:
@@ -825,12 +698,12 @@ class PerspectiveAcl(object):
 
     def __acl__(self):
         acls = []
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['perspective_client_id']
         except:
             pass
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
@@ -844,12 +717,12 @@ class PerspectiveCreateAcl(object):
 
     def __acl__(self):
         acls = []
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['dictionary_client_id']
         except:
             pass
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['dictionary_object_id']
         except:
@@ -863,7 +736,7 @@ class OrganizationAcl(object):
 
     def __acl__(self):
         acls = []
-        organization_id=None
+        organization_id = None
         try:
             organization_id = self.request.matchdict['organization_id']
         except:
@@ -877,12 +750,12 @@ class DictionaryAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['object_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['client_id']
         except:
@@ -896,12 +769,12 @@ class DictionaryIdsWithPrefixAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['dictionary_perspective_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['dictionary_perspective_client_id']
         except:
@@ -915,12 +788,12 @@ class DictionaryRolesAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['object_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['client_id']
         except:
@@ -934,12 +807,12 @@ class PerspectiveRolesAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['perspective_client_id']
         except:
@@ -953,12 +826,12 @@ class CreateLexicalEntriesEntitiesAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['perspective_client_id']
         except:
@@ -972,12 +845,12 @@ class LexicalEntriesEntitiesAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['perspective_client_id']
         except:
@@ -991,12 +864,12 @@ class PerspectiveEntityOneAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['object_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['client_id']
         except:
@@ -1012,12 +885,12 @@ class PerspectiveEntityTwoAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['object_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['client_id']
         except:
@@ -1054,12 +927,12 @@ class PerspectivePublishAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['perspective_client_id']
         except:
@@ -1073,12 +946,12 @@ class PerspectiveLexicalViewAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['perspective_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['perspective_client_id']
         except:
@@ -1092,19 +965,20 @@ class LexicalViewAcl(object):
 
     def __acl__(self):
         acls = []
-        object_id=None
+        object_id = None
         try:
             object_id = self.request.matchdict['object_id']
         except:
             pass
-        client_id=None
+        client_id = None
         try:
             client_id = self.request.matchdict['client_id']
         except:
             pass
-        lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id,object_id=object_id).first()
+        lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         parent = lex.parent
         return acls + acl_by_groups(parent.object_id, parent.client_id, 'lexical_entries_and_entities')
+
 
 class ApproveAllAcl(object):
     def __init__(self, request):

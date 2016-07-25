@@ -358,10 +358,9 @@ def view_perspective_tree(request):  # tested & in docs
     if perspective:
         if not perspective.marked_for_deletion:
             tree = []
-            translation_string = perspective.get_translation(request)
             tree.append({'type': 'perspective',
-                         'translation_string': translation_string['translation_string'],
-                         'translation': translation_string['translation'],
+                         'translation_gist_client_id': perspective.translation_string,
+                         'translation_gist_object_id': perspective.translation_gist_object_id,
                          'client_id': perspective.client_id,
                          'object_id': perspective.object_id,
                          'parent_client_id': perspective.parent_client_id,
@@ -482,6 +481,8 @@ def create_perspective(request):  # tested & in docs
             req = json.loads(request.json_body)
         else:
             req = request.json_body
+        translation_gist_client_id = req['translation_gist_client_id']
+        translation_gist_object_id = req['translation_gist_object_id']
         is_template = req.get('is_template')
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -508,16 +509,17 @@ def create_perspective(request):  # tested & in docs
             additional_metadata = coord
         additional_metadata = json.dumps(additional_metadata)
 
-        perspective = DictionaryPerspective(object_id=DBSession.query(DictionaryPerspective).filter_by(client_id=client.id).count() + 1,
-                                            client_id=variables['auth'],
+        perspective = DictionaryPerspective(client_id=variables['auth'],
                                             state='WiP',
                                             parent=parent,
                                             import_source=req.get('import_source'),
                                             import_hash=req.get('import_hash'),
-                                            additional_metadata=additional_metadata)
+                                            additional_metadata=additional_metadata,
+                                            translation_gist_client_id=translation_gist_client_id,
+                                            translation_gist_object_id=translation_gist_object_id
+                                            )
         if is_template is not None:
             perspective.is_template = is_template
-        perspective.set_translation(request)
         DBSession.add(perspective)
         DBSession.flush()
         owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
@@ -574,7 +576,7 @@ def view_perspectives(request):
     return response
 
 
-@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'GET', permission='view')
+@view_config(route_name='perspective_roles', renderer='json', request_method='GET', permission='view')
 def view_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -594,9 +596,9 @@ def view_perspective_roles(request):  # TODO: test
             roles_organizations = dict()
             for base in bases:
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=object_id,
-                                                             subject_client_id=client_id).first()
-                perm = base.translation_string
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
+                perm = base.name
                 users = []
                 for user in group.users:
                     users += [user.id]
@@ -642,7 +644,7 @@ def edit_perspective_roles(request):  # TODO: test
         if not perspective.marked_for_deletion:
             if roles_users:
                 for role_name in roles_users:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -677,7 +679,7 @@ def edit_perspective_roles(request):  # TODO: test
 
             if roles_organizations:
                 for role_name in roles_organizations:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -740,7 +742,7 @@ def delete_perspective_roles(request):  # TODO: test
         if not perspective.marked_for_deletion:
             if roles_users:
                 for role_name in roles_users:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -778,7 +780,7 @@ def delete_perspective_roles(request):  # TODO: test
 
             if roles_organizations:
                 for role_name in roles_organizations:
-                    base = DBSession.query(BaseGroup).filter_by(translation_string=role_name, perspective_default=True).first()
+                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
                     if not base:
                         request.response.status = HTTPNotFound.code
                         return {'error': str("No such role in the system")}
@@ -873,7 +875,7 @@ def edit_perspective_status(request):  # tested & in docs
 
 
 @view_config(route_name='perspective_fields', renderer='json', request_method='GET')
-def view_perspective_fields(request):  # tested
+def view_perspective_fields(request):  # TODO: completely redo
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -888,7 +890,7 @@ def view_perspective_fields(request):  # tested
             data = dict()
             if field.level == 'leveloneentity' or field.level == 'groupingentity':
                 ent_type = field.get_entity_type(request)
-                data['entity_type'] = ent_type['translation_string']
+                data['translation_gist_client_id'] = ent_type['translation_string']
                 data['entity_type_translation'] = ent_type['translation']
                 data_type = field.get_data_type(request)
                 data['data_type'] = data_type['translation_string']
@@ -1541,8 +1543,10 @@ def edit_perspective(request):  # tested & in docs
                     return {'error': str("No such pair of dictionary/perspective in the system")}
                 req = request.json_body
 
-                if 'translation' in req:
-                    perspective.set_translation(request)
+                if 'translation_gist_client_id' in req:
+                    perspective.translation_gist_client_id = req['translation_gist_client_id']
+                if 'translation_gist_object_id' in req:
+                    perspective.translation_gist_object_id = req['translation_gist_object_id']
                 if 'parent_client_id' in req:
                     perspective.parent_client_id = req['parent_client_id']
                 if 'parent_object_id' in req:
