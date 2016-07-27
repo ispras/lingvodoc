@@ -29,23 +29,20 @@ case class LinguisticType(id: String, graphicReferences: Boolean, typeAlignable:
     """.stripMargin
 }
 
-
+// Represents ELAN (EAF) document
 class ELANDocumentJquery private(annotDocXML: JQuery) {
-  val (date, author, version, format) = parseAttrs(annotDocXML)
+  // attributes
+  val date = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.dateAttrName)
+  val author = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.authorAttrName)
+  val version = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.versionAttrName)
+  val format = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.formatAttrName, defaultValue = Some("2.7"))
+
   val header = new Header(annotDocXML.find(Header.tagName))
-  val timeOrder = new TimeOrder(annotDocXML.find(TimeOrder.tagName)) // timeslots without values are allowed
+  val timeOrder = new TimeOrder(annotDocXML.find(TimeOrder.tagName))
 
   //  var linguisticType = LinguisticType("", graphicReferences = false, typeAlignable = false)
   //    var locale = Locale("", "", "")
   //    var tiers = List[Tier]()
-
-
-  private def parseAttrs(annotDocXML: JQuery) = (
-    new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.dateAttrName).get) { val name = ELANDocumentJquery.dateAttrName },
-    new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.authorAttrName).get) { val name = ELANDocumentJquery.authorAttrName },
-    new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.versionAttrName).get) { val name = ELANDocumentJquery.versionAttrName },
-    new RequiredXMLAttr(annotDocXML.attr(ELANDocumentJquery.formatAttrName).toOption.getOrElse("2.7")) { val name = ELANDocumentJquery.formatAttrName }
-    )
 
   def content = s"$header $timeOrder"
   def attrs = s"$date $author $version $format ${ELANDocumentJquery.xmlnsXsi} ${ELANDocumentJquery.schemaLoc}"
@@ -60,8 +57,8 @@ object ELANDocumentJquery {
   val annotDocTagName = "ANNOTATION_DOCUMENT"
   val (dateAttrName, authorAttrName, versionAttrName, formatAttrName) = ("DATE", "AUTHOR", "VERSION", "FORMAT")
   // hardcoded, expected not to change
-  val xmlnsXsi = new RequiredXMLAttr("http://www.w3.org/2001/XMLSchema-instance") { val name = "xmlns:xsi" }
-  val schemaLoc = new RequiredXMLAttr("http://www.mpi.nl/tools/elan/EAFv2.7.xsd") { val name = "xsi:noNamespaceSchemaLocation"}
+  val xmlnsXsi = RequiredXMLAttr("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
+  val schemaLoc = RequiredXMLAttr("xsi:noNamespaceSchemaLocation", "http://www.mpi.nl/tools/elan/EAFv2.7.xsd")
   // see http://www.mpi.nl/tools/elan/EAF_Annotation_Format.pdf for format specification
   // JQuery is used for parsing.
   // WARNING: it is assumed that the xmlString is a valid ELAN document matching xsd scheme.
@@ -85,13 +82,17 @@ class Header(headerXML: JQuery) {
 
 object Header {
   val (tagName, mfAttrName, propTagName) = ("HEADER", "MEDIA_FILE", "PROPERTY")
-  val timeUnits = new RequiredXMLAttr("milliseconds") { val name = "TIME_UNITS" }
+  val timeUnits = RequiredXMLAttr("TIME_UNITS", "milliseconds")
 }
 
 // Represents MEDIA_DESCRIPTOR element
-class MediaDescriptor private(val mediaURL: RequiredXMLAttr[String], val mimeType: RequiredXMLAttr[String],
-                              val relativeMediaUrl: OptionalXMLAttr[String], val timeOrigin: OptionalXMLAttr[Long],
-                              val extractedFrom: OptionalXMLAttr[String]) {
+class MediaDescriptor (mdXML: JQuery) {
+  val mediaURL = RequiredXMLAttr(mdXML, MediaDescriptor.muAttrName)
+  val mimeType = RequiredXMLAttr(mdXML, MediaDescriptor.mtAttrName)
+  val relativeMediaUrl = OptionalXMLAttr(mdXML, MediaDescriptor.rmuAttrName)
+  val timeOrigin = OptionalXMLAttr(mdXML, MediaDescriptor.toAttrName, converter = Some((v: String) => v.toLong))
+  val extractedFrom = OptionalXMLAttr(mdXML, MediaDescriptor.efAttrName)
+
   override def toString = s"<${MediaDescriptor.tagName} $mediaURL $mimeType $relativeMediaUrl $timeOrigin $extractedFrom/>\n"
   def join(md2: MediaDescriptor): MediaDescriptor = {   // take optional attrs from md2, if they absent here
     relativeMediaUrl.updateValue(md2.relativeMediaUrl)
@@ -102,27 +103,21 @@ class MediaDescriptor private(val mediaURL: RequiredXMLAttr[String], val mimeTyp
 }
 
 object MediaDescriptor {
+  def apply(mdXML: JQuery) = new MediaDescriptor(mdXML)
   // there can be more than one MD tag; the last tag gets the priority
-  def fromMultiple(mdXMLs: JQuery): Option[MediaDescriptor] =
-    Utils.jQuery2List(mdXMLs).foldLeft[Option[MediaDescriptor]](None) {
-      (acc, newMd) => Some(MediaDescriptor(newMd)) ++ acc reduceOption (_ join _)
-    }
-  def apply(mdXML: JQuery): MediaDescriptor = {
-    new MediaDescriptor(new RequiredXMLAttr(mdXML.attr(muAttrName).get) { val name = muAttrName },
-      new RequiredXMLAttr(mdXML.attr(mtAttrName).get) { val name = mtAttrName },
-      new OptionalXMLAttr(mdXML.attr(rmuAttrName).toOption) { val name = rmuAttrName },
-      new OptionalXMLAttr(mdXML.attr(toAttrName).toOption.map(_.toLong)) { val name = toAttrName },
-      new OptionalXMLAttr(mdXML.attr(efAttrName).toOption) { val name = efAttrName }
-    )
-  }
+  def fromMultiple(mdXMLs: JQuery) = Utils.fromMultiple[MediaDescriptor](mdXMLs, MediaDescriptor.apply, _.join(_))
   val (tagName, muAttrName, mtAttrName, rmuAttrName, toAttrName, efAttrName) =
     ("MEDIA_DESCRIPTOR", "MEDIA_URL", "MIME_TYPE", "RELATIVE_MEDIA_URL", "TIME_ORIGIN", "EXTRACTED_FROM")
 }
 
 // Represents LINKED_FILE_DESCRIPTOR element
-class LinkedFileDescriptor private(val linkURL: RequiredXMLAttr[String], val mimeType: RequiredXMLAttr[String],
-                                   val relativeLinkURL: OptionalXMLAttr[String], val timeOrigin: OptionalXMLAttr[Long],
-                                   val associatedWith: OptionalXMLAttr[String]) {
+class LinkedFileDescriptor private(lfdXML: JQuery) {
+  val linkURL = RequiredXMLAttr(lfdXML, LinkedFileDescriptor.luAttrName)
+  val mimeType = RequiredXMLAttr(lfdXML, LinkedFileDescriptor.mtAttrName)
+  val relativeLinkURL = OptionalXMLAttr(lfdXML, LinkedFileDescriptor.rluAttrName)
+  val timeOrigin = OptionalXMLAttr(lfdXML, LinkedFileDescriptor.toAttrName, converter = Some((v: String) => v.toLong))
+  val associatedWith = OptionalXMLAttr(lfdXML, LinkedFileDescriptor.awAttrName)
+
   override def toString = s"<${LinkedFileDescriptor.tagName} $linkURL $mimeType $relativeLinkURL $timeOrigin $associatedWith/>\n"
   def join(lfd2: LinkedFileDescriptor): LinkedFileDescriptor = { // take optional attrs from lfd2, if they absent here
     relativeLinkURL.updateValue(lfd2.relativeLinkURL)
@@ -133,18 +128,8 @@ class LinkedFileDescriptor private(val linkURL: RequiredXMLAttr[String], val mim
 }
 
 object LinkedFileDescriptor {
-  def fromMultiple(lfdXMLs: JQuery) =
-    Utils.jQuery2List(lfdXMLs).foldLeft[Option[LinkedFileDescriptor]](None) {
-      (acc, newLfd) => Some(LinkedFileDescriptor(newLfd)) ++ acc reduceOption (_ join _)
-    }
-  def apply(lfdXML: JQuery): LinkedFileDescriptor = {
-    new LinkedFileDescriptor(new RequiredXMLAttr(lfdXML.attr(luAttrName).get) { val name = luAttrName },
-      new RequiredXMLAttr(lfdXML.attr(mtAttrName).get) { val name = mtAttrName },
-      new OptionalXMLAttr(lfdXML.attr(rluAttrName).toOption) { val name = rluAttrName},
-      new OptionalXMLAttr(lfdXML.attr(toAttrName).toOption.map(_.toLong)) { val name = toAttrName},
-      new OptionalXMLAttr(lfdXML.attr(awAttrName).toOption) { val name = awAttrName }
-    )
-  }
+  def apply(lfdXML: JQuery) = new LinkedFileDescriptor(lfdXML)
+  def fromMultiple(lfdXMLs: JQuery) = Utils.fromMultiple[LinkedFileDescriptor](lfdXMLs, LinkedFileDescriptor.apply, _.join(_))
   val (tagName, luAttrName, mtAttrName, rluAttrName, toAttrName, awAttrName) = ("LINKED_FILE_DESCRIPTOR", "LINK_URL",
     "MIME_TYPE", "RELATIVE_LINK_URL", "TIME_ORIGIN", "ASSOCIATED_WITH")
 }
@@ -153,7 +138,7 @@ object LinkedFileDescriptor {
 class TimeOrder(timeOrderXML: JQuery) {
   var timeSlots = Utils.jQuery2List(timeOrderXML.find(TimeOrder.tsTagName)).map(tsJquery => {
     tsJquery.attr(TimeOrder.tsIdAttrName).get -> tsJquery.attr(TimeOrder.tvAttrName).toOption
-  }).toMap
+  }).toMap // timeslots without values are allowed
   def content = timeSlots.map{ case (id, value) =>
     s"<${TimeOrder.tsTagName} ${new RequiredXMLAttr(id) { val name = TimeOrder.tsIdAttrName }} ${ new OptionalXMLAttr(value) { val name = TimeOrder.tvAttrName }}/>"}
   override def toString = Utils.wrap(TimeOrder.tagName, content.mkString("\n"))
@@ -163,6 +148,17 @@ object TimeOrder {
   val (tagName, tsTagName, tsIdAttrName, tvAttrName) = ("TIME_ORDER", "TIME_SLOT", "TIME_SLOT_ID", "TIME_VALUE")
 }
 
+// Represents Tier element
+class Tier(tierXML: JQuery) {
+
+}
+
+object Tier {
+  val (tagName, tIDAttrName, lTypeRefAttrName, partAttrName, annotAttrName, defLocAttrName, parRefAttrName) = (
+    "TIER", "TIER_ID", "LINGUISTIC_TYPE_REF", "PARTICIPANT", "ANNOTATOR", "DEFAULT_LOCALE", "PARENT_REF"
+    )
+}
+
 // this trait and two its descendants wrap XML attribute providing convenient toString method
 trait XMLAttr { val name: String }
 
@@ -170,8 +166,31 @@ abstract class RequiredXMLAttr[T](var value: T) extends XMLAttr {
   override def toString = name + "=\"" + value + "\""
 }
 
+object RequiredXMLAttr {
+  def apply[T](_name: String, _value: T) = new RequiredXMLAttr(_value) { val name = _name }
+
+  // Read attribute's value from Jquery element
+  def apply[T](jqEl: JQuery, name: String, defaultValue: Option[T] = None, converter: Option[String => T] = None): RequiredXMLAttr[T] = {
+    // this is a required attr; if xml node doesn't have it, it must be provided as a default value
+    val value = OptionalXMLAttr(jqEl, name, converter).value.getOrElse(defaultValue.get)
+    RequiredXMLAttr(name, value)
+  }
+}
+
 abstract class OptionalXMLAttr[T](var value: Option[T]) extends XMLAttr {
   override def toString = value.fold("") { name + "=\"" + _ + "\"" } // yes, it is just getOrElse :)
   // set attr2 value if it exists
   def updateValue(attr2: OptionalXMLAttr[T]) { value = attr2.value orElse value }
+}
+
+object OptionalXMLAttr {
+  def apply[T](_name: String, _value: Option[T]) = new OptionalXMLAttr(_value) { val name = _name }
+  def apply[T](jqEl: JQuery, name: String, converter: Option[String => T] = None): OptionalXMLAttr[T] = {
+    val valOpt = jqEl.attr(name).toOption
+    val valOptConverted = converter match {
+      case Some(conv) => valOpt.map(v => conv(v))
+      case None => valOpt.asInstanceOf[Option[T]] // No converter ~ the value is String
+    }
+    OptionalXMLAttr(name, valOptConverted)
+  }
 }
