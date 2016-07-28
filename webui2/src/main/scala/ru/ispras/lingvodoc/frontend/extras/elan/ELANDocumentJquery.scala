@@ -38,13 +38,15 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
   val format = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.formatAttrName, defaultValue = Some("2.7"))
 
   val header = new Header(annotDocXML.find(Header.tagName))
+
   val timeOrder = new TimeOrder(annotDocXML.find(TimeOrder.tagName))
+  var tiers = Tier.fromXMLs(annotDocXML.find(Tier.tagName))
 
   //  var linguisticType = LinguisticType("", graphicReferences = false, typeAlignable = false)
   //    var locale = Locale("", "", "")
   //    var tiers = List[Tier]()
 
-  def content = s"$header $timeOrder"
+  def content = s"$header $timeOrder ${tiers.mkString("\n")}"
   def attrs = s"$date $author $version $format ${ELANDocumentJquery.xmlnsXsi} ${ELANDocumentJquery.schemaLoc}"
 
   override def toString =
@@ -150,13 +152,76 @@ object TimeOrder {
 
 // Represents Tier element
 class Tier(tierXML: JQuery) {
+  val tierID = RequiredXMLAttr(tierXML, Tier.tIDAttrName)
+  val linguisticTypeRef = RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName)
+  val participant = OptionalXMLAttr(tierXML, Tier.parRefAttrName)
+  val annotator = OptionalXMLAttr(tierXML, Tier.annotAttrName)
+  val defaultLocale = OptionalXMLAttr(tierXML, Tier.defLocAttrName)
+  val parentRef = OptionalXMLAttr(tierXML, Tier.parRefAttrName)
 
+  var annotations: List[Annotation] = Utils.jQuery2List(tierXML.find(Annotation.tagName)).map(Annotation(_))
+
+  def attrsToString = s"$tierID $linguisticTypeRef $participant $annotator $defaultLocale $parentRef"
+  override def toString = Utils.wrap(Tier.tagName, annotations.mkString("\n"), attrsToString)
 }
 
 object Tier {
+  def fromXMLs(tiers: JQuery) = Utils.jQuery2List(tiers).map(new Tier(_))
   val (tagName, tIDAttrName, lTypeRefAttrName, partAttrName, annotAttrName, defLocAttrName, parRefAttrName) = (
     "TIER", "TIER_ID", "LINGUISTIC_TYPE_REF", "PARTICIPANT", "ANNOTATOR", "DEFAULT_LOCALE", "PARENT_REF"
     )
+}
+
+// Represents Annotation element
+class Annotation private(val annotation: Either[AlignableAnnotation, RefAnnotation]) {
+  override def toString = Utils.wrap(Annotation.tagName, annotation.fold(identity, identity).toString)
+}
+
+object Annotation {
+  // ANNOTATION contains only one element, it is either alignable or ref annotation
+  def apply(annotationXML: JQuery) = {
+    val includedAnnotationXML = annotationXML.children().first()
+    val annotation = includedAnnotationXML.prop("tagName").toString match {
+      case AlignableAnnotation.tagName => Left(new AlignableAnnotation(includedAnnotationXML))
+      case RefAnnotation.tagName => Right(new RefAnnotation(includedAnnotationXML))
+    }
+    new Annotation(annotation)
+  }
+  val tagName = "ANNOTATION"
+}
+
+class AlignableAnnotation(alignAnnotXML: JQuery) extends AnnotationAttributeGroup(alignAnnotXML) {
+  val timeSlotRef1 = RequiredXMLAttr(alignAnnotXML, AlignableAnnotation.tsRef1AttrName)
+  val timeSlotRef2 = RequiredXMLAttr(alignAnnotXML, AlignableAnnotation.tsRef2AttrName)
+  val svgRef = OptionalXMLAttr(alignAnnotXML, AlignableAnnotation.svgRefAttrName)
+  var text = alignAnnotXML.find(AlignableAnnotation.annotValueElName).text()
+
+  def content = Utils.wrap(AlignableAnnotation.annotValueElName, text)
+  override def toString = Utils.wrap(AlignableAnnotation.tagName, content,
+    s"${super.toString} $timeSlotRef1 $timeSlotRef2 $svgRef")
+}
+
+object AlignableAnnotation {
+  val (tagName, tsRef1AttrName, tsRef2AttrName, svgRefAttrName, annotValueElName) =
+    ("ALIGNABLE_ANNOTATION", "TIME_SLOT_REF1", "TIME_SLOT_REF2", "SVG_REF", "ANNOTATION_VALUE")
+}
+
+class RefAnnotation(refAnnotXML: JQuery) extends AnnotationAttributeGroup(refAnnotXML)
+
+object RefAnnotation {
+  val (tagName) = ("REF_ANNOTATION")
+}
+
+// represents annotationAttribut attribute group
+class AnnotationAttributeGroup(includedAnnotationXML: JQuery) {
+  val annotationID = RequiredXMLAttr(includedAnnotationXML, AnnotationAttributeGroup.annotIDAttrName)
+  val extRef = OptionalXMLAttr(includedAnnotationXML, AnnotationAttributeGroup.extRefAttrName)
+
+  override def toString = s"$annotationID $extRef"
+}
+
+object AnnotationAttributeGroup {
+  val (annotIDAttrName, extRefAttrName) = ("ANNOTATION_ID", "EXT_REF")
 }
 
 // this trait and two its descendants wrap XML attribute providing convenient toString method
@@ -185,6 +250,8 @@ abstract class OptionalXMLAttr[T](var value: Option[T]) extends XMLAttr {
 
 object OptionalXMLAttr {
   def apply[T](_name: String, _value: Option[T]) = new OptionalXMLAttr(_value) { val name = _name }
+
+  // Read attribute's value from Jquery element
   def apply[T](jqEl: JQuery, name: String, converter: Option[String => T] = None): OptionalXMLAttr[T] = {
     val valOpt = jqEl.attr(name).toOption
     val valOptConverted = converter match {

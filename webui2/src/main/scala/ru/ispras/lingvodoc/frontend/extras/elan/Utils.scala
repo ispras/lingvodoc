@@ -9,9 +9,10 @@ import scala.collection.mutable.ListBuffer
 private [elan] object Utils {
   // convert JQuery object to XML string. This will not work if document starts with XML declaration <?xml...
   // see http://stackoverflow.com/questions/22647651/convert-xml-document-back-to-string-with-jquery
-  // don't forget to call it on the cloned object, or it will be screwed up by additional tag!
+  // don't forget to call it on the
   def jQuery2XML(jq: JQuery): String = {
-    jq.appendTo("<x></x>").parent().html()
+    val jqCloned = jq.clone() // clone the object, since it will be screwed up by additional tag
+    jqCloned.appendTo("<x></x>").parent().html()
   }
 
   // wrap @content with tags @tagName with optional @attrs
