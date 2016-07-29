@@ -216,9 +216,12 @@ class IdMixin(object):
     It's used for automatically set id as primary key.
     """
     id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
-    __table_args__ = (
-        dict(
-            sqlite_autoincrement=True))
+    # __table_args__ = (
+    #     dict(
+    #         sqlite_autoincrement=True))
+    # __remove_this_table_args__ = (
+    #     dict(
+    #         sqlite_autoincrement=True))
 
 
 def get_client_counter(check_id):
@@ -263,10 +266,10 @@ class RelationshipMixin(object):
 
     @declared_attr
     def __table_args__(cls):
-        if hasattr(cls, 'id'):
-            return cls.__table_args__ + CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(
-                parent_name=cls.__parentname__)
-        else:
+        # if hasattr(cls, '__remove_this_table_args__'):
+        #     return cls.__remove_this_table_args__ + CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(
+        #         parent_name=cls.__parentname__)
+        # else:
             return CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name=cls.__parentname__)
 
     @declared_attr
@@ -474,7 +477,7 @@ class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
 
     @declared_attr
     def parent_entity(cls):
-        return relationship(cls.__parentname__, backref=backref('entity'), remote_side=[cls.client_id, cls.object_id])
+        return relationship(cls, backref=backref('entity'), remote_side=[cls.client_id, cls.object_id])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
