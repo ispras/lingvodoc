@@ -79,6 +79,7 @@ def edit_language(request):  # tested & in docs
         language = DBSession.query(Language).filter_by(client_id=client_id, object_id=object_id).first()
         if language:
             if not language.marked_for_deletion:
+                # TODO: Status 500 will be returned if arguments are invalid; add try/catch
                 req = request.json_body
                 if 'parent_client_id' in req:
                     language.parent_client_id = req['parent_client_id']
@@ -174,7 +175,7 @@ def create_language(request):  # tested & in docs
 def view_languages_list(request):  # tested & in docs
     response = dict()
     langs = []
-    languages = DBSession.query(Language).filter_by(parent = None).all()
+    languages = DBSession.query(Language).filter_by(parent=None, marked_for_deletion=False).all()
     if languages:
         for lang in languages:
             langs += [language_info(lang, request)]

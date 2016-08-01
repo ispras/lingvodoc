@@ -491,18 +491,18 @@ def create_perspective(request):  # tested & in docs
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such dictionary in the system")}
-        # coord = {}
-        # latitude = req.get('latitude')
-        # longitude = req.get('longitude')
-        # if latitude:
-        #     coord['latitude']=latitude
-        # if longitude:
-        #     coord['longitude']=longitude
+        coord = {}
+        latitude = req.get('latitude')
+        longitude = req.get('longitude')
+        if latitude:
+            coord['latitude']=latitude
+        if longitude:
+            coord['longitude']=longitude
         additional_metadata = req.get('additional_metadata')
-        # if additional_metadata:
-        #     additional_metadata.update(coord)
-        # else:
-        #     additional_metadata = coord
+        if additional_metadata:
+            additional_metadata.update(coord)
+        else:
+            additional_metadata = coord
         additional_metadata = json.dumps(additional_metadata)
 
         perspective = DictionaryPerspective(client_id=variables['auth'],
@@ -1570,6 +1570,7 @@ def edit_perspective(request):  # tested & in docs
                     return {'error': str("No such pair of dictionary/perspective in the system")}
                 req = request.json_body
 
+                # TODO: Status 500 will be returned if arguments are invalid; add try/catch
                 if 'translation_gist_client_id' in req:
                     perspective.translation_gist_client_id = req['translation_gist_client_id']
                 if 'translation_gist_object_id' in req:

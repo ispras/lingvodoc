@@ -177,6 +177,8 @@ def language_info(lang, request):
     if lang.language:
         contains = []
         for childlang in lang.language:
+            if childlang.marked_for_deletion:
+                continue
             contains += [language_info(childlang, request)]
         result['contains'] = contains
 
