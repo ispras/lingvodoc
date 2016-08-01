@@ -10,16 +10,9 @@ from lingvodoc.models import (
     DBSession,
     Dictionary,
     DictionaryPerspective,
-    DictionaryPerspectiveField,
     Group,
-    GroupingEntity,
-    LevelOneEntity,
-    LevelTwoEntity,
     LexicalEntry,
     Organization,
-    PublishGroupingEntity,
-    PublishLevelOneEntity,
-    PublishLevelTwoEntity,
     User
 )
 from lingvodoc.views.v2.utils import (
@@ -139,8 +132,9 @@ def view_perspective(request): # tested & in docs
     return response
 
 
+# TODO: completely broken!
 @view_config(route_name='perspective_hash', renderer='json', request_method='PUT', permission='edit')
-def edit_perspective_hash(request):  # TODO: test?
+def edit_perspective_hash(request):
     import requests
     try:
         response = dict()
@@ -159,14 +153,15 @@ def edit_perspective_hash(request):  # TODO: test?
         perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
         if perspective:
             if not perspective.marked_for_deletion:
-                l1es = DBSession.query(LevelOneEntity)\
-                    .join(LexicalEntry,
-                          and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-                               LevelOneEntity.parent_object_id == LexicalEntry.object_id,
-                               LexicalEntry.parent_client_id == client_id,
-                               LexicalEntry.parent_object_id == object_id))\
-                    .filter(func.lower(LevelOneEntity.entity_type).like('%sound%'), or_(LevelOneEntity.additional_metadata == None,
-                                                                                        not_(LevelOneEntity.additional_metadata.like('%hash%'))))
+                l1es = list()
+                # l1es = DBSession.query(LevelOneEntity)\
+                #     .join(LexicalEntry,
+                #           and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+                #                LevelOneEntity.parent_object_id == LexicalEntry.object_id,
+                #                LexicalEntry.parent_client_id == client_id,
+                #                LexicalEntry.parent_object_id == object_id))\
+                #     .filter(func.lower(LevelOneEntity.entity_type).like('%sound%'), or_(LevelOneEntity.additional_metadata == None,
+                #                                                                         not_(LevelOneEntity.additional_metadata.like('%hash%'))))
                 count_l1e = l1es.count()
                 for l1e in l1es:
 
@@ -184,17 +179,18 @@ def edit_perspective_hash(request):  # TODO: test?
                         l1e.additional_metadata = json.dumps(new_meta)
                     except:
                         print('fail with sound', l1e.client_id, l1e.object_id)
-                l2es = DBSession.query(LevelTwoEntity)\
-                    .join(LevelOneEntity,
-                          and_(LevelTwoEntity.parent_client_id == LevelOneEntity.client_id,
-                               LevelTwoEntity.parent_object_id == LevelOneEntity.object_id))\
-                    .join(LexicalEntry,
-                          and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-                               LevelOneEntity.parent_object_id == LexicalEntry.object_id,
-                               LexicalEntry.parent_client_id == client_id,
-                               LexicalEntry.parent_object_id == object_id))\
-                    .filter(func.lower(LevelTwoEntity.entity_type).like('%markup%'), or_(LevelTwoEntity.additional_metadata == None,
-                                                                                        not_(LevelTwoEntity.additional_metadata.like('%hash%'))))
+                # l2es = DBSession.query(LevelTwoEntity)\
+                #     .join(LevelOneEntity,
+                #           and_(LevelTwoEntity.parent_client_id == LevelOneEntity.client_id,
+                #                LevelTwoEntity.parent_object_id == LevelOneEntity.object_id))\
+                #     .join(LexicalEntry,
+                #           and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+                #                LevelOneEntity.parent_object_id == LexicalEntry.object_id,
+                #                LexicalEntry.parent_client_id == client_id,
+                #                LexicalEntry.parent_object_id == object_id))\
+                #     .filter(func.lower(LevelTwoEntity.entity_type).like('%markup%'), or_(LevelTwoEntity.additional_metadata == None,
+                #                                                                         not_(LevelTwoEntity.additional_metadata.like('%hash%'))))
+                l2es = list()
                 count_l2e = l2es.count()
                 for l2e in l2es:
                     url = l2e.content
@@ -874,17 +870,19 @@ def edit_perspective_status(request):  # tested & in docs
     return {'error': str("No such perspective in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='perspective_fields', renderer='json', request_method='GET')
-def view_perspective_fields(request):  # TODO: completely redo
+def view_perspective_fields(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective:
         fields = []
-        db_fields = DBSession.query(DictionaryPerspectiveField)\
-            .filter_by(parent=perspective, marked_for_deletion=False)\
-            .order_by('position')
+        # db_fields = DBSession.query(DictionaryPerspectiveField)\
+        #     .filter_by(parent=perspective, marked_for_deletion=False)\
+        #     .order_by('position')
+        db_fields = list()
         for field in db_fields:
 
             data = dict()
@@ -931,8 +929,9 @@ def view_perspective_fields(request):  # TODO: completely redo
         return {'error': str("No such perspective in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE', permission='edit')
-def delete_perspective_fields(request):  # tested
+def delete_perspective_fields(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -942,7 +941,8 @@ def delete_perspective_fields(request):  # tested
         req = request.json_body
         cli_id = req['field_client_id']
         obj_id = req['field_object_id']
-        field = DBSession.query(DictionaryPerspectiveField).filter_by(client_id=cli_id, object_id=obj_id).first()
+        # field = DBSession.query(DictionaryPerspectiveField).filter_by(client_id=cli_id, object_id=obj_id).first()
+        field = None
         if field:
             field.marked_for_deletion = True
         else:
@@ -955,6 +955,7 @@ def delete_perspective_fields(request):  # tested
         return {'error': str("No such perspective in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='perspective_fields', renderer='json', request_method='POST', permission='edit')
 def create_perspective_fields(request):  # tested
     # TODO: stop recreating fields. Needs to be done both there and in web
@@ -986,10 +987,11 @@ def create_perspective_fields(request):  # tested
             field.marked_for_deletion = True
 
         for entry in fields:
-            field = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
-                                               client_id=variables['auth'],
-                                               parent=perspective,
-                                               state=entry['status'])
+            # field = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
+            #                                    client_id=variables['auth'],
+            #                                    parent=perspective,
+            #                                    state=entry['status'])
+            field = None
             translation = entry['data_type']
             if 'data_type_translation' in entry:
                 translation = entry['data_type_translation']
@@ -1004,14 +1006,15 @@ def create_perspective_fields(request):  # tested
             field.position = entry['position']
             if 'contains' in entry:
                 for subentry in entry['contains']:
-                    field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
-                                                        client_id=variables['auth'],
-                                                        entity_type=subentry['entity_type'],
-                                                        data_type=subentry['data_type'],
-                                                        level='leveltwoentity',
-                                                        parent=perspective,
-                                                        parent_entity=field,
-                                                        state=subentry['status'])
+                    # field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
+                    #                                     client_id=variables['auth'],
+                    #                                     entity_type=subentry['entity_type'],
+                    #                                     data_type=subentry['data_type'],
+                    #                                     level='leveltwoentity',
+                    #                                     parent=perspective,
+                    #                                     parent_entity=field,
+                    #                                     state=subentry['status'])
+                    field2 = None
                     field2.position = subentry['position']
                     translation = subentry['data_type']
                     if 'data_type_translation' in subentry:
@@ -1042,6 +1045,7 @@ def create_perspective_fields(request):  # tested
         return {'error': str(e)}
 
 
+# TODO: completely broken!
 @view_config(route_name='lexical_entries_all', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all(request):
     response = dict()
@@ -1055,18 +1059,19 @@ def lexical_entries_all(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexes = DBSession.query(LexicalEntry) \
-                .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-                .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-                .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-                .options(joinedload('publishleveloneentity')) \
-                .options(joinedload('publishleveltwoentity')) \
-                .options(joinedload('publishgroupingentity')) \
-                .filter(LexicalEntry.parent == parent) \
-                .group_by(LexicalEntry) \
-                .join(LevelOneEntity) \
-                .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
-                .offset(start_from).limit(count)
+            # lexes = DBSession.query(LexicalEntry) \
+            #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
+            #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
+            #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
+            #     .options(joinedload('publishleveloneentity')) \
+            #     .options(joinedload('publishleveltwoentity')) \
+            #     .options(joinedload('publishgroupingentity')) \
+            #     .filter(LexicalEntry.parent == parent) \
+            #     .group_by(LexicalEntry) \
+            #     .join(LevelOneEntity) \
+            #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
+            #     .offset(start_from).limit(count)
+            lexes = list()
 
             result = deque()
             for entry in lexes.all():
@@ -1102,6 +1107,7 @@ def lexical_entries_all_count(request): # tested
         return {'error': str("No such perspective in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='lexical_entries_published', renderer='json', request_method='GET', permission='view')
 @MEMOIZE
 def lexical_entries_published(request):
@@ -1118,23 +1124,24 @@ def lexical_entries_published(request):
         if not parent.marked_for_deletion:
             # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
             # NOTE: IMPORTANT: 'яяяяя' is a hack - something wrong with postgres collation if we use \uffff
-            lexes = DBSession.query(LexicalEntry) \
-                .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-                .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-                .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-                .options(joinedload('publishleveloneentity')) \
-                .options(joinedload('publishleveltwoentity')) \
-                .options(joinedload('publishgroupingentity')) \
-                .filter(LexicalEntry.parent == parent) \
-                .group_by(LexicalEntry, LevelOneEntity.content) \
-                .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-                                           LevelOneEntity.parent_object_id == LexicalEntry.object_id,
-                                           LevelOneEntity.marked_for_deletion == False)) \
-                .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-                                                  PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id,
-                                                  PublishLevelOneEntity.marked_for_deletion == False)) \
-                .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
-                .offset(start_from).limit(count)
+            # lexes = DBSession.query(LexicalEntry) \
+            #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
+            #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
+            #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
+            #     .options(joinedload('publishleveloneentity')) \
+            #     .options(joinedload('publishleveltwoentity')) \
+            #     .options(joinedload('publishgroupingentity')) \
+            #     .filter(LexicalEntry.parent == parent) \
+            #     .group_by(LexicalEntry, LevelOneEntity.content) \
+            #     .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+            #                                LevelOneEntity.parent_object_id == LexicalEntry.object_id,
+            #                                LevelOneEntity.marked_for_deletion == False)) \
+            #     .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+            #                                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id,
+            #                                       PublishLevelOneEntity.marked_for_deletion == False)) \
+            #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
+            #     .offset(start_from).limit(count)
+            lexes = list()
 
             result = deque()
 
@@ -1149,24 +1156,26 @@ def lexical_entries_published(request):
         return {'error': str("No such perspective in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
-def lexical_entries_published_count(request): # tested todo:?
+def lexical_entries_published_count(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(LexicalEntry)\
-                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .outerjoin(PublishGroupingEntity)\
-                .outerjoin(PublishLevelOneEntity)\
-                .outerjoin(PublishLevelTwoEntity)\
-                .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
-                            PublishLevelOneEntity.marked_for_deletion==False,
-                            PublishLevelTwoEntity.marked_for_deletion==False,
-                            ))\
-                .group_by(LexicalEntry).count()
+            # lexical_entries_count = DBSession.query(LexicalEntry)\
+            #     .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            #     .outerjoin(PublishGroupingEntity)\
+            #     .outerjoin(PublishLevelOneEntity)\
+            #     .outerjoin(PublishLevelTwoEntity)\
+            #     .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
+            #                 PublishLevelOneEntity.marked_for_deletion==False,
+            #                 PublishLevelTwoEntity.marked_for_deletion==False,
+            #                 ))\
+            #     .group_by(LexicalEntry).count()
+            lexical_entries_count = None
 
             return {"count": lexical_entries_count}
     else:
@@ -1174,6 +1183,7 @@ def lexical_entries_published_count(request): # tested todo:?
         return {'error': str("No such perspective in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
@@ -1192,37 +1202,43 @@ def approve_entity(request):
         # {""}
         for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
-                entity = DBSession.query(LevelOneEntity).\
-                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                # entity = DBSession.query(LevelOneEntity).\
+                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                entity = None
                 if entity:
                     if not entity.publishleveloneentity:
-                        publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
-                                                           entity=entity, parent=entity.parent)
-                        DBSession.add(publishent)
+                        # publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
+                        #                                    entity=entity, parent=entity.parent)
+                        # DBSession.add(publishent)
+                        publishent = None
                     else:
                         for ent in entity.publishleveloneentity:
                             if ent.marked_for_deletion:
                                 ent.marked_for_deletion = False
             elif entry['type'] == 'leveltwoentity':
-                entity = DBSession.query(LevelTwoEntity).\
-                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                # entity = DBSession.query(LevelTwoEntity).\
+                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                entity = None
                 if entity:
                     if not entity.publishleveltwoentity:
-                        publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
-                                                           entity=entity, parent=entity.parent.parent)
-                        DBSession.add(publishent)
+                        # publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
+                        #                                    entity=entity, parent=entity.parent.parent)
+                        # DBSession.add(publishent)
+                        publishent = None
                     else:
                         for ent in entity.publishleveltwoentity:
                             if ent.marked_for_deletion:
                                 ent.marked_for_deletion = False
             elif entry['type'] == 'groupingentity':
-                entity = DBSession.query(GroupingEntity).\
-                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                # entity = DBSession.query(GroupingEntity).\
+                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                entity = None
                 if entity:
                     if not entity.publishgroupingentity:
-                        publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                                           entity=entity, parent=entity.parent)
-                        DBSession.add(publishent)
+                        # publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
+                        #                                    entity=entity, parent=entity.parent)
+                        # DBSession.add(publishent)
+                        publishent = None
                     else:
                         for ent in entity.publishgroupingentity:
                             if ent.marked_for_deletion:
@@ -1245,8 +1261,9 @@ def approve_entity(request):
         return {'error': str(e)}
 
 
+# TODO: completely broken!
 @view_config(route_name='approve_entity', renderer='json', request_method='DELETE', permission='delete')
-def disapprove_entity(request):  # TODO: test
+def disapprove_entity(request):
     try:
         req = request.json_body
         variables = {'auth': request.authenticated_userid}
@@ -1259,8 +1276,9 @@ def disapprove_entity(request):  # TODO: test
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req['entities']:
             if entry['type'] == 'leveloneentity':
-                entity = DBSession.query(LevelOneEntity).\
-                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                # entity = DBSession.query(LevelOneEntity).\
+                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                entity = None
                 if entity:
                     for ent in entity.publishleveloneentity:
                         ent.marked_for_deletion = True
@@ -1268,15 +1286,17 @@ def disapprove_entity(request):  # TODO: test
                 else:
                     log.debug("WARNING: NO ENTITY")
             elif entry['type'] == 'leveltwoentity':
-                entity = DBSession.query(LevelTwoEntity).\
-                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                # entity = DBSession.query(LevelTwoEntity).\
+                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                entity = None
                 if entity:
                     for ent in entity.publishleveltwoentity:
                         ent.marked_for_deletion = True
                         DBSession.flush()
             elif entry['type'] == 'groupingentity':
-                entity = DBSession.query(GroupingEntity).\
-                    filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                # entity = DBSession.query(GroupingEntity).\
+                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+                entity = None
                 if entity:
                     for ent in entity.publishgroupingentity:
                         ent.marked_for_deletion = True
@@ -1299,6 +1319,7 @@ def disapprove_entity(request):  # TODO: test
         return {'error': str(e)}
 
 
+# TODO: completely broken!
 @view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
 def approve_all(request):
     response = dict()
@@ -1313,7 +1334,8 @@ def approve_all(request):
             dictionary_object_id = parent.parent_object_id
             lexes = DBSession.query(LexicalEntry).filter_by(parent=parent).all()
             for lex in lexes:
-                levones = DBSession.query(LevelOneEntity).filter_by(parent=lex).all()
+                # levones = DBSession.query(LevelOneEntity).filter_by(parent=lex).all()
+                levones = list()
                 for levone in levones:
                     entities += [{'type': 'leveloneentity',
                                          'client_id': levone.client_id,
@@ -1322,7 +1344,8 @@ def approve_all(request):
                         entities += [{'type': 'leveltwoentity',
                                              'client_id':levtwo.client_id,
                                              'object_id':levtwo.object_id}]
-                groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
+                # groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
+                groupents = list()
                 for groupent in groupents:
                     entities += [{'type': 'groupingentity',
                                          'client_id': groupent.client_id,
@@ -1433,8 +1456,9 @@ def publish_dictionary_get(request):
     return render_to_response('../templates/publish_dictionary.pt', variables, request=request)
 
 
+# TODO: completely broken!
 @view_config(route_name='create_entities_bulk', renderer='json', request_method='POST', permission='create')
-def create_entities_bulk(request):  # TODO: test
+def create_entities_bulk(request):
     try:
         variables = {'auth': authenticated_userid(request)}
         response = dict()
@@ -1451,28 +1475,31 @@ def create_entities_bulk(request):  # TODO: test
         for item in req:
             if item['level'] == 'leveloneentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
-                entity = LevelOneEntity(client_id=client.id,
-                                        object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
-                                        entity_type=item['entity_type'],
-                                        locale_id=item['locale_id'],
-                                        additional_metadata=item.get('additional_metadata'),
-                                        parent=parent)
+                # entity = LevelOneEntity(client_id=client.id,
+                #                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
+                #                         entity_type=item['entity_type'],
+                #                         locale_id=item['locale_id'],
+                #                         additional_metadata=item.get('additional_metadata'),
+                #                         parent=parent)
+                entity = None
             elif item['level'] == 'groupingentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
-                entity = GroupingEntity(client_id=client.id,
-                                        object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                        entity_type=item['entity_type'],
-                                        locale_id=item['locale_id'],
-                                        additional_metadata=item.get('additional_metadata'),
-                                        parent=parent)
+                # entity = GroupingEntity(client_id=client.id,
+                #                         object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
+                #                         entity_type=item['entity_type'],
+                #                         locale_id=item['locale_id'],
+                #                         additional_metadata=item.get('additional_metadata'),
+                #                         parent=parent)
+                entity = None
             elif item['level'] == 'leveltwoentity':
                 parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
-                entity = LevelTwoEntity(client_id=client.id,
-                                        object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
-                                        entity_type=item['entity_type'],
-                                        locale_id=item['locale_id'],
-                                        additional_metadata=item.get('additional_metadata'),
-                                        parent=parent)
+                # entity = LevelTwoEntity(client_id=client.id,
+                #                         object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
+                #                         entity_type=item['entity_type'],
+                #                         locale_id=item['locale_id'],
+                #                         additional_metadata=item.get('additional_metadata'),
+                #                         parent=parent)
+                entity = None
             DBSession.add(entity)
             DBSession.flush()
             data_type = item.get('data_type')

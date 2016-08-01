@@ -7,8 +7,6 @@ from lingvodoc.views.v2.utils import (
 from lingvodoc.models import (
     Client,
     DBSession,
-    LevelOneEntity,
-    LevelTwoEntity,
     User
 )
 
@@ -29,13 +27,15 @@ import hashlib
 import json
 
 
+# TODO: Completely broken!
 @view_config(route_name='get_level_two_entity_indict', renderer='json', request_method='GET', permission='view')
 @view_config(route_name='get_level_two_entity', renderer='json', request_method='GET', permission='view')
-def view_l2_entity(request):  # tested
+def view_l2_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    # entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    entity = None
     if entity:
         if not entity.marked_for_deletion:
             # TODO: use track
@@ -50,8 +50,9 @@ def view_l2_entity(request):  # tested
     return {'error': str("No such entity in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='create_level_two_entity', renderer='json', request_method='POST', permission='create')
-def create_l2_entity(request):  # tested
+def create_l2_entity(request):
     try:
 
         variables = {'auth': authenticated_userid(request)}
@@ -66,14 +67,16 @@ def create_l2_entity(request):  # tested
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
-        parent = DBSession.query(LevelOneEntity).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        # parent = DBSession.query(LevelOneEntity).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
+        parent = None
         if not parent:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such level one entity in the system")}
         additional_metadata = req.get('additional_metadata')
-        entity = LevelTwoEntity(client_id=client.id, object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
-                                locale_id=req['locale_id'], additional_metadata=additional_metadata,
-                                parent=parent)
+        # entity = LevelTwoEntity(client_id=client.id, object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
+        #                         locale_id=req['locale_id'], additional_metadata=additional_metadata,
+        #                         parent=parent)
+        entity = None
 
         DBSession.add(entity)
         DBSession.flush()
@@ -122,14 +125,16 @@ def create_l2_entity(request):  # tested
         return {'error': str(e)}
 
 
+# TODO: completely broken!
 @view_config(route_name='get_level_two_entity_indict', renderer='json', request_method='DELETE', permission='delete')
 @view_config(route_name='get_level_two_entity', renderer='json', request_method='DELETE', permission='delete')
-def delete_l2_entity(request):  # TODO: test
+def delete_l2_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    # entity = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    entity = None
     if entity:
         if not entity.marked_for_deletion:
 

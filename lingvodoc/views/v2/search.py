@@ -6,7 +6,6 @@ from lingvodoc.models import (
     DBSession,
     DictionaryPerspective,
     Group,
-    LevelOneEntity,
     LexicalEntry,
     User
 )
@@ -26,8 +25,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import joinedload, subqueryload
 
 
+# TODO: completely broken!
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
-def basic_search(request):  # TODO: test
+def basic_search(request):
     can_add_tags = request.params.get('can_add_tags')
     searchstring = request.params.get('leveloneentity')
     perspective_client_id = request.params.get('perspective_client_id')
@@ -40,16 +40,18 @@ def basic_search(request):  # TODO: test
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
             if group:
-                results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
+                # results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
+                results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.join(LexicalEntry)\
                         .join(DictionaryPerspective)\
                         .filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
             else:
-                results_cursor = DBSession.query(LevelOneEntity)\
-                    .join(LexicalEntry)\
-                    .join(DictionaryPerspective)
+                # results_cursor = DBSession.query(LevelOneEntity)\
+                #     .join(LexicalEntry)\
+                #     .join(DictionaryPerspective)
+                results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
@@ -61,10 +63,11 @@ def basic_search(request):  # TODO: test
             results = []
             entries = set()
             if can_add_tags:
-                results_cursor = results_cursor\
-                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
-                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
-                    .group_by(LevelOneEntity).having(func.count('*') == 2)
+                # results_cursor = results_cursor\
+                #     .filter(BaseGroup.subject=='lexical_entries_and_entities',
+                #             or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+                #     .group_by(LevelOneEntity).having(func.count('*') == 2)
+                results_cursor = list()
             else:
                 results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
             for item in results_cursor:
@@ -93,6 +96,7 @@ def basic_search(request):  # TODO: test
     return {'error': 'search is too short'}
 
 
+# TODO: completely broken!
 @view_config(route_name='advanced_search', renderer='json', request_method='POST')
 def advanced_search(request):
     req = request.json
@@ -104,10 +108,12 @@ def advanced_search(request):
         search_parts = searchstring['searchstring'].split()
         search_expression = LevelOneEntity.content.like('%' + search_parts[0] + '%')
         for part in search_parts[1:]:
-            search_expression = or_(search_expression, LevelOneEntity.content.like('%' + part + '%'))
+            # search_expression = or_(search_expression, LevelOneEntity.content.like('%' + part + '%'))
+            search_expression = list()
         if 'entity_type' in searchstring:
             # print(searchstring['entity_type'])
-            search_expression = and_(search_expression, LevelOneEntity.entity_type == searchstring['entity_type'])
+            # search_expression = and_(search_expression, LevelOneEntity.entity_type == searchstring['entity_type'])
+            search_expression = list()
         return search_expression, searchstring['search_by_or']
 
     if not searchstrings:
@@ -127,9 +133,10 @@ def advanced_search(request):
         tmp_expression, to_do_or = make_expression_component(search_string)
         search_expression = operator_func(search_expression, tmp_expression)
 
-    results_cursor = DBSession.query(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
-        .distinct(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
-        .filter(search_expression)
+    # results_cursor = DBSession.query(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
+    #     .distinct(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
+    #     .filter(search_expression)
+    results_cursor = list()
     tmp_list = list()
     for item in results_cursor.all():
         tmp_list.append(item)
@@ -167,6 +174,7 @@ def advanced_search(request):
     return results
 
 
+# TODO: completely broken!
 @view_config(route_name='entity_metadata_search', renderer='json', request_method='GET')
 def entity_metadata_search(request):  # TODO: test
     # TODO: add same check for permission as in basic_search
@@ -176,9 +184,10 @@ def entity_metadata_search(request):  # TODO: test
     searchtype = request.params.get('searchtype')
     perspective_client_id = request.params.get('perspective_client_id')
     perspective_object_id = request.params.get('perspective_object_id')
-    results_cursor = DBSession.query(LevelOneEntity)\
-        .filter(LevelOneEntity.entity_type.like('%'+searchtype+'%'),
-                LevelOneEntity.additional_metadata.like('%'+searchstring+'%'))
+    # results_cursor = DBSession.query(LevelOneEntity)\
+    #     .filter(LevelOneEntity.entity_type.like('%'+searchtype+'%'),
+    #             LevelOneEntity.additional_metadata.like('%'+searchstring+'%'))
+    results_cursor = list()
     if perspective_client_id and perspective_object_id:
         results_cursor = results_cursor.join(LexicalEntry).join(DictionaryPerspective).filter(DictionaryPerspective.client_id == perspective_client_id,
                                                DictionaryPerspective.object_id == perspective_object_id)
