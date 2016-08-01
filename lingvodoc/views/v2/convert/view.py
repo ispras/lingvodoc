@@ -12,7 +12,6 @@ from lingvodoc.models import (
     Client,
     DBSession,
     DictionaryPerspective,
-    LevelTwoEntity,
     User,
     UserBlobs
 )
@@ -105,8 +104,9 @@ def convert_dictionary(request):  # TODO: test
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
 
 
+# TODO: completely broken!
 @view_config(route_name='convert_markup', renderer='json', request_method='POST')
-def convert_markup(request):  # TODO: test
+def convert_markup(request):
     import requests
     from lingvodoc.scripts.convert_rules import praat_to_elan
     try:
@@ -122,7 +122,8 @@ def convert_markup(request):  # TODO: test
         client_id = req['client_id']
         object_id = req['object_id']
 
-        l2e = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        #l2e = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+        l2e = None
         if not l2e:
             raise KeyError("No such file")
         r = requests.get(l2e.content)

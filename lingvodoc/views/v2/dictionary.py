@@ -7,17 +7,10 @@ from lingvodoc.models import (
     DBSession,
     Dictionary,
     DictionaryPerspective,
-    DictionaryPerspectiveField,
     Group,
-    GroupingEntity,
     Language,
-    LevelOneEntity,
-    LevelTwoEntity,
     LexicalEntry,
     Organization,
-    PublishGroupingEntity,
-    PublishLevelOneEntity,
-    PublishLevelTwoEntity,
     User
 )
 
@@ -189,8 +182,9 @@ def delete_dictionary(request):  # tested & in docs
     return {'error': str("No such dictionary in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='dictionary_copy', renderer='json', request_method='POST', permission='edit')
-def copy_dictionary(request):  # TODO: test. or not. was this ever finished?
+def copy_dictionary(request):
     response = dict()
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
@@ -349,87 +343,96 @@ def copy_dictionary(request):  # TODO: test. or not. was this ever finished?
                 DBSession.add(new_lex)
                 DBSession.flush()
 
-                l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
+                # l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
+                l1es = None
                 for l1e in l1es:
-                    new_l1e = LevelOneEntity(client_id=l1e.client_id,
-                                             object_id=DBSession.query(LevelOneEntity).filter_by(
-                                                 client_id=l1e.client_id).count() + 1,
-                                             content=l1e.content,
-                                             entity_type=l1e.entity_type,
-                                             locale_id=l1e.locale_id,
-                                             additional_metadata=l1e.additional_metadata,
-                                             parent=new_lex,
-                                             marked_for_deletion=l1e.marked_for_deletion,
-                                             is_translatable=l1e.is_translatable,
-                                             created_at=l1e.created_at)
+                    # new_l1e = LevelOneEntity(client_id=l1e.client_id,
+                    #                          object_id=DBSession.query(LevelOneEntity).filter_by(
+                    #                              client_id=l1e.client_id).count() + 1,
+                    #                          content=l1e.content,
+                    #                          entity_type=l1e.entity_type,
+                    #                          locale_id=l1e.locale_id,
+                    #                          additional_metadata=l1e.additional_metadata,
+                    #                          parent=new_lex,
+                    #                          marked_for_deletion=l1e.marked_for_deletion,
+                    #                          is_translatable=l1e.is_translatable,
+                    #                          created_at=l1e.created_at)
+                    new_l1e = None
                     DBSession.add(new_l1e)
                     DBSession.add(new_l1e)
                     DBSession.flush()
                     for pl1e in l1e.publishleveloneentity:
-                        new_pl1e = PublishLevelOneEntity(client_id=pl1e.client_id,
-                                                         object_id=DBSession.query(PublishLevelOneEntity).filter_by(
-                                                             client_id=pl1e.client_id).count() + 1,
-                                                         content=pl1e.content,
-                                                         entity_type=pl1e.entity_type,
-                                                         parent=new_lex,
-                                                         entity=new_l1e,
-                                                         marked_for_deletion=pl1e.marked_for_deletion,
-                                                         created_at=pl1e.created_at)
+                        # new_pl1e = PublishLevelOneEntity(client_id=pl1e.client_id,
+                        #                                  object_id=DBSession.query(PublishLevelOneEntity).filter_by(
+                        #                                      client_id=pl1e.client_id).count() + 1,
+                        #                                  content=pl1e.content,
+                        #                                  entity_type=pl1e.entity_type,
+                        #                                  parent=new_lex,
+                        #                                  entity=new_l1e,
+                        #                                  marked_for_deletion=pl1e.marked_for_deletion,
+                        #                                  created_at=pl1e.created_at)
+                        new_pl1e = None
                         DBSession.add(new_pl1e)
                         DBSession.flush()
 
-                    l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
+                    # l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
+                    l2es = list()
                     for l2e in l2es:
-                        new_l2e = LevelTwoEntity(client_id=l2e.client_id,
-                                                 object_id=DBSession.query(LevelTwoEntity).filter_by(
-                                                     client_id=l2e.client_id).count() + 1,
-                                                 content=l2e.content,
-                                                 entity_type=l2e.entity_type,
-                                                 locale_id=l2e.locale_id,
-                                                 additional_metadata=l2e.additional_metadata,
-                                                 parent=new_l1e,
-                                                 marked_for_deletion=l2e.marked_for_deletion,
-                                                 is_translatable=l2e.is_translatable,
-                                                 created_at=l2e.created_at)
+                        # new_l2e = LevelTwoEntity(client_id=l2e.client_id,
+                        #                          object_id=DBSession.query(LevelTwoEntity).filter_by(
+                        #                              client_id=l2e.client_id).count() + 1,
+                        #                          content=l2e.content,
+                        #                          entity_type=l2e.entity_type,
+                        #                          locale_id=l2e.locale_id,
+                        #                          additional_metadata=l2e.additional_metadata,
+                        #                          parent=new_l1e,
+                        #                          marked_for_deletion=l2e.marked_for_deletion,
+                        #                          is_translatable=l2e.is_translatable,
+                        #                          created_at=l2e.created_at)
+                        new_l2e = None
                         DBSession.add(new_l2e)
                         DBSession.flush()
                         for pl2e in l2e.publishleveltwoentity:
-                            new_pl2e = PublishLevelTwoEntity(client_id=pl2e.client_id,
-                                                             object_id=DBSession.query(PublishLevelTwoEntity).filter_by(
-                                                                 client_id=pl2e.client_id).count() + 1,
-                                                             content=pl2e.content,
-                                                             entity_type=pl2e.entity_type,
-                                                             parent=new_lex,
-                                                             entity=new_l2e,
-                                                             marked_for_deletion=pl2e.marked_for_deletion,
-                                                             created_at=pl2e.created_at)
+                            # new_pl2e = PublishLevelTwoEntity(client_id=pl2e.client_id,
+                            #                                  object_id=DBSession.query(PublishLevelTwoEntity).filter_by(
+                            #                                      client_id=pl2e.client_id).count() + 1,
+                            #                                  content=pl2e.content,
+                            #                                  entity_type=pl2e.entity_type,
+                            #                                  parent=new_lex,
+                            #                                  entity=new_l2e,
+                            #                                  marked_for_deletion=pl2e.marked_for_deletion,
+                            #                                  created_at=pl2e.created_at)
+                            new_pl2e = None
                             DBSession.add(new_pl2e)
                             DBSession.flush()
-                ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
+                # ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
+                ges = list()
                 for ge in ges:
-                    new_ge = GroupingEntity(client_id=ge.client_id,
-                                            object_id=DBSession.query(GroupingEntity).filter_by(
-                                                client_id=ge.client_id).count() + 1,
-                                            content=ge.content,  # same tag?
-                                            entity_type=ge.entity_type,
-                                            locale_id=ge.locale_id,
-                                            additional_metadata=ge.additional_metadata,
-                                            parent=new_lex,
-                                            marked_for_deletion=ge.marked_for_deletion,
-                                            is_translatable=ge.is_translatable,
-                                            created_at=ge.created_at)
+                    # new_ge = GroupingEntity(client_id=ge.client_id,
+                    #                         object_id=DBSession.query(GroupingEntity).filter_by(
+                    #                             client_id=ge.client_id).count() + 1,
+                    #                         content=ge.content,  # same tag?
+                    #                         entity_type=ge.entity_type,
+                    #                         locale_id=ge.locale_id,
+                    #                         additional_metadata=ge.additional_metadata,
+                    #                         parent=new_lex,
+                    #                         marked_for_deletion=ge.marked_for_deletion,
+                    #                         is_translatable=ge.is_translatable,
+                    #                         created_at=ge.created_at)
+                    new_ge = None
                     DBSession.add(new_ge)
                     DBSession.flush()
                     for pge in ge.publishgroupingentity:
-                        new_pge = PublishGroupingEntity(client_id=pge.client_id,
-                                                        object_id=DBSession.query(PublishGroupingEntity).filter_by(
-                                                            client_id=pge.client_id).count() + 1,
-                                                        content=pge.content,
-                                                        entity_type=pge.entity_type,
-                                                        parent=new_lex,
-                                                        entity=new_ge,
-                                                        marked_for_deletion=pge.marked_for_deletion,
-                                                        created_at=pge.created_at)
+                        # new_pge = PublishGroupingEntity(client_id=pge.client_id,
+                        #                                 object_id=DBSession.query(PublishGroupingEntity).filter_by(
+                        #                                     client_id=pge.client_id).count() + 1,
+                        #                                 content=pge.content,
+                        #                                 entity_type=pge.entity_type,
+                        #                                 parent=new_lex,
+                        #                                 entity=new_ge,
+                        #                                 marked_for_deletion=pge.marked_for_deletion,
+                        #                                 created_at=pge.created_at)
+                        new_pge = None
                         DBSession.add(new_pge)
                         DBSession.flush()
         request.response.status = HTTPOk.code
@@ -493,8 +496,9 @@ def dictionary_info(request):  # TODO: test
     return {'error': str("No such dictionary in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='dictionary_delete', renderer='json', request_method='DELETE', permission='delete')
-def real_delete_dictionary(request):  # TODO: test. how?
+def real_delete_dictionary(request):
     response = dict()
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
@@ -502,20 +506,27 @@ def real_delete_dictionary(request):  # TODO: test. how?
     if parent:
         perspectives = DBSession.query(DictionaryPerspective).filter_by(parent=parent)
         for perspective in perspectives:
-            fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective).delete()
+            # fields = DBSession.query(DictionaryPerspectiveField).filter_by(parent=perspective).delete()
+            fields = list()
             lexes = DBSession.query(LexicalEntry).filter_by(parent=perspective)
             for lex in lexes:
-                l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
+                # l1es = DBSession.query(LevelOneEntity).filter_by(parent=lex)
+                l1es = list()
                 for l1e in l1es:
-                    l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
+                    # l2es = DBSession.query(LevelTwoEntity).filter_by(parent=l1e)
+                    l2es = list()
                     for l2e in l2es:
-                        pl2es = DBSession.query(PublishLevelTwoEntity).filter_by(entity=l2e).delete()
+                        # pl2es = DBSession.query(PublishLevelTwoEntity).filter_by(entity=l2e).delete()
+                        pl2es = list()
                         DBSession.delete(l2e)
-                    pl1es = DBSession.query(PublishLevelOneEntity).filter_by(entity=l1e).delete()
+                    # pl1es = DBSession.query(PublishLevelOneEntity).filter_by(entity=l1e).delete()
+                    pl1es = list()
                     DBSession.delete(l1e)
-                ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
+                # ges = DBSession.query(GroupingEntity).filter_by(parent=lex)
+                ges = list()
                 for ge in ges:
-                    pges = DBSession.query(PublishGroupingEntity).filter_by(entity=ge).delete()
+                    # pges = DBSession.query(PublishGroupingEntity).filter_by(entity=ge).delete()
+                    pges = list()
                     DBSession.delete(ge)
                 DBSession.delete(lex)
             for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):

@@ -73,10 +73,10 @@ def signup_post(request):  # tested
         new_user.email.append(email)
         DBSession.add(new_user)
         basegroups = []
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create dictionaries").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create languages").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create organizations").first()]
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can create translation strings").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create dictionaries").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create languages").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create organizations").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create translation strings").first()]
         groups = []
         for base in basegroups:
             groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]

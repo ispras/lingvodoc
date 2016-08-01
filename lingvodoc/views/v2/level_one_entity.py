@@ -7,9 +7,9 @@ from lingvodoc.views.v2.utils import (
 from lingvodoc.models import (
     Client,
     DBSession,
-    LevelOneEntity,
+    #LevelOneEntity,
     LexicalEntry,
-    User,
+    User
 )
 
 from pyramid.httpexceptions import (
@@ -28,13 +28,15 @@ import hashlib
 import json
 
 
+# TODO: completely broken!
 @view_config(route_name='get_level_one_entity_indict', renderer='json', request_method='GET', permission='view')
 @view_config(route_name='get_level_one_entity', renderer='json', request_method='GET', permission='view')
-def view_l1_entity(request):  # tested
+def view_l1_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    # entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    entity = None
     if entity:
         if not entity.marked_for_deletion:
             # TODO: fix urls to relative urls in content
@@ -45,14 +47,16 @@ def view_l1_entity(request):  # tested
     return {'error': str("No such entity in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='get_level_one_entity_indict', renderer='json', request_method='DELETE', permission='delete')
 @view_config(route_name='get_level_one_entity', renderer='json', request_method='DELETE', permission='delete')
-def delete_l1_entity(request):  # TODO: test
+def delete_l1_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    # entity = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    entity = None
     if entity:
         if not entity.marked_for_deletion:
 
@@ -83,9 +87,10 @@ def create_l1_entity(request):  # tested
             request.response.status = HTTPNotFound.code
             return {'error': str("No such lexical entry in the system")}
         additional_metadata = req.get('additional_metadata')
-        entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
-                                locale_id=req['locale_id'], additional_metadata=additional_metadata,
-                                parent=parent)
+        # entity = LevelOneEntity(client_id=client.id, object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1, entity_type=req['entity_type'],
+        #                         locale_id=req['locale_id'], additional_metadata=additional_metadata,
+        #                         parent=parent)
+        entity = None
         DBSession.add(entity)
         DBSession.flush()
         data_type = req.get('data_type')

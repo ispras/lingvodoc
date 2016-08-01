@@ -1,8 +1,7 @@
 __author__ = 'alexander'
 
 from lingvodoc.models import (
-    DBSession,
-    GroupingEntity
+    DBSession
 )
 
 from pyramid.httpexceptions import (
@@ -12,19 +11,22 @@ from pyramid.httpexceptions import (
 from pyramid.view import view_config
 
 
+# TODO: completely broken!
 @view_config(route_name='get_group_entity', renderer='json', request_method='GET')
-def view_group_entity(request):  # TODO: test
+def view_group_entity(request):
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
-    entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    # entity = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
+    entity = None
     if entity:
         if not entity.marked_for_deletion:
             ent = dict()
             ent['entity_type'] = entity.entity_type
             ent['tag'] = entity.content
-            entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
+            # entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
+            entities2 = list()
             objs = []
             for entry in entities2:
                 obj = {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id}
@@ -43,7 +45,8 @@ def delete_group_entity(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
-    entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
+    # entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
+    entities = list()
     if entities:
         for entity in entities:
             if not entity.marked_for_deletion:

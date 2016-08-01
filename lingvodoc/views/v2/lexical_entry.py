@@ -7,8 +7,6 @@ from lingvodoc.models import (
     DBSession,
     DictionaryPerspective,
     Group,
-    GroupingEntity,
-    LevelOneEntity,
     LexicalEntry,
     User
 )
@@ -35,6 +33,7 @@ import time
 log = logging.getLogger(__name__)
 
 
+# TODO: completely broken!
 @view_config(route_name='get_connected_words', renderer='json', request_method='GET')
 @view_config(route_name='get_connected_words_indict', renderer='json', request_method='GET')
 def view_connected_words(request):  # tested, found some shit(tags here are not the same, as in view_group_entity) # TODO: fix
@@ -54,7 +53,8 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
                 new_tags = []
                 lexes = []
                 for tag in tags:
-                    entity = DBSession.query(GroupingEntity).filter(GroupingEntity.content==tag).first()
+                    # entity = DBSession.query(GroupingEntity).filter(GroupingEntity.content==tag).first()
+                    entity = None
                     path = request.route_url('get_group_entity',
                                          client_id = entity.client_id,
                                          object_id = entity.object_id)
@@ -66,9 +66,10 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
                         if lex not in lexes:
                             lexes.append((lex['client_id'], lex['object_id']))
                 for lex in lexes:
-                    pre_tags = DBSession.query(GroupingEntity.content)\
-                               .filter_by(parent_client_id=lex[0],
-                                          parent_object_id=lex[1]).all()
+                    # pre_tags = DBSession.query(GroupingEntity.content)\
+                    #            .filter_by(parent_client_id=lex[0],
+                    #                       parent_object_id=lex[1]).all()
+                    pre_tags = None
                     tags = list()
                     for tag in pre_tags:
                         tags.append(tag[0])
@@ -83,7 +84,8 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
                     equal = True
             lexes = list()
             for tag in tags:
-                entity = DBSession.query(GroupingEntity).filter_by(content = tag).first()
+                # entity = DBSession.query(GroupingEntity).filter_by(content = tag).first()
+                entity = None
                 path = request.route_url('get_group_entity',
                                          client_id = entity.client_id,
                                          object_id = entity.object_id)
@@ -116,6 +118,7 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
     return {'error': str("No such lexical entry in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')
 def create_group_entity(request):  # tested
@@ -139,8 +142,9 @@ def create_group_entity(request):  # tested
             if not parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such lexical entry in the system")}
-            par_tags = DBSession.query(GroupingEntity).\
-                filter_by(entity_type=req['entity_type'], parent=parent).all()
+            # par_tags = DBSession.query(GroupingEntity).\
+            #     filter_by(entity_type=req['entity_type'], parent=parent).all()
+            par_tags = None
             tags += [o.content for o in par_tags]
         if not tags:
             n = 10  # better read from settings
@@ -152,11 +156,13 @@ def create_group_entity(request):  # tested
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             for tag in tags:
-                ent = DBSession.query(GroupingEntity).\
-                    filter_by(entity_type=req['entity_type'], content=tag, parent=parent).first()
+                # ent = DBSession.query(GroupingEntity).\
+                #     filter_by(entity_type=req['entity_type'], content=tag, parent=parent).first()
+                ent = None
                 if not ent:
-                    entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
-                                            entity_type=req['entity_type'], content=tag, parent=parent)
+                    # entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
+                    #                         entity_type=req['entity_type'], content=tag, parent=parent)
+                    entity = None
                     DBSession.add(entity)
                     DBSession.flush()
         log.debug('TAGS: %s', tags)
@@ -303,8 +309,9 @@ def view_lexical_entry(request):  # TODO: test
     return {'error': str("No such lexical entry in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='move_lexical_entry', renderer='json', request_method='PATCH', permission='create')
-def move_lexical_entry(request):  # TODO: test
+def move_lexical_entry(request):
     req = request.json_body
     variables = {'auth': request.authenticated_userid}
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -340,11 +347,13 @@ def move_lexical_entry(request):  # TODO: test
             if entry.moved_to is None:
 
                 if not entry.marked_for_deletion and not parent.marked_for_deletion:
-                    l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                    # l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                    l1e = list()
                     for entity in l1e:
-                        ent = DBSession.query(LevelOneEntity)\
-                            .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
-                            .first()
+                        # ent = DBSession.query(LevelOneEntity)\
+                        #     .filter_by(parent=parent, entity_type=entity.entity_type, content = entity.content)\
+                        #     .first()
+                        ent = None
                         if ent:
                             entity.marked_for_deletion = True
                             if real_delete:
@@ -358,7 +367,8 @@ def move_lexical_entry(request):  # TODO: test
                             publent.marked_for_deletion = True
                             publent.parent = parent
                         DBSession.flush()
-                    ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                    # ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                    ge = list()
                     for entity in ge:
                         entity.parent = parent
                         for publent in entity.publishgroupingentity:
@@ -373,8 +383,9 @@ def move_lexical_entry(request):  # TODO: test
     return {'error': str("No such lexical entry in the system")}
 
 
+# TODO: completely broken!
 @view_config(route_name='move_lexical_entry_bulk', renderer='json', request_method='PATCH')
-def move_lexical_entry_bulk(request):  # TODO: test
+def move_lexical_entry_bulk(request):
     req = request.json_body
     real_delete = req.get('real_delete')  # With great power comes great responsibility
     # Maybe there needs to be check for permission of some sort (can really delete only when updating dictionary)
@@ -429,13 +440,15 @@ def move_lexical_entry_bulk(request):  # TODO: test
                                         if entry.moved_to is None:
 
                                             if not entry.marked_for_deletion and not parent.marked_for_deletion:
-                                                l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                                                # l1e = DBSession.query(LevelOneEntity).filter_by(parent = entry).all()
+                                                l1e = list()
                                                 for entity in l1e:
-                                                    ent = DBSession.query(LevelOneEntity)\
-                                                        .filter_by(parent=parent,
-                                                                   entity_type=entity.entity_type,
-                                                                   content = entity.content)\
-                                                        .first()
+                                                    # ent = DBSession.query(LevelOneEntity)\
+                                                    #     .filter_by(parent=parent,
+                                                    #                entity_type=entity.entity_type,
+                                                    #                content = entity.content)\
+                                                    #     .first()
+                                                    ent = None
                                                     if ent:
                                                         entity.marked_for_deletion = True
                                                         if real_delete:
@@ -449,7 +462,8 @@ def move_lexical_entry_bulk(request):  # TODO: test
                                                         publent.marked_for_deletion = True
                                                         publent.parent = parent
                                                     DBSession.flush()
-                                                ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                                                # ge = DBSession.query(GroupingEntity).filter_by(parent = entry).all()
+                                                ge = list()
                                                 for entity in ge:
                                                     entity.parent = parent
                                                     for publent in entity.publishgroupingentity:
