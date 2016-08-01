@@ -22,8 +22,6 @@ def upgrade():
     op.create_table('basegroup',
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('id', SLBigInteger(), nullable=False),
-    sa.Column('translation_gist_client_id', SLBigInteger(), nullable=True),
-    sa.Column('translation_gist_object_id', SLBigInteger(), nullable=True),
     sa.Column('name', sa.UnicodeText(), nullable=True),
     sa.Column('subject', sa.UnicodeText(), nullable=True),
     sa.Column('action', sa.UnicodeText(), nullable=True),
@@ -99,8 +97,6 @@ def upgrade():
     sa.Column('subject_client_id', SLBigInteger(), nullable=True),
     sa.Column('subject_object_id', SLBigInteger(), nullable=True),
     sa.Column('subject_override', sa.Boolean(), nullable=True),
-    sa.Column('parent_object_id', SLBigInteger(), nullable=True),
-    sa.Column('parent_client_id', SLBigInteger(), nullable=True),
     sa.ForeignKeyConstraint(['base_group_id'], ['basegroup.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

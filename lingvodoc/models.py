@@ -545,7 +545,7 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
         # TODO: last_sync_datetime
 
 
-class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin, TranslationMixin):
+class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     name = Column(UnicodeText)  # readable name
     groups = relationship('Group', backref=backref("BaseGroup"))
     subject = Column(UnicodeText)
@@ -567,9 +567,6 @@ class Group(Base, TableNameMixin, IdMixin, CreatedAtMixin):
                                  secondary=organization_to_group_association,
                                  backref=backref("groups"))
     parent = relationship(__parentname__, backref=backref('group'))
-
-    parent_object_id = Column(SLBigInteger())
-    parent_client_id = Column(SLBigInteger())
 
 
 class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin):
