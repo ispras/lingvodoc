@@ -566,6 +566,10 @@ class Group(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     organizations = relationship("Organization",
                                  secondary=organization_to_group_association,
                                  backref=backref("groups"))
+    parent = relationship(__parentname__, backref=backref('group'))
+
+    parent_object_id = Column(SLBigInteger())
+    parent_client_id = Column(SLBigInteger())
 
 
 class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin):
@@ -861,46 +865,46 @@ class LexicalEntriesEntitiesAcl(object):
         return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
 
 
-class PerspectiveEntityOneAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
-        levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
-
-
-class PerspectiveEntityTwoAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
-        levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        perspective = levoneent.parent.parent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
+# class PerspectiveEntityOneAcl(object):
+#     def __init__(self, request):
+#         self.request = request
+# #
+#     def __acl__(self):
+#         acls = []
+#         object_id = None
+#         try:
+#             object_id = self.request.matchdict['object_id']
+#         except:
+#             pass
+#         client_id = None
+#         try:
+#             client_id = self.request.matchdict['client_id']
+#         except:
+#             pass
+#         levoneent = DBSession.query(LevelOneEntity).filter_by(client_id=client_id, object_id=object_id).first()
+#         perspective = levoneent.parent.parent
+#         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
+#
+#
+# class PerspectiveEntityTwoAcl(object):
+#     def __init__(self, request):
+#         self.request = request
+#
+#     def __acl__(self):
+#         acls = []
+#         object_id = None
+#         try:
+#             object_id = self.request.matchdict['object_id']
+#         except:
+#             pass
+#         client_id = None
+#         try:
+#             client_id = self.request.matchdict['client_id']
+#         except:
+#             pass
+#         levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
+#         perspective = levoneent.parent.parent.parent
+#         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
 
 
 # class PerspectiveEntityGroupAcl(object):

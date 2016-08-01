@@ -1,13 +1,13 @@
-"""Initial(tmp)
+"""Initial tables (tmp)
 
-Revision ID: 43201b4d427
+Revision ID: 7585e1fab1
 Revises: 
-Create Date: 2016-07-27 16:45:53.682581
+Create Date: 2016-08-01 13:54:17.393702
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '43201b4d427'
+revision = '7585e1fab1'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -99,6 +99,8 @@ def upgrade():
     sa.Column('subject_client_id', SLBigInteger(), nullable=True),
     sa.Column('subject_object_id', SLBigInteger(), nullable=True),
     sa.Column('subject_override', sa.Boolean(), nullable=True),
+    sa.Column('parent_object_id', SLBigInteger(), nullable=True),
+    sa.Column('parent_client_id', SLBigInteger(), nullable=True),
     sa.ForeignKeyConstraint(['base_group_id'], ['basegroup.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
