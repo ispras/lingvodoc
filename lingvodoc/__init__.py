@@ -285,8 +285,7 @@ def configure_routes(config):
     # API #GET && DELETE
     # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,
     # 'content': <'content'>, 'locale_id': <locale_id>}]
-    config.add_route(name='get_level_one_entity', pattern='/leveloneentity/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityOneAcl')
+    config.add_route(name='get_level_one_entity', pattern='/leveloneentity/{client_id}/{object_id}')
     config.add_route(name='get_level_one_entity_indict', pattern='/dictionary/'
                                                                  '{dictionary_client_id}/{dictionary_object_id}'
                                                                  '/perspective/'
@@ -294,11 +293,9 @@ def configure_routes(config):
                                                                  'lexical_entry/'
                                                                  '{lexical_entry_client_id}/{lexical_entry_object_id}/'
                                                                  'leveloneentity/'
-                                                                 '{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityOneAcl')  # tested (no del)
+                                                                 '{client_id}/{object_id}')  # tested (no del)
 
-    config.add_route(name='get_level_two_entity', pattern='/leveltwoentity/{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityTwoAcl')  # tested (no del)
+    config.add_route(name='get_level_two_entity', pattern='/leveltwoentity/{client_id}/{object_id}')  # tested (no del)
     config.add_route(name='get_level_two_entity_indict', pattern='/dictionary/'
                                                                  '{dictionary_client_id}/{dictionary_object_id}'
                                                                  '/perspective/'
@@ -308,8 +305,7 @@ def configure_routes(config):
                                                                  'leveloneentity/'
                                                                  '{leveloneentity_client_id}/{leveloneentity_object_id}/'
                                                                  'leveltwoentity/'
-                                                                 '{client_id}/{object_id}',
-                     factory='lingvodoc.models.PerspectiveEntityTwoAcl')  # tested (no del)
+                                                                 '{client_id}/{object_id}')  # tested (no del)
 
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}

@@ -167,9 +167,8 @@ def language_info(lang, request):
     result = dict()
     result['client_id'] = lang.client_id
     result['object_id'] = lang.object_id
-    translation_string = lang.get_translation(request)
-    result['translation_string'] = translation_string['translation_string']
-    result['translation'] = translation_string['translation']
+    result['translation_gist_client_id'] = lang.translation_gist_client_id
+    result['translation_gist_object_id'] = lang.translation_gist_object_id
     if lang.locale:
         result['locale_exist'] = True
     else:
