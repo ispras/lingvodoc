@@ -187,9 +187,8 @@ def language_with_dicts(lang, dicts, request):
     result = dict()
     result['client_id'] = lang.client_id
     result['object_id'] = lang.object_id
-    translation_string = lang.get_translation(request)
-    result['translation_string'] = translation_string['translation_string']
-    result['translation'] = translation_string['translation']
+    result['translation_gist_client_id'] = lang.translation_gist_client_id
+    result['translation_gist_object_id'] = lang.translation_gist_object_id
     if lang.locale:
         result['locale_exist'] = True
     else:
@@ -358,9 +357,8 @@ def view_perspective_from_object(request, perspective):
             response['parent_object_id'] = perspective.parent_object_id
             response['client_id'] = perspective.client_id
             response['object_id'] = perspective.object_id
-            translation_string = perspective.get_translation(request)
-            response['translation_string'] = translation_string['translation_string']
-            response['translation'] = translation_string['translation']
+            response['translation_gist_client_id'] = perspective.translation_gist_client_id
+            response['translation_gist_object_id'] = perspective.translation_gist_object_id
             response['status'] = perspective.state
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
