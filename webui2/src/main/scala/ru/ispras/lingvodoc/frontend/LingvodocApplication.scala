@@ -13,6 +13,7 @@ class RoutingConfig(routeProvider: RouteProvider) extends Config {
     .when("/", Route("/static/templates/home.html", "Home", "HomeController"))
     .when("/login", Route("/static/templates/login.html", "Login", "LoginController"))
     .when("/logout", Route("/static/templates/logout.html", "Logout", "LogoutController"))
+    .when("/signup", Route("/static/templates/signup.html", "Logout", "SignupController"))
     .when("/dashboard", Route("/static/templates/dashboard.html", "Dashboard", "DashboardController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
     .otherwise(Route("/home"))
@@ -32,6 +33,7 @@ object LingvodocApplication {
       .controller[NavigationController]
       .controller[LoginController]
       .controller[LogoutController]
+      .controller[SignupController]
       .controller[DashboardController]
       .controller[HomeController]
       .controller[PerspectivePropertiesController]

@@ -604,7 +604,35 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     defer.promise
   }
+
+  /**
+    * Sign up
+    * @param login
+    * @param name
+    * @param password
+    * @param email
+    * @param day
+    * @param month
+    * @param year
+    * @return
+    */
+  def signup(login: String, name: String, password: String, email: String, day: Int, month: Int, year: Int) = {
+    val defer = $q.defer[Int]()
+    val req = JSON.stringify(js.Dynamic.literal(login = login, name = name, email = email, password = password))
+    $http.post[js.Dynamic](getMethodUrl("signin"), req) onComplete {
+      case Success(response) =>
+        try {
+          val clientId = response.client_id.asInstanceOf[Int]
+          defer.resolve(clientId)
+        } catch {
+          case e: Throwable => defer.reject("Unknown exception:" + e.getMessage)
+        }
+      case Failure(e) => defer.reject("Failed to sign up: " + e.getMessage)
+    }
+    defer.promise
+  }
 }
+
 
 @injectable("BackendService")
 class BackendServiceFactory($http: HttpService, $q: Q) extends Factory[BackendService] {

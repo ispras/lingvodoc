@@ -34,7 +34,7 @@ def configure_routes(config):
     """
 
     # web-view #GET
-    config.add_route(name='home', pattern='/')
+    config.add_route(name='main', pattern='/')
 
     # web-view #GET && POST
     # registration page
