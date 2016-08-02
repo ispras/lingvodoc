@@ -11,7 +11,9 @@ from lingvodoc.models import (
     Language,
     LexicalEntry,
     Organization,
-    User
+    User,
+    TranslationAtom,
+    TranslationGist
 )
 
 from lingvodoc.views.v2.utils import (
@@ -75,8 +77,21 @@ def create_dictionary(request):  # tested & in docs
         if additional_metadata:
             additional_metadata = json.dumps(additional_metadata)
 
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = json.dumps({'searchstring': 'WiP'})
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
         dictionary = Dictionary(client_id=variables['auth'],
-                                state='WiP',
+                                state_translation_gist_object_id=state_translation_gist_object_id,
+                                state_translation_gist_client_id=state_translation_gist_client_id,
                                 parent=parent,
                                 translation_gist_client_id=translation_gist_client_id,
                                 translation_gist_object_id=translation_gist_object_id,
@@ -106,24 +121,24 @@ def create_dictionary(request):  # tested & in docs
         return {'error': str(e)}
 
 
-@view_config(route_name='dictionary', renderer='json', request_method='GET')  # Authors -- names of users, who can edit?
+@view_config(route_name='dictionary', renderer='json', request_method='GET')
 def view_dictionary(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    if dictionary:
-        if not dictionary.marked_for_deletion:
-            response['parent_client_id'] = dictionary.parent_client_id
-            response['parent_object_id'] = dictionary.parent_object_id
-            response['translation_gist_client_id'] = dictionary.translation_gist_client_id
-            response['translation_gist_object_id'] = dictionary.translation_gist_object_id
-            response['client_id'] = dictionary.client_id
-            response['object_id'] = dictionary.object_id
-            response['status'] = dictionary.state
-            response['additional_metadata'] = dictionary.additional_metadata
-            request.response.status = HTTPOk.code
-            return response
+    if dictionary and not dictionary.marked_for_deletion:
+        response['parent_client_id'] = dictionary.parent_client_id
+        response['parent_object_id'] = dictionary.parent_object_id
+        response['translation_gist_client_id'] = dictionary.translation_gist_client_id
+        response['translation_gist_object_id'] = dictionary.translation_gist_object_id
+        response['client_id'] = dictionary.client_id
+        response['object_id'] = dictionary.object_id
+        response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
+        response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
+        response['additional_metadata'] = dictionary.additional_metadata
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -792,11 +807,15 @@ def view_dictionary_status(request):  # tested & in docs
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    if dictionary:
-        if not dictionary.marked_for_deletion:
-            response['status'] = dictionary.state  # TODO: probably change
-            request.response.status = HTTPOk.code
-            return response
+    if dictionary and not dictionary.marked_for_deletion:
+        response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
+        response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
+        atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=dictionary.state_translation_gist_client_id,
+                                                          parent_object_id=dictionary.state_translation_gist_object_id,
+                                                          locale_id=int(request.cookies['locale_id'])).first()
+        response['status'] = atom.content
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -827,7 +846,7 @@ def edit_dictionary_status(request):  # tested & in docs
 @view_config(route_name='dictionaries', renderer='json', request_method='POST')
 def dictionaries_list(request):  # TODO: test
     req = request.json_body
-    response = list()
+    response = dict()
     user_created = None
     if 'user_created' in req:
         user_created = req['user_created']
@@ -856,7 +875,7 @@ def dictionaries_list(request):  # TODO: test
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
-        # response['clients'] = cli
+        response['clients'] = cli
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
 
     # if author:
@@ -963,7 +982,7 @@ def dictionaries_list(request):  # TODO: test
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
     # TODO: fix.
     # TODO: start writing todos with more information
-    # fixed already?
+
     dictionaries = list()
     # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
     dicts = dicts.order_by(Dictionary.client_id, Dictionary.object_id)
@@ -1017,7 +1036,7 @@ def dictionaries_list(request):  # TODO: test
             #
             # dicts = prevdicts
             dictionaries = [o for o in dictionaries if (o['client_id'], o['object_id']) in dictstemp]
-    response = dictionaries
+    response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
 
     return response
@@ -1056,7 +1075,7 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
                     dictionaries += [resp.json]
             org['dicts'] = dictionaries
             organizations += [org]
-        return organizations
+        return {'organizations': organizations}
     if group_by_lang and group_by_org:
         tmp = group_by_organizations(dicts, request)
         organizations = []
@@ -1065,7 +1084,7 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
             org['langs'] = group_by_languages(dcts, request)
             del org['dicts']
             organizations += [org]
-        return organizations
+        return {'organizations': organizations}
     dictionaries = []
     dicts = dicts.order_by("client_id", "object_id")
     for dct in dicts:

@@ -13,7 +13,9 @@ from lingvodoc.models import (
     Group,
     LexicalEntry,
     Organization,
-    User
+    User,
+    TranslationAtom,
+    TranslationGist
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
@@ -505,8 +507,22 @@ def create_perspective(request):  # tested & in docs
             additional_metadata = coord
         additional_metadata = json.dumps(additional_metadata)
 
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = json.dumps({'searchstring': 'WiP'})
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
         perspective = DictionaryPerspective(client_id=variables['auth'],
-                                            state='WiP',
+                                            state_translation_gist_object_id=state_translation_gist_object_id,
+                                            state_translation_gist_client_id=state_translation_gist_client_id,
                                             parent=parent,
                                             import_source=req.get('import_source'),
                                             import_hash=req.get('import_hash'),
@@ -828,14 +844,18 @@ def view_perspective_status(request):  # tested & in docs
         return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
-            response['status'] = perspective.state
-            request.response.status = HTTPOk.code
-            return response
+    if perspective and not perspective.marked_for_deletion:
+        if perspective.parent != parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such pair of dictionary/perspective in the system")}
+        response['state_translation_gist_client_id'] = perspective.state_translation_gist_client_id
+        response['state_translation_gist_object_id'] = perspective.state_translation_gist_object_id
+        atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=perspective.state_translation_gist_client_id,
+                                                          parent_object_id=perspective.state_translation_gist_object_id,
+                                                          locale_id=int(request.cookies['locale_id'])).first()
+        response['status'] = atom.content
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 

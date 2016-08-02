@@ -45,7 +45,7 @@ from sqlalchemy.exc import IntegrityError
 
 import datetime
 import json
-
+from sqlalchemy.orm.exc import NoResultFound
 # search (filter by input, type and (?) locale)
 
 
@@ -250,3 +250,27 @@ def translation_search(request):
         return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No result")}
+
+
+@view_config(route_name='translation_service_search', renderer='json', request_method='POST')
+def translation_service_search(request):
+
+    if type(request.json_body) == str:
+        req = json.loads(request.json_body)
+    else:
+        req = request.json_body
+    searchstring = req['searchstring']
+    try:
+        translationatom = DBSession.query(TranslationAtom)\
+            .join(TranslationGist).\
+            filter(TranslationAtom.content == searchstring,
+                   TranslationAtom.locale_id == 2,
+                   TranslationGist.type == 'Service')\
+            .one()
+        response = translationgist_contents(translationatom.parent)
+        request.response.status = HTTPOk.code
+        return response
+
+    except NoResultFound:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No result")}
