@@ -355,7 +355,7 @@ def view_perspective_tree(request):  # tested & in docs
         if not perspective.marked_for_deletion:
             tree = []
             tree.append({'type': 'perspective',
-                         'translation_gist_client_id': perspective.translation_string,
+                         'translation_gist_client_id': perspective.translation_gist_client_id,
                          'translation_gist_object_id': perspective.translation_gist_object_id,
                          'client_id': perspective.client_id,
                          'object_id': perspective.object_id,
