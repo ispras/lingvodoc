@@ -11,7 +11,9 @@ from lingvodoc.models import (
     Language,
     LexicalEntry,
     Organization,
-    User
+    User,
+    TranslationAtom,
+    TranslationGist
 )
 
 from lingvodoc.views.v2.utils import (
@@ -76,7 +78,8 @@ def create_dictionary(request):  # tested & in docs
             additional_metadata = json.dumps(additional_metadata)
 
         dictionary = Dictionary(client_id=variables['auth'],
-                                state='WiP',
+                                state_translation_gist_object_id=state_translation_gist_object_id,
+                                state_translation_gist_client_id=state_translation_gist_client_id,
                                 parent=parent,
                                 translation_gist_client_id=translation_gist_client_id,
                                 translation_gist_object_id=translation_gist_object_id,
@@ -112,19 +115,19 @@ def view_dictionary(request):  # tested & in docs
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    if dictionary:
-        if not dictionary.marked_for_deletion:
-            response['parent_client_id'] = dictionary.parent_client_id
-            response['parent_object_id'] = dictionary.parent_object_id,
-            response['translation_gist_client_id'] = dictionary.translation_gist_client_id,
-            response['translation_gist_object_id'] = dictionary.translation_gist_object_id,
-            response['client_id'] = dictionary.client_id
-            response['object_id'] = dictionary.object_id
-            response['status'] = dictionary.state
-            response['additional_metadata'] = dictionary.additional_metadata
-            response['translation'] = dictionary.get_translation(request.cookies['locale_id'])
-            request.response.status = HTTPOk.code
-            return response
+    if dictionary and not dictionary.marked_for_deletion:
+        response['parent_client_id'] = dictionary.parent_client_id
+        response['parent_object_id'] = dictionary.parent_object_id
+        response['translation_gist_client_id'] = dictionary.translation_gist_client_id
+        response['translation_gist_object_id'] = dictionary.translation_gist_object_id
+        response['client_id'] = dictionary.client_id
+        response['object_id'] = dictionary.object_id
+        response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
+        response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
+        response['additional_metadata'] = dictionary.additional_metadata
+        response['translation'] = dictionary.get_translation(request.cookies['locale_id'])
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -793,11 +796,15 @@ def view_dictionary_status(request):  # tested & in docs
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    if dictionary:
-        if not dictionary.marked_for_deletion:
-            response['status'] = dictionary.state  # TODO: probably change
-            request.response.status = HTTPOk.code
-            return response
+    if dictionary and not dictionary.marked_for_deletion:
+        response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
+        response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
+        atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=dictionary.state_translation_gist_client_id,
+                                                          parent_object_id=dictionary.state_translation_gist_object_id,
+                                                          locale_id=int(request.cookies['locale_id'])).first()
+        response['status'] = atom.content
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
@@ -816,7 +823,7 @@ def edit_dictionary_status(request):  # tested & in docs
             else:
                 req = request.json_body
             status = req['status']
-            dictionary.state = status  # TODO: probably change
+            dictionary.state = status
             DBSession.add(dictionary)
             request.response.status = HTTPOk.code
             response['status'] = status
@@ -964,6 +971,7 @@ def dictionaries_list(request):  # TODO: test
             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
     # TODO: fix.
     # TODO: start writing todos with more information
+
     dictionaries = list()
     # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
     dicts = dicts.order_by(Dictionary.client_id, Dictionary.object_id)

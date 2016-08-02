@@ -351,8 +351,9 @@ class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Crea
     for the same language so we use some grouping. This grouping is provided via Language objects.
     """
     __parentname__ = 'Language'
-    state = Column(UnicodeText)
-    authors = Column(UnicodeText)
+    # state = Column(UnicodeText)
+    state_translation_gist_client_id = Column(SLBigInteger())
+    state_translation_gist_object_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False)
     additional_metadata = Column(UnicodeText)
     # about = Column(UnicodeText)
@@ -369,7 +370,9 @@ class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, Relationship
     Parent: Dictionary.
     """
     __parentname__ = 'Dictionary'
-    state = Column(UnicodeText)
+    # state = Column(UnicodeText)
+    state_translation_gist_client_id = Column(SLBigInteger())
+    state_translation_gist_object_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False)
     is_template = Column(Boolean, default=False)
     import_source = Column(UnicodeText)
@@ -377,7 +380,6 @@ class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, Relationship
     additional_metadata = Column(UnicodeText)
     linked_to_client_id = Column(BigInteger)
     linked_to_object_id = Column(BigInteger)
-    # about = Column(UnicodeText)
 
 
 class Field(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin):
@@ -391,26 +393,11 @@ class Field(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationM
         3. With it we can restrict to use any entity types except listed here (security concerns).
     Parent: DictionaryPerspective.
     """
-    data_type = Column(UnicodeText)
+    # data_type = Column(UnicodeText)
+    data_type_translation_gist_client_id = Column(SLBigInteger())
+    data_type_translation_gist_object_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False)
     is_translatable = Column(Boolean, default=False)
-
-
-lexicalentry_to_lexicalentry_association = Table('lexicalentry_to_lexicalentry_association',
-                                                 Base.metadata,
-                                                 Column('lexicalentry_1_client_id', BigInteger),
-                                                 Column('lexicalentry_1_object_id', BigInteger),
-                                                 Column('lexicalentry_2_client_id', BigInteger),
-                                                 Column('lexicalentry_2_object_id', BigInteger),
-                                                 ForeignKeyConstraint(['lexicalentry_1_client_id',
-                                                                       'lexicalentry_1_object_id'],
-                                                                      ['lexicalentry.client_id',
-                                                                       'lexicalentry.object_id']),
-                                                 ForeignKeyConstraint(['lexicalentry_2_client_id',
-                                                                       'lexicalentry_2_object_id'],
-                                                                      ['lexicalentry.client_id',
-                                                                       'lexicalentry.object_id'])
-                                                 )
 
 
 class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
@@ -424,18 +411,6 @@ class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Cr
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     additional_metadata = Column(UnicodeText)
-
-
-LexicalEntry.linked_to = relationship("LexicalEntry",
-                                      secondary=lexicalentry_to_lexicalentry_association,
-                                      primaryjoin=and_(
-                                          LexicalEntry.client_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_1_client_id,
-                                          LexicalEntry.object_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_1_object_id),
-                                      secondaryjoin=and_(
-                                          LexicalEntry.client_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_2_client_id,
-                                          LexicalEntry.object_id == lexicalentry_to_lexicalentry_association.c.lexicalentry_2_object_id),
-                                      backref=backref("linked_from"))
-
 
 # def track(self, publish):
 #     vec = []

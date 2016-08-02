@@ -174,13 +174,13 @@ def create_language(request):  # tested & in docs
 
 @view_config(route_name='get_languages', renderer='json', request_method='GET')
 def view_languages_list(request):  # tested & in docs
-    response = dict()
+    response = list()
     langs = []
     languages = DBSession.query(Language).filter_by(parent=None, marked_for_deletion=False).all()
     if languages:
         for lang in languages:
             langs += [language_info(lang, request)]
-    response['languages'] = langs
+    response = langs
 
     request.response.status = HTTPOk.code
     return response

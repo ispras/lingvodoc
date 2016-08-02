@@ -125,6 +125,7 @@ def login_post(request):  # tested
         if not locale_id:
             locale_id = 1
         response.set_cookie(key='locale_id', value=str(locale_id))
+        response.set_cookie(key='client_id', value=str(client.id))
         headers = remember(request, principal=client.id)
         return HTTPFound(location=next, headers=response.headers)
     return HTTPUnauthorized(location=request.route_url('login'))
@@ -153,6 +154,7 @@ def signin(request):  # TODO: find out if it used anywhere. And the get rid of i
         if not locale_id:
             locale_id = 1
         response.set_cookie(key='locale_id', value=str(locale_id))
+        response.set_cookie(key='client_id', value=str(client.id))
         result = dict()
         result['client_id'] = client.id
         request.response.status = HTTPOk.code
@@ -182,6 +184,7 @@ def login_cheat(request):  # TODO: test
         if not locale_id:
             locale_id = 1
         response.set_cookie(key='locale_id', value=str(locale_id))
+        response.set_cookie(key='client_id', value=str(client.id))
         headers = remember(request, principal=client.id)
         return response
 
