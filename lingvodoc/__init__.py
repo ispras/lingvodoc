@@ -584,6 +584,9 @@ def configure_routes(config):
     config.add_route(name='translation_search', pattern='/translation_search',
                      factory='lingvodoc.models.ApproveAllAcl')
 
+    config.add_route(name='translation_service_search', pattern='/translation_service_search',
+                     factory='lingvodoc.models.ApproveAllAcl')
+
 
 
 def main(global_config, **settings):
