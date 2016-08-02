@@ -55,6 +55,7 @@ def view_language(request):  # tested & in docs
             response['object_id'] = language.object_id
             response['translation_gist_client_id'] = language.translation_gist_client_id
             response['translation_gist_object_id'] = language.translation_gist_object_id
+            response['translation'] = language.get_translation(request.cookies['locale_id'])
             if language.locale:
                 response['locale_exist'] = True
             else:

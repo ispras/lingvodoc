@@ -122,6 +122,7 @@ def view_dictionary(request):  # tested & in docs
             response['object_id'] = dictionary.object_id
             response['status'] = dictionary.state
             response['additional_metadata'] = dictionary.additional_metadata
+            response['translation'] = dictionary.get_translation(request.cookies['locale_id'])
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code

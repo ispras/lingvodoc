@@ -259,7 +259,11 @@ def edit_perspective_meta(request):  # tested & in docs
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            req = request.json_body
+            try:
+                req = request.json_body
+            except ValueError:
+                request.response.status = HTTPBadRequest.code
+                return {'error': 'body is invalid json or empty'}
             if perspective.additional_metadata:
                 old_meta = json.loads(perspective.additional_metadata)
                 new_meta = req
@@ -294,8 +298,11 @@ def delete_perspective_meta(request):  # tested & in docs
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            req = request.json_body
-
+            try:
+                req = request.json_body
+            except ValueError:
+                request.response.status = HTTPBadRequest.code
+                return {'error': 'body is invalid json or empty'}
             old_meta = json.loads(perspective.additional_metadata)
             new_meta = req
             for entry in new_meta:

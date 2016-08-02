@@ -49,6 +49,8 @@ from sqlalchemy.ext.compiler import compiles
 
 import logging
 
+ENGLISH_LOCALE = 2
+
 log = logging.getLogger(__name__)
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
@@ -288,6 +290,21 @@ class RelationshipMixin(object):
 class TranslationMixin(object):
     translation_gist_client_id = Column(SLBigInteger())
     translation_gist_object_id = Column(SLBigInteger())
+
+    def get_translation(self, locale_id):
+        translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
+                                                                 parent_object_id=self.translation_gist_object_id,
+                                                                 locale_id=locale_id).first()
+        if translation is None:
+            translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
+                                                                     parent_object_id=self.translation_gist_object_id,
+                                                                     locale_id=ENGLISH_LOCALE).first()
+        if translation is not None:
+            return translation.content
+        log.warn("'translationgist' exists but there is no default (english) translation. "
+                 "translation_gist_client_id={0}, translation_gist_object_id={1}"
+                 .format(self.translation_gist_client_id, self.translation_gist_object_id))
+        return "Translation N/A"
 
 
 class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
