@@ -636,7 +636,7 @@ def view_perspective_roles(request):  # TODO: test
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'POST', permission='create')
-def edit_perspective_roles(request):  # TODO: test
+def edit_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -659,80 +659,79 @@ def edit_perspective_roles(request):  # TODO: test
         request.response.status = HTTPNotFound.code
         return {'error': str("No such dictionary in the system")}
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        if not perspective.marked_for_deletion:
-            if roles_users:
-                for role_name in roles_users:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
-                    if not base:
-                        request.response.status = HTTPNotFound.code
-                        return {'error': str("No such role in the system")}
+    if perspective and not perspective.marked_for_deletion:
+        if roles_users:
+            for role_name in roles_users:
+                base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
+                if not base:
+                    request.response.status = HTTPNotFound.code
+                    return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=object_id,
-                                                             subject_client_id=client_id).first()
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
 
-                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
-                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
-                    permitted = False
-                    if userlogged in group.users:
-                        permitted = True
-                    if not permitted:
-                        for org in userlogged.organizations:
-                            if org in group.organizations:
-                                permitted = True
-                                break
+                permitted = False
+                if userlogged in group.users:
+                    permitted = True
+                if not permitted:
+                    for org in userlogged.organizations:
+                        if org in group.organizations:
+                            permitted = True
+                            break
 
-                    if permitted:
-                        users = roles_users[role_name]
-                        for userid in users:
-                            user = DBSession.query(User).filter_by(id=userid).first()
-                            if user:
-                                if user not in group.users:
-                                    group.users.append(user)
-                    else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                if permitted:
+                    users = roles_users[role_name]
+                    for userid in users:
+                        user = DBSession.query(User).filter_by(id=userid).first()
+                        if user:
+                            if user not in group.users:
+                                group.users.append(user)
+                else:
+                    request.response.status = HTTPForbidden.code
+                    return {'error': str("Not enough permission")}
 
-            if roles_organizations:
-                for role_name in roles_organizations:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
-                    if not base:
-                        request.response.status = HTTPNotFound.code
-                        return {'error': str("No such role in the system")}
+        if roles_organizations:
+            for role_name in roles_organizations:
+                base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
+                if not base:
+                    request.response.status = HTTPNotFound.code
+                    return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=object_id,
-                                                             subject_client_id=client_id).first()
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
 
-                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
-                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
-                    permitted = False
-                    if userlogged in group.users:
-                        permitted = True
-                    if not permitted:
-                        for org in userlogged.organizations:
-                            if org in group.organizations:
-                                permitted = True
-                                break
+                permitted = False
+                if userlogged in group.users:
+                    permitted = True
+                if not permitted:
+                    for org in userlogged.organizations:
+                        if org in group.organizations:
+                            permitted = True
+                            break
 
-                    if permitted:
-                        orgs = roles_organizations[role_name]
-                        for orgid in orgs:
-                            org = DBSession.query(Organization).filter_by(id=orgid).first()
-                            if org:
-                                if org not in group.organizations:
-                                    group.organizations.append(org)
-                    else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                if permitted:
+                    orgs = roles_organizations[role_name]
+                    for orgid in orgs:
+                        org = DBSession.query(Organization).filter_by(id=orgid).first()
+                        if org:
+                            if org not in group.organizations:
+                                group.organizations.append(org)
+                else:
+                    request.response.status = HTTPForbidden.code
+                    return {'error': str("Not enough permission")}
 
-            request.response.status = HTTPOk.code
-            return response
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
