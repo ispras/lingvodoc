@@ -8,7 +8,7 @@ import ru.ispras.lingvodoc.frontend.app.model.{Field, Perspective, Dictionary, L
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils
 
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import scala.scalajs.js
 import scala.scalajs.js.Array
 import scala.scalajs.js.annotation.{JSExportAll, JSExport}
