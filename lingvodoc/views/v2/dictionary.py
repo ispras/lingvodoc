@@ -77,18 +77,6 @@ def create_dictionary(request):  # tested & in docs
         if additional_metadata:
             additional_metadata = json.dumps(additional_metadata)
 
-        subreq = Request.blank('/translation_service_search')
-        subreq.method = 'POST'
-        subreq.headers = request.headers
-        subreq.json = json.dumps({'searchstring': 'WiP'})
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-
-        if 'error' not in resp.json:
-            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
-        else:
-            raise KeyError("Something wrong with the base", resp.json['error'])
         dictionary = Dictionary(client_id=variables['auth'],
                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                 state_translation_gist_client_id=state_translation_gist_client_id,
@@ -121,7 +109,7 @@ def create_dictionary(request):  # tested & in docs
         return {'error': str(e)}
 
 
-@view_config(route_name='dictionary', renderer='json', request_method='GET')
+@view_config(route_name='dictionary', renderer='json', request_method='GET')  # Authors -- names of users, who can edit?
 def view_dictionary(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('client_id')
@@ -137,6 +125,7 @@ def view_dictionary(request):  # tested & in docs
         response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
         response['additional_metadata'] = dictionary.additional_metadata
+        response['translation'] = dictionary.get_translation(request.cookies['locale_id'])
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code

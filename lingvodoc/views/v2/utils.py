@@ -366,6 +366,7 @@ def view_perspective_from_object(request, perspective):
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
             response['additional_metadata'] = perspective.additional_metadata
+            response['translation'] = perspective.get_translation(request.cookies['locale_id'])
             if perspective.additional_metadata:
                 meta = json.loads(perspective.additional_metadata)
                 if 'location' in meta:
