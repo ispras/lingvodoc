@@ -13,7 +13,9 @@ from lingvodoc.models import (
     Group,
     LexicalEntry,
     Organization,
-    User
+    User,
+    TranslationAtom,
+    TranslationGist
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
@@ -259,7 +261,11 @@ def edit_perspective_meta(request):  # tested & in docs
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            req = request.json_body
+            try:
+                req = request.json_body
+            except ValueError:
+                request.response.status = HTTPBadRequest.code
+                return {'error': 'body is invalid json or empty'}
             if perspective.additional_metadata:
                 old_meta = json.loads(perspective.additional_metadata)
                 new_meta = req
@@ -294,8 +300,11 @@ def delete_perspective_meta(request):  # tested & in docs
             if perspective.parent != parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such pair of dictionary/perspective in the system")}
-            req = request.json_body
-
+            try:
+                req = request.json_body
+            except ValueError:
+                request.response.status = HTTPBadRequest.code
+                return {'error': 'body is invalid json or empty'}
             old_meta = json.loads(perspective.additional_metadata)
             new_meta = req
             for entry in new_meta:
@@ -505,8 +514,22 @@ def create_perspective(request):  # tested & in docs
             additional_metadata = coord
         additional_metadata = json.dumps(additional_metadata)
 
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = json.dumps({'searchstring': 'WiP'})
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
         perspective = DictionaryPerspective(client_id=variables['auth'],
-                                            state='WiP',
+                                            state_translation_gist_object_id=state_translation_gist_object_id,
+                                            state_translation_gist_client_id=state_translation_gist_client_id,
                                             parent=parent,
                                             import_source=req.get('import_source'),
                                             import_hash=req.get('import_hash'),
@@ -613,7 +636,7 @@ def view_perspective_roles(request):  # TODO: test
 
 
 @view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'POST', permission='create')
-def edit_perspective_roles(request):  # TODO: test
+def edit_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
@@ -636,80 +659,79 @@ def edit_perspective_roles(request):  # TODO: test
         request.response.status = HTTPNotFound.code
         return {'error': str("No such dictionary in the system")}
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        if not perspective.marked_for_deletion:
-            if roles_users:
-                for role_name in roles_users:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
-                    if not base:
-                        request.response.status = HTTPNotFound.code
-                        return {'error': str("No such role in the system")}
+    if perspective and not perspective.marked_for_deletion:
+        if roles_users:
+            for role_name in roles_users:
+                base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
+                if not base:
+                    request.response.status = HTTPNotFound.code
+                    return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=object_id,
-                                                             subject_client_id=client_id).first()
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
 
-                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
-                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
-                    permitted = False
-                    if userlogged in group.users:
-                        permitted = True
-                    if not permitted:
-                        for org in userlogged.organizations:
-                            if org in group.organizations:
-                                permitted = True
-                                break
+                permitted = False
+                if userlogged in group.users:
+                    permitted = True
+                if not permitted:
+                    for org in userlogged.organizations:
+                        if org in group.organizations:
+                            permitted = True
+                            break
 
-                    if permitted:
-                        users = roles_users[role_name]
-                        for userid in users:
-                            user = DBSession.query(User).filter_by(id=userid).first()
-                            if user:
-                                if user not in group.users:
-                                    group.users.append(user)
-                    else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                if permitted:
+                    users = roles_users[role_name]
+                    for userid in users:
+                        user = DBSession.query(User).filter_by(id=userid).first()
+                        if user:
+                            if user not in group.users:
+                                group.users.append(user)
+                else:
+                    request.response.status = HTTPForbidden.code
+                    return {'error': str("Not enough permission")}
 
-            if roles_organizations:
-                for role_name in roles_organizations:
-                    base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
-                    if not base:
-                        request.response.status = HTTPNotFound.code
-                        return {'error': str("No such role in the system")}
+        if roles_organizations:
+            for role_name in roles_organizations:
+                base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
+                if not base:
+                    request.response.status = HTTPNotFound.code
+                    return {'error': str("No such role in the system")}
 
-                    group = DBSession.query(Group).filter_by(base_group_id=base.id,
-                                                             subject_object_id=object_id,
-                                                             subject_client_id=client_id).first()
+                group = DBSession.query(Group).filter_by(base_group_id=base.id,
+                                                         subject_object_id=object_id,
+                                                         subject_client_id=client_id).first()
 
-                    client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
+                client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
 
-                    userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
+                userlogged = DBSession.query(User).filter_by(id=client.user_id).first()
 
-                    permitted = False
-                    if userlogged in group.users:
-                        permitted = True
-                    if not permitted:
-                        for org in userlogged.organizations:
-                            if org in group.organizations:
-                                permitted = True
-                                break
+                permitted = False
+                if userlogged in group.users:
+                    permitted = True
+                if not permitted:
+                    for org in userlogged.organizations:
+                        if org in group.organizations:
+                            permitted = True
+                            break
 
-                    if permitted:
-                        orgs = roles_organizations[role_name]
-                        for orgid in orgs:
-                            org = DBSession.query(Organization).filter_by(id=orgid).first()
-                            if org:
-                                if org not in group.organizations:
-                                    group.organizations.append(org)
-                    else:
-                        request.response.status = HTTPForbidden.code
-                        return {'error': str("Not enough permission")}
+                if permitted:
+                    orgs = roles_organizations[role_name]
+                    for orgid in orgs:
+                        org = DBSession.query(Organization).filter_by(id=orgid).first()
+                        if org:
+                            if org not in group.organizations:
+                                group.organizations.append(org)
+                else:
+                    request.response.status = HTTPForbidden.code
+                    return {'error': str("Not enough permission")}
 
-            request.response.status = HTTPOk.code
-            return response
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
@@ -828,14 +850,18 @@ def view_perspective_status(request):  # tested & in docs
         return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
-            response['status'] = perspective.state
-            request.response.status = HTTPOk.code
-            return response
+    if perspective and not perspective.marked_for_deletion:
+        if perspective.parent != parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such pair of dictionary/perspective in the system")}
+        response['state_translation_gist_client_id'] = perspective.state_translation_gist_client_id
+        response['state_translation_gist_object_id'] = perspective.state_translation_gist_object_id
+        atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=perspective.state_translation_gist_client_id,
+                                                          parent_object_id=perspective.state_translation_gist_object_id,
+                                                          locale_id=int(request.cookies['locale_id'])).first()
+        response['status'] = atom.content
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 

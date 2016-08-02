@@ -361,10 +361,12 @@ def view_perspective_from_object(request, perspective):
             response['object_id'] = perspective.object_id
             response['translation_gist_client_id'] = perspective.translation_gist_client_id
             response['translation_gist_object_id'] = perspective.translation_gist_object_id
-            response['status'] = perspective.state
+            response['state_translation_gist_client_id'] = perspective.state_translation_gist_client_id
+            response['state_translation_gist_object_id'] = perspective.state_translation_gist_object_id
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
             response['additional_metadata'] = perspective.additional_metadata
+            response['translation'] = perspective.get_translation(request.cookies['locale_id'])
             if perspective.additional_metadata:
                 meta = json.loads(perspective.additional_metadata)
                 if 'location' in meta:
