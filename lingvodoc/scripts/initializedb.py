@@ -30,6 +30,7 @@ from ..models import (
 
 import json
 
+test_init = True
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
@@ -175,7 +176,7 @@ def data_init(manager, accounts):
             for key in translations[translation_string]:
                 if key != 'type':
                     contents.append((translations[translation_string][key], key))
-            create_translation(client_id=client.id, contents=contents, gist_type=gist_type)
+            last_gist = create_translation(client_id=client.id, contents=contents, gist_type=gist_type)
 
         create_gist_from_string("Can create dictionaries")
         base_groups.append(BaseGroup(name="Can create dictionaries",
@@ -359,6 +360,71 @@ def data_init(manager, accounts):
                 if not adm_group in admin_account.groups:
                     admin_account.groups.append(adm_group)
         DBSession.flush()
+
+
+
+        if test_init:
+            try:
+                test_account = User(login="Test",
+                                     name="Test",
+                                     intl_name="Test"
+                                     )
+                test_pwd = Passhash(password="123456")
+                test_email = Email(email="test@test.ru")
+                test_account.password = test_pwd
+                DBSession.add(test_pwd)
+                DBSession.add(test_account)
+                DBSession.flush()
+                test_client = Client(user_id=test_account.id)
+                test_email.user = test_account
+                DBSession.add(test_email)
+                DBSession.add(test_client)
+                basegroups = []
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create dictionaries").first()]
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create languages").first()]
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create organizations").first()]
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create translation strings").first()]
+                groups = []
+                for base in basegroups:
+                    groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]
+                for group in groups:
+                    if group not in test_account.groups:
+                        test_account.groups.append(group)
+                DBSession.flush()
+
+
+                translationatom = DBSession.query(TranslationAtom)\
+                    .join(TranslationGist).\
+                    filter(TranslationAtom.content == "WiP",
+                           TranslationAtom.locale_id == 2,
+                           TranslationGist.type == 'Service')\
+                    .one()
+                state_gist = translationatom.parent
+
+                test_dict = Dictionary(client_id=test_client.id,
+                                       translation_gist_client_id=last_gist.client_id,
+                                       translation_gist_object_id=last_gist.object_id,
+                                       parent_client_id=russian_language.client_id,
+                                       parent_object_id=russian_language.object_id,
+                                       state_translation_gist_client_id=state_gist.client_id,
+                                       state_translation_gist_object_id=state_gist.object_id)
+                DBSession.add(test_dict)
+                DBSession.flush()
+
+                test_persp = DictionaryPerspective(client_id=test_client.id,
+                                                   translation_gist_client_id=last_gist.client_id,
+                                                   translation_gist_object_id=last_gist.object_id,
+                                                   parent_client_id=test_dict.client_id,
+                                                   parent_object_id=test_dict.object_id,
+                                                   state_translation_gist_client_id=state_gist.client_id,
+                                                   state_translation_gist_object_id=state_gist.object_id)
+                DBSession.add(test_persp)
+                DBSession.flush()
+
+            except:
+                print('couldn\'t create all test data')
+                pass
+
 
         # fake_dictionary = Dictionary(client_id=client.id,
         #                              #object_id=1,
