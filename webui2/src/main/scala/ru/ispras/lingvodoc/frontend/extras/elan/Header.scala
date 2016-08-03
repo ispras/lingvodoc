@@ -3,7 +3,10 @@ package ru.ispras.lingvodoc.frontend.extras.elan
 import org.scalajs.dom._
 import org.scalajs.jquery.JQuery
 
+import scala.scalajs.js.annotation.JSExportAll
+
 // Represents HEADER element
+@JSExportAll
 class Header(headerXML: JQuery) {
   headerXML.attr(Header.mfAttrName).foreach(mf => console.log(s"WARN: ${Header.mfAttrName} attribute is deprecated and ignored by ELAN"))
   headerXML.attr(Header.timeUnits.name).filterNot(_ == Header.timeUnits.value).
@@ -23,6 +26,7 @@ object Header {
 }
 
 // Represents MEDIA_DESCRIPTOR element
+@JSExportAll
 class MediaDescriptor (mdXML: JQuery) {
   val mediaURL = RequiredXMLAttr(mdXML, MediaDescriptor.muAttrName)
   val mimeType = RequiredXMLAttr(mdXML, MediaDescriptor.mtAttrName)
@@ -48,6 +52,7 @@ object MediaDescriptor {
 }
 
 // Represents LINKED_FILE_DESCRIPTOR element
+@JSExportAll
 class LinkedFileDescriptor private(lfdXML: JQuery) {
   val linkURL = RequiredXMLAttr(lfdXML, LinkedFileDescriptor.luAttrName)
   val mimeType = RequiredXMLAttr(lfdXML, LinkedFileDescriptor.mtAttrName)

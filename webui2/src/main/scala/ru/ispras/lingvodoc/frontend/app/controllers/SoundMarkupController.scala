@@ -1,15 +1,17 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import org.scalajs.dom
+import scala.collection.mutable
+import scala.scalajs.js
 import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
 import com.greencatsoft.angularjs.core.Scope
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
-import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, ELANDocumentJquery}
+import ru.ispras.lingvodoc.frontend.extras.elan.{Tier, ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.console
-import org.scalajs.jquery.jQuery
+import scala.scalajs.js.JSConverters._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
@@ -17,8 +19,10 @@ import scala.scalajs.js.annotation.JSExport
 
 @js.native
 trait SoundMarkupScope extends Scope {
-  var blabla: String = js.native
-  var blabla2: String = js.native
+  var elan: ELANDocumentJquery = js.native
+  var tiersjs: js.Array[Tier] = js.native
+  var i: Int = js.native
+  var arr: js.Array[Int] = js.native
 }
 
 @injectable("SoundMarkupController")
@@ -33,6 +37,11 @@ class SoundMarkupController(scope: SoundMarkupScope,
   val soundAddress = params.get("soundAddress").map(_.toString)
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
+  scope.i = 10
+  scope.arr = js.Array()
+  scope.arr = scope.arr :+ 5
+  scope.arr = scope.arr :+ 10
+  scope.arr = scope.arr :+ 15
 
   (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
     backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
@@ -88,6 +97,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
 <ANNOTATION_VALUE>(ЛЗС)</ANNOTATION_VALUE>
 </ALIGNABLE_ANNOTATION>
 </ANNOTATION>
+</TIER>
+<TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="Translation" TIER_ID="Ann">
 <ANNOTATION>
 <REF_ANNOTATION ANNOTATION_ID="ref1" ANNOTATION_REF="a5">
 <ANNOTATION_VALUE>haha</ANNOTATION_VALUE>
@@ -124,8 +135,9 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
 <EXTERNAL_REF EXT_REF_ID="er4" TYPE="iso12620" VALUE="http://www.isocat.org/datcat/DC-1333"/>
 </ANNOTATION_DOCUMENT>
       """
-      val elan = ELANDocumentJquery(test_markup)
-      console.log(elan.toString)
+      scope.elan = ELANDocumentJquery(test_markup)
+      scope.tiersjs = scope.elan.tiers.toJSArray
+    console.log(scope.elan.toString)
 //    val lt = xml.find("LINGUISTIC_TYPE")
 ////    val test = xml.find("test")
 //    console.log(markup)
