@@ -89,6 +89,7 @@ def create_dictionary(request):  # tested & in docs
             state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
+
         dictionary = Dictionary(client_id=variables['auth'],
                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                 state_translation_gist_client_id=state_translation_gist_client_id,
