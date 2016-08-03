@@ -113,7 +113,7 @@ def login_get(request):
     return render_to_response('templates/login.pt', variables, request=request)
 
 
-@view_config(route_name='login', request_method='POST')
+@view_config(route_name='login', request_method='POST', renderer='json')
 def login_post(request):  # tested
     next = request.params.get('next') or request.route_url('home')
     login = request.POST.get('login', '')
@@ -135,7 +135,8 @@ def login_post(request):  # tested
         response.set_cookie(key='locale_id', value=str(locale_id))
         response.set_cookie(key='client_id', value=str(client.id))
         headers = remember(request, principal=client.id)
-        return HTTPFound(location=next, headers=response.headers)
+        # return HTTPFound(location=next, headers=response.headers)
+        return {}
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
