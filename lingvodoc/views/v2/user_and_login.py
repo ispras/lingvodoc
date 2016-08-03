@@ -92,7 +92,7 @@ def signup_post(request):  # tested
             if group not in new_user.groups:
                 new_user.groups.append(group)
         DBSession.flush()
-        return login_post(request)
+        return {}
 
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
