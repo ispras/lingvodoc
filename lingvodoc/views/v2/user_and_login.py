@@ -52,14 +52,22 @@ def signup_get(request):
 @view_config(route_name='signup', renderer='json', request_method='POST')
 def signup_post(request):  # tested
     try:
-        login = request.POST.getone('login')
-        name = request.POST.getone('name')
-        email = request.POST.getone('email')
-        password = request.POST.getone('password')
+        req = request.json_body
+        login = req['login']
+        # login = request.POST.getone('login')
+        name = req['name']
+        # name = request.POST.getone('name')
+        email = req['email']
+        # email = request.POST.getone('email')
+        password = req['password']
+        # password = request.POST.getone('password')
 
-        day = request.POST.get('day', "1")
-        month = request.POST.get('month', "1")
-        year = request.POST.get('year', "1970")
+        day = req.get('day', "1")
+        # day = request.POST.get('day', "1")
+        month = req.get('month', "1")
+        # month = request.POST.get('month', "1")
+        year = req.get('year', "1970")
+        # year = request.POST.get('year', "1970")
         birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
 
         if DBSession.query(User).filter_by(login=login).first():
