@@ -482,6 +482,9 @@ def create_perspective(request):  # tested & in docs
         parent_client_id = request.matchdict.get('dictionary_client_id')
         parent_object_id = request.matchdict.get('dictionary_object_id')
 
+        if "json_body" not in request.__dict__:
+            request.response.status = HTTPBadRequest
+            return {'error': "invalid json"}
         if type(request.json_body) == str:
             req = json.loads(request.json_body)
         else:
@@ -664,6 +667,7 @@ def edit_perspective_roles(request):
             for role_name in roles_users:
                 base = DBSession.query(BaseGroup).filter_by(name=role_name, perspective_default=True).first()
                 if not base:
+                    log.debug("Not found role: " + role_name)
                     request.response.status = HTTPNotFound.code
                     return {'error': str("No such role in the system")}
 

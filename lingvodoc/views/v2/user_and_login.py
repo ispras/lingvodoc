@@ -54,21 +54,22 @@ def signup_post(request):  # tested
     try:
         req = request.json_body
         login = req['login']
-        # login = request.POST.getone('login')
         name = req['name']
-        # name = request.POST.getone('name')
         email = req['email']
-        # email = request.POST.getone('email')
         password = req['password']
-        # password = request.POST.getone('password')
 
-        day = req.get('day', "1")
-        # day = request.POST.get('day', "1")
-        month = req.get('month', "1")
-        # month = request.POST.get('month', "1")
-        year = req.get('year', "1970")
-        # year = request.POST.get('year', "1970")
-        birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
+        day = req.get('day')
+        month = req.get('month')
+        year = req.get('year')
+        if day is None or month is None or year is None:
+            request.response.status = HTTPBadRequest.code
+            return {'Error': "day, month or year of the birth is missing"}
+        # birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
+        try:
+            birthday = datetime.date(year, month, day)
+        except ValueError:
+            request.response.status = HTTPBadRequest.code
+            return {'Error': "Invalid birthday"}
 
         if DBSession.query(User).filter_by(login=login).first():
             raise CommonException("The user with this login is already registered")
@@ -137,7 +138,6 @@ def login_post(request):  # tested
         headers = remember(request, principal=client.id)
         return HTTPFound(location=next, headers=response.headers)
     return HTTPUnauthorized(location=request.route_url('login'))
-
 
 
 @view_config(route_name='signin', renderer='json', request_method='POST')
@@ -248,17 +248,8 @@ def users_list(request):  # tested
 @view_config(route_name='get_user_info', renderer='json', request_method='GET')
 def get_user_info(request):  # tested
     response = dict()
-    client_id = None
-    try:
-        client_id = request.params.get('client_id')
-    except:
-        pass
-    user_id=None
-    try:
-        user_id = request.params.get('user_id')
-    except:
-        pass
-    user = None
+    client_id = request.params.get('client_id')
+    user_id = request.params.get('user_id')
     if client_id:
         client = DBSession.query(Client).filter_by(id=client_id).first()
         if not client:
@@ -267,7 +258,6 @@ def get_user_info(request):  # tested
             return {'error': str("No such client in the system")}
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
-
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
     elif user_id:
@@ -284,14 +274,14 @@ def get_user_info(request):  # tested
         if not user:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such user in the system")}
-    response['id']=user.id
-    response['login']=user.login
-    response['name']=user.name
-    response['intl_name']=user.intl_name
-    response['default_locale_id']=user.default_locale_id
-    response['birthday']=str(user.birthday)
-    response['signup_date']=str(user.signup_date)
-    response['is_active']=str(user.is_active)
+    response['id']= user.id
+    response['login'] = user.login
+    response['name'] = user.name
+    response['intl_name'] = user.intl_name
+    response['default_locale_id'] = user.default_locale_id
+    response['birthday'] = str(user.birthday)
+    response['signup_date'] = str(user.signup_date)
+    response['is_active'] = str(user.is_active)
     email = None
     if user.email:
         for em in user.email:
@@ -318,16 +308,8 @@ def edit_user_info(request):  # TODO: test
     response = dict()
 
     req = request.json_body
-    client_id = None
-    try:
-        client_id = req.get('client_id')
-    except:
-        pass
-    user_id=None
-    try:
-        user_id = req.get('user_id')
-    except:
-        pass
+    client_id = req.get('client_id')
+    user_id = req.get('user_id')
     user = None
     if client_id:
         client = DBSession.query(Client).filter_by(id=client_id).first()
@@ -373,13 +355,17 @@ def edit_user_info(request):  # TODO: test
         user.default_locale_id = default_locale_id
     birthday = req.get('birthday')
     if birthday:
-        user.birthday = datetime.date(birthday)
+        try:
+            year, month, day = birthday.split('-')
+            user.birthday = datetime.date(int(year), int(month), int(day))
+        except ValueError:
+            request.response.status = HTTPBadRequest.code
+            return {'Error': "Invalid birthday"}
     email = req.get('email')
     if email:
         if user.email:
             for em in user.email:
-
-                    em.email = email
+                em.email = email
         else:
             new_email = Email(user=user, email=email)
             DBSession.add(new_email)
@@ -390,7 +376,7 @@ def edit_user_info(request):  # TODO: test
             for ab in user.about:
                 ab.content = req['about']
         else:
-            new_about = About(user=user, about=about)
+            new_about = About(user=user, content=about)
             DBSession.add(new_about)
             DBSession.flush()
     # response['is_active']=str(user.is_active)
