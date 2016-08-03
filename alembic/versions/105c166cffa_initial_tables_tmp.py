@@ -88,6 +88,7 @@ def upgrade():
     sa.Column('state_translation_gist_object_id', SLBigInteger(), nullable=True),
     sa.Column('marked_for_deletion', sa.Boolean(), nullable=True),
     sa.Column('additional_metadata', sa.UnicodeText(), nullable=True),
+    sa.Column('category', sa.UnicodeText(), nullable=True),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['language.object_id', 'language.client_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )

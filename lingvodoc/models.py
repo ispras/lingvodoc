@@ -356,7 +356,7 @@ class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Crea
     state_translation_gist_object_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False)
     additional_metadata = Column(UnicodeText)
-    # about = Column(UnicodeText)
+    category = Column(UnicodeText)
 
 
 class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin,
