@@ -9,7 +9,6 @@ import google.maps.LatLng
 import google.maps.Data.Feature
 import google.maps.LatLng
 import org.scalajs.dom._
-import ru.ispras.lingvodoc.frontend.app.model.Location
 
 import scala.scalajs.js
 import js.annotation.JSExport
@@ -48,20 +47,21 @@ class PerspectiveMapController(scope: PerspectiveMapScope,
   @JSExport
   def drawLocations() = {
 
-    scope.labels = scope.labels :+ Location(51.601203, -1.711370) :+ Location(51.801203, -1.774370) :+ Location(52.201203, -1.734370)
+
+
 
 
     console.log(scope.labels)
 
-    scope.labels.toSeq.foreach {
-      location =>
-        val position = new LatLng(location.lat, location.lng)
-        val marker = new google.maps.Marker(google.maps.MarkerOptions(
-          position = position,
-          map = scope.map,
-          title = "Marker"
-        ))
-    }
+//    scope.labels.toSeq.foreach {
+//      location =>
+//        val position = new LatLng(location.lat, location.lng)
+//        val marker = new google.maps.Marker(google.maps.MarkerOptions(
+//          position = position,
+//          map = scope.map,
+//          title = "Marker"
+//        ))
+//    }
   }
 
 

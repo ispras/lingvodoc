@@ -40,45 +40,13 @@ def testing(request):
     return{'words': [{'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 2, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 2, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 0', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 2, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 2, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 1, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 3, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 1', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 3, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 6, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 2, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 6, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 4', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 6, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 7, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 5, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 4, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 4, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 2', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 4, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 4, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 3, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 5, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 5, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 3', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 5, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 5, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 4, 'client_id': 13, 'contains': None}]}}]}
 
 
-@view_config(route_name='home', renderer='templates/home.pt', request_method='GET')
-def home_get(request):
+@view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
+def main_get(request):
     client_id = authenticated_userid(request)
     user = get_user_by_client_id(client_id)
     variables = {'client_id': client_id, 'user': user}
-    return render_to_response('templates/home.pt', variables, request=request)
+    return render_to_response('templates/main.pt', variables, request=request)
 
-
-@view_config(route_name='dashboard', renderer='templates/dashboard.pt', request_method='GET')
-def dashboard_get(request):
-    client_id = authenticated_userid(request)
-    user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
-    variables = {'client_id': client_id, 'user': user}
-    return render_to_response('templates/dashboard.pt', variables, request=request)
-
-
-@view_config(route_name='merge_master', renderer='templates/merge_master.pt', request_method='GET')
-def merge_master_get(request):
-    client_id = authenticated_userid(request)
-    user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
-    variables = {'client_id': client_id, 'user': user }
-    return render_to_response('templates/merge_master.pt', variables, request=request)
-
-
-@view_config(route_name='maps', renderer='templates/maps.pt', request_method='GET')
-def maps_get(request):
-    client_id = authenticated_userid(request)
-    user = get_user_by_client_id(client_id)
-    if user is None:
-        response = Response()
-        return HTTPFound(location=request.route_url('login'), headers=response.headers)
-    variables = {'client_id': client_id, 'user': user }
-    return render_to_response('templates/maps.pt', variables, request=request)
 
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
