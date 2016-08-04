@@ -880,49 +880,6 @@ def dictionaries_list(request):  # TODO: test
         response['clients'] = cli
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
 
-    # if author:
-    #     user = DBSession.query(User).filter_by(id=author).first()
-    #     dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
-    #     isadmin = False
-    #     for group in user.groups:
-    #         if group.parent.dictionary_default:
-    #             if group.subject_override:
-    #                 isadmin = True
-    #                 break
-    #             dcttmp = (group.subject_client_id, group.subject_object_id)
-    #             if dcttmp not in dictstemp:
-    #                 dictstemp += [dcttmp]
-    #         if group.parent.perspective_default:
-    #             if group.subject_override:
-    #                 isadmin = True
-    #                 break
-    #             dicti = DBSession.query(Dictionary) \
-    #                 .join(DictionaryPerspective) \
-    #                 .filter_by(client_id=group.subject_client_id,
-    #                            object_id=group.subject_object_id) \
-    #                 .first()
-    #             if dicti:
-    #                 dcttmp = (dicti.client_id, dicti.object_id)
-    #                 if dcttmp not in dictstemp:
-    #                     dictstemp += [dcttmp]
-    #
-    #     if not isadmin:
-    #         # dictstemp = [o for o in dictstemp]
-    #         if dictstemp:
-    #             # print(len(dictstemp))
-    #             #
-    #             # prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-    #             # for dicti in dictstemp:
-    #             #     prevdicts = prevdicts.subquery().select()
-    #             #     prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
-    #             #
-    #             # dicts = prevdicts
-    #             dicts = dicts.filter(tuple_(Dictionary.client_id, Dictionary.object_id).in_(dictstemp))
-    #
-    #         else:
-    #             dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-
-
     if languages:
         langs = []
         for lan in languages:
@@ -1000,8 +957,6 @@ def dictionaries_list(request):  # TODO: test
             dictionaries += [resp.json]
     # return {'count': dicts.count()}
 
-
-
     if author:
         user = DBSession.query(User).filter_by(id=author).first()
         dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
@@ -1028,15 +983,6 @@ def dictionaries_list(request):  # TODO: test
                     if dcttmp not in dictstemp:
                         dictstemp += [dcttmp]
         if not isadmin:
-            # dictstemp = [o for o in dictstemp]
-            # print(len(dictstemp))
-            #
-            # prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-            # for dicti in dictstemp:
-            #     prevdicts = prevdicts.subquery().select()
-            #     prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(prevdicts)
-            #
-            # dicts = prevdicts
             dictionaries = [o for o in dictionaries if (o['client_id'], o['object_id']) in dictstemp]
     response['dictionaries'] = dictionaries
     request.response.status = HTTPOk.code
