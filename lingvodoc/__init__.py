@@ -1,6 +1,9 @@
 import logging
+from configparser import (
+    ConfigParser,
+    NoSectionError
+)
 
-from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
@@ -9,18 +12,11 @@ from .models import (
     DBSession,
     Base,
     )
-
-from lingvodoc.caching import (
+from lingvodoc.cache.caching import (
     initialize_cache
 )
-
 from .acl import (
     groupfinder
-)
-
-from configparser import (
-    ConfigParser,
-    NoSectionError
 )
 
 def configure_routes(config):
@@ -595,7 +591,7 @@ def main(global_config, **settings):
     config_file = global_config['__file__']
     parser = ConfigParser()
     parser.read(config_file)
-    #TODO: DANGER
+    # TODO: DANGER
     storage = dict()
     for k, v in parser.items('backend:storage'):
         storage[k] = v
@@ -603,7 +599,7 @@ def main(global_config, **settings):
     config = Configurator(settings=settings)
     log = logging.getLogger(__name__)
 
-    #TODO: Find a more neat way
+    # TODO: Find a more neat way
     try:
         cache_kwargs = dict()
         for k, v in parser.items('cache:dogpile'):
