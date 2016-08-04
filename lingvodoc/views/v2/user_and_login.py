@@ -142,7 +142,7 @@ def login_post(request):  # tested
 
 
 @view_config(route_name='signin', renderer='json', request_method='POST')
-def signin(request):  # TODO: find out if it used anywhere. And the get rid of it
+def signin(request):
     next = request.params.get('next') or request.route_url('home')
     req = request.json_body
     login = req['login']
@@ -169,7 +169,8 @@ def signin(request):  # TODO: find out if it used anywhere. And the get rid of i
         request.response.status = HTTPOk.code
         # request.response.headers = headers
         # return response
-        return HTTPOk(headers=headers, json_body=result)
+        # return HTTPOk(headers=headers, json_body=result)
+        return result
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
