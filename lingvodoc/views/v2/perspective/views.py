@@ -363,17 +363,20 @@ def view_perspective_tree(request):  # tested & in docs
     if perspective:
         if not perspective.marked_for_deletion:
             tree = []
-            tree.append({'type': 'perspective',
-                         'translation_gist_client_id': perspective.translation_gist_client_id,
-                         'translation_gist_object_id': perspective.translation_gist_object_id,
-                         'client_id': perspective.client_id,
-                         'object_id': perspective.object_id,
-                         'parent_client_id': perspective.parent_client_id,
-                         'parent_object_id': perspective.parent_object_id,
-                         'is_template': perspective.is_template,
-                         'marked_for_deletion': perspective.marked_for_deletion,
-                         'status': perspective.state
-                         })
+            resp = view_perspective_from_object(request, perspective)
+            # tree.append({'type': 'perspective',
+            #              'translation_gist_client_id': perspective.translation_gist_client_id,
+            #              'translation_gist_object_id': perspective.translation_gist_object_id,
+            #              'client_id': perspective.client_id,
+            #              'object_id': perspective.object_id,
+            #              'parent_client_id': perspective.parent_client_id,
+            #              'parent_object_id': perspective.parent_object_id,
+            #              'is_template': perspective.is_template,
+            #              'marked_for_deletion': perspective.marked_for_deletion,
+            #              'status': perspective.state
+            #              })
+            resp.update({"type": "perspective"})
+            tree.append(resp)
             dictionary = perspective.parent
             path = request.route_url('dictionary',
                                  client_id=dictionary.client_id,
@@ -879,19 +882,22 @@ def edit_perspective_status(request):  # tested & in docs
         return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
-
-            if type(request.json_body) == str:
-                req = json.loads(request.json_body)
-            else:
-                req = request.json_body
-            perspective.state = req['status']
-            request.response.status = HTTPOk.code
-            return response
+    if perspective and not perspective.marked_for_deletion:
+        if perspective.parent != parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such pair of dictionary/perspective in the system")}
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
+        perspective.state_translation_gist_client_id = req['state_translation_gist_client_id']
+        perspective.state_translation_gist_object_id = req['state_translation_gist_object_id']
+        atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=req['state_translation_gist_client_id'],
+                                                          parent_object_id=req['state_translation_gist_object_id'],
+                                                          locale_id=int(request.cookies['locale_id'])).first()
+        response['status'] = atom.content
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such perspective in the system")}
 
