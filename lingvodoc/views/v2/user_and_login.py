@@ -143,7 +143,6 @@ def login_post(request):  # tested
 
 @view_config(route_name='signin', renderer='json', request_method='POST')
 def signin(request):
-    next = request.params.get('next') or request.route_url('home')
     req = request.json_body
     login = req['login']
     password = req['password']
