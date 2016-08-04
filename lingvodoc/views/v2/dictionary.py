@@ -828,19 +828,19 @@ def edit_dictionary_status(request):  # tested & in docs
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     dictionary = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
-    if dictionary:
-        if not dictionary.marked_for_deletion:
-
-            if type(request.json_body) == str:
-                req = json.loads(request.json_body)
-            else:
-                req = request.json_body
-            status = req['status']
-            dictionary.state = status
-            DBSession.add(dictionary)
-            request.response.status = HTTPOk.code
-            response['status'] = status
-            return response
+    if dictionary and not dictionary.marked_for_deletion:
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
+        dictionary.state_translation_gist_client_id = req['state_translation_gist_client_id']
+        dictionary.state_translation_gist_object_id = req['state_translation_gist_object_id']
+        atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=req['state_translation_gist_client_id'],
+                                                          parent_object_id=req['state_translation_gist_object_id'],
+                                                          locale_id=int(request.cookies['locale_id'])).first()
+        response['status'] = atom.content
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such dictionary in the system")}
 
