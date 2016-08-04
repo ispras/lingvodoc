@@ -136,7 +136,8 @@ def login_post(request):  # tested
         response.set_cookie(key='client_id', value=str(client.id))
         headers = remember(request, principal=client.id)
         # return HTTPFound(location=next, headers=response.headers)
-        return {}
+        return HTTPOk(headers=response.headers, json_body={})
+        # return {}
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
@@ -168,8 +169,8 @@ def signin(request):
         request.response.status = HTTPOk.code
         # request.response.headers = headers
         # return response
-        # return HTTPOk(headers=headers, json_body=result)
-        return result
+        return HTTPOk(headers=response.headers, json_body=result)
+        # return result
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
