@@ -53,6 +53,7 @@ class Tier(val tierID: RequiredXMLAttr[String], val linguisticTypeRef:RequiredXM
   }
 
   def annotationsToJSArray = annotations.toJSArray
+  def refAnnotationsToJSArray = getRefAnnotations.toJSArray
 
   def attrsToString = s"$tierID $linguisticTypeRef $participant $annotator $defaultLocale $parentRef"
   override def toString = Utils.wrap(Tier.tagName, annotations.mkString("\n"), attrsToString)
@@ -66,10 +67,11 @@ object Tier {
     )
 }
 
+// Functionality which either alignable and ref annotations have
 trait AbstractAnnotation {
   val parent: Tier
-//  def start: Long
-//  def end: Long
+  def start: Int
+  def end: Int
   var text: String
   def includedAnnotationToString: String
   override def toString = Utils.wrap(AbstractAnnotation.tagName, includedAnnotationToString)
@@ -117,6 +119,9 @@ class AlignableAnnotation(val timeSlotRef1: RequiredXMLAttr[String], val timeSlo
     parent
   )
 
+  def start = parent.parent.getTimeSlotValue(timeSlotRef1.value)
+  def end = parent.parent.getTimeSlotValue(timeSlotRef2.value)
+
   override def attrsToString = super.attrsToString + s"$timeSlotRef1 $timeSlotRef2 $svgRef"
   def includedAnnotationToString = Utils.wrap(AlignableAnnotation.tagName, content, attrsToString)
 }
@@ -135,12 +140,17 @@ object AlignableAnnotation {
 class RefAnnotation(val annotationRef: RequiredXMLAttr[String], val previousAnnotation: OptionalXMLAttr[String],
                     aag: AnnotationAttributeGroup, val parent: Tier)
   extends AnnotationAttributeGroup(aag) with AbstractAnnotation {
+  private lazy val parentAnnotation = parent.parent.getAlignableAnnotationByID(annotationRef.value)
+
   private def this(refAnnotXML: JQuery, parent: Tier) = this(
     RequiredXMLAttr(refAnnotXML, RefAnnotation.annotRefAttrName),
     OptionalXMLAttr(refAnnotXML, RefAnnotation.prevAnnotAttrName),
     new AnnotationAttributeGroup(refAnnotXML),
     parent
   )
+
+  def start = parentAnnotation.start
+  def end = parentAnnotation.end
 
   override def attrsToString = super.attrsToString + s"$annotationRef $previousAnnotation"
   def includedAnnotationToString = Utils.wrap(RefAnnotation.tagName, content, attrsToString)

@@ -22,6 +22,8 @@ object WaveSurferOpts {
 @js.native
 trait WaveSurfer extends js.Object {
   def load(url: String): js.Any = js.native
+  def playPause(): js.Any = js.native
+  def play(start: Int = 0, end: Int = Int.MaxValue): js.Any = js.native
 }
 
 @js.native

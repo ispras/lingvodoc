@@ -39,6 +39,7 @@ private [elan] object Utils {
   // attribute value doesn't make sense. Examples are MEDIA_DESCRIPTOR and LINKED_FILE_DESCRIPTOR. In this case,
   // we will read all of them and perceive the last tag attrs as having highest priority. This method does the job:
   // it reads all of them sequentially and takes new values as it goes
+  // TODO: perhaps several MEDIA_DESCRIPTORS make sense?
   def fromMultiple[T](xmls: JQuery, apply: (JQuery => T), join: (T, T) => T): Option[T] =
     Utils.jQuery2List(xmls).foldLeft[Option[T]](None) {
       (acc, newXML) => Some(apply(newXML)) ++ acc reduceOption (join(_, _))

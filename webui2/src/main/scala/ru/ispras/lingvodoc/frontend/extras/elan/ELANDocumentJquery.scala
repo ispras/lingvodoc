@@ -36,6 +36,9 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
   val lexiconRef = Utils.jQuery2XML(annotDocXML.find(ELANDocumentJquery.lexRefTagName))
   val externalRef = Utils.jQuery2XML(annotDocXML.find(ELANDocumentJquery.extRefTagName))
 
+  def getTimeSlotValue(id: String) = timeOrder.getTimeSlotValue(id)
+
+  // get Linguistic Type by id
   def getLinguisticType(ltRef: String) = {
     val errorMsg = s"Linguistic type $ltRef not found; loaded linguistic types are " +
       linguisticTypes.values.map(_.linguisticTypeID.value).mkString(", ")
@@ -44,7 +47,17 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
     } catch {
       case e: java.util.NoSuchElementException => throw ELANPArserException(errorMsg)
     }
+  }
 
+  // search all tiers for alignable annotation with given ID
+  def getAlignableAnnotationByID(annotID: String): AlignableAnnotation = {
+    try {
+      console.log(s"searching for $annotID")
+      console.log(tiers.flatMap(tier => tier.getAlignableAnnotations).toString)
+      tiers.flatMap(tier => tier.getAlignableAnnotations).head
+    } catch {
+      case e: java.util.NoSuchElementException => throw ELANPArserException(s"Alignable annotation with id $annotID not found")
+    }
   }
 
   // How could we access them from html templates otherwise?
@@ -78,9 +91,21 @@ object ELANDocumentJquery {
 // Represents TIME_ORDER element
 @JSExportAll
 class TimeOrder(timeOrderXML: JQuery) {
+  // Scala.js doesn't support Long, we are forced to use Int instead
   var timeSlots = Utils.jQuery2List(timeOrderXML.find(TimeOrder.tsTagName)).map(tsJquery => {
-    tsJquery.attr(TimeOrder.tsIdAttrName).get -> tsJquery.attr(TimeOrder.tvAttrName).toOption.map(_.toLong)
-  }).toMap // timeslots without values are allowed
+    tsJquery.attr(TimeOrder.tsIdAttrName).get -> tsJquery.attr(TimeOrder.tvAttrName).toOption.map(_.toInt)
+  }).toMap // timeslots without values are allowed by the specification
+
+  // In principle timeslots without value are allowed, but this particular method will throw an exception, if
+  // timeslot has no value or timeslot with such id doesn't exists at all
+  def getTimeSlotValue(id: String): Int = {
+    try {
+      timeSlots(id).get
+    } catch {
+      case e: java.util.NoSuchElementException => throw ELANPArserException(s"TimeSlot with id $id doesn't exists or has no value")
+    }
+  }
+
   def content = timeSlots.map{ case (id, value) =>
       s"<${TimeOrder.tsTagName} ${RequiredXMLAttr(TimeOrder.tsIdAttrName, id)} ${OptionalXMLAttr(TimeOrder.tvAttrName, value)} />"}
   override def toString = Utils.wrap(TimeOrder.tagName, content.mkString("\n"))

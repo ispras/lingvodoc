@@ -20,9 +20,7 @@ import scala.scalajs.js.annotation.JSExport
 @js.native
 trait SoundMarkupScope extends Scope {
   var elan: ELANDocumentJquery = js.native
-  var tiersjs: js.Array[Tier] = js.native
-  var i: Int = js.native
-  var arr: js.Array[Int] = js.native
+  var waveSurfer: WaveSurfer = js.native
 }
 
 @injectable("SoundMarkupController")
@@ -37,18 +35,26 @@ class SoundMarkupController(scope: SoundMarkupScope,
   val soundAddress = params.get("soundAddress").map(_.toString)
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
-  scope.i = 10
-  scope.arr = js.Array()
-  scope.arr = scope.arr :+ 5
-  scope.arr = scope.arr :+ 10
-  scope.arr = scope.arr :+ 15
 
   (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
     backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
-    case markup => parseMarkup(markup)
+      case markup => parseMarkup(markup)
     }
   })
 
+  // hack to initialize controller after loading the view
+  // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
+  @JSExport
+  def createWaveSurfer(): Unit = {
+    if (waveSurfer.isEmpty) {
+      val wso = WaveSurferOpts("#waveform", "violet", "purple")
+      waveSurfer = Some(WaveSurfer.create(wso))
+      (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
+        ws.load(sa)
+      })
+    }
+    scope.waveSurfer = waveSurfer.get
+  }
 
   def parseMarkup(markup: String): Unit = {
     val test_markup =
@@ -136,42 +142,18 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
 </ANNOTATION_DOCUMENT>
       """
       scope.elan = ELANDocumentJquery(test_markup)
-      scope.tiersjs = scope.elan.tiers.toJSArray
-    console.log(scope.elan.toString)
-//    val lt = xml.find("LINGUISTIC_TYPE")
-////    val test = xml.find("test")
-//    console.log(markup)
-//    console.log("AAAA")
-//    console.log(lt)
-//    console.log(lt.attr("LINGUISTIC_TYPE_ID"))
-//
-//    val props = xml.find("PROPERTY")
-//    props.each((el: dom.Element) => {
-//      val jqEl = jQuery(el)
-//      console.log(jqEl.text())
-//    })
-
+//      console.log(scope.elan.toString)
   }
 
-  // hack to initialize controller after loading the view
-  // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
   @JSExport
-  def createWaveSurfer(): Unit = {
-    if (waveSurfer.isEmpty) {
-      val wso = WaveSurferOpts("#waveform", "violet", "purple")
-      waveSurfer = Some(WaveSurfer.create(wso))
-      (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
-        ws.load(sa)
-      })
-    }
-  }
+  def playPause() = waveSurfer.foreach(_.playPause())
+
+  @JSExport
+  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
 
   @JSExport
   def save(): Unit = {
-    val wso = WaveSurferOpts("#waveform", "violet", "purple")
-    val ws = WaveSurfer.create(wso)
-    ws.load("audio.wav")
-//    instance.dismiss(())
+    instance.close(())
   }
 
   @JSExport

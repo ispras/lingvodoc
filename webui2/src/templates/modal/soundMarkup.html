@@ -23,16 +23,26 @@
             <td>Start</td>
             <td>End</td>
             <td>Annotation</td>
+            <td>Play</td>
         </tr>
         </thead>
         <tbody>
-            <tr ng-repeat="annotation in elan.tiersToJSArray[0].annotationsToJSArray">
-                <td>ff</td>
-                <td>ff</td>
-                <td>ff</td>
+            <tr ng-repeat="annot in elan.tiersToJSArray[0].annotationsToJSArray">
+                <td>{{ annot.start }}</td>
+                <td>{{ annot.end }}</td>
+                <td>{{ annot.text }}</td>
+                <td>
+                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.play(annot.start, annot.end)">
+                        <span class="glyphicon glyphicon-play"></span>
+                    </button>
+                </td>
             </tr>
         </tbody>
     </table>
+
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+        <span class="glyphicon glyphicon-play">Play/Pause full</span>
+    </button>
 
 </div>
 
