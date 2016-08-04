@@ -204,9 +204,8 @@ def login_cheat(request):  # TODO: test
 
 @view_config(route_name='logout', renderer='json')
 def logout_any(request):  # tested
-    next = request.params.get('next') or request.route_url('login')
     headers = forget(request)
-    return HTTPFound(location=next, headers=headers)
+    return HTTPOk(headers=headers, json_body={})
 
 
 @view_config(route_name='profile', renderer='templates/profile.pt', request_method='GET')
