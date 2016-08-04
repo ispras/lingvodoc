@@ -11,7 +11,9 @@
     <link rel="icon" href="favicon.ico">
 
     <title>Lingvodoc</title>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/bootstrap.min.css')}"/>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+
     <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-jsdeps.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-fastopt.js')}"></script>
 
@@ -24,7 +26,7 @@
 <body>
 
 <!-- navigation -->
-<nav class="lingvodoc-navbar" ng-controller="NavigationController">
+<nav class="navbar navbar-default navbar-fixed-top" ng-controller="NavigationController">
     <div class="container">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
@@ -82,7 +84,7 @@
 <!-- end navigation -->
 
 
-<div ng-view></div>
+<div class="page-content" ng-view></div>
 
 </body>
 

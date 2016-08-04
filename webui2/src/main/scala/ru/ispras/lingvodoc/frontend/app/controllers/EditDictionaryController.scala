@@ -7,7 +7,7 @@ import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils.encodeURIComponent

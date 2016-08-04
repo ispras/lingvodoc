@@ -137,13 +137,13 @@ def login_post(request):  # tested
         response.set_cookie(key='client_id', value=str(client.id))
         headers = remember(request, principal=client.id)
         # return HTTPFound(location=next, headers=response.headers)
-        return {}
+        return HTTPOk(headers=response.headers, json_body={})
+        # return {}
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
 @view_config(route_name='signin', renderer='json', request_method='POST')
-def signin(request):  # TODO: find out if it used anywhere. And the get rid of it
-    next = request.params.get('next') or request.route_url('home')
+def signin(request):
     req = request.json_body
     login = req['login']
     password = req['password']
@@ -169,7 +169,8 @@ def signin(request):  # TODO: find out if it used anywhere. And the get rid of i
         request.response.status = HTTPOk.code
         # request.response.headers = headers
         # return response
-        return HTTPOk(headers=headers, json_body=result)
+        return HTTPOk(headers=response.headers, json_body=result)
+        # return result
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
@@ -203,9 +204,8 @@ def login_cheat(request):  # TODO: test
 
 @view_config(route_name='logout', renderer='json')
 def logout_any(request):  # tested
-    next = request.params.get('next') or request.route_url('login')
     headers = forget(request)
-    return HTTPFound(location=next, headers=headers)
+    return HTTPOk(headers=headers, json_body={})
 
 
 @view_config(route_name='profile', renderer='templates/profile.pt', request_method='GET')

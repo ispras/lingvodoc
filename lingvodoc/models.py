@@ -616,7 +616,7 @@ class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     creation_time = Column(DateTime, default=datetime.datetime.utcnow)
     is_browser_client = Column(Boolean, default=True)
     user = relationship("User", backref='clients')
-    counter = Column(SLBigInteger(), default=1)  # TODO: not do sequence
+    counter = Column(SLBigInteger(), default=1)
 
 
 class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
