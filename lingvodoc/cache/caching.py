@@ -1,8 +1,12 @@
 from dogpile.cache.api import NO_VALUE
 from dogpile.cache import make_region
 
+from lingvodoc.cache.basic.cache import CommonCache
+from lingvodoc.cache.mock.cache import MockCache
+
 
 MEMOIZE = None
+CACHE = None
 
 
 def create_region(args):
@@ -19,7 +23,7 @@ def create_region(args):
 # clear all cached values related to it
 #
 # We cache values for unauthenticated users only so far
-def cache_decorator(region):
+def cache_responses(region):
     def func_wrapper(func):
         def wrapper(req):
             if 'auth_tkt' not in req.environ['webob._parsed_cookies'][0]:
@@ -40,8 +44,11 @@ def cache_decorator(region):
 
 def initialize_cache(args):
     global MEMOIZE
+    global CACHE
     if args is None:
         MEMOIZE = lambda func: func
+        CACHE = MockCache()
         return
     region = make_region().configure(**args)
-    MEMOIZE = cache_decorator(region)
+    MEMOIZE = cache_responses(region)
+    CACHE = CommonCache(region)

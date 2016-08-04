@@ -292,14 +292,33 @@ class TranslationMixin(object):
     translation_gist_object_id = Column(SLBigInteger())
 
     def get_translation(self, locale_id):
+        from lingvodoc.cache.caching import CACHE
+
+        key = ':'.join([str(self.translation_gist_client_id),
+                        str(self.translation_gist_object_id), str(locale_id)])
+        translation = CACHE.get(key)
+        if translation is not None:
+            log.debug("Got cached")
+            return translation
+        log.debug("No cached value, getting from DB")
         translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
                                                                  parent_object_id=self.translation_gist_object_id,
                                                                  locale_id=locale_id).first()
         if translation is None:
+            log.debug("No value in DB, getting default value")
+            key = ':'.join([str(self.translation_gist_client_id),
+                            str(self.translation_gist_object_id), str(ENGLISH_LOCALE)])
+            translation = CACHE.get(key)
+            if translation is not None:
+                log.debug("Got cached default value")
+                return translation
+            log.debug("No cached default value, getting from DB")
             translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
                                                                      parent_object_id=self.translation_gist_object_id,
                                                                      locale_id=ENGLISH_LOCALE).first()
         if translation is not None:
+            log.debug("Got results. Putting the value in the cache")
+            CACHE.set(key, translation.content)
             return translation.content
         log.warn("'translationgist' exists but there is no default (english) translation. "
                  "translation_gist_client_id={0}, translation_gist_object_id={1}"

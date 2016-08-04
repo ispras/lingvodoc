@@ -1,29 +1,12 @@
 __author__ = 'alexander'
 
 from collections import deque
-
-from lingvodoc.caching import MEMOIZE
-from lingvodoc.exceptions import CommonException
-from lingvodoc.models import (
-    BaseGroup,
-    Client,
-    DBSession,
-    Dictionary,
-    DictionaryPerspective,
-    Group,
-    LexicalEntry,
-    Organization,
-    User,
-    TranslationAtom,
-    TranslationGist
-)
-from lingvodoc.views.v2.utils import (
-    cache_clients,
-    create_object,
-    get_user_by_client_id,
-    user_counter,
-    view_perspective_from_object
-)
+import base64
+import datetime
+import hashlib
+import json
+import logging
+import multiprocessing
 
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -39,23 +22,30 @@ from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.security import authenticated_userid
 from pyramid.view import view_config
-
-from sqlalchemy import (
-    func,
-    or_,
-    and_,
-    not_
-)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.expression import case
 
-import base64
-import datetime
-import hashlib
-import json
-import logging
-import multiprocessing
+from lingvodoc.cache.caching import MEMOIZE
+from lingvodoc.exceptions import CommonException
+from lingvodoc.models import (
+    BaseGroup,
+    Client,
+    DBSession,
+    Dictionary,
+    DictionaryPerspective,
+    Group,
+    LexicalEntry,
+    Organization,
+    User,
+    TranslationAtom
+)
+from lingvodoc.views.v2.utils import (
+    cache_clients,
+    create_object,
+    get_user_by_client_id,
+    user_counter,
+    view_perspective_from_object
+)
 
 log = logging.getLogger(__name__)
 
