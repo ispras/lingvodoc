@@ -3430,89 +3430,6 @@ function $m_Lgoogle_maps_MapOptions$() {
   return $n_Lgoogle_maps_MapOptions$
 }
 /** @constructor */
-function $c_Lgoogle_maps_MarkerOptions$() {
-  $c_O.call(this)
-}
-$c_Lgoogle_maps_MarkerOptions$.prototype = new $h_O();
-$c_Lgoogle_maps_MarkerOptions$.prototype.constructor = $c_Lgoogle_maps_MarkerOptions$;
-/** @constructor */
-function $h_Lgoogle_maps_MarkerOptions$() {
-  /*<skip>*/
-}
-$h_Lgoogle_maps_MarkerOptions$.prototype = $c_Lgoogle_maps_MarkerOptions$.prototype;
-$c_Lgoogle_maps_MarkerOptions$.prototype.init___ = (function() {
-  return this
-});
-$c_Lgoogle_maps_MarkerOptions$.prototype.apply__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__Lgoogle_maps_Map__sjs_js_UndefOr__Lgoogle_maps_LatLng__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__Lgoogle_maps_MarkerOptions = (function(animation, clickable, cursor, draggable, flat, icon, map, optimized, position, raiseOnDrag, shadow, shape, title, visible, zIndex) {
-  var result = {};
-  if ((clickable !== (void 0))) {
-    var x$1 = $uZ(clickable);
-    result.clickable = x$1
-  };
-  if ((cursor !== (void 0))) {
-    var x$2 = $as_T(cursor);
-    result.cursor = x$2
-  };
-  if ((draggable !== (void 0))) {
-    var x$3 = $uZ(draggable);
-    result.draggable = x$3
-  };
-  if ((flat !== (void 0))) {
-    var x$4 = $uZ(flat);
-    result.flat = x$4
-  };
-  if ((icon !== (void 0))) {
-    result.icon = icon
-  };
-  result.map = map;
-  if ((optimized !== (void 0))) {
-    var x$6 = $uZ(optimized);
-    result.optimized = x$6
-  };
-  if ((optimized !== (void 0))) {
-    var x$7 = $uZ(optimized);
-    result.optimized = x$7
-  };
-  result.position = position;
-  if ((raiseOnDrag !== (void 0))) {
-    var x$8 = $uZ(raiseOnDrag);
-    result.raiseOnDrag = x$8
-  };
-  if ((shadow !== (void 0))) {
-    result.shadow = shadow
-  };
-  if ((shape !== (void 0))) {
-    result.shape = shape
-  };
-  if ((title !== (void 0))) {
-    var x$11 = $as_T(title);
-    result.title = x$11
-  };
-  if ((visible !== (void 0))) {
-    var x$12 = $uZ(visible);
-    result.visible = x$12
-  };
-  if ((zIndex !== (void 0))) {
-    var x$13 = $uD(zIndex);
-    result.zIndex = x$13
-  };
-  return result
-});
-var $d_Lgoogle_maps_MarkerOptions$ = new $TypeData().initClass({
-  Lgoogle_maps_MarkerOptions$: 0
-}, false, "google.maps.MarkerOptions$", {
-  Lgoogle_maps_MarkerOptions$: 1,
-  O: 1
-});
-$c_Lgoogle_maps_MarkerOptions$.prototype.$classData = $d_Lgoogle_maps_MarkerOptions$;
-var $n_Lgoogle_maps_MarkerOptions$ = (void 0);
-function $m_Lgoogle_maps_MarkerOptions$() {
-  if ((!$n_Lgoogle_maps_MarkerOptions$)) {
-    $n_Lgoogle_maps_MarkerOptions$ = new $c_Lgoogle_maps_MarkerOptions$().init___()
-  };
-  return $n_Lgoogle_maps_MarkerOptions$
-}
-/** @constructor */
 function $c_Lorg_scalajs_dom_package$() {
   $c_O.call(this);
   this.ApplicationCache$1 = null;
@@ -3638,9 +3555,9 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
       return f$2.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$2, arg2$2, arg3$2, arg4$2, arg5$2, arg6$2, arg7$2, arg8$2, arg9$2, arg10$2, arg11$2, arg12$2, arg13$2, arg14$2, arg15$2, arg16$2, arg17$2, arg18$2, arg19$2, arg20$2)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$3().init___());
-  var proxy$3 = ["$injector"];
+  var proxy$3 = [];
   proxy$3.push(handler$3);
-  var jsx$14 = jsx$15.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("$exceptionHandler", proxy$3);
+  var jsx$14 = jsx$15.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("UserService", proxy$3);
   var handler$4 = (function(f$3) {
     return (function(arg1$3, arg2$3, arg3$3, arg4$3, arg5$3, arg6$3, arg7$3, arg8$3, arg9$3, arg10$3, arg11$3, arg12$3, arg13$3, arg14$3, arg15$3, arg16$3, arg17$3, arg18$3, arg19$3, arg20$3) {
       return f$3.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$3, arg2$3, arg3$3, arg4$3, arg5$3, arg6$3, arg7$3, arg8$3, arg9$3, arg10$3, arg11$3, arg12$3, arg13$3, arg14$3, arg15$3, arg16$3, arg17$3, arg18$3, arg19$3, arg20$3)
@@ -3654,7 +3571,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
       return f$4.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$4, arg2$4, arg3$4, arg4$4, arg5$4, arg6$4, arg7$4, arg8$4, arg9$4, arg10$4, arg11$4, arg12$4, arg13$4, arg14$4, arg15$4, arg16$4, arg17$4, arg18$4, arg19$4, arg20$4)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$5().init___());
-  var proxy$5 = ["$scope", "BackendService"];
+  var proxy$5 = ["$scope", "$rootScope", "BackendService", "UserService"];
   proxy$5.push(handler$5);
   var jsx$12 = jsx$13.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("NavigationController", proxy$5);
   var handler$6 = (function(f$5) {
@@ -3662,7 +3579,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
       return f$5.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$5, arg2$5, arg3$5, arg4$5, arg5$5, arg6$5, arg7$5, arg8$5, arg9$5, arg10$5, arg11$5, arg12$5, arg13$5, arg14$5, arg15$5, arg16$5, arg17$5, arg18$5, arg19$5, arg20$5)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$6().init___());
-  var proxy$6 = ["$scope", "$window", "BackendService"];
+  var proxy$6 = ["$scope", "$location", "$rootScope", "BackendService"];
   proxy$6.push(handler$6);
   var jsx$11 = jsx$12.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LoginController", proxy$6);
   var handler$7 = (function(f$6) {
@@ -3670,7 +3587,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
       return f$6.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$6, arg2$6, arg3$6, arg4$6, arg5$6, arg6$6, arg7$6, arg8$6, arg9$6, arg10$6, arg11$6, arg12$6, arg13$6, arg14$6, arg15$6, arg16$6, arg17$6, arg18$6, arg19$6, arg20$6)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$7().init___());
-  var proxy$7 = ["$scope", "BackendService"];
+  var proxy$7 = ["$scope", "$location", "$rootScope", "BackendService"];
   proxy$7.push(handler$7);
   var jsx$10 = jsx$11.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LogoutController", proxy$7);
   var handler$8 = (function(f$7) {
@@ -4268,59 +4185,6 @@ function $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$() {
   };
   return $n_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$
 }
-/** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_UserService$() {
-  $c_O.call(this);
-  this.user$1 = null
-}
-$c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_UserService$;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_UserService$() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype.init___ = (function() {
-  this.user$1 = null;
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype.$$js$exported$prop$user__Lru_ispras_lingvodoc_frontend_app_model_User__O = (function(x$1) {
-  this.user$1 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype.$$js$exported$prop$user__O = (function() {
-  return this.user$1
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype, "user", {
-  "set": (function(arg$1) {
-    var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_User(arg$1);
-    this.$$js$exported$prop$user__Lru_ispras_lingvodoc_frontend_app_model_User__O(prep0)
-  }),
-  "get": (function() {
-    return this.$$js$exported$prop$user__O()
-  }),
-  "enumerable": true
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_services_UserService$ = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_UserService$: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.UserService$", {
-  Lru_ispras_lingvodoc_frontend_app_services_UserService$: 1,
-  O: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_UserService$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_UserService$;
-var $n_Lru_ispras_lingvodoc_frontend_app_services_UserService$ = (void 0);
-function $m_Lru_ispras_lingvodoc_frontend_app_services_UserService$() {
-  if ((!$n_Lru_ispras_lingvodoc_frontend_app_services_UserService$)) {
-    $n_Lru_ispras_lingvodoc_frontend_app_services_UserService$ = new $c_Lru_ispras_lingvodoc_frontend_app_services_UserService$().init___()
-  };
-  return $n_Lru_ispras_lingvodoc_frontend_app_services_UserService$
-}
-$e.ru = ($e.ru || {});
-$e.ru.ispras = ($e.ru.ispras || {});
-$e.ru.ispras.lingvodoc = ($e.ru.ispras.lingvodoc || {});
-$e.ru.ispras.lingvodoc.frontend = ($e.ru.ispras.lingvodoc.frontend || {});
-$e.ru.ispras.lingvodoc.frontend.app = ($e.ru.ispras.lingvodoc.frontend.app || {});
-$e.ru.ispras.lingvodoc.frontend.app.services = ($e.ru.ispras.lingvodoc.frontend.app.services || {});
-$e.ru.ispras.lingvodoc.frontend.app.services.UserService = $m_Lru_ispras_lingvodoc_frontend_app_services_UserService$;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$() {
   $c_O.call(this);
@@ -10432,31 +10296,31 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.login__T_
     "login": username,
     "password": password
   }));
-  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.post(this.getMethodUrl__p1__T__T("signin"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$3) {
-    return (function(x0$25$2) {
-      var x0$25 = $as_s_util_Try(x0$25$2);
-      if ($is_s_util_Success(x0$25)) {
-        var x2 = $as_s_util_Success(x0$25);
+  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.post(this.getMethodUrl__p1__T__T("signin"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$1) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_s_util_Try(x0$1$2);
+      if ($is_s_util_Success(x0$1)) {
+        var x2 = $as_s_util_Success(x0$1);
         var response = x2.value$2;
         try {
           var clientId = $uI(response.client_id);
-          defer$3.resolve(clientId)
+          defer$1.resolve(clientId)
         } catch (e) {
           var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
           if ((e$2 !== null)) {
             var s = ("Unknown exception:" + e$2.getMessage__T());
-            defer$3.reject(s)
+            defer$1.reject(s)
           } else {
             throw e
           }
         }
-      } else if ($is_s_util_Failure(x0$25)) {
-        var x3 = $as_s_util_Failure(x0$25);
+      } else if ($is_s_util_Failure(x0$1)) {
+        var x3 = $as_s_util_Failure(x0$1);
         var e$4 = x3.exception$2;
         var s$1 = ("Failed to sign in: " + e$4.getMessage__T());
-        defer$3.reject(s$1)
+        defer$1.reject(s$1)
       } else {
-        throw new $c_s_MatchError().init___O(x0$25)
+        throw new $c_s_MatchError().init___O(x0$1)
       }
     })
   })(defer)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10497,10 +10361,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getFields
   var jsx$1 = $g.encodeURIComponent(("" + this$8));
   var url = (((((((("dictionary/" + jsx$6) + "/") + jsx$4) + "/perspective/") + jsx$2) + "/") + $as_T(jsx$1)) + "/fields");
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(this.getMethodUrl__p1__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$16) {
-    return (function(x0$19$2) {
-      var x0$19 = $as_s_util_Try(x0$19$2);
-      if ($is_s_util_Success(x0$19)) {
-        var x2 = $as_s_util_Success(x0$19);
+    return (function(x0$20$2) {
+      var x0$20 = $as_s_util_Try(x0$20$2);
+      if ($is_s_util_Success(x0$20)) {
+        var x2 = $as_s_util_Success(x0$20);
         var response = x2.value$2;
         try {
           var this$13 = $m_Lupickle_default$();
@@ -10529,13 +10393,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getFields
             throw e$1
           }
         }
-      } else if ($is_s_util_Failure(x0$19)) {
-        var x3 = $as_s_util_Failure(x0$19);
+      } else if ($is_s_util_Failure(x0$20)) {
+        var x3 = $as_s_util_Failure(x0$20);
         var e$6 = x3.exception$2;
         var cause$3 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to fetch perspective fields: " + e$6.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$16, cause$3)
       } else {
-        throw new $c_s_MatchError().init___O(x0$19)
+        throw new $c_s_MatchError().init___O(x0$20)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10563,17 +10427,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updateFie
   var s = $s_Lupickle_Types$class__write__Lupickle_Types__O__Lupickle_Types$Writer__T(this$11, perspective, e);
   var jsx$8 = jsx$10.post(jsx$9, s);
   jsx$11.promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(jsx$8).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$17) {
-    return (function(x0$20$2) {
-      var x0$20 = $as_s_util_Try(x0$20$2);
-      if ($is_s_util_Success(x0$20)) {
+    return (function(x0$21$2) {
+      var x0$21 = $as_s_util_Try(x0$21$2);
+      if ($is_s_util_Success(x0$21)) {
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$17, (void 0))
-      } else if ($is_s_util_Failure(x0$20)) {
-        var x4 = $as_s_util_Failure(x0$20);
+      } else if ($is_s_util_Failure(x0$21)) {
+        var x4 = $as_s_util_Failure(x0$21);
         var e$1 = x4.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to update perspective fields: " + e$1.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$17, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$20)
+        throw new $c_s_MatchError().init___O(x0$21)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10588,10 +10452,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getDictio
   var jsx$1 = $g.encodeURIComponent(("" + this$4));
   var url = this.getMethodUrl__p1__T__T((((("dictionary/" + jsx$2) + "/") + $as_T(jsx$1)) + "/perspectives"));
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(url)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(dictionary$1, p$1) {
-    return (function(x0$2$2) {
-      var x0$2 = $as_s_util_Try(x0$2$2);
-      if ($is_s_util_Success(x0$2)) {
-        var x2 = $as_s_util_Success(x0$2);
+    return (function(x0$3$2) {
+      var x0$3 = $as_s_util_Try(x0$3$2);
+      if ($is_s_util_Success(x0$3)) {
+        var x2 = $as_s_util_Success(x0$3);
         var response = x2.value$2;
         try {
           var this$9 = $m_Lupickle_default$();
@@ -10620,13 +10484,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getDictio
             throw e$1
           }
         }
-      } else if ($is_s_util_Failure(x0$2)) {
-        var x3 = $as_s_util_Failure(x0$2);
+      } else if ($is_s_util_Failure(x0$3)) {
+        var x3 = $as_s_util_Failure(x0$3);
         var e$6 = x3.exception$2;
         var cause$3 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(((("Failed to get list of perspectives for dictionary " + dictionary$1.translationString$2) + ": ") + e$6.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$1, cause$3)
       } else {
-        throw new $c_s_MatchError().init___O(x0$2)
+        throw new $c_s_MatchError().init___O(x0$3)
       }
     })
   })(dictionary, p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10650,17 +10514,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.removePer
   var jsx$1 = $g.encodeURIComponent(("" + this$8));
   var url = ((((((("dictionary/" + jsx$6) + "/") + jsx$4) + "/perspective/") + jsx$2) + "/") + $as_T(jsx$1));
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1["delete"](this.getMethodUrl__p1__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$11) {
-    return (function(x0$14$2) {
-      var x0$14 = $as_s_util_Try(x0$14$2);
-      if ($is_s_util_Success(x0$14)) {
+    return (function(x0$15$2) {
+      var x0$15 = $as_s_util_Try(x0$15$2);
+      if ($is_s_util_Success(x0$15)) {
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$11, (void 0))
-      } else if ($is_s_util_Failure(x0$14)) {
-        var x4 = $as_s_util_Failure(x0$14);
+      } else if ($is_s_util_Failure(x0$15)) {
+        var x4 = $as_s_util_Failure(x0$15);
         var e = x4.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to remove perspective: " + e.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$11, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$14)
+        throw new $c_s_MatchError().init___O(x0$15)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10688,17 +10552,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updatePer
   var s = $s_Lupickle_Types$class__write__Lupickle_Types__O__Lupickle_Types$Writer__T(this$11, perspective, e);
   var jsx$8 = jsx$10.put(jsx$9, s);
   jsx$11.promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(jsx$8).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$12) {
-    return (function(x0$15$2) {
-      var x0$15 = $as_s_util_Try(x0$15$2);
-      if ($is_s_util_Success(x0$15)) {
+    return (function(x0$16$2) {
+      var x0$16 = $as_s_util_Try(x0$16$2);
+      if ($is_s_util_Success(x0$16)) {
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$12, (void 0))
-      } else if ($is_s_util_Failure(x0$15)) {
-        var x4 = $as_s_util_Failure(x0$15);
+      } else if ($is_s_util_Failure(x0$16)) {
+        var x4 = $as_s_util_Failure(x0$16);
         var e$1 = x4.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to update perspective: " + e$1.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$12, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$15)
+        throw new $c_s_MatchError().init___O(x0$16)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10708,10 +10572,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPerspe
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   var url = ((("perspective/" + $as_T($g.encodeURIComponent(("" + clientId)))) + "/") + $as_T($g.encodeURIComponent(("" + objectId))));
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(this.getMethodUrl__p1__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$9) {
-    return (function(x0$12$2) {
-      var x0$12 = $as_s_util_Try(x0$12$2);
-      if ($is_s_util_Success(x0$12)) {
-        var x2 = $as_s_util_Success(x0$12);
+    return (function(x0$13$2) {
+      var x0$13 = $as_s_util_Try(x0$13$2);
+      if ($is_s_util_Success(x0$13)) {
+        var x2 = $as_s_util_Success(x0$13);
         var response = x2.value$2;
         try {
           var this$5 = $m_Lupickle_default$();
@@ -10732,13 +10596,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPerspe
             throw e$1
           }
         }
-      } else if ($is_s_util_Failure(x0$12)) {
-        var x3 = $as_s_util_Failure(x0$12);
+      } else if ($is_s_util_Failure(x0$13)) {
+        var x3 = $as_s_util_Failure(x0$13);
         var e$4 = x3.exception$2;
         var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get perspective: " + e$4.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$9, cause$2)
       } else {
-        throw new $c_s_MatchError().init___O(x0$12)
+        throw new $c_s_MatchError().init___O(x0$13)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10768,59 +10632,21 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.removeDic
   var jsx$1 = $g.encodeURIComponent(("" + this$4));
   var url = ((("dictionary/" + jsx$2) + "/") + $as_T(jsx$1));
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1["delete"](this.getMethodUrl__p1__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$7) {
-    return (function(x0$9$2) {
-      var x0$9 = $as_s_util_Try(x0$9$2);
-      if ($is_s_util_Success(x0$9)) {
+    return (function(x0$10$2) {
+      var x0$10 = $as_s_util_Try(x0$10$2);
+      if ($is_s_util_Success(x0$10)) {
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$7, (void 0))
-      } else if ($is_s_util_Failure(x0$9)) {
-        var x4 = $as_s_util_Failure(x0$9);
+      } else if ($is_s_util_Failure(x0$10)) {
+        var x4 = $as_s_util_Failure(x0$10);
         var e = x4.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to remove dictionary: " + e.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$7, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$9)
+        throw new $c_s_MatchError().init___O(x0$10)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return p
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.signup__T__T__T__T__I__I__I__Lcom_greencatsoft_angularjs_core_Promise = (function(login, name, password, email, day, month, year) {
-  var defer = this.$$q$1.defer();
-  var req = $as_T($g.JSON.stringify({
-    "login": login,
-    "name": name,
-    "email": email,
-    "password": password
-  }));
-  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.post(this.getMethodUrl__p1__T__T("signin"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$1) {
-    return (function(x0$1$2) {
-      var x0$1 = $as_s_util_Try(x0$1$2);
-      if ($is_s_util_Success(x0$1)) {
-        var x2 = $as_s_util_Success(x0$1);
-        var response = x2.value$2;
-        try {
-          var clientId = $uI(response.client_id);
-          defer$1.resolve(clientId)
-        } catch (e) {
-          var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
-          if ((e$2 !== null)) {
-            var s = ("Unknown exception:" + e$2.getMessage__T());
-            defer$1.reject(s)
-          } else {
-            throw e
-          }
-        }
-      } else if ($is_s_util_Failure(x0$1)) {
-        var x3 = $as_s_util_Failure(x0$1);
-        var e$4 = x3.exception$2;
-        var s$1 = ("Failed to sign up: " + e$4.getMessage__T());
-        defer$1.reject(s$1)
-      } else {
-        throw new $c_s_MatchError().init___O(x0$1)
-      }
-    })
-  })(defer)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
-  return defer.promise
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getDictionaries__Lru_ispras_lingvodoc_frontend_app_model_DictionaryQuery__s_concurrent_Future = (function(query) {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
@@ -10847,10 +10673,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getSoundM
   }));
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.post(this.getMethodUrl__p1__T__T("convert/markup"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$21) {
-    return (function(x0$24$2) {
-      var x0$24 = $as_s_util_Try(x0$24$2);
-      if ($is_s_util_Success(x0$24)) {
-        var x2 = $as_s_util_Success(x0$24);
+    return (function(x0$25$2) {
+      var x0$25 = $as_s_util_Try(x0$25$2);
+      if ($is_s_util_Success(x0$25)) {
+        var x2 = $as_s_util_Success(x0$25);
         var response = x2.value$2;
         try {
           var this$5 = $m_Lupickle_default$();
@@ -10871,13 +10697,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getSoundM
             throw e
           }
         }
-      } else if ($is_s_util_Failure(x0$24)) {
-        var x3 = $as_s_util_Failure(x0$24);
+      } else if ($is_s_util_Failure(x0$25)) {
+        var x3 = $as_s_util_Failure(x0$25);
         var e$4 = x3.exception$2;
         var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get sound markup: " + e$4.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$21, cause$2)
       } else {
-        throw new $c_s_MatchError().init___O(x0$24)
+        throw new $c_s_MatchError().init___O(x0$25)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10895,18 +10721,18 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.setDictio
   var jsx$1 = $g.encodeURIComponent(("" + this$5));
   var url = (((("dictionary/" + jsx$2) + "/") + $as_T(jsx$1)) + "/state");
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.put(this.getMethodUrl__p1__T__T(url), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(dictionary$2, status$1, p$8) {
-    return (function(x0$10$2) {
-      var x0$10 = $as_s_util_Try(x0$10$2);
-      if ($is_s_util_Success(x0$10)) {
+    return (function(x0$11$2) {
+      var x0$11 = $as_s_util_Try(x0$11$2);
+      if ($is_s_util_Success(x0$11)) {
         dictionary$2.status$2 = status$1;
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$8, (void 0))
-      } else if ($is_s_util_Failure(x0$10)) {
-        var x4 = $as_s_util_Failure(x0$10);
+      } else if ($is_s_util_Failure(x0$11)) {
+        var x4 = $as_s_util_Failure(x0$11);
         var e = x4.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to update dictionary status: " + e.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$8, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$10)
+        throw new $c_s_MatchError().init___O(x0$11)
       }
     })
   })(dictionary, status, p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10915,10 +10741,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.setDictio
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPerspectiveFields__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future = (function(dictionary, perspective) {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   this.getFields__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future(dictionary, perspective).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(perspective$2, p$18) {
-    return (function(x0$21$2) {
-      var x0$21 = $as_s_util_Try(x0$21$2);
-      if ($is_s_util_Success(x0$21)) {
-        var x2 = $as_s_util_Success(x0$21);
+    return (function(x0$22$2) {
+      var x0$22 = $as_s_util_Try(x0$22$2);
+      if ($is_s_util_Success(x0$22)) {
+        var x2 = $as_s_util_Success(x0$22);
         var fields = $as_sc_Seq(x2.value$2);
         var this$4 = $m_sjsr_package$();
         if ($is_sjs_js_ArrayOps(fields)) {
@@ -10938,13 +10764,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPerspe
         };
         perspective$2.fields$2 = jsx$1;
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$18, perspective$2)
-      } else if ($is_s_util_Failure(x0$21)) {
-        var x3$1 = $as_s_util_Failure(x0$21);
+      } else if ($is_s_util_Failure(x0$22)) {
+        var x3$1 = $as_s_util_Failure(x0$22);
         var e = x3$1.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to fetch perspective fields: " + e.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$18, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$21)
+        throw new $c_s_MatchError().init___O(x0$22)
       }
     })
   })(perspective, p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -10956,17 +10782,46 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getDictio
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(this.getMethodUrl__p1__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionary$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise(this, p), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return p
 });
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.signup__T__T__T__T__T__T__T__Lcom_greencatsoft_angularjs_core_Promise = (function(login, name, password, email, day, month, year) {
+  var defer = this.$$q$1.defer();
+  var req = $as_T($g.JSON.stringify({
+    "login": login,
+    "name": name,
+    "email": email,
+    "password": password,
+    "day": day,
+    "month": month,
+    "year": year
+  }));
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log(req);
+  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.post(this.getMethodUrl__p1__T__T("signup"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$2) {
+    return (function(x0$2$2) {
+      var x0$2 = $as_s_util_Try(x0$2$2);
+      if ($is_s_util_Success(x0$2)) {
+        defer$2.resolve((void 0))
+      } else if ($is_s_util_Failure(x0$2)) {
+        var x3 = $as_s_util_Failure(x0$2);
+        var e = x3.exception$2;
+        var s = ("Failed to sign up: " + e.getMessage__T());
+        defer$2.reject(s)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$2)
+      }
+    })
+  })(defer)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+  return defer.promise
+});
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPublishedDictionaries__Lcom_greencatsoft_angularjs_core_Promise = (function() {
   var defer = this.$$q$1.defer();
   var req = $as_T($g.JSON.stringify({
     "group_by_lang": true,
     "group_by_org": false
   }));
-  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.post(this.getMethodUrl__p1__T__T("published_dictionaries"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$2) {
-    return (function(x0$11$2) {
-      var x0$11 = $as_s_util_Try(x0$11$2);
-      if ($is_s_util_Success(x0$11)) {
-        var x2 = $as_s_util_Success(x0$11);
+  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.post(this.getMethodUrl__p1__T__T("published_dictionaries"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$3) {
+    return (function(x0$12$2) {
+      var x0$12 = $as_s_util_Try(x0$12$2);
+      if ($is_s_util_Success(x0$12)) {
+        var x2 = $as_s_util_Success(x0$12);
         var response = x2.value$2;
         try {
           var this$7 = $m_Lupickle_default$();
@@ -10977,27 +10832,27 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPublis
           var cbf = new $c_s_LowPriorityImplicits$$anon$4().init___s_LowPriorityImplicits(this$5);
           var evidence$3 = $s_Lupickle_Implicits$class__SeqishR__Lupickle_Implicits__Lupickle_Types$Reader__scg_CanBuildFrom__Lupickle_Types$Reader(this$6, e, cbf);
           var languages = $as_sc_Seq($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$7, expr, evidence$3));
-          defer$2.resolve(languages)
+          defer$3.resolve(languages)
         } catch (e$1) {
           if ($is_Lupickle_Invalid$Json(e$1)) {
             var e$3 = $as_Lupickle_Invalid$Json(e$1);
             var s = ("Malformed dictionary json:" + e$3.s$1);
-            defer$2.reject(s)
+            defer$3.reject(s)
           } else if ($is_Lupickle_Invalid$Data(e$1)) {
             var e$2 = $as_Lupickle_Invalid$Data(e$1);
             var s$1 = ("Malformed dictionary data. Missing some required fields: " + e$2.s$1);
-            defer$2.reject(s$1)
+            defer$3.reject(s$1)
           } else {
             throw e$1
           }
         }
-      } else if ($is_s_util_Failure(x0$11)) {
-        var x3 = $as_s_util_Failure(x0$11);
+      } else if ($is_s_util_Failure(x0$12)) {
+        var x3 = $as_s_util_Failure(x0$12);
         var e$4 = x3.exception$2;
         var s$2 = ("Failed to get list of dictionaries: " + e$4.getMessage__T());
-        defer$2.reject(s$2)
+        defer$3.reject(s$2)
       } else {
-        throw new $c_s_MatchError().init___O(x0$11)
+        throw new $c_s_MatchError().init___O(x0$12)
       }
     })
   })(defer)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -11006,10 +10861,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPublis
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getLanguages__s_concurrent_Future = (function() {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(this.getMethodUrl__p1__T__T("languages"))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$4) {
-    return (function(x0$6$2) {
-      var x0$6 = $as_s_util_Try(x0$6$2);
-      if ($is_s_util_Success(x0$6)) {
-        var x2 = $as_s_util_Success(x0$6);
+    return (function(x0$7$2) {
+      var x0$7 = $as_s_util_Try(x0$7$2);
+      if ($is_s_util_Success(x0$7)) {
+        var x2 = $as_s_util_Success(x0$7);
         var response = x2.value$2;
         try {
           var this$5 = $m_Lupickle_default$();
@@ -11034,13 +10889,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getLangua
             throw e$1
           }
         }
-      } else if ($is_s_util_Failure(x0$6)) {
-        var x3 = $as_s_util_Failure(x0$6);
+      } else if ($is_s_util_Failure(x0$7)) {
+        var x3 = $as_s_util_Failure(x0$7);
         var e$4 = x3.exception$2;
         var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get list of languages: " + e$4.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$4, cause$2)
       } else {
-        throw new $c_s_MatchError().init___O(x0$6)
+        throw new $c_s_MatchError().init___O(x0$7)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -11066,10 +10921,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPublis
   var jsx$1 = $g.encodeURIComponent(("" + this$8));
   var url = (((((((("dictionary/" + jsx$6) + "/") + jsx$4) + "/perspective/") + jsx$2) + "/") + $as_T(jsx$1)) + "/published_count");
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(this.getMethodUrl__p1__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$19) {
-    return (function(x0$22$2) {
-      var x0$22 = $as_s_util_Try(x0$22$2);
-      if ($is_s_util_Success(x0$22)) {
-        var x2 = $as_s_util_Success(x0$22);
+    return (function(x0$23$2) {
+      var x0$23 = $as_s_util_Try(x0$23$2);
+      if ($is_s_util_Success(x0$23)) {
+        var x2 = $as_s_util_Success(x0$23);
         var response = x2.value$2;
         try {
           var value = $uI(response.count);
@@ -11083,13 +10938,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPublis
             throw e
           }
         }
-      } else if ($is_s_util_Failure(x0$22)) {
-        var x3 = $as_s_util_Failure(x0$22);
+      } else if ($is_s_util_Failure(x0$23)) {
+        var x3 = $as_s_util_Failure(x0$23);
         var e$4 = x3.exception$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get published lexical entries count: " + e$4.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$19, cause$1)
       } else {
-        throw new $c_s_MatchError().init___O(x0$22)
+        throw new $c_s_MatchError().init___O(x0$23)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -11124,10 +10979,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getLexica
   url = this.addUrlParameter__p1__T__T__T__T(url, "start_from", ("" + offset));
   url = this.addUrlParameter__p1__T__T__T__T(url, "count", ("" + count));
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(this.getMethodUrl__p1__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$20) {
-    return (function(x0$23$2) {
-      var x0$23 = $as_s_util_Try(x0$23$2);
-      if ($is_s_util_Success(x0$23)) {
-        var x2 = $as_s_util_Success(x0$23);
+    return (function(x0$24$2) {
+      var x0$24 = $as_s_util_Try(x0$24$2);
+      if ($is_s_util_Success(x0$24)) {
+        var x2 = $as_s_util_Success(x0$24);
         var response = x2.value$2;
         try {
           var this$15 = $m_Lupickle_default$();
@@ -11156,13 +11011,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getLexica
             throw e$1
           }
         }
-      } else if ($is_s_util_Failure(x0$23)) {
-        var x3 = $as_s_util_Failure(x0$23);
+      } else if ($is_s_util_Failure(x0$24)) {
+        var x3 = $as_s_util_Failure(x0$24);
         var e$6 = x3.exception$2;
         var cause$3 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get lexical entries: " + e$6.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$20, cause$3)
       } else {
-        throw new $c_s_MatchError().init___O(x0$23)
+        throw new $c_s_MatchError().init___O(x0$24)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -11186,18 +11041,18 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.setPerspe
   var jsx$1 = $g.encodeURIComponent(("" + this$9));
   var url = (((((((("dictionary/" + jsx$6) + "/") + jsx$4) + "/perspective/") + jsx$2) + "/") + $as_T(jsx$1)) + "/state");
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.put(this.getMethodUrl__p1__T__T(url), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(perspective$1, status$2, p$10) {
-    return (function(x0$13$2) {
-      var x0$13 = $as_s_util_Try(x0$13$2);
-      if ($is_s_util_Success(x0$13)) {
+    return (function(x0$14$2) {
+      var x0$14 = $as_s_util_Try(x0$14$2);
+      if ($is_s_util_Success(x0$14)) {
         perspective$1.status$2 = status$2;
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$10, (void 0))
-      } else if ($is_s_util_Failure(x0$13)) {
-        var x4 = $as_s_util_Failure(x0$13);
+      } else if ($is_s_util_Failure(x0$14)) {
+        var x4 = $as_s_util_Failure(x0$14);
         var e = x4.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to update perspective status: " + e.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$10, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$13)
+        throw new $c_s_MatchError().init___O(x0$14)
       }
     })
   })(perspective, status, p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -11219,17 +11074,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updateDic
   var s = $s_Lupickle_Types$class__write__Lupickle_Types__O__Lupickle_Types$Writer__T(this$6, dictionary, evidence$1);
   var jsx$4 = jsx$6.put(jsx$5, s);
   jsx$7.promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(jsx$4).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$6) {
-    return (function(x0$8$2) {
-      var x0$8 = $as_s_util_Try(x0$8$2);
-      if ($is_s_util_Success(x0$8)) {
+    return (function(x0$9$2) {
+      var x0$9 = $as_s_util_Try(x0$9$2);
+      if ($is_s_util_Success(x0$9)) {
         return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$6, (void 0))
-      } else if ($is_s_util_Failure(x0$8)) {
-        var x4 = $as_s_util_Failure(x0$8);
+      } else if ($is_s_util_Failure(x0$9)) {
+        var x4 = $as_s_util_Failure(x0$9);
         var e = x4.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to remove dictionary: " + e.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$6, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$8)
+        throw new $c_s_MatchError().init___O(x0$9)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -11238,10 +11093,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updateDic
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getCurrentUser__s_concurrent_Future = (function() {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.$$http$1.get(this.getMethodUrl__p1__T__T("user"))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$15) {
-    return (function(x0$18$2) {
-      var x0$18 = $as_s_util_Try(x0$18$2);
-      if ($is_s_util_Success(x0$18)) {
-        var x2 = $as_s_util_Success(x0$18);
+    return (function(x0$19$2) {
+      var x0$19 = $as_s_util_Try(x0$19$2);
+      if ($is_s_util_Success(x0$19)) {
+        var x2 = $as_s_util_Success(x0$19);
         var js = x2.value$2;
         try {
           var this$3 = $m_Lupickle_default$();
@@ -11266,13 +11121,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getCurren
             throw e$1
           }
         }
-      } else if ($is_s_util_Failure(x0$18)) {
-        var x3 = $as_s_util_Failure(x0$18);
+      } else if ($is_s_util_Failure(x0$19)) {
+        var x3 = $as_s_util_Failure(x0$19);
         var e$6 = x3.exception$2;
         var cause$3 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get current user: " + e$6.getMessage__T()));
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$15, cause$3)
       } else {
-        throw new $c_s_MatchError().init___O(x0$18)
+        throw new $c_s_MatchError().init___O(x0$19)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -11303,6 +11158,81 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService = new $TypeData
   Lcom_greencatsoft_angularjs_Initializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_services_UserService() {
+  $c_O.call(this);
+  this.user$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_UserService;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_services_UserService() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.init___ = (function() {
+  this.user$1 = $m_s_None$();
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.hasUser__Z = (function() {
+  var this$1 = this.user$1;
+  return this$1.isDefined__Z()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.setUser__Lru_ispras_lingvodoc_frontend_app_model_User__V = (function(u) {
+  this.user$1 = new $c_s_Some().init___O(u)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.$$js$exported$meth$setUser__Lru_ispras_lingvodoc_frontend_app_model_User__O = (function(u) {
+  this.setUser__Lru_ispras_lingvodoc_frontend_app_model_User__V(u)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.$$js$exported$meth$removeUser__O = (function() {
+  this.removeUser__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.$$js$exported$meth$getUser__O = (function() {
+  return this.getUser__Lru_ispras_lingvodoc_frontend_app_model_User()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.$$js$exported$meth$hasUser__O = (function() {
+  return this.hasUser__Z()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.getUser__Lru_ispras_lingvodoc_frontend_app_model_User = (function() {
+  return $as_Lru_ispras_lingvodoc_frontend_app_model_User(this.user$1.get__O())
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.removeUser__V = (function() {
+  this.user$1 = $m_s_None$()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.hasUser = (function() {
+  return this.$$js$exported$meth$hasUser__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.getUser = (function() {
+  return this.$$js$exported$meth$getUser__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.removeUser = (function() {
+  return this.$$js$exported$meth$removeUser__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.setUser = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_User(arg$1);
+  return this.$$js$exported$meth$setUser__Lru_ispras_lingvodoc_frontend_app_model_User__O(prep0)
+});
+function $is_Lru_ispras_lingvodoc_frontend_app_services_UserService(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_app_services_UserService)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_app_services_UserService(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_app_services_UserService(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.app.services.UserService"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_app_services_UserService(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_app_services_UserService)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_app_services_UserService(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_app_services_UserService(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.app.services.UserService;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_app_services_UserService = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_UserService: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.UserService", {
+  Lru_ispras_lingvodoc_frontend_app_services_UserService: 1,
+  O: 1,
+  Lcom_greencatsoft_angularjs_Service: 1,
+  Lcom_greencatsoft_angularjs_Initializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_UserService;
 /** @constructor */
 function $c_Lupickle_Types$ReadWriter$$anon$1() {
   $c_O.call(this);
@@ -15902,6 +15832,17 @@ var $d_sjsr_RuntimeLong = new $TypeData().initClass({
 });
 $c_sjsr_RuntimeLong.prototype.$classData = $d_sjsr_RuntimeLong;
 /** @constructor */
+function $c_sr_AbstractFunction0$mcV$sp() {
+  $c_sr_AbstractFunction0.call(this)
+}
+$c_sr_AbstractFunction0$mcV$sp.prototype = new $h_sr_AbstractFunction0();
+$c_sr_AbstractFunction0$mcV$sp.prototype.constructor = $c_sr_AbstractFunction0$mcV$sp;
+/** @constructor */
+function $h_sr_AbstractFunction0$mcV$sp() {
+  /*<skip>*/
+}
+$h_sr_AbstractFunction0$mcV$sp.prototype = $c_sr_AbstractFunction0$mcV$sp.prototype;
+/** @constructor */
 function $c_Lcom_greencatsoft_angularjs_AbstractController() {
   $c_O.call(this);
   this.scope$1 = null;
@@ -16440,9 +16381,9 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$3.prototype.init_
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$3.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory().init___Lcom_greencatsoft_angularjs_core_Injector(a0);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory().init___();
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
-  var result = target.apply__sjs_js_Function2();
+  var result = target.apply__Lru_ispras_lingvodoc_frontend_app_services_UserService();
   var this$1 = $m_s_Option$().apply__O__s_Option(result);
   if (this$1.isEmpty__Z()) {
     var opt = $m_s_None$()
@@ -16526,7 +16467,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$5.prototype.init_
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$5.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController().init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a1));
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController().init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationScope__Lcom_greencatsoft_angularjs_core_RootScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lru_ispras_lingvodoc_frontend_app_services_UserService(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), $as_Lru_ispras_lingvodoc_frontend_app_services_UserService(a3));
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -16569,7 +16510,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$6.prototype.init_
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$6.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController().init___Lru_ispras_lingvodoc_frontend_app_controllers_LoginScope__Lcom_greencatsoft_angularjs_core_Window__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2));
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController().init___Lru_ispras_lingvodoc_frontend_app_controllers_LoginScope__Lcom_greencatsoft_angularjs_core_Location__Lcom_greencatsoft_angularjs_core_RootScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -16612,7 +16553,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$7.prototype.init_
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$7.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController().init___Lru_ispras_lingvodoc_frontend_app_controllers_LogoutScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a1));
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController().init___Lru_ispras_lingvodoc_frontend_app_controllers_LogoutScope__Lcom_greencatsoft_angularjs_core_Location__Lcom_greencatsoft_angularjs_core_RootScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -17160,68 +17101,6 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$
   Ljava_io_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$setPerspectives$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$setPerspectives$1;
-/** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1() {
-  $c_sr_AbstractFunction1.call(this);
-  this.$$outer$2 = null
-}
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype.apply__O__O = (function(v1) {
-  this.apply__s_util_Try__V($as_s_util_Try(v1))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_LoginController = (function($$outer) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype.apply__s_util_Try__V = (function(x0$1) {
-  if ($is_s_util_Success(x0$1)) {
-    var this$1 = this.$$outer$2;
-    this$1.scope$1.password = "";
-    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$backend$f.getCurrentUser__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
-      return (function(x0$2$2) {
-        var x0$2 = $as_s_util_Try(x0$2$2);
-        if ($is_s_util_Success(x0$2)) {
-          arg$outer.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$$window$f.location.href = "/"
-        } else if ($is_s_util_Failure(x0$2)) {
-          var this$2 = arg$outer.$$outer$2;
-          this$2.scope$1.password = "";
-          var this$3 = arg$outer.$$outer$2;
-          this$3.scope$1.lastError = true
-        } else {
-          throw new $c_s_MatchError().init___O(x0$2)
-        }
-      })
-    })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-  } else if ($is_s_util_Failure(x0$1)) {
-    var this$4 = this.$$outer$2;
-    this$4.scope$1.password = "";
-    var this$5 = this.$$outer$2;
-    this$5.scope$1.lastError = true
-  } else {
-    throw new $c_s_MatchError().init___O(x0$1)
-  }
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.LoginController$$anonfun$login$1", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1: 1,
-  sr_AbstractFunction1: 1,
-  O: 1,
-  F1: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3() {
   $c_sr_AbstractFunction1.call(this);
@@ -18401,108 +18280,6 @@ var $d_Lru_ispras_lingvodoc_frontend_app_model_Language$$anonfun$1$$anon$1$$anon
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Language$$anonfun$1$$anon$1$$anonfun$7$$anonfun$derive$macro$1$lzycompute$1$1$$anonfun$apply$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Language$$anonfun$1$$anon$1$$anonfun$7$$anonfun$derive$macro$1$lzycompute$1$1$$anonfun$apply$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_model_Location() {
-  $c_O.call(this);
-  this.lat$1 = 0.0;
-  this.lng$1 = 0.0
-}
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Location;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_model_Location() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.productPrefix__T = (function() {
-  return "Location"
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.productArity__I = (function() {
-  return 2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.equals__O__Z = (function(x$1) {
-  if ((this === x$1)) {
-    return true
-  } else if ($is_Lru_ispras_lingvodoc_frontend_app_model_Location(x$1)) {
-    var Location$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Location(x$1);
-    return ((this.lat$1 === Location$1.lat$1) && (this.lng$1 === Location$1.lng$1))
-  } else {
-    return false
-  }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.productElement__I__O = (function(x$1) {
-  switch (x$1) {
-    case 0: {
-      return this.lat$1;
-      break
-    }
-    case 1: {
-      return this.lng$1;
-      break
-    }
-    default: {
-      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
-    }
-  }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.toString__T = (function() {
-  return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.init___D__D = (function(lat, lng) {
-  this.lat$1 = lat;
-  this.lng$1 = lng;
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.hashCode__I = (function() {
-  var acc = (-889275714);
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().doubleHash__D__I(this.lat$1));
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().doubleHash__D__I(this.lng$1));
-  return $m_sr_Statics$().finalizeHash__I__I__I(acc, 2)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.productIterator__sc_Iterator = (function() {
-  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.$$js$exported$prop$lat__O = (function() {
-  return this.lat$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.$$js$exported$prop$lng__O = (function() {
-  return this.lng$1
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype, "lng", {
-  "get": (function() {
-    return this.$$js$exported$prop$lng__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype, "lat", {
-  "get": (function() {
-    return this.$$js$exported$prop$lat__O()
-  }),
-  "enumerable": true
-});
-function $is_Lru_ispras_lingvodoc_frontend_app_model_Location(obj) {
-  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_app_model_Location)))
-}
-function $as_Lru_ispras_lingvodoc_frontend_app_model_Location(obj) {
-  return (($is_Lru_ispras_lingvodoc_frontend_app_model_Location(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.app.model.Location"))
-}
-function $isArrayOf_Lru_ispras_lingvodoc_frontend_app_model_Location(obj, depth) {
-  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_app_model_Location)))
-}
-function $asArrayOf_Lru_ispras_lingvodoc_frontend_app_model_Location(obj, depth) {
-  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_app_model_Location(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.app.model.Location;", depth))
-}
-var $d_Lru_ispras_lingvodoc_frontend_app_model_Location = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_model_Location: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.model.Location", {
-  Lru_ispras_lingvodoc_frontend_app_model_Location: 1,
-  O: 1,
-  s_Product: 1,
-  s_Equals: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Location.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Location;
-/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2() {
   $c_sr_AbstractFunction1.call(this)
 }
@@ -19000,9 +18777,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
     return $as_Lupickle_Types$Reader(elem$1)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$3) {
-  if ($is_s_util_Success(x0$3)) {
-    var x2 = $as_s_util_Success(x0$3);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$4) {
+  if ($is_s_util_Success(x0$4)) {
+    var x2 = $as_s_util_Success(x0$4);
     var response = x2.value$2;
     try {
       var this$3 = $m_Lupickle_default$();
@@ -19030,14 +18807,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
         throw e
       }
     }
-  } else if ($is_s_util_Failure(x0$3)) {
-    var x3 = $as_s_util_Failure(x0$3);
+  } else if ($is_s_util_Failure(x0$4)) {
+    var x3 = $as_s_util_Failure(x0$4);
     var e$4 = x3.exception$2;
     var this$7 = this.p$2$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get list of dictionaries: " + e$4.getMessage__T()));
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$3)
+    throw new $c_s_MatchError().init___O(x0$4)
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$2) {
@@ -19180,9 +18957,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__O($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1.prototype.apply__s_util_Try__O = (function(x0$4) {
-  if ($is_s_util_Success(x0$4)) {
-    var x2 = $as_s_util_Success(x0$4);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1.prototype.apply__s_util_Try__O = (function(x0$5) {
+  if ($is_s_util_Success(x0$5)) {
+    var x2 = $as_s_util_Success(x0$5);
     var dictionaries = $as_sc_Seq(x2.value$2);
     var jsx$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
       return (function(dictionary$2) {
@@ -19196,14 +18973,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
     var this$2 = $m_sc_Seq$();
     jsx$2.sequence__sc_TraversableOnce__scg_CanBuildFrom__s_concurrent_ExecutionContext__s_concurrent_Future(futures, this$2.ReusableCBFInstance$2, $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1$$anonfun$apply$4().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1__sc_Seq(this, dictionaries), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
     return (void 0)
-  } else if ($is_s_util_Failure(x0$4)) {
-    var x3 = $as_s_util_Failure(x0$4);
+  } else if ($is_s_util_Failure(x0$5)) {
+    var x3 = $as_s_util_Failure(x0$5);
     var e = x3.exception$2;
     var this$3 = this.p$3$f;
     var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get list of dictionaries with perspectives: " + e.getMessage__T()));
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$3, cause)
   } else {
-    throw new $c_s_MatchError().init___O(x0$4)
+    throw new $c_s_MatchError().init___O(x0$5)
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$3) {
@@ -19251,9 +19028,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
   this.dictionaries$1$2 = dictionaries$1;
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1$$anonfun$apply$4.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$5) {
-  if ($is_s_util_Success(x0$5)) {
-    var x2 = $as_s_util_Success(x0$5);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1$$anonfun$apply$4.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$6) {
+  if ($is_s_util_Success(x0$6)) {
+    var x2 = $as_s_util_Success(x0$6);
     var perspectives = $as_sc_Seq(x2.value$2);
     var this$6 = $m_sr_Tuple2Zipped$();
     var _1 = this.dictionaries$1$2;
@@ -19312,14 +19089,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
     var g = $as_sc_Seq(jsx$1);
     var this$7 = this.$$outer$2.p$3$f;
     return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$7, g)
-  } else if ($is_s_util_Failure(x0$5)) {
-    var x3 = $as_s_util_Failure(x0$5);
+  } else if ($is_s_util_Failure(x0$6)) {
+    var x3 = $as_s_util_Failure(x0$6);
     var e$1 = x3.exception$2;
     var this$8 = this.$$outer$2.p$3$f;
     var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get list of perspectives: " + e$1.getMessage__T()));
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$8, cause)
   } else {
-    throw new $c_s_MatchError().init___O(x0$5)
+    throw new $c_s_MatchError().init___O(x0$6)
   }
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1$$anonfun$apply$4 = new $TypeData().initClass({
@@ -19348,9 +19125,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionary$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionary$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$7) {
-  if ($is_s_util_Success(x0$7)) {
-    var x2 = $as_s_util_Success(x0$7);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionary$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$8) {
+  if ($is_s_util_Success(x0$8)) {
+    var x2 = $as_s_util_Success(x0$8);
     var response = x2.value$2;
     try {
       var this$2 = this.p$5$2;
@@ -19374,14 +19151,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
         throw e
       }
     }
-  } else if ($is_s_util_Failure(x0$7)) {
-    var x3 = $as_s_util_Failure(x0$7);
+  } else if ($is_s_util_Failure(x0$8)) {
+    var x3 = $as_s_util_Failure(x0$8);
     var e$4 = x3.exception$2;
     var this$5 = this.p$5$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get dictionary: " + e$4.getMessage__T()));
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$7)
+    throw new $c_s_MatchError().init___O(x0$8)
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionary$1.prototype.derive$macro$24$1__p2__Lupickle_Types$Reader = (function() {
@@ -19538,9 +19315,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublish
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublishedDictionaryPerspectives$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublishedDictionaryPerspectives$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$16) {
-  if ($is_s_util_Success(x0$16)) {
-    var x2 = $as_s_util_Success(x0$16);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublishedDictionaryPerspectives$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$17) {
+  if ($is_s_util_Success(x0$17)) {
+    var x2 = $as_s_util_Success(x0$17);
     var perspectives = $as_sc_Seq(x2.value$2);
     var publishedPerspectives = $as_sc_Seq(perspectives.filter__F1__O(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$2) {
       var p = $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(p$2);
@@ -19550,14 +19327,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublish
     }))));
     var this$3 = this.p$13$2;
     return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$3, publishedPerspectives)
-  } else if ($is_s_util_Failure(x0$16)) {
-    var x3 = $as_s_util_Failure(x0$16);
+  } else if ($is_s_util_Failure(x0$17)) {
+    var x3 = $as_s_util_Failure(x0$17);
     var e = x3.exception$2;
     var this$4 = this.p$13$2;
     var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get published perspectives: " + e.getMessage__T()));
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$4, cause)
   } else {
-    throw new $c_s_MatchError().init___O(x0$16)
+    throw new $c_s_MatchError().init___O(x0$17)
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublishedDictionaryPerspectives$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$13) {
@@ -19614,99 +19391,40 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendServiceFactory = new $T
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendServiceFactory.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendServiceFactory;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory() {
-  $c_O.call(this);
-  this.ru$ispras$lingvodoc$frontend$app$services$ExceptionHandlerFactory$$injector$f = null
+function $c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory() {
+  $c_O.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory;
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype.apply__sjs_js_Function2 = (function() {
-  return (function(f) {
-    return (function(arg1, arg2) {
-      return f.apply__O__O__O(arg1, arg2)
-    })
-  })(new $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1().init___Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory(this))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype.toString__T = (function() {
-  return "<function0>"
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype.apply__O = (function() {
-  return this.apply__sjs_js_Function2()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype.init___Lcom_greencatsoft_angularjs_core_Injector = (function(injector) {
-  this.ru$ispras$lingvodoc$frontend$app$services$ExceptionHandlerFactory$$injector$f = injector;
+$h_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype.init___ = (function() {
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.ExceptionHandlerFactory", {
-  Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory: 1,
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype.toString__T = (function() {
+  return "<function0>"
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype.apply__Lru_ispras_lingvodoc_frontend_app_services_UserService = (function() {
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("factory!");
+  return new $c_Lru_ispras_lingvodoc_frontend_app_services_UserService().init___()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype.apply__O = (function() {
+  return this.apply__Lru_ispras_lingvodoc_frontend_app_services_UserService()
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.UserServiceFactory", {
+  Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory: 1,
   O: 1,
   Lcom_greencatsoft_angularjs_Factory: 1,
   Lcom_greencatsoft_angularjs_Service: 1,
   Lcom_greencatsoft_angularjs_Initializable: 1,
   F0: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory;
-/** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1() {
-  $c_sr_AbstractFunction2.call(this);
-  this.$$outer$2 = null
-}
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype = new $h_sr_AbstractFunction2();
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype.apply__jl_Throwable__sjs_js_Object__V = (function(e, cause) {
-  var modal = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$services$ExceptionHandlerFactory$$injector$f.get("$uibModal");
-  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
-  options.templateUrl = "/static/templates/modal/exceptionHandler.html";
-  options.controller = "ExceptionHandlerController";
-  options.backdrop = false;
-  options.keyboard = false;
-  options.size = "lg";
-  options.resolve = {
-    "params": (function(e$1, cause$1) {
-      return (function() {
-        return {
-          "exception": e$1,
-          "cause": cause$1
-        }
-      })
-    })(e, cause)
-  };
-  modal.open(options)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory = (function($$outer) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype.apply__O__O__O = (function(v1, v2) {
-  this.apply__jl_Throwable__sjs_js_Object__V($as_jl_Throwable(v1), v2)
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.ExceptionHandlerFactory$$anonfun$apply$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1: 1,
-  sr_AbstractFunction2: 1,
-  O: 1,
-  F2: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_ExceptionHandlerFactory$$anonfun$apply$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory;
 /** @constructor */
 function $c_Lupickle_Implicits$$anonfun$SeqishW$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -22831,8 +22549,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.$class
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
-  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$$window$f = null;
-  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$backend$f = null
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$location$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$rootScope$f = null;
+  this.backend$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController;
@@ -22855,13 +22574,29 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController.prototype.login
     var jsx$1 = false
   };
   if (jsx$1) {
-    $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$backend$f.login__T__T__Lcom_greencatsoft_angularjs_core_Promise($as_T(this.scope$1.username), $as_T(this.scope$1.password))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController$$anonfun$login$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_LoginController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+    $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(this.backend$2.login__T__T__Lcom_greencatsoft_angularjs_core_Promise($as_T(this.scope$1.username), $as_T(this.scope$1.password))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+      return (function(x0$1$2) {
+        var x0$1 = $as_s_util_Try(x0$1$2);
+        if ($is_s_util_Success(x0$1)) {
+          arg$outer.scope$1.password = "";
+          arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$rootScope$f.$emit("user.login");
+          return arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$location$f.path("/")
+        } else if ($is_s_util_Failure(x0$1)) {
+          arg$outer.scope$1.password = "";
+          arg$outer.scope$1.lastError = true;
+          return (void 0)
+        } else {
+          throw new $c_s_MatchError().init___O(x0$1)
+        }
+      })
+    })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_LoginScope__Lcom_greencatsoft_angularjs_core_Window__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function($$scope, $$window, backend) {
-  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$$window$f = $$window;
-  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$backend$f = backend;
-  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, $$scope, $m_s_None$());
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_LoginScope__Lcom_greencatsoft_angularjs_core_Location__Lcom_greencatsoft_angularjs_core_RootScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function(scope, location, rootScope, backend) {
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$location$f = location;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LoginController$$rootScope$f = rootScope;
+  this.backend$2 = backend;
+  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
   this.scope$1.username = "";
   this.scope$1.password = "";
   this.scope$1.remember = true;
@@ -22885,7 +22620,9 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController = new $Type
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_LoginController;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController() {
-  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this)
+  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LogoutController$$location$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LogoutController$$rootScope$f = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController;
@@ -22894,16 +22631,23 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController() {
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_LogoutScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function(scope, backend) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_LogoutScope__Lcom_greencatsoft_angularjs_core_Location__Lcom_greencatsoft_angularjs_core_RootScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function(scope, location, rootScope, backend) {
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LogoutController$$location$f = location;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$LogoutController$$rootScope$f = rootScope;
   $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
-  $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(backend.logout__Lcom_greencatsoft_angularjs_core_Promise()).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x0$1$2) {
-    var x0$1 = $as_s_util_Try(x0$1$2);
-    if ($is_s_util_Success(x0$1)) {
-      $m_Lru_ispras_lingvodoc_frontend_app_services_UserService$().user$1 = null
-    } else if ((!$is_s_util_Failure(x0$1))) {
-      throw new $c_s_MatchError().init___O(x0$1)
-    }
-  })), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+  $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(backend.logout__Lcom_greencatsoft_angularjs_core_Promise()).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_s_util_Try(x0$1$2);
+      if ($is_s_util_Success(x0$1)) {
+        arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$LogoutController$$rootScope$f.$emit("user.logout");
+        return arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$LogoutController$$location$f.path("/")
+      } else if ($is_s_util_Failure(x0$1)) {
+        return (void 0)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$1)
+      }
+    })
+  })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_LogoutController = new $TypeData().initClass({
@@ -22947,7 +22691,9 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_MainController = new $TypeD
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_MainController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_MainController;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController() {
-  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this)
+  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$backend$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController;
@@ -22957,33 +22703,44 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController()
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype;
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.getAuthenticatedUser__Lru_ispras_lingvodoc_frontend_app_model_User = (function() {
-  return $as_Lru_ispras_lingvodoc_frontend_app_model_User($as_s_Option(this.scope$1.user).get__O())
+  return this.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f.getUser__Lru_ispras_lingvodoc_frontend_app_model_User()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationScope__Lcom_greencatsoft_angularjs_core_RootScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lru_ispras_lingvodoc_frontend_app_services_UserService = (function(scope, rootScope, backend, userService) {
+  this.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$backend$f = backend;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f = userService;
+  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
+  rootScope.$on("user.login", (function(f) {
+    return (function() {
+      return f.apply__O()
+    })
+  })(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController(this)));
+  rootScope.$on("user.logout", (function(arg$outer) {
+    return (function() {
+      $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("LOGOUT");
+      arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f.removeUser__V()
+    })
+  })(this));
+  backend.getCurrentUser__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer$1) {
+    return (function(x0$2$2) {
+      var x0$2 = $as_s_util_Try(x0$2$2);
+      if ($is_s_util_Success(x0$2)) {
+        var x2 = $as_s_util_Success(x0$2);
+        var user = $as_Lru_ispras_lingvodoc_frontend_app_model_User(x2.value$2);
+        arg$outer$1.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f.setUser__Lru_ispras_lingvodoc_frontend_app_model_User__V(user)
+      } else if ($is_s_util_Failure(x0$2)) {
+        arg$outer$1.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f.removeUser__V()
+      } else {
+        throw new $c_s_MatchError().init___O(x0$2)
+      }
+    })
+  })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+  return this
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.$$js$exported$meth$isAuthenticated__O = (function() {
   return this.isAuthenticated__Z()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.isAuthenticated__Z = (function() {
-  var this$1 = $as_s_Option(this.scope$1.user);
-  return this$1.isDefined__Z()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function(scope, backend) {
-  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
-  this.scope$1.user = $m_s_None$();
-  backend.getCurrentUser__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
-    return (function(x0$1$2) {
-      var x0$1 = $as_s_util_Try(x0$1$2);
-      if ($is_s_util_Success(x0$1)) {
-        var x2 = $as_s_util_Success(x0$1);
-        var user = $as_Lru_ispras_lingvodoc_frontend_app_model_User(x2.value$2);
-        arg$outer.scope$1.user = new $c_s_Some().init___O(user)
-      } else if ($is_s_util_Failure(x0$1)) {
-        arg$outer.scope$1.user = $m_s_None$()
-      } else {
-        throw new $c_s_MatchError().init___O(x0$1)
-      }
-    })
-  })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
-  return this
+  return this.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f.hasUser__Z()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.$$js$exported$meth$getAuthenticatedUser__O = (function() {
   return this.getAuthenticatedUser__Lru_ispras_lingvodoc_frontend_app_model_User()
@@ -23013,11 +22770,13 @@ $e.ru.ispras.lingvodoc.frontend = ($e.ru.ispras.lingvodoc.frontend || {});
 $e.ru.ispras.lingvodoc.frontend.app = ($e.ru.ispras.lingvodoc.frontend.app || {});
 $e.ru.ispras.lingvodoc.frontend.app.controllers = ($e.ru.ispras.lingvodoc.frontend.app.controllers || {});
 /** @constructor */
-$e.ru.ispras.lingvodoc.frontend.app.controllers.NavigationController = (function(arg$1, arg$2) {
+$e.ru.ispras.lingvodoc.frontend.app.controllers.NavigationController = (function(arg$1, arg$2, arg$3, arg$4) {
   var $thiz = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController();
   var prep0 = arg$1;
-  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(arg$2);
-  $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService.call($thiz, prep0, prep1);
+  var prep1 = arg$2;
+  var prep2 = $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(arg$3);
+  var prep3 = $as_Lru_ispras_lingvodoc_frontend_app_services_UserService(arg$4);
+  $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationScope__Lcom_greencatsoft_angularjs_core_RootScope__Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lru_ispras_lingvodoc_frontend_app_services_UserService.call($thiz, prep0, prep1, prep2, prep3);
   return $thiz
 });
 $e.ru.ispras.lingvodoc.frontend.app.controllers.NavigationController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController.prototype;
@@ -23039,9 +22798,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController.protot
   this.ok__V()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController.prototype.initializeMap__sjs_js_timers_SetTimeoutHandle = (function() {
-  var x$16 = new $g.google.maps.LatLng(51.201203, (-1.72437));
-  var x$32 = $m_Lgoogle_maps_MapOptions$().apply$default$14__Lgoogle_maps_MapTypeId();
-  var opts = $m_Lgoogle_maps_MapOptions$().apply__T__Lgoogle_maps_LatLng__Z__Z__Z__T__T__Z__Z__Z__Lgoogle_maps_MapTypeControlOptions__Z__Lgoogle_maps_NavigationControlOptions__Lgoogle_maps_MapTypeId__Z__Z__Lgoogle_maps_OverviewMapControlOptions__Z__Lgoogle_maps_PanControlOptions__Z__Lgoogle_maps_RotateControlOptions__Z__Lgoogle_maps_ScaleControlOptions__Z__Lgoogle_maps_StreetViewPanorama__Z__Lgoogle_maps_StreetViewControlOptions__sjs_js_Array__D__Z__Lgoogle_maps_ZoomControlOptions__Lgoogle_maps_MapOptions(null, x$16, false, false, true, null, null, true, false, false, null, true, null, x$32, true, true, null, false, null, false, null, true, null, true, null, false, null, null, 8.0, true, null);
+  var x$1 = new $g.google.maps.LatLng(51.201203, (-1.72437));
+  var x$17 = $m_Lgoogle_maps_MapOptions$().apply$default$14__Lgoogle_maps_MapTypeId();
+  var opts = $m_Lgoogle_maps_MapOptions$().apply__T__Lgoogle_maps_LatLng__Z__Z__Z__T__T__Z__Z__Z__Lgoogle_maps_MapTypeControlOptions__Z__Lgoogle_maps_NavigationControlOptions__Lgoogle_maps_MapTypeId__Z__Z__Lgoogle_maps_OverviewMapControlOptions__Z__Lgoogle_maps_PanControlOptions__Z__Lgoogle_maps_RotateControlOptions__Z__Lgoogle_maps_ScaleControlOptions__Z__Lgoogle_maps_StreetViewPanorama__Z__Lgoogle_maps_StreetViewControlOptions__sjs_js_Array__D__Z__Lgoogle_maps_ZoomControlOptions__Lgoogle_maps_MapOptions(null, x$1, false, false, true, null, null, true, false, false, null, true, null, x$17, true, true, null, false, null, false, null, true, null, true, null, false, null, null, 8.0, true, null);
   this.scope$1.map = new $g.google.maps.Map($m_Lorg_scalajs_dom_package$().document__Lorg_scalajs_dom_raw_HTMLDocument().getElementById(this.mapElementId$2), opts);
   $g.google.maps.event.addListener(this.scope$1.map, "click", (function() {
     return (void 0)
@@ -23065,56 +22824,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController.protot
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController.prototype.drawLocations__V = (function() {
-  var jsx$1 = this.scope$1;
-  var array = this.scope$1.labels;
-  var elem = new $c_Lru_ispras_lingvodoc_frontend_app_model_Location().init___D__D(51.601203, (-1.71137));
-  var array$1 = [];
-  var i = 0;
-  var len = $uI(array.length);
-  while ((i < len)) {
-    var index = i;
-    var arg1 = array[index];
-    array$1.push(arg1);
-    i = ((1 + i) | 0)
-  };
-  array$1.push(elem);
-  var elem$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_Location().init___D__D(51.801203, (-1.77437));
-  var array$2 = [];
-  var i$1 = 0;
-  var len$1 = $uI(array$1.length);
-  while ((i$1 < len$1)) {
-    var index$1 = i$1;
-    var arg1$1 = array$1[index$1];
-    array$2.push(arg1$1);
-    i$1 = ((1 + i$1) | 0)
-  };
-  array$2.push(elem$1);
-  var elem$2 = new $c_Lru_ispras_lingvodoc_frontend_app_model_Location().init___D__D(52.201203, (-1.73437));
-  var array$3 = [];
-  var i$2 = 0;
-  var len$2 = $uI(array$2.length);
-  while ((i$2 < len$2)) {
-    var index$2 = i$2;
-    var arg1$2 = array$2[index$2];
-    array$3.push(arg1$2);
-    i$2 = ((1 + i$2) | 0)
-  };
-  array$3.push(elem$2);
-  jsx$1.labels = array$3;
-  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log(this.scope$1.labels);
-  var array$4 = this.scope$1.labels;
-  var i$3 = 0;
-  var len$3 = $uI(array$4.length);
-  while ((i$3 < len$3)) {
-    var index$3 = i$3;
-    var arg1$3 = array$4[index$3];
-    var location = $as_Lru_ispras_lingvodoc_frontend_app_model_Location(arg1$3);
-    var position = new $g.google.maps.LatLng(location.lat$1, location.lng$1);
-    var jsx$2 = $g.google.maps.Marker;
-    var x$2 = this.scope$1.map;
-    new jsx$2($m_Lgoogle_maps_MarkerOptions$().apply__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__Lgoogle_maps_Map__sjs_js_UndefOr__Lgoogle_maps_LatLng__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__sjs_js_UndefOr__Lgoogle_maps_MarkerOptions((void 0), (void 0), (void 0), (void 0), (void 0), (void 0), x$2, (void 0), position, (void 0), (void 0), (void 0), "Marker", (void 0), (void 0)));
-    i$3 = ((1 + i$3) | 0)
-  }
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log(this.scope$1.labels)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController.prototype.$$js$exported$meth$initializeMap__O = (function() {
   return this.initializeMap__sjs_js_timers_SetTimeoutHandle()
@@ -23428,23 +23138,21 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_SignupController.prototype.$$js
   this.signup__V()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SignupController.prototype.signup__V = (function() {
-  var this$1 = $as_s_Option(this.scope$1.error);
-  if (this$1.isDefined__Z()) {
-    var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-    var s = $as_T($as_s_Option(this.scope$1.error).get__O());
-    jsx$1.log(s)
-  };
-  $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(this.backend$2.signup__T__T__T__T__I__I__I__Lcom_greencatsoft_angularjs_core_Promise($as_T(this.scope$1.login), $as_T(this.scope$1.fullName), $as_T(this.scope$1.password), $as_T(this.scope$1.email), 1, 1, 2000)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+  $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(this.backend$2.signup__T__T__T__T__T__T__T__Lcom_greencatsoft_angularjs_core_Promise($as_T(this.scope$1.login), $as_T(this.scope$1.fullName), $as_T(this.scope$1.password), $as_T(this.scope$1.email), $as_T(this.scope$1.day), $as_T(this.scope$1.month), $as_T(this.scope$1.year))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
     return (function(x0$1$2) {
       var x0$1 = $as_s_util_Try(x0$1$2);
       if ($is_s_util_Success(x0$1)) {
-        return arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$SignupController$$location$f.path("login")
-      } else if ($is_s_util_Failure(x0$1)) {
+        var x2 = $as_s_util_Success(x0$1);
+        var p3 = $asUnit(x2.value$2);
+        if ((p3 === (void 0))) {
+          return arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$SignupController$$location$f.path("login")
+        }
+      };
+      if ($is_s_util_Failure(x0$1)) {
         arg$outer.scope$1.error = new $c_s_Some().init___O("some error");
         return (void 0)
-      } else {
-        throw new $c_s_MatchError().init___O(x0$1)
-      }
+      };
+      throw new $c_s_MatchError().init___O(x0$1)
     })
   })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
@@ -28788,6 +28496,57 @@ var $d_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException = new $Type
   s_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1() {
+  $c_sr_AbstractFunction0$mcV$sp.call(this);
+  this.$$outer$3 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype = new $h_sr_AbstractFunction0$mcV$sp();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype.apply$mcV$sp__V = (function() {
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("LOGIN");
+  this.$$outer$3.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$backend$f.getCurrentUser__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_s_util_Try(x0$1$2);
+      if ($is_s_util_Success(x0$1)) {
+        var x2 = $as_s_util_Success(x0$1);
+        var user = $as_Lru_ispras_lingvodoc_frontend_app_model_User(x2.value$2);
+        arg$outer.$$outer$3.ru$ispras$lingvodoc$frontend$app$controllers$NavigationController$$userService$f.setUser__Lru_ispras_lingvodoc_frontend_app_model_User__V(user)
+      } else if ((!$is_s_util_Failure(x0$1))) {
+        throw new $c_s_MatchError().init___O(x0$1)
+      }
+    })
+  })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype.apply__O = (function() {
+  this.apply$mcV$sp__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$3 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.NavigationController$$anonfun$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1: 1,
+  sr_AbstractFunction0$mcV$sp: 1,
+  sr_AbstractFunction0: 1,
+  O: 1,
+  F0: 1,
+  s_Function0$mcV$sp: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_NavigationController$$anonfun$1;
 /** @constructor */
 function $c_jl_JSConsoleBasedPrintStream() {
   $c_Ljava_io_PrintStream.call(this);

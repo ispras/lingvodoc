@@ -1,6 +1,6 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Location, Scope, Window}
+import com.greencatsoft.angularjs.core.{Location, Scope}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
@@ -9,9 +9,7 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import org.scalajs.dom.console
-import org.scalajs.jquery.jQuery
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
-
 
 
 @js.native
@@ -27,7 +25,7 @@ trait SignupScope extends Scope {
 }
 
 @injectable("SignupController")
-class SignupController(scope: SignupScope,  location: Location, backend: BackendService) extends AbstractController[SignupScope](scope) {
+class SignupController(scope: SignupScope, location: Location, backend: BackendService) extends AbstractController[SignupScope](scope) {
 
   scope.login = ""
   scope.fullName = ""
@@ -52,13 +50,8 @@ class SignupController(scope: SignupScope,  location: Location, backend: Backend
 
   @JSExport
   def signup() = {
-
-    if (scope.error.nonEmpty) {
-      console.log(scope.error.get)
-    }
-
-    backend.signup(scope.login, scope.fullName, scope.password, scope.email, 1,1,2000) onComplete {
-      case Success(user) => location.path("login")
+    backend.signup(scope.login, scope.fullName, scope.password, scope.email, scope.day, scope.month, scope.year) onComplete {
+      case Success(()) => location.path("login")
       case Failure(e) => scope.error = Some("some error")
     }
   }

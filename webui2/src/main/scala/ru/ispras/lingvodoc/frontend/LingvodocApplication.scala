@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendServiceFactory, ExceptionHandlerFactory}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendServiceFactory, ExceptionHandlerFactory, UserService, UserServiceFactory}
 
 import scala.scalajs.js.annotation.JSExport
 
@@ -28,7 +28,8 @@ object LingvodocApplication {
     Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap"))
       .config[RoutingConfig]
 	    .factory[BackendServiceFactory]
-      .factory[ExceptionHandlerFactory]
+      .factory[UserServiceFactory]
+      //.factory[ExceptionHandlerFactory]
       .controller[MainController]
       .controller[NavigationController]
       .controller[LoginController]
@@ -43,5 +44,6 @@ object LingvodocApplication {
       .controller[ViewDictionaryController]
       .controller[SoundMarkupController]
       .controller[ExceptionHandlerController]
+
   }
 }
