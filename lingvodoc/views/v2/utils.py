@@ -7,7 +7,8 @@ from lingvodoc.models import (
     Language,
     Organization,
     User,
-    UserBlobs
+    UserBlobs,
+    TranslationAtom
 )
 
 from pyramid.request import Request
@@ -388,3 +389,24 @@ def view_perspective_from_object(request, perspective):
                                 remove_list.append(info)
             return response
     return {'error':'no persp'}
+
+
+def view_field_from_object(request, field):
+    response = dict()
+    if field and not field.marked_for_deletion:
+        response['client_id'] = field.client_id
+        response['client_id'] = field.client_id
+        response['created_at'] = str(field.created_at)
+        response['data_type_translation_gist_client_id'] = field.data_type_translation_gist_client_id
+        response['data_type_translation_gist_object_id'] = field.data_type_translation_gist_object_id
+        response['translation'] = field.get_translation(request.cookies['locale_id'])
+        response['is_translatable'] = field.is_translatable
+        response['translation_gist_client_id'] = field.translation_gist_client_id
+        response['translation_gist_object_id'] = field.translation_gist_object_id
+        atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=field.data_type_translation_gist_client_id,
+                                                          parent_object_id=field.data_type_translation_gist_object_id,
+                                                          locale_id=int(request.cookies['locale_id'])).first()
+        response['data_type'] = atom.content
+
+        return response
+    return {'error': 'no field'}

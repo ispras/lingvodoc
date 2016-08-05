@@ -261,6 +261,13 @@ def configure_routes(config):
                              '/perspective/{perspective_client_id}/{perspective_id}/fields',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested (except delete, because it not used anywhere(?))
 
+    config.add_route(name='create_field',
+                     pattern='/field',
+                     factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='field',
+                     pattern='/field/{client_id}/{object_id}',
+                     factory='lingvodoc.models.ApproveAllAcl')
+
     # API #POST
     # should be done with standard form enctype="multipart/form-data"
     config.add_route(name="upload_user_blob",

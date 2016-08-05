@@ -37,14 +37,16 @@ from lingvodoc.models import (
     LexicalEntry,
     Organization,
     User,
-    TranslationAtom
+    TranslationAtom,
+    Field
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
     create_object,
     get_user_by_client_id,
     user_counter,
-    view_perspective_from_object
+    view_perspective_from_object,
+    view_field_from_object
 )
 
 log = logging.getLogger(__name__)
@@ -464,7 +466,7 @@ def create_perspective(request):  # tested & in docs
         parent_object_id = request.matchdict.get('dictionary_object_id')
 
         if "json_body" not in request.__dict__:
-            request.response.status = HTTPBadRequest
+            request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
         if type(request.json_body) == str:
             req = json.loads(request.json_body)
@@ -884,107 +886,37 @@ def edit_perspective_status(request):  # tested & in docs
     return {'error': str("No such perspective in the system")}
 
 
-# TODO: completely broken!
-@view_config(route_name='perspective_fields', renderer='json', request_method='GET')
-def view_perspective_fields(request):
+@view_config(route_name='field', renderer='json', request_method='GET')
+def view_field(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        fields = []
-        # db_fields = DBSession.query(DictionaryPerspectiveField)\
-        #     .filter_by(parent=perspective, marked_for_deletion=False)\
-        #     .order_by('position')
-        db_fields = list()
-        for field in db_fields:
-
-            data = dict()
-            if field.level == 'leveloneentity' or field.level == 'groupingentity':
-                ent_type = field.get_entity_type(request)
-                data['translation_gist_client_id'] = ent_type['translation_string']
-                data['entity_type_translation'] = ent_type['translation']
-                data_type = field.get_data_type(request)
-                data['data_type'] = data_type['translation_string']
-                data['data_type_translation'] = data_type['translation']
-                data['position'] = field.position
-                data['status'] = field.state
-                data['level'] = field.level
-                contains = []
-                if field.dictionaryperspectivefield:
-                    for field2 in field.dictionaryperspectivefield:
-                        if not field2.marked_for_deletion:
-                            data2 = dict()
-                            ent_type = field2.get_entity_type(request)
-                            data2['entity_type'] = ent_type['translation_string']
-                            data2['entity_type_translation'] = ent_type['translation']
-                            data_type2 = field2.get_data_type(request)
-                            data2['data_type'] = data_type2['translation_string']
-                            data2['data_type_translation'] = data_type2['translation']
-                            data2['status'] = field2.state
-                            data2['position'] = field2.position
-                            data2['level'] = field2.level
-                            data2['client_id'] = field2.client_id
-                            data2['object_id'] = field2.object_id
-                            contains += [data2]
-                data['contains'] = contains
-                if field.group:
-                    group = field.get_group(request)
-                    data['group'] = group['translation_string']
-                    data['group_translation'] = group['translation']
-                data['client_id'] = field.client_id
-                data['object_id'] = field.object_id
-                fields += [data]
-        response['fields'] = fields
-        request.response.status = HTTPOk.code
-        return response
+    field = DBSession.query(Field).filter_by(client_id=client_id, object_id=object_id).first()
+    field = Field()
+    if field:
+        return view_field_from_object(request=request, field=field)
     else:
         request.response.status = HTTPNotFound.code
-        return {'error': str("No such perspective in the system")}
+        return {'error': str("No such field in the system")}
 
 
-# TODO: completely broken!
-@view_config(route_name='perspective_fields', renderer = 'json', request_method='DELETE', permission='edit')
-def delete_perspective_fields(request):
-    response = dict()
-    client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
-
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        req = request.json_body
-        cli_id = req['field_client_id']
-        obj_id = req['field_object_id']
-        # field = DBSession.query(DictionaryPerspectiveField).filter_by(client_id=cli_id, object_id=obj_id).first()
-        field = None
-        if field:
-            field.marked_for_deletion = True
-        else:
-            request.response.status = HTTPNotFound.code
-            return {'error': str("No such field in the system")}
-        request.response.status = HTTPOk.code
-        return response
-    else:
-        request.response.status = HTTPNotFound.code
-        return {'error': str("No such perspective in the system")}
-
-
-# TODO: completely broken!
-@view_config(route_name='perspective_fields', renderer='json', request_method='POST', permission='edit')
-def create_perspective_fields(request):  # tested
-    # TODO: stop recreating fields. Needs to be done both there and in web
+@view_config(route_name='create_field', renderer='json', request_method='POST')
+def create_field(request):
     try:
         variables = {'auth': authenticated_userid(request)}
-        parent_client_id = request.matchdict.get('perspective_client_id')
-        parent_object_id = request.matchdict.get('perspective_id')
-        dictionary_client_id = request.matchdict.get('dictionary_client_id')
-        dictionary_object_id = request.matchdict.get('dictionary_object_id')
+        try:
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
+        except AttributeError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+        translation_gist_client_id = req['translation_gist_client_id']
+        translation_gist_object_id = req['translation_gist_object_id']
+        data_type_translation_gist_client_id = req['data_type_translation_gist_client_id']
+        data_type_translation_gist_object_id = req['data_type_translation_gist_object_id']
 
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
-            req = request.json_body
-        fields = req['fields']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -992,60 +924,20 @@ def create_perspective_fields(request):  # tested
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
-        perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=parent_client_id,
-                                                                       object_id=parent_object_id).first()
-        if not perspective:
-            request.response.status = HTTPNotFound.code
-            return {'error': str("No such perspective in the system")}
-        for field in perspective.dictionaryperspectivefield:
-            field.marked_for_deletion = True
+        field = Field(client_id=variables['auth'],
+                                            data_type_translation_gist_client_id=data_type_translation_gist_client_id,
+                                            data_type_translation_gist_object_id=data_type_translation_gist_object_id,
+                                            translation_gist_client_id=translation_gist_client_id,
+                                            translation_gist_object_id=translation_gist_object_id
+                                            )
 
-        for entry in fields:
-            # field = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
-            #                                    client_id=variables['auth'],
-            #                                    parent=perspective,
-            #                                    state=entry['status'])
-            field = None
-            translation = entry['data_type']
-            if 'data_type_translation' in entry:
-                translation = entry['data_type_translation']
-            field.set_data_type(request, translation, entry['data_type'])
-            translation = entry['entity_type']
-            if 'entity_type_translation' in entry:
-                translation = entry['entity_type_translation']
-            field.set_entity_type(request, translation, entry['entity_type'])
-            if 'group' in entry:
-                field.set_group(request, entry['group_translation'], entry['group'])
-            field.level = entry['level']
-            field.position = entry['position']
-            if 'contains' in entry:
-                for subentry in entry['contains']:
-                    # field2 = DictionaryPerspectiveField(object_id=DBSession.query(DictionaryPerspectiveField).filter_by(client_id=client.id).count() + 1,
-                    #                                     client_id=variables['auth'],
-                    #                                     entity_type=subentry['entity_type'],
-                    #                                     data_type=subentry['data_type'],
-                    #                                     level='leveltwoentity',
-                    #                                     parent=perspective,
-                    #                                     parent_entity=field,
-                    #                                     state=subentry['status'])
-                    field2 = None
-                    field2.position = subentry['position']
-                    translation = subentry['data_type']
-                    if 'data_type_translation' in subentry:
-                        translation = subentry['data_type_translation']
-                    field2.set_data_type(request, translation, subentry['data_type'])
-                    translation = subentry['entity_type']
-                    if 'entity_type_translation' in subentry:
-                        translation = subentry['entity_type_translation']
-                    field2.set_entity_type(request, translation, subentry['entity_type'])
-                    if 'group' in subentry:
-                        field2.set_group(request, subentry['group_translation'], subentry['group'])
-                    DBSession.add(field2)
-                    DBSession.flush()
-            DBSession.add(field)
-            DBSession.flush()
+        if req.get('is_translatable', None):
+            field.is_translatable = bool(req['is_translatable'])
+        DBSession.add(field)
+        DBSession.flush()
         request.response.status = HTTPOk.code
-        return {}
+        return {'object_id': field.object_id,
+                'client_id': field.client_id}
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
@@ -1057,6 +949,66 @@ def create_perspective_fields(request):  # tested
     except CommonException as e:
         request.response.status = HTTPConflict.code
         return {'error': str(e)}
+
+
+def view_nested_field(request, field):
+    field_object = DBSession.query(Field).filter_by(client_id=field['client_id'], object_id=field['object_id']).first()
+    field_json = view_field_from_object(request=request, field=field_object)
+    if 'error' in field_json:
+        return field_json
+    if field.get('contains'):
+        contains = list()
+        for subfield in field['contains']:
+            subfield_json = view_nested_field(request, subfield)
+            if 'error' in subfield_json:
+                return subfield_json
+            contains.append(subfield_json)
+        field_json['contains'] = contains
+    if field.get('link'):
+        field_json['link'] = field['link']
+    return field_json
+
+
+@view_config(route_name='perspective_fields', renderer='json', request_method='GET')
+def view_perspective_fields(request):
+    response = list()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective and not perspective.marked_for_deletion:
+        fields = json.loads(perspective.additional_metadata)['fields']
+        for field in fields:
+            response.append(view_nested_field(request, field))
+        request.response.status = HTTPOk.code
+        return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='perspective_fields', renderer='json', request_method='PUT')
+def update_perspective_fields(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_id')
+    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if perspective and not perspective.marked_for_deletion:
+        try:
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
+        except AttributeError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+        additional_metadata = json.loads(perspective.additional_metadata)
+        additional_metadata.update({"fields": req})
+        perspective.additional_metadata = json.dumps(additional_metadata)
+        request.response.status = HTTPOk.code
+        return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
 
 
 # TODO: completely broken!
