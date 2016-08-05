@@ -60,11 +60,8 @@ def perspectives_list(request):  # tested
         is_template = request.GET.get('is_template')
     except:
         pass
-    state = None
-    try:
-        state = request.params.get('state')
-    except:
-        pass
+    state_translation_gist_client_id = request.params.get('state_translation_gist_client_id', None)
+    state_translation_gist_object_id = request.params.get('state_translation_gist_object_id', None)
     persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion==False)
     if is_template is not None:
         if type(is_template) == str:
@@ -78,8 +75,9 @@ def perspectives_list(request):  # tested
                 return
 
         persps = persps.filter(DictionaryPerspective.is_template == is_template)
-    if state:
-        persps = persps.filter(DictionaryPerspective.state==state)
+    if state_translation_gist_client_id and state_translation_gist_object_id:
+        persps = persps.filter(DictionaryPerspective.state_translation_gist_client_id==state_translation_gist_client_id,
+                               DictionaryPerspective.state_translation_gist_object_id==state_translation_gist_object_id)
     perspectives = []
     for perspective in persps:
         resp = view_perspective_from_object(request, perspective)
@@ -344,17 +342,6 @@ def view_perspective_tree(request):  # tested & in docs
         if not perspective.marked_for_deletion:
             tree = []
             resp = view_perspective_from_object(request, perspective)
-            # tree.append({'type': 'perspective',
-            #              'translation_gist_client_id': perspective.translation_gist_client_id,
-            #              'translation_gist_object_id': perspective.translation_gist_object_id,
-            #              'client_id': perspective.client_id,
-            #              'object_id': perspective.object_id,
-            #              'parent_client_id': perspective.parent_client_id,
-            #              'parent_object_id': perspective.parent_object_id,
-            #              'is_template': perspective.is_template,
-            #              'marked_for_deletion': perspective.marked_for_deletion,
-            #              'status': perspective.state
-            #              })
             resp.update({"type": "perspective"})
             tree.append(resp)
             dictionary = perspective.parent
