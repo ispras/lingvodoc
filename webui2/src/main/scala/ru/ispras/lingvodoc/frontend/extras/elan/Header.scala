@@ -13,15 +13,22 @@ class Header(headerXML: JQuery) {
     foreach(mf => console.log(s"WARN: ${Header.timeUnits.name} are always ${Header.timeUnits.value} in ELAN"))
   val mediaDescriptor = MediaDescriptor.fromMultiple(headerXML.find(MediaDescriptor.tagName))
   val linkedFileDescriptor = LinkedFileDescriptor.fromMultiple(headerXML.find(LinkedFileDescriptor.tagName))
-  val props = Utils.jQuery2XML(headerXML.find(Header.propTagName)) // User-defined properties
-  override def toString: String =
-    Utils.wrap(Header.tagName,
-      s"${mediaDescriptor.getOrElse("")} ${linkedFileDescriptor.getOrElse("")} $props",
-      Header.timeUnits.toString)
+  var props = parseProps(Utils.jQuery2List(headerXML.find(Header.propTagName)))
+
+  // parse user-defined properties into Map and back into String
+  private def parseProps(propXMLs: List[JQuery]): Map[String, String] =
+    propXMLs.map(propXML => propXML.attr("NAME").get -> propXML.text).toMap
+  private def propsToString = props map {case (k, v) =>
+    Utils.wrap(Header.propTagName, v, RequiredXMLAttr(Header.propAttrName, k).toString)
+  } mkString "\n"
+
+  private def content = s"${mediaDescriptor.getOrElse("")} ${linkedFileDescriptor.getOrElse("")} $propsToString"
+  override def toString: String = Utils.wrap(Header.tagName, content, Header.timeUnits.toString)
 }
 
 object Header {
-  val (tagName, mfAttrName, propTagName) = ("HEADER", "MEDIA_FILE", "PROPERTY")
+  val (tagName, mfAttrName, propTagName, propAttrName) = ("HEADER", "MEDIA_FILE", "PROPERTY", "NAME")
+  val (lastUsedTimeSlotIDPropName, lastUsedAnnotIDPropName) = ("lingvodocLastUsedTimeSlotID", "lingvodocLastUsedAnnotationID")
   val timeUnits = RequiredXMLAttr("TIME_UNITS", "milliseconds")
 }
 

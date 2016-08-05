@@ -2,13 +2,13 @@ package ru.ispras.lingvodoc.frontend.extras.elan
 
 import org.scalajs.jquery.JQuery
 
-import scala.scalajs.js.annotation.JSExportAll
+import scala.annotation.meta.field
+import scala.scalajs.js.annotation.{JSExportDescendentObjects, JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
 
 
 // Represents Tier element
-@JSExportAll
 class Tier(val tierID: RequiredXMLAttr[String], val linguisticTypeRef:RequiredXMLAttr[String],
            val participant: OptionalXMLAttr[String], val annotator: OptionalXMLAttr[String],
            val defaultLocale: OptionalXMLAttr[String], val parentRef: OptionalXMLAttr[String],
@@ -23,12 +23,20 @@ class Tier(val tierID: RequiredXMLAttr[String], val linguisticTypeRef:RequiredXM
     List.empty,
     parent
   )
-    // If Tier is time alignable, only alignable annotations can present and only ref annotations otherwise, see
-    // comment to LinguisticType's isTimeAlignable method
     annotations = Utils.jQuery2List(tierXML.find(AbstractAnnotation.tagName)).map(
       if (isTimeAlignable) AlignableAnnotation(_, this) else RefAnnotation(_, this))
   }
 
+  @JSExport
+  def annotationsToJSArray = annotations.toJSArray
+  @JSExport
+  def refAnnotationsToJSArray = getRefAnnotations.toJSArray
+  @JSExport
+  def getID = tierID.value
+
+  // If Tier is time alignable, only alignable annotations can present and only ref annotations otherwise, see
+  // comment to LinguisticType's isTimeAlignable method
+  @JSExport
   def isTimeAlignable = getLinguisticType.isTimeAlignable
   def getLinguisticType = { parent.getLinguisticType(linguisticTypeRef.value) }
 
@@ -52,10 +60,7 @@ class Tier(val tierID: RequiredXMLAttr[String], val linguisticTypeRef:RequiredXM
     List.empty
   }
 
-  def annotationsToJSArray = annotations.toJSArray
-  def refAnnotationsToJSArray = getRefAnnotations.toJSArray
-
-  def attrsToString = s"$tierID $linguisticTypeRef $participant $annotator $defaultLocale $parentRef"
+  private def attrsToString = s"$tierID $linguisticTypeRef $participant $annotator $defaultLocale $parentRef"
   override def toString = Utils.wrap(Tier.tagName, annotations.mkString("\n"), attrsToString)
 }
 
@@ -69,11 +74,18 @@ object Tier {
 
 // Functionality which either alignable and ref annotations have
 trait AbstractAnnotation {
+  val annotationID: RequiredXMLAttr[String]
+  val extRef: OptionalXMLAttr[String]
   val parent: Tier
-  def start: Int
-  def end: Int
+  def start: Long
+  def end: Long
+  // Long is opaque to scala.js, so we need these
+  @JSExport
+  def startToString = start.toString
+  @JSExport
+  def endToString = end.toString
   var text: String
-  def includedAnnotationToString: String
+  protected def includedAnnotationToString: String
   override def toString = Utils.wrap(AbstractAnnotation.tagName, includedAnnotationToString)
 }
 
@@ -88,26 +100,6 @@ object AbstractAnnotation {
   val tagName = "ANNOTATION"
 }
 
-//// Represents Annotation element
-//@JSExportAll
-//class Annotation private(val annotation: Either[AlignableAnnotation, RefAnnotation]) {
-//  override def toString = Utils.wrap(Annotation.tagName, annotation.fold(identity, identity).toString)
-//}
-
-//object Annotation {
-//  // ANNOTATION contains only one element, it is either alignable or ref annotation
-//  def apply(annotationXML: JQuery) = {
-//    val includedAnnotationXML = annotationXML.children().first()
-//    val annotation = includedAnnotationXML.prop("tagName").toString match {
-//      case AlignableAnnotation.tagName => Left(new AlignableAnnotation(includedAnnotationXML))
-//      case RefAnnotation.tagName => Right(new RefAnnotation(includedAnnotationXML))
-//    }
-//    new Annotation(annotation)
-//  }
-//  val tagName = "ANNOTATION"
-//}
-
-@JSExportAll
 class AlignableAnnotation(val timeSlotRef1: RequiredXMLAttr[String], val timeSlotRef2: RequiredXMLAttr[String],
                           val svgRef: OptionalXMLAttr[String], aag: AnnotationAttributeGroup, val parent: Tier)
   extends AnnotationAttributeGroup(aag) with AbstractAnnotation {
@@ -123,7 +115,7 @@ class AlignableAnnotation(val timeSlotRef1: RequiredXMLAttr[String], val timeSlo
   def end = parent.parent.getTimeSlotValue(timeSlotRef2.value)
 
   override def attrsToString = super.attrsToString + s"$timeSlotRef1 $timeSlotRef2 $svgRef"
-  def includedAnnotationToString = Utils.wrap(AlignableAnnotation.tagName, content, attrsToString)
+  protected def includedAnnotationToString = Utils.wrap(AlignableAnnotation.tagName, content, attrsToString)
 }
 
 object AlignableAnnotation {
@@ -136,10 +128,10 @@ object AlignableAnnotation {
     ("ALIGNABLE_ANNOTATION", "TIME_SLOT_REF1", "TIME_SLOT_REF2", "SVG_REF")
 }
 
-@JSExportAll
 class RefAnnotation(val annotationRef: RequiredXMLAttr[String], val previousAnnotation: OptionalXMLAttr[String],
                     aag: AnnotationAttributeGroup, val parent: Tier)
   extends AnnotationAttributeGroup(aag) with AbstractAnnotation {
+  // will not work until all tiers are loaded
   private lazy val parentAnnotation = parent.parent.getAlignableAnnotationByID(annotationRef.value)
 
   private def this(refAnnotXML: JQuery, parent: Tier) = this(
@@ -153,7 +145,7 @@ class RefAnnotation(val annotationRef: RequiredXMLAttr[String], val previousAnno
   def end = parentAnnotation.end
 
   override def attrsToString = super.attrsToString + s"$annotationRef $previousAnnotation"
-  def includedAnnotationToString = Utils.wrap(RefAnnotation.tagName, content, attrsToString)
+  protected def includedAnnotationToString = Utils.wrap(RefAnnotation.tagName, content, attrsToString)
 }
 
 object RefAnnotation {
@@ -167,9 +159,8 @@ object RefAnnotation {
 
 // represents annotationAttribute attribute group and additionally adds ANNOTATION_VALUE element which is the same
 // in both ref annotation and alignable annotations too
-@JSExportAll
 class AnnotationAttributeGroup(val annotationID: RequiredXMLAttr[String], val extRef: OptionalXMLAttr[String],
-                               var text: String) {
+                               @(JSExport @field) var text: String) {
   def this(includedAnnotationXML: JQuery) = this(
     RequiredXMLAttr(includedAnnotationXML, AnnotationAttributeGroup.annotIDAttrName),
     OptionalXMLAttr(includedAnnotationXML, AnnotationAttributeGroup.extRefAttrName),

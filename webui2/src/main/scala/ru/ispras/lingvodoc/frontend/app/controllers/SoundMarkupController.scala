@@ -61,7 +61,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
       """<?xml version="1.0" encoding="UTF-8"?>
 <ANNOTATION_DOCUMENT AUTHOR="TextGridTools" DATE="2016-07-28T15:41:21+00:00" FORMAT="2.7" VERSION="2.7" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.7.xsd">
 <HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">
-<PROPERTY NAME="lastUsedAnnotationId">0</PROPERTY>
+<PROPERTY NAME="lingvodocLastUsedAnnotationId">0</PROPERTY>
+<PROPERTY NAME="lingvodocLastUsedAnnotationId">0</PROPERTY>
 </HEADER>
 <TIME_ORDER>
 <TIME_SLOT TIME_SLOT_ID="ts1" TIME_VALUE="0"/>
@@ -106,7 +107,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 </TIER>
 <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="Translation" TIER_ID="Ann">
 <ANNOTATION>
-<REF_ANNOTATION ANNOTATION_ID="ref1" ANNOTATION_REF="a5">
+<REF_ANNOTATION ANNOTATION_ID="ref1" ANNOTATION_REF="ref1">
 <ANNOTATION_VALUE>haha</ANNOTATION_VALUE>
 </REF_ANNOTATION>
 </ANNOTATION>
@@ -142,7 +143,7 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
 </ANNOTATION_DOCUMENT>
       """
       scope.elan = ELANDocumentJquery(test_markup)
-//      console.log(scope.elan.toString)
+      console.log(scope.elan.toString)
   }
 
   @JSExport
