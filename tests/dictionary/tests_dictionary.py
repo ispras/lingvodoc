@@ -74,7 +74,7 @@ class DictionaryTest(MyTestCase):
         response = self.app.post_json('/dictionaries',
                                       params = {'user_created': [self.id_u3]})
         self.assertEqual(response.status_int, HTTPOk.code)
-        self.assertEqual(response.json, correct_answers[test_name])
+        self.assertDictEqual(response.json, correct_answers[test_name], set_like=True)
 
         test_name = "filter_by_user_3"
         response = self.app.post_json('/dictionaries',
@@ -138,7 +138,7 @@ class DictionaryTest(MyTestCase):
         persp_1 = self.create_perspective('translation_string1', dict_1, "Published", False)
         persp_2 = self.create_perspective('translation_string2', dict_1, "Published", False)
         response = self.app.get('/dictionary/%s/%s/perspective/%s/%s/fields'
-                                % (1, 1, 1, 1))
+                                % (1, 6, 1, 7)) # 1 1 1 1 with old
         fields = response.json
         response = self.app.post_json('/dictionary/%s/%s/perspective/%s/%s/fields'
                                       % (dict_1['client_id'],
@@ -224,13 +224,14 @@ class ConvertedDictionaryTest(MyTestCase):
                                                          'blob_object_id': blob_ids['object_id']})
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertEqual(response.json, [])
+        # a = input()
         response = self.app.post_json('/convert', params={'blob_client_id': blob_ids['client_id'],
                                                          'blob_object_id': blob_ids['object_id'],
                                                           'parent_client_id':root_ids['client_id'],
                                                           'parent_object_id':root_ids['object_id']})
         self.assertEqual(response.status_int, HTTPOk.code)
         self.assertDictEqual(response.json, {"status": "Your dictionary is being converted."
-                      " Wait 5-15 minutes and you will see new dictionary in your dashboard."})
+                                                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."})
         not_found = True
         for i in range(3):
             response = self.app.post_json('/dictionaries', params={'user_created': [user_id]})
@@ -243,7 +244,7 @@ class ConvertedDictionaryTest(MyTestCase):
         dict_ids = response.json['dictionaries'][0]
         for i in range(20):
             response = self.app.get('/dictionary/%s/%s/state' % (dict_ids['client_id'], dict_ids['object_id']))
-            if response.json['status'].lower() == 'published':
+            if response.json['status'].lower() == 'Converting 100%'.lower():
                 break
             sleep(60)
         response = self.app.get('/dictionary/%s/%s/perspectives' % (dict_ids['client_id'], dict_ids['object_id']))
@@ -261,7 +262,4 @@ class ConvertedDictionaryTest(MyTestCase):
 
         json_file = open('dictionary/test_dict_convert.json', 'r')
         correct_answer = json.loads(json_file.read())
-        self.assertDictEqual(response.json, correct_answer, stop_words=['client_id',
-                                                                        'object_id',
-                                                                        'parent_client_id',
-                                                                        'parent_object_id'], set_like= True)
+        self.assertDictEqual(response.json, correct_answer, set_like= True)

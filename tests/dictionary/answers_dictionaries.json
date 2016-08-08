@@ -1,27 +1,5 @@
 {
   "filter_by_user_1": {
-    "dictionaries": [
-      {
-        "additional_metadata": null,
-        "client_id": 17,
-        "translation_string": "user1_dict1",
-        "parent_object_id": 1,
-        "translation": "user1_dict1",
-        "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
-      },
-      {
-        "additional_metadata": null,
-        "client_id": 18,
-        "translation_string": "user2_dict1",
-        "parent_object_id": 2,
-        "translation": "user2_dict1",
-        "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
-      }
-    ],
     "clients": [
       5,
       6,
@@ -29,25 +7,47 @@
       9,
       17,
       18
+    ],
+    "dictionaries": [
+      {
+        "translation_string": "user1_dict1",
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 1,
+        "client_id": 17,
+        "translation": "user1_dict1",
+        "parent_client_id": 16,
+        "additional_metadata": null
+      },
+      {
+        "translation_string": "user2_dict1",
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 3,
+        "client_id": 18,
+        "translation": "user2_dict1",
+        "parent_client_id": 16,
+        "additional_metadata": null
+      }
     ]
   },
   "filter_by_user_2": {
     "dictionaries": [
       {
+        "object_id": 1,
         "additional_metadata": null,
+        "translation": "user3_dict1",
         "client_id": 19,
         "translation_string": "user3_dict1",
-        "parent_object_id": 3,
-        "translation": "user3_dict1",
-        "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
       }
     ],
     "clients": [
+      19,
       11,
-      12,
-      19
+      12
     ]
   },
   "filter_by_user_3": {
@@ -60,38 +60,38 @@
   "filter_by_language_1": {
     "dictionaries": [
       {
-        "additional_metadata": null,
-        "client_id": 17,
         "translation_string": "user1_dict1",
-        "parent_object_id": 1,
         "translation": "user1_dict1",
+        "client_id": 17,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 1,
+        "parent_client_id": 16
       },
       {
-        "additional_metadata": null,
-        "client_id": 18,
         "translation_string": "user2_dict1",
-        "parent_object_id": 2,
         "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
       }
     ]
   },
   "filter_by_language_2": {
     "dictionaries": [
       {
-        "additional_metadata": null,
-        "client_id": 19,
         "translation_string": "user3_dict1",
-        "parent_object_id": 3,
         "translation": "user3_dict1",
+        "client_id": 19,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
       }
     ]
   },
@@ -101,14 +101,14 @@
   "filter_by_user_language_1": {
     "dictionaries": [
       {
-        "additional_metadata": null,
-        "client_id": 18,
         "translation_string": "user2_dict1",
-        "parent_object_id": 2,
         "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
       }
     ],
     "clients": [
@@ -133,34 +133,34 @@
   "filter_by_user_language_3": {
     "dictionaries": [
       {
-        "additional_metadata": null,
-        "client_id": 17,
         "translation_string": "user1_dict1",
-        "parent_object_id": 1,
         "translation": "user1_dict1",
+        "client_id": 17,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 1,
+        "parent_client_id": 16
       },
       {
-        "additional_metadata": null,
-        "client_id": 18,
         "translation_string": "user2_dict1",
-        "parent_object_id": 2,
         "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
       },
       {
-        "additional_metadata": null,
-        "client_id": 19,
         "translation_string": "user3_dict1",
-        "parent_object_id": 3,
         "translation": "user3_dict1",
+        "client_id": 19,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
       }
     ],
     "clients": [
@@ -180,44 +180,44 @@
   "filter_by_user_language_4": {
     "dictionaries": [
       {
-        "additional_metadata": null,
-        "client_id": 1,
         "translation_string": "Fake dictionary",
-        "parent_object_id": null,
         "translation": "Fake dictionary",
-        "object_id": 1,
-        "parent_client_id": null,
-        "status": "Service"
+        "client_id": 1,
+        "additional_metadata": null,
+        "object_id": 6,
+        "status": "Service",
+        "parent_object_id": null,
+        "parent_client_id": null
       },
       {
-        "additional_metadata": null,
-        "client_id": 17,
         "translation_string": "user1_dict1",
-        "parent_object_id": 1,
         "translation": "user1_dict1",
+        "client_id": 17,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 1,
+        "parent_client_id": 16
       },
       {
-        "additional_metadata": null,
-        "client_id": 18,
         "translation_string": "user2_dict1",
-        "parent_object_id": 2,
         "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
       },
       {
-        "additional_metadata": null,
-        "client_id": 19,
         "translation_string": "user3_dict1",
-        "parent_object_id": 3,
         "translation": "user3_dict1",
+        "client_id": 19,
+        "additional_metadata": null,
         "object_id": 1,
-        "parent_client_id": 16,
-        "status": "WiP"
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
       }
     ]
   }

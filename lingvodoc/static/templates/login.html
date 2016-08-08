@@ -1,17 +1,17 @@
 <div class="container">
 
-    <div class="form-signin"></div>
-        <h2 class="form-signin-heading">Please sign in | <a href="${request.route_url('signup')}">Sign up</a></h2>
-        <label for="inputLogin" class="sr-only">Login</label>
-        <input type="text" placeholder="Login" required autofocus ng-model="username">
-        <label for="inputPassword" class="sr-only">Password</label>
-        <input type="password" class="form-control" placeholder="Password" required ng-model="password">
+    <form role="form" class="form-signin">
+        <h2 class="form-signin-heading">Please sign in | <a href="#/signup">Sign up</a></h2>
+        <label for="login" class="sr-only">Login</label>
+        <input id="login" type="text" class="form-control" placeholder="Login" required autofocus ng-model="username">
+        <label for="password" class="sr-only">Password</label>
+        <input id="password" type="password" class="form-control" placeholder="Password" required ng-model="password">
         <div class="checkbox">
             <label>
                 <input type="checkbox" value="remember-me"> Remember me
             </label>
         </div>
         <button class="btn btn-lg btn-primary btn-block" ng-click="controller.login()">Sign in</button>
-    </div>
+    </form>
 
 </div>

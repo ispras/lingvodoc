@@ -5,6 +5,8 @@ import json
 import hashlib
 import logging
 
+from lingvodoc.queue.client import QueueClient
+
 
 def get_dict_attributes(sqconn):
     dict_trav = sqconn.cursor()
@@ -175,12 +177,16 @@ def upload_audio_with_markup(session, ids_mapping, sound_and_markup_cursor, uplo
         markup__without_audio_sequence = upload_markup(upload_url, search_url, markup__without_audio_sequence, session)
 
 
-def change_dict_status(session, converting_status_url, status):
-    session.put(converting_status_url, json={'status': status})
+#def change_dict_status(session, converting_status_url, status, task_id, progress):
+# def change_dict_status(task_id, progress):
+#     #session.put(converting_status_url, json={'status': status})
+#     QueueClient.update_progress(task_id, progress)
 
 
 def convert_db_new(sqconn, session, language_client_id, language_object_id, server_url,
-                dictionary_client_id, dictionary_object_id, perspective_client_id, perspective_object_id, locale_id=1):
+                   dictionary_client_id, dictionary_object_id, perspective_client_id, perspective_object_id,
+                   locale_id=1, task_id=None):
+
     log = logging.getLogger(__name__)
     dict_attributes = get_dict_attributes(sqconn)
     if not dictionary_client_id or not dictionary_object_id:
@@ -196,7 +202,17 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
 
     converting_status_url = server_url + 'dictionary/%s/%s/state' % (dictionary['client_id'], dictionary['object_id'])
 
-    change_dict_status(session, converting_status_url, 'Converting 5%')
+    # There is no way to move this redefinition because single-task version uses `converting_status_url`
+    # which is assigned here
+    def async_progress_bar(progress):
+        QueueClient.update_progress(task_id, progress)
+
+    def single_progress_bar(progress):
+        session.put(converting_status_url, json={'status': 'Converting {0}%'.format(str(progress))})
+
+    change_dict_status = single_progress_bar if task_id is None else async_progress_bar
+
+    change_dict_status(5)
     perspective_create_url = server_url + 'dictionary/%s/%s/perspective' % (
     dictionary['client_id'], dictionary['object_id'])
 
@@ -213,9 +229,9 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     converting_perspective_status_url = server_url + 'dictionary/%s/%s/perspective/%s/%s/state' % \
                                                      (dictionary['client_id'], dictionary['object_id'],
                                                       perspective['client_id'], perspective['object_id'])
-    change_dict_status(session, converting_perspective_status_url, 'Converting')
+    change_dict_status(10)
 
-    create_perspective_fields_request = session.get(server_url + 'dictionary/1/1/perspective/1/1/fields')
+    create_perspective_fields_request = session.get(server_url + 'dictionary/1/6/perspective/1/7/fields')
     perspective_fields_create_url = perspective_create_url + '/%s/%s/fields' % (perspective['client_id'],
                                                                                 perspective['object_id'])
     status = session.post(perspective_fields_create_url, json=create_perspective_fields_request.text)
@@ -246,7 +262,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                                                                                         perspective['client_id'],
                                                                                         perspective['object_id'])
 
-    change_dict_status(session, converting_status_url, 'Converting 15%')
+    change_dict_status(15)
 
     def create_entity_list(mapping, cursor, level, data_type, entity_type, is_a_regular_form, locale_id=1):
         push_list = []
@@ -288,7 +304,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
         status = prepare_and_upload_text_entities("regular_form", False, column_and_type[0], column_and_type[1])
         log.debug(status.text)
 
-    change_dict_status(session, converting_status_url, 'Converting 35%')
+    change_dict_status(35)
 
     sound_and_markup_word_cursor = sqconn.cursor()
     sound_and_markup_word_cursor.execute("""select blobs.id,
@@ -338,7 +354,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                              audio_hashes, markup_hashes, entity_types, client_id, True, locale_id)
     log.debug(audio_hashes)
 
-    change_dict_status(session, converting_status_url, 'Converting 45%')
+    change_dict_status(45)
 
     paradigm_sound_and_markup_cursor = sqconn.cursor()
     paradigm_sound_and_markup_cursor.execute("""select blobs.id,
@@ -358,7 +374,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
                              audio_hashes, markup_hashes, entity_types, client_id, False, locale_id)
     log.debug(audio_hashes)
 
-    change_dict_status(session, converting_status_url, 'Converting 60%')
+    change_dict_status(60)
 
     simple_word_sound_cursor = sqconn.cursor()
     simple_word_sound_cursor.execute("""select blobs.id,
@@ -374,7 +390,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     upload_audio_simple(session, ids_mapping, simple_word_sound_cursor, create_entities_url, audio_hashes, entity_types,
                         client_id, True, locale_id)
 
-    change_dict_status(session, converting_status_url, 'Converting 70%')
+    change_dict_status(70)
 
     simple_paradigm_sound_cursor = sqconn.cursor()
     simple_paradigm_sound_cursor.execute("""select blobs.id,
@@ -391,7 +407,7 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
     upload_audio_simple(session, ids_mapping, simple_paradigm_sound_cursor, create_entities_url, audio_hashes,
                         entity_types, client_id, False, locale_id)
 
-    change_dict_status(session, converting_status_url, 'Converting 80%')
+    change_dict_status(80)
 
     connect_url = server_url + 'dictionary/%s/%s/perspective/%s/%s/lexical_entry/connect' % (dictionary['client_id'],
                                                                                              dictionary['object_id'],
@@ -431,17 +447,17 @@ def convert_db_new(sqconn, session, language_client_id, language_object_id, serv
         else:
             break
 
-    change_dict_status(session, converting_status_url, 'Converted 100%')
+    change_dict_status(95)
 
-    change_dict_status(session, converting_status_url, 'Published')
-    change_dict_status(session, converting_perspective_status_url, 'Published')
+    change_dict_status(100)
     return dictionary
 
 
 def convert_one(filename, login, password_hash, language_client_id, language_object_id,
                 dictionary_client_id, dictionary_object_id, perspective_client_id, perspective_object_id,
-                server_url="http://localhost:6543/"):
+                server_url="http://localhost:6543/", task_id=None):
     log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)
     log.debug("Starting convert_one")
     log.debug("Creating session")
     session = requests.Session()
@@ -460,7 +476,8 @@ def convert_one(filename, login, password_hash, language_client_id, language_obj
     log.debug("Connected to sqlite3 database")
     try:
         status = convert_db_new(sqconn, session, language_client_id, language_object_id, server_url,
-                dictionary_client_id, dictionary_object_id, perspective_client_id, perspective_object_id)
+                                dictionary_client_id, dictionary_object_id, perspective_client_id,
+                                perspective_object_id, task_id=task_id)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)
@@ -474,6 +491,9 @@ if __name__ == "__main__":
     log.setLevel(logging.DEBUG)
     logging.basicConfig(format='%(asctime)s\t%(levelname)s\t[%(name)s]\t%(message)s')
     log.debug("!!!!!!!!!! YOU SHOULD NOT SEE IT !!!!!!!!")
-    convert_one(filename="/Users/al/Movies/dicts-current/nenets_kaninski.sqlite", login="",
-                password_hash="",
-                language_client_id=33, language_object_id=24, server_url="http://lingvodoc.ispras.ru/")
+    convert_one(filename="/home/student/dicts-current/nenets_kaninski.sqlite", login="Test",
+                password_hash="$2a$12$zBMnhV9oUfKehlHJCHnsPuGM98Wwq/g9hlWWNqg8ZGDuLNyUSfxza",
+                language_client_id=1, language_object_id=1,
+                dictionary_client_id=None, dictionary_object_id=None,
+                perspective_client_id=None, perspective_object_id=None,
+                server_url="http://lingvodoc.ispras.ru/")
