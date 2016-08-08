@@ -5,6 +5,12 @@
 <div class="modal-body">
     <div id="waveform">{{ controller.createWaveSurfer() }}</div>
 
+    <svg width="100%" height="100%">
+        <line x1="0" y1="0" x2="200" y2="200" style="stroke:rgb(255,0,0); stroke-width:2"></line>
+    </svg>
+
+    height is {{ controller.getWaveSurferHeight }}
+    width is {{ controller.getWaveSurferWidth }}
     <uib-tabset justified="true">
         <uib-tab ng-repeat="tier in elan.tiersToJSArray" heading="{{tier.getID}}">
             <span ng-if="tier.isTimeAlignable == false">
@@ -34,6 +40,7 @@
             </table>
         </uib-tab>
     </uib-tabset>
+
 
     <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
         <span class="glyphicon glyphicon-play">Play/Pause full</span>

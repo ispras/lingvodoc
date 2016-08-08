@@ -337,6 +337,10 @@ object Locale {
   *      |-----an1----------|.......|........||------an2------|
   *
   *
+  * Now, who can be who's parent? Top-level tier (without parent) can be only top-level, i.e. without stereotype.
+  * Then, any parenting is allowed except for the case when time alignable tier inherits from non time alignable --
+  * -- obviously, it doesn't make much sense.
+  *
   * Useful links:
   * http://www.mpi.nl/tools/elan/EAF_Annotation_Format.pdf -- EAF format specification
   * http://www.mpi.nl/corpus/html/elan/ch02.html#Fig_Tier_dependencies_in_the_timeline_viewer -- chapter on Annotations

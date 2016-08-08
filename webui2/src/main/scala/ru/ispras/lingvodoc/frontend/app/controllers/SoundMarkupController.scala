@@ -19,6 +19,7 @@ import scala.scalajs.js.annotation.JSExport
 
 @js.native
 trait SoundMarkupScope extends Scope {
+  var ruler: Int = js.native
   var elan: ELANDocumentJquery = js.native
   var waveSurfer: WaveSurfer = js.native
 }
@@ -144,7 +145,14 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
       """
       scope.elan = ELANDocumentJquery(test_markup)
       console.log(scope.elan.toString)
+    scope.ruler = 15
   }
+
+  @JSExport
+  def getWaveSurferWidth: Int = js.Dynamic.global.document.getElementById("waveform").offsetWidth.toString.toInt
+
+  @JSExport
+  def getWaveSurferHeight: Int = js.Dynamic.global.document.getElementById("waveform").offsetHeight.toString.toInt
 
   @JSExport
   def playPause() = waveSurfer.foreach(_.playPause())
