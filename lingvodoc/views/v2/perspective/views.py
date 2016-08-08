@@ -24,6 +24,7 @@ from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
+from sqlalchemy.orm.exc import NoResultFound
 
 from lingvodoc.cache.caching import MEMOIZE
 from lingvodoc.exceptions import CommonException
@@ -38,7 +39,9 @@ from lingvodoc.models import (
     Organization,
     User,
     TranslationAtom,
-    Field
+    TranslationGist,
+    Field,
+    DictionaryPerspectiveToField
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
@@ -452,13 +455,14 @@ def create_perspective(request):  # tested & in docs
         parent_client_id = request.matchdict.get('dictionary_client_id')
         parent_object_id = request.matchdict.get('dictionary_object_id')
 
-        if "json_body" not in request.__dict__:
+        try:
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
+        except AttributeError:
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
-            req = request.json_body
         translation_gist_client_id = req['translation_gist_client_id']
         translation_gist_object_id = req['translation_gist_object_id']
         is_template = req.get('is_template')
@@ -938,21 +942,42 @@ def create_field(request):
         return {'error': str(e)}
 
 
-def view_nested_field(request, field):
-    field_object = DBSession.query(Field).filter_by(client_id=field['client_id'], object_id=field['object_id']).first()
+def create_nested_field(field, perspective, client_id, upper_level, link_ids):
+    field_object = DictionaryPerspectiveToField(client_id=client_id,
+                                                perspective=perspective,
+                                                field_client_id=field['client_id'],
+                                                field_object_id=field['object_id'],
+                                                upper_level=upper_level)
+    if field.get('link'):
+        # if field_object.field.data_type_translation_gist_client_id != link_ids['client_id'] or field_object.field.data_type_translation_gist_client_id != link_ids['client_id']:
+        #     return {'error':'wrong type for link'}
+        field_object.link_client_id = field['link']['client_id']
+        field_object.link_object_id = field['link']['object_id']
+    DBSession.flush()
+    contains = field.get('contains', None)
+    if contains:
+        for subfield in contains:
+            create_nested_field(subfield, perspective, client_id, upper_level=field_object, link_ids=link_ids)
+    return
+
+
+def view_nested_field(request, field, link_ids):
+    field_object = field.field
     field_json = view_field_from_object(request=request, field=field_object)
     if 'error' in field_json:
         return field_json
-    if field.get('contains'):
-        contains = list()
-        for subfield in field['contains']:
-            subfield_json = view_nested_field(request, subfield)
-            if 'error' in subfield_json:
-                return subfield_json
-            contains.append(subfield_json)
+    contains = list()
+    for subfield in field.dictionaryperspectivetofield:
+        subfield_json = view_nested_field(request, subfield, link_ids)
+        if 'error' in subfield_json:
+            return subfield_json
+        contains.append(subfield_json)
+    if contains:
         field_json['contains'] = contains
-    if field.get('link'):
-        field_json['link'] = field['link']
+
+    if field_object.data_type_translation_gist_client_id == link_ids['client_id'] \
+            and field_object.data_type_translation_gist_object_id == link_ids['object_id']:
+        field_json['link'] = {'client_id': field.link_client_id, 'object_id': field.link_object_id}
     return field_json
 
 
@@ -963,9 +988,21 @@ def view_perspective_fields(request):
     object_id = request.matchdict.get('perspective_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective and not perspective.marked_for_deletion:
-        fields = json.loads(perspective.additional_metadata)['fields']
+        fields = DBSession.query(DictionaryPerspectiveToField)\
+            .filter_by(perspective=perspective, upper_level=None)\
+            .all()
+        try:
+            link_gist = DBSession.query(TranslationGist)\
+                .join(TranslationAtom)\
+                .filter(TranslationGist.type == 'Service',
+                        TranslationAtom.content == 'link',
+                        TranslationAtom.locale_id == 2).one()
+            link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
+        except NoResultFound:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("Something wrong with the base")}
         for field in fields:
-            response.append(view_nested_field(request, field))
+            response.append(view_nested_field(request, field, link_ids))
         request.response.status = HTTPOk.code
         return response
     else:
@@ -979,6 +1016,14 @@ def update_perspective_fields(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    variables = {'auth': authenticated_userid(request)}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
     if perspective and not perspective.marked_for_deletion:
         try:
             if type(request.json_body) == str:
@@ -988,9 +1033,29 @@ def update_perspective_fields(request):
         except AttributeError:
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
-        additional_metadata = json.loads(perspective.additional_metadata)
-        additional_metadata.update({"fields": req})
-        perspective.additional_metadata = json.dumps(additional_metadata)
+        try:
+            link_gist = DBSession.query(TranslationGist)\
+                .join(TranslationAtom)\
+                .filter(TranslationGist.type == 'Service',
+                        TranslationAtom.content == 'link',
+                        TranslationAtom.locale_id == 2).one()
+            link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
+        except NoResultFound:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("Something wrong with the base")}
+        fields = DBSession.query(DictionaryPerspectiveToField)\
+            .filter_by(perspective=perspective)\
+            .all()
+        DBSession.flush()
+        for field in fields:
+            DBSession.delete(field)
+        for field in req:
+            create_nested_field(field=field,
+                                perspective=perspective,
+                                client_id=client.id,
+                                upper_level=None,
+                                link_ids=link_ids)
+
         request.response.status = HTTPOk.code
         return response
     else:

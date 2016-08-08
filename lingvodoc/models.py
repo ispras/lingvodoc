@@ -21,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.types import (
     UnicodeText,
     BigInteger,
+    Integer,
     DateTime,
     Boolean,
     Date
@@ -397,8 +398,52 @@ class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, Relationship
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
     additional_metadata = Column(UnicodeText)
-    linked_to_client_id = Column(BigInteger)
-    linked_to_object_id = Column(BigInteger)
+
+
+class DictionaryPerspectiveToField(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
+    """
+    """
+    __parentname__ = 'DictionaryPerspective'
+    __table_args__ = (ForeignKeyConstraint(['perspective_client_id', 'perspective_object_id'],
+                                           [__parentname__.lower() + '.client_id',
+                                            __parentname__.lower() + '.object_id']),
+                      ForeignKeyConstraint(['field_client_id', 'field_object_id'],
+                                           ['field' + '.client_id',
+                                            'field' + '.object_id']),
+                      ForeignKeyConstraint(['self_client_id', 'self_object_id'],
+                                           ['DictionaryPerspectiveToField'.lower() + '.client_id',
+                                            'DictionaryPerspectiveToField'.lower() + '.object_id']),
+                      ForeignKeyConstraint(['link_client_id', 'link_object_id'],
+                                           [__parentname__.lower() + '.client_id',
+                                            __parentname__.lower() + '.object_id']),
+                      )
+    perspective_client_id = Column(SLBigInteger())
+    perspective_object_id = Column(SLBigInteger())
+    field_client_id = Column(SLBigInteger())
+    field_object_id = Column(SLBigInteger())
+    self_client_id = Column(SLBigInteger())
+    self_object_id = Column(SLBigInteger())
+    link_client_id = Column(SLBigInteger())
+    link_object_id = Column(SLBigInteger())
+    position = Column(Integer)
+
+    perspective = relationship(__parentname__,
+                               backref=backref('DictionaryPerspectiveToField'.lower()),
+                               foreign_keys=[perspective_client_id,
+                                        perspective_object_id])
+
+    field = relationship('Field',
+                         backref=backref('DictionaryPerspectiveToField'.lower()))
+
+    link = relationship(__parentname__,
+                        backref=backref('linked_from'.lower()),
+                        foreign_keys=[link_client_id,
+                                      link_object_id])
+
+DictionaryPerspectiveToField.upper_level = relationship('DictionaryPerspectiveToField',
+                                                        backref=backref('DictionaryPerspectiveToField'.lower()),
+                                                        remote_side=[DictionaryPerspectiveToField.client_id,
+                                                                     DictionaryPerspectiveToField.object_id])
 
 
 class Field(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin):
