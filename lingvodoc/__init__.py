@@ -373,10 +373,10 @@ def configure_routes(config):
     # API #POST
     # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
     # ids are returned
-    config.add_route(name='create_level_one_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                      '/perspective/{perspective_client_id}/{perspective_id}/'
-                                                      'lexical_entry/{lexical_entry_client_id}/'
-                                                      '{lexical_entry_object_id}/leveloneentity',
+    config.add_route(name='create_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                   'lexical_entry/{lexical_entry_client_id}/'
+                                                   '{lexical_entry_object_id}/entity',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     config.add_route(name='create_entities_bulk', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
