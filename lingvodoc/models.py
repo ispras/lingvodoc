@@ -548,13 +548,19 @@ class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Cr
 
 class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
     __parentname__ = "LexicalEntry"
-    __table_args__ = (ForeignKeyConstraint(['parent_object_id', 'parent_client_id'],
-                                           ["LexicalEntry".lower() + '.object_id',
-                                            "LexicalEntry".lower() + '.client_id']),
-                      ForeignKeyConstraint(['entity_object_id', 'entity_client_id'],
-                                           ["Entity".lower() + '.object_id', "Entity".lower() + '.client_id'])
+    __table_args__ = (ForeignKeyConstraint(['parent_client_id', 'parent_object_id'],
+                                           [__parentname__.lower() + '.client_id',
+                                            __parentname__.lower() + '.object_id']),
+                      ForeignKeyConstraint(['field_client_id', 'field_object_id'],
+                                           ['field' + '.client_id',
+                                            'field' + '.object_id']),
+                      ForeignKeyConstraint(['entity_client_id', 'entity_object_id'],
+                                           ['Entity'.lower() + '.client_id',
+                                            'Entity'.lower() + '.object_id']),
+                      ForeignKeyConstraint(['link_client_id', 'link_object_id'],
+                                           [__parentname__.lower() + '.client_id',
+                                            __parentname__.lower() + '.object_id']),
                       )
-    parent = relationship(__parentname__, backref=backref('entity'))
     parent_object_id = Column(SLBigInteger())
     parent_client_id = Column(SLBigInteger())
     entity_object_id = Column(SLBigInteger())  # infinite nesting
@@ -565,10 +571,21 @@ class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
     additional_metadata = Column(UnicodeText)
     locale_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False)
+    link_object_id = Column(SLBigInteger())
+    link_client_id = Column(SLBigInteger())
 
-    @declared_attr
-    def parent_entity(cls):
-        return relationship(cls, backref=backref('entity'), remote_side=[cls.client_id, cls.object_id])
+    parent = relationship(__parentname__,
+                          backref=backref('LexicalEntry'.lower()),
+                          foreign_keys=[parent_client_id,
+                                        parent_object_id])
+
+    field = relationship('Field',
+                         backref=backref('Entity'.lower()))
+
+    link = relationship(__parentname__,
+                        backref=backref('linked_from'.lower()),
+                        foreign_keys=[link_client_id,
+                                      link_object_id])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -592,6 +609,11 @@ class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
         #     if children:
         #         dictionary['contains'] = children
         #     return dictionary
+
+Entity.parent_entity = relationship('Entity',
+                                    backref=backref('Entity'.lower()),
+                                    remote_side=[Entity.client_id,
+                                                 Entity.object_id])
 
 
 class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
