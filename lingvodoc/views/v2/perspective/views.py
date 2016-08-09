@@ -880,10 +880,9 @@ def edit_perspective_status(request):  # tested & in docs
 @view_config(route_name='field', renderer='json', request_method='GET')
 def view_field(request):
     response = dict()
-    client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
     field = DBSession.query(Field).filter_by(client_id=client_id, object_id=object_id).first()
-    field = Field()
     if field:
         return view_field_from_object(request=request, field=field)
     else:
