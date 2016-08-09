@@ -44,7 +44,7 @@ from pyramid.view import view_config
 import sqlalchemy
 from sqlalchemy import (
     func,
-    tuple_
+    and_
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -870,10 +870,20 @@ def dictionaries_list(request):  # TODO: test
     dicts = DBSession.query(Dictionary).filter(Dictionary.marked_for_deletion == False)
     if published:
         if published:
-            dicts = dicts.filter_by(state='Published').join(DictionaryPerspective) \
-                .filter(DictionaryPerspective.state == 'Published')
-            # else:
-            #     dicts = dicts.filter_by(state!='Published')
+            subreq = Request.blank('/translation_service_search')
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = json.dumps({'searchstring': 'WiP'})
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+
+            if 'error' not in resp.json:
+                state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            else:
+                raise KeyError("Something wrong with the base", resp.json['error'])
+            dicts = dicts.filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id)).join(DictionaryPerspective) \
+                .filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id))
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
@@ -943,7 +953,6 @@ def dictionaries_list(request):  # TODO: test
     # TODO: start writing todos with more information
 
     dictionaries = list()
-    # dictionaries = [{'object_id':o.object_id,'client_id':o.client_id, 'translation': o.get_translation(request)['translation'],'translation_string': o.get_translation(request)['translation_string'], 'status':o.state,'parent_client_id':o.parent_client_id,'parent_object_id':o.parent_object_id} for o in dicts]
     dicts = dicts.order_by(Dictionary.client_id, Dictionary.object_id)
     for dct in dicts:
         path = request.route_url('dictionary',
@@ -1001,10 +1010,25 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     if 'group_by_lang' in req:
         group_by_lang = req['group_by_lang']
     dicts = DBSession.query(Dictionary)
-    dicts = dicts.filter(func.lower(Dictionary.state) == func.lower('published')).join(DictionaryPerspective) \
-        .filter(func.lower(DictionaryPerspective.state) == func.lower('published'))
+
+    subreq = Request.blank('/translation_service_search')
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    subreq.json = json.dumps({'searchstring': 'WiP'})
+    headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+
+    if 'error' not in resp.json:
+        state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+    else:
+        raise KeyError("Something wrong with the base", resp.json['error'])
+    dicts = dicts.filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id)).join(DictionaryPerspective) \
+        .filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id))
+
     if group_by_lang and not group_by_org:
         return group_by_languages(dicts, request)
+
     if not group_by_lang and group_by_org:
         tmp = group_by_organizations(dicts, request)
         organizations = []

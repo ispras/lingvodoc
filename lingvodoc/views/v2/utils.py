@@ -406,7 +406,9 @@ def view_field_from_object(request, field):
         atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=field.data_type_translation_gist_client_id,
                                                           parent_object_id=field.data_type_translation_gist_object_id,
                                                           locale_id=int(request.cookies['locale_id'])).first()
-        response['data_type'] = atom.content
-
+        if atom:
+            response['data_type'] = atom.content
+        else:
+            print('no atom content for ids', field.data_type_translation_gist_client_id, field.data_type_translation_gist_object_id)
         return response
     return {'error': 'no field'}

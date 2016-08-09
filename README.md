@@ -24,6 +24,8 @@ Running the project for development
 
 - cd <directory containing this file>
 
+- launch every command from this directory
+
 - create development.ini from production.ini (change sqlalchemy.url)
 
 - create alembic.ini from alembic_base.ini (change sqlalchemy.url)
