@@ -481,9 +481,9 @@ def create_perspective(request):  # tested & in docs
         latitude = req.get('latitude')
         longitude = req.get('longitude')
         if latitude:
-            coord['latitude']=latitude
+            coord['latitude'] = latitude
         if longitude:
-            coord['longitude']=longitude
+            coord['longitude'] = longitude
         additional_metadata = req.get('additional_metadata')
         if additional_metadata:
             additional_metadata.update(coord)
