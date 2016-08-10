@@ -95,6 +95,7 @@ def data_init(manager, accounts):
 
         for locale in [ru_locale, en_locale, fi_locale, fr_locale, de_locale]:
             DBSession.add(locale)
+        DBSession.flush()
         locale_id = en_locale.id
 
         # Initializing base locales and languages
@@ -179,19 +180,20 @@ def data_init(manager, accounts):
         try:
             with open('lingvodoc/scripts/translations_base.json', 'r') as json_file:
                 translations = json.loads(json_file.read())
-        except:
+        except Exception as e:
+            import traceback
+            print('couldn\'t read json file with translations')
+            print(e.args)
+            traceback.print_exc()
             pass
-        last_gist = None
+
         for translation_string in sorted(translations):
             gist_type = translations[translation_string]['type']
             contents = list()
             for key in translations[translation_string]:
-                if key != 'type':
+                if key != 'type' :
                     contents.append((translations[translation_string][key], key))
-            last_gist = create_translation(client_id=client.id, contents=contents, gist_type=gist_type)
-        if last_gist:
-            for atom in last_gist.translationatom:
-                print(atom.content, atom.locale_id, atom.parent_client_id, atom.parent_object_id, atom.client_id, atom.object_id)
+            create_translation(client_id=client.id, contents=contents, gist_type=gist_type)
 
         create_gist_from_string("Can create dictionaries")
         base_groups.append(BaseGroup(name="Can create dictionaries",
