@@ -8,7 +8,10 @@ from lingvodoc.models import (
     Client,
     DBSession,
     Entity,
+    Field,
     LexicalEntry,
+    TranslationAtom,
+    TranslationGist,
     User
 )
 
@@ -23,6 +26,7 @@ from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_
 
 import base64
 import hashlib
@@ -85,6 +89,21 @@ def create_entity(request):  # tested
             return {'error': 'Missing value: content'}
         additional_metadata = req.get('additional_metadata')
         parent_entity = None
+        # import pdb
+        # pdb.set_trace()
+        # data_type = DBSession.query(TranslationAtom).filter(TranslationAtom.locale_id == 2).join(TranslationGist, and_(
+        #     TranslationAtom.parent_client_id == TranslationGist.client_id,
+        #     TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+        #     TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+        #     TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+        #     Field.client_id == req['field_client_id'], Field.object_id == req['field_object_id']).first()
+        tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+            TranslationAtom.parent_client_id == TranslationGist.client_id,
+            TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+            TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+            TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+            Field.client_id == req['field_client_id'], Field.object_id == req['field_object_id']).first()
+        data_type = tr_atom.content
         if req.get('entity_client_id') and req.get('entity_object_id'):
             parent_entity = DBSession.query(Entity).filter_by(client_id=req['entity_client_id'],
                                                               object_id=req['entity_object_id']).first()
@@ -98,17 +117,13 @@ def create_entity(request):  # tested
                         parent=parent)
         if parent_entity:
             entity.parent_entity = parent_entity
-        data_type = req.get('data_type')
         filename = req.get('filename')
         real_location = None
         url = None
         if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
             real_location, url = create_object(request, req['content'], entity, data_type, filename)
-
-        if url and real_location:
             entity.content = url
             old_meta = entity.additional_metadata
-
             need_hash = True
             if old_meta:
                 new_meta = json.loads(old_meta)
@@ -123,8 +138,16 @@ def create_entity(request):  # tested
                 else:
                     new_meta = hash_dict
                 entity.additional_metadata = json.dumps(new_meta)
+        elif data_type == 'link':
+            try:
+                entity.link_client_id = req['content']['client_id']
+                entity.link_object_id = req['content']['object_id']
+            except (KeyError, TypeError):
+                request.response.status = HTTPBadRequest.code
+                return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
         else:
             entity.content = req['content']
+        return None
         DBSession.add(entity)
         request.response.status = HTTPOk.code
         response['client_id'] = entity.client_id

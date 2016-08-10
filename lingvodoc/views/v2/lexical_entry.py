@@ -291,10 +291,7 @@ def view_lexical_entry(request):  # TODO: test
     #     .options(joinedload('publishgroupingentity')) \
     #     .filter_by(client_id=client_id, object_id=object_id).first()
 
-    import pdb
-    pdb.set_trace()
     entry = DBSession.query(LexicalEntry) \
-        .options(joinedload('entity')) \
         .filter_by(client_id=client_id, object_id=object_id).first()
     if entry:
         if entry.moved_to:

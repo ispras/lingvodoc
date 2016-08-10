@@ -120,9 +120,12 @@ from collections import deque
 #     return vec
 
 
-def recursive_content(self, publish):  # TODO: completely redo
-    import pdb
-    pdb.set_trace()
+def recursive_content(self, publish, root=True):  # TODO: completely redo
+    """
+    :param publish:
+    :param root: The value is True if we want to get underlying lexical entries.
+    :return:
+    """
     vec = []
     # This code may IS much faster.
     m = filter(lambda x: x[1].direction.name == "ONETOMANY" and hasattr(self, str(x[0])),
@@ -137,15 +140,30 @@ def recursive_content(self, publish):  # TODO: completely redo
             locale_id = None
             if hasattr(xx, "locale_id"):
                 locale_id = xx.locale_id
+            contains = None
+            tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+                    TranslationAtom.parent_client_id == TranslationGist.client_id,
+                    TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+                    TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+                    TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+                    Field.client_id == xx.field_client_id, Field.object_id == xx.field_object_id).first()
+            if tr_atom.content == 'link' and root:
+                lex_entry = DBSession.query(LexicalEntry).join(Entity, and_(
+                    Entity.link_client_id == LexicalEntry.client_id,
+                    Entity.link_object_id == LexicalEntry.object_id)).filter(
+                    Entity.client_id == xx.client_id, Entity.object_id == xx.object_id).first()
+                contains = recursive_content(lex_entry, publish, False)
             info = {'level': xx.__tablename__,
                     'content': xx.content,
                     'object_id': xx.object_id,
                     'client_id': xx.client_id,
                     'parent_object_id': xx.parent_object_id,
                     'parent_client_id': xx.parent_client_id,
+                    'link_object_id': xx.parent_object_id,
+                    'link_client_id': xx.parent_client_id,
                     'locale_id': locale_id,
                     'additional_metadata': additional_metadata,
-                    'contains': recursive_content(xx, publish) or None}
+                    'contains': contains}
             published = False
             if info['contains']:
                 log.debug(info['contains'])
