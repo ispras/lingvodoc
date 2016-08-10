@@ -609,6 +609,7 @@ class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
         super().__init__(**kwargs)
         publishingentity = PublishingEntity(client_id=self.client_id, object_id=self.object_id)
         DBSession.add(publishingentity)
+        self.publishingentity = publishingentity
 
         # def track(self, publish):
         #     dictionary = {'level': self.__tablename__,
@@ -635,9 +636,16 @@ Entity.parent_entity = relationship('Entity',
 
 
 class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
+    __parentname__ = 'Entity'
+    __table_args__ = ((ForeignKeyConstraint(['client_id', 'object_id'],
+                                           [__parentname__.lower() + '.client_id',
+                                            __parentname__.lower() + '.object_id']),)
+                      )
+
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
     published = Column(Boolean, default=False)
+    parent = relationship('Entity', backref=backref("publishingentity", uselist=False))
 
 
 user_to_group_association = Table('user_to_group_association', Base.metadata,
@@ -712,7 +720,7 @@ class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 class About(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user_id = Column(SLBigInteger(), ForeignKey("user.id"))
-    user = relationship("User", backref='about')
+    user = relationship("User", backref=backref('about', uselist=False))
     content = Column(UnicodeText)
     locale_id = Column(ForeignKey("locale.id"))
 
@@ -728,7 +736,7 @@ class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user_id = Column(SLBigInteger(), ForeignKey('user.id'))
     email = Column(UnicodeText, unique=True)
-    user = relationship("User", backref='email')
+    user = relationship("User", backref=backref('email', uselist=False))
 
 
 class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
