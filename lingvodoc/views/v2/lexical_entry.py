@@ -282,13 +282,16 @@ def view_lexical_entry(request):  # TODO: test
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
 
+    # entry = DBSession.query(LexicalEntry) \
+    #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
+    #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
+    #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
+    #     .options(joinedload('publishleveloneentity')) \
+    #     .options(joinedload('publishleveltwoentity')) \
+    #     .options(joinedload('publishgroupingentity')) \
+    #     .filter_by(client_id=client_id, object_id=object_id).first()
+
     entry = DBSession.query(LexicalEntry) \
-        .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-        .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-        .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-        .options(joinedload('publishleveloneentity')) \
-        .options(joinedload('publishleveltwoentity')) \
-        .options(joinedload('publishgroupingentity')) \
         .filter_by(client_id=client_id, object_id=object_id).first()
     if entry:
         if entry.moved_to:

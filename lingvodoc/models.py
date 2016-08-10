@@ -120,62 +120,117 @@ from collections import deque
 #     return vec
 
 
-def recursive_content(self, publish):  # TODO: completely redo
+def recursive_content(self, publish, root=True):  # TODO: completely redo
+    """
+    :param publish:
+    :param root: The value is True if we want to get underlying lexical entries.
+    :return:
+    """
     vec = []
     # This code may IS much faster.
-    m = inspect(type(self)).relationships
-    for (name, relationship) in m.items():
-        if relationship.direction.name == "ONETOMANY" and hasattr(self, str(name)):
-            x = getattr(self, str(name))
-            for xx in x:
-                additional_metadata = None
-                if hasattr(xx, "additional_metadata"):
-                    if xx.additional_metadata:
-                        additional_metadata = json.loads(xx.additional_metadata)
-                locale_id = None
-                if hasattr(xx, "locale_id"):
-                    locale_id = xx.locale_id
-                info = {'level': xx.__tablename__,
-                        'content': xx.content,
-                        'object_id': xx.object_id,
-                        'client_id': xx.client_id,
-                        'parent_object_id': xx.parent_object_id,
-                        'parent_client_id': xx.parent_client_id,
-                        'entity_type': xx.entity_type,
-                        'marked_for_deletion': xx.marked_for_deletion,
-                        'locale_id': locale_id,
-                        'additional_metadata': additional_metadata,
-                        'contains': recursive_content(xx, publish) or None}
-                published = False
-                if info['contains']:
-                    log.debug(info['contains'])
-                    ents = []
-                    for ent in info['contains']:
-                        ents += [ent]
-                        # log.debug('CONTAINS', ent)
-                    for ent in ents:
-                        try:
-                            if 'publish' in ent['level']:
-                                if not ent['marked_for_deletion']:
-                                    published = True
-                                    if not publish:
-                                        break
-                                if publish:
-                                    info['contains'].remove(ent)
-                        except TypeError:
-                            log.debug('IDK: %s' % str(ent))
-                if publish:
-                    if not published:
-                        if 'publish' in info['level']:
-                            res = dict()
-                            res['level'] = info['level']
-                            res['marked_for_deletion'] = info['marked_for_deletion']
-                            info = res
-                        else:
-                            continue
-                info['published'] = published
-                vec += [info]
+    m = filter(lambda x: x[1].direction.name == "ONETOMANY" and hasattr(self, str(x[0])),
+               inspect(type(self)).relationships.items())
+    for (name, relationship) in m:
+        entry_content = getattr(self, str(name))
+        for xx in entry_content:
+            additional_metadata = None
+            if hasattr(xx, "additional_metadata"):
+                if xx.additional_metadata:
+                    additional_metadata = json.loads(xx.additional_metadata)
+            locale_id = None
+            if hasattr(xx, "locale_id"):
+                locale_id = xx.locale_id
+            contains = None
+            tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+                    TranslationAtom.parent_client_id == TranslationGist.client_id,
+                    TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+                    TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+                    TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+                    Field.client_id == xx.field_client_id, Field.object_id == xx.field_object_id).first()
+            if tr_atom.content == 'link' and root:
+                lex_entry = DBSession.query(LexicalEntry).join(Entity, and_(
+                    Entity.link_client_id == LexicalEntry.client_id,
+                    Entity.link_object_id == LexicalEntry.object_id)).filter(
+                    Entity.client_id == xx.client_id, Entity.object_id == xx.object_id).first()
+                contains = recursive_content(lex_entry, publish, False)
+            info = {'level': xx.__tablename__,
+                    'content': xx.content,
+                    'object_id': xx.object_id,
+                    'client_id': xx.client_id,
+                    'parent_object_id': xx.parent_object_id,
+                    'parent_client_id': xx.parent_client_id,
+                    'link_object_id': xx.parent_object_id,
+                    'link_client_id': xx.parent_client_id,
+                    'locale_id': locale_id,
+                    'additional_metadata': additional_metadata,
+                    'contains': contains}
+            published = False
+            if info['contains']:
+                log.debug(info['contains'])
+                ents = list(info['contains'])
+                # TODO: handle published
+            info['published'] = published
+            vec += [info]
     return vec
+
+# def recursive_content(self, publish):  # TODO: completely redo
+#     import pdb
+#     pdb.set_trace()
+#     vec = []
+#     # This code may IS much faster.
+#     m = inspect(type(self)).relationships
+#     for (name, relationship) in m.items():
+#         if relationship.direction.name == "ONETOMANY" and hasattr(self, str(name)):
+#             x = getattr(self, str(name))
+#             for xx in x:
+#                 additional_metadata = None
+#                 if hasattr(xx, "additional_metadata"):
+#                     if xx.additional_metadata:
+#                         additional_metadata = json.loads(xx.additional_metadata)
+#                 locale_id = None
+#                 if hasattr(xx, "locale_id"):
+#                     locale_id = xx.locale_id
+#                 info = {'level': xx.__tablename__,
+#                         'content': xx.content,
+#                         'object_id': xx.object_id,
+#                         'client_id': xx.client_id,
+#                         'parent_object_id': xx.parent_object_id,
+#                         'parent_client_id': xx.parent_client_id,
+#                         # 'entity_type': xx.entity_type,
+#                         # 'marked_for_deletion': xx.marked_for_deletion,
+#                         'locale_id': locale_id,
+#                         'additional_metadata': additional_metadata,
+#                         'contains': recursive_content(xx, publish) or None}
+#                 published = False
+#                 if info['contains']:
+#                     log.debug(info['contains'])
+#                     ents = []
+#                     for ent in info['contains']:
+#                         ents += [ent]
+#                         # log.debug('CONTAINS', ent)
+#                     for ent in ents:
+#                         try:
+#                             if 'publish' in ent['level']:
+#                                 if not ent['marked_for_deletion']:
+#                                     published = True
+#                                     if not publish:
+#                                         break
+#                                 if publish:
+#                                     info['contains'].remove(ent)
+#                         except TypeError:
+#                             log.debug('IDK: %s' % str(ent))
+#                 if publish:
+#                     if not published:
+#                         if 'publish' in info['level']:
+#                             res = dict()
+#                             res['level'] = info['level']
+#                             res['marked_for_deletion'] = info['marked_for_deletion']
+#                             info = res
+#                         else:
+#                             continue
+#                 info['published'] = published
+#                 vec += [info]
+#     return vec
 
 
 # TODO: make this part detecting the engine automatically or from config (need to get after engine_from_config)
@@ -476,39 +531,37 @@ class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Cr
     marked_for_deletion = Column(Boolean, default=False)
     additional_metadata = Column(UnicodeText)
 
-# def track(self, publish):
-#     vec = []
-#     vec += recursive_content(self, publish)
-#     published = False
-#     if vec:
-#         ents = []
-#         for ent in vec:
-#             ents += [ent]
-#         for ent in ents:
-#             try:
-#                 if 'publish' in ent['level']:
-#                         if not ent['marked_for_deletion']:
-#                             published = True
-#                             if not publish:
-#                                 break
-#                         if publish:
-#                             vec.remove(ent)
-#             except:
-#                 log.debug('IDK: %s' % ent)
-#     came_from = None
-#     meta = None
-#     if self.additional_metadata:
-#         meta = json.loads(self.additional_metadata)
-#     if meta:
-#         if 'came_from' in meta:
-#             came_from = meta['came_from']
-#     response = {"level": self.__tablename__,
-#                 "client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
-#                 "parent_client_id": self.parent_client_id,
-#                 "parent_object_id": self.parent_object_id,
-#                 "marked_for_deletion": self.marked_for_deletion,
-#                 "came_from": came_from}
-#     return response
+    def track(self, publish):
+        vec = []
+        vec += recursive_content(self, publish)
+        published = False
+        if vec:
+            ents = list(vec)
+            for ent in ents:
+                try:
+                    if 'publish' in ent['level']:
+                            if not ent['marked_for_deletion']:
+                                published = True
+                                if not publish:
+                                    break
+                            if publish:
+                                vec.remove(ent)
+                except:
+                    log.debug('IDK: %s' % ent)
+        came_from = None
+        meta = None
+        if self.additional_metadata:
+            meta = json.loads(self.additional_metadata)
+        if meta:
+            if 'came_from' in meta:
+                came_from = meta['came_from']
+        response = {"level": self.__tablename__,
+                    "client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
+                    "parent_client_id": self.parent_client_id,
+                    "parent_object_id": self.parent_object_id,
+                    "marked_for_deletion": self.marked_for_deletion,
+                    "came_from": came_from}
+        return response
 
 
 class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):

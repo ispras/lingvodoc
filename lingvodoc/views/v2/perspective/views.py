@@ -34,6 +34,7 @@ from lingvodoc.models import (
     DBSession,
     Dictionary,
     DictionaryPerspective,
+    Entity,
     Group,
     LexicalEntry,
     Organization,
@@ -481,9 +482,9 @@ def create_perspective(request):  # tested & in docs
         latitude = req.get('latitude')
         longitude = req.get('longitude')
         if latitude:
-            coord['latitude']=latitude
+            coord['latitude'] = latitude
         if longitude:
-            coord['longitude']=longitude
+            coord['longitude'] = longitude
         additional_metadata = req.get('additional_metadata')
         if additional_metadata:
             additional_metadata.update(coord)
@@ -1088,7 +1089,10 @@ def lexical_entries_all(request):
             #     .join(LevelOneEntity) \
             #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
             #     .offset(start_from).limit(count)
-            lexes = list()
+            lexes = DBSession.query(LexicalEntry) \
+                .filter(LexicalEntry.parent == parent) \
+                .group_by(LexicalEntry) \
+                .offset(start_from).limit(count)
 
             result = deque()
             for entry in lexes.all():
