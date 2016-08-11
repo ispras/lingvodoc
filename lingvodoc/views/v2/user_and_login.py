@@ -79,7 +79,7 @@ def signup_post(request):  # tested
         pwd = Passhash(password=password)
         email = Email(email=email)
         new_user.password = pwd
-        new_user.email.append(email)
+        new_user.email = email
         DBSession.add(new_user)
         basegroups = []
         basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create dictionaries").first()]
@@ -283,18 +283,8 @@ def get_user_info(request):  # tested
     response['birthday'] = str(user.birthday)
     response['signup_date'] = str(user.signup_date)
     response['is_active'] = str(user.is_active)
-    email = None
-    if user.email:
-        for em in user.email:
-            email = em.email
-            break
-    response['email'] = email
-    about = None
-    if user.about:
-        for ab in user.about:
-            about = ab.content
-            break
-    response['about'] = about
+    response['email'] = user.email.email
+    response['about'] = user.about
     organizations = []
     for organization in user.organizations:
         organizations += [{'organization_id':organization.id}]
@@ -365,8 +355,7 @@ def edit_user_info(request):  # TODO: test
     email = req.get('email')
     if email:
         if user.email:
-            for em in user.email:
-                em.email = email
+            user.email.email = email
         else:
             new_email = Email(user=user, email=email)
             DBSession.add(new_email)
@@ -374,8 +363,7 @@ def edit_user_info(request):  # TODO: test
     about = req.get('about')
     if about:
         if user.about:
-            for ab in user.about:
-                ab.content = req['about']
+            user.about.content = req['about']
         else:
             new_about = About(user=user, content=about)
             DBSession.add(new_about)
