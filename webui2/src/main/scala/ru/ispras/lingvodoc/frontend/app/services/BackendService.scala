@@ -616,7 +616,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     * @param year
     * @return
     */
-  def signup(login: String, name: String, password: String, email: String, day: String, month: String, year: String) = {
+  def signup(login: String, name: String, password: String, email: String, day: Int, month: Int, year: Int) = {
     val defer = $q.defer[Unit]()
     val req = JSON.stringify(js.Dynamic.literal(login = login, name = name, email = email, password = password, day = day, month = month, year = year))
     console.log(req)

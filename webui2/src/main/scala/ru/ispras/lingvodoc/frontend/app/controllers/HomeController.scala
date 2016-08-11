@@ -46,4 +46,8 @@ class HomeController(scope: HomeScope, backend: BackendService) extends Abstract
       scope.languages = languages.toJSArray
     case Failure(e) => console.log(e.getMessage)
   }
+
+  backend.getDictionary(2, 1)
+
+
 }
