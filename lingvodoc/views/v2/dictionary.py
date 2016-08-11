@@ -138,7 +138,11 @@ def view_dictionary(request):  # tested & in docs
         response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
         response['additional_metadata'] = dictionary.additional_metadata
-        response['translation'] = dictionary.get_translation(request.cookies['locale_id'])
+        if request.cookies.get('locale_id'):
+            locale_id = request.cookies['locale_id']
+        else:
+            locale_id = 2
+        response['translation'] = dictionary.get_translation(locale_id)
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code
@@ -874,7 +878,9 @@ def dictionaries_list(request):  # TODO: test
             subreq.method = 'POST'
             subreq.headers = request.headers
             subreq.json = json.dumps({'searchstring': 'WiP'})
-            headers = {'Cookie': request.headers['Cookie']}
+            headers = dict()
+            if request.headers.get('Cookie'):
+                headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
 
@@ -1015,7 +1021,9 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     subreq.method = 'POST'
     subreq.headers = request.headers
     subreq.json = json.dumps({'searchstring': 'WiP'})
-    headers = {'Cookie': request.headers['Cookie']}
+    headers = dict()
+    if request.headers.get('Cookie'):
+        headers = {'Cookie': request.headers['Cookie']}
     subreq.headers = headers
     resp = request.invoke_subrequest(subreq)
 
