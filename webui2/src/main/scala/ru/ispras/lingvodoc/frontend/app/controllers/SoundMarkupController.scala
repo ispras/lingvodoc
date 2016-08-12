@@ -4,13 +4,14 @@ import org.scalajs.dom
 import scala.collection.mutable
 import scala.scalajs.js
 import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
-import com.greencatsoft.angularjs.core.Scope
+import com.greencatsoft.angularjs.core.{Timeout, Scope}
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 import ru.ispras.lingvodoc.frontend.extras.elan.{Tier, ELANPArserException, ELANDocumentJquery}
-import org.scalajs.dom.console
+import org.scalajs.dom.{EventTarget, console}
+import org.singlespaced.d3js.{Selection, d3}
 import scala.scalajs.js.JSConverters._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
@@ -19,13 +20,14 @@ import scala.scalajs.js.annotation.JSExport
 
 @js.native
 trait SoundMarkupScope extends Scope {
-  var ruler: Int = js.native
+  var ruler: Double = js.native // coordinate of wavesurfer ruler
   var elan: ELANDocumentJquery = js.native
-  var waveSurfer: WaveSurfer = js.native
+  var ws: WaveSurfer = js.native // for debugging, remove later
 }
 
 @injectable("SoundMarkupController")
 class SoundMarkupController(scope: SoundMarkupScope,
+                            timeout: Timeout,
                             instance: ModalInstance[Unit],
                             modal: ModalService,
                             backend: BackendService,
@@ -33,28 +35,59 @@ class SoundMarkupController(scope: SoundMarkupScope,
   extends AbstractController[SoundMarkupScope](scope) {
   var waveSurfer: Option[WaveSurfer] = None
   var soundMarkup: Option[String] = None
-  val soundAddress = params.get("soundAddress").map(_.toString)
+//  val soundAddress = params.get("soundAddress").map(_.toString)
+  val soundAddress = Some("http://localhost/getting_closer.wav")
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
-  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
-    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
-      case markup => parseMarkup(markup)
-    }
-  })
+  // hack to distinguish situation when ws is sought by human or by us
+  var isWSSeeked = false
+  // true after first drag event, false after dragend
+  var isDragging = false
+  // true when we move right border of selection rectangle, false when left
+  var rightBorderIsMoving = true
+
+  // d3 selection rectangle element
+  var selectionRectangle: Option[Selection[EventTarget]] = None
+  // d3 drag object
+  var dragRectange: js.Dynamic = _
+
+
+  // add scope to window for debugging
+  dom.window.asInstanceOf[js.Dynamic].myScope = scope
+
+//  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
+//    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
+//      case markup => parseMarkup(markup)
+//    }
+//  })
+  parseMarkup("fff")
 
   // hack to initialize controller after loading the view
   // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
   @JSExport
   def createWaveSurfer(): Unit = {
     if (waveSurfer.isEmpty) {
-      val wso = WaveSurferOpts("#waveform", "violet", "purple")
+      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
+                               cursorWidth = 1, cursorColor = "#000")
       waveSurfer = Some(WaveSurfer.create(wso))
       (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
         ws.load(sa)
       })
-    }
-    scope.waveSurfer = waveSurfer.get
+      waveSurfer.foreach(_.on("seek", onWSSeek _)) // bind seek event
+      waveSurfer.foreach(_.on("audioprocess", onWSPlaying _)) // bind playing event
+      scope.ws = waveSurfer.get
+      init()
+    } // do not write anything here, outside if!
+  }
+
+  // In contract to the constructor, this method is called when waversurfer is already loaded
+  def init(): Unit = {
+    dragRectange = d3.behavior.drag().asInstanceOf[js.Dynamic]
+      .on("dragstart", onSelectionDragStart _)
+      .on("drag", onSelectionDragging _)
+      .on("dragend", onSelectionDragEnd _)
+    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].call(dragRectange)
   }
 
   def parseMarkup(markup: String): Unit = {
@@ -145,14 +178,46 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
       """
       scope.elan = ELANDocumentJquery(test_markup)
       console.log(scope.elan.toString)
-    scope.ruler = 15
+      scope.ruler = 0
   }
 
   @JSExport
-  def getWaveSurferWidth: Int = js.Dynamic.global.document.getElementById("waveform").offsetWidth.toString.toInt
+  def getWaveSurferWidth = js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString.toDouble
 
   @JSExport
-  def getWaveSurferHeight: Int = js.Dynamic.global.document.getElementById("waveform").offsetHeight.toString.toInt
+  def getWaveSurferHeight = js.Dynamic.global.document.getElementById("waveform").scrollHeight.toString.toDouble
+
+  def svgSeek(offset: Double, forceApply: Boolean = false): Unit = {
+    isWSSeeked = true
+    setRulerOffset(offset, forceApply)
+    val progress = offset / getWaveSurferWidth
+    waveSurfer.foreach(_.seekTo(progress))
+  }
+
+  def setRulerProgress(progress: Double, forceApply: Boolean = false, applyTimeout: Boolean = false): Unit =
+    setRulerOffset(progress * getWaveSurferWidth, forceApply, applyTimeout)
+
+  def setRulerOffset(offset: Double, forceApply: Boolean = false, applyTimeout: Boolean = false): Unit = {
+    val action = () => { scope.ruler = offset }
+    if (applyTimeout)
+      timeout(action)
+    else if (forceApply)
+      scope.$apply({
+        action()
+      })
+    else
+      action()
+  }
+
+  // not needed
+  @JSExport
+  def getDrawerWidth: Double = {
+    waveSurfer.map(_.drawer.width.toString.toDouble).getOrElse(0)
+  }
+  @JSExport
+  def getDrawerHeight: Double = {
+    waveSurfer.map(_.drawer.height.toString.toDouble).getOrElse(0)
+  }
 
   @JSExport
   def playPause() = waveSurfer.foreach(_.playPause())
@@ -169,10 +234,60 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
   def cancel(): Unit = {
     instance.close(())
   }
-}
 
-object SoundMarkupController {
-  def displayWaveSurfer(): Unit = {
+  def onWSSeek(progress: Double): Unit = {
+    console.log("ws seeked")
+    if (isWSSeeked)
+      isWSSeeked = false
+    else
+      setRulerProgress(progress, forceApply = true)
+  }
 
+  def onWSPlaying(): Unit = {
+    val progress = waveSurfer.map(ws => ws.getCurrentTime() / ws.getDuration())
+    progress.foreach(p => setRulerProgress(p, applyTimeout = true))
+  }
+
+  @JSExport
+  def onSVGSeek(event: js.Dynamic): Unit = {
+    console.log("svg seeking")
+    svgSeek(event.offsetX.asInstanceOf[Double])
+  }
+
+  def onSelectionDragStart() = {
+    console.log("starting dragging")
+  }
+
+  def onSelectionDragging() = {
+    console.log("dragging")
+    if (!isDragging) { // executed on first drag event
+      selectionRectangle.foreach(_.remove())
+      selectionRectangle = Some(d3.select("#soundSVG").append("rect")
+        .attr("x", d3.event.asInstanceOf[js.Dynamic].x.toString.toDouble)
+        .attr("y", 0)
+        .attr("width", 0)
+        .attr("height", getWaveSurferHeight))
+      isDragging = true
+    }
+    else { // executed on every subsequent drag event
+      val (oldx, cursorx) = (selectionRectangle.get.attr("x").toString.toDouble, Math.max(0, d3.event.asInstanceOf[js.Dynamic].x.toString.toDouble))
+      val oldWidth = selectionRectangle.get.attr("width").toString.toDouble
+
+      if ((rightBorderIsMoving && cursorx > oldx) || (!rightBorderIsMoving && cursorx >= oldx + oldWidth)) {
+        selectionRectangle.foreach(_.attr("width", cursorx - oldx))
+        rightBorderIsMoving = true
+      }
+      else {
+        selectionRectangle.foreach(_.attr("x", cursorx).attr("width", oldx + oldWidth - cursorx))
+        rightBorderIsMoving = false
+      }
+
+      svgSeek(cursorx, forceApply = true)
+    }
+  }
+  def onSelectionDragEnd() = {
+    console.log("ending dragging")
+    isDragging = false
   }
 }
+

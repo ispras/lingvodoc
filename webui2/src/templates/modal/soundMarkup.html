@@ -3,14 +3,26 @@
 </div>
 
 <div class="modal-body">
-    <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+    <div id="waveform" style="margin: 0; padding: 0" >{{ controller.createWaveSurfer() }}</div>
 
-    <svg width="100%" height="100%">
-        <line x1="0" y1="0" x2="200" y2="200" style="stroke:rgb(255,0,0); stroke-width:2"></line>
+    <svg id="soundSVG" ng-attr-width="{{controller.getWaveSurferWidth}}"
+         ng-attr-height="{{controller.getWaveSurferHeight}}">""
+        <!-- invisible rect to catch any click -->
+        <rect id="backgroundRect" x="0" y="0"
+              ng-attr-width="{{controller.getWaveSurferWidth}}" ng-attr-height="{{controller.getWaveSurferHeight}}"
+              fill="#000000" fill-opacity="0.1"
+              ng-click="controller.onSVGSeek($event)"></rect>
+        <line ng-attr-x1="{{ruler}}" ng-attr-y1="0" ng-attr-x2="{{ruler}}" ng-attr-y2="{{controller.getWaveSurferHeight}}"
+              style="stroke:rgb(0, 0, 0); stroke-width:1">
+        </line>
     </svg>
 
-    height is {{ controller.getWaveSurferHeight }}
-    width is {{ controller.getWaveSurferWidth }}
+    div height is {{ controller.getWaveSurferHeight }}
+    div width is {{ controller.getWaveSurferWidth }}
+    ruler is {{ ruler }}
+    <span ng-if="ruler == 15">
+        This tier contains only reference annotations, you can't modify them directly.
+    </span>
     <uib-tabset justified="true">
         <uib-tab ng-repeat="tier in elan.tiersToJSArray" heading="{{tier.getID}}">
             <span ng-if="tier.isTimeAlignable == false">
