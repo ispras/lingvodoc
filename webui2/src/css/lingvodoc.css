@@ -52,4 +52,14 @@
     margin-bottom: 10px;
 }
 
+/* eaf (sound markup) editing staff */
+.sm-selecton-rectangle {
+    fill: blue;
+    opacity: 0.2;
+}
+
+.sm-ruler {
+    stroke: red;
+    stroke-width: 1
+}
 

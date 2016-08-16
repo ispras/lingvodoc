@@ -68,8 +68,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
   @JSExport
   def createWaveSurfer(): Unit = {
     if (waveSurfer.isEmpty) {
+      // params should be synchronized with sm-ruler css
       val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
-                               cursorWidth = 1, cursorColor = "#000")
+                               cursorWidth = 1, cursorColor = "red")
       waveSurfer = Some(WaveSurfer.create(wso))
       (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
         ws.load(sa)
@@ -87,7 +88,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
       .on("dragstart", onSelectionDragStart _)
       .on("drag", onSelectionDragging _)
       .on("dragend", onSelectionDragEnd _)
-    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].call(dragRectange)
+    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].call(dragRectange) // subscribe to drag events
+    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].on("click", onSVGSeek _) // subscribe to svg seek event
   }
 
   def parseMarkup(markup: String): Unit = {
@@ -251,7 +253,7 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
   @JSExport
   def onSVGSeek(event: js.Dynamic): Unit = {
     console.log("svg seeking")
-    svgSeek(event.offsetX.asInstanceOf[Double])
+    svgSeek(d3.event.asInstanceOf[js.Dynamic].offsetX.asInstanceOf[Double], forceApply = true)
   }
 
   def onSelectionDragStart() = {
@@ -266,11 +268,13 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
         .attr("x", d3.event.asInstanceOf[js.Dynamic].x.toString.toDouble)
         .attr("y", 0)
         .attr("width", 0)
-        .attr("height", getWaveSurferHeight))
+        .attr("height", getWaveSurferHeight)
+        .attr("class", "sm-selecton-rectangle"))
       isDragging = true
     }
     else { // executed on every subsequent drag event
-      val (oldx, cursorx) = (selectionRectangle.get.attr("x").toString.toDouble, Math.max(0, d3.event.asInstanceOf[js.Dynamic].x.toString.toDouble))
+      val (oldx, cursorx) = (selectionRectangle.get.attr("x").toString.toDouble,
+        Math.min(getWaveSurferWidth, Math.max(0, d3.event.asInstanceOf[js.Dynamic].x.toString.toDouble)))
       val oldWidth = selectionRectangle.get.attr("width").toString.toDouble
 
       if ((rightBorderIsMoving && cursorx > oldx) || (!rightBorderIsMoving && cursorx >= oldx + oldWidth)) {

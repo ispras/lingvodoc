@@ -9,17 +9,24 @@ trait WaveSurferOpts extends js.Object {
   val progressColor: String = js.native
   val cursorWidth: Int = js.native
   val cursorColor: String = js.native
+  val scrollParent: Boolean = js.native
+  val minPxPerSec: Int = js.native
+  val fillParent: Boolean = js.native
 }
 
 object WaveSurferOpts {
   def apply(container: String, waveColor: String = "#999", progressColor: String = " #555",
-            cursorWidth: Int = 1, cursorColor: String = "#333"): WaveSurferOpts = {
+            cursorWidth: Int = 1, cursorColor: String = "#333", scrollParent: Boolean = false,
+            minPxPerSec: Int = 50, fillParent: Boolean = true): WaveSurferOpts = {
     js.Dynamic.literal(
       container = container,
       waveColor = waveColor,
       progressColor = progressColor,
       cursorWidth = cursorWidth,
-      cursorColor = cursorColor
+      cursorColor = cursorColor,
+      scrollParent = scrollParent,
+      minPxPerSec = minPxPerSec,
+      fillParent = fillParent
     ).asInstanceOf[WaveSurferOpts]
   }
 }
