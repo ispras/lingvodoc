@@ -47,7 +47,6 @@ class HomeController(scope: HomeScope, backend: BackendService) extends Abstract
     case Failure(e) => console.log(e.getMessage)
   }
 
-  backend.getDictionary(2, 1)
 
 
 }
