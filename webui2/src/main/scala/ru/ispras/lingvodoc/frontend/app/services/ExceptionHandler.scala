@@ -19,7 +19,7 @@ class ExceptionHandlerFactory(injector: Injector) extends Factory[js.Function2[T
 
       val options = ModalOptions()
       options.templateUrl = "/static/templates/modal/exceptionHandler.html"
-      options.controller = "ExceptionHandlerController"
+      options.controller = "ExceptInionHandlerController"
       options.backdrop = false
       options.keyboard = false
       options.size = "lg"

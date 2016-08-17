@@ -40,7 +40,6 @@ class UserService extends Service {
 @injectable("UserService")
 class UserServiceFactory() extends Factory[UserService] {
   override def apply(): UserService = {
-    console.log("factory!")
     new UserService()
   }
 }

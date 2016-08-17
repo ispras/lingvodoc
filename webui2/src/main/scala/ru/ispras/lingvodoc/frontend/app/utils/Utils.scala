@@ -38,4 +38,18 @@ object Utils {
       case None => None
     }
   }
+
+
+  def getLocale(): Option[Int] = {
+    Cookie.get("locale_id") match {
+      case Some(x) => Some(x.toInt)
+      case None => None
+    }
+  }
+
+  def setLocale(localeId: Int) = {
+    Cookie.set("locale_id", localeId.toString)
+  }
+
+
 }
