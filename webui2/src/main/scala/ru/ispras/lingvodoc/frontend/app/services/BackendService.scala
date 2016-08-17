@@ -71,8 +71,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
           case e: Throwable => p.failure(BackendException("Unexpected exception:" + e.getMessage))
         }
 
-      case Failure(e) => p.failure(BackendException("Failed to get list of perspectives for dictionary " + dictionary
-        .translationString + ": " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to get list of perspectives for dictionary " + dictionary.translation + ": " + e.getMessage))
     }
     p.future
   }
@@ -223,8 +222,8 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       .objectId.toString) + "/state"
     $http.put(getMethodUrl(url), req) onComplete {
       case Success(_) =>
-        dictionary.status = status
-        p.success(Unit)
+        //dictionary.status = status
+        p.success(())
       case Failure(e) => p.failure(BackendException("Failed to update dictionary status: " + e.getMessage))
     }
     p.future
