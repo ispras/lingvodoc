@@ -88,9 +88,9 @@ def create_entity(request):  # tested
             request.response.status = HTTPBadRequest.code
             return {'error': 'Missing value: content'}
         additional_metadata = req.get('additional_metadata')
-        parent_entity = None
+        upper_level = None
         # import pdb
-        # pdb.set_trace()
+        # pdb.set_trace(v
         # data_type = DBSession.query(TranslationAtom).filter(TranslationAtom.locale_id == 2).join(TranslationGist, and_(
         #     TranslationAtom.parent_client_id == TranslationGist.client_id,
         #     TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
@@ -104,19 +104,19 @@ def create_entity(request):  # tested
             TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
             Field.client_id == req['field_client_id'], Field.object_id == req['field_object_id']).first()
         data_type = tr_atom.content
-        if req.get('entity_client_id') and req.get('entity_object_id'):
-            parent_entity = DBSession.query(Entity).filter_by(client_id=req['entity_client_id'],
+        if req.get('self_client_id') and req.get('self_object_id'):
+            upper_level = DBSession.query(Entity).filter_by(client_id=req['entity_client_id'],
                                                               object_id=req['entity_object_id']).first()
-            if not parent_entity:
-                return {'error': str("No such parent entity in the system")}
+            if not upper_level:
+                return {'error': str("No such upper level in the system")}
         entity = Entity(client_id=client.id,
                         field_client_id=req['field_client_id'],
                         field_object_id=req['field_object_id'],
-                        locale_id=req['locale_id'],
+                        locale_id=req.get('locale_id'),
                         additional_metadata=additional_metadata,
                         parent=parent)
-        if parent_entity:
-            entity.parent_entity = parent_entity
+        if upper_level:
+            entity.upper_level = upper_level
         filename = req.get('filename')
         real_location = None
         url = None
@@ -147,7 +147,7 @@ def create_entity(request):  # tested
                 return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
         else:
             entity.content = req['content']
-        return None
+        # return None
         DBSession.add(entity)
         request.response.status = HTTPOk.code
         response['client_id'] = entity.client_id

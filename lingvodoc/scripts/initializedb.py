@@ -63,10 +63,22 @@ def find_translation(content, locale_id=2):
 
 def data_init(manager, accounts):
     with manager:
+
+        # creating base locales
+        ru_locale = Locale(shortcut="ru", intl_name="Russian (Русский)")
+        en_locale = Locale(shortcut="en", intl_name="English")
+        fi_locale = Locale(shortcut="fi", intl_name="Finnish (Suomi)")
+        fr_locale = Locale(shortcut="fr", intl_name="French (Français)")
+        de_locale = Locale(shortcut="de", intl_name="German (Deutsch)")
+
+        for locale in [ru_locale, en_locale, fi_locale, fr_locale, de_locale]:
+            DBSession.add(locale)
+        DBSession.flush()
+
         # Creating global administrator
         admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
         if admin_account:
-        # print("Admin record not found, initializing")
+            # print("Admin record not found, initializing")
             print("Admin record found", admin_account.id, admin_account.login)
             return
         admin_account = User(login=accounts['administrator_login'],
@@ -84,17 +96,6 @@ def data_init(manager, accounts):
         DBSession.add(email)
         DBSession.add(client)
 
-        DBSession.flush()
-
-        # creating base locales
-        ru_locale = Locale(shortcut="ru", intl_name="Russian (Русский)")
-        en_locale = Locale(shortcut="en", intl_name="English")
-        fi_locale = Locale(shortcut="fi", intl_name="Finnish (Suomi)")
-        fr_locale = Locale(shortcut="fr", intl_name="French (Français)")
-        de_locale = Locale(shortcut="de", intl_name="German (Deutsch)")
-
-        for locale in [ru_locale, en_locale, fi_locale, fr_locale, de_locale]:
-            DBSession.add(locale)
         DBSession.flush()
         locale_id = en_locale.id
 
@@ -485,23 +486,23 @@ def data_init(manager, accounts):
                 DBSession.add(paradigm_field)
 
                 field_1 = DictionaryPerspectiveToField(client_id=test_client.id,
-                                                       perspective=test_persp,
+                                                       parent=test_persp,
                                                        field=word_field,
                                                        position=1
                                                        )
                 field_2 = DictionaryPerspectiveToField(client_id=test_client.id,
-                                                       perspective=test_persp,
+                                                       parent=test_persp,
                                                        field=sound_field,
                                                        position=2
                                                        )
                 field_3 = DictionaryPerspectiveToField(client_id=test_client.id,
-                                                       perspective=test_persp,
+                                                       parent=test_persp,
                                                        field=transcription_field,
                                                        upper_level=field_2,
                                                        position=3
                                                        )
                 field_4 = DictionaryPerspectiveToField(client_id=test_client.id,
-                                                       perspective=test_persp,
+                                                       parent=test_persp,
                                                        field=paradigm_field,
                                                        link=test_persp_link,
                                                        position=4
@@ -510,17 +511,17 @@ def data_init(manager, accounts):
                     DBSession.add(field)
 
                 field_1 = DictionaryPerspectiveToField(client_id=test_client.id,
-                                                       perspective=test_persp_link,
+                                                       parent=test_persp_link,
                                                        field=word_field,
                                                        position=1
                                                        )
                 field_2 = DictionaryPerspectiveToField(client_id=test_client.id,
-                                                       perspective=test_persp_link,
+                                                       parent=test_persp_link,
                                                        field=transcription_field,
                                                        position=2
                                                        )
                 field_3 = DictionaryPerspectiveToField(client_id=test_client.id,
-                                                       perspective=test_persp_link,
+                                                       parent=test_persp_link,
                                                        field=sound_field,
                                                        position=3
                                                        )

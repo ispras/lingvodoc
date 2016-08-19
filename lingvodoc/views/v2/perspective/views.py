@@ -942,12 +942,13 @@ def create_field(request):
         return {'error': str(e)}
 
 
-def create_nested_field(field, perspective, client_id, upper_level, link_ids):
+def create_nested_field(field, perspective, client_id, upper_level, link_ids, position):
     field_object = DictionaryPerspectiveToField(client_id=client_id,
-                                                perspective=perspective,
+                                                parent=perspective,
                                                 field_client_id=field['client_id'],
                                                 field_object_id=field['object_id'],
-                                                upper_level=upper_level)
+                                                upper_level=upper_level,
+                                                position=position)
     if field.get('link'):
         # if field_object.field.data_type_translation_gist_client_id != link_ids['client_id'] or field_object.field.data_type_translation_gist_client_id != link_ids['client_id']:
         #     return {'error':'wrong type for link'}
@@ -956,25 +957,32 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids):
     DBSession.flush()
     contains = field.get('contains', None)
     if contains:
+        inner_position = 1
         for subfield in contains:
-            create_nested_field(subfield, perspective, client_id, upper_level=field_object, link_ids=link_ids)
+            create_nested_field(subfield,
+                                perspective,
+                                client_id,
+                                upper_level=field_object,
+                                link_ids=link_ids,
+                                position=inner_position)
+            inner_position += 1
     return
 
 
 def view_nested_field(request, field, link_ids):
     field_object = field.field
     field_json = view_field_from_object(request=request, field=field_object)
+    field_json['position'] = field.position
     if 'error' in field_json:
         return field_json
     contains = list()
-    for subfield in field.dictionaryperspectivetofield:
+    for subfield in field.dictionaryperspectivetofield: #todo: order subfields
         subfield_json = view_nested_field(request, subfield, link_ids)
         if 'error' in subfield_json:
             return subfield_json
         contains.append(subfield_json)
     if contains:
         field_json['contains'] = contains
-
     if field_object.data_type_translation_gist_client_id == link_ids['client_id'] \
             and field_object.data_type_translation_gist_object_id == link_ids['object_id']:
         field_json['link'] = {'client_id': field.link_client_id, 'object_id': field.link_object_id}
@@ -989,7 +997,8 @@ def view_perspective_fields(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective and not perspective.marked_for_deletion:
         fields = DBSession.query(DictionaryPerspectiveToField)\
-            .filter_by(perspective=perspective, upper_level=None)\
+            .filter_by(parent=perspective, upper_level=None)\
+            .order_by(DictionaryPerspectiveToField.position)\
             .all()
         try:
             link_gist = DBSession.query(TranslationGist)\
@@ -1044,18 +1053,19 @@ def update_perspective_fields(request):
             request.response.status = HTTPNotFound.code
             return {'error': str("Something wrong with the base")}
         fields = DBSession.query(DictionaryPerspectiveToField)\
-            .filter_by(perspective=perspective)\
+            .filter_by(parent=perspective)\
             .all()
         DBSession.flush()
         for field in fields:
             DBSession.delete(field)
+        position = 1
         for field in req:
             create_nested_field(field=field,
                                 perspective=perspective,
                                 client_id=client.id,
                                 upper_level=None,
-                                link_ids=link_ids)
-
+                                link_ids=link_ids, position=position)
+            position += 1
         request.response.status = HTTPOk.code
         return response
     else:
@@ -1075,8 +1085,7 @@ def lexical_entries_all(request):
     count = request.params.get('count') or 200
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if parent:
-        if not parent.marked_for_deletion:
+    if parent and not parent.marked_for_deletion:
             # lexes = DBSession.query(LexicalEntry) \
             #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
             #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
@@ -1097,8 +1106,9 @@ def lexical_entries_all(request):
             result = deque()
             for entry in lexes.all():
                 result.append(entry.track(False))
+                # result.append({'client_id': entry.client_id, 'object_id': entry.object_id})
 
-            response['lexical_entries'] = list(result)
+            response = list(result)
 
             request.response.status = HTTPOk.code
             return response
