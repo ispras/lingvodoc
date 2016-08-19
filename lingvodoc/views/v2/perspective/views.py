@@ -551,6 +551,7 @@ def view_perspectives(request):
     response = list()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
+    # published = request.matchdict.get('published', None)
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         request.response.status = HTTPNotFound.code
