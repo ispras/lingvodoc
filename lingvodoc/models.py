@@ -142,11 +142,11 @@ def recursive_content(self, publish, root=True):  # TODO: completely redo
                 locale_id = xx.locale_id
             contains = None
             tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
-                    TranslationAtom.parent_client_id == TranslationGist.client_id,
-                    TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
-                    TranslationGist.client_id == Field.data_type_translation_gist_client_id,
-                    TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
-                    Field.client_id == xx.field_client_id, Field.object_id == xx.field_object_id).first()
+                TranslationAtom.parent_client_id == TranslationGist.client_id,
+                TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+                TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+                TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+                Field.client_id == xx.field_client_id, Field.object_id == xx.field_object_id).first()
             if tr_atom.content == 'link' and root:
                 lex_entry = DBSession.query(LexicalEntry).join(Entity, and_(
                     Entity.link_client_id == LexicalEntry.client_id,
@@ -172,6 +172,7 @@ def recursive_content(self, publish, root=True):  # TODO: completely redo
             info['published'] = published
             vec += [info]
     return vec
+
 
 # def recursive_content(self, publish):  # TODO: completely redo
 #     import pdb
@@ -250,6 +251,17 @@ def recursive_content(self, publish, root=True):  # TODO: completely redo
 #             print("It's not an sqlalchemy")
 
 
+def table_args_method(self, table_args):
+    table_args.update(super(type(self), self).__table_args__)
+    return table_args
+
+
+class PrimeTableArgs(object):
+    @declared_attr
+    def __table_args__(cls):
+        return tuple()
+
+
 class TableNameMixin(object):
     """
     Look forward to:
@@ -266,7 +278,7 @@ class CreatedAtMixin(object):
     """
     It's used for automatically set created_at column.
     """
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
 
 class IdMixin(object):
@@ -316,7 +328,7 @@ class CompositeKeysHelper(object):
                                      [parent_name.lower() + '.object_id', parent_name.lower() + '.client_id']),)
 
 
-class RelationshipMixin(object):
+class RelationshipMixin(PrimeTableArgs):
     """
     It's used for automatically set parent attribute as relationship.
     Each class using this mixin should have __parentname__ attribute
@@ -324,28 +336,35 @@ class RelationshipMixin(object):
 
     @declared_attr
     def __table_args__(cls):
-        # if hasattr(cls, '__remove_this_table_args__'):
-        #     return cls.__remove_this_table_args__ + CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(
-        #         parent_name=cls.__parentname__)
-        # else:
-            return CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(parent_name=cls.__parentname__)
+        return CompositeKeysHelper.set_table_args_for_simple_fk_composite_key(
+            parent_name=cls.__parentname__) + super().__table_args__
 
     @declared_attr
     def parent(cls):
         if cls.__parentname__.lower() == cls.__tablename__.lower():
             return relationship(cls.__parentname__,
-                                backref=backref(cls.__tablename__.lower()), remote_side=[cls.client_id, cls.object_id])
+                                backref=backref(cls.__tablename__.lower()), remote_side=[cls.client_id, cls.object_id],
+                                foreign_keys=[cls.parent_client_id,
+                                              cls.parent_object_id])
         else:
             return relationship(cls.__parentname__,
-                                backref=backref(cls.__tablename__.lower()))
+                                backref=backref(cls.__tablename__.lower()),
+                                foreign_keys=[cls.parent_client_id,
+                                              cls.parent_object_id])
 
-    parent_object_id = Column(SLBigInteger())
-    parent_client_id = Column(SLBigInteger())
+    parent_object_id = Column(SLBigInteger())  # , nullable=False
+    parent_client_id = Column(SLBigInteger())  # , nullable=False
 
 
-class TranslationMixin(object):
-    translation_gist_client_id = Column(SLBigInteger())
-    translation_gist_object_id = Column(SLBigInteger())
+class TranslationMixin(PrimeTableArgs):
+    translation_gist_client_id = Column(SLBigInteger(), nullable=False)
+    translation_gist_object_id = Column(SLBigInteger(), nullable=False)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (ForeignKeyConstraint(['translation_gist_object_id', 'translation_gist_client_id'],
+                                     ['TranslationGist'.lower() + '.object_id',
+                                      'TranslationGist'.lower() + '.client_id']),) + super().__table_args__
 
     def get_translation(self, locale_id):
         from lingvodoc.cache.caching import CACHE
@@ -387,7 +406,7 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
     This is base of translations
     """
     type = Column(UnicodeText)
-    marked_for_deletion = Column(Boolean, default=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
@@ -395,9 +414,9 @@ class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin,
     This is translations
     """
     __parentname__ = 'TranslationGist'
-    content = Column(UnicodeText)
-    locale_id = Column(SLBigInteger())
-    marked_for_deletion = Column(Boolean, default=False)
+    content = Column(UnicodeText, nullable=False)
+    locale_id = Column(SLBigInteger(), nullable=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, RelationshipMixin):
@@ -405,7 +424,7 @@ class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, Translati
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
     __parentname__ = 'Language'
-    marked_for_deletion = Column(Boolean, default=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
 
 class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
@@ -414,11 +433,29 @@ class Locale(Base, TableNameMixin, IdMixin, RelationshipMixin, CreatedAtMixin):
     Should be added as admin only.
     """
     __parentname__ = 'Language'
-    shortcut = Column(UnicodeText)
-    intl_name = Column(UnicodeText)
+    shortcut = Column(UnicodeText, nullable=False)
+    intl_name = Column(UnicodeText, nullable=False)
 
 
-class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin, TranslationMixin):
+class StateMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (ForeignKeyConstraint(['state_translation_gist_client_id',
+                                      'state_translation_gist_object_id'],
+                                     ['TranslationGist'.lower() + '.client_id',
+                                      'TranslationGist'.lower() + '.object_id']),) + super().__table_args__
+
+    state_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
+    state_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
+
+
+class Dictionary(CompositeIdMixin,
+                 Base,
+                 TableNameMixin,
+                 RelationshipMixin,
+                 CreatedAtMixin,
+                 TranslationMixin,
+                 StateMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -426,16 +463,18 @@ class Dictionary(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Crea
     for the same language so we use some grouping. This grouping is provided via Language objects.
     """
     __parentname__ = 'Language'
-    # state = Column(UnicodeText)
-    state_translation_gist_client_id = Column(SLBigInteger())
-    state_translation_gist_object_id = Column(SLBigInteger())
-    marked_for_deletion = Column(Boolean, default=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     additional_metadata = Column(UnicodeText)
     category = Column(UnicodeText)
 
 
-class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin,
-                            TranslationMixin):
+class DictionaryPerspective(CompositeIdMixin,
+                            Base,
+                            TableNameMixin,
+                            RelationshipMixin,
+                            CreatedAtMixin,
+                            TranslationMixin,
+                            StateMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -445,63 +484,99 @@ class DictionaryPerspective(CompositeIdMixin, Base, TableNameMixin, Relationship
     Parent: Dictionary.
     """
     __parentname__ = 'Dictionary'
-    # state = Column(UnicodeText)
-    state_translation_gist_client_id = Column(SLBigInteger())
-    state_translation_gist_object_id = Column(SLBigInteger())
-    marked_for_deletion = Column(Boolean, default=False)
-    is_template = Column(Boolean, default=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
+    is_template = Column(Boolean, default=False, nullable=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
     additional_metadata = Column(UnicodeText)
 
 
-class DictionaryPerspectiveToField(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
+class SelfMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            ForeignKeyConstraint(['self_client_id', 'self_object_id'],
+                                 [cls.__tablename__.lower() + '.client_id',
+                                  cls.__tablename__.lower() + '.object_id']),) + super().__table_args__
+    self_client_id = Column(SLBigInteger())
+    self_object_id = Column(SLBigInteger())
+
+    @declared_attr
+    def upper_level(cls):
+        return relationship(cls,
+                                    backref=backref(cls.__tablename__.lower()),
+                                    remote_side=[cls.client_id,
+                                                 cls.object_id])
+
+
+class FieldMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            ForeignKeyConstraint(['field_client_id', 'field_object_id'],
+                                 ['field' + '.client_id',
+                                  'field' + '.object_id']),) + super().__table_args__
+    field_client_id = Column(SLBigInteger(), nullable=False)
+    field_object_id = Column(SLBigInteger(), nullable=False)
+
+    @declared_attr
+    def field(cls):
+        return relationship('Field',
+                         backref=backref(cls.__tablename__.lower()))
+
+
+class ParentLinkMixin(PrimeTableArgs):
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            ForeignKeyConstraint(['link_client_id', 'link_object_id'],
+                                 [cls.__parentname__.lower() + '.client_id',
+                                  cls.__parentname__.lower() + '.object_id']),
+        ) + super().__table_args__
+    link_client_id = Column(SLBigInteger())
+    link_object_id = Column(SLBigInteger())
+
+    @declared_attr
+    def link(cls):
+        return relationship(cls.__parentname__,
+                        backref=backref('linked_from'.lower()),
+                        foreign_keys=[cls.link_client_id,
+                                      cls.link_object_id])
+
+
+class DictionaryPerspectiveToField(CompositeIdMixin,
+                                   Base,
+                                   TableNameMixin,
+                                   CreatedAtMixin,
+                                   RelationshipMixin,
+                                   SelfMixin,
+                                   FieldMixin,
+                                   ParentLinkMixin
+                                   ):
     """
     """
     __parentname__ = 'DictionaryPerspective'
-    __table_args__ = (ForeignKeyConstraint(['perspective_client_id', 'perspective_object_id'],
-                                           [__parentname__.lower() + '.client_id',
-                                            __parentname__.lower() + '.object_id']),
-                      ForeignKeyConstraint(['field_client_id', 'field_object_id'],
-                                           ['field' + '.client_id',
-                                            'field' + '.object_id']),
-                      ForeignKeyConstraint(['self_client_id', 'self_object_id'],
-                                           ['DictionaryPerspectiveToField'.lower() + '.client_id',
-                                            'DictionaryPerspectiveToField'.lower() + '.object_id']),
-                      ForeignKeyConstraint(['link_client_id', 'link_object_id'],
-                                           [__parentname__.lower() + '.client_id',
-                                            __parentname__.lower() + '.object_id']),
-                      )
-    perspective_client_id = Column(SLBigInteger())
-    perspective_object_id = Column(SLBigInteger())
-    field_client_id = Column(SLBigInteger())
-    field_object_id = Column(SLBigInteger())
-    self_client_id = Column(SLBigInteger())
-    self_object_id = Column(SLBigInteger())
-    link_client_id = Column(SLBigInteger())
-    link_object_id = Column(SLBigInteger())
-    position = Column(Integer)
-
-    perspective = relationship(__parentname__,
-                               backref=backref('DictionaryPerspectiveToField'.lower()),
-                               foreign_keys=[perspective_client_id,
-                                        perspective_object_id])
-
-    field = relationship('Field',
-                         backref=backref('DictionaryPerspectiveToField'.lower()))
-
-    link = relationship(__parentname__,
-                        backref=backref('linked_from'.lower()),
-                        foreign_keys=[link_client_id,
-                                      link_object_id])
-
-DictionaryPerspectiveToField.upper_level = relationship('DictionaryPerspectiveToField',
-                                                        backref=backref('DictionaryPerspectiveToField'.lower()),
-                                                        remote_side=[DictionaryPerspectiveToField.client_id,
-                                                                     DictionaryPerspectiveToField.object_id])
+    position = Column(Integer, nullable=False)
 
 
-class Field(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin):
+class DataTypeMixin(PrimeTableArgs):
+
+    @declared_attr
+    def __table_args__(cls):
+        return (ForeignKeyConstraint(['data_type_translation_gist_client_id',
+                                      'data_type_translation_gist_object_id'],
+                                     ['TranslationGist'.lower() + '.client_id',
+                                      'TranslationGist'.lower() + '.object_id']),) + super().__table_args__
+    data_type_translation_gist_client_id = Column(SLBigInteger(), nullable=False)
+    data_type_translation_gist_object_id = Column(SLBigInteger(), nullable=False)
+
+
+class Field(CompositeIdMixin,
+            Base,
+            TableNameMixin,
+            CreatedAtMixin,
+            TranslationMixin,
+            DataTypeMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -513,13 +588,15 @@ class Field(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationM
     Parent: DictionaryPerspective.
     """
     # data_type = Column(UnicodeText)
-    data_type_translation_gist_client_id = Column(SLBigInteger())
-    data_type_translation_gist_object_id = Column(SLBigInteger())
-    marked_for_deletion = Column(Boolean, default=False)
-    is_translatable = Column(Boolean, default=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
+    is_translatable = Column(Boolean, default=False, nullable=False)
 
 
-class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
+class LexicalEntry(CompositeIdMixin,
+                   Base,
+                   TableNameMixin,
+                   RelationshipMixin,
+                   CreatedAtMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -540,12 +617,12 @@ class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Cr
             for ent in ents:
                 try:
                     if 'publish' in ent['level']:
-                            if not ent['marked_for_deletion']:
-                                published = True
-                                if not publish:
-                                    break
-                            if publish:
-                                vec.remove(ent)
+                        if not ent['marked_for_deletion']:
+                            published = True
+                            if not publish:
+                                break
+                        if publish:
+                            vec.remove(ent)
                 except:
                     log.debug('IDK: %s' % ent)
         came_from = None
@@ -564,46 +641,20 @@ class LexicalEntry(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, Cr
         return response
 
 
-class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
+class Entity(CompositeIdMixin,
+             Base,
+             TableNameMixin,
+             CreatedAtMixin,
+             RelationshipMixin,
+             SelfMixin,
+             FieldMixin,
+             ParentLinkMixin):
     __parentname__ = "LexicalEntry"
-    __table_args__ = (ForeignKeyConstraint(['parent_client_id', 'parent_object_id'],
-                                           [__parentname__.lower() + '.client_id',
-                                            __parentname__.lower() + '.object_id']),
-                      ForeignKeyConstraint(['field_client_id', 'field_object_id'],
-                                           ['field' + '.client_id',
-                                            'field' + '.object_id']),
-                      ForeignKeyConstraint(['entity_client_id', 'entity_object_id'],
-                                           ['Entity'.lower() + '.client_id',
-                                            'Entity'.lower() + '.object_id']),
-                      ForeignKeyConstraint(['link_client_id', 'link_object_id'],
-                                           [__parentname__.lower() + '.client_id',
-                                            __parentname__.lower() + '.object_id']),
-                      )
-    parent_object_id = Column(SLBigInteger())
-    parent_client_id = Column(SLBigInteger())
-    entity_object_id = Column(SLBigInteger())  # infinite nesting
-    entity_client_id = Column(SLBigInteger())  # infinite nesting
-    field_object_id = Column(SLBigInteger())  # could be changed at merge (and field structure changes?)
-    field_client_id = Column(SLBigInteger())  # same as above
+
     content = Column(UnicodeText)
     additional_metadata = Column(UnicodeText)
     locale_id = Column(SLBigInteger())
-    marked_for_deletion = Column(Boolean, default=False)
-    link_object_id = Column(SLBigInteger())
-    link_client_id = Column(SLBigInteger())
-
-    parent = relationship(__parentname__,
-                          backref=backref('LexicalEntry'.lower()),
-                          foreign_keys=[parent_client_id,
-                                        parent_object_id])
-
-    field = relationship('Field',
-                         backref=backref('Entity'.lower()))
-
-    link = relationship(__parentname__,
-                        backref=backref('linked_from'.lower()),
-                        foreign_keys=[link_client_id,
-                                      link_object_id])
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -629,22 +680,17 @@ class Entity(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
         #         dictionary['contains'] = children
         #     return dictionary
 
-Entity.parent_entity = relationship('Entity',
-                                    backref=backref('Entity'.lower()),
-                                    remote_side=[Entity.client_id,
-                                                 Entity.object_id])
-
 
 class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
     __parentname__ = 'Entity'
     __table_args__ = ((ForeignKeyConstraint(['client_id', 'object_id'],
-                                           [__parentname__.lower() + '.client_id',
-                                            __parentname__.lower() + '.object_id']),)
+                                            [__parentname__.lower() + '.client_id',
+                                             __parentname__.lower() + '.object_id']),)
                       )
 
     object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
-    published = Column(Boolean, default=False)
+    published = Column(Boolean, default=False, nullable=False)
     parent = relationship('Entity', backref=backref("publishingentity", uselist=False))
 
 
@@ -665,15 +711,16 @@ user_to_organization_association = Table('user_to_organization_association', Bas
 
 
 class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    login = Column(UnicodeText, unique=True)
+    login = Column(UnicodeText, unique=True, nullable=False)
     name = Column(UnicodeText)
     # this stands for name in English
-    intl_name = Column(UnicodeText)
-    default_locale_id = Column(ForeignKey("locale.id"))
+    intl_name = Column(UnicodeText, nullable=False)
+    additional_metadata = Column(UnicodeText)
+    default_locale_id = Column(ForeignKey("locale.id"), default=2, nullable=False)
     birthday = Column(Date)
-    signup_date = Column(DateTime, default=datetime.datetime.utcnow)
+    signup_date = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     # it's responsible for "deleted user state". True for active, False for deactivated.
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     password = relationship("Passhash", uselist=False)
     # dictionaries = relationship("Dictionary",
     #                             secondary=user_to_dictionary_association, backref=backref("participated"))
@@ -685,17 +732,17 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 
 class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    name = Column(UnicodeText)  # readable name
+    name = Column(UnicodeText, nullable=False)  # readable name
     groups = relationship('Group', backref=backref("BaseGroup"))
-    subject = Column(UnicodeText)
-    action = Column(UnicodeText)
-    dictionary_default = Column(Boolean, default=False)
-    perspective_default = Column(Boolean, default=False)
+    subject = Column(UnicodeText, nullable=False)
+    action = Column(UnicodeText, nullable=False)
+    dictionary_default = Column(Boolean, default=False, nullable=False)
+    perspective_default = Column(Boolean, default=False, nullable=False)
 
 
 class Group(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     __parentname__ = 'BaseGroup'
-    base_group_id = Column(ForeignKey("basegroup.id"))
+    base_group_id = Column(ForeignKey("basegroup.id"), nullable=False)
     subject_client_id = Column(SLBigInteger())
     subject_object_id = Column(SLBigInteger())
     subject_override = Column(Boolean, default=False)
@@ -714,45 +761,38 @@ class Organization(Base, TableNameMixin, IdMixin, CreatedAtMixin):
                          secondary=user_to_organization_association,
                          backref=backref("organizations"))
     about = Column(UnicodeText)
-    marked_for_deletion = Column(Boolean, default=False)
+    marked_for_deletion = Column(Boolean, default=False, nullable=False)
     # locale_id = Column(ForeignKey("locale.id"))
 
 
-class About(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(SLBigInteger(), ForeignKey("user.id"))
-    user = relationship("User", backref=backref('about', uselist=False))
-    content = Column(UnicodeText)
-    locale_id = Column(ForeignKey("locale.id"))
-
-
 class Passhash(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
-    hash = Column(UnicodeText)
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
+    hash = Column(UnicodeText, nullable=False)
 
     def __init__(self, password):
         self.hash = bcrypt.encrypt(password)
 
 
 class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
     email = Column(UnicodeText, unique=True)
     user = relationship("User", backref=backref('email', uselist=False))
 
 
 class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
-    user_id = Column(SLBigInteger(), ForeignKey('user.id'))
-    creation_time = Column(DateTime, default=datetime.datetime.utcnow)
-    is_browser_client = Column(Boolean, default=True)
+    user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
+    creation_time = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    is_browser_client = Column(Boolean, default=True, nullable=False)
     user = relationship("User", backref='clients')
-    counter = Column(SLBigInteger(), default=1)
+    counter = Column(SLBigInteger(), default=1, nullable=False)
 
 
-class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
-    name = Column(UnicodeText)
+class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):  # TODO: decide what is nullable
+    name = Column(UnicodeText, nullable=False)
     # content holds url for the object
-    content = Column(UnicodeText)
-    real_storage_path = Column(UnicodeText)
-    data_type = Column(UnicodeText)
+    content = Column(UnicodeText, nullable=False)
+    real_storage_path = Column(UnicodeText, nullable=False)
+    data_type = Column(UnicodeText, nullable=False)
     additional_metadata = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)

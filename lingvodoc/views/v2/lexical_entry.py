@@ -305,7 +305,8 @@ def view_lexical_entry(request):  # TODO: test
         else:
             if not entry.marked_for_deletion:
                 response['lexical_entry'] = entry.track(False)
-
+                # response['client_id'] = entry.client_id
+                # response['object_id'] = entry.object_id
                 request.response.status = HTTPOk.code
                 return response
     request.response.status = HTTPNotFound.code
