@@ -267,6 +267,9 @@ def configure_routes(config):
     config.add_route(name='field',
                      pattern='/field/{client_id}/{object_id}',
                      factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='all_statuses',
+                     pattern='/all_statuses',
+                     factory='lingvodoc.models.ApproveAllAcl')
 
     # API #POST
     # should be done with standard form enctype="multipart/form-data"

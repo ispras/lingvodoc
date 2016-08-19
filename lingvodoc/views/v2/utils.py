@@ -364,6 +364,11 @@ def view_perspective_from_object(request, perspective):
             response['translation_gist_object_id'] = perspective.translation_gist_object_id
             response['state_translation_gist_client_id'] = perspective.state_translation_gist_client_id
             response['state_translation_gist_object_id'] = perspective.state_translation_gist_object_id
+            atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=perspective.state_translation_gist_client_id,
+                                                              parent_object_id=perspective.state_translation_gist_object_id,
+                                                              locale_id=int(request.cookies['locale_id'])).first()
+            if atom:
+                response['status'] = atom.content
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
             response['additional_metadata'] = perspective.additional_metadata
