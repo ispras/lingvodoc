@@ -5,20 +5,29 @@
 <div class="modal-body">
     <div id="waveform" style="margin: 0; padding: 0" >{{ controller.createWaveSurfer() }}</div>
 
-    <svg id="soundSVG" ng-attr-width="{{controller.getWaveSurferWidth}}"
-         ng-attr-height="{{controller.getWaveSurferHeight}}">""
+    <svg id="soundSVG" ng-attr-width="{{controller.getWaveSurferWidth}}" ng-attr-height="{{controller.getWaveSurferHeight}}">""
         <!-- invisible rect to catch any click -->
         <rect id="backgroundRect" x="0" y="0"
-              ng-attr-width="{{controller.getWaveSurferWidth}}" ng-attr-height="{{controller.getWaveSurferHeight}}"
-              fill="#000000" fill-opacity="0.1"
-              ></rect>
+              ng-attr-width="{{controller.getWaveSurferWidth}}" ng-attr-height="{{controller.getWaveSurferHeight}}" fill="brown"
+              fill-opacity="0.3"
+              ng-click="controller.onSVGSeek($event)"
+              ng-mouseup="controller.onSVGMouseUp($event)" ng-mousedown="controller.onSVGMouseDown($event)"
+              ng-mousemove="controller.onSVGMouseMove($event)">
+        </rect>
         <svg x="0" ng-attr-y="{{$index * 40}}" ng-repeat="tier in elan.tiersToJSArray">
             <rect id="{{tier.getID + 'Rectangle'}}" x="0" y="0" width="100%" height="40"
                   fill="{{$index % 2 == 0 ? 'grey' : 'white'}}"></rect>
-            <rect id="fuck" x="15" height="50" width="50%" ></rect>
         </svg>
+        <!-- ng-mouse-* are just forwarded bo backgroundRect -->
+        <rect id="selectionRect" x="0" y="0" width="0" ng-attr-height="{{controller.getWaveSurferHeight}}"
+              class="sm-selection-rectangle"
+              ng-mouseup="controller.onSVGMouseUp($event)"
+              ng-mousemove="controller.onSVGMouseMove($event)">
+        </rect>
         <line class="sm-ruler"
-              ng-attr-x1="{{ruler}}" ng-attr-y1="0" ng-attr-x2="{{ruler}}" ng-attr-y2="{{controller.getWaveSurferHeight}}">
+              ng-attr-x1="{{ruler}}" ng-attr-y1="0" ng-attr-x2="{{ruler}}" ng-attr-y2="{{controller.getWaveSurferHeight}}"
+              ng-mouseup="controller.onSVGMouseUp($event)"
+              ng-mousemove="controller.onSVGMouseMove($event)">
         </line>
     </svg>
 

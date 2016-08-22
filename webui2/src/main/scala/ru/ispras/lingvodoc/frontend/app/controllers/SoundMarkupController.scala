@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import org.scalajs.dom
+import org.scalajs.dom.raw.MouseEvent
 import scala.collection.mutable
 import scala.scalajs.js
 import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
@@ -14,6 +15,7 @@ import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
 import scala.scalajs.js.JSConverters._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+import org.scalajs.jquery._
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -42,6 +44,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // hack to distinguish situation when ws is sought by human or by us
   var isWSSeeked = false
+  // listen to svg mouseover while true, ignore it when false
+  var svgIsMouseDown = false
   // true after first drag event, false after dragend
   var isDragging = false
   // true when we move right border of selection rectangle, false when left
@@ -84,12 +88,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // In contract to the constructor, this method is called when waversurfer is already loaded
   def init(): Unit = {
-    dragRectange = d3.behavior.drag().asInstanceOf[js.Dynamic]
-      .on("dragstart", onSelectionDragStart _)
-      .on("drag", onSelectionDragging _)
-      .on("dragend", onSelectionDragEnd _)
-    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].call(dragRectange) // subscribe to drag events
-    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].on("click", onSVGSeek _) // subscribe to svg seek event
+    selectionRectangle = Some(d3.select("#selectionRect"))
+//    dragRectange = d3.behavior.drag().asInstanceOf[js.Dynamic]
+//      .on("dragstart", onSelectionDragStart _)
+//      .on("drag", onSelectionDragging _)
+//      .on("dragend", onSelectionDragEnd _)
+//    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].call(dragRectange) // subscribe to drag events
   }
 
   def parseMarkup(markup: String): Unit = {
@@ -250,10 +254,57 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
     progress.foreach(p => setRulerProgress(p, applyTimeout = true))
   }
 
+  // called when user clicks on svg, sets ruler to this place
   @JSExport
   def onSVGSeek(event: js.Dynamic): Unit = {
     console.log("svg seeking")
-    svgSeek(d3.event.asInstanceOf[js.Dynamic].offsetX.asInstanceOf[Double], forceApply = true)
+    svgSeek(event.offsetX.asInstanceOf[Double])
+  }
+
+  // called on svg mouse down, prepares for dragging
+  @JSExport
+  def onSVGMouseDown(event: js.Dynamic): Unit = {
+    event.preventDefault() // or mouse up will not fired
+    console.log("svg mouse down")
+    svgIsMouseDown = true
+    isDragging = false
+  }
+
+  @JSExport
+  // called on svg mouse up, finished dragging
+  def onSVGMouseUp(event: js.Dynamic): Unit = {
+    console.log("svg mouse up")
+    svgIsMouseDown = false
+  }
+
+  @JSExport
+  // called on svg mouse moving and extends/shrinks the selection rectangle if mouse down event happened earlier
+  def onSVGMouseMove(event: js.Dynamic): Unit = {
+    event.preventDefault() // or mouse up will not fired
+    if (!svgIsMouseDown)
+      return
+
+    console.log(s"mouse moving at offset ${event.offsetX}")
+    val cursorX = Math.min(getWaveSurferWidth, Math.max(0, event.offsetX.toString.toDouble))
+    if (!isDragging) { // executed on first mouse move event
+      selectionRectangle.foreach(_.attr("x", cursorX).attr("width", 0))
+      isDragging = true
+    }
+    else { // executed on every subsequent mouse move event
+      val oldX = selectionRectangle.get.attr("x").toString.toDouble
+      val oldWidth = selectionRectangle.get.attr("width").toString.toDouble
+
+      if ((rightBorderIsMoving && cursorX > oldX) || (!rightBorderIsMoving && cursorX >= oldX + oldWidth)) {
+        selectionRectangle.foreach(_.attr("width", cursorX - oldX))
+        rightBorderIsMoving = true
+      }
+      else {
+        selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX + oldWidth - cursorX))
+        rightBorderIsMoving = false
+      }
+
+      svgSeek(cursorX)
+    }
   }
 
   def onSelectionDragStart() = {
@@ -292,6 +343,19 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
   def onSelectionDragEnd() = {
     console.log("ending dragging")
     isDragging = false
+  }
+
+  @JSExport
+  def md(event: js.Dynamic) = {
+    console.log("hi from md")
+  }
+  @JSExport
+  def mm(event: js.Dynamic) = {
+    console.log("hi from mm")
+  }
+  @JSExport
+  def mu(event: js.Dynamic) = {
+    console.log("hi from mu")
   }
 }
 

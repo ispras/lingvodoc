@@ -53,9 +53,10 @@
 }
 
 /* eaf (sound markup) editing staff */
-.sm-selecton-rectangle {
+.sm-selection-rectangle {
     fill: blue;
     opacity: 0.2;
+    z-index: 1000;
 }
 
 .sm-ruler {

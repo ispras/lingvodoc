@@ -44,6 +44,6 @@ object LingvodocApplication {
       .controller[ViewDictionaryController]
       .controller[SoundMarkupController]
       .controller[ExceptionHandlerController]
-
+//      .directive[myDragDirective]
   }
 }
