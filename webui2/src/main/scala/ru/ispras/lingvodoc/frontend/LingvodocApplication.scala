@@ -3,6 +3,7 @@ package ru.ispras.lingvodoc.frontend
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers._
+import ru.ispras.lingvodoc.frontend.app.directives.ConvertToNumberDirective
 import ru.ispras.lingvodoc.frontend.app.services.{BackendServiceFactory, ExceptionHandlerFactory, UserService, UserServiceFactory}
 
 import scala.scalajs.js.annotation.JSExport
@@ -16,6 +17,7 @@ class RoutingConfig(routeProvider: RouteProvider) extends Config {
     .when("/signup", Route("/static/templates/signup.html", "Logout", "SignupController"))
     .when("/dashboard", Route("/static/templates/dashboard.html", "Dashboard", "DashboardController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
+    .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
     .otherwise(Route("/home"))
 }
 
@@ -37,6 +39,7 @@ object LingvodocApplication {
       .controller[SignupController]
       .controller[DashboardController]
       .controller[HomeController]
+      .controller[CreateDictionaryController]
       .controller[PerspectivePropertiesController]
       .controller[DictionaryPropertiesController]
       .controller[EditDictionaryController]
@@ -44,6 +47,7 @@ object LingvodocApplication {
       .controller[ViewDictionaryController]
       .controller[SoundMarkupController]
       .controller[ExceptionHandlerController]
-
+      .controller[CreateFieldTypeController]
+      .directive[ConvertToNumberDirective]
   }
 }

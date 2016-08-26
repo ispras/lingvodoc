@@ -6,6 +6,7 @@ import upickle.default._
 
 import scala.concurrent.{Future, Promise}
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.{Date, JSON}
@@ -138,7 +139,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     $http.get[js.Dynamic](getMethodUrl("languages")) onComplete {
       case Success(response) =>
         try {
-          val languages = read[Seq[Language]](js.JSON.stringify(response.languages))
+          val languages = read[Seq[Language]](js.JSON.stringify(response))
           p.success(languages)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Malformed languages json:" + e.getMessage))
@@ -299,8 +300,8 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
     $http.put(getMethodUrl(url), req) onComplete {
       case Success(_) =>
-        perspective.status = status
-        p.success(Unit)
+        //perspective.status = status
+        p.success(())
       case Failure(e) => p.failure(BackendException("Failed to update perspective status: " + e.getMessage))
     }
     p.future
@@ -358,7 +359,8 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     val p = Promise[Seq[Perspective]]()
     getDictionaryPerspectives(dictionary) onComplete {
       case Success(perspectives) =>
-        val publishedPerspectives = perspectives.filter(p => p.status.toUpperCase.equals("PUBLISHED"))
+        //val publishedPerspectives = perspectives.filter(p => p.status.toUpperCase.equals("PUBLISHED"))
+        val publishedPerspectives = perspectives
         p.success(publishedPerspectives)
       case Failure(e) => p.failure(BackendException("Failed to get published perspectives: " + e.getMessage))
     }
@@ -618,14 +620,83 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   def signup(login: String, name: String, password: String, email: String, day: Int, month: Int, year: Int) = {
     val defer = $q.defer[Unit]()
     val req = JSON.stringify(js.Dynamic.literal(login = login, name = name, email = email, password = password, day = day, month = month, year = year))
-    console.log(req)
-
     $http.post[js.Dynamic](getMethodUrl("signup"), req) onComplete {
       case Success(response) => defer.resolve(())
       case Failure(e) => defer.reject("Failed to sign up: " + e.getMessage)
     }
     defer.promise
   }
+
+  def allStatuses() = {
+    val defer = $q.defer[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("all_statuses")) onComplete {
+      case Success(response) =>
+        defer.resolve(())
+      case Failure(e) => defer.reject("Failed get list of status values: " + e.getMessage)
+    }
+    defer.promise
+  }
+
+
+
+
+  def translationAtom(clientId: Int, objectId: Int): Future[TranslationAtom] = {
+    val defer = $q.defer[TranslationAtom]()
+    val url = "translationatom/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        val atom = read[TranslationAtom](js.JSON.stringify(response))
+        defer.resolve(atom)
+      case Failure(e) => defer.reject("Failed to get translation atom: " + e.getMessage)
+    }
+    defer.promise
+  }
+
+  def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
+    val defer = $q.defer[TranslationGist]()
+    val url = "translationgist/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val gist = read[TranslationGist](js.JSON.stringify(response))
+          defer.resolve(gist)
+        } catch {
+          case e: upickle.Invalid.Json => defer.reject("Malformed translation gist json:" + e.getMessage)
+          case e: upickle.Invalid.Data => defer.reject("Malformed translation gist data. Missing some " + "required fields: " + e.getMessage)
+          case e: Throwable => defer.reject("Unexpected exception:" + e.getMessage)
+        }
+      case Failure(e) => defer.reject("Failed to get translation gist: " + e.getMessage)
+    }
+    defer.promise
+  }
+
+
+  def translateLanguage(language: Language, localeId: Int): Future[Language] = {
+    val defer = $q.defer[Language]()
+
+    translationGist(language.translationGistClientId, language.translationGistObjectId) onComplete {
+      case Success(gist) =>
+        gist.atoms.find(atom => atom.localeId == localeId) match {
+          case Some(atom) => language.translation = Some(atom.content)
+          case None => language.translation = None
+        }
+        defer.resolve(language)
+
+      case Failure(e) => defer.reject("Failed to get translation for language: " + e.getMessage)
+    }
+    defer.future
+  }
+
+
+  def getLocales(): Future[Seq[Locale]] = {
+    val defer = $q.defer[Seq[Locale]]()
+    val locales = Locale(2, "En", "English", "") :: Locale(1, "Ru", "Russian", "") :: Locale(3, "De", "German", "") :: Locale(4, "Fr", "French", "") :: Nil
+    defer.resolve(locales)
+    defer.future
+  }
+
+
 }
 
 

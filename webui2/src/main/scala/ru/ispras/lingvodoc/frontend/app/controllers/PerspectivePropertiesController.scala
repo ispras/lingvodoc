@@ -100,9 +100,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
 
     // update perspective
     if (backupPerspective.isTemplate != scope.perspective.isTemplate ||
-      backupPerspective.status != scope.perspective.status ||
-      backupPerspective.translation != scope.perspective.translation ||
-      backupPerspective.translationString != scope.perspective.translationString) {
+      backupPerspective.translation != scope.perspective.translation) {
 
       futures = futures :+ backend.updatePerspective(scope.dictionary, scope.perspective)
     }

@@ -22,6 +22,10 @@ trait HomeScope extends Scope {
 @injectable("HomeController")
 class HomeController(scope: HomeScope, backend: BackendService) extends AbstractController[HomeScope](scope) {
 
+  scope.languages = Seq[Language]().toJSArray
+
+  load()
+
   @JSExport
   def getPerspectiveAuthors(perspective: Perspective): String = {
     "Metadata is not supported!"
@@ -31,22 +35,24 @@ class HomeController(scope: HomeScope, backend: BackendService) extends Abstract
     for (language <- languages) {
       for (dictionary <- language.dictionaries) {
         backend.getPublishedDictionaryPerspectives(dictionary) onComplete {
-          case Success(perspectives) => dictionary.perspectives = perspectives.toJSArray
-          case Failure(e) =>
+          case Success(perspectives) =>
+            dictionary.perspectives = perspectives.toJSArray
+          case Failure(e) => console.log("failed to parse")
         }
       }
       setPerspectives(language.languages.toSeq)
     }
   }
 
-  backend.getPublishedDictionaries onComplete {
-    case Success(languages) =>
-      console.log(languages.toJSArray)
-      setPerspectives(languages)
-      scope.languages = languages.toJSArray
-    case Failure(e) => console.log(e.getMessage)
+  private[this] def load() = {
+
+    backend.allStatuses()
+
+    backend.getPublishedDictionaries onComplete {
+      case Success(languages) =>
+        setPerspectives(languages)
+        scope.languages = languages.toJSArray
+      case Failure(e) => console.log(e.getMessage)
+    }
   }
-
-
-
 }

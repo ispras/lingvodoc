@@ -15,7 +15,15 @@ case class Language(override val clientId: Int,
                     var translationGistClientId: Int,
                     var translationGistObjectId: Int,
                     languages: js.Array[Language],
-                    dictionaries: js.Array[Dictionary]) extends Object(clientId, objectId)
+                    dictionaries: js.Array[Dictionary]) extends Object(clientId, objectId) {
+
+  var translation: Option[String] = None
+
+
+  def getTranslation() = {
+    translation.getOrElse("1111")
+  }
+}
 
 object Language {
   implicit val writer = upickle.default.Writer[Language] {
