@@ -1,8 +1,12 @@
 package ru.ispras.lingvodoc.frontend.app.model
 
 import derive.key
+import upickle.Js
 
+import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
+import scala.scalajs.js.JSConverters._
+
 
 @JSExportAll
 case class Field(@key("client_id") override val clientId: Int,
@@ -13,5 +17,73 @@ case class Field(@key("client_id") override val clientId: Int,
                  @key("data_type_translation_gist_client_id") var dataTypeTranslationGistClientId: Int,
                  @key("data_type_translation_gist_object_id") var dataTypeTranslationGistObjectId: Int,
                  @key("is_translatable") var isTranslatable: Boolean,
-                 @key("created_at") var createdAt: String) extends Object(clientId, objectId) {
+                 var createdAt: String) extends Object(clientId, objectId) {
+
+  var fields: js.Array[Field] = js.Array[Field]()
 }
+
+object Field {
+  implicit val writer = upickle.default.Writer[Field] {
+    case field: Field =>
+      (new (Field => Js.Obj) {
+        override def apply(f: Field): Js.Obj = {
+          val contains = f.fields.map(e => apply(e)).toSeq
+          Js.Obj(
+            ("client_id", Js.Num(f.clientId)),
+            ("object_id", Js.Num(f.objectId)),
+            ("translation", Js.Str(f.translation)),
+            ("translation_gist_client_id", Js.Num(f.translationGistClientId)),
+            ("translation_gist_object_id", Js.Num(f.translationGistObjectId)),
+            ("data_type_translation_gist_client_id", Js.Num(f.dataTypeTranslationGistClientId)),
+            ("data_type_translation_gist_object_id", Js.Num(f.dataTypeTranslationGistObjectId)),
+            ("is_translatable", if (f.isTranslatable) Js.True else Js.False),
+            ("created_at", Js.Str(f.createdAt)),
+            ("contains", Js.Arr(contains: _*))
+          )
+        }
+      }) (field)
+  }
+
+  implicit val reader = upickle.default.Reader[Field] {
+    case jsval: Js.Obj =>
+      // XXX: In order to compile this it may be required to increase stack size of sbt process.
+      // Otherwise optimizer may crush with StackOverflow exception
+      (new ((Js.Obj) => Field) {
+        def apply(js: Js.Obj): Field = {
+
+          val clientId = js("client_id").asInstanceOf[Js.Num].value.toInt
+          val objectId = js("object_id").asInstanceOf[Js.Num].value.toInt
+          val translation = js("translation").asInstanceOf[Js.Str].value
+          val translationGistClientId = js("translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
+          val translationGistObjectId = js("translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
+          val dataTypeTranslationGistClientId = js("data_type_translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
+          val dataTypeTranslationGistObjectId = js("data_type_translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
+          val createdAt = js("created_at").asInstanceOf[Js.Str].value
+          val isTranslatable = js("is_translatable") match {
+            case Js.True => true
+            case Js.False => false
+            case _ => false
+          }
+
+          // get array of child fields or empty list if there are none
+          val fields = js.value.find(_._1 == "contains").getOrElse(("contains", Js.Arr()))._2.asInstanceOf[Js.Arr]
+
+          var subFields = Seq[Field]()
+          for (e <- fields.value) {
+            // skip non-object elements
+            e match {
+              case jsObj: Js.Obj =>
+                subFields = subFields :+ apply(jsObj)
+              case _ =>
+            }
+          }
+
+          val field = Field(clientId, objectId, translation, translationGistClientId, translationGistObjectId, dataTypeTranslationGistClientId, dataTypeTranslationGistObjectId, isTranslatable, createdAt)
+          field.fields = subFields.toJSArray
+          field
+        }
+      }) (jsval)
+  }
+}
+
+

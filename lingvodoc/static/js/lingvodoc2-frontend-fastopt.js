@@ -1496,24 +1496,6 @@ function $s_s_concurrent_Promise$class__complete__s_concurrent_Promise__s_util_T
     throw new $c_jl_IllegalStateException().init___T("Promise already completed.")
   }
 }
-function $s_s_math_Ordering$ByteOrdering$class__compare__s_math_Ordering$ByteOrdering__B__B__I($$this, x, y) {
-  return ((x - y) | 0)
-}
-function $s_s_math_Ordering$DoubleOrdering$class__lteq__s_math_Ordering$DoubleOrdering__D__D__Z($$this, x, y) {
-  return (x <= y)
-}
-function $s_s_math_Ordering$FloatOrdering$class__lteq__s_math_Ordering$FloatOrdering__F__F__Z($$this, x, y) {
-  return (x <= y)
-}
-function $s_s_math_Ordering$IntOrdering$class__compare__s_math_Ordering$IntOrdering__I__I__I($$this, x, y) {
-  return ((x < y) ? (-1) : ((x === y) ? 0 : 1))
-}
-function $s_s_math_Ordering$ShortOrdering$class__compare__s_math_Ordering$ShortOrdering__S__S__I($$this, x, y) {
-  return ((x - y) | 0)
-}
-function $s_s_math_Ordering$class__lteq__s_math_Ordering__O__O__Z($$this, x, y) {
-  return ($$this.compare__O__O__I(x, y) <= 0)
-}
 function $s_s_reflect_ClassTag$class__newArray__s_reflect_ClassTag__I__O($$this, len) {
   var x1 = $$this.runtimeClass__jl_Class();
   return ((x1 === $d_B.getClassOf()) ? $newArrayObject($d_B.getArrayOf(), [len]) : ((x1 === $d_S.getClassOf()) ? $newArrayObject($d_S.getArrayOf(), [len]) : ((x1 === $d_C.getClassOf()) ? $newArrayObject($d_C.getArrayOf(), [len]) : ((x1 === $d_I.getClassOf()) ? $newArrayObject($d_I.getArrayOf(), [len]) : ((x1 === $d_J.getClassOf()) ? $newArrayObject($d_J.getArrayOf(), [len]) : ((x1 === $d_F.getClassOf()) ? $newArrayObject($d_F.getArrayOf(), [len]) : ((x1 === $d_D.getClassOf()) ? $newArrayObject($d_D.getArrayOf(), [len]) : ((x1 === $d_Z.getClassOf()) ? $newArrayObject($d_Z.getArrayOf(), [len]) : ((x1 === $d_V.getClassOf()) ? $newArrayObject($d_sr_BoxedUnit.getArrayOf(), [len]) : $m_jl_reflect_Array$().newInstance__jl_Class__I__O($$this.runtimeClass__jl_Class(), len))))))))))
@@ -2033,10 +2015,6 @@ function $s_sc_SeqLike$class__reverse__sc_SeqLike__O($$this) {
   };
   return b.result__O()
 }
-function $s_sc_SeqLike$class__sortBy__sc_SeqLike__F1__s_math_Ordering__O($$this, f, ord) {
-  var ord$1 = new $c_s_math_Ordering$$anon$5().init___s_math_Ordering__F1(ord, f);
-  return $s_sc_SeqLike$class__sorted__sc_SeqLike__s_math_Ordering__O($$this, ord$1)
-}
 function $s_sc_SeqLike$class__reverseIterator__sc_SeqLike__sc_Iterator($$this) {
   return $$this.toCollection__O__sc_Seq($$this.reverse__O()).iterator__sc_Iterator()
 }
@@ -2044,30 +2022,6 @@ function $s_sc_SeqLike$class__$$colon$plus__sc_SeqLike__O__scg_CanBuildFrom__O($
   var b = bf.apply__O__scm_Builder($$this.repr__O());
   b.$$plus$plus$eq__sc_TraversableOnce__scg_Growable($$this.thisCollection__sc_Seq());
   b.$$plus$eq__O__scm_Builder(elem);
-  return b.result__O()
-}
-function $s_sc_SeqLike$class__sorted__sc_SeqLike__s_math_Ordering__O($$this, ord) {
-  var len = $$this.length__I();
-  var b = $$this.newBuilder__scm_Builder();
-  if ((len === 1)) {
-    b.$$plus$plus$eq__sc_TraversableOnce__scg_Growable($$this)
-  } else if ((len > 1)) {
-    b.sizeHint__I__V(len);
-    var arr = $newArrayObject($d_O.getArrayOf(), [len]);
-    var i = new $c_sr_IntRef().init___I(0);
-    $$this.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($$this$1, arr$1, i$1) {
-      return (function(x$2) {
-        arr$1.u[i$1.elem$1] = x$2;
-        i$1.elem$1 = ((1 + i$1.elem$1) | 0)
-      })
-    })($$this, arr, i)));
-    $m_ju_Arrays$().sort__AO__ju_Comparator__V(arr, ord);
-    i.elem$1 = 0;
-    while ((i.elem$1 < arr.u.length)) {
-      b.$$plus$eq__O__scm_Builder(arr.u[i.elem$1]);
-      i.elem$1 = ((1 + i.elem$1) | 0)
-    }
-  };
   return b.result__O()
 }
 function $s_sc_SetLike$class__isEmpty__sc_SetLike__Z($$this) {
@@ -3950,135 +3904,6 @@ $e.ru.ispras.lingvodoc = ($e.ru.ispras.lingvodoc || {});
 $e.ru.ispras.lingvodoc.frontend = ($e.ru.ispras.lingvodoc.frontend || {});
 $e.ru.ispras.lingvodoc.frontend.LingvodocApplication = $m_Lru_ispras_lingvodoc_frontend_LingvodocApplication$;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper() {
-  $c_O.call(this);
-  this.field$1 = null;
-  this.groupEnabled$1 = false;
-  this.statusEnabled$1 = false;
-  this.translatable$1 = false;
-  this.subfieldsEnabled$1 = false
-}
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$statusEnabled__Z__O = (function(x$1) {
-  this.statusEnabled$1 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$groupEnabled__Z__O = (function(x$1) {
-  this.groupEnabled$1 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$statusEnabled__O = (function() {
-  return this.statusEnabled$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$subfieldsEnabled__Z__O = (function(x$1) {
-  this.subfieldsEnabled$1 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$subfieldsEnabled__O = (function() {
-  return this.subfieldsEnabled$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$translatable__Z__O = (function(x$1) {
-  this.translatable$1 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$translatable__O = (function() {
-  return this.translatable$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Field = (function(field) {
-  this.field$1 = field;
-  var x1 = field.group$2;
-  if ($is_s_Some(x1)) {
-    var jsx$1 = true
-  } else {
-    var x = $m_s_None$();
-    if ((x === x1)) {
-      var jsx$1 = false
-    } else {
-      var jsx$1;
-      throw new $c_s_MatchError().init___O(x1)
-    }
-  };
-  this.groupEnabled$1 = jsx$1;
-  this.statusEnabled$1 = (field.status$2 === "enabled");
-  this.translatable$1 = false;
-  var array = field.fields$2;
-  this.subfieldsEnabled$1 = ($uI(array.length) !== 0);
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$field__O = (function() {
-  return this.field$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$$js$exported$prop$groupEnabled__O = (function() {
-  return this.groupEnabled$1
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype, "subfieldsEnabled", {
-  "set": (function(arg$1) {
-    var prep0 = $uZ(arg$1);
-    this.$$js$exported$prop$subfieldsEnabled__Z__O(prep0)
-  }),
-  "get": (function() {
-    return this.$$js$exported$prop$subfieldsEnabled__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype, "translatable", {
-  "set": (function(arg$1) {
-    var prep0 = $uZ(arg$1);
-    this.$$js$exported$prop$translatable__Z__O(prep0)
-  }),
-  "get": (function() {
-    return this.$$js$exported$prop$translatable__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype, "statusEnabled", {
-  "set": (function(arg$1) {
-    var prep0 = $uZ(arg$1);
-    this.$$js$exported$prop$statusEnabled__Z__O(prep0)
-  }),
-  "get": (function() {
-    return this.$$js$exported$prop$statusEnabled__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype, "groupEnabled", {
-  "set": (function(arg$1) {
-    var prep0 = $uZ(arg$1);
-    this.$$js$exported$prop$groupEnabled__Z__O(prep0)
-  }),
-  "get": (function() {
-    return this.$$js$exported$prop$groupEnabled__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype, "field", {
-  "get": (function() {
-    return this.$$js$exported$prop$field__O()
-  }),
-  "enumerable": true
-});
-function $is_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(obj) {
-  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper)))
-}
-function $as_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(obj) {
-  return (($is_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.app.controllers.FieldWrapper"))
-}
-function $isArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(obj, depth) {
-  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper)))
-}
-function $asArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(obj, depth) {
-  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.app.controllers.FieldWrapper;", depth))
-}
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.FieldWrapper", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper: 1,
-  O: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper;
-/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Column() {
   $c_O.call(this)
 }
@@ -4130,8 +3955,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.createColumn__p1__Lru_ispras_lingvodoc_frontend_app_model_Field__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column = (function(field) {
   var array = field.fields$2;
   if (($uI(array.length) !== 0)) {
-    var jsx$2 = field.entityType$2;
-    var jsx$1 = field.dataType$2;
+    var jsx$2 = field.translation$2;
+    var jsx$1 = field.translation$2;
     var array$1 = field.fields$2;
     var this$3 = $m_sc_Seq$();
     $m_sjs_js_WrappedArray$();
@@ -4143,77 +3968,30 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
       var index = i;
       var arg1 = array$1[index];
       var f = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg1);
-      var elem = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn().init___T__T__T(f.entityType$2, f.dataTypeTranslation$2, f.entityTypeTranslation$2);
+      var elem = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn().init___T__T__T(f.translation$2, f.translation$2, f.translation$2);
       array$2.push(elem);
       i = ((1 + i) | 0)
     };
-    return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn().init___T__T__sjs_js_Array__T(jsx$2, jsx$1, array$2, field.entityTypeTranslation$2)
+    return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn().init___T__T__sjs_js_Array__T(jsx$2, jsx$1, array$2, field.translation$2)
   } else {
     var array$3 = field.fields$2;
     if (($uI(array$3.length) === 0)) {
-      return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn().init___T__T__T(field.entityType$2, field.dataType$2, field.entityTypeTranslation$2)
+      return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn().init___T__T__T(field.translation$2, field.translation$2, field.translation$2)
     } else {
       throw new $c_s_MatchError().init___O(field)
     }
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.ru$ispras$lingvodoc$frontend$app$controllers$common$DictionaryTable$$addColumn__Lru_ispras_lingvodoc_frontend_app_model_Field__I = (function(field) {
-  if (field.group$2.isEmpty__Z()) {
-    var h = this.createColumn__p1__Lru_ispras_lingvodoc_frontend_app_model_Field__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(field);
-    return $uI(this.header$1.push(h))
-  } else {
-    var groupName = $as_T(field.group$2.get__O());
-    var array = this.header$1;
-    var len = $uI(array.length);
-    var i = 0;
-    while (true) {
-      if ((i < len)) {
-        var index = i;
-        var arg1 = array[index];
-        var x0$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(arg1);
-        if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x0$1)) {
-          var x2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x0$1);
-          var this$2 = x2.group$2;
-          var jsx$2 = (this$2 === groupName)
-        } else {
-          var jsx$2 = false
-        };
-        var jsx$1 = (!jsx$2)
-      } else {
-        var jsx$1 = false
-      };
-      if (jsx$1) {
-        i = ((1 + i) | 0)
-      } else {
-        break
-      }
-    };
-    var i$1 = i;
-    var groupField = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
-    if (groupField.isDefined__Z()) {
-      return $uI($as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(groupField.get__O()).columns$2.push(this.createColumn__p1__Lru_ispras_lingvodoc_frontend_app_model_Field__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(field)))
-    } else {
-      var x$1 = this.createColumn__p1__Lru_ispras_lingvodoc_frontend_app_model_Field__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(field);
-      var this$3 = $m_sci_Nil$();
-      var columns = new $c_sci_$colon$colon().init___O__sci_List(x$1, this$3);
-      var result = [];
-      var these = columns;
-      while ((!these.isEmpty__Z())) {
-        var arg1$1 = these.head__O();
-        $uI(result.push(arg1$1));
-        these = $as_sci_List(these.tail__O())
-      };
-      var groupColumn = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn().init___T__sjs_js_Array__T(groupName, result, groupName);
-      return $uI(this.header$1.push(groupColumn))
-    }
-  }
+  var h = this.createColumn__p1__Lru_ispras_lingvodoc_frontend_app_model_Field__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(field);
+  return $uI(this.header$1.push(h))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.$$js$exported$prop$header__sjs_js_Array__O = (function(x$1) {
   this.header$1 = x$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.ru$ispras$lingvodoc$frontend$app$controllers$common$DictionaryTable$$addRow__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__V = (function(entry) {
   var array = this.header$1;
-  var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7().init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(this, entry);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6().init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(this, entry);
   var array$1 = [];
   $uI(array.length);
   var i = 0;
@@ -4289,12 +4067,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$.prototy
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$.prototype.apply__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable = (function(fields, entries) {
   var table = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable().init___();
   table.ru$ispras$lingvodoc$frontend$app$controllers$common$DictionaryTable$$fields$1 = fields;
-  var f$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(f$2) {
-    var f = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(f$2);
-    return f.position$2
-  }));
-  var ord = $m_s_math_Ordering$Int$();
-  var this$1 = $as_sc_TraversableOnce($s_sc_SeqLike$class__sortBy__sc_SeqLike__F1__s_math_Ordering__O(fields, f$1, ord)).toList__sci_List();
+  var this$1 = fields.toList__sci_List();
   var these = this$1;
   while ((!these.isEmpty__Z())) {
     var arg1 = these.head__O();
@@ -5653,73 +5426,6 @@ $c_ju_Arrays$.prototype.fill__AI__I__V = (function(a, value) {
   while ((i !== toIndex)) {
     a.u[i] = value;
     i = ((1 + i) | 0)
-  }
-});
-$c_ju_Arrays$.prototype.java$util$Arrays$$insertionSortAnyRef__AO__I__I__s_math_Ordering__V = (function(a, start, end, ord) {
-  var n = ((end - start) | 0);
-  if ((n >= 2)) {
-    if ((ord.compare__O__O__I(a.u[start], a.u[((1 + start) | 0)]) > 0)) {
-      var temp = a.u[start];
-      a.u[start] = a.u[((1 + start) | 0)];
-      a.u[((1 + start) | 0)] = temp
-    };
-    var m = 2;
-    while ((m < n)) {
-      var next = a.u[((start + m) | 0)];
-      if ((ord.compare__O__O__I(next, a.u[(((-1) + ((start + m) | 0)) | 0)]) < 0)) {
-        var iA = start;
-        var iB = (((-1) + ((start + m) | 0)) | 0);
-        while ((((iB - iA) | 0) > 1)) {
-          var ix = ((((iA + iB) | 0) >>> 1) | 0);
-          if ((ord.compare__O__O__I(next, a.u[ix]) < 0)) {
-            iB = ix
-          } else {
-            iA = ix
-          }
-        };
-        var ix$2 = ((iA + ((ord.compare__O__O__I(next, a.u[iA]) < 0) ? 0 : 1)) | 0);
-        var i = ((start + m) | 0);
-        while ((i > ix$2)) {
-          a.u[i] = a.u[(((-1) + i) | 0)];
-          i = (((-1) + i) | 0)
-        };
-        a.u[ix$2] = next
-      };
-      m = ((1 + m) | 0)
-    }
-  }
-});
-$c_ju_Arrays$.prototype.java$util$Arrays$$stableSplitMergeAnyRef__AO__AO__I__I__s_math_Ordering__V = (function(a, temp, start, end, ord) {
-  var length = ((end - start) | 0);
-  if ((length > 16)) {
-    var middle = ((start + ((length / 2) | 0)) | 0);
-    this.java$util$Arrays$$stableSplitMergeAnyRef__AO__AO__I__I__s_math_Ordering__V(a, temp, start, middle, ord);
-    this.java$util$Arrays$$stableSplitMergeAnyRef__AO__AO__I__I__s_math_Ordering__V(a, temp, middle, end, ord);
-    var outIndex = start;
-    var leftInIndex = start;
-    var rightInIndex = middle;
-    while ((outIndex < end)) {
-      if (((leftInIndex < middle) && ((rightInIndex >= end) || ord.lteq__O__O__Z(a.u[leftInIndex], a.u[rightInIndex])))) {
-        temp.u[outIndex] = a.u[leftInIndex];
-        leftInIndex = ((1 + leftInIndex) | 0)
-      } else {
-        temp.u[outIndex] = a.u[rightInIndex];
-        rightInIndex = ((1 + rightInIndex) | 0)
-      };
-      outIndex = ((1 + outIndex) | 0)
-    };
-    $systemArraycopy(temp, start, a, start, length)
-  } else {
-    this.java$util$Arrays$$insertionSortAnyRef__AO__I__I__s_math_Ordering__V(a, start, end, ord)
-  }
-});
-$c_ju_Arrays$.prototype.sort__AO__ju_Comparator__V = (function(array, comparator) {
-  var ord = new $c_ju_Arrays$$anon$3().init___ju_Comparator(comparator);
-  var end = array.u.length;
-  if ((end > 16)) {
-    this.java$util$Arrays$$stableSplitMergeAnyRef__AO__AO__I__I__s_math_Ordering__V(array, $newArrayObject($d_O.getArrayOf(), [array.u.length]), 0, end, ord)
-  } else {
-    this.java$util$Arrays$$insertionSortAnyRef__AO__I__I__s_math_Ordering__V(array, 0, end, ord)
   }
 });
 var $d_ju_Arrays$ = new $TypeData().initClass({
@@ -8914,55 +8620,52 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.ap
   var this$2 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
   var objectId = $doubleToInt($as_Lupickle_Js$Num($s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$2, "object_id")).value$1);
   var this$3 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
-  var ev$1 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$3, "entity_type");
-  var entityType = ((ev$1 === null) ? null : $as_Lupickle_Js$Str(ev$1).value$1);
+  var ev$1 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$3, "translation");
+  var translation = ((ev$1 === null) ? null : $as_Lupickle_Js$Str(ev$1).value$1);
   var this$4 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
-  var ev$2 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$4, "entity_type_translation");
-  var entityTypeTranslation = ((ev$2 === null) ? null : $as_Lupickle_Js$Str(ev$2).value$1);
+  var translationGistClientId = $doubleToInt($as_Lupickle_Js$Num($s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$4, "translation_gist_client_id")).value$1);
   var this$5 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
-  var ev$3 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$5, "data_type");
-  var dataType = ((ev$3 === null) ? null : $as_Lupickle_Js$Str(ev$3).value$1);
+  var translationGistObjectId = $doubleToInt($as_Lupickle_Js$Num($s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$5, "translation_gist_object_id")).value$1);
   var this$6 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
-  var ev$4 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$6, "data_type_translation");
-  var dataTypeTranslation = ((ev$4 === null) ? null : $as_Lupickle_Js$Str(ev$4).value$1);
+  var dataTypeTranslationGistClientId = $doubleToInt($as_Lupickle_Js$Num($s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$6, "data_type_translation_gist_client_id")).value$1);
   var this$7 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
-  var ev$5 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$7, "level");
-  var level = ((ev$5 === null) ? null : $as_Lupickle_Js$Str(ev$5).value$1);
+  var dataTypeTranslationGistObjectId = $doubleToInt($as_Lupickle_Js$Num($s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$7, "data_type_translation_gist_object_id")).value$1);
   var this$8 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
-  var ev$6 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$8, "status");
-  var status = ((ev$6 === null) ? null : $as_Lupickle_Js$Str(ev$6).value$1);
+  var ev$2 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$8, "created_at");
+  var createdAt = ((ev$2 === null) ? null : $as_Lupickle_Js$Str(ev$2).value$1);
   var this$9 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
-  var position = $doubleToInt($as_Lupickle_Js$Num($s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$9, "position")).value$1);
+  var x1 = $s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$9, "is_translatable");
+  var x = $m_Lupickle_Js$True$();
+  if ((x === x1)) {
+    var isTranslatable = true
+  } else {
+    var x$3 = $m_Lupickle_Js$False$();
+    var isTranslatable = false
+  };
   var this$10 = js.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$1$2) {
     var x$1 = $as_T2(x$1$2);
-    var x = x$1.$$und1__O();
-    return ((x !== null) && $objectEquals(x, "group"))
+    var x$2 = x$1.$$und1__O();
+    return ((x$2 !== null) && $objectEquals(x$2, "contains"))
   })));
-  var ev$7 = $as_T2((this$10.isEmpty__Z() ? new $c_T2().init___O__O("group", null) : this$10.get__O())).$$und2__O();
-  var group = ((ev$7 === null) ? null : $as_Lupickle_Js$Str(ev$7).value$1);
-  var this$11 = js.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$2$2) {
-    var x$2 = $as_T2(x$2$2);
-    var x$3 = x$2.$$und1__O();
-    return ((x$3 !== null) && $objectEquals(x$3, "contains"))
-  })));
-  var ev$8 = $as_T2((this$11.isEmpty__Z() ? new $c_T2().init___O__O("contains", new $c_Lupickle_Js$Arr().init___sc_Seq($m_sci_Nil$())) : this$11.get__O())).$$und2__O();
-  var fields = ((ev$8 === null) ? null : $as_Lupickle_Js$Arr(ev$8).value$1);
+  var ev$3 = $as_T2((this$10.isEmpty__Z() ? new $c_T2().init___O__O("contains", new $c_Lupickle_Js$Arr().init___sc_Seq($m_sci_Nil$())) : this$10.get__O())).$$und2__O();
+  var fields = ((ev$3 === null) ? null : $as_Lupickle_Js$Arr(ev$3).value$1);
   var elem = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
-  var subfields = new $c_sr_ObjectRef().init___O(elem);
-  fields.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, subfields$1) {
+  var subFields = new $c_sr_ObjectRef().init___O(elem);
+  fields.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, subFields$1) {
     return (function(e$2) {
       var e = $as_Lupickle_Js$Value(e$2);
       if ($is_Lupickle_Js$Obj(e)) {
         var x2 = ((e === null) ? null : $as_Lupickle_Js$Obj(e).value$1);
-        var jsx$2 = $as_sc_Seq(subfields$1.elem$1);
+        var jsx$2 = $as_sc_Seq(subFields$1.elem$1);
         var jsx$1 = arg$outer.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Field(x2);
-        var this$13 = $m_sc_Seq$();
-        subfields$1.elem$1 = $as_sc_Seq(jsx$2.$$colon$plus__O__scg_CanBuildFrom__O(jsx$1, this$13.ReusableCBFInstance$2))
+        var this$12 = $m_sc_Seq$();
+        subFields$1.elem$1 = $as_sc_Seq(jsx$2.$$colon$plus__O__scg_CanBuildFrom__O(jsx$1, this$12.ReusableCBFInstance$2))
       }
     })
-  })(this, subfields)));
-  var col = $as_sc_Seq(subfields.elem$1);
-  var this$16 = $m_sjsr_package$();
+  })(this, subFields)));
+  var field = new $c_Lru_ispras_lingvodoc_frontend_app_model_Field().init___I__I__T__I__I__I__I__Z__T(clientId, objectId, translation, translationGistClientId, translationGistObjectId, dataTypeTranslationGistClientId, dataTypeTranslationGistObjectId, isTranslatable, createdAt);
+  var col = $as_sc_Seq(subFields.elem$1);
+  var this$15 = $m_sjsr_package$();
   if ($is_sjs_js_ArrayOps(col)) {
     var x2$1 = $as_sjs_js_ArrayOps(col);
     var jsx$3 = x2$1.scala$scalajs$js$ArrayOps$$array$f
@@ -8975,11 +8678,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.ap
       return (function(x$2$1) {
         return $uI(result$1.push(x$2$1))
       })
-    })(this$16, result)));
+    })(this$15, result)));
     var jsx$3 = result
   };
-  var field = new $c_Lru_ispras_lingvodoc_frontend_app_model_Field().init___I__I__T__T__T__T__T__I__T__sjs_js_Array(clientId, objectId, entityType, entityTypeTranslation, dataType, dataTypeTranslation, level, position, status, jsx$3);
-  field.group$2 = $m_s_Option$().apply__O__s_Option(group);
+  field.fields$2 = jsx$3;
   return field
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1 = new $TypeData().initClass({
@@ -9019,7 +8721,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.ap
     i = ((1 + i) | 0)
   };
   var contains = new $c_sjs_js_WrappedArray().init___sjs_js_Array(array$1);
-  return $m_s_Predef$().wrapRefArray__AO__scm_WrappedArray($makeNativeArrayWrapper($d_T2.getArrayOf(), [new $c_T2().init___O__O("client_id", new $c_Lupickle_Js$Num().init___D(f.clientId$2)), new $c_T2().init___O__O("object_id", new $c_Lupickle_Js$Num().init___D(f.objectId$2)), new $c_T2().init___O__O("data_type", new $c_Lupickle_Js$Str().init___T(f.dataType$2)), new $c_T2().init___O__O("data_type_translation", new $c_Lupickle_Js$Str().init___T(f.dataTypeTranslation$2)), new $c_T2().init___O__O("entity_type", new $c_Lupickle_Js$Str().init___T(f.entityType$2)), new $c_T2().init___O__O("entity_type_translation", new $c_Lupickle_Js$Str().init___T(f.entityTypeTranslation$2)), new $c_T2().init___O__O("level", new $c_Lupickle_Js$Str().init___T(f.level$2)), new $c_T2().init___O__O("status", new $c_Lupickle_Js$Str().init___T(f.status$2)), new $c_T2().init___O__O("position", new $c_Lupickle_Js$Num().init___D(f.position$2)), new $c_T2().init___O__O("contains", new $c_Lupickle_Js$Arr().init___sc_Seq(contains))]))
+  return $m_s_Predef$().wrapRefArray__AO__scm_WrappedArray($makeNativeArrayWrapper($d_T2.getArrayOf(), [new $c_T2().init___O__O("client_id", new $c_Lupickle_Js$Num().init___D(f.clientId$2)), new $c_T2().init___O__O("object_id", new $c_Lupickle_Js$Num().init___D(f.objectId$2)), new $c_T2().init___O__O("translation", new $c_Lupickle_Js$Str().init___T(f.translation$2)), new $c_T2().init___O__O("translation_gist_client_id", new $c_Lupickle_Js$Num().init___D(f.translationGistClientId$2)), new $c_T2().init___O__O("translation_gist_object_id", new $c_Lupickle_Js$Num().init___D(f.translationGistObjectId$2)), new $c_T2().init___O__O("data_type_translation_gist_client_id", new $c_Lupickle_Js$Num().init___D(f.dataTypeTranslationGistClientId$2)), new $c_T2().init___O__O("data_type_translation_gist_object_id", new $c_Lupickle_Js$Num().init___D(f.dataTypeTranslationGistObjectId$2)), new $c_T2().init___O__O("is_translatable", (f.isTranslatable$2 ? $m_Lupickle_Js$True$() : $m_Lupickle_Js$False$())), new $c_T2().init___O__O("created_at", new $c_Lupickle_Js$Str().init___T(f.createdAt$2)), new $c_T2().init___O__O("contains", new $c_Lupickle_Js$Arr().init___sc_Seq(contains))]))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.toString__T = (function() {
   return "<function1>"
@@ -9139,26 +8841,26 @@ var $d_Lru_ispras_lingvodoc_frontend_app_model_Language$$anonfun$1$$anon$1 = new
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Language$$anonfun$1$$anon$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Language$$anonfun$1$$anon$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2() {
   $c_O.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype.apply__O__O = (function(v1) {
   return this.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Perspective($as_Lupickle_Js$Obj(v1).value$1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype.toString__T = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype.toString__T = (function() {
   return "<function1>"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Perspective = (function(js) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Perspective = (function(js) {
   var this$1 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
   var clientId = $doubleToInt($as_Lupickle_Js$Num($s_Lupickle_Js$Value$class__apply__Lupickle_Js$Value__T__Lupickle_Js$Value(this$1, "client_id")).value$1);
   var this$2 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
@@ -9198,35 +8900,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.protot
   };
   return new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective().init___I__I__I__I__T__I__I__I__I__Z__Z(clientId, objectId, parentClientId, parentObjectId, translation, translationGistClientId, translationGistObjectId, stateTranslationGistClientId, stateTranslationGistObjectId, isTemplate, markedForDeletion)
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.model.Perspective$$anonfun$1$$anon$1", {
-  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.model.Perspective$$anonfun$1$$anon$2", {
+  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2: 1,
   O: 1,
   F1: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2() {
+function $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1() {
   $c_O.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2() {
+function $h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype.apply__O__O = (function(v1) {
   return new $c_Lupickle_Js$Obj().init___sc_Seq(this.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__sc_Seq($as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(v1)))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype.toString__T = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype.toString__T = (function() {
   return "<function1>"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__sc_Seq = (function(f) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__sc_Seq = (function(f) {
   var array = f.fields$2;
   var array$1 = [];
   $uI(array.length);
@@ -9244,14 +8946,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.protot
   var fields = new $c_sjs_js_WrappedArray().init___sjs_js_Array(array$1);
   return $m_s_Predef$().wrapRefArray__AO__scm_WrappedArray($makeNativeArrayWrapper($d_T2.getArrayOf(), [new $c_T2().init___O__O("client_id", new $c_Lupickle_Js$Num().init___D(f.clientId$2)), new $c_T2().init___O__O("object_id", new $c_Lupickle_Js$Num().init___D(f.objectId$2)), new $c_T2().init___O__O("parent_client_id", new $c_Lupickle_Js$Num().init___D(f.parentClientId$2)), new $c_T2().init___O__O("parent_object_id", new $c_Lupickle_Js$Num().init___D(f.parentObjectId$2)), new $c_T2().init___O__O("translation", new $c_Lupickle_Js$Str().init___T(f.translation$2)), new $c_T2().init___O__O("translation_gist_client_id", new $c_Lupickle_Js$Num().init___D(f.translationGistClientId$2)), new $c_T2().init___O__O("translation_gist_object_id", new $c_Lupickle_Js$Num().init___D(f.translationGistObjectId$2)), new $c_T2().init___O__O("state_translation_gist_client_id", new $c_Lupickle_Js$Num().init___D(f.stateTranslationGistClientId$2)), new $c_T2().init___O__O("state_translation_gist_object_id", new $c_Lupickle_Js$Num().init___D(f.stateTranslationGistObjectId$2)), new $c_T2().init___O__O("is_template", (f.isTemplate$2 ? $m_Lupickle_Js$True$() : $m_Lupickle_Js$False$())), new $c_T2().init___O__O("marked_for_deletion", (f.markedForDeletion$2 ? $m_Lupickle_Js$True$() : $m_Lupickle_Js$False$())), new $c_T2().init___O__O("fields", new $c_Lupickle_Js$Arr().init___sc_Seq(fields))]))
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.model.Perspective$$anonfun$2$$anon$2", {
-  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.model.Perspective$$anonfun$2$$anon$1", {
+  Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1: 1,
   O: 1,
   F1: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1;
 /** @constructor */
 function $c_Lupickle_Types$Reader$$anon$3() {
   $c_O.call(this);
@@ -11122,44 +10824,6 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getFields
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return p
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updateFields__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future = (function(dictionary, perspective) {
-  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
-  var this$2 = dictionary.clientId$2;
-  var jsx$7 = $g.encodeURIComponent(("" + this$2));
-  var jsx$6 = $as_T(jsx$7);
-  var this$4 = dictionary.objectId$2;
-  var jsx$5 = $g.encodeURIComponent(("" + this$4));
-  var jsx$4 = $as_T(jsx$5);
-  var this$6 = perspective.clientId$2;
-  var jsx$3 = $g.encodeURIComponent(("" + this$6));
-  var jsx$2 = $as_T(jsx$3);
-  var this$8 = perspective.objectId$2;
-  var jsx$1 = $g.encodeURIComponent(("" + this$8));
-  var url = (((((((("dictionary/" + jsx$6) + "/") + jsx$4) + "/perspective/") + jsx$2) + "/") + $as_T(jsx$1)) + "/fields");
-  var jsx$11 = $m_Lcom_greencatsoft_angularjs_core_HttpPromise$();
-  var jsx$10 = this.$$http$1;
-  var jsx$9 = this.getMethodUrl__p1__T__T(url);
-  var this$11 = $m_Lupickle_default$();
-  var e = $m_Lru_ispras_lingvodoc_frontend_app_model_Perspective$().writer$1;
-  var s = $s_Lupickle_Types$class__write__Lupickle_Types__O__Lupickle_Types$Writer__T(this$11, perspective, e);
-  var jsx$8 = jsx$10.post(jsx$9, s);
-  jsx$11.promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(jsx$8).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$17) {
-    return (function(x0$19$2) {
-      var x0$19 = $as_s_util_Try(x0$19$2);
-      if ($is_s_util_Success(x0$19)) {
-        return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$17, (void 0))
-      } else if ($is_s_util_Failure(x0$19)) {
-        var x4 = $as_s_util_Failure(x0$19);
-        var e$1 = x4.exception$2;
-        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to update perspective fields: " + e$1.getMessage__T()));
-        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$17, cause)
-      } else {
-        throw new $c_s_MatchError().init___O(x0$19)
-      }
-    })
-  })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
-  return p
-});
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getDictionaryPerspectives__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__s_concurrent_Future = (function(dictionary) {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   var this$2 = dictionary.clientId$2;
@@ -11260,44 +10924,6 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getLocale
   var locales = new $c_sci_$colon$colon().init___O__sci_List(x$4, this$4);
   defer.resolve(locales);
   return new $c_Lcom_greencatsoft_angularjs_core_Defer$DeferredPromise().init___Lcom_greencatsoft_angularjs_core_Defer(defer).future__s_concurrent_Future()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updatePerspective__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future = (function(dictionary, perspective) {
-  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
-  var this$2 = dictionary.clientId$2;
-  var jsx$7 = $g.encodeURIComponent(("" + this$2));
-  var jsx$6 = $as_T(jsx$7);
-  var this$4 = dictionary.objectId$2;
-  var jsx$5 = $g.encodeURIComponent(("" + this$4));
-  var jsx$4 = $as_T(jsx$5);
-  var this$6 = perspective.clientId$2;
-  var jsx$3 = $g.encodeURIComponent(("" + this$6));
-  var jsx$2 = $as_T(jsx$3);
-  var this$8 = perspective.objectId$2;
-  var jsx$1 = $g.encodeURIComponent(("" + this$8));
-  var url = ((((((("dictionary/" + jsx$6) + "/") + jsx$4) + "/perspective/") + jsx$2) + "/") + $as_T(jsx$1));
-  var jsx$11 = $m_Lcom_greencatsoft_angularjs_core_HttpPromise$();
-  var jsx$10 = this.$$http$1;
-  var jsx$9 = this.getMethodUrl__p1__T__T(url);
-  var this$11 = $m_Lupickle_default$();
-  var e = $m_Lru_ispras_lingvodoc_frontend_app_model_Perspective$().writer$1;
-  var s = $s_Lupickle_Types$class__write__Lupickle_Types__O__Lupickle_Types$Writer__T(this$11, perspective, e);
-  var jsx$8 = jsx$10.put(jsx$9, s);
-  jsx$11.promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(jsx$8).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$12) {
-    return (function(x0$14$2) {
-      var x0$14 = $as_s_util_Try(x0$14$2);
-      if ($is_s_util_Success(x0$14)) {
-        return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$12, (void 0))
-      } else if ($is_s_util_Failure(x0$14)) {
-        var x4 = $as_s_util_Failure(x0$14);
-        var e$1 = x4.exception$2;
-        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to update perspective: " + e$1.getMessage__T()));
-        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$12, cause)
-      } else {
-        throw new $c_s_MatchError().init___O(x0$14)
-      }
-    })
-  })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
-  return p
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPerspective__I__I__s_concurrent_Future = (function(clientId, objectId) {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
@@ -18695,169 +18321,6 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$setPerspectives$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$setPerspectives$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3() {
-  $c_sr_AbstractFunction1.call(this);
-  this.$$outer$2 = null
-}
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype.apply__O__O = (function(v1) {
-  this.apply__s_util_Try__V($as_s_util_Try(v1))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype.apply__s_util_Try__V = (function(x0$2) {
-  if ($is_s_util_Success(x0$2)) {
-    var x2 = $as_s_util_Success(x0$2);
-    var perspective = $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(x2.value$2);
-    var jsx$1 = this.$$outer$2;
-    var clientId = perspective.clientId$2;
-    var objectId = perspective.objectId$2;
-    var parentClientId = perspective.parentClientId$2;
-    var parentObjectId = perspective.parentObjectId$2;
-    var translation = perspective.translation$2;
-    var translationGistClientId = perspective.translationGistClientId$2;
-    var translationGistObjectId = perspective.translationGistObjectId$2;
-    var stateTranslationGistClientId = perspective.stateTranslationGistClientId$2;
-    var stateTranslationGistObjectId = perspective.stateTranslationGistObjectId$2;
-    var isTemplate = perspective.isTemplate$2;
-    var markedForDeletion = perspective.markedForDeletion$2;
-    jsx$1.backupPerspective$2 = new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective().init___I__I__I__I__T__I__I__I__I__Z__Z(clientId, objectId, parentClientId, parentObjectId, translation, translationGistClientId, translationGistObjectId, stateTranslationGistClientId, stateTranslationGistObjectId, isTemplate, markedForDeletion);
-    var this$1 = this.$$outer$2;
-    this$1.scope$1.perspective = perspective;
-    var this$2 = this.$$outer$2;
-    var jsx$2 = this$2.scope$1;
-    var array = perspective.fields$2;
-    var this$4 = $m_sc_Seq$();
-    $m_sjs_js_WrappedArray$();
-    var array$1 = [];
-    $uI(array.length);
-    var i = 0;
-    var len = $uI(array.length);
-    while ((i < len)) {
-      var index = i;
-      var arg1 = array[index];
-      var f = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg1);
-      var elem = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper().init___Lru_ispras_lingvodoc_frontend_app_model_Field(f);
-      array$1.push(elem);
-      i = ((1 + i) | 0)
-    };
-    jsx$2.fields = array$1
-  } else if ($is_s_util_Failure(x0$2)) {
-    var x3 = $as_s_util_Failure(x0$2);
-    var e = x3.exception$2;
-    var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-    var s = e.getMessage__T();
-    jsx$3.log(s)
-  } else {
-    throw new $c_s_MatchError().init___O(x0$2)
-  }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController = (function($$outer) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  return this
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.PerspectivePropertiesController$$anonfun$3", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3: 1,
-  sr_AbstractFunction1: 1,
-  O: 1,
-  F1: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3;
-/** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2() {
-  $c_sr_AbstractFunction1.call(this);
-  this.originalFields$1$2 = null;
-  this.updateFields$1$2 = null
-}
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype.apply__O__O = (function(v1) {
-  this.apply__T2__V($as_T2(v1))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController__sjs_js_Array__sr_BooleanRef = (function($$outer, originalFields$1, updateFields$1) {
-  this.originalFields$1$2 = originalFields$1;
-  this.updateFields$1$2 = updateFields$1;
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype.apply__T2__V = (function(x$5) {
-  if ((x$5 !== null)) {
-    var fw = $as_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(x$5.$$und1__O());
-    var index = x$5.$$und2$mcI$sp__I();
-    var array = this.originalFields$1$2;
-    var len = $uI(array.length);
-    var i = 0;
-    while (true) {
-      if ((i < len)) {
-        var index$1 = i;
-        var arg1 = array[index$1];
-        var x$4 = $as_T2(arg1);
-        var jsx$1 = (!(x$4.$$und2$mcI$sp__I() === index))
-      } else {
-        var jsx$1 = false
-      };
-      if (jsx$1) {
-        i = ((1 + i) | 0)
-      } else {
-        break
-      }
-    };
-    var i$1 = i;
-    var x1$2 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
-    if ($is_s_Some(x1$2)) {
-      var x2 = $as_s_Some(x1$2);
-      var e = $as_T2(x2.x$2);
-      var originalFW = $as_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(e.$$und1__O());
-      if ((((originalFW.field$1.dataType$2 !== fw.field$1.dataType$2) || (originalFW.field$1.entityType$2 !== fw.field$1.entityType$2)) || (originalFW.field$1.dataTypeTranslation$2 !== fw.field$1.dataTypeTranslation$2))) {
-        var jsx$2 = true
-      } else {
-        var x = originalFW.field$1.group$2;
-        var x$2 = fw.field$1.group$2;
-        var jsx$2 = (!((x === null) ? (x$2 === null) : x.equals__O__Z(x$2)))
-      };
-      if ((jsx$2 || (originalFW.field$1.position$2 !== fw.field$1.position$2))) {
-        this.updateFields$1$2.elem$1 = true
-      }
-    } else {
-      var x$3 = $m_s_None$();
-      if ((x$3 === x1$2)) {
-        this.updateFields$1$2.elem$1 = true
-      } else {
-        throw new $c_s_MatchError().init___O(x1$2)
-      }
-    }
-  } else {
-    throw new $c_s_MatchError().init___O(x$5)
-  }
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.PerspectivePropertiesController$$anonfun$ok$2", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2: 1,
-  sr_AbstractFunction1: 1,
-  O: 1,
-  F1: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2;
-/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$1() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
@@ -18997,21 +18460,21 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$a
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$1$$anonfun$apply$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$1$$anonfun$apply$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4() {
   $c_sr_AbstractFunction1.call(this);
   this.column$2$f = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype.apply__O__O = (function(v1) {
   return this.apply__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value($as_Lru_ispras_lingvodoc_frontend_app_model_Entity(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value = (function(entity) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value = (function(entity) {
   var elem = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   var elem$1 = null;
   elem$1 = elem;
@@ -19073,38 +18536,38 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
   };
   return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value().init___T__T__sjs_js_Array(jsx$6, jsx$5, jsx$4)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn = (function($$outer, column$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn = (function($$outer, column$2) {
   this.column$2$f = column$2;
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable$$anonfun$5", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable$$anonfun$4", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null;
   this.entry$1$f = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype.apply__O__O = (function(v1) {
   return this.apply__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column__Lru_ispras_lingvodoc_frontend_app_controllers_common_GenericContent($as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry = (function($$outer, entry$1) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry = (function($$outer, entry$1) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
   } else {
@@ -19113,9 +18576,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
   this.entry$1$f = entry$1;
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype.apply__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column__Lru_ispras_lingvodoc_frontend_app_controllers_common_GenericContent = (function(x0$2) {
-  if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$2)) {
-    var x2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$2);
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype.apply__Lru_ispras_lingvodoc_frontend_app_controllers_common_Column__Lru_ispras_lingvodoc_frontend_app_controllers_common_GenericContent = (function(x0$1) {
+  if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$1)) {
+    var x2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$1);
     var array = this.entry$1$f.entities$2;
     var array$1 = [];
     var i = 0;
@@ -19144,8 +18607,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
       i$1 = ((1 + i$1) | 0)
     };
     return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Content().init___sjs_js_Array(array$2)
-  } else if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$2)) {
-    var x3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$2);
+  } else if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$1)) {
+    var x3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$1);
     var array$3 = this.entry$1$f.entities$2;
     var array$4 = [];
     var i$2 = 0;
@@ -19233,9 +18696,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
       i$3 = ((1 + i$3) | 0)
     };
     return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Content().init___sjs_js_Array(array$5)
-  } else if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x0$2)) {
-    var x4 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x0$2);
-    var array$8 = x4.columns$2;
+  } else if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x0$1)) {
+    var x4 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x0$1);
+    var array$8 = x4.columns__sjs_js_Array();
     var array$9 = [];
     $uI(array$8.length);
     var i$7 = 0;
@@ -19243,9 +18706,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
     while ((i$7 < len$6)) {
       var index$6 = i$7;
       var arg1$5 = array$8[index$6];
-      var x0$3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(arg1$5);
-      if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$3)) {
-        var x2$2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$3);
+      var x0$2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Column(arg1$5);
+      if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$2)) {
+        var x2$2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_SimpleColumn(x0$2);
         var array$10 = this.entry$1$f.entities$2;
         var array$11 = [];
         var i$8 = 0;
@@ -19278,8 +18741,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
         $s_sc_IndexedSeqOptimized$class__foreach__sc_IndexedSeqOptimized__F1__V(this$38, f$3);
         var values = b.scala$scalajs$js$ArrayOps$$array$f;
         var elem$3 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Content().init___sjs_js_Array(values)
-      } else if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$3)) {
-        var x3$2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$3);
+      } else if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$2)) {
+        var x3$2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(x0$2);
         var this$40 = this.$$outer$2;
         var array$12 = this.entry$1$f.entities$2;
         var array$13 = [];
@@ -19297,7 +18760,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
           i$9 = ((1 + i$9) | 0)
         };
         var this$48 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$13);
-        var f$4 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$5().init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(this$40, x3$2);
+        var f$4 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$4().init___Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable__Lru_ispras_lingvodoc_frontend_app_controllers_common_MasterColumn(this$40, x3$2);
         var b$2 = new $c_sjs_js_ArrayOps().init___();
         $s_scm_Builder$class__sizeHint__scm_Builder__sc_TraversableLike__V(b$2, this$48);
         var f$6 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($$this$1, b$3, f$5) {
@@ -19310,27 +18773,27 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun
         var elem$3 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Content().init___sjs_js_Array(values$1)
       } else {
         var elem$3;
-        throw new $c_s_MatchError().init___O(x0$3)
+        throw new $c_s_MatchError().init___O(x0$2)
       };
       array$9.push(elem$3);
       i$7 = ((1 + i$7) | 0)
     };
     return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupContent().init___sjs_js_Array(array$9)
   } else {
-    throw new $c_s_MatchError().init___O(x0$2)
+    throw new $c_s_MatchError().init___O(x0$1)
   }
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable$$anonfun$7", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable$$anonfun$6", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$7;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$6;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Row() {
   $c_O.call(this);
@@ -19706,7 +19169,11 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2.prototype.apply__O__
   return this.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__Lupickle_Js$Value($as_Lru_ispras_lingvodoc_frontend_app_model_Field(v1))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__Lupickle_Js$Value = (function(x0$1) {
-  return new $c_Lupickle_Js$Obj().init___sc_Seq(new $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2(this).apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq(x0$1))
+  if ((x0$1 !== null)) {
+    return new $c_Lupickle_Js$Obj().init___sc_Seq(new $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2(this).apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq(x0$1))
+  } else {
+    throw new $c_s_MatchError().init___O(x0$1)
+  }
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2: 0
@@ -20160,7 +19627,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2.prototype.appl
   return this.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__Lupickle_Js$Value($as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(v1))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__Lupickle_Js$Value = (function(x0$1) {
-  return new $c_Lupickle_Js$Obj().init___sc_Seq(new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2(this).apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__sc_Seq(x0$1))
+  return new $c_Lupickle_Js$Obj().init___sc_Seq(new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2(this).apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__sc_Seq(x0$1))
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$2: 0
@@ -26139,13 +25606,7 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController = 
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController() {
-  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
-  this.ru$ispras$lingvodoc$frontend$app$controllers$PerspectivePropertiesController$$instance$f = null;
-  this.modal$2 = null;
-  this.backend$2 = null;
-  this.d$2 = null;
-  this.p$2 = null;
-  this.backupPerspective$2 = null
+  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this)
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController;
@@ -26154,223 +25615,9 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesC
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.$$js$exported$meth$ok__O = (function() {
-  this.ok__V()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.ok__V = (function() {
-  var futures = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
-  if (((this.backupPerspective$2.isTemplate$2 !== $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(this.scope$1.perspective).isTemplate$2) || (this.backupPerspective$2.translation$2 !== $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(this.scope$1.perspective).translation$2))) {
-    var jsx$2 = futures;
-    var jsx$1 = this.backend$2.updatePerspective__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_model_Dictionary(this.scope$1.dictionary), $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(this.scope$1.perspective));
-    var this$1 = $m_sc_Seq$();
-    futures = $as_sc_Seq(jsx$2.$$colon$plus__O__scg_CanBuildFrom__O(jsx$1, this$1.ReusableCBFInstance$2))
-  };
-  var array = $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(this.scope$1.perspective).fields$2;
-  var array$1 = [];
-  $uI(array.length);
-  var i = 0;
-  var len = $uI(array.length);
-  while ((i < len)) {
-    var index = i;
-    var arg1 = array[index];
-    var x$3 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg1);
-    var elem = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper().init___Lru_ispras_lingvodoc_frontend_app_model_Field(x$3);
-    array$1.push(elem);
-    i = ((1 + i) | 0)
-  };
-  var array$2 = [];
-  var len$1 = $uI(array$1.length);
-  var i$1 = 0;
-  while ((i$1 < len$1)) {
-    var index$1 = i$1;
-    var elem$1 = new $c_T2().init___O__O(array$1[index$1], i$1);
-    array$2.push(elem$1);
-    i$1 = ((1 + i$1) | 0)
-  };
-  var updateFields = new $c_sr_BooleanRef().init___Z(false);
-  var array$3 = this.scope$1.fields;
-  var array$4 = [];
-  var len$2 = $uI(array$3.length);
-  var i$2 = 0;
-  while ((i$2 < len$2)) {
-    var index$2 = i$2;
-    var elem$2 = new $c_T2().init___O__O(array$3[index$2], i$2);
-    array$4.push(elem$2);
-    i$2 = ((1 + i$2) | 0)
-  };
-  var this$10 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$4);
-  var p = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(check$ifrefutable$1$2) {
-    var check$ifrefutable$1 = $as_T2(check$ifrefutable$1$2);
-    return (check$ifrefutable$1 !== null)
-  }));
-  new $c_sc_TraversableLike$WithFilter().init___sc_TraversableLike__F1(this$10, p).foreach__F1__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$ok$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController__sjs_js_Array__sr_BooleanRef(this, array$2, updateFields));
-  if (updateFields.elem$1) {
-    var jsx$3 = $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(this.scope$1.perspective);
-    var array$5 = this.scope$1.fields;
-    var array$6 = [];
-    $uI(array$5.length);
-    var i$3 = 0;
-    var len$3 = $uI(array$5.length);
-    while ((i$3 < len$3)) {
-      var index$3 = i$3;
-      var arg1$1 = array$5[index$3];
-      var x$6 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(arg1$1);
-      var elem$3 = x$6.field$1;
-      array$6.push(elem$3);
-      i$3 = ((1 + i$3) | 0)
-    };
-    jsx$3.fields$2 = array$6;
-    var jsx$5 = futures;
-    var jsx$4 = this.backend$2.updateFields__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_model_Dictionary(this.scope$1.dictionary), $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(this.scope$1.perspective));
-    var this$13 = $m_sc_Seq$();
-    futures = $as_sc_Seq(jsx$5.$$colon$plus__O__scg_CanBuildFrom__O(jsx$4, this$13.ReusableCBFInstance$2))
-  };
-  var jsx$7 = $m_s_concurrent_Future$();
-  var jsx$6 = futures;
-  var this$14 = $m_sc_Seq$();
-  jsx$7.sequence__sc_TraversableOnce__scg_CanBuildFrom__s_concurrent_ExecutionContext__s_concurrent_Future(jsx$6, this$14.ReusableCBFInstance$2, $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
-    return (function(x0$1$2) {
-      var x0$1 = $as_s_util_Try(x0$1$2);
-      if ($is_s_util_Success(x0$1)) {
-        arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$PerspectivePropertiesController$$instance$f.dismiss((void 0))
-      } else if ($is_s_util_Failure(x0$1)) {
-        var x3 = $as_s_util_Failure(x0$1);
-        var e = x3.exception$2;
-        var jsx$8 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-        var s = e.getMessage__T();
-        jsx$8.log(s)
-      } else {
-        throw new $c_s_MatchError().init___O(x0$1)
-      }
-    })
-  })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary = (function(scope, instance, modal, backend, params) {
-  this.ru$ispras$lingvodoc$frontend$app$controllers$PerspectivePropertiesController$$instance$f = instance;
-  this.modal$2 = modal;
-  this.backend$2 = backend;
   $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
-  if ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionary"))) {
-    var jsx$1 = params.dictionary
-  } else {
-    var jsx$1;
-    throw new $c_ju_NoSuchElementException().init___T("key not found: dictionary")
-  };
-  this.d$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Dictionary(jsx$1);
-  if ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "perspective"))) {
-    var jsx$2 = params.perspective
-  } else {
-    var jsx$2;
-    throw new $c_ju_NoSuchElementException().init___T("key not found: perspective")
-  };
-  this.p$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(jsx$2);
-  this.backupPerspective$2 = null;
-  this.scope$1.dictionary = this.d$2;
-  backend.getPerspectiveFields__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future(this.d$2, this.p$2).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController$$anonfun$3().init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.$$js$exported$meth$addField__O = (function() {
-  return this.addField__I()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.removeField__I__V = (function(index) {
-  var jsx$1 = this.scope$1;
-  var array = this.scope$1.fields;
-  var array$1 = [];
-  var len = $uI(array.length);
-  var i = 0;
-  while ((i < len)) {
-    var index$1 = i;
-    var elem = new $c_T2().init___O__O(array[index$1], i);
-    array$1.push(elem);
-    i = ((1 + i) | 0)
-  };
-  var array$2 = [];
-  var i$1 = 0;
-  var len$1 = $uI(array$1.length);
-  while ((i$1 < len$1)) {
-    var index$2 = i$1;
-    var arg1 = array$1[index$2];
-    var x$1 = $as_T2(arg1);
-    if (((x$1.$$und2$mcI$sp__I() !== index) !== false)) {
-      array$2.push(arg1)
-    };
-    i$1 = ((1 + i$1) | 0)
-  };
-  var array$3 = [];
-  $uI(array$2.length);
-  var i$2 = 0;
-  var len$2 = $uI(array$2.length);
-  while ((i$2 < len$2)) {
-    var index$3 = i$2;
-    var arg1$1 = array$2[index$3];
-    var x$2 = $as_T2(arg1$1);
-    var elem$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper(x$2.$$und1__O());
-    array$3.push(elem$1);
-    i$2 = ((1 + i$2) | 0)
-  };
-  jsx$1.fields = array$3
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.$$js$exported$meth$enableLinkedField__O = (function() {
-  return (void 0)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.$$js$exported$meth$cancel__O = (function() {
-  this.cancel__V()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.cancel__V = (function() {
-  this.ru$ispras$lingvodoc$frontend$app$controllers$PerspectivePropertiesController$$instance$f.dismiss((void 0))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.$$js$exported$meth$removeField__I__O = (function(index) {
-  this.removeField__I__V(index)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.editGeoLabels__V = (function() {
-  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
-  options.templateUrl = "/static/templates/modal/perspectiveMap.html";
-  options.controller = "PerspectiveMapController";
-  options.backdrop = false;
-  options.keyboard = false;
-  options.size = "lg";
-  options.resolve = {
-    "params": (function(arg$outer) {
-      return (function() {
-        return {
-          "dictionary": $as_Lru_ispras_lingvodoc_frontend_app_model_Dictionary(arg$outer.scope$1.dictionary),
-          "perspective": $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(arg$outer.scope$1.perspective)
-        }
-      })
-    })(this)
-  };
-  this.modal$2.open(options)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.$$js$exported$meth$enableGroup__O = (function() {
-  return (void 0)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.$$js$exported$meth$editGeoLabels__O = (function() {
-  this.editGeoLabels__V()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.addField__I = (function() {
-  return $uI(this.scope$1.fields.push(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_FieldWrapper().init___Lru_ispras_lingvodoc_frontend_app_model_Field(new $c_Lru_ispras_lingvodoc_frontend_app_model_Field().init___I__I__T__T__T__T__T__I__T__sjs_js_Array((-1), (-1), "", "", "", "", "", 1, "", []))))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.cancel = (function() {
-  return this.$$js$exported$meth$cancel__O()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.ok = (function() {
-  return this.$$js$exported$meth$ok__O()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.editGeoLabels = (function() {
-  return this.$$js$exported$meth$editGeoLabels__O()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.enableLinkedField = (function() {
-  return this.$$js$exported$meth$enableLinkedField__O()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.enableGroup = (function() {
-  return this.$$js$exported$meth$enableGroup__O()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.removeField = (function(arg$1) {
-  var prep0 = $uI(arg$1);
-  return this.$$js$exported$meth$removeField__I__O(prep0)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController.prototype.addField = (function() {
-  return this.$$js$exported$meth$addField__O()
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController: 0
@@ -27040,101 +26287,6 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldType = new $Typ
   Ljava_io_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldType.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldType;
-/** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn() {
-  $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Column.call(this);
-  this.group$2 = null;
-  this.columns$2 = null;
-  this.displayName$2 = null
-}
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype = new $h_Lru_ispras_lingvodoc_frontend_app_controllers_common_Column();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.productPrefix__T = (function() {
-  return "GroupColumn"
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.$$js$exported$prop$displayName__O = (function() {
-  return this.displayName$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.productArity__I = (function() {
-  return 3
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.equals__O__Z = (function(x$1) {
-  if ((this === x$1)) {
-    return true
-  } else if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x$1)) {
-    var GroupColumn$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(x$1);
-    return (((this.group$2 === GroupColumn$1.group$2) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.columns$2, GroupColumn$1.columns$2)) && (this.displayName$2 === GroupColumn$1.displayName$2))
-  } else {
-    return false
-  }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.productElement__I__O = (function(x$1) {
-  switch (x$1) {
-    case 0: {
-      return this.group$2;
-      break
-    }
-    case 1: {
-      return this.columns$2;
-      break
-    }
-    case 2: {
-      return this.displayName$2;
-      break
-    }
-    default: {
-      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
-    }
-  }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.toString__T = (function() {
-  return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.$$js$exported$prop$group__O = (function() {
-  return this.group$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.$$js$exported$prop$columns__O = (function() {
-  return this.columns$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.init___T__sjs_js_Array__T = (function(group, columns, displayName) {
-  this.group$2 = group;
-  this.columns$2 = columns;
-  this.displayName$2 = displayName;
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.hashCode__I = (function() {
-  var this$2 = $m_s_util_hashing_MurmurHash3$();
-  return this$2.productHash__s_Product__I__I(this, (-889275714))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.productIterator__sc_Iterator = (function() {
-  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.$$js$exported$meth$getName__O = (function() {
-  return this.displayName$2
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype, "displayName", {
-  "get": (function() {
-    return this.$$js$exported$prop$displayName__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype, "columns", {
-  "get": (function() {
-    return this.$$js$exported$prop$columns__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype, "group", {
-  "get": (function() {
-    return this.$$js$exported$prop$group__O()
-  }),
-  "enumerable": true
-});
 function $is_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn)))
 }
@@ -27147,18 +26299,6 @@ function $isArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupCo
 function $asArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(obj, depth) {
   return (($isArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.app.controllers.common.GroupColumn;", depth))
 }
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.common.GroupColumn", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn: 1,
-  Lru_ispras_lingvodoc_frontend_app_controllers_common_Column: 1,
-  O: 1,
-  s_Product: 1,
-  s_Equals: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupColumn;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupContent() {
   $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GenericContent.call(this);
@@ -28352,15 +27492,14 @@ function $c_Lru_ispras_lingvodoc_frontend_app_model_Field() {
   $c_Lru_ispras_lingvodoc_frontend_app_model_Object.call(this);
   this.clientId$2 = 0;
   this.objectId$2 = 0;
-  this.entityType$2 = null;
-  this.entityTypeTranslation$2 = null;
-  this.dataType$2 = null;
-  this.dataTypeTranslation$2 = null;
-  this.level$2 = null;
-  this.position$2 = 0;
-  this.status$2 = null;
-  this.fields$2 = null;
-  this.group$2 = null
+  this.translation$2 = null;
+  this.translationGistClientId$2 = 0;
+  this.translationGistObjectId$2 = 0;
+  this.dataTypeTranslationGistClientId$2 = 0;
+  this.dataTypeTranslationGistObjectId$2 = 0;
+  this.isTranslatable$2 = false;
+  this.createdAt$2 = null;
+  this.fields$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype = new $h_Lru_ispras_lingvodoc_frontend_app_model_Object();
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Field;
@@ -28369,54 +27508,33 @@ function $h_Lru_ispras_lingvodoc_frontend_app_model_Field() {
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$entityType__O = (function() {
-  return this.entityType$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$status__T__O = (function(x$1) {
-  this.status$2 = x$1
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$translation__T__O = (function(x$1) {
+  this.translation$2 = x$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.productPrefix__T = (function() {
   return "Field"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataType__T__O = (function(x$1) {
-  this.dataType$2 = x$1
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$translationGistObjectId__O = (function() {
+  return this.translationGistObjectId$2
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.productArity__I = (function() {
-  return 10
+  return 9
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataTypeTranslation__O = (function() {
-  return this.dataTypeTranslation$2
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataTypeTranslationGistObjectId__O = (function() {
+  return this.dataTypeTranslationGistObjectId$2
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$status__O = (function() {
-  return this.status$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.init___I__I__T__T__T__T__T__I__T__sjs_js_Array = (function(clientId, objectId, entityType, entityTypeTranslation, dataType, dataTypeTranslation, level, position, status, fields) {
-  this.clientId$2 = clientId;
-  this.objectId$2 = objectId;
-  this.entityType$2 = entityType;
-  this.entityTypeTranslation$2 = entityTypeTranslation;
-  this.dataType$2 = dataType;
-  this.dataTypeTranslation$2 = dataTypeTranslation;
-  this.level$2 = level;
-  this.position$2 = position;
-  this.status$2 = status;
-  this.fields$2 = fields;
-  $c_Lru_ispras_lingvodoc_frontend_app_model_Object.prototype.init___I__I.call(this, clientId, objectId);
-  this.group$2 = $m_s_None$();
-  return this
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$createdAt__O = (function() {
+  return this.createdAt$2
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.equals__O__Z = (function(x$1) {
   if ((this === x$1)) {
     return true
   } else if ($is_Lru_ispras_lingvodoc_frontend_app_model_Field(x$1)) {
     var Field$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(x$1);
-    return ((((((((((this.clientId$2 === Field$1.clientId$2) && (this.objectId$2 === Field$1.objectId$2)) && (this.entityType$2 === Field$1.entityType$2)) && (this.entityTypeTranslation$2 === Field$1.entityTypeTranslation$2)) && (this.dataType$2 === Field$1.dataType$2)) && (this.dataTypeTranslation$2 === Field$1.dataTypeTranslation$2)) && (this.level$2 === Field$1.level$2)) && (this.position$2 === Field$1.position$2)) && (this.status$2 === Field$1.status$2)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.fields$2, Field$1.fields$2))
+    return (((((((((this.clientId$2 === Field$1.clientId$2) && (this.objectId$2 === Field$1.objectId$2)) && (this.translation$2 === Field$1.translation$2)) && (this.translationGistClientId$2 === Field$1.translationGistClientId$2)) && (this.translationGistObjectId$2 === Field$1.translationGistObjectId$2)) && (this.dataTypeTranslationGistClientId$2 === Field$1.dataTypeTranslationGistClientId$2)) && (this.dataTypeTranslationGistObjectId$2 === Field$1.dataTypeTranslationGistObjectId$2)) && (this.isTranslatable$2 === Field$1.isTranslatable$2)) && (this.createdAt$2 === Field$1.createdAt$2))
   } else {
     return false
   }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataTypeTranslation__T__O = (function(x$1) {
-  this.dataTypeTranslation$2 = x$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.productElement__I__O = (function(x$1) {
   switch (x$1) {
@@ -28429,35 +27547,31 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.productElement__I__O 
       break
     }
     case 2: {
-      return this.entityType$2;
+      return this.translation$2;
       break
     }
     case 3: {
-      return this.entityTypeTranslation$2;
+      return this.translationGistClientId$2;
       break
     }
     case 4: {
-      return this.dataType$2;
+      return this.translationGistObjectId$2;
       break
     }
     case 5: {
-      return this.dataTypeTranslation$2;
+      return this.dataTypeTranslationGistClientId$2;
       break
     }
     case 6: {
-      return this.level$2;
+      return this.dataTypeTranslationGistObjectId$2;
       break
     }
     case 7: {
-      return this.position$2;
+      return this.isTranslatable$2;
       break
     }
     case 8: {
-      return this.status$2;
-      break
-    }
-    case 9: {
-      return this.fields$2;
+      return this.createdAt$2;
       break
     }
     default: {
@@ -28468,32 +27582,40 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.productElement__I__O 
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$fields__O = (function() {
   return this.fields$2
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$entityTypeTranslation__O = (function() {
-  return this.entityTypeTranslation$2
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.init___I__I__T__I__I__I__I__Z__T = (function(clientId, objectId, translation, translationGistClientId, translationGistObjectId, dataTypeTranslationGistClientId, dataTypeTranslationGistObjectId, isTranslatable, createdAt) {
+  this.clientId$2 = clientId;
+  this.objectId$2 = objectId;
+  this.translation$2 = translation;
+  this.translationGistClientId$2 = translationGistClientId;
+  this.translationGistObjectId$2 = translationGistObjectId;
+  this.dataTypeTranslationGistClientId$2 = dataTypeTranslationGistClientId;
+  this.dataTypeTranslationGistObjectId$2 = dataTypeTranslationGistObjectId;
+  this.isTranslatable$2 = isTranslatable;
+  this.createdAt$2 = createdAt;
+  $c_Lru_ispras_lingvodoc_frontend_app_model_Object.prototype.init___I__I.call(this, clientId, objectId);
+  this.fields$2 = [];
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$createdAt__T__O = (function(x$1) {
+  this.createdAt$2 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$isTranslatable__O = (function() {
+  return this.isTranslatable$2
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.toString__T = (function() {
   return $m_sr_ScalaRunTime$().$$undtoString__s_Product__T(this)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$group__O = (function() {
-  return this.group$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataType__O = (function() {
-  return this.dataType$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$group__s_Option__O = (function(x$1) {
-  this.group$2 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$position__O = (function() {
-  return this.position$2
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$position__I__O = (function(x$1) {
-  this.position$2 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$entityTypeTranslation__T__O = (function(x$1) {
-  this.entityTypeTranslation$2 = x$1
-});
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$fields__sjs_js_Array__O = (function(x$1) {
   this.fields$2 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$translationGistClientId__I__O = (function(x$1) {
+  this.translationGistClientId$2 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$translationGistClientId__O = (function() {
+  return this.translationGistClientId$2
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataTypeTranslationGistClientId__O = (function() {
+  return this.dataTypeTranslationGistClientId$2
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.objectId__I = (function() {
   return this.objectId$2
@@ -28501,25 +27623,30 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.objectId__I = (functi
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$objectId__O = (function() {
   return this.objectId$2
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$level__T__O = (function(x$1) {
-  this.level$2 = x$1
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataTypeTranslationGistClientId__I__O = (function(x$1) {
+  this.dataTypeTranslationGistClientId$2 = x$1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$entityType__T__O = (function(x$1) {
-  this.entityType$2 = x$1
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$translationGistObjectId__I__O = (function(x$1) {
+  this.translationGistObjectId$2 = x$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.hashCode__I = (function() {
   var acc = (-889275714);
   acc = $m_sr_Statics$().mix__I__I__I(acc, this.clientId$2);
   acc = $m_sr_Statics$().mix__I__I__I(acc, this.objectId$2);
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.entityType$2));
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.entityTypeTranslation$2));
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.dataType$2));
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.dataTypeTranslation$2));
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.level$2));
-  acc = $m_sr_Statics$().mix__I__I__I(acc, this.position$2);
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.status$2));
-  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.fields$2));
-  return $m_sr_Statics$().finalizeHash__I__I__I(acc, 10)
+  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.translation$2));
+  acc = $m_sr_Statics$().mix__I__I__I(acc, this.translationGistClientId$2);
+  acc = $m_sr_Statics$().mix__I__I__I(acc, this.translationGistObjectId$2);
+  acc = $m_sr_Statics$().mix__I__I__I(acc, this.dataTypeTranslationGistClientId$2);
+  acc = $m_sr_Statics$().mix__I__I__I(acc, this.dataTypeTranslationGistObjectId$2);
+  acc = $m_sr_Statics$().mix__I__I__I(acc, (this.isTranslatable$2 ? 1231 : 1237));
+  acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.createdAt$2));
+  return $m_sr_Statics$().finalizeHash__I__I__I(acc, 9)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$isTranslatable__Z__O = (function(x$1) {
+  this.isTranslatable$2 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$dataTypeTranslationGistObjectId__I__O = (function(x$1) {
+  this.dataTypeTranslationGistObjectId$2 = x$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.productIterator__sc_Iterator = (function() {
   return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
@@ -28530,18 +27657,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.clientId__I = (functi
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$clientId__O = (function() {
   return this.clientId$2
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$level__O = (function() {
-  return this.level$2
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "group", {
-  "set": (function(arg$1) {
-    var prep0 = $as_s_Option(arg$1);
-    this.$$js$exported$prop$group__s_Option__O(prep0)
-  }),
-  "get": (function() {
-    return this.$$js$exported$prop$group__O()
-  }),
-  "enumerable": true
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype.$$js$exported$prop$translation__O = (function() {
+  return this.translation$2
 });
 Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "fields", {
   "set": (function(arg$1) {
@@ -28553,73 +27670,73 @@ Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype
   }),
   "enumerable": true
 });
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "status", {
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "createdAt", {
   "set": (function(arg$1) {
     var prep0 = $as_T(arg$1);
-    this.$$js$exported$prop$status__T__O(prep0)
+    this.$$js$exported$prop$createdAt__T__O(prep0)
   }),
   "get": (function() {
-    return this.$$js$exported$prop$status__O()
+    return this.$$js$exported$prop$createdAt__O()
   }),
   "enumerable": true
 });
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "position", {
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "isTranslatable", {
+  "set": (function(arg$1) {
+    var prep0 = $uZ(arg$1);
+    this.$$js$exported$prop$isTranslatable__Z__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$isTranslatable__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "dataTypeTranslationGistObjectId", {
   "set": (function(arg$1) {
     var prep0 = $uI(arg$1);
-    this.$$js$exported$prop$position__I__O(prep0)
+    this.$$js$exported$prop$dataTypeTranslationGistObjectId__I__O(prep0)
   }),
   "get": (function() {
-    return this.$$js$exported$prop$position__O()
+    return this.$$js$exported$prop$dataTypeTranslationGistObjectId__O()
   }),
   "enumerable": true
 });
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "level", {
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "dataTypeTranslationGistClientId", {
   "set": (function(arg$1) {
-    var prep0 = $as_T(arg$1);
-    this.$$js$exported$prop$level__T__O(prep0)
+    var prep0 = $uI(arg$1);
+    this.$$js$exported$prop$dataTypeTranslationGistClientId__I__O(prep0)
   }),
   "get": (function() {
-    return this.$$js$exported$prop$level__O()
+    return this.$$js$exported$prop$dataTypeTranslationGistClientId__O()
   }),
   "enumerable": true
 });
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "dataTypeTranslation", {
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "translationGistObjectId", {
   "set": (function(arg$1) {
-    var prep0 = $as_T(arg$1);
-    this.$$js$exported$prop$dataTypeTranslation__T__O(prep0)
+    var prep0 = $uI(arg$1);
+    this.$$js$exported$prop$translationGistObjectId__I__O(prep0)
   }),
   "get": (function() {
-    return this.$$js$exported$prop$dataTypeTranslation__O()
+    return this.$$js$exported$prop$translationGistObjectId__O()
   }),
   "enumerable": true
 });
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "dataType", {
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "translationGistClientId", {
   "set": (function(arg$1) {
-    var prep0 = $as_T(arg$1);
-    this.$$js$exported$prop$dataType__T__O(prep0)
+    var prep0 = $uI(arg$1);
+    this.$$js$exported$prop$translationGistClientId__I__O(prep0)
   }),
   "get": (function() {
-    return this.$$js$exported$prop$dataType__O()
+    return this.$$js$exported$prop$translationGistClientId__O()
   }),
   "enumerable": true
 });
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "entityTypeTranslation", {
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "translation", {
   "set": (function(arg$1) {
     var prep0 = $as_T(arg$1);
-    this.$$js$exported$prop$entityTypeTranslation__T__O(prep0)
+    this.$$js$exported$prop$translation__T__O(prep0)
   }),
   "get": (function() {
-    return this.$$js$exported$prop$entityTypeTranslation__O()
-  }),
-  "enumerable": true
-});
-Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Field.prototype, "entityType", {
-  "set": (function(arg$1) {
-    var prep0 = $as_T(arg$1);
-    this.$$js$exported$prop$entityType__T__O(prep0)
-  }),
-  "get": (function() {
-    return this.$$js$exported$prop$entityType__O()
+    return this.$$js$exported$prop$translation__O()
   }),
   "enumerable": true
 });
@@ -29412,11 +28529,11 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective.prototype.$$js$exported$p
 $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective.prototype.objectId__I = (function() {
   return this.objectId$2
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective.prototype.$$js$exported$prop$isTemplate__O = (function() {
-  return this.isTemplate$2
-});
 $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective.prototype.$$js$exported$prop$objectId__O = (function() {
   return this.objectId$2
+});
+$c_Lru_ispras_lingvodoc_frontend_app_model_Perspective.prototype.$$js$exported$prop$isTemplate__O = (function() {
+  return this.isTemplate$2
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective.prototype.init___I__I__I__I__T__I__I__I__I__Z__Z = (function(clientId, objectId, parentClientId, parentObjectId, translation, translationGistClientId, translationGistObjectId, stateTranslationGistClientId, stateTranslationGistObjectId, isTemplate, markedForDeletion) {
   this.clientId$2 = clientId;
@@ -29631,7 +28748,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1.prototype.init
 $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1.prototype.applyOrElse__Lupickle_Js$Value__F1__O = (function(x1, $default) {
   if ($is_Lupickle_Js$Obj(x1)) {
     var x2 = ((x1 === null) ? null : $as_Lupickle_Js$Obj(x1).value$1);
-    return new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1(this).apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Perspective(x2)
+    return new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_model_Perspective$$anonfun$1(this).apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Perspective(x2)
   } else {
     return $default.apply__O__O(x1)
   }
@@ -33283,41 +32400,6 @@ var $d_jl_JSConsoleBasedPrintStream = new $TypeData().initClass({
 });
 $c_jl_JSConsoleBasedPrintStream.prototype.$classData = $d_jl_JSConsoleBasedPrintStream;
 /** @constructor */
-function $c_ju_Arrays$$anon$3() {
-  $c_O.call(this);
-  this.cmp$1$1 = null
-}
-$c_ju_Arrays$$anon$3.prototype = new $h_O();
-$c_ju_Arrays$$anon$3.prototype.constructor = $c_ju_Arrays$$anon$3;
-/** @constructor */
-function $h_ju_Arrays$$anon$3() {
-  /*<skip>*/
-}
-$h_ju_Arrays$$anon$3.prototype = $c_ju_Arrays$$anon$3.prototype;
-$c_ju_Arrays$$anon$3.prototype.init___ju_Comparator = (function(cmp$1) {
-  this.cmp$1$1 = cmp$1;
-  return this
-});
-$c_ju_Arrays$$anon$3.prototype.compare__O__O__I = (function(x, y) {
-  return this.cmp$1$1.compare__O__O__I(x, y)
-});
-$c_ju_Arrays$$anon$3.prototype.lteq__O__O__Z = (function(x, y) {
-  return $s_s_math_Ordering$class__lteq__s_math_Ordering__O__O__Z(this, x, y)
-});
-var $d_ju_Arrays$$anon$3 = new $TypeData().initClass({
-  ju_Arrays$$anon$3: 0
-}, false, "java.util.Arrays$$anon$3", {
-  ju_Arrays$$anon$3: 1,
-  O: 1,
-  s_math_Ordering: 1,
-  ju_Comparator: 1,
-  s_math_PartialOrdering: 1,
-  s_math_Equiv: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_ju_Arrays$$anon$3.prototype.$classData = $d_ju_Arrays$$anon$3;
-/** @constructor */
 function $c_s_concurrent_duration_Duration$$anon$1() {
   $c_s_concurrent_duration_Duration$Infinite.call(this)
 }
@@ -33410,47 +32492,6 @@ var $d_s_concurrent_duration_Duration$$anon$3 = new $TypeData().initClass({
   jl_Comparable: 1
 });
 $c_s_concurrent_duration_Duration$$anon$3.prototype.$classData = $d_s_concurrent_duration_Duration$$anon$3;
-/** @constructor */
-function $c_s_math_Ordering$$anon$5() {
-  $c_O.call(this);
-  this.$$outer$1 = null;
-  this.f$2$1 = null
-}
-$c_s_math_Ordering$$anon$5.prototype = new $h_O();
-$c_s_math_Ordering$$anon$5.prototype.constructor = $c_s_math_Ordering$$anon$5;
-/** @constructor */
-function $h_s_math_Ordering$$anon$5() {
-  /*<skip>*/
-}
-$h_s_math_Ordering$$anon$5.prototype = $c_s_math_Ordering$$anon$5.prototype;
-$c_s_math_Ordering$$anon$5.prototype.compare__O__O__I = (function(x, y) {
-  return this.$$outer$1.compare__O__O__I(this.f$2$1.apply__O__O(x), this.f$2$1.apply__O__O(y))
-});
-$c_s_math_Ordering$$anon$5.prototype.init___s_math_Ordering__F1 = (function($$outer, f$2) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$1 = $$outer
-  };
-  this.f$2$1 = f$2;
-  return this
-});
-$c_s_math_Ordering$$anon$5.prototype.lteq__O__O__Z = (function(x, y) {
-  return $s_s_math_Ordering$class__lteq__s_math_Ordering__O__O__Z(this, x, y)
-});
-var $d_s_math_Ordering$$anon$5 = new $TypeData().initClass({
-  s_math_Ordering$$anon$5: 0
-}, false, "scala.math.Ordering$$anon$5", {
-  s_math_Ordering$$anon$5: 1,
-  O: 1,
-  s_math_Ordering: 1,
-  ju_Comparator: 1,
-  s_math_PartialOrdering: 1,
-  s_math_Equiv: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_s_math_Ordering$$anon$5.prototype.$classData = $d_s_math_Ordering$$anon$5;
 /** @constructor */
 function $c_s_reflect_ClassTag$ClassClassTag() {
   $c_O.call(this);
@@ -34141,49 +33182,6 @@ function $m_Lupickle_default$() {
     $n_Lupickle_default$ = new $c_Lupickle_default$().init___()
   };
   return $n_Lupickle_default$
-}
-/** @constructor */
-function $c_s_math_Ordering$Int$() {
-  $c_O.call(this)
-}
-$c_s_math_Ordering$Int$.prototype = new $h_O();
-$c_s_math_Ordering$Int$.prototype.constructor = $c_s_math_Ordering$Int$;
-/** @constructor */
-function $h_s_math_Ordering$Int$() {
-  /*<skip>*/
-}
-$h_s_math_Ordering$Int$.prototype = $c_s_math_Ordering$Int$.prototype;
-$c_s_math_Ordering$Int$.prototype.init___ = (function() {
-  return this
-});
-$c_s_math_Ordering$Int$.prototype.compare__O__O__I = (function(x, y) {
-  var x$1 = $uI(x);
-  var y$1 = $uI(y);
-  return $s_s_math_Ordering$IntOrdering$class__compare__s_math_Ordering$IntOrdering__I__I__I(this, x$1, y$1)
-});
-$c_s_math_Ordering$Int$.prototype.lteq__O__O__Z = (function(x, y) {
-  return $s_s_math_Ordering$class__lteq__s_math_Ordering__O__O__Z(this, x, y)
-});
-var $d_s_math_Ordering$Int$ = new $TypeData().initClass({
-  s_math_Ordering$Int$: 0
-}, false, "scala.math.Ordering$Int$", {
-  s_math_Ordering$Int$: 1,
-  O: 1,
-  s_math_Ordering$IntOrdering: 1,
-  s_math_Ordering: 1,
-  ju_Comparator: 1,
-  s_math_PartialOrdering: 1,
-  s_math_Equiv: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_s_math_Ordering$Int$.prototype.$classData = $d_s_math_Ordering$Int$;
-var $n_s_math_Ordering$Int$ = (void 0);
-function $m_s_math_Ordering$Int$() {
-  if ((!$n_s_math_Ordering$Int$)) {
-    $n_s_math_Ordering$Int$ = new $c_s_math_Ordering$Int$().init___()
-  };
-  return $n_s_math_Ordering$Int$
 }
 /** @constructor */
 function $c_s_reflect_AnyValManifest() {
@@ -35729,14 +34727,6 @@ $c_s_math_Numeric$ByteIsIntegral$.prototype.toDouble__O__D = (function(x) {
   var x$1 = $uB(x);
   return x$1
 });
-$c_s_math_Numeric$ByteIsIntegral$.prototype.compare__O__O__I = (function(x, y) {
-  var x$1 = $uB(x);
-  var y$1 = $uB(y);
-  return $s_s_math_Ordering$ByteOrdering$class__compare__s_math_Ordering$ByteOrdering__B__B__I(this, x$1, y$1)
-});
-$c_s_math_Numeric$ByteIsIntegral$.prototype.lteq__O__O__Z = (function(x, y) {
-  return $s_s_math_Ordering$class__lteq__s_math_Ordering__O__O__Z(this, x, y)
-});
 var $d_s_math_Numeric$ByteIsIntegral$ = new $TypeData().initClass({
   s_math_Numeric$ByteIsIntegral$: 0
 }, false, "scala.math.Numeric$ByteIsIntegral$", {
@@ -35779,14 +34769,6 @@ $c_s_math_Numeric$IntIsIntegral$.prototype.toDouble__O__D = (function(x) {
   var x$1 = $uI(x);
   return x$1
 });
-$c_s_math_Numeric$IntIsIntegral$.prototype.compare__O__O__I = (function(x, y) {
-  var x$1 = $uI(x);
-  var y$1 = $uI(y);
-  return $s_s_math_Ordering$IntOrdering$class__compare__s_math_Ordering$IntOrdering__I__I__I(this, x$1, y$1)
-});
-$c_s_math_Numeric$IntIsIntegral$.prototype.lteq__O__O__Z = (function(x, y) {
-  return $s_s_math_Ordering$class__lteq__s_math_Ordering__O__O__Z(this, x, y)
-});
 var $d_s_math_Numeric$IntIsIntegral$ = new $TypeData().initClass({
   s_math_Numeric$IntIsIntegral$: 0
 }, false, "scala.math.Numeric$IntIsIntegral$", {
@@ -35828,14 +34810,6 @@ $c_s_math_Numeric$ShortIsIntegral$.prototype.init___ = (function() {
 $c_s_math_Numeric$ShortIsIntegral$.prototype.toDouble__O__D = (function(x) {
   var x$1 = $uS(x);
   return x$1
-});
-$c_s_math_Numeric$ShortIsIntegral$.prototype.compare__O__O__I = (function(x, y) {
-  var x$1 = $uS(x);
-  var y$1 = $uS(y);
-  return $s_s_math_Ordering$ShortOrdering$class__compare__s_math_Ordering$ShortOrdering__S__S__I(this, x$1, y$1)
-});
-$c_s_math_Numeric$ShortIsIntegral$.prototype.lteq__O__O__Z = (function(x, y) {
-  return $s_s_math_Ordering$class__lteq__s_math_Ordering__O__O__Z(this, x, y)
 });
 var $d_s_math_Numeric$ShortIsIntegral$ = new $TypeData().initClass({
   s_math_Numeric$ShortIsIntegral$: 0
@@ -35956,16 +34930,6 @@ $c_s_math_Numeric$DoubleIsFractional$.prototype.toDouble__O__D = (function(x) {
   var x$1 = $uD(x);
   return x$1
 });
-$c_s_math_Numeric$DoubleIsFractional$.prototype.compare__O__O__I = (function(x, y) {
-  var x$1 = $uD(x);
-  var y$1 = $uD(y);
-  return $m_jl_Double$().compare__D__D__I(x$1, y$1)
-});
-$c_s_math_Numeric$DoubleIsFractional$.prototype.lteq__O__O__Z = (function(x, y) {
-  var x$1 = $uD(x);
-  var y$1 = $uD(y);
-  return $s_s_math_Ordering$DoubleOrdering$class__lteq__s_math_Ordering$DoubleOrdering__D__D__Z(this, x$1, y$1)
-});
 var $d_s_math_Numeric$DoubleIsFractional$ = new $TypeData().initClass({
   s_math_Numeric$DoubleIsFractional$: 0
 }, false, "scala.math.Numeric$DoubleIsFractional$", {
@@ -36008,16 +34972,6 @@ $c_s_math_Numeric$FloatIsFractional$.prototype.init___ = (function() {
 $c_s_math_Numeric$FloatIsFractional$.prototype.toDouble__O__D = (function(x) {
   var x$1 = $uF(x);
   return x$1
-});
-$c_s_math_Numeric$FloatIsFractional$.prototype.compare__O__O__I = (function(x, y) {
-  var x$1 = $uF(x);
-  var y$1 = $uF(y);
-  return $m_jl_Double$().compare__D__D__I(x$1, y$1)
-});
-$c_s_math_Numeric$FloatIsFractional$.prototype.lteq__O__O__Z = (function(x, y) {
-  var x$1 = $uF(x);
-  var y$1 = $uF(y);
-  return $s_s_math_Ordering$FloatOrdering$class__lteq__s_math_Ordering$FloatOrdering__F__F__Z(this, x$1, y$1)
 });
 var $d_s_math_Numeric$FloatIsFractional$ = new $TypeData().initClass({
   s_math_Numeric$FloatIsFractional$: 0
