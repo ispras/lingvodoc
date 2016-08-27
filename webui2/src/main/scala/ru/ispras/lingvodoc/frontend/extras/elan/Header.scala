@@ -28,7 +28,6 @@ class Header(headerXML: JQuery) {
 
 object Header {
   val (tagName, mfAttrName, propTagName, propAttrName) = ("HEADER", "MEDIA_FILE", "PROPERTY", "NAME")
-  val (lastUsedTimeSlotIDPropName, lastUsedAnnotIDPropName) = ("lingvodocLastUsedTimeSlotID", "lingvodocLastUsedAnnotationID")
   val timeUnits = RequiredXMLAttr("TIME_UNITS", "milliseconds")
 }
 

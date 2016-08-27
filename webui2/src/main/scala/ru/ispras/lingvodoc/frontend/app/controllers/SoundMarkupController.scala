@@ -10,7 +10,7 @@ import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
-import ru.ispras.lingvodoc.frontend.extras.elan.{Tier, ELANPArserException, ELANDocumentJquery}
+import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
 import scala.scalajs.js.JSConverters._
@@ -25,6 +25,8 @@ trait SoundMarkupScope extends Scope {
   var ruler: Double = js.native // coordinate of wavesurfer ruler
   var elan: ELANDocumentJquery = js.native
   var ws: WaveSurfer = js.native // for debugging, remove later
+  var tierWidth: Int = js.native // displayed tier width in pixels
+  var tiersNameWidth: Int = js.native // column with tier names width in pixels
 }
 
 @injectable("SoundMarkupController")
@@ -35,6 +37,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             backend: BackendService,
                             params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[SoundMarkupScope](scope) {
+  scope.tierWidth = 40
+  scope.tiersNameWidth = 100
+
   var waveSurfer: Option[WaveSurfer] = None
   var soundMarkup: Option[String] = None
 //  val soundAddress = params.get("soundAddress").map(_.toString)
@@ -53,8 +58,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // d3 selection rectangle element
   var selectionRectangle: Option[Selection[EventTarget]] = None
-  // d3 drag object
-  var dragRectange: js.Dynamic = _
 
 
   // add scope to window for debugging
@@ -89,11 +92,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // In contract to the constructor, this method is called when waversurfer is already loaded
   def init(): Unit = {
     selectionRectangle = Some(d3.select("#selectionRect"))
-//    dragRectange = d3.behavior.drag().asInstanceOf[js.Dynamic]
-//      .on("dragstart", onSelectionDragStart _)
-//      .on("drag", onSelectionDragging _)
-//      .on("dragend", onSelectionDragEnd _)
-//    d3.select("#backgroundRect").asInstanceOf[js.Dynamic].call(dragRectange) // subscribe to drag events
   }
 
   def parseMarkup(markup: String): Unit = {
@@ -101,8 +99,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
       """<?xml version="1.0" encoding="UTF-8"?>
 <ANNOTATION_DOCUMENT AUTHOR="TextGridTools" DATE="2016-07-28T15:41:21+00:00" FORMAT="2.7" VERSION="2.7" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.7.xsd">
 <HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">
-<PROPERTY NAME="lingvodocLastUsedAnnotationId">0</PROPERTY>
-<PROPERTY NAME="lingvodocLastUsedAnnotationId">0</PROPERTY>
 </HEADER>
 <TIME_ORDER>
 <TIME_SLOT TIME_SLOT_ID="ts1" TIME_VALUE="0"/>
@@ -145,9 +141,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
 </ALIGNABLE_ANNOTATION>
 </ANNOTATION>
 </TIER>
-<TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="Translation" TIER_ID="Ann">
+<TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="Translation" TIER_ID="Ann" PARENT_REF="Mary">
 <ANNOTATION>
-<REF_ANNOTATION ANNOTATION_ID="ref1" ANNOTATION_REF="ref1">
+<REF_ANNOTATION ANNOTATION_ID="ref1" ANNOTATION_REF="a4">
 <ANNOTATION_VALUE>haha</ANNOTATION_VALUE>
 </REF_ANNOTATION>
 </ANNOTATION>
@@ -264,7 +260,6 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
   // called on svg mouse down, prepares for dragging
   @JSExport
   def onSVGMouseDown(event: js.Dynamic): Unit = {
-    event.preventDefault() // or mouse up will not fired
     console.log("svg mouse down")
     svgIsMouseDown = true
     isDragging = false
@@ -280,11 +275,10 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
   @JSExport
   // called on svg mouse moving and extends/shrinks the selection rectangle if mouse down event happened earlier
   def onSVGMouseMove(event: js.Dynamic): Unit = {
-    event.preventDefault() // or mouse up will not fired
     if (!svgIsMouseDown)
       return
 
-    console.log(s"mouse moving at offset ${event.offsetX}")
+//    console.log(s"mouse moving at offset ${event.offsetX}")
     val cursorX = Math.min(getWaveSurferWidth, Math.max(0, event.offsetX.toString.toDouble))
     if (!isDragging) { // executed on first mouse move event
       selectionRectangle.foreach(_.attr("x", cursorX).attr("width", 0))
@@ -294,12 +288,19 @@ VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
       val oldX = selectionRectangle.get.attr("x").toString.toDouble
       val oldWidth = selectionRectangle.get.attr("width").toString.toDouble
 
-      if ((rightBorderIsMoving && cursorX > oldX) || (!rightBorderIsMoving && cursorX >= oldX + oldWidth)) {
-        selectionRectangle.foreach(_.attr("width", cursorX - oldX))
+      if ((rightBorderIsMoving && cursorX > oldX) ||
+          (!rightBorderIsMoving && cursorX >= oldX + oldWidth)) {
+        if (!rightBorderIsMoving) // first event with right border moving, just after changing left to right
+          selectionRectangle.foreach(_.attr("x", oldX + oldWidth).attr("width", cursorX - oldX - oldWidth))
+        else // right border is still moving
+          selectionRectangle.foreach(_.attr("width", cursorX - oldX))
         rightBorderIsMoving = true
       }
       else {
-        selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX + oldWidth - cursorX))
+        if (rightBorderIsMoving) // first event after right -> left border moving
+          selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX - cursorX))
+        else // left border is still moving
+          selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX + oldWidth - cursorX))
         rightBorderIsMoving = false
       }
 

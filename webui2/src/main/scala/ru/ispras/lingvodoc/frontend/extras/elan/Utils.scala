@@ -85,3 +85,8 @@ object OptionalXMLAttr {
     OptionalXMLAttr(name, valOpt)
   }
 }
+
+object XMLAttrConversions {
+  implicit def requiredXMLAttr2Value[T](attr: RequiredXMLAttr[T]): T = attr.value
+  implicit def optionalXMLAttr2Value[T](attr: OptionalXMLAttr[T]): Option[T] = attr.value
+}

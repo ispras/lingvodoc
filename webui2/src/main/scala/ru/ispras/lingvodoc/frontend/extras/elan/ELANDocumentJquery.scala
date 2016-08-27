@@ -3,6 +3,9 @@ package ru.ispras.lingvodoc.frontend.extras.elan
 import org.scalajs.dom
 import org.scalajs.jquery._
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.extras.elan.annotation.{IAnnotation, AlignableAnnotation}
+import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, RefTier, TimeAlignableTier, Tier}
+import ru.ispras.lingvodoc.frontend.extras.elan.XMLAttrConversions._
 
 import scala.collection.immutable.{ListMap, HashMap}
 import scala.scalajs.js
@@ -27,10 +30,10 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
   val header = new Header(annotDocXML.find(Header.tagName))
 
   val timeOrder = new TimeOrder(annotDocXML.find(TimeOrder.tagName))
-  private var linguisticTypes = LinguisticType.fromXMLs(annotDocXML.find(LinguisticType.tagName))
-  var tiers = Tier.fromXMLs(annotDocXML.find(Tier.tagName), this)
-  val locales = Locale.fromXMLs(annotDocXML.find(Locale.tagName))
   val constraints = Constraint.predefinedConstraints
+  private var linguisticTypes = LinguisticType.fromXMLs(annotDocXML.find(LinguisticType.tagName))
+  var tiers: List[ITier[IAnnotation]] = Tier.fromXMLs(annotDocXML.find(Tier.tagName), this)
+  val locales = Locale.fromXMLs(annotDocXML.find(Locale.tagName))
   // the following 3 elements are not supported yet; we will just save them unchanged as a String
   val controlledVocabulary = Utils.jQuery2XML(annotDocXML.find(ELANDocumentJquery.controlledVocTagName))
   val lexiconRef = Utils.jQuery2XML(annotDocXML.find(ELANDocumentJquery.lexRefTagName))
@@ -38,7 +41,7 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
 
   private var lastUsedTimeSlotID: Long = 0
   private var lastUsedAnnotationID: Long = 0
-  reindexIfNeeded()
+  reindex()
 
   /**
     * We cannot reliably say whether this XML last time was modified via lingvodoc, ELAN or something else,
@@ -46,7 +49,7 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
     * Because of that we are forced to reindex time slot and annotation IDs every time we read a EAF file.
     * This function does the job: it counts IDs, renames them and sets two counters
     */
-  private def reindexIfNeeded(): Unit = {
+  private def reindex(): Unit = {
       // reindex time slots
       var oldTimeSlotIDsToNew: Map[String, String] = Map.empty
       timeOrder.timeSlots = for ((id, value) <- timeOrder.timeSlots) yield {
@@ -56,14 +59,14 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
         (newTimeSlot, value)
       }
       // now substitute references to time slots in all alignable annotations
-      tiers.foreach(_.getAlignableAnnotations.foreach(annotation => {
+    getTimeAlignableTiers.flatMap(_.getAnnotations).foreach(annotation => {
         annotation.timeSlotRef1.value = oldTimeSlotIDsToNew(annotation.timeSlotRef1.value)
         annotation.timeSlotRef2.value = oldTimeSlotIDsToNew(annotation.timeSlotRef2.value)
-      }))
+      })
 
       // reindex annotations
       var oldAnnotationIDstoNew: Map[String, String] = Map.empty
-      tiers.foreach(_.annotations.foreach(annotation => {
+      tiers.foreach(_.getAnnotations.foreach(annotation => {
         lastUsedAnnotationID += 1
         val newAnnotationID = annotIDFromNumber(lastUsedAnnotationID)
         oldAnnotationIDstoNew += (annotation.annotationID.value -> newAnnotationID)
@@ -71,11 +74,11 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
       }))
       // now substitute all references to them: they encounter in ANNOTATION_REF and
       // in PREVIOUS_ANNOTATION of ref annotations
-      tiers.foreach(_.getRefAnnotations.foreach(annotation => {
+      getRefTiers.flatMap(_.getAnnotations).foreach(annotation => {
         annotation.annotationRef.value = oldAnnotationIDstoNew(annotation.annotationRef.value)
         annotation.previousAnnotation.value.foreach(v =>
           annotation.previousAnnotation.value = Some(oldAnnotationIDstoNew(v)))
-      }))
+      })
   }
 
   // xsd:ID can't start with a digit
@@ -92,6 +95,16 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
     annotIDFromNumber(lastUsedAnnotationID)
   }
 
+  def getTierByID(id: String) = try {
+    tiers.filter(_.getID == id).head
+  } catch {
+    case e: java.util.NoSuchElementException => throw ELANPArserException(s"Tier with id $id not found")
+  }
+
+  def getTimeAlignableTiers = tiers.filter(_.isInstanceOf[TimeAlignableTier[AlignableAnnotation]]).
+    map(_.asInstanceOf[TimeAlignableTier[AlignableAnnotation]])
+  def getRefTiers = tiers.filter(_.isInstanceOf[RefTier]).map(_.asInstanceOf[RefTier])
+
   // fails if time slot has no value or doesn't exists
   def getTimeSlotValue(id: String) = timeOrder.getTimeSlotValue(id)
 
@@ -106,20 +119,12 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
     }
   }
 
-  // search all tiers for alignable annotation with given ID
-  def getAlignableAnnotationByID(annotID: String): AlignableAnnotation = {
-    try {
-      tiers.flatMap(tier => tier.getAlignableAnnotations).head
-    } catch {
-      case e: java.util.NoSuchElementException => throw ELANPArserException(s"Alignable annotation with id $annotID not found")
-    }
-  }
 
   // How could we access them from html templates otherwise?
   def tiersToJSArray = tiers.toJSArray
 
   private def content = s"$header $timeOrder ${tiers.mkString("\n")} ${linguisticTypes.values.mkString("\n")} " +
-                s"${locales.mkString("\n")} ${constraints.mkString("\n")}" +
+                s"${locales.mkString("\n")} ${constraints.values.mkString("\n")}" +
                 s"$controlledVocabulary $lexiconRef  $externalRef"
   private def attrsToString = s"$date $author $version $format ${ELANDocumentJquery.xmlnsXsi} ${ELANDocumentJquery.schemaLoc}"
 
@@ -200,13 +205,15 @@ class LinguisticType(linguisticTypeXML: JQuery) {
     * */
   def isTimeAlignable = {
     val result = constraints.value match {
-      case None | Some(Constraint.timeSubdiv) | Some(Constraint.includedIn) => true
-      case Some(Constraint.symbolAssoc) | Some(Constraint.symbolSubdiv) => false
+      case None | Some(Constraint.`timeSubdivID`) | Some(Constraint.`includedInID`) => true
+      case Some(Constraint.`symbolAssocID`) | Some(Constraint.`symbolSubdivID`) => false
       case x => throw ELANPArserException(s"Wrong constraint id $x")
     }
-    timeAlignable.value.foreach(ta => if (ta != result) console.warn("Ignored TIME_ALIGNABLE value is not consistent with CONSTRAINTS"))
+    timeAlignable.foreach(ta => if (ta != result) console.warn("Ignored TIME_ALIGNABLE value is not consistent with CONSTRAINTS"))
     result
   }
+
+  def getStereotypeID: Option[String] = constraints
 
   override def toString =
   s"<${LinguisticType.tagName} $linguisticTypeID $timeAlignable $constraints $graphicReferences " +
@@ -243,7 +250,6 @@ object Locale {
   val (tagName, langCodeAttrName, countCodeAttrName, variantAttrName) =
     ("LOCALE", "LANGUAGE_CODE", "COUNTRY_CODE", "VARIANT")
 }
-//TODO: who can be a parent? Anyone! Check out symbolic_subdivision son of symbolic_subdivision
 /**
   * Represents CONSTRAINT element. There are 4 predefined CONSTRAINT elements (stereotypes)
   * and ELAN doesn't support anything else.
@@ -347,7 +353,6 @@ object Locale {
   *   in ELAN's users guide
   * http://www.hrelp.org/events/workshops/aaken2013/assets/aj_elan.pdf
   *
-  *
   * @param stereotype
   * @param description
   */
@@ -361,19 +366,19 @@ class Constraint(val stereotype: RequiredXMLAttr[String], val description: Optio
 
 object Constraint {
   // Four predefined constraints
-  def predefinedConstraints = List(
-    new Constraint(timeSubdiv, Some(timeSubdivDescr)),
-    new Constraint(symbolSubdiv, Some(symbolSubdivDescr)),
-    new Constraint(symbolAssoc, Some(symbolAssocDescr)),
-    new Constraint(includedIn, Some(includedInDescr))
+  def predefinedConstraints = Map(
+    timeSubdivID -> new Constraint(timeSubdivID, Some(timeSubdivDescr)),
+    symbolSubdivID ->new Constraint(symbolSubdivID, Some(symbolSubdivDescr)),
+    symbolAssocID -> new Constraint(symbolAssocID, Some(symbolAssocDescr)),
+    includedInID -> new Constraint(includedInID, Some(includedInDescr))
   )
 
   val (tagName, stereotypeAttrName, descrAttrName) = ("CONSTRAINT", "STEREOTYPE", "DESCRIPTION")
 
-  val (timeSubdiv, timeSubdivDescr) = ("Time_Subdivision", "Time subdivision of parent annotation's time interval, no time gaps allowed within this interval")
-  val (symbolSubdiv, symbolSubdivDescr) = ("Symbolic_Subdivision", "Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered")
-  val (symbolAssoc, symbolAssocDescr) = ("Symbolic_Association", "1-1 association with a parent annotation")
-  val (includedIn, includedInDescr) = ("Included_In", "Time alignable annotations within the parent annotation's time interval, gaps are allowed")
+  val (timeSubdivID, timeSubdivDescr) = ("Time_Subdivision", "Time subdivision of parent annotation's time interval, no time gaps allowed within this interval")
+  val (symbolSubdivID, symbolSubdivDescr) = ("Symbolic_Subdivision", "Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered")
+  val (symbolAssocID, symbolAssocDescr) = ("Symbolic_Association", "1-1 association with a parent annotation")
+  val (includedInID, includedInDescr) = ("Included_In", "Time alignable annotations within the parent annotation's time interval, gaps are allowed")
 }
 
 

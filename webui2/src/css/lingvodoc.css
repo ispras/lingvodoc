@@ -56,7 +56,14 @@
 .sm-selection-rectangle {
     fill: blue;
     opacity: 0.2;
-    z-index: 1000;
+}
+
+.sm-tier {
+}
+
+.sm-tier-names-sep-line {
+    stroke: grey;
+    stroke-width: 1;
 }
 
 .sm-ruler {

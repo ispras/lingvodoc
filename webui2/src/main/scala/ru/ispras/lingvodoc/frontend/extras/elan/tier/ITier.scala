@@ -1,0 +1,109 @@
+package ru.ispras.lingvodoc.frontend.extras.elan.tier
+
+import org.scalajs.jquery.JQuery
+import ru.ispras.lingvodoc.frontend.extras.elan._
+import ru.ispras.lingvodoc.frontend.extras.elan.annotation.{RefAnnotation, AlignableAnnotation, IAnnotation}
+import ru.ispras.lingvodoc.frontend.extras.elan.XMLAttrConversions._
+
+import scala.scalajs.js
+import scala.scalajs.js.annotation.{JSExportAll, JSExportDescendentObjects, JSExport}
+import scala.scalajs.js.JSConverters._
+import org.scalajs.dom.console
+
+// exports Tier things needed in JS
+@JSExportDescendentObjects
+@JSExportAll
+trait ITierJS[+AnnotType <: IAnnotation] {
+  // is this tier time alignable?
+  val timeAlignable: Boolean
+  // human readable stereotype name
+  val stereotype: String
+
+  // get linguistic type name (id)
+  def getLT: String
+
+  // get tier name
+  def getID: String
+
+  // get JS array of Annotations (js doesn't work with Scala collections directly)
+  // I would write js.Array[AnnotType] here, but Array is invariant, so it won't work
+  def annotationsToJSArray: js.Dynamic
+}
+
+trait ITier[+AnnotType <: IAnnotation] extends ITierJS[AnnotType] {
+  // get root document
+  val owner: ELANDocumentJquery
+  def getAnnotations: List[AnnotType]
+  def getAnnotationByID(id: String): AnnotType
+}
+
+abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[AnnotType] {
+  val tierID = to.tierID
+  val linguisticTypeRef = to.linguisticTypeRef
+  val participant = to.participant
+  val annotator = to.annotator
+  val defaultLocale = to.defaultLocale
+  val owner = to.owner
+
+  def getLT = linguisticTypeRef
+  def getID = tierID
+  def annotationsToJSArray = getAnnotations.toJSArray.asInstanceOf[js.Dynamic]
+  def getAnnotationByID(id: String) = try {
+    getAnnotations.filter(_.getID == id).head
+  } catch {
+    case e: java.util.NoSuchElementException => throw ELANPArserException(s"Annotation with id $id not found")
+  }
+
+  private def attrsToString = s"$tierID $linguisticTypeRef $participant $annotator $defaultLocale"
+  override def toString = Utils.wrap(Tier.tagName, getAnnotations.mkString("\n"), attrsToString)
+}
+
+object Tier {
+  // read sequence of XML Tier elements and return list of them
+  def fromXMLs(tierXMLs: JQuery, owner: ELANDocumentJquery) = Utils.jQuery2List(tierXMLs).map(fromXML(_, owner))
+  // factory method, chooses right tier type and creates it TODO: implement it
+  def fromXML(tierXML: JQuery, owner: ELANDocumentJquery): Tier[IAnnotation] = {
+    val ltRef = RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName)
+    owner.getLinguisticType(ltRef).getStereotypeID
+    owner.getLinguisticType(ltRef).getStereotypeID match {
+      case None => new TopLevelTier(tierXML, owner)
+      case Some(Constraint.symbolAssocID) => new SymbolicAssociationTier(tierXML, owner)
+    }
+  }
+  val (tagName, tIDAttrName, lTypeRefAttrName, partAttrName, annotAttrName, defLocAttrName) = (
+    "TIER", "TIER_ID", "LINGUISTIC_TYPE_REF", "PARTICIPANT", "ANNOTATOR", "DEFAULT_LOCALE"
+    )
+}
+
+private[tier] class TierOpts(val tierID: RequiredXMLAttr[String], val linguisticTypeRef: RequiredXMLAttr[String],
+               val participant: OptionalXMLAttr[String], val annotator: OptionalXMLAttr[String],
+               val defaultLocale: OptionalXMLAttr[String], val owner: ELANDocumentJquery) {
+  def this(tierXML: JQuery, owner: ELANDocumentJquery) = this(
+    RequiredXMLAttr(tierXML, Tier.tIDAttrName),
+    RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName),
+    OptionalXMLAttr(tierXML, Tier.partAttrName),
+    OptionalXMLAttr(tierXML, Tier.annotAttrName),
+    OptionalXMLAttr(tierXML, Tier.defLocAttrName),
+    owner
+  )
+  def this(tierID: String, linguisticTypeRef: String, participant: Option[String], annotator: Option[String],
+           defaultLocale: Option[String], owner: ELANDocumentJquery) = this(
+    RequiredXMLAttr(Tier.tIDAttrName, tierID),
+    RequiredXMLAttr(Tier.lTypeRefAttrName, linguisticTypeRef),
+    OptionalXMLAttr(Tier.partAttrName, participant),
+    OptionalXMLAttr(Tier.annotAttrName, annotator),
+    OptionalXMLAttr(Tier.defLocAttrName, defaultLocale),
+    owner
+  )
+}
+
+// tier which have a parent tier
+trait DependentTier[+AnnotType <: IAnnotation] extends ITier[AnnotType] {
+  val parentRef: RequiredXMLAttr[String]
+
+  def getParentTier = owner.getTierByID(parentRef)
+}
+
+object DependentTier {
+  val parentRefAttrName = "PARENT_REF"
+}
