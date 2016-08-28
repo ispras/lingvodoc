@@ -63,13 +63,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // add scope to window for debugging
   dom.window.asInstanceOf[js.Dynamic].myScope = scope
 
-//  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
-//    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
-//      case markup => parseMarkup(markup)
-//    }
-//  })
-  parseMarkup("fff")
-
   // hack to initialize controller after loading the view
   // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
   @JSExport
@@ -91,94 +84,116 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // In contract to the constructor, this method is called when waversurfer is already loaded
   def init(): Unit = {
+    //  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
+    //    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
+    //      case markup => parseMarkup(markup)
+    //    }
+    //  })
+    parseMarkup("fff", waveSurfer.map(_.getDuration().toLong * 1000).getOrElse(Long.MaxValue))
+
     selectionRectangle = Some(d3.select("#selectionRect"))
   }
 
-  def parseMarkup(markup: String): Unit = {
+  def parseMarkup(markup: String, duration: Long): Unit = {
     val test_markup =
       """<?xml version="1.0" encoding="UTF-8"?>
-<ANNOTATION_DOCUMENT AUTHOR="TextGridTools" DATE="2016-07-28T15:41:21+00:00" FORMAT="2.7" VERSION="2.7" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.7.xsd">
-<HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">
-</HEADER>
-<TIME_ORDER>
-<TIME_SLOT TIME_SLOT_ID="ts1" TIME_VALUE="0"/>
-<TIME_SLOT TIME_SLOT_ID="ts2" TIME_VALUE="64"/>
-<TIME_SLOT TIME_SLOT_ID="ts3" TIME_VALUE="135"/>
-<TIME_SLOT TIME_SLOT_ID="ts4" TIME_VALUE="303"/>
-<TIME_SLOT TIME_SLOT_ID="ts5" TIME_VALUE="389"/>
-<TIME_SLOT TIME_SLOT_ID="ts6" TIME_VALUE="472"/>
-<TIME_SLOT TIME_SLOT_ID="ts7" TIME_VALUE="574"/>
-</TIME_ORDER>
-<TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="default-lt" TIER_ID="Mary">
-<ANNOTATION>
-<ALIGNABLE_ANNOTATION ANNOTATION_ID="a1" TIME_SLOT_REF1="ts1" TIME_SLOT_REF2="ts2">
-<ANNOTATION_VALUE>(22в)</ANNOTATION_VALUE>
-</ALIGNABLE_ANNOTATION>
-</ANNOTATION>
-<ANNOTATION>
-<ALIGNABLE_ANNOTATION ANNOTATION_ID="a2" TIME_SLOT_REF1="ts2" TIME_SLOT_REF2="ts3">
-<ANNOTATION_VALUE>w</ANNOTATION_VALUE>
-</ALIGNABLE_ANNOTATION>
-</ANNOTATION>
-<ANNOTATION>
-<ALIGNABLE_ANNOTATION ANNOTATION_ID="a3" TIME_SLOT_REF1="ts3" TIME_SLOT_REF2="ts4">
-<ANNOTATION_VALUE>a</ANNOTATION_VALUE>
-</ALIGNABLE_ANNOTATION>
-</ANNOTATION>
-<ANNOTATION>
-<ALIGNABLE_ANNOTATION ANNOTATION_ID="a4" TIME_SLOT_REF1="ts4" TIME_SLOT_REF2="ts5">
-<ANNOTATION_VALUE>n</ANNOTATION_VALUE>
-</ALIGNABLE_ANNOTATION>
-</ANNOTATION>
-<ANNOTATION>
-<ALIGNABLE_ANNOTATION ANNOTATION_ID="a5" TIME_SLOT_REF1="ts5" TIME_SLOT_REF2="ts6">
-<ANNOTATION_VALUE>o</ANNOTATION_VALUE>
-</ALIGNABLE_ANNOTATION>
-</ANNOTATION>
-<ANNOTATION>
-<ALIGNABLE_ANNOTATION ANNOTATION_ID="a6" TIME_SLOT_REF1="ts6" TIME_SLOT_REF2="ts7">
-<ANNOTATION_VALUE>(ЛЗС)</ANNOTATION_VALUE>
-</ALIGNABLE_ANNOTATION>
-</ANNOTATION>
-</TIER>
-<TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="Translation" TIER_ID="Ann" PARENT_REF="Mary">
-<ANNOTATION>
-<REF_ANNOTATION ANNOTATION_ID="ref1" ANNOTATION_REF="a4">
-<ANNOTATION_VALUE>haha</ANNOTATION_VALUE>
-</REF_ANNOTATION>
-</ANNOTATION>
-</TIER>
-
-<LINGUISTIC_TYPE GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="default-lt" TIME_ALIGNABLE="true"/>
-<LINGUISTIC_TYPE LINGUISTIC_TYPE_ID="Sp Transcript" TIME_ALIGNABLE="true" GRAPHIC_REFERENCES="false"/>
-<LINGUISTIC_TYPE LINGUISTIC_TYPE_ID="Translation" TIME_ALIGNABLE="false" GRAPHIC_REFERENCES="false" CONSTRAINTS="Symbolic_Association"/>
-
-<LOCALE COUNTRY_CODE="US" LANGUAGE_CODE="en"/>
-
-<CONSTRAINT STEREOTYPE="Time_Subdivision" DESCRIPTION="Time subdivision of parent annotation's time interval, no time gaps allowed within this interval"/>
-<CONSTRAINT STEREOTYPE="Symbolic_Subdivision" DESCRIPTION="Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered"/>
-<CONSTRAINT STEREOTYPE="Symbolic_Association" DESCRIPTION="1-1 association with a parent annotation"/>
-<CONSTRAINT STEREOTYPE="Included_In" DESCRIPTION="Time alignable annotations within the parent annotation's time interval, gaps are allowed"/>
-
-<CONTROLLED_VOCABULARY CV_ID="Gesture Hand" DESCRIPTION="Hand gesture codes">
-<CV_ENTRY DESCRIPTION="Right Hand">R</CV_ENTRY>
-<CV_ENTRY DESCRIPTION="Left Hand">L</CV_ENTRY>
-<CV_ENTRY DESCRIPTION="Both Hands">B</CV_ENTRY>
-</CONTROLLED_VOCABULARY>
-
-<LEXICON_REF DATCAT_ID="MmM5MDkwYTIyZjExMmMyYzAxMmY0NDAyOWJjZDA5ZjU=" DATCAT_NAME="Begripnaam"
-LEXICON_ID="MmM5MDkwYTIyZjExMmMyYzAxMmY0NDAyOWMzYTBhMjI="
-LEXICON_NAME="SignLinC" LEX_REF_ID="lr1" NAME="SL_Lex1" TYPE="LEXUS (MPI)"
-URL="http://corpus1.mpi.nl/mpi/lexusDojo/services/LexusWebService"/>
-
-<EXTERNAL_REF EXT_REF_ID="er1" TYPE="cve_id" VALUE="CVE_ID40"/>
-<EXTERNAL_REF EXT_REF_ID="er2" TYPE="cve_id" VALUE="CVE_ID41"/>
-<EXTERNAL_REF EXT_REF_ID="er3" TYPE="ecv"
-VALUE="http://www.mpi.nl/tools/elan/atemp/gest.ecv"/>
-<EXTERNAL_REF EXT_REF_ID="er4" TYPE="iso12620" VALUE="http://www.isocat.org/datcat/DC-1333"/>
-</ANNOTATION_DOCUMENT>
+         <ANNOTATION_DOCUMENT AUTHOR="" DATE="2016-08-28T15:55:36+03:00" FORMAT="2.8" VERSION="2.8" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.8.xsd">
+             <HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">
+                 <MEDIA_DESCRIPTOR MEDIA_URL="file:///home/ars/tmp/tmp/Six_Degrees_Of_Inner_Turbulence.wav" MIME_TYPE="audio/x-wav" RELATIVE_MEDIA_URL="./Six_Degrees_Of_Inner_Turbulence.wav"/>
+                 <PROPERTY NAME="URN">urn:nl-mpi-tools-elan-eaf:a0e42b2b-d6a1-47a7-92ed-f54285fb6186</PROPERTY>
+                 <PROPERTY NAME="lastUsedAnnotationId">11</PROPERTY>
+             </HEADER>
+             <TIME_ORDER>
+                 <TIME_SLOT TIME_SLOT_ID="ts1" TIME_VALUE="1110"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts2" TIME_VALUE="1270"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts3" TIME_VALUE="2080"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts4" TIME_VALUE="2760"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts5" TIME_VALUE="2760"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts6" TIME_VALUE="3110"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts7" TIME_VALUE="3380"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts8" TIME_VALUE="3690"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts9" TIME_VALUE="3690"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts10" TIME_VALUE="3690"/>
+                 <TIME_SLOT TIME_SLOT_ID="ts11" TIME_VALUE="4770"/>
+             </TIME_ORDER>
+             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="top_level" TIER_ID="toplevel">
+                 <ANNOTATION>
+                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a1" TIME_SLOT_REF1="ts1" TIME_SLOT_REF2="ts3">
+                         <ANNOTATION_VALUE>грузите</ANNOTATION_VALUE>
+                     </ALIGNABLE_ANNOTATION>
+                 </ANNOTATION>
+                 <ANNOTATION>
+                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a2" TIME_SLOT_REF1="ts4" TIME_SLOT_REF2="ts8">
+                         <ANNOTATION_VALUE>бочки апельсины</ANNOTATION_VALUE>
+                     </ALIGNABLE_ANNOTATION>
+                 </ANNOTATION>
+                 <ANNOTATION>
+                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a3" TIME_SLOT_REF1="ts9" TIME_SLOT_REF2="ts11">
+                         <ANNOTATION_VALUE>командовать</ANNOTATION_VALUE>
+                     </ALIGNABLE_ANNOTATION>
+                 </ANNOTATION>
+             </TIER>
+             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="time_subdivision" PARENT_REF="toplevel" TIER_ID="time_subdivision">
+                 <ANNOTATION>
+                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a4" TIME_SLOT_REF1="ts1" TIME_SLOT_REF2="ts2">
+                         <ANNOTATION_VALUE>г</ANNOTATION_VALUE>
+                     </ALIGNABLE_ANNOTATION>
+                 </ANNOTATION>
+                 <ANNOTATION>
+                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a5" TIME_SLOT_REF1="ts2" TIME_SLOT_REF2="ts3">
+                         <ANNOTATION_VALUE>рузите</ANNOTATION_VALUE>
+                     </ALIGNABLE_ANNOTATION>
+                 </ANNOTATION>
+             </TIER>
+             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="included_in" PARENT_REF="toplevel" TIER_ID="included_in">
+                 <ANNOTATION>
+                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a6" TIME_SLOT_REF1="ts5" TIME_SLOT_REF2="ts6">
+                         <ANNOTATION_VALUE>бочки</ANNOTATION_VALUE>
+                     </ALIGNABLE_ANNOTATION>
+                 </ANNOTATION>
+                 <ANNOTATION>
+                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a7" TIME_SLOT_REF1="ts7" TIME_SLOT_REF2="ts10">
+                         <ANNOTATION_VALUE>апельсины</ANNOTATION_VALUE>
+                     </ALIGNABLE_ANNOTATION>
+                 </ANNOTATION>
+             </TIER>
+             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="symbolic_subdivision" PARENT_REF="toplevel" TIER_ID="symbolic_association">
+                 <ANNOTATION>
+                     <REF_ANNOTATION ANNOTATION_ID="a8" ANNOTATION_REF="a1">
+                         <ANNOTATION_VALUE>load</ANNOTATION_VALUE>
+                     </REF_ANNOTATION>
+                 </ANNOTATION>
+                 <ANNOTATION>
+                     <REF_ANNOTATION ANNOTATION_ID="a9" ANNOTATION_REF="a2">
+                         <ANNOTATION_VALUE>barrels oranges</ANNOTATION_VALUE>
+                     </REF_ANNOTATION>
+                 </ANNOTATION>
+             </TIER>
+             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="symbolic_subdivision" PARENT_REF="toplevel" TIER_ID="symbolic_subdivision">
+                 <ANNOTATION>
+                     <REF_ANNOTATION ANNOTATION_ID="a10" ANNOTATION_REF="a2">
+                         <ANNOTATION_VALUE>barrels</ANNOTATION_VALUE>
+                     </REF_ANNOTATION>
+                 </ANNOTATION>
+                 <ANNOTATION>
+                     <REF_ANNOTATION ANNOTATION_ID="a11" ANNOTATION_REF="a2" PREVIOUS_ANNOTATION="a10">
+                         <ANNOTATION_VALUE>oranges</ANNOTATION_VALUE>
+                     </REF_ANNOTATION>
+                 </ANNOTATION>
+             </TIER>
+             <LINGUISTIC_TYPE GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="top_level" TIME_ALIGNABLE="true"/>
+             <LINGUISTIC_TYPE CONSTRAINTS="Symbolic_Subdivision" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="symbolic_subdivision" TIME_ALIGNABLE="false"/>
+             <LINGUISTIC_TYPE CONSTRAINTS="Symbolic_Association" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="symbolic_association" TIME_ALIGNABLE="false"/>
+             <LINGUISTIC_TYPE CONSTRAINTS="Time_Subdivision" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="time_subdivision" TIME_ALIGNABLE="true"/>
+             <LINGUISTIC_TYPE CONSTRAINTS="Included_In" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="included_in" TIME_ALIGNABLE="true"/>
+             <LOCALE COUNTRY_CODE="US" LANGUAGE_CODE="en"/>
+             <CONSTRAINT DESCRIPTION="Time subdivision of parent annotation's time interval, no time gaps allowed within this interval" STEREOTYPE="Time_Subdivision"/>
+             <CONSTRAINT DESCRIPTION="Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered" STEREOTYPE="Symbolic_Subdivision"/>
+             <CONSTRAINT DESCRIPTION="1-1 association with a parent annotation" STEREOTYPE="Symbolic_Association"/>
+             <CONSTRAINT DESCRIPTION="Time alignable annotations within the parent annotation's time interval, gaps are allowed" STEREOTYPE="Included_In"/>
+         </ANNOTATION_DOCUMENT>
       """
-      scope.elan = ELANDocumentJquery(test_markup)
+      scope.elan = ELANDocumentJquery(test_markup, duration)
       console.log(scope.elan.toString)
       scope.ruler = 0
   }

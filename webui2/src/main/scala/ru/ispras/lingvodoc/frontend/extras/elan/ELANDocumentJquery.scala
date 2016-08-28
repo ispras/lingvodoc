@@ -20,7 +20,7 @@ case class ELANPArserException(message: String) extends Exception(message)
 
 // Represents ELAN (EAF) document
 @JSExportAll
-class ELANDocumentJquery private(annotDocXML: JQuery) {
+class ELANDocumentJquery private(annotDocXML: JQuery, val duration: Long) {
   // attributes
   val date = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.dateAttrName)
   val author = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.authorAttrName)
@@ -142,10 +142,14 @@ object ELANDocumentJquery {
   val xmlnsXsi = RequiredXMLAttr("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
   val schemaLoc = RequiredXMLAttr("xsi:noNamespaceSchemaLocation", "http://www.mpi.nl/tools/elan/EAFv2.7.xsd")
   // see http://www.mpi.nl/tools/elan/EAF_Annotation_Format.pdf for format specification
-  // JQuery is used for parsing.
+  // JQuery is used for parsing. Duration is the duration of mediafile measured in milliseconds, it is needed to
+  // constrain maximum allowed time slot.
   // WARNING: it is assumed that the xmlString is a valid ELAN document matching xsd scheme.
   // Otherwise the result is undefined.
-  def apply(xmlString: String) = new ELANDocumentJquery(jQuery(jQuery.parseXML(xmlString)).find(annotDocTagName))
+  def apply(xmlString: String, duration: Long) = new ELANDocumentJquery(
+    jQuery(jQuery.parseXML(xmlString)).find(annotDocTagName),
+    duration
+  )
 }
 
 // Represents TIME_ORDER element
@@ -197,6 +201,8 @@ class LinguisticType(val linguisticTypeID: RequiredXMLAttr[String], val timeAlig
   if (!constraints.map(owner.constraints.keys.toSeq.contains).getOrElse(true))
     throw ELANPArserException(s"Wrong constraint ${constraints.value} for LT ${linguisticTypeID.value}")
 
+  timeAlignable.foreach(ta => if (ta != isTimeAlignable) console.warn("Ignored TIME_ALIGNABLE value is not consistent with CONSTRAINTS"))
+
   /**
     * If yes, a tier with such linguistic type can have only alignable annotations. Otherwise it can have only ref
     * annotations. Note that EAF format specification doesn't forbid explicitly mixing alignable and ref annotations,
@@ -212,13 +218,12 @@ class LinguisticType(val linguisticTypeID: RequiredXMLAttr[String], val timeAlig
     * and give a warning in case of inconsistency.
     * 2)
     * */
-  def isTimeAlignable = {
+  private def isTimeAlignable = {
     val result = constraints.value match {
       case None | Some(Constraint.`timeSubdivID`) | Some(Constraint.`includedInID`) => true
       case Some(Constraint.`symbolAssocID`) | Some(Constraint.`symbolSubdivID`) => false
       case x => throw ELANPArserException(s"Wrong constraint id $x")
     }
-    timeAlignable.foreach(ta => if (ta != result) console.warn("Ignored TIME_ALIGNABLE value is not consistent with CONSTRAINTS"))
     result
   }
 

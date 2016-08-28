@@ -109,3 +109,8 @@ trait DependentTier[+AnnotType <: IAnnotation] extends ITier[AnnotType] {
 object DependentTier {
   val parentRefAttrName = "PARENT_REF"
 }
+
+private[tier] class DependentTierOpts(val parentRef: RequiredXMLAttr[String]) {
+  def this(tierXML: JQuery) = this(RequiredXMLAttr(tierXML, DependentTier.parentRefAttrName))
+  def this(parentRef: String) = this(RequiredXMLAttr(DependentTier.parentRefAttrName, parentRef))
+}

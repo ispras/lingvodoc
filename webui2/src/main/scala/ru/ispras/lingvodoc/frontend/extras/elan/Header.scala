@@ -8,9 +8,9 @@ import scala.scalajs.js.annotation.JSExportAll
 // Represents HEADER element
 @JSExportAll
 class Header(headerXML: JQuery) {
-  headerXML.attr(Header.mfAttrName).foreach(mf => console.log(s"WARN: ${Header.mfAttrName} attribute is deprecated and ignored by ELAN"))
+  headerXML.attr(Header.mfAttrName).foreach(mf => console.warn(s"${Header.mfAttrName} attribute is deprecated and ignored by ELAN"))
   headerXML.attr(Header.timeUnits.name).filterNot(_ == Header.timeUnits.value).
-    foreach(mf => console.log(s"WARN: ${Header.timeUnits.name} are always ${Header.timeUnits.value} in ELAN"))
+    foreach(mf => console.warn(s"${Header.timeUnits.name} are always ${Header.timeUnits.value} in ELAN"))
   val mediaDescriptor = MediaDescriptor.fromMultiple(headerXML.find(MediaDescriptor.tagName))
   val linkedFileDescriptor = LinkedFileDescriptor.fromMultiple(headerXML.find(LinkedFileDescriptor.tagName))
   var props = parseProps(Utils.jQuery2List(headerXML.find(Header.propTagName)))
@@ -32,6 +32,7 @@ object Header {
 }
 
 // Represents MEDIA_DESCRIPTOR element
+// TODO
 @JSExportAll
 class MediaDescriptor (mdXML: JQuery) {
   val mediaURL = RequiredXMLAttr(mdXML, MediaDescriptor.muAttrName)

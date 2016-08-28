@@ -16,7 +16,7 @@ trait IAnnotation {
   def startToString = start.toString
   @JSExport
   def endToString = end.toString
-  
+
   @JSExport
   def getID = annotationID.value
 
