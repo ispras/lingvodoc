@@ -31,7 +31,7 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
 
   val timeOrder = new TimeOrder(annotDocXML.find(TimeOrder.tagName))
   val constraints = Constraint.predefinedConstraints
-  private var linguisticTypes = LinguisticType.fromXMLs(annotDocXML.find(LinguisticType.tagName))
+  private var linguisticTypes = LinguisticType.fromXMLs(annotDocXML.find(LinguisticType.tagName), this)
   var tiers: List[ITier[IAnnotation]] = Tier.fromXMLs(annotDocXML.find(Tier.tagName), this)
   val locales = Locale.fromXMLs(annotDocXML.find(Locale.tagName))
   // the following 3 elements are not supported yet; we will just save them unchanged as a String
@@ -101,7 +101,7 @@ class ELANDocumentJquery private(annotDocXML: JQuery) {
     case e: java.util.NoSuchElementException => throw ELANPArserException(s"Tier with id $id not found")
   }
 
-  def getTimeAlignableTiers = tiers.filter(_.isInstanceOf[TimeAlignableTier[AlignableAnnotation]]).
+  def getTimeAlignableTiers = tiers.filter(_.isInstanceOf[TimeAlignableTier[_]]).
     map(_.asInstanceOf[TimeAlignableTier[AlignableAnnotation]])
   def getRefTiers = tiers.filter(_.isInstanceOf[RefTier]).map(_.asInstanceOf[RefTier])
 
@@ -179,14 +179,23 @@ object TimeOrder {
 // Represents LINGUISTIC_TYPE element
 // TODO: check constraints value on manual creation
 @JSExportAll
-class LinguisticType(linguisticTypeXML: JQuery) {
-  val linguisticTypeID = RequiredXMLAttr(linguisticTypeXML, LinguisticType.ltIDAttrName)
-  val timeAlignable = OptionalXMLAttr(linguisticTypeXML, LinguisticType.timeAlignAttrName, _.toBoolean)
-  val constraints = OptionalXMLAttr(linguisticTypeXML, LinguisticType.constraintsAttrName)
-  val graphicReferences = OptionalXMLAttr(linguisticTypeXML, LinguisticType.graphicReferencesAttrName, _.toBoolean)
-  val controlledVocabularyRef = OptionalXMLAttr(linguisticTypeXML, LinguisticType.controlledVocRefAttrName)
-  val extRef = OptionalXMLAttr(linguisticTypeXML, LinguisticType.extRefAttrName)
-  val lexiconRef = OptionalXMLAttr(linguisticTypeXML, LinguisticType.lexRefAttrName)
+class LinguisticType(val linguisticTypeID: RequiredXMLAttr[String], val timeAlignable: OptionalXMLAttr[Boolean],
+                     val constraints: OptionalXMLAttr[String], val graphicReferences: OptionalXMLAttr[Boolean],
+                     val controlledVocabularyRef: OptionalXMLAttr[String], val extRef: OptionalXMLAttr[String],
+                     val lexiconRef: OptionalXMLAttr[String], owner: ELANDocumentJquery) {
+  def this(linguisticTypeXML: JQuery, owner: ELANDocumentJquery) = this(
+    RequiredXMLAttr(linguisticTypeXML, LinguisticType.ltIDAttrName),
+    OptionalXMLAttr(linguisticTypeXML, LinguisticType.timeAlignAttrName, _.toBoolean),
+    OptionalXMLAttr(linguisticTypeXML, LinguisticType.constraintsAttrName),
+    OptionalXMLAttr(linguisticTypeXML, LinguisticType.graphicReferencesAttrName, _.toBoolean),
+    OptionalXMLAttr(linguisticTypeXML, LinguisticType.controlledVocRefAttrName),
+    OptionalXMLAttr(linguisticTypeXML, LinguisticType.extRefAttrName),
+    OptionalXMLAttr(linguisticTypeXML, LinguisticType.lexRefAttrName),
+    owner
+  )
+
+  if (!constraints.map(owner.constraints.keys.toSeq.contains).getOrElse(true))
+    throw ELANPArserException(s"Wrong constraint ${constraints.value} for LT ${linguisticTypeID.value}")
 
   /**
     * If yes, a tier with such linguistic type can have only alignable annotations. Otherwise it can have only ref
@@ -222,8 +231,8 @@ class LinguisticType(linguisticTypeXML: JQuery) {
 
 object LinguisticType {
   // read sequence of XML linguisticTypeXML elements and return map of them with ID as a key
-  def fromXMLs(linguisticTypeXMLs: JQuery) = Utils.jQuery2List(linguisticTypeXMLs).map(ltXML => {
-    val lt = new LinguisticType(ltXML)
+  def fromXMLs(linguisticTypeXMLs: JQuery, owner: ELANDocumentJquery) = Utils.jQuery2List(linguisticTypeXMLs).map(ltXML => {
+    val lt = new LinguisticType(ltXML, owner)
     lt.linguisticTypeID.value -> lt
   }).toMap
   val (tagName, ltIDAttrName, timeAlignAttrName, constraintsAttrName, graphicReferencesAttrName) =

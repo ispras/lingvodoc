@@ -4,36 +4,31 @@ import org.scalajs.jquery.JQuery
 import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, TimeAlignableTier, Tier}
 import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, Utils, OptionalXMLAttr, RequiredXMLAttr}
 
-import scala.annotation.meta.field
 import scala.scalajs.js.annotation.{JSExportAll, JSExportDescendentObjects, JSExport}
 
-// exports Annotation things needed in JS
 @JSExportDescendentObjects
-@JSExportAll
-trait IAnnotationJS {
+trait IAnnotation {
+  @JSExport
+  var text: String
+
   // Long is opaque to scala.js, so we can give only these
-  def startToString: String
-  def endToString: String
+  @JSExport
+  def startToString = start.toString
+  @JSExport
+  def endToString = end.toString
+  
+  @JSExport
+  def getID = annotationID.value
 
-  def getID: String
-}
-
-trait IAnnotation extends IAnnotationJS {
   val annotationID: RequiredXMLAttr[String]
   val extRef: OptionalXMLAttr[String]
   val owner: ITier[IAnnotation]
 
-  def getID = annotationID.value
-
-  // for ref annotations start and end makes sense only for displaying
+  // for ref annotations start and end makes sense only for displaying. Measured in milliseconds.
   def start: Long
   def end: Long
 
-  def startToString = start.toString
-  def endToString = end.toString
-
-  var text: String
-
+  // xml representation of content inside <ANNOTATION></ANNOTATION>
   protected def includedAnnotationToString: String
 }
 
@@ -46,7 +41,8 @@ abstract class Annotation(ao: AnnotationOpts) extends IAnnotation {
   val owner = ao.owner
 
   override def toString = Utils.wrap(Annotation.tagName, includedAnnotationToString)
-  protected def content = Utils.wrap(Annotation.annotValueElName, text)
+  // <ANNOTATION_VALUE> tag
+   protected final def content = Utils.wrap(Annotation.annotValueElName, text)
   protected def attrsToString = s"$annotationID $extRef"
 }
 

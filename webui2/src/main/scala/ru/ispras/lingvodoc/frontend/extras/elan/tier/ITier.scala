@@ -10,27 +10,28 @@ import scala.scalajs.js.annotation.{JSExportAll, JSExportDescendentObjects, JSEx
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
 
-// exports Tier things needed in JS
 @JSExportDescendentObjects
-@JSExportAll
-trait ITierJS[+AnnotType <: IAnnotation] {
+trait ITier[+AnnotType <: IAnnotation] {
   // is this tier time alignable?
+  @JSExport
   val timeAlignable: Boolean
   // human readable stereotype name
+  @JSExport
   val stereotype: String
 
   // get linguistic type name (id)
+  @JSExport
   def getLT: String
 
   // get tier name
+  @JSExport
   def getID: String
 
   // get JS array of Annotations (js doesn't work with Scala collections directly)
   // I would write js.Array[AnnotType] here, but Array is invariant, so it won't work
+  @JSExport
   def annotationsToJSArray: js.Dynamic
-}
 
-trait ITier[+AnnotType <: IAnnotation] extends ITierJS[AnnotType] {
   // get root document
   val owner: ELANDocumentJquery
   def getAnnotations: List[AnnotType]
@@ -68,6 +69,7 @@ object Tier {
     owner.getLinguisticType(ltRef).getStereotypeID match {
       case None => new TopLevelTier(tierXML, owner)
       case Some(Constraint.symbolAssocID) => new SymbolicAssociationTier(tierXML, owner)
+      case _ => ??? // impossible
     }
   }
   val (tagName, tIDAttrName, lTypeRefAttrName, partAttrName, annotAttrName, defLocAttrName) = (
