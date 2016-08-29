@@ -1,49 +1,57 @@
 package ru.ispras.lingvodoc.frontend.app.model
 
+import derive.key
 import upickle.Js
 import upickle.default._
+import org.scalajs.dom.console
 
 
 import scala.scalajs.js
+import scala.scalajs.js.annotation.JSExportAll
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.annotation.{JSExportAll, JSExport}
+
 
 @JSExportAll
-case class Field(override val clientId: Int,
-                 override val objectId: Int,
-                 var entityType: String,
-                 var entityTypeTranslation: String,
-                 var dataType: String,
-                 var dataTypeTranslation: String,
-                 var level: String,
-                 var position: Int,
-                 var status: String,
-                 var fields: js.Array[Field]) extends Object(clientId, objectId) {
+case class Field(@key("client_id") override val clientId: Int,
+                 @key("object_id") override val objectId: Int,
+                 @key("translation") var translation: String,
+                 @key("translation_gist_client_id") var translationGistClientId: Int,
+                 @key("translation_gist_object_id") var translationGistObjectId: Int,
+                 @key("data_type_translation_gist_client_id") var dataTypeTranslationGistClientId: Int,
+                 @key("data_type_translation_gist_object_id") var dataTypeTranslationGistObjectId: Int,
+                 @key("is_translatable") var isTranslatable: Boolean,
+                 var createdAt: String) extends Object(clientId, objectId) {
 
-  var group: Option[String] = None
+  var fields: js.Array[Field] = js.Array[Field]()
+  var link: Option[Link] = None
 }
 
 object Field {
   implicit val writer = upickle.default.Writer[Field] {
-    case field =>
+    field: Field =>
       (new (Field => Js.Obj) {
         override def apply(f: Field): Js.Obj = {
-
           val contains = f.fields.map(e => apply(e)).toSeq
-          Js.Obj(
-            ("client_id", Js.Num(f.clientId)),
+
+          var values = Seq[(String, Js.Value)](("client_id", Js.Num(f.clientId)),
             ("object_id", Js.Num(f.objectId)),
-            ("data_type", Js.Str(f.dataType)),
-            ("data_type_translation", Js.Str(f.dataTypeTranslation)),
-            ("entity_type", Js.Str(f.entityType)),
-            ("entity_type_translation", Js.Str(f.entityTypeTranslation)),
-            ("level", Js.Str(f.level)),
-            ("status", Js.Str(f.status)),
-            ("position", Js.Num(f.position)),
-            ("contains", Js.Arr(contains:_*))
-          )
+            ("translation", Js.Str(f.translation)),
+            ("translation_gist_client_id", Js.Num(f.translationGistClientId)),
+            ("translation_gist_object_id", Js.Num(f.translationGistObjectId)),
+            ("data_type_translation_gist_client_id", Js.Num(f.dataTypeTranslationGistClientId)),
+            ("data_type_translation_gist_object_id", Js.Num(f.dataTypeTranslationGistObjectId)),
+            ("is_translatable", if (f.isTranslatable) Js.True else Js.False),
+            ("created_at", Js.Str(f.createdAt)),
+            ("contains", Js.Arr(contains: _*)))
+
+          field.link match {
+            case Some(link) => values = values :+ ("link", Js.Obj(("client_id", Js.Num(link.clientId)), ("object_id", Js.Num(link.objectId))))
+            case None =>
+          }
+
+          Js.Obj(values: _*)
         }
-      })(field)
+      }) (field)
   }
 
   implicit val reader = upickle.default.Reader[Field] {
@@ -53,35 +61,46 @@ object Field {
       (new ((Js.Obj) => Field) {
         def apply(js: Js.Obj): Field = {
 
+
           val clientId = js("client_id").asInstanceOf[Js.Num].value.toInt
           val objectId = js("object_id").asInstanceOf[Js.Num].value.toInt
-          val entityType = js("entity_type").asInstanceOf[Js.Str].value
-          val entityTypeTranslation = js("entity_type_translation").asInstanceOf[Js.Str].value
-          val dataType = js("data_type").asInstanceOf[Js.Str].value
-          val dataTypeTranslation = js("data_type_translation").asInstanceOf[Js.Str].value
-          val level = js("level").asInstanceOf[Js.Str].value
-          val status = js("status").asInstanceOf[Js.Str].value
-          val position = js("position").asInstanceOf[Js.Num].value.toInt
+          val translation = js("translation").asInstanceOf[Js.Str].value
+          val translationGistClientId = js("translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
+          val translationGistObjectId = js("translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
+          val dataTypeTranslationGistClientId = js("data_type_translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
+          val dataTypeTranslationGistObjectId = js("data_type_translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
+          val createdAt = js("created_at").asInstanceOf[Js.Str].value
+          val isTranslatable = js("is_translatable") match {
+            case Js.True => true
+            case Js.False => false
+            case _ => false
+          }
 
-          val group = js.value.find(_._1 == "group").getOrElse(("group", null))._2.asInstanceOf[Js.Str].value
+          val link = js.value.find(_._1 == "link") match {
+            case Some(l) => Some(readJs[Link](l._2))
+            case None => None
+          }
 
           // get array of child fields or empty list if there are none
           val fields = js.value.find(_._1 == "contains").getOrElse(("contains", Js.Arr()))._2.asInstanceOf[Js.Arr]
 
-          var subfields = Seq[Field]()
+          var subFields = Seq[Field]()
           for (e <- fields.value) {
             // skip non-object elements
             e match {
               case jsObj: Js.Obj =>
-                subfields = subfields :+ apply(jsObj)
+                subFields = subFields :+ apply(jsObj)
               case _ =>
             }
           }
-          val field = Field(clientId, objectId, entityType, entityTypeTranslation, dataType, dataTypeTranslation, level,
-            position, status, subfields.toJSArray)
-          field.group = Option(group)
+
+          val field = Field(clientId, objectId, translation, translationGistClientId, translationGistObjectId, dataTypeTranslationGistClientId, dataTypeTranslationGistObjectId, isTranslatable, createdAt)
+          field.fields = subFields.toJSArray
+          field.link = link
           field
         }
-      })(jsval)
+      }) (jsval)
   }
 }
+
+

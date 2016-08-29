@@ -2,12 +2,11 @@ package ru.ispras.lingvodoc.frontend.app.controllers.common
 
 import ru.ispras.lingvodoc.frontend.app.model.{Entity, Field, LexicalEntry}
 
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.runNow
+
 import scala.scalajs.js
 import scala.scalajs.js.Array
 import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
-import scala.util.{Failure, Success}
 import org.scalajs.dom.console
 
 
@@ -72,31 +71,15 @@ class DictionaryTable {
 
   private def createColumn(field: Field): Column = {
     field match {
-      case c if c.fields.nonEmpty => MasterColumn(field.entityType, field.dataType, field.fields.toSeq.map(f => SimpleColumn(f.entityType, f.dataTypeTranslation, f.entityTypeTranslation)).toJSArray, field.entityTypeTranslation)
-      case c if c.fields.isEmpty => SimpleColumn(field.entityType, field.dataType, field.entityTypeTranslation)
+      case c if c.fields.nonEmpty => MasterColumn(field.translation, field.translation, field.fields.toSeq.map(f => SimpleColumn(f.translation, f.translation, f.translation)).toJSArray, field.translation)
+      case c if c.fields.isEmpty => SimpleColumn(field.translation, field.translation, field.translation)
     }
   }
 
 
   private def addColumn(field: Field) = {
-
-    if (field.group.isEmpty) {
-      val h = createColumn(field)
-      header.push(h)
-    } else {
-      val groupName = field.group.get
-      // try to find existing group column
-      val groupField = header.toSeq.find { case (gc: GroupColumn) => gc.group.equals(groupName) case (_) => false }
-      if (groupField.nonEmpty) {
-        // add new field to existing group column
-        groupField.get.asInstanceOf[GroupColumn].columns.push(createColumn(field))
-      } else {
-        // create new group column
-        val columns: Seq[Column] = createColumn(field) :: Nil
-        val groupColumn = GroupColumn(groupName, columns.toJSArray, groupName)
-        header.push(groupColumn)
-      }
-    }
+    val h = createColumn(field)
+    header.push(h)
   }
 
   private def getContent(entities: Seq[Entity], column: SimpleColumn): Content = {
@@ -113,7 +96,7 @@ class DictionaryTable {
       for (e <- entity.entities) {
         val slaveColumnOpt = column.slaveColumns.find(f => f.entityType.equals(e.entityType))
         if (slaveColumnOpt.nonEmpty) {
-          subEntities = subEntities :+ new Value(e.content, slaveColumnOpt.get.dataType, js.Array())
+          subEntities = subEntities :+ Value(e.content, slaveColumnOpt.get.dataType, js.Array())
         }
       }
       Value(entity.content, column.dataType, subEntities.toJSArray)
@@ -148,7 +131,7 @@ object DictionaryTable {
     table.fields = fields
 
     // create table header
-    for (field <- fields.sortBy(f => f.position).toList) {
+    for (field <- fields.toList) {
       table.addColumn(field)
     }
 

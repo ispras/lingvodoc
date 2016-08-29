@@ -5,6 +5,7 @@ import upickle.Js
 import scala.scalajs.js.Date
 import scala.scalajs.js.annotation.JSExportAll
 
+
 @JSExportAll
 case class User(id: Int,
                 var login: String,
@@ -12,7 +13,6 @@ case class User(id: Int,
                 var name: String,
                 var intlName: String,
                 var birthday: Date,
-                var about: String,
                 var isActive: Boolean,
                 var signupDate: Date) {
 
@@ -22,14 +22,13 @@ case class User(id: Int,
 
 object User {
   implicit val writer = upickle.default.Writer[User] {
-    case user => Js.Obj(
+    user => Js.Obj(
       ("id", Js.Num(user.id)),
       ("login", Js.Str(user.login)),
       ("email", Js.Str(user.email)),
       ("name", Js.Str(user.name)),
       ("intl_name", Js.Str(user.intlName)),
       ("birthday", Js.Str(user.birthday.toDateString())),
-      ("about", Js.Str(user.about)),
       ("is_active", if (user.isActive) Js.True else Js.False),
       ("signup_date", Js.Str(user.signupDate.toDateString()))
     )
@@ -43,11 +42,6 @@ object User {
       val name = js("name").asInstanceOf[Js.Str].value
       val intlName = js("intl_name").asInstanceOf[Js.Str].value
 
-      val about = js("about") match {
-        case str: Js.Str => str.value
-        case _ => ""
-      }
-
       val isActive: Boolean = js("is_active") match {
         case Js.True => true
         case Js.False => false
@@ -60,6 +54,6 @@ object User {
       val signupTimestamp = Date.parse(js("signup_date").asInstanceOf[Js.Str].value)
       val signupDate = new Date()
       signupDate.setTime(signupTimestamp)
-      User(id, login, email, name, intlName, birthday, about, isActive, signupDate)
+      User(id, login, email, name, intlName, birthday, isActive, signupDate)
   }
 }

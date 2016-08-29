@@ -6,6 +6,7 @@ import upickle.default._
 
 import scala.concurrent.{Future, Promise}
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.{Date, JSON}
@@ -65,13 +66,13 @@ class BackendService($http: HttpService, $q: Q) extends Service {
           val perspectives = read[Seq[Perspective]](js.JSON.stringify(response.perspectives))
           p.success(perspectives)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspectives json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspectives data. Missing some " +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed perspectives json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed perspectives data. Missing some " +
             "required fields: " + e.getMessage))
-          case e: Throwable => p.failure(BackendException("Unexpected exception:" + e.getMessage))
+          case e: Throwable => p.failure(new BackendException("Unexpected exception:" + e.getMessage))
         }
 
-      case Failure(e) => p.failure(BackendException("Failed to get list of perspectives for dictionary " + dictionary.translation + ": " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get list of perspectives for dictionary " + dictionary.translation + ": " + e.getMessage))
     }
     p.future
   }
@@ -91,11 +92,11 @@ class BackendService($http: HttpService, $q: Q) extends Service {
           val dictionaries = read[Seq[Dictionary]](js.JSON.stringify(response.dictionaries))
           p.success(dictionaries)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed dictionary json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed dictionary data. Missing some " +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed dictionary json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed dictionary data. Missing some " +
             "required fields: " + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get list of dictionaries: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get list of dictionaries: " + e.getMessage))
     }
     p.future
   }
@@ -120,9 +121,9 @@ class BackendService($http: HttpService, $q: Q) extends Service {
               dictionary
             }
             p.success(g)
-          case Failure(e) => p.failure(BackendException("Failed to get list of perspectives: " + e.getMessage))
+          case Failure(e) => p.failure(new BackendException("Failed to get list of perspectives: " + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get list of dictionaries with perspectives: " + e
+      case Failure(e) => p.failure(new BackendException("Failed to get list of dictionaries with perspectives: " + e
         .getMessage))
     }
     p.future
@@ -138,14 +139,14 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     $http.get[js.Dynamic](getMethodUrl("languages")) onComplete {
       case Success(response) =>
         try {
-          val languages = read[Seq[Language]](js.JSON.stringify(response.languages))
+          val languages = read[Seq[Language]](js.JSON.stringify(response))
           p.success(languages)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed languages json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed languages data. Missing some required" +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed languages json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed languages data. Missing some required" +
             " fields: " + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get list of languages: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get list of languages: " + e.getMessage))
     }
     p.future
   }
@@ -166,11 +167,11 @@ class BackendService($http: HttpService, $q: Q) extends Service {
         try {
           p.success(read[Dictionary](js.JSON.stringify(response)))
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed dictionary json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed dictionary data. Missing some " +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed dictionary json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed dictionary data. Missing some " +
             "required fields: " + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get dictionary: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get dictionary: " + e.getMessage))
     }
     p.future
   }
@@ -187,7 +188,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       .objectId.toString)
     $http.put(getMethodUrl(url), write(dictionary)) onComplete {
       case Success(_) => p.success(Unit)
-      case Failure(e) => p.failure(BackendException("Failed to remove dictionary: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to remove dictionary: " + e.getMessage))
     }
     p.future
   }
@@ -204,7 +205,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       .objectId.toString)
     $http.delete(getMethodUrl(url)) onComplete {
       case Success(_) => p.success(Unit)
-      case Failure(e) => p.failure(BackendException("Failed to remove dictionary: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to remove dictionary: " + e.getMessage))
     }
     p.future
   }
@@ -224,7 +225,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       case Success(_) =>
         //dictionary.status = status
         p.success(())
-      case Failure(e) => p.failure(BackendException("Failed to update dictionary status: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to update dictionary status: " + e.getMessage))
     }
     p.future
   }
@@ -270,11 +271,11 @@ class BackendService($http: HttpService, $q: Q) extends Service {
         try {
           p.success(read[Perspective](js.JSON.stringify(response)))
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspective json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspective data. Missing some " +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed perspective json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed perspective data. Missing some " +
             "required fields: " + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get perspective: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get perspective: " + e.getMessage))
     }
     p.future
   }
@@ -299,9 +300,9 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
     $http.put(getMethodUrl(url), req) onComplete {
       case Success(_) =>
-        perspective.status = status
-        p.success(Unit)
-      case Failure(e) => p.failure(BackendException("Failed to update perspective status: " + e.getMessage))
+        //perspective.status = status
+        p.success(())
+      case Failure(e) => p.failure(new BackendException("Failed to update perspective status: " + e.getMessage))
     }
     p.future
   }
@@ -322,7 +323,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
     $http.delete(getMethodUrl(url)) onComplete {
       case Success(_) => p.success(())
-      case Failure(e) => p.failure(BackendException("Failed to remove perspective: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to remove perspective: " + e.getMessage))
     }
     p.future
   }
@@ -342,7 +343,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       "/" + encodeURIComponent(perspective.objectId.toString)
     $http.put(getMethodUrl(url), write(perspective)) onComplete {
       case Success(_) => p.success(())
-      case Failure(e) => p.failure(BackendException("Failed to update perspective: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to update perspective: " + e.getMessage))
     }
     p.future
   }
@@ -358,9 +359,10 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     val p = Promise[Seq[Perspective]]()
     getDictionaryPerspectives(dictionary) onComplete {
       case Success(perspectives) =>
-        val publishedPerspectives = perspectives.filter(p => p.status.toUpperCase.equals("PUBLISHED"))
+        //val publishedPerspectives = perspectives.filter(p => p.status.toUpperCase.equals("PUBLISHED"))
+        val publishedPerspectives = perspectives
         p.success(publishedPerspectives)
-      case Failure(e) => p.failure(BackendException("Failed to get published perspectives: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get published perspectives: " + e.getMessage))
     }
     p.future
   }
@@ -370,7 +372,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     val url = ""
     $http.put(getMethodUrl(url), write(metadata)) onComplete {
       case Success(_) => p.success(())
-      case Failure(e) => p.failure(BackendException("Failed to update perspective: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to update perspective: " + e.getMessage))
     }
     p.future
   }
@@ -388,12 +390,12 @@ class BackendService($http: HttpService, $q: Q) extends Service {
           val user = read[User](JSON.stringify(js))
           p.success(user)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed user json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed user data. Missing some " +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed user json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed user data. Missing some " +
             "required fields: " + e.getMessage))
-          case e: Throwable => p.failure(BackendException("Unknown exception:" + e.getMessage))
+          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get current user: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get current user: " + e.getMessage))
     }
     p.future
   }
@@ -413,18 +415,19 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       "/perspective/" + encodeURIComponent(perspective.clientId.toString) + "/" + encodeURIComponent(perspective
       .objectId.toString) + "/fields"
 
+
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
           val fields = read[Seq[Field]](js.JSON.stringify(response.fields))
           p.success(fields)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed fields json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed fields data. Missing some " +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed fields json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed fields data. Missing some " +
             "required fields: " + e.getMessage))
-          case e: Throwable => p.failure(BackendException("Unknown exception:" + e.getMessage))
+          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to fetch perspective fields: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to fetch perspective fields: " + e.getMessage))
     }
     p.future
   }
@@ -444,7 +447,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
         .objectId.toString) + "/fields"
     $http.post(getMethodUrl(url), write(perspective)) onComplete {
       case Success(_) => p.success(())
-      case Failure(e) => p.failure(BackendException("Failed to update perspective fields: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to update perspective fields: " + e.getMessage))
     }
     p.future
   }
@@ -463,7 +466,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       case Success(fields) =>
         perspective.fields = fields.toJSArray
         p.success(perspective)
-      case Failure(e) => p.failure(BackendException("Failed to fetch perspective fields: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to fetch perspective fields: " + e.getMessage))
     }
     p.future
   }
@@ -488,9 +491,9 @@ class BackendService($http: HttpService, $q: Q) extends Service {
         try {
           p.success(response.count.asInstanceOf[Int])
         } catch {
-          case e: Throwable => p.failure(BackendException("Unknown exception:" + e.getMessage))
+          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get published lexical entries count: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get published lexical entries count: " + e.getMessage))
     }
     p.future
   }
@@ -529,12 +532,12 @@ class BackendService($http: HttpService, $q: Q) extends Service {
           val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response.lexical_entries))
           p.success(entries)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed lexical entries json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed lexical entries data. Missing some required fields: " + e.getMessage))
-          case e: Throwable => p.failure(BackendException("Unknown exception:" + e.getMessage))
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed lexical entries json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed lexical entries data. Missing some required fields: " + e.getMessage))
+          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
 
         }
-      case Failure(e) => p.failure(BackendException("Failed to get lexical entries: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get lexical entries: " + e.getMessage))
     }
     p.future
   }
@@ -557,11 +560,11 @@ class BackendService($http: HttpService, $q: Q) extends Service {
           val markup = read[String](js.JSON.stringify(response.content))
           p.success(markup)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed markup json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed markup data. Missing some " +
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed markup json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed markup data. Missing some " +
             "required fields: " + e.getMessage))
         }
-      case Failure(e) => p.failure(BackendException("Failed to get sound markup: " + e.getMessage))
+      case Failure(e) => p.failure(new BackendException("Failed to get sound markup: " + e.getMessage))
     }
     p.future
   }
@@ -618,13 +621,84 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   def signup(login: String, name: String, password: String, email: String, day: Int, month: Int, year: Int) = {
     val defer = $q.defer[Unit]()
     val req = JSON.stringify(js.Dynamic.literal(login = login, name = name, email = email, password = password, day = day, month = month, year = year))
-    console.log(req)
-
     $http.post[js.Dynamic](getMethodUrl("signup"), req) onComplete {
       case Success(response) => defer.resolve(())
       case Failure(e) => defer.reject("Failed to sign up: " + e.getMessage)
     }
     defer.promise
+  }
+
+  /**
+    * Get list of all statuses
+    * @return
+    */
+  def allStatuses() = {
+    val defer = $q.defer[Unit]()
+
+    $http.get[js.Dynamic](getMethodUrl("all_statuses")) onComplete {
+      case Success(response) =>
+        defer.resolve(())
+      case Failure(e) => defer.reject("Failed get list of status values: " + e.getMessage)
+    }
+    defer.promise
+  }
+
+
+
+
+  def translationAtom(clientId: Int, objectId: Int): Future[TranslationAtom] = {
+    val defer = $q.defer[TranslationAtom]()
+    val url = "translationatom/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        val atom = read[TranslationAtom](js.JSON.stringify(response))
+        defer.resolve(atom)
+      case Failure(e) => defer.reject("Failed to get translation atom: " + e.getMessage)
+    }
+    defer.promise
+  }
+
+  def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
+    val defer = $q.defer[TranslationGist]()
+    val url = "translationgist/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val gist = read[TranslationGist](js.JSON.stringify(response))
+          defer.resolve(gist)
+        } catch {
+          case e: upickle.Invalid.Json => defer.reject("Malformed translation gist json:" + e.getMessage)
+          case e: upickle.Invalid.Data => defer.reject("Malformed translation gist data. Missing some " + "required fields: " + e.getMessage)
+          case e: Throwable => defer.reject("Unexpected exception:" + e.getMessage)
+        }
+      case Failure(e) => defer.reject("Failed to get translation gist: " + e.getMessage)
+    }
+    defer.promise
+  }
+
+
+  def translateLanguage(language: Language, localeId: Int): Future[Language] = {
+    val defer = $q.defer[Language]()
+
+    translationGist(language.translationGistClientId, language.translationGistObjectId) onComplete {
+      case Success(gist) =>
+        gist.atoms.find(atom => atom.localeId == localeId) match {
+          case Some(atom) => language.translation = Some(atom.content)
+          case None => language.translation = None
+        }
+        defer.resolve(language)
+
+      case Failure(e) => defer.reject("Failed to get translation for language: " + e.getMessage)
+    }
+    defer.future
+  }
+
+
+  def getLocales(): Future[Seq[Locale]] = {
+    val defer = $q.defer[Seq[Locale]]()
+    val locales = Locale(2, "En", "English", "") :: Locale(1, "Ru", "Russian", "") :: Locale(3, "De", "German", "") :: Locale(4, "Fr", "French", "") :: Nil
+    defer.resolve(locales)
+    defer.future
   }
 }
 

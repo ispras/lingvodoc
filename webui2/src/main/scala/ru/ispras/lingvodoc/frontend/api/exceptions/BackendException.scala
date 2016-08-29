@@ -1,3 +1,7 @@
 package ru.ispras.lingvodoc.frontend.api.exceptions
 
-case class BackendException(message: String) extends  Exception(message)
+case class BackendException(message: String, nestedException: Throwable) extends  Exception(message, nestedException) {
+  def this() = this("", null)
+  def this(message: String) = this(message, null)
+  def this(nestedException : Throwable) = this("", nestedException)
+}

@@ -4,10 +4,16 @@
 
 <div class="modal-body">
 
-    <label for="dictionaryName">Exception</label>
-    <input type="text" id="dictionaryName" class="form-control" ng-model="message" disabled="true">
+    <h3>Oops, something went wrong.</h3>
+    <input type="text" class="form-control" ng-model="message" disabled="true">
 
-    <div class="">
+    <h3>Cause:</h3>
+    <input type="text" class="form-control" ng-model="causeMessage" disabled="true">
+
+
+    <h3>Stack trace:</h3>
+
+    <div id="stackTrace" style="word-wrap: break-word;">
         {{ stackTrace }}
     </div>
 

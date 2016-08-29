@@ -38,7 +38,7 @@ class CreatePerspectiveController(scope: CreatePerspectiveScope,
 
   @JSExport
   def addField() = {
-    scope.fields.push(new FieldWrapper(new Field(-1, -1, "", "", "", "", "", 1, "", js.Array())))
+    //scope.fields.push(new FieldWrapper(new Field(-1, -1, "", "", "", "", "", 1, "", js.Array())))
   }
 
   @JSExport

@@ -55,8 +55,11 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, backend
       case Some(serverLocale) =>
         if (serverLocale != locale) {
           Utils.setLocale(locale)
+          rootScope.$emit("user.changeLocale")
         }
-      case None => Utils.setLocale(locale)
+      case None =>
+        Utils.setLocale(locale)
+        rootScope.$emit("user.changeLocale")
     }
     scope.locale = locale
   }
@@ -66,7 +69,7 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, backend
     backend.getCurrentUser onComplete {
       case Success(user) =>
         userService.setUser(user)
-      case Failure(e) =>
+      case Failure(e) => console.log("error: " + e.getMessage)
     }
   })
 
