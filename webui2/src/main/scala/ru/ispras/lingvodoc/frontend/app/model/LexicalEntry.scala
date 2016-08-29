@@ -24,14 +24,14 @@ case class LexicalEntry(override val clientId: Int,
 
 object LexicalEntry {
   implicit val writer = upickle.default.Writer[LexicalEntry] {
-    case t => Js.Obj(
-      ("client_id", Js.Num(t.clientId)),
-      ("object_id", Js.Num(t.objectId)),
-      ("parent_client_id", Js.Num(t.parentClientId)),
-      ("parent_object_id", Js.Num(t.parentObjectId)),
-      ("level", Js.Str(t.level)),
-      ("published", if (t.published) Js.True else Js.False),
-      ("marked_for_deletion", if (t.markedForDeletion) Js.True else Js.False)
+    lexicalEntry => Js.Obj(
+      ("client_id", Js.Num(lexicalEntry.clientId)),
+      ("object_id", Js.Num(lexicalEntry.objectId)),
+      ("parent_client_id", Js.Num(lexicalEntry.parentClientId)),
+      ("parent_object_id", Js.Num(lexicalEntry.parentObjectId)),
+      ("level", Js.Str(lexicalEntry.level)),
+      ("published", if (lexicalEntry.published) Js.True else Js.False),
+      ("marked_for_deletion", if (lexicalEntry.markedForDeletion) Js.True else Js.False)
     )
   }
 

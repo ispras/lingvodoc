@@ -25,7 +25,7 @@ case class Perspective(override val clientId: Int,
 
 object Perspective {
   implicit val writer = upickle.default.Writer[Perspective] {
-    case perspective =>
+    perspective =>
       (new (Perspective => Js.Obj) {
         override def apply(f: Perspective): Js.Obj = {
 

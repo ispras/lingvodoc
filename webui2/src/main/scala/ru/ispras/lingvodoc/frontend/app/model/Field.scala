@@ -2,6 +2,9 @@ package ru.ispras.lingvodoc.frontend.app.model
 
 import derive.key
 import upickle.Js
+import upickle.default._
+import org.scalajs.dom.console
+
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
@@ -20,16 +23,17 @@ case class Field(@key("client_id") override val clientId: Int,
                  var createdAt: String) extends Object(clientId, objectId) {
 
   var fields: js.Array[Field] = js.Array[Field]()
+  var link: Option[Link] = None
 }
 
 object Field {
   implicit val writer = upickle.default.Writer[Field] {
-    case field: Field =>
+    field: Field =>
       (new (Field => Js.Obj) {
         override def apply(f: Field): Js.Obj = {
           val contains = f.fields.map(e => apply(e)).toSeq
-          Js.Obj(
-            ("client_id", Js.Num(f.clientId)),
+
+          var values = Seq[(String, Js.Value)](("client_id", Js.Num(f.clientId)),
             ("object_id", Js.Num(f.objectId)),
             ("translation", Js.Str(f.translation)),
             ("translation_gist_client_id", Js.Num(f.translationGistClientId)),
@@ -38,8 +42,14 @@ object Field {
             ("data_type_translation_gist_object_id", Js.Num(f.dataTypeTranslationGistObjectId)),
             ("is_translatable", if (f.isTranslatable) Js.True else Js.False),
             ("created_at", Js.Str(f.createdAt)),
-            ("contains", Js.Arr(contains: _*))
-          )
+            ("contains", Js.Arr(contains: _*)))
+
+          field.link match {
+            case Some(link) => values = values :+ ("link", Js.Obj(("client_id", Js.Num(link.clientId)), ("object_id", Js.Num(link.objectId))))
+            case None =>
+          }
+
+          Js.Obj(values: _*)
         }
       }) (field)
   }
@@ -50,6 +60,7 @@ object Field {
       // Otherwise optimizer may crush with StackOverflow exception
       (new ((Js.Obj) => Field) {
         def apply(js: Js.Obj): Field = {
+
 
           val clientId = js("client_id").asInstanceOf[Js.Num].value.toInt
           val objectId = js("object_id").asInstanceOf[Js.Num].value.toInt
@@ -63,6 +74,11 @@ object Field {
             case Js.True => true
             case Js.False => false
             case _ => false
+          }
+
+          val link = js.value.find(_._1 == "link") match {
+            case Some(l) => Some(readJs[Link](l._2))
+            case None => None
           }
 
           // get array of child fields or empty list if there are none
@@ -80,6 +96,7 @@ object Field {
 
           val field = Field(clientId, objectId, translation, translationGistClientId, translationGistObjectId, dataTypeTranslationGistClientId, dataTypeTranslationGistObjectId, isTranslatable, createdAt)
           field.fields = subFields.toJSArray
+          field.link = link
           field
         }
       }) (jsval)

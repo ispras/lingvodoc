@@ -69,7 +69,7 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, backend
     backend.getCurrentUser onComplete {
       case Success(user) =>
         userService.setUser(user)
-      case Failure(e) =>
+      case Failure(e) => console.log("error: " + e.getMessage)
     }
   })
 

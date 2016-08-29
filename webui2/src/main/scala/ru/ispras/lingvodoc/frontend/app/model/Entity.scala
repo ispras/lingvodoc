@@ -30,7 +30,7 @@ case class Entity(override val clientId: Int,
 
 object Entity {
   implicit val writer = upickle.default.Writer[Entity] {
-    case t => Js.Obj(
+    t => Js.Obj(
       ("client_id", Js.Num(t.clientId)),
       ("object_id", Js.Num(t.objectId)),
       ("parent_client_id", Js.Num(t.parentClientId)),

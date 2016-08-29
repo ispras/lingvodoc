@@ -8,7 +8,7 @@ scalacOptions += "-deprecation"
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.8.0"
-libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.3.6"
+libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.3.9"
 libraryDependencies += "com.greencatsoft" %%% "scalajs-angular" % "0.8-SNAPSHOT"
 libraryDependencies += "io.surfkit" %%% "scalajs-google-maps" % "0.1-SNAPSHOT"
 libraryDependencies += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"

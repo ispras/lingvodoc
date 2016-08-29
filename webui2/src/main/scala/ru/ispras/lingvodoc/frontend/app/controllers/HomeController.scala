@@ -1,14 +1,15 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
+import com.greencatsoft.angularjs.core.{Injector, Scope}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
-import ru.ispras.lingvodoc.frontend.app.model.{Language, Perspective}
-import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import ru.ispras.lingvodoc.frontend.app.model.{Field, Language, Perspective}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ExceptionHandlerFactory}
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
+import scala.scalajs.js.{Function2, Object}
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
@@ -20,7 +21,9 @@ trait HomeScope extends Scope {
 }
 
 @injectable("HomeController")
-class HomeController(scope: HomeScope, backend: BackendService) extends AbstractController[HomeScope](scope) {
+class HomeController(scope: HomeScope, injector: Injector, backend: BackendService) extends AbstractController[HomeScope](scope) {
+
+  private[this] val exceptionHandler = injector.get[Function2[Throwable, Object, Unit]]("$exceptionHandler")
 
   scope.languages = Seq[Language]().toJSArray
 
@@ -37,7 +40,7 @@ class HomeController(scope: HomeScope, backend: BackendService) extends Abstract
         backend.getPublishedDictionaryPerspectives(dictionary) onComplete {
           case Success(perspectives) =>
             dictionary.perspectives = perspectives.toJSArray
-          case Failure(e) => console.log("failed to parse")
+          case Failure(e) => exceptionHandler(BackendException("Failed to get published perspectives list", e), null)
         }
       }
       setPerspectives(language.languages.toSeq)
@@ -46,13 +49,15 @@ class HomeController(scope: HomeScope, backend: BackendService) extends Abstract
 
   private[this] def load() = {
 
-    backend.allStatuses()
-
-    backend.getPublishedDictionaries onComplete {
-      case Success(languages) =>
-        setPerspectives(languages)
-        scope.languages = languages.toJSArray
-      case Failure(e) => console.log(e.getMessage)
+    backend.allStatuses() map { _ =>
+      backend.getPublishedDictionaries onComplete {
+        case Success(languages) =>
+          setPerspectives(languages)
+          scope.languages = languages.toJSArray
+        case Failure(e) => exceptionHandler(BackendException("Failed to get published dictionaries list", e), null)
+      }
     }
+
+
   }
 }

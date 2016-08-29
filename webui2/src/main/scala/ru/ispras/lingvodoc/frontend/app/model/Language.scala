@@ -27,11 +27,11 @@ case class Language(override val clientId: Int,
 
 object Language {
   implicit val writer = upickle.default.Writer[Language] {
-    case t => Js.Obj(
-      ("client_id", Js.Num(t.clientId)),
-      ("object_id", Js.Num(t.objectId)),
-      ("translation_gist_client_id", Js.Num(t.translationGistClientId)),
-      ("translation_gist_object_id", Js.Num(t.translationGistObjectId))
+    language => Js.Obj(
+      ("client_id", Js.Num(language.clientId)),
+      ("object_id", Js.Num(language.objectId)),
+      ("translation_gist_client_id", Js.Num(language.translationGistClientId)),
+      ("translation_gist_object_id", Js.Num(language.translationGistObjectId))
     )
   }
 

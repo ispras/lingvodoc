@@ -2,8 +2,8 @@ package ru.ispras.lingvodoc.frontend.app.services
 
 import com.greencatsoft.angularjs.{Factory, Service, injectable}
 import com.greencatsoft.angularjs.core.Injector
-
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 
 import scala.scalajs.js
 
@@ -11,15 +11,13 @@ import scala.scalajs.js
 class ExceptionHandlerFactory(injector: Injector) extends Factory[js.Function2[Throwable, js.Object, Unit]] {
 
   override def apply(): js.Function2[Throwable, js.Object, Unit] = {
-
     // exception handler function
     (e: Throwable, cause: js.Object) => {
 
       val modal = injector.get[ModalService]("$uibModal")
-
       val options = ModalOptions()
       options.templateUrl = "/static/templates/modal/exceptionHandler.html"
-      options.controller = "ExceptInionHandlerController"
+      options.controller = "ExceptionHandlerController"
       options.backdrop = false
       options.keyboard = false
       options.size = "lg"
@@ -30,7 +28,6 @@ class ExceptionHandlerFactory(injector: Injector) extends Factory[js.Function2[T
       ).asInstanceOf[js.Dictionary[js.Any]]
 
       val instance = modal.open[Unit](options)
-
     }
   }
 }

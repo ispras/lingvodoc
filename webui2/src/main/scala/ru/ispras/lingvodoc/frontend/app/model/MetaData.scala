@@ -7,7 +7,7 @@ case class MetaData(name: String, value: String) {}
 object MetaData {
 
   implicit val writer = upickle.default.Writer[MetaData] {
-    case metadata => Js.Obj(
+    metadata => Js.Obj(
       ("name", Js.Str(metadata.name)),
       ("value", Js.Str(metadata.value))
     )
