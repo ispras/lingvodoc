@@ -916,6 +916,16 @@ def view_field(request):
         return {'error': str("No such field in the system")}
 
 
+@view_config(route_name='fields', renderer='json', request_method='GET')
+def all_fields(request):
+    fields = DBSession.query(Field).filter_by().all()
+    response = list()
+    for field in fields:
+        response.append(view_field_from_object(request=request, field=field))
+    request.response.code = HTTPOk.code
+    return response
+
+
 @view_config(route_name='create_field', renderer='json', request_method='POST')
 def create_field(request):
     try:

@@ -122,7 +122,7 @@ def create_translationgist(request):
         DBSession.add(translationgist)
         DBSession.flush()
         basegroups = []
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can delete translationgist").first()]
+        basegroups += [DBSession.query(BaseGroup).join(TranslationGist).join(Tra).filter_by(translation_string="Can delete translationgist").first()]
         groups = []
         for base in basegroups:
             group = Group(subject_client_id=translationgist.client_id, subject_object_id=translationgist.object_id, parent=base)
