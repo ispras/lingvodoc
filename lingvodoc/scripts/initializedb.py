@@ -53,6 +53,17 @@ def create_translation(client_id, contents=list(), gist_type='Service'):
     return gist
 
 
+def find_service_translation(content, locale_id=2):
+    atom = DBSession.query(TranslationAtom).join(TranslationGist)\
+        .filter(TranslationAtom.content==content,
+                TranslationAtom.locale_id==locale_id,
+                TranslationGist.type=='Service').first()
+    if atom:
+        return atom.parent
+    else:
+        return None
+
+
 def find_translation(content, locale_id=2):
     atom = DBSession.query(TranslationAtom).filter_by(content=content, locale_id=locale_id).first()
     if atom:
@@ -420,9 +431,9 @@ def data_init(manager, accounts):
                 state_gist = translationatom.parent
                 dict_name_gist = find_translation('Dictionary of Middle-Ob dialect Mansi')
                 persp_name_gist = find_translation('Lingvodoc 0.98 etymology dictionary')
-                text_type_gist = find_translation('text')
-                sound_type_gist = find_translation('sound')
-                link_type_gist = find_translation('link')
+                text_type_gist = find_service_translation('Text')
+                sound_type_gist = find_service_translation('Sound')
+                link_type_gist = find_service_translation('Link')
                 word_gist = find_translation('Word')
                 transcription_gist = find_translation('Transcription')
                 sound_gist = find_translation('Sound')

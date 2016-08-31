@@ -57,6 +57,26 @@ def all_statuses(request):
     return response
 
 
+@view_config(route_name='all_data_types', renderer='json', request_method='GET')
+def all_data_types(request):
+    from pyramid.request import Request
+    import json
+
+    response = list()
+    for data_type in ['Text', 'Image', 'Sound', 'Praat markup', 'ELAN markup', 'Link']:
+
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': data_type}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        response.append(resp.json)
+    request.response.status = HTTPOk.code
+    return response
+
+
 conn_err_msg = """\
 Pyramid is having a problem using your SQL database.  The problem
 might be caused by one of the following things:

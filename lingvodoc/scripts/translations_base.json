@@ -427,9 +427,9 @@
   },
   "text": {
     "type": "Service",
-    "1": "text",
-    "2": "text",
-    "3": "text"
+    "1": "Текст",
+    "2": "Text",
+    "3": "Text"
   },
   "N\u0430\u043b\u0434\u044b-\u043a\u0443\u0440\u0433\u0430\u043d\u0441\u043a\u0438\u0439 \u0433\u043e\u0432\u043e\u0440 \u043a\u0430\u0437\u0430\u0445\u0441\u043a\u043e\u0433\u043e \u044f\u0437\u044b\u043a\u0430,": {
     "type": "Dictionary",
@@ -597,9 +597,9 @@
   },
   "sound": {
     "type": "Service",
-    "1": "\u0437\u0432\u0443\u043a",
-    "3": "audio",
-    "2": "sound"
+    "1": "Звук",
+    "3": "Audio",
+    "2": "Sound"
   },
   "\u04de\u0435\u0447 \u043a\u044b\u043b\u044a\u0451\u0441. \u0421\u0432\u044f\u0442\u043e\u0439 \u0422\u0438\u0445\u043e\u043d\u043b\u044d\u043d \u04df\u0435\u0447\u043b\u044b \u0434\u044b\u0448\u0435\u0442\u044d\u043c \u043a\u044b\u043b\u044a\u0451\u0441\u044b\u0437 (1891)": {
     "type": "Dictionary",
@@ -1303,26 +1303,44 @@
   },
   "Language": {
     "type": "Service",
-    "1": "Language",
-    "3": "Language",
-    "2": "Language"
+    "1": "Язык",
+    "2": "Language",
+    "3": "Sprache"
   },
   "WiP": {
     "type": "Service",
     "1": "WiP",
-    "3": "WiP",
-    "2": "WiP"
+    "2": "WiP",
+    "3": "WiP"
   },
   "Published": {
     "type": "Service",
-    "1": "Published",
-    "3": "Published",
-    "2": "Published"
+    "1": "Опубликованный",
+    "2": "Published",
+    "3": "Veröffentlicht"
   },
   "link": {
     "type": "Service",
-    "1": "link",
-    "3": "link",
-    "2": "link"
+    "1": "Ссылка",
+    "2": "Link",
+    "3": "Link"
+  },
+  "praat markup": {
+    "type": "Service",
+    "1": "Praat разметка",
+    "2": "Praat markup",
+    "3": "Praat markup"
+  },
+  "ELAN markup": {
+    "type": "Service",
+    "1": "ELAN разметка",
+    "2": "ELAN markup",
+    "3": "ELAN markup"
+  },
+  "Image": {
+    "type": "Service",
+    "1": "Изображение",
+    "2": "Image",
+    "3": "Image"
   }
 }
