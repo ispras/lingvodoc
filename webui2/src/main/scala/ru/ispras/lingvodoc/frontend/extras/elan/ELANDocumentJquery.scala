@@ -3,8 +3,8 @@ package ru.ispras.lingvodoc.frontend.extras.elan
 import org.scalajs.dom
 import org.scalajs.jquery._
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.extras.elan.annotation.{IAnnotation, AlignableAnnotation}
-import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, RefTier, TimeAlignableTier, Tier}
+import ru.ispras.lingvodoc.frontend.extras.elan.annotation.{SymbolicSubdivisionAnnotation, IAnnotation, AlignableAnnotation}
+import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, RefTier, AlignableTier, Tier}
 import ru.ispras.lingvodoc.frontend.extras.elan.XMLAttrConversions._
 
 import scala.collection.immutable.{ListMap, HashMap}
@@ -76,8 +76,12 @@ class ELANDocumentJquery private(annotDocXML: JQuery, val duration: Long) {
       // in PREVIOUS_ANNOTATION of ref annotations
       getRefTiers.flatMap(_.getAnnotations).foreach(annotation => {
         annotation.annotationRef.value = oldAnnotationIDstoNew(annotation.annotationRef.value)
-        annotation.previousAnnotation.value.foreach(v =>
-          annotation.previousAnnotation.value = Some(oldAnnotationIDstoNew(v)))
+        annotation match {
+          case ssAnnotation: SymbolicSubdivisionAnnotation =>
+            val ssAnnotation = annotation.asInstanceOf[SymbolicSubdivisionAnnotation]
+            ssAnnotation.previousAnnotation.value.foreach(v =>
+              ssAnnotation.previousAnnotation.value = Some(oldAnnotationIDstoNew(v)))
+        }
       })
   }
 
@@ -101,8 +105,8 @@ class ELANDocumentJquery private(annotDocXML: JQuery, val duration: Long) {
     case e: java.util.NoSuchElementException => throw ELANPArserException(s"Tier with id $id not found")
   }
 
-  def getTimeAlignableTiers = tiers.filter(_.isInstanceOf[TimeAlignableTier[_]]).
-    map(_.asInstanceOf[TimeAlignableTier[AlignableAnnotation]])
+  def getTimeAlignableTiers = tiers.filter(_.isInstanceOf[AlignableTier[_]]).
+    map(_.asInstanceOf[AlignableTier[AlignableAnnotation]])
   def getRefTiers = tiers.filter(_.isInstanceOf[RefTier]).map(_.asInstanceOf[RefTier])
 
   // fails if time slot has no value or doesn't exists

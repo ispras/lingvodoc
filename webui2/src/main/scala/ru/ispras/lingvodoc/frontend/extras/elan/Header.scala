@@ -32,7 +32,6 @@ object Header {
 }
 
 // Represents MEDIA_DESCRIPTOR element
-// TODO
 @JSExportAll
 class MediaDescriptor (mdXML: JQuery) {
   val mediaURL = RequiredXMLAttr(mdXML, MediaDescriptor.muAttrName)

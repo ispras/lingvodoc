@@ -1,7 +1,10 @@
 package ru.ispras.lingvodoc.frontend.extras.elan
 
+import java.util.NoSuchElementException
+
 import org.scalajs.dom
 import org.scalajs.jquery._
+import org.scalajs.dom.console
 
 import scala.collection.mutable.ListBuffer
 
@@ -64,7 +67,13 @@ object RequiredXMLAttr {
     RequiredXMLAttr(jqEl, name, defaultValue, identity)
   def apply[T](jqEl: JQuery, name: String, defaultValue: Option[T] = None, converter: String => T): RequiredXMLAttr[T] = {
     // this is a required attr; if xml node doesn't have it, it must be provided as a default value
-    val value = OptionalXMLAttr(jqEl, name, converter).value.getOrElse(defaultValue.get)
+    val value =
+    try {
+      OptionalXMLAttr(jqEl, name, converter).value.getOrElse(defaultValue.get)
+    } catch {
+      case e: NoSuchElementException => throw new ELANPArserException(s"Not found required attribute $name in " +
+        s"xml ${Utils.jQuery2XML(jqEl)}")
+    }
     RequiredXMLAttr(name, value)
   }
 }

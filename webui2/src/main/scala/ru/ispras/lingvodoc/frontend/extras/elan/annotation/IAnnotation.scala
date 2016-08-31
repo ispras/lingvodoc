@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.extras.elan.annotation
 
 import org.scalajs.jquery.JQuery
-import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, TimeAlignableTier, Tier}
+import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, AlignableTier, Tier}
 import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, Utils, OptionalXMLAttr, RequiredXMLAttr}
 
 import scala.scalajs.js.annotation.{JSExportAll, JSExportDescendentObjects, JSExport}

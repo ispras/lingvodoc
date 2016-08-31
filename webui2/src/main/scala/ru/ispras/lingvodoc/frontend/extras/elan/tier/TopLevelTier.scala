@@ -5,7 +5,7 @@ import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANDocumentJquery}
 import ru.ispras.lingvodoc.frontend.extras.elan.annotation.{Annotation, AlignableAnnotation}
 
 class TopLevelTier private(var annotations: List[AlignableAnnotation], to: TierOpts)
-  extends TimeAlignableTier[AlignableAnnotation](to) {
+  extends AlignableTier[AlignableAnnotation](to) {
   def this(annotations: List[AlignableAnnotation], tierID: String, linguisticTypeRef: String,
            participant: Option[String], annotator: Option[String], defaultLocale: Option[String],
            owner: ELANDocumentJquery) =

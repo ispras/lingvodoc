@@ -4,26 +4,24 @@ import org.scalajs.jquery.JQuery
 import ru.ispras.lingvodoc.frontend.extras.elan.tier.{RefTier, Tier}
 import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, OptionalXMLAttr, RequiredXMLAttr}
 
-class RefAnnotation private(val annotationRef: RequiredXMLAttr[String], val previousAnnotation: OptionalXMLAttr[String],
-                            override val owner: RefTier,
-                            ao: AnnotationOpts)
-  extends Annotation(ao) {
+class RefAnnotation protected(rao: RefAnnotationOpts, ao: AnnotationOpts)
+  extends Annotation(ao) with DependentAnnotation {
+  val annotationRef = rao.annotationRef
+  override val owner = rao.owner
 
   def this(refAnnotXML: JQuery, owner: RefTier) = this(
-    RequiredXMLAttr(refAnnotXML, RefAnnotation.annotRefAttrName),
-    OptionalXMLAttr(refAnnotXML, RefAnnotation.prevAnnotAttrName),
-    owner,
+    new RefAnnotationOpts(RequiredXMLAttr(refAnnotXML, RefAnnotation.annotRefAttrName), owner),
     new AnnotationOpts(refAnnotXML, owner)
   )
 
-  def start = parentAnnotation.start
-  def end = parentAnnotation.end
+  def start = getParentAnnotation.start
+  def end = getParentAnnotation.end
 
-  override def attrsToString = super.attrsToString + s"$annotationRef $previousAnnotation"
+  override def attrsToString = super.attrsToString + s"$annotationRef"
   protected def includedAnnotationToString = Utils.wrap(RefAnnotation.tagName, content, attrsToString)
 
   // will not work until all tiers are loaded
-  private lazy val parentAnnotation = owner.getParentTier.getAnnotationByID(annotationRef.value)
+  lazy val getParentAnnotation = owner.getParentTier.getAnnotationByID(annotationRef.value)
 }
 
 object RefAnnotation {
@@ -32,5 +30,16 @@ object RefAnnotation {
       s"Only ref annotations are allowed in tier ${owner.tierID.value}")
     new RefAnnotation(includedAnnotationXML, owner)
   }
-  val (tagName, annotRefAttrName, prevAnnotAttrName) = ("REF_ANNOTATION", "ANNOTATION_REF", "PREVIOUS_ANNOTATION")
+  val (tagName, annotRefAttrName) = ("REF_ANNOTATION", "ANNOTATION_REF")
+}
+
+class RefAnnotationOpts(val annotationRef: RequiredXMLAttr[String], val owner: RefTier) {
+  def this(raXML: JQuery, owner: RefTier) = this(
+    RequiredXMLAttr(raXML, RefAnnotation.annotRefAttrName),
+    owner
+  )
+  def this(annotationRef: String, owner: RefTier) = this(
+    RequiredXMLAttr(RefAnnotation.annotRefAttrName, annotationRef),
+    owner
+  )
 }

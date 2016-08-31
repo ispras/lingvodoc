@@ -62,16 +62,32 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
 object Tier {
   // read sequence of XML Tier elements and return list of them
   def fromXMLs(tierXMLs: JQuery, owner: ELANDocumentJquery) = Utils.jQuery2List(tierXMLs).map(fromXML(_, owner))
-  // factory method, chooses right tier type and creates it TODO: implement it
+  // factory method, chooses right tier type and creates it
   def fromXML(tierXML: JQuery, owner: ELANDocumentJquery): Tier[IAnnotation] = {
     val ltRef = RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName)
-    owner.getLinguisticType(ltRef).getStereotypeID
+    try {
+      owner.getLinguisticType(ltRef).getStereotypeID match {
+        case None => new TopLevelTier(tierXML, owner)
+        case Some(Constraint.timeSubdivID) => new TimeSubdivisionTier(tierXML, owner)
+        case Some(Constraint.includedInID) => new IncludedInTier(tierXML, owner)
+        case Some(Constraint.symbolSubdivID) => new SymbolicSubdivisionTier(tierXML, owner)
+        case Some(Constraint.symbolAssocID) => new SymbolicAssociationTier(tierXML, owner)
+        case _ => ??? // impossible
+      }
+    }
+      catch {
+        case e: Exception => console.log(e.getStackTrace.mkString("\n"))
+      }
     owner.getLinguisticType(ltRef).getStereotypeID match {
       case None => new TopLevelTier(tierXML, owner)
+      case Some(Constraint.timeSubdivID) => new TimeSubdivisionTier(tierXML, owner)
+      case Some(Constraint.includedInID) => new IncludedInTier(tierXML, owner)
+      case Some(Constraint.symbolSubdivID) => new SymbolicSubdivisionTier(tierXML, owner)
       case Some(Constraint.symbolAssocID) => new SymbolicAssociationTier(tierXML, owner)
       case _ => ??? // impossible
     }
   }
+
   val (tagName, tIDAttrName, lTypeRefAttrName, partAttrName, annotAttrName, defLocAttrName) = (
     "TIER", "TIER_ID", "LINGUISTIC_TYPE_REF", "PARTICIPANT", "ANNOTATOR", "DEFAULT_LOCALE"
     )
@@ -97,20 +113,4 @@ private[tier] class TierOpts(val tierID: RequiredXMLAttr[String], val linguistic
     OptionalXMLAttr(Tier.defLocAttrName, defaultLocale),
     owner
   )
-}
-
-// tier which have a parent tier
-trait DependentTier[+AnnotType <: IAnnotation] extends ITier[AnnotType] {
-  val parentRef: RequiredXMLAttr[String]
-
-  def getParentTier = owner.getTierByID(parentRef)
-}
-
-object DependentTier {
-  val parentRefAttrName = "PARENT_REF"
-}
-
-private[tier] class DependentTierOpts(val parentRef: RequiredXMLAttr[String]) {
-  def this(tierXML: JQuery) = this(RequiredXMLAttr(tierXML, DependentTier.parentRefAttrName))
-  def this(parentRef: String) = this(RequiredXMLAttr(DependentTier.parentRefAttrName, parentRef))
 }
