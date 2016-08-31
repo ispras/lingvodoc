@@ -32,37 +32,36 @@ import base64
 import hashlib
 import json
 
-# @view_config(route_name='get_entity_indict', renderer='json', request_method='GET', permission='view')
-# @view_config(route_name='get_entity', renderer='json', request_method='GET', permission='view')
-# def view_entity(request):
-#     response = dict()
-#     client_id = request.matchdict.get('client_id')
-#     object_id = request.matchdict.get('object_id')
-#     entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
-#     if entity and not entity.marked_for_deletion:
-#         # TODO: fix urls to relative urls in content
-#         response = entity.track(False)
-#         request.response.status = HTTPOk.code
-#         return response
-#     request.response.status = HTTPNotFound.code
-#     return {'error': str("No such entity in the system")}
-#
-#
-# @view_config(route_name='get_entity_indict', renderer='json', request_method='DELETE', permission='delete')
-# @view_config(route_name='get_entity', renderer='json', request_method='DELETE', permission='delete')
-# def delete_entity(request):
-#     response = dict()
-#     client_id = request.matchdict.get('client_id')
-#     object_id = request.matchdict.get('object_id')
-#     entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
-#     if entity and not entity.marked_for_deletion:
-#         entity.marked_for_deletion = True
-#         request.response.status = HTTPOk.code
-#         return response
-#     request.response.status = HTTPNotFound.code
-#     return {'error': str("No such entity in the system")}
-#
-#
+
+@view_config(route_name='get_entity_indict', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='get_entity', renderer='json', request_method='GET', permission='view')
+def view_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity and not entity.marked_for_deletion:
+        # TODO: fix urls to relative urls in content
+        response = entity.track(False)
+        request.response.status = HTTPOk.code
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such entity in the system")}
+
+
+@view_config(route_name='get_entity_indict', renderer='json', request_method='DELETE', permission='delete')
+@view_config(route_name='get_entity', renderer='json', request_method='DELETE', permission='delete')
+def delete_entity(request):
+    response = dict()
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
+    entity = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+    if entity and not entity.marked_for_deletion:
+        entity.marked_for_deletion = True
+        request.response.status = HTTPOk.code
+        return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such entity in the system")}
 
 
 @view_config(route_name='create_entity', renderer='json', request_method='POST', permission='create')

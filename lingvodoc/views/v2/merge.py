@@ -89,8 +89,8 @@ def merge_dictionaries(request):  # TODO: test
         if not client_id or not object_id:
             subreq = Request.blank('/dictionary')
             subreq.method = 'POST'
-            subreq.json = json.dumps({'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
-                                'translation_string': translation_string, 'translation': translation})
+            subreq.json = {'parent_object_id': parent_object_id, 'parent_client_id': parent_client_id,
+                                'translation_string': translation_string, 'translation': translation}
             headers = {'Cookie':request.headers['Cookie']}
             subreq.headers = headers
             response = request.invoke_subrequest(subreq)
@@ -213,7 +213,7 @@ def merge_perspectives_api(request):  # TODO: test
         if not client_id and not object_id:
             subreq = Request.blank('/dictionary/%s/%s/perspective' % (dictionary_client_id, dictionary_object_id))
             subreq.method = 'POST'
-            subreq.json = json.dumps({'translation_string': translation_string, 'translation': translation})
+            subreq.json = {'translation_string': translation_string, 'translation': translation}
             headers = {'Cookie':request.headers['Cookie']}
             subreq.headers = headers
             response = request.invoke_subrequest(subreq)
@@ -243,7 +243,7 @@ def merge_perspectives_api(request):  # TODO: test
                                 client_id,
                                 object_id))
         subreq.method = 'POST'
-        subreq.json = json.dumps({'fields': fields})
+        subreq.json = {'fields': fields}
         headers = {'Cookie':request.headers['Cookie']}
         subreq.headers = headers
         response = request.invoke_subrequest(subreq)

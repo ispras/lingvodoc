@@ -57,11 +57,14 @@ def create_dictionary(request):  # tested & in docs
     try:
 
         variables = {'auth': request.authenticated_userid}
-
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
+        try:
             req = request.json_body
+        except AttributeError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+        except ValueError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
         parent_client_id = req['parent_client_id']
         parent_object_id = req['parent_object_id']
         translation_gist_client_id = req['translation_gist_client_id']
@@ -80,7 +83,7 @@ def create_dictionary(request):  # tested & in docs
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
         subreq.headers = request.headers
-        subreq.json = json.dumps({'searchstring': 'WiP'})
+        subreq.json = {'searchstring': 'WiP'}
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -203,7 +206,7 @@ def delete_dictionary(request):  # tested & in docs
     return {'error': str("No such dictionary in the system")}
 
 
-# TODO: completely broken!
+# TODO: completely broken! (and unnecessary)
 @view_config(route_name='dictionary_copy', renderer='json', request_method='POST', permission='edit')
 def copy_dictionary(request):
     response = dict()
@@ -214,10 +217,10 @@ def copy_dictionary(request):
         path = request.route_url('create_dictionary')
         subreq = Request.blank(path)
         subreq.method = 'POST'
-        subreq.json = json.dumps({'translation_gist_client_id': parent.translation_gist_client_id,
+        subreq.json = {'translation_gist_client_id': parent.translation_gist_client_id,
                                   'translation_gist_object_id': parent.translation_gist_object_id,
                                   'parent_client_id': parent.parent_client_id,
-                                  'parent_object_id': parent.parent_object_id})
+                                  'parent_object_id': parent.parent_object_id}
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -241,7 +244,7 @@ def copy_dictionary(request):
                                  object_id=new_dict.object_id)
         subreq = Request.blank(path)
         subreq.method = 'POST'
-        subreq.json = json.dumps(resp.json)
+        subreq.json = resp.json
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -259,7 +262,7 @@ def copy_dictionary(request):
                                  object_id=new_dict.object_id)
         subreq = Request.blank(path)
         subreq.method = 'PUT'
-        subreq.json = json.dumps(resp.json)
+        subreq.json = resp.json
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -271,8 +274,8 @@ def copy_dictionary(request):
                                      dictionary_object_id=new_dict.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            subreq.json = json.dumps({'translation_gist_client_id': parent.translation_gist_client_id,
-                                  'translation_gist_object_id': parent.translation_gist_object_id})
+            subreq.json = {'translation_gist_client_id': parent.translation_gist_client_id,
+                                  'translation_gist_object_id': parent.translation_gist_object_id}
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -301,7 +304,7 @@ def copy_dictionary(request):
                                      perspective_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            subreq.json = json.dumps(resp.json)
+            subreq.json = resp.json
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -324,7 +327,7 @@ def copy_dictionary(request):
                                      perspective_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'PUT'
-            subreq.json = json.dumps(resp.json)
+            subreq.json = resp.json
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -347,7 +350,7 @@ def copy_dictionary(request):
                                      perspective_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            subreq.json = json.dumps(resp.json)
+            subreq.json = resp.json
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -877,7 +880,7 @@ def dictionaries_list(request):  # TODO: test
             subreq = Request.blank('/translation_service_search')
             subreq.method = 'POST'
             subreq.headers = request.headers
-            subreq.json = json.dumps({'searchstring': 'WiP'})
+            subreq.json = {'searchstring': 'WiP'}
             headers = dict()
             if request.headers.get('Cookie'):
                 headers = {'Cookie': request.headers['Cookie']}
@@ -1020,7 +1023,7 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     subreq = Request.blank('/translation_service_search')
     subreq.method = 'POST'
     subreq.headers = request.headers
-    subreq.json = json.dumps({'searchstring': 'WiP'})
+    subreq.json = {'searchstring': 'WiP'}
     headers = dict()
     if request.headers.get('Cookie'):
         headers = {'Cookie': request.headers['Cookie']}

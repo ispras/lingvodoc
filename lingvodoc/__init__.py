@@ -274,70 +274,68 @@ def configure_routes(config):
     # API #POST
     # should be done with standard form enctype="multipart/form-data"
     config.add_route(name="upload_user_blob",
-                     pattern="/blob")
+                     pattern="/blob",
+                     factory='lingvodoc.models.ApproveAllAcl')
 
     # seems to be redundant
     # not anymore
     # API #GET
     # no params, returns file
     config.add_route(name="get_user_blob",
-                    pattern="/blobs/{client_id}/{object_id}")
+                    pattern="/blobs/{client_id}/{object_id}",
+                     factory='lingvodoc.models.ApproveAllAcl')
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
-                     pattern="/blobs")
+                     pattern="/blobs",
+                     factory='lingvodoc.models.ApproveAllAcl')
 
 # TODO: LOCALES!
     # API #GET && DELETE
     # [{'entity_type': '<entity_type>', 'parent_object_id': <parent_object_id>, 'parent_client_id': <parent_client_id>,
     # 'content': <'content'>, 'locale_id': <locale_id>}]
-    config.add_route(name='get_level_one_entity', pattern='/leveloneentity/{client_id}/{object_id}')
-    config.add_route(name='get_level_one_entity_indict', pattern='/dictionary/'
+    config.add_route(name='get_entity', pattern='/entity/{client_id}/{object_id}',
+                     factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='get_entity_indict', pattern='/dictionary/'
                                                                  '{dictionary_client_id}/{dictionary_object_id}'
                                                                  '/perspective/'
                                                                  '{perspective_client_id}/{perspective_id}/'
                                                                  'lexical_entry/'
                                                                  '{lexical_entry_client_id}/{lexical_entry_object_id}/'
-                                                                 'leveloneentity/'
-                                                                 '{client_id}/{object_id}')  # tested (no del)
-
-    config.add_route(name='get_level_two_entity', pattern='/leveltwoentity/{client_id}/{object_id}')  # tested (no del)
-    config.add_route(name='get_level_two_entity_indict', pattern='/dictionary/'
-                                                                 '{dictionary_client_id}/{dictionary_object_id}'
-                                                                 '/perspective/'
-                                                                 '{perspective_client_id}/{perspective_id}/'
-                                                                 'lexical_entry/'
-                                                                 '{lexical_entry_client_id}/{lexical_entry_object_id}/'
-                                                                 'leveloneentity/'
-                                                                 '{leveloneentity_client_id}/{leveloneentity_object_id}/'
-                                                                 'leveltwoentity/'
-                                                                 '{client_id}/{object_id}')  # tested (no del)
+                                                                 'entity/'
+                                                                 '{client_id}/{object_id}',
+                     factory='lingvodoc.models.ApproveAllAcl')  # tested (no del)
 
     # API #GET && DELETE
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}')  # tested (no del)
+    config.add_route(name='get_group_entity', pattern='/group_entity/{client_id}/{object_id}',
+                     factory='lingvodoc.models.ApproveAllAcl')  # tested (no del)
     # tags are different there and in connected words
 
     # API #GET
     # GET parameter: entity_type = <type> (e.g: "etymology")
-    config.add_route(name='get_connected_words', pattern='/lexical_entry/{client_id}/{object_id}/connected')  # tested (no del)
+    config.add_route(name='get_connected_words', pattern='/lexical_entry/{client_id}/{object_id}/connected',
+                     factory='lingvodoc.models.ApproveAllAcl')  # tested (no del)
     config.add_route(name='get_connected_words_indict', pattern='/dictionary/'
                                                                 '{dictionary_client_id}/{dictionary_object_id}'
                                                                 '/perspective/'
                                                                 '{perspective_client_id}/{perspective_id}/'
                                                                 'lexical_entry/'
                                                                 '{client_id}/{object_id}/'
-                                                                'connected')  # tested
+                                                                'connected',
+                     factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     # API #POST (TODO: change to PATCH method later)
     # {entity_type: <entity_type>, content: <tag>, connections: [{object_id: <obj_id>, client_id: <cl_id>}
-    config.add_route(name='add_group_entity', pattern='/group_entity')  # tested
+    config.add_route(name='add_group_entity', pattern='/group_entity',
+                     factory='lingvodoc.models.ApproveAllAcl')  # tested
     config.add_route(name='add_group_indict', pattern='/dictionary/'
                                                       '{dictionary_client_id}/{dictionary_object_id}'
                                                       '/perspective/'
                                                       '{perspective_client_id}/{perspective_id}/'
                                                       'lexical_entry/'
-                                                      'connect')  # tested
+                                                      'connect',
+                     factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     # API #GET
     # like
@@ -385,16 +383,6 @@ def configure_routes(config):
     config.add_route(name='create_entities_bulk', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                           '/perspective/{perspective_client_id}/{perspective_id}/entities',
                      factory='lingvodoc.models.ApproveAllAcl')  # TODO: test
-
-    # API #POST
-    # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
-    # ids are returned
-    config.add_route(name='create_level_two_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
-                                                   'lexical_entry/{lexical_entry_client_id}/'
-                                                   '{lexical_entry_object_id}/leveloneentity/{level_one_client_id}/'
-                                                   '{level_one_object_id}/leveltwoentity',
-                     factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     # API #GET
     # params: start_from=M, count=N, sort_by=<entity_type>

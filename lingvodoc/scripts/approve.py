@@ -30,7 +30,8 @@ def approve(session, server_url,dictionary_client_id, dictionary_object_id, clie
     perspective = session.get(connect_url)
     perspective = json.loads(perspective.text)
     entities = list()
-    for lexicalentry in perspective['lexical_entries']:
+    for lexicalentry in perspective['lexical_entries']: # TODO: make flatten list of only entities
+    # TODO: (there may be a problem with track - it returns entities from other perspectives)
         for entity in lexicalentry['contains']:
             if entity['level'] in ['leveloneentity', 'groupingentity']:
                 not_publ = True

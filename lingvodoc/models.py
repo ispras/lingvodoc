@@ -120,57 +120,71 @@ from collections import deque
 #     return vec
 
 
+def entity_content(xx, publish, root):
+    additional_metadata = None
+    if hasattr(xx, "additional_metadata"):
+        if xx.additional_metadata:
+            additional_metadata = json.loads(xx.additional_metadata)  # TODO: check if json.loads json.dumps is excessive
+    locale_id = None
+    if hasattr(xx, "locale_id"):
+        locale_id = xx.locale_id
+    contains = list()
+    tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+        TranslationAtom.parent_client_id == TranslationGist.client_id,
+        TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+        TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+        TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+        Field.client_id == xx.field_client_id, Field.object_id == xx.field_object_id,
+        TranslationAtom.locale_id == 2).first()
+    if tr_atom.content == 'link' and root:
+        lex_entry = DBSession.query(LexicalEntry).join(Entity, and_(
+            Entity.link_client_id == LexicalEntry.client_id,
+            Entity.link_object_id == LexicalEntry.object_id)).filter(
+            Entity.client_id == xx.client_id, Entity.object_id == xx.object_id).first()
+        contains = recursive_content(lex_entry, publish, False)
+    contains += recursive_content(xx, publish, True)  # todo: check nested entities handling
+    published = False
+    if xx.publishingentity.published:
+        published = True
+    info = {'level': xx.__tablename__,
+            'content': xx.content,
+            'object_id': xx.object_id,
+            'client_id': xx.client_id,
+            'parent_object_id': xx.parent_object_id,
+            'parent_client_id': xx.parent_client_id,
+            'link_object_id': xx.parent_object_id,
+            'link_client_id': xx.parent_client_id,
+            'field_object_id': xx.field_client_id,
+            'field_client_id': xx.field_object_id,
+            'locale_id': locale_id,
+            'additional_metadata': additional_metadata,
+            'contains': contains,
+            'published': published}
+    return info
+
+
 def recursive_content(self, publish, root=True):  # TODO: completely redo
     """
     :param publish:
     :param root: The value is True if we want to get underlying lexical entries.
     :return:
     """
-    vec = []
+    vec = list()
     # This code may IS much faster.
-    m = filter(lambda x: x[1].direction.name == "ONETOMANY" and hasattr(self, str(x[0])),
-               inspect(type(self)).relationships.items())
-    for (name, relationship) in m:
-        entry_content = getattr(self, str(name))
-        for xx in entry_content:
-            additional_metadata = None
-            if hasattr(xx, "additional_metadata"):
-                if xx.additional_metadata:
-                    additional_metadata = json.loads(xx.additional_metadata)
-            locale_id = None
-            if hasattr(xx, "locale_id"):
-                locale_id = xx.locale_id
-            contains = None
-            tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
-                TranslationAtom.parent_client_id == TranslationGist.client_id,
-                TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
-                TranslationGist.client_id == Field.data_type_translation_gist_client_id,
-                TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
-                Field.client_id == xx.field_client_id, Field.object_id == xx.field_object_id).first()
-            if tr_atom.content == 'link' and root:
-                lex_entry = DBSession.query(LexicalEntry).join(Entity, and_(
-                    Entity.link_client_id == LexicalEntry.client_id,
-                    Entity.link_object_id == LexicalEntry.object_id)).filter(
-                    Entity.client_id == xx.client_id, Entity.object_id == xx.object_id).first()
-                contains = recursive_content(lex_entry, publish, False)
-            info = {'level': xx.__tablename__,
-                    'content': xx.content,
-                    'object_id': xx.object_id,
-                    'client_id': xx.client_id,
-                    'parent_object_id': xx.parent_object_id,
-                    'parent_client_id': xx.parent_client_id,
-                    'link_object_id': xx.parent_object_id,
-                    'link_client_id': xx.parent_client_id,
-                    'locale_id': locale_id,
-                    'additional_metadata': additional_metadata,
-                    'contains': contains}
-            published = False
-            if info['contains']:
-                log.debug(info['contains'])
-                ents = list(info['contains'])
-                # TODO: handle published
-            info['published'] = published
-            vec += [info]
+    # m = filter(lambda x: x[1].direction.name == "ONETOMANY" and hasattr(self, str(x[0])),
+    #            inspect(type(self)).relationships.items())
+    # for (name, relationship) in m:
+    #     entry_content = getattr(self, str(name))
+    #     for xx in entry_content:
+    for xx in self.entity:
+        info = entity_content(xx, publish, root)
+        if publish and not info['published']:
+            continue
+        # if info['contains']:
+        #     log.debug(info['contains'])
+        #     ents = list(info['contains'])
+        #     # TODO: check published handling
+        vec.append(info)
     return vec
 
 
@@ -311,6 +325,8 @@ class CompositeIdMixin(object):
         kwargs["object_id"] = client_by_id.counter
         # self.object_id = client_by_id.counter
         client_by_id.counter += 1
+
+
         super().__init__(**kwargs)
 
 
@@ -560,6 +576,11 @@ class DictionaryPerspectiveToField(CompositeIdMixin,
 
 
 class DataTypeMixin(PrimeTableArgs):
+    """
+     Used only by Field. This mixin is needed, because super() can not be used in __table_args__ in
+     Field class definition. Sqlalchemy looks through __table_args__ before class is fully initialized,
+     so super() does not exist yet.
+    """
 
     @declared_attr
     def __table_args__(cls):
@@ -662,23 +683,8 @@ class Entity(CompositeIdMixin,
         DBSession.add(publishingentity)
         self.publishingentity = publishingentity
 
-        # def track(self, publish):
-        #     dictionary = {'level': self.__tablename__,
-        #                   'content': self.content,
-        #                   'object_id': self.object_id,
-        #                   'client_id': self.client_id,
-        #                   'parent_object_id': self.parent_object_id,
-        #                   'parent_client_id': self.parent_client_id,
-        #                   'entity_type': self.entity_type,
-        #                   'marked_for_deletion': self.marked_for_deletion,
-        #                   'locale_id': self.locale_id
-        #                   }
-        #     if self.additional_metadata:
-        #         dictionary['additional_metadata'] = self.additional_metadata
-        #     children = recursive_content(self, publish)
-        #     if children:
-        #         dictionary['contains'] = children
-        #     return dictionary
+    def track(self, publish):
+        return entity_content(self, publish, False)
 
 
 class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
