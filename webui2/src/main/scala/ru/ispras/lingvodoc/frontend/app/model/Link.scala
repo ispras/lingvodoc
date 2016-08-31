@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.model
 import upickle.Js
 
 
-case class Link(override val clientId: Int, override val objectId: Int) extends Object(clientId, objectId);
+case class Link(override val clientId: Int, override val objectId: Int) extends Object(clientId, objectId)
 
 
 

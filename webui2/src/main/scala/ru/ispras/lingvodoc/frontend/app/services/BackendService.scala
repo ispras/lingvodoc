@@ -400,6 +400,27 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+
+
+  def getField(id: CompositeId): Future[Field] = {
+    val p = Promise[Field]()
+    val url = "field/" + encodeURIComponent(id.clientId.toString) + "/" + encodeURIComponent(id.objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val field = read[Field](js.JSON.stringify(response))
+          p.success(field)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed field json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed field data. Missing some required fields", e))
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to fetch perspective fields", e))
+    }
+    p.future
+  }
+
+
   /**
     * GetPerspective fields
     *
@@ -644,8 +665,12 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
-
-
+  /**
+    * Gets translation atom by id
+    * @param clientId
+    * @param objectId
+    * @return
+    */
   def translationAtom(clientId: Int, objectId: Int): Future[TranslationAtom] = {
     val defer = $q.defer[TranslationAtom]()
     val url = "translationatom/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
@@ -657,6 +682,34 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     defer.promise
   }
+
+  /**
+    * Creates translation atom
+    * @param gistId
+    * @return
+    */
+  def createTranslationAtom(gistId: CompositeId, string: LocalizedString): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+    val req = JSON.stringify(js.Dynamic.literal("parent_client_id" -> gistId.clientId,
+      "parent_object_id" -> gistId.objectId,
+      "locale_id" -> string.localeId,
+      "content" -> string.str
+    ))
+
+    $http.post[js.Dynamic](getMethodUrl("translationatom"), req) onComplete {
+      case Success(response) =>
+        try {
+          val gistId = read[CompositeId](js.JSON.stringify(response))
+          p.success(gistId)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Creation of translation atom failed. Malformed json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Creation of translation atom failed. Malformed data", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to create translation atom", e))
+    }
+    p.future
+  }
+
 
   def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
     val defer = $q.defer[TranslationGist]()
@@ -674,6 +727,24 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       case Failure(e) => defer.reject("Failed to get translation gist: " + e.getMessage)
     }
     defer.promise
+  }
+
+  def createTranslationGist(gistType: String): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    val req = JSON.stringify(js.Dynamic.literal("type" -> gistType))
+    $http.post[js.Dynamic](getMethodUrl("translationgist"), req) onComplete {
+      case Success(response) =>
+        try {
+          val gistId = read[CompositeId](js.JSON.stringify(response))
+          p.success(gistId)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Creation of translation gist failed. Malformed json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Creation of translation gist failed. Malformed data", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to create translation gist", e))
+    }
+    p.future
   }
 
 
@@ -694,12 +765,77 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
+  def createField(translationGist: CompositeId, dataTypeGist: CompositeId): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    val req = JSON.stringify(
+      js.Dynamic.literal("translation_gist_client_id" -> translationGist.clientId,
+        "translation_gist_object_id" -> translationGist.objectId,
+        "data_type_translation_gist_client_id" -> dataTypeGist.clientId,
+        "data_type_translation_gist_object_id" -> dataTypeGist.objectId)
+    )
+
+    $http.post[js.Dynamic](getMethodUrl("field"), req) onComplete {
+      case Success(response) =>
+        try {
+          val gistId = read[CompositeId](js.JSON.stringify(response))
+          p.success(gistId)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Creation of field failed. Malformed json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Creation of field failed. Malformed data", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to create field", e))
+    }
+    p.future
+  }
+
+
+  def fields(): Future[Seq[Field]] = {
+    val p = Promise[Seq[Field]]()
+
+    $http.get[js.Dynamic](getMethodUrl("fields")) onComplete {
+      case Success(response) =>
+        try {
+          val fields = read[Seq[Field]](js.JSON.stringify(response))
+          p.success(fields)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed fields json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed fields data", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of fields", e))
+    }
+    p.future
+  }
+
+  def dataTypes(): Future[Seq[TranslationGist]] = {
+    val p = Promise[Seq[TranslationGist]]()
+
+    $http.get[js.Dynamic](getMethodUrl("all_data_types")) onComplete {
+      case Success(response) =>
+        try {
+          val fields = read[Seq[TranslationGist]](js.JSON.stringify(response))
+          p.success(fields)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed data types json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed data types data", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of data types", e))
+    }
+    p.future
+  }
+
+
+
   def getLocales(): Future[Seq[Locale]] = {
     val defer = $q.defer[Seq[Locale]]()
     val locales = Locale(2, "En", "English", "") :: Locale(1, "Ru", "Russian", "") :: Locale(3, "De", "German", "") :: Locale(4, "Fr", "French", "") :: Nil
     defer.resolve(locales)
     defer.future
   }
+
+
+
+
 }
 
 

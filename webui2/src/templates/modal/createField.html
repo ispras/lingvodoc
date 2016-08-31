@@ -4,7 +4,7 @@
 
 <div class="modal-body">
     <!-- type names -->
-    <div class="row" ng-repeat="name in fieldType.names">
+    <div class="row" ng-repeat="name in fieldEntry.names">
 
         <div class="col-lg-6">
 
@@ -20,7 +20,7 @@
                 <span class="input-group-addon">Language</span>
                 <select id="type-name-locale-{{$index}}" class="form-control"
                         ng-model="name.localeId" convert-to-number>
-                    <option ng-repeat="locale in controller.getAvailableLocales(fieldType.names, name)" ng-attr-value="{{ locale.id }}">{{locale.name }}
+                    <option ng-repeat="locale in controller.getAvailableLocales(fieldEntry.names, name)" ng-attr-value="{{ locale.id }}">{{locale.name }}
                     </option>
                 </select>
             </div>
@@ -34,7 +34,7 @@
 
         <div class="col-lg-6">
 
-            <button class="btn btn-info" ng-click="controller.addNameTranslation(fieldType)">
+            <button class="btn btn-info" ng-click="controller.addNameTranslation(fieldEntry)">
                 <span class="glyphicon glyphicon-plus-sign">Add translation</span>
             </button>
 
@@ -58,7 +58,7 @@
         <div class="col-lg-6">
             <div class="checkbox">
                 <label>
-                    <input type="checkbox" ng-checked="fieldType.translatable">
+                    <input type="checkbox" ng-checked="fieldEntry.translatable">
                     Translatable
                 </label>
             </div>
