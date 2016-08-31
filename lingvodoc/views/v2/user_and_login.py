@@ -285,7 +285,7 @@ def get_user_info(request):  # tested
     response['default_locale_id'] = user.default_locale_id
     response['birthday'] = str(user.birthday)
     response['signup_date'] = str(user.signup_date)
-    response['is_active'] = str(user.is_active)
+    response['is_active'] = user.is_active
     response['email'] = user.email.email
     meta = None
     if user.additional_metadata:
