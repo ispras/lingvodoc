@@ -2,20 +2,19 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{AnchorScroll, Location, Scope}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
-import ru.ispras.lingvodoc.frontend.app.model.{Dictionary, Language, Locale, LocalizedString}
+import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldType, Layer, Translatable}
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.util.{Failure, Success}
-
 
 
 @js.native
@@ -27,6 +26,8 @@ trait CreateDictionaryScope extends Scope {
   var creationMode: String = js.native
   var names: js.Array[LocalizedString] = js.native
   var layers: js.Array[Layer] = js.native
+  var fields: js.Array[Field] = js.native
+  var dataTypes: js.Array[TranslationGist] = js.native
   var step: Int = js.native
 }
 
@@ -42,8 +43,9 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   scope.languageId = ""
   scope.creationMode = "create"
   scope.layers = js.Array[Layer]()
+  scope.fields = js.Array[Field]()
+  scope.dataTypes = js.Array[TranslationGist]()
   scope.step = 2
-
 
 
   // load data from backend
@@ -65,7 +67,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   /**
-    * Returns TRUE is all names are empty and no language is selected
+    * Returns TRUE if all names are empty and no language is selected
     *
     * @return
     */
@@ -97,18 +99,18 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
 
   @JSExport
   def addLayer() = {
-    val layer = Layer(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")), js.Array[FieldType]())
+    val layer = Layer(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")), js.Array[FieldEntry]())
     scope.layers = scope.layers :+ layer
   }
 
   @JSExport
   def addFieldType(layer: Layer) = {
-    layer.fieldTypes = layer.fieldTypes :+ FieldType(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")))
+    layer.fieldEntries = layer.fieldEntries :+ FieldEntry(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")))
   }
 
   @JSExport
-  def removeFieldType(layer: Layer, fieldType: FieldType) = {
-    layer.fieldTypes = layer.fieldTypes.filterNot(d => d.equals(fieldType))
+  def removeFieldType(layer: Layer, fieldType: FieldEntry) = {
+    layer.fieldEntries = layer.fieldEntries.filterNot(d => d.equals(fieldType))
   }
 
   @JSExport
@@ -117,7 +119,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     if (obj.names.exists(_.localeId == currentLocaleId)) {
       // pick next available locale
       scope.locales.filterNot(locale => obj.names.exists(name => name.localeId == locale.id)).toList match {
-        case firstLocale::otherLocales =>
+        case firstLocale :: otherLocales =>
           obj.names = obj.names :+ LocalizedString(firstLocale.id, "")
         case Nil =>
       }
@@ -129,27 +131,27 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
 
 
   @JSExport
-  def moveFieldTypeUp(layer: Layer, fieldType: FieldType) = {
-    def aux(lx: List[FieldType], acc: List[FieldType]): List[FieldType] = {
+  def moveFieldTypeUp(layer: Layer, fieldType: FieldEntry) = {
+    def aux(lx: List[FieldEntry], acc: List[FieldEntry]): List[FieldEntry] = {
       lx match {
         case Nil => acc
         case a :: b :: xs if b.equals(fieldType) => aux(xs, a :: b :: acc)
         case x :: xs => aux(xs, x :: acc)
       }
     }
-    layer.fieldTypes = aux(layer.fieldTypes.toList, Nil).reverse.toJSArray
+    layer.fieldEntries = aux(layer.fieldEntries.toList, Nil).reverse.toJSArray
   }
 
   @JSExport
-  def moveFieldTypeDown(layer: Layer, fieldType: FieldType) = {
-    def aux(lx: List[FieldType], acc: List[FieldType]): List[FieldType] = {
+  def moveFieldTypeDown(layer: Layer, fieldType: FieldEntry) = {
+    def aux(lx: List[FieldEntry], acc: List[FieldEntry]): List[FieldEntry] = {
       lx match {
         case Nil => acc
         case a :: b :: xs if a.equals(fieldType) => aux(xs, a :: b :: acc)
         case x :: xs => aux(xs, x :: acc)
       }
     }
-    layer.fieldTypes = aux(layer.fieldTypes.toList, Nil).reverse.toJSArray
+    layer.fieldEntries = aux(layer.fieldEntries.toList, Nil).reverse.toJSArray
   }
 
 
@@ -171,28 +173,59 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
-  def createNewFieldType() = {
+  def createNewField(fieldEntry: FieldEntry) = {
 
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/createFieldType.html"
-    options.controller = "CreateFieldTypeController"
+    options.templateUrl = "/static/templates/modal/createField.html"
+    options.controller = "CreateFieldController"
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
     options.resolve = js.Dynamic.literal(
       params = () => {
-        js.Dynamic.literal(locales = scope.locales.asInstanceOf[js.Object])
+        js.Dynamic.literal(entry = fieldEntry.asInstanceOf[js.Object],
+          locales = scope.locales.asInstanceOf[js.Object],
+          dataTypes = scope.dataTypes.asInstanceOf[js.Object])
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
 
-    val instance = modal.open[FieldType](options)
+    val instance = modal.open[FieldEntry](options)
 
     instance.result map {
-      case field: FieldType => console.log((field :: Nil).toJSArray)
+      f => createField(f)
     }
   }
 
 
+  private[this] def createField(fieldType: FieldEntry) = {
+
+    // create gist
+    backend.createTranslationGist("Field") onComplete {
+      case Success(gistId) =>
+        // create translation atoms
+        // TODO: add some error checks
+        val seqs = fieldType.names map {
+          name => backend.createTranslationAtom(gistId, name)
+        }
+
+        // make sure all translations created successfully
+        Future.sequence(seqs.toSeq) onComplete {
+          case Success(_) =>
+            // and finally create field
+            backend.createField(gistId, CompositeId.fromObject(fieldType.dataType.get)) map {
+              fieldId =>
+                // get field data
+                backend.getField(fieldId) map {
+                  field =>
+                    // add field to list of all available fields
+                    scope.fields = scope.fields :+ field
+                }
+            }
+          case Failure(e) => console.error(e.getMessage)
+        }
+      case Failure(e) => console.error(e.getMessage)
+    }
+  }
 
 
   /**
@@ -227,6 +260,20 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     * Loads data from backend
     */
   def load(): Unit = {
+
+    backend.dataTypes() map {
+      dataTypes => scope.dataTypes = dataTypes.toJSArray
+    }
+
+
+
+    // load list of fields
+    backend.fields() onComplete {
+      case Success(fields) =>
+        scope.fields = fields.toJSArray
+      case Failure(e) =>
+    }
+
 
     // load list of locales
     backend.getLocales onComplete {

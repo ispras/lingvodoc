@@ -49,20 +49,12 @@
 
             </div>
 
-
-
-
-
-
-
-
-
             <div ng-show="step==2">
 
                 <!-- Layers -->
                 <h1>Layers <button type="button" aria-label="Add layer" ng-click="controller.addLayer()"><span aria-hidden="true">+</span></button></h1>
 
-                <div class="row" ng-repeat="layer in layers">
+                <div class="row animate-repeat" ng-repeat="layer in layers">
 
                     <!-- layer -->
                     <div class="col-lg-12">
@@ -104,107 +96,92 @@
                         <br />
                         <br />
 
+
+
+                        <!-- Types block -->
+                        <div class="row">
+                            <div class="col-lg-12">
+
+                                <h3>Fields <button type="button" aria-label="Add layer" ng-click="controller.addFieldType(layer)"><span aria-hidden="true">+</span></button></h3>
+                                <!-- list of types -->
+                                <div class="row animate-repeat" ng-repeat="fieldEntry in layer.fieldEntries">
+                                    <!-- Type -->
+                                    <div class="col-lg-12">
+
+                                        <!-- type header -->
+                                        <div>
+                                            <button type="button" class="close" aria-label="Remove" ng-click="controller.removeFieldType(layer, fieldEntry)"><span aria-hidden="true">×</span></button>
+                                            <h4>#{{$index+1}}
+                                                <button type="button" class="control-button" aria-label="Up" ng-click="controller.moveFieldTypeUp(layer, fieldEntry)"><span aria-hidden="true">⇑</span></button>
+                                                <button type="button" class="control-button" aria-label="Down" ng-click="controller.moveFieldTypeDown(layer, fieldEntry)"><span aria-hidden="true">⇓</span></button>
+                                            </h4>
+                                        </div>
+                                        <!-- type header end -->
+
+                                        <div class="row">
+
+                                            <div class="col-lg-6">
+
+                                                <!-- Select from already existing fields -->
+                                                <select ng-model="fieldEntry.fieldId" class="form-control">
+                                                    <option ng-repeat="field in fields" value="{{field.getId}}">{{ field.translation }}</option>
+                                                </select>
+
+
+                                                <div>
+                                                    <!-- Create new field type -->
+                                                    <button type="button" class="btn btn-info" aria-label="Create new field type" ng-click="controller.createNewField(fieldEntry)">
+                                                        <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>New field type...
+                                                    </button>
+                                                </div>
+
+                                            </div>
+
+
+                                            <div class="col-lg-6">
+
+                                                <!-- Select from already existing fields -->
+                                                <select ng-model="fieldEntry.fieldId" class="form-control">
+                                                    <option ng-repeat="field in fields" value="{{field.getId}}">{{ field.translation }}</option>
+                                                </select>
+
+                                            </div>
+
+
+
+
+
+
+                                        </div>
+
+                                        <hr />
+
+                                    </div>
+
+
+
+
+                                    <!-- type end -->
+                                </div>
+                                <!-- list of types -->
+
+
+                                <br />
+                                <br />
+
+                            </div>
+                            <!-- types end -->
+                        </div>
+
+
+
+
+
                     </div>
 
                     <hr/>
 
-                    <!-- Types block -->
-                    <div class="col-lg-12">
 
-                        <h3>Types <button type="button" aria-label="Add layer" ng-click="controller.addFieldType(layer)"><span aria-hidden="true">+</span></button></h3>
-                        <!-- list of types -->
-                        <div class="row" ng-repeat="fieldType in layer.fieldTypes">
-                            <!-- Type -->
-                            <div class="col-lg-12">
-
-                                <!-- type header -->
-                                <div>
-                                    <button type="button" class="close" aria-label="Remove" ng-click="controller.removeFieldType(layer, fieldType)"><span aria-hidden="true">×</span></button>
-                                    <h4>#{{$index+1}}
-                                        <button type="button" class="control-button" aria-label="Up" ng-click="controller.moveFieldTypeUp(layer, fieldType)"><span aria-hidden="true">⇑</span></button>
-                                        <button type="button" class="control-button" aria-label="Down" ng-click="controller.moveFieldTypeDown(layer, fieldType)"><span aria-hidden="true">⇓</span></button>
-
-                                    </h4>
-
-                                </div>
-
-
-
-                                <button type="button" aria-label="O" ng-click="controller.createNewFieldType()"><span aria-hidden="true">O</span></button>
-
-
-
-                                <!-- type names -->
-                                <div class="row" ng-repeat="name in fieldType.names">
-
-                                        <div class="col-lg-6">
-
-                                            <div class="input-group"><span class="input-group-addon">Name</span>
-                                                <input type="text" id="type-name-{{$index}}" class="form-control"
-                                                       ng-model="name.str" placeholder="">
-                                            </div>
-
-                                        </div>
-
-                                        <div class="col-lg-6">
-                                            <div class="input-group">
-                                                <span class="input-group-addon">Language</span>
-                                                <select id="type-name-locale-{{$index}}" class="form-control"
-                                                        ng-model="name.localeId" convert-to-number>
-                                                    <option ng-repeat="locale in locales" ng-attr-value="{{ locale.id }}">{{locale.name }}
-                                                    </option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                </div>
-                                <!-- type names end -->
-
-                                <br />
-
-                                <button class="btn btn-info" ng-click="controller.addNameTranslation(fieldType)">
-                                    <span class="glyphicon glyphicon-plus-sign">Add translation</span>
-                                </button>
-
-                                <br />
-                                <br/>
-
-                                <!-- Type description -->
-                                <div class="row">
-                                    <div class="col-lg-6">
-                                        <div class="input-group">
-                                            <span class="input-group-addon">Type</span>
-                                            <select id="field-type-{{$index}}" class="form-control">
-                                                <option>Word</option>
-                                                <option>Image</option>
-                                                <option>Sound</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-lg-6">
-                                        <div class="input-group">
-                                            <label for="translatable-checkbox-{{$parent.$index + '-' +$index}}">Translatable</label>
-                                            <input id="translatable-checkbox-{{$parent.$index + '-' +$index}}" type="checkbox">
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Type description end -->
-
-
-                                <hr />
-
-
-                            </div>
-                            <!-- type end -->
-                        </div>
-                        <!-- list of types -->
-
-
-                        <br />
-                        <br />
-
-                    </div>
-                    <!-- types end -->
 
 
 
