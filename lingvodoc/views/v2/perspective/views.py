@@ -1249,7 +1249,6 @@ def lexical_entries_published_count(request):
         return {'error': str("No such perspective in the system")}
 
 
-# TODO: completely broken!
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
@@ -1265,8 +1264,7 @@ def approve_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        # {""}
-        for entry in req['entities']:
+        for entry in req:
             entity = DBSession.query(Entity).\
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
             if entity:
@@ -1289,7 +1287,6 @@ def approve_entity(request):
         return {'error': str(e)}
 
 
-# TODO: completely broken!
 @view_config(route_name='approve_entity', renderer='json', request_method='DELETE', permission='delete')
 def disapprove_entity(request):
     try:
@@ -1305,7 +1302,6 @@ def disapprove_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        # {""}
         for entry in req:
             entity = DBSession.query(Entity).\
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
