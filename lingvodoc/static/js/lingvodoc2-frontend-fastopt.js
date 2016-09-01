@@ -9746,6 +9746,75 @@ function $asArrayOf_jl_Throwable(obj, depth) {
   return (($isArrayOf_jl_Throwable(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Ljava.lang.Throwable;", depth))
 }
 /** @constructor */
+function $c_ju_Random() {
+  $c_O.call(this);
+  this.seedHi$1 = 0;
+  this.seedLo$1 = 0;
+  this.nextNextGaussian$1 = 0.0;
+  this.haveNextNextGaussian$1 = false
+}
+$c_ju_Random.prototype = new $h_O();
+$c_ju_Random.prototype.constructor = $c_ju_Random;
+/** @constructor */
+function $h_ju_Random() {
+  /*<skip>*/
+}
+$h_ju_Random.prototype = $c_ju_Random.prototype;
+$c_ju_Random.prototype.init___ = (function() {
+  $c_ju_Random.prototype.init___J.call(this, $m_ju_Random$().java$util$Random$$randomSeed__J());
+  return this
+});
+$c_ju_Random.prototype.init___J = (function(seed_in) {
+  this.haveNextNextGaussian$1 = false;
+  this.setSeed__J__V(seed_in);
+  return this
+});
+$c_ju_Random.prototype.nextInt__I__I = (function(n) {
+  if ((n <= 0)) {
+    throw new $c_jl_IllegalArgumentException().init___T("n must be positive")
+  } else {
+    return (((n & ((-n) | 0)) === n) ? (this.next__I__I(31) >> $clz32(n)) : this.loop$1__p1__I__I(n))
+  }
+});
+$c_ju_Random.prototype.next__I__I = (function(bits) {
+  var oldSeedHi = this.seedHi$1;
+  var oldSeedLo = this.seedLo$1;
+  var loProd = (11 + (15525485 * oldSeedLo));
+  var hiProd = ((1502 * oldSeedLo) + (15525485 * oldSeedHi));
+  var x = (loProd / 16777216);
+  var newSeedHi = (16777215 & (($uI((x | 0)) + (16777215 & $uI((hiProd | 0)))) | 0));
+  var newSeedLo = (16777215 & $uI((loProd | 0)));
+  this.seedHi$1 = newSeedHi;
+  this.seedLo$1 = newSeedLo;
+  var result32 = ((newSeedHi << 8) | (newSeedLo >> 16));
+  return ((result32 >>> ((32 - bits) | 0)) | 0)
+});
+$c_ju_Random.prototype.loop$1__p1__I__I = (function(n$1) {
+  _loop: while (true) {
+    var bits = this.next__I__I(31);
+    var value = ((bits % n$1) | 0);
+    if ((((((bits - value) | 0) + (((-1) + n$1) | 0)) | 0) < 0)) {
+      continue _loop
+    } else {
+      return value
+    }
+  }
+});
+$c_ju_Random.prototype.setSeed__J__V = (function(seed_in) {
+  var seed = new $c_sjsr_RuntimeLong().init___I__I((-1), 65535).$$amp__sjsr_RuntimeLong__sjsr_RuntimeLong(new $c_sjsr_RuntimeLong().init___I__I((-554899859), 5).$$up__sjsr_RuntimeLong__sjsr_RuntimeLong(seed_in));
+  this.seedHi$1 = seed.$$greater$greater$greater__I__sjsr_RuntimeLong(24).lo$2;
+  this.seedLo$1 = (16777215 & seed.lo$2);
+  this.haveNextNextGaussian$1 = false
+});
+var $d_ju_Random = new $TypeData().initClass({
+  ju_Random: 0
+}, false, "java.util.Random", {
+  ju_Random: 1,
+  O: 1,
+  Ljava_io_Serializable: 1
+});
+$c_ju_Random.prototype.$classData = $d_ju_Random;
+/** @constructor */
 function $c_ju_regex_Matcher() {
   $c_O.call(this);
   this.pattern0$1 = null;
@@ -12622,6 +12691,43 @@ function $m_jl_Short$() {
   return $n_jl_Short$
 }
 /** @constructor */
+function $c_ju_Random$() {
+  $c_O.call(this)
+}
+$c_ju_Random$.prototype = new $h_O();
+$c_ju_Random$.prototype.constructor = $c_ju_Random$;
+/** @constructor */
+function $h_ju_Random$() {
+  /*<skip>*/
+}
+$h_ju_Random$.prototype = $c_ju_Random$.prototype;
+$c_ju_Random$.prototype.init___ = (function() {
+  return this
+});
+$c_ju_Random$.prototype.java$util$Random$$randomSeed__J = (function() {
+  return new $c_sjsr_RuntimeLong().init___I(this.randomInt__p1__I()).$$less$less__I__sjsr_RuntimeLong(32).$$bar__sjsr_RuntimeLong__sjsr_RuntimeLong(new $c_sjsr_RuntimeLong().init___I__I((-1), 0).$$amp__sjsr_RuntimeLong__sjsr_RuntimeLong(new $c_sjsr_RuntimeLong().init___I(this.randomInt__p1__I())))
+});
+$c_ju_Random$.prototype.randomInt__p1__I = (function() {
+  var a = (4.294967296E9 * $uD($g.Math.random()));
+  return $doubleToInt(((-2.147483648E9) + $uD($g.Math.floor(a))))
+});
+var $d_ju_Random$ = new $TypeData().initClass({
+  ju_Random$: 0
+}, false, "java.util.Random$", {
+  ju_Random$: 1,
+  O: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_ju_Random$.prototype.$classData = $d_ju_Random$;
+var $n_ju_Random$ = (void 0);
+function $m_ju_Random$() {
+  if ((!$n_ju_Random$)) {
+    $n_ju_Random$ = new $c_ju_Random$().init___()
+  };
+  return $n_ju_Random$
+}
+/** @constructor */
 function $c_ju_concurrent_TimeUnit$() {
   $c_O.call(this);
   this.NANOSECONDS$1 = null;
@@ -14172,6 +14278,35 @@ function $m_s_util_Left$() {
   };
   return $n_s_util_Left$
 }
+/** @constructor */
+function $c_s_util_Random() {
+  $c_O.call(this);
+  this.self$1 = null
+}
+$c_s_util_Random.prototype = new $h_O();
+$c_s_util_Random.prototype.constructor = $c_s_util_Random;
+/** @constructor */
+function $h_s_util_Random() {
+  /*<skip>*/
+}
+$h_s_util_Random.prototype = $c_s_util_Random.prototype;
+$c_s_util_Random.prototype.init___ = (function() {
+  $c_s_util_Random.prototype.init___ju_Random.call(this, new $c_ju_Random().init___());
+  return this
+});
+$c_s_util_Random.prototype.init___ju_Random = (function(self) {
+  this.self$1 = self;
+  return this
+});
+var $d_s_util_Random = new $TypeData().initClass({
+  s_util_Random: 0
+}, false, "scala.util.Random", {
+  s_util_Random: 1,
+  O: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_s_util_Random.prototype.$classData = $d_s_util_Random;
 /** @constructor */
 function $c_s_util_Right$() {
   $c_O.call(this)
@@ -18041,6 +18176,53 @@ var $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$9 = new $Type
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$9.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$9;
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.fieldEntry$1$f = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry = (function($$outer, fieldEntry$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.fieldEntry$1$f = fieldEntry$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype.apply__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Future = (function(f) {
+  var this$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Future(f);
+  var f$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(nf$2) {
+      var nf = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(nf$2);
+      arg$outer.fieldEntry$1$f.fieldId$1 = nf.getId__T()
+    })
+  })(this));
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f$1, executor)
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.CreateDictionaryController$$anonfun$createNewField$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2;
+/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$3() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
@@ -18166,7 +18348,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$ano
           var jsx$4 = result
         };
         var jsx$3 = jsx$5.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$flatLanguages__sjs_js_Array__sc_Seq(jsx$4);
-        var jsx$2 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4(this);
+        var jsx$2 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4(this);
         var this$4 = $m_sc_Seq$();
         var jsx$1 = $as_sc_TraversableOnce(jsx$3.map__F1__scg_CanBuildFrom__O(jsx$2, this$4.ReusableCBFInstance$2));
         var this$5 = $m_sc_Seq$();
@@ -18229,26 +18411,26 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype.apply__O__O = (function(v1) {
   return this.apply__Lru_ispras_lingvodoc_frontend_app_model_Language__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_model_Language(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Language__s_concurrent_Future = (function(language) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Language__s_concurrent_Future = (function(language) {
   var jsx$1 = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f;
   var this$1 = $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$().getLocale__s_Option();
   return jsx$1.translateLanguage__Lru_ispras_lingvodoc_frontend_app_model_Language__I__s_concurrent_Future(language, $uI((this$1.isEmpty__Z() ? 2 : this$1.get__O())))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4 = (function($$outer) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
   } else {
@@ -18256,22 +18438,23 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$ano
   };
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$9;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4$$anonfun$apply$10;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null;
-  this.fieldType$4$f = null
+  this.fieldType$2$f = null;
+  this.p$1$f = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1;
@@ -18281,13 +18464,23 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryContro
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype;
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype.apply__O__O = (function(v1) {
-  this.apply__s_util_Try__V($as_s_util_Try(v1))
+  return this.apply__s_util_Try__O($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype.apply__s_util_Try__V = (function(x0$1) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Promise = (function($$outer, fieldType$2, p$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.fieldType$2$f = fieldType$2;
+  this.p$1$f = p$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype.apply__s_util_Try__O = (function(x0$1) {
   if ($is_s_util_Success(x0$1)) {
     var x2 = $as_s_util_Success(x0$1);
     var gistId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(x2.value$2);
-    var array = this.fieldType$4$f.names$1;
+    var array = this.fieldType$2$f.names$1;
     var array$1 = [];
     $uI(array.length);
     var i = 0;
@@ -18346,25 +18539,19 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$ano
       })
     })(this$5));
     var executor$2 = $m_s_concurrent_Future$InternalCallbackExecutor$();
-    $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$7, f$2, executor$2).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, gistId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+    $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$7, f$2, executor$2).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, gistId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+    return (void 0)
   } else if ($is_s_util_Failure(x0$1)) {
     var x3 = $as_s_util_Failure(x0$1);
     var e = x3.exception$2;
     var jsx$2 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
     var s = e.getMessage__T();
-    jsx$2.error(s)
+    jsx$2.error(s);
+    var this$9 = this.p$1$f;
+    return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$9, e)
   } else {
     throw new $c_s_MatchError().init___O(x0$1)
   }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry = (function($$outer, fieldType$4) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  this.fieldType$4$f = fieldType$4;
-  return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1: 0
@@ -18378,22 +18565,22 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null;
   this.gistId$1$2 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__O($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1__Lru_ispras_lingvodoc_frontend_app_model_CompositeId = (function($$outer, gistId$1) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1__Lru_ispras_lingvodoc_frontend_app_model_CompositeId = (function($$outer, gistId$1) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
   } else {
@@ -18402,14 +18589,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$ano
   this.gistId$1$2 = gistId$1;
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype.apply__s_util_Try__O = (function(x0$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype.apply__s_util_Try__O = (function(x0$2) {
   if ($is_s_util_Success(x0$2)) {
     var jsx$2 = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f;
     var jsx$1 = this.gistId$1$2;
     $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
-    var o = $as_Lru_ispras_lingvodoc_frontend_app_model_Object(this.$$outer$2.fieldType$4$f.dataType$1.get__O());
+    var o = $as_Lru_ispras_lingvodoc_frontend_app_model_Object(this.$$outer$2.fieldType$2$f.dataType$1.get__O());
     var this$2 = jsx$2.createField__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId__I(), o.objectId__I()));
-    var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4(this);
+    var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5(this);
     var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
     return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$2, f, executor)
   } else if ($is_s_util_Failure(x0$2)) {
@@ -18418,44 +18605,37 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$ano
     var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
     var s = e.getMessage__T();
     jsx$3.error(s);
-    return (void 0)
+    var this$4 = this.$$outer$2.p$1$f;
+    return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$4, e)
   } else {
     throw new $c_s_MatchError().init___O(x0$2)
   }
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4 = (function($$outer) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future = (function(fieldId) {
-  var this$5 = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f.getField__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(fieldId);
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future = (function(fieldId) {
+  var this$6 = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f.getField__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(fieldId);
   var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
     return (function(field$2) {
       var field = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(field$2);
@@ -18473,26 +18653,36 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$ano
         i = ((1 + i) | 0)
       };
       array$1.push(field);
-      jsx$1.fields = array$1
+      jsx$1.fields = array$1;
+      var this$5 = arg$outer.$$outer$2.$$outer$2.p$1$f;
+      return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$5, field)
     })
   })(this));
   var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
-  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$5, f, executor)
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$6, f, executor)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype.apply__O__O = (function(v1) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype.apply__O__O = (function(v1) {
   return this.apply__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(v1))
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5: 1,
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$4$$anonfun$apply$5;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1$$anonfun$apply$5$$anonfun$apply$6;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_DashboardController$$anonfun$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -25763,7 +25953,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   array$1.push(elem);
   layer.fieldEntries$1 = array$1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.aux$1__p2__sci_List__sci_List__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__sci_List = (function(lx, acc, fieldType$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.aux$1__p2__sci_List__sci_List__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__sci_List = (function(lx, acc, fieldType$3) {
   _aux: while (true) {
     var rc8 = false;
     var x2 = null;
@@ -25781,7 +25971,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
         var x4 = $as_sci_$colon$colon(p3);
         var b = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(x4.head$5);
         var xs = x4.tl$5;
-        if (b.equals__O__Z(fieldType$2)) {
+        if (b.equals__O__Z(fieldType$3)) {
           var this$1 = acc;
           var this$2 = new $c_sci_$colon$colon().init___O__sci_List(b, this$1);
           var temp$acc = new $c_sci_$colon$colon().init___O__sci_List(a, this$2);
@@ -25919,6 +26109,25 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$getLocaleName__I__O = (function(localeId) {
   return this.getLocaleName__I__T(localeId)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$availableLayers__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__O = (function(layer) {
+  return this.availableLayers__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__sjs_js_Array(layer)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.availableLayers__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__sjs_js_Array = (function(layer) {
+  var array = this.scope$1.layers;
+  var array$1 = [];
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var x$11 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer(arg1);
+    if ((x$11.equals__O__Z(layer) !== true)) {
+      array$1.push(arg1)
+    };
+    i = ((1 + i) | 0)
+  };
+  return array$1
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$createNewField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O = (function(fieldEntry) {
   return this.createNewField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Future(fieldEntry)
 });
@@ -25938,6 +26147,12 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   };
   array$1.push(layer);
   jsx$1.layers = array$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$linkedLayersEnabled__O = (function() {
+  return this.linkedLayersEnabled__Z()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$selectField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O = (function(fieldEntry) {
+  return this.selectField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O(fieldEntry)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.load__V = (function() {
   var this$4 = this.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f.dataTypes__s_concurrent_Future();
@@ -25997,6 +26212,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   this.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f.getLocales__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$3().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   this.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f.getLanguages__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$load$4().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$getLinkedLayerDisplayName__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__O = (function(layer) {
+  return this.getLinkedLayerDisplayName__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__T(layer)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.getLocaleName__I__T = (function(localeId) {
   var array = this.scope$1.locales;
@@ -26061,6 +26279,19 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   };
   layer.fieldEntries$1 = jsx$1
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.selectField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O = (function(fieldEntry) {
+  var this$1 = fieldEntry.fieldId$1;
+  if ((this$1 === "add_new_field")) {
+    fieldEntry.fieldId$1 = "";
+    return this.createNewField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Future(fieldEntry)
+  } else {
+    return (void 0)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.linkedLayersEnabled__Z = (function() {
+  var array = this.scope$1.layers;
+  return ($uI(array.length) > 1)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.createDictionary2__V = (function() {
   var array = this.scope$1.languages;
   var len = $uI(array.length);
@@ -26091,6 +26322,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
     }
   }
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Future = (function(fieldType) {
+  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
+  this.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f.createTranslationGist__T__s_concurrent_Future("Field").onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Promise(this, fieldType, p), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+  return p
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$createDictionary2__O = (function() {
+  this.createDictionary2__V()
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.createNewField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__s_concurrent_Future = (function(fieldEntry) {
   var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
   options.templateUrl = "/static/templates/modal/createField.html";
@@ -26111,26 +26350,15 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   };
   var instance = this.modal$2.open(options);
   var this$1 = $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(instance.result);
-  var f$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer$1) {
-    return (function(f$2) {
-      var f = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(f$2);
-      arg$outer$1.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__V(f)
-    })
-  })(this));
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$createNewField$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(this, fieldEntry);
   var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
-  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f$1, executor)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$createDictionary2__O = (function() {
-  this.createDictionary2__V()
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$removeFieldType__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O = (function(layer, fieldType) {
   this.removeFieldType__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__V(layer, fieldType)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.$$js$exported$meth$step1NextDisabled__O = (function() {
   return this.step1NextDisabled__Z()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__V = (function(fieldType) {
-  this.ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$backend$f.createTranslationGist__T__s_concurrent_Future("Field").onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$CreateDictionaryController$$createField$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(this, fieldType), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.getAvailableLocales__sjs_js_Array__Lru_ispras_lingvodoc_frontend_app_model_LocalizedString__sjs_js_Array = (function(translations, currentTranslation) {
   var array = this.scope$1.locales;
@@ -26222,6 +26450,92 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   };
   return result
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.getLinkedLayerDisplayName__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__T = (function(layer) {
+  var this$1 = $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$().getLocale__s_Option();
+  var localeId = $uI((this$1.isEmpty__Z() ? 2 : this$1.get__O()));
+  var array = this.scope$1.layers;
+  var array$1 = [];
+  var len = $uI(array.length);
+  var i = 0;
+  while ((i < len)) {
+    var index = i;
+    var elem = new $c_T2().init___O__O(array[index], i);
+    array$1.push(elem);
+    i = ((1 + i) | 0)
+  };
+  var len$1 = $uI(array$1.length);
+  var i$1 = 0;
+  while (true) {
+    if ((i$1 < len$1)) {
+      var index$1 = i$1;
+      var arg1 = array$1[index$1];
+      var x = $as_T2(arg1);
+      var jsx$1 = (!layer.equals__O__Z(x.$$und1__O()))
+    } else {
+      var jsx$1 = false
+    };
+    if (jsx$1) {
+      i$1 = ((1 + i$1) | 0)
+    } else {
+      break
+    }
+  };
+  var i$2 = i$1;
+  var x1 = ((i$2 < $uI(array$1.length)) ? new $c_s_Some().init___O(array$1[i$2]) : $m_s_None$());
+  if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var x$1 = $as_T2(x2.x$2);
+    var this$5 = ((1 + x$1.$$und2$mcI$sp__I()) | 0);
+    var indexBasedName = ("#" + ("" + this$5))
+  } else {
+    var x$2 = $m_s_None$();
+    if ((x$2 === x1)) {
+      var indexBasedName = ""
+    } else {
+      var indexBasedName;
+      throw new $c_s_MatchError().init___O(x1)
+    }
+  };
+  var array$2 = layer.names$1;
+  var len$2 = $uI(array$2.length);
+  var i$3 = 0;
+  while (true) {
+    if ((i$3 < len$2)) {
+      var index$2 = i$3;
+      var arg1$1 = array$2[index$2];
+      var name = $as_Lru_ispras_lingvodoc_frontend_app_model_LocalizedString(arg1$1);
+      var jsx$2 = (!(name.localeId$1 === localeId))
+    } else {
+      var jsx$2 = false
+    };
+    if (jsx$2) {
+      i$3 = ((1 + i$3) | 0)
+    } else {
+      break
+    }
+  };
+  var i$4 = i$3;
+  var x1$2 = ((i$4 < $uI(array$2.length)) ? new $c_s_Some().init___O(array$2[i$4]) : $m_s_None$());
+  if ($is_s_Some(x1$2)) {
+    var x2$2 = $as_s_Some(x1$2);
+    var name$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_LocalizedString(x2$2.x$2);
+    var thiz = name$1.str$1;
+    var x$3 = $as_T(thiz.trim());
+    var this$10 = new $c_sci_StringOps().init___T(x$3);
+    if ($s_sc_TraversableOnce$class__nonEmpty__sc_TraversableOnce__Z(this$10)) {
+      return name$1.str$1
+    } else {
+      return indexBasedName
+    }
+  } else {
+    var x$4 = $m_s_None$();
+    if ((x$4 === x1$2)) {
+      return indexBasedName
+    } else {
+      throw new $c_s_MatchError().init___O(x1$2)
+    }
+  }
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.getLayerDisplayName__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__T = (function(layer) {
   var this$1 = $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$().getLocale__s_Option();
   var localeId = $uI((this$1.isEmpty__Z() ? 2 : this$1.get__O()));
@@ -26275,7 +26589,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   this.load__V();
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.aux$2__p2__sci_List__sci_List__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__sci_List = (function(lx, acc, fieldType$3) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.aux$2__p2__sci_List__sci_List__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__sci_List = (function(lx, acc, fieldType$4) {
   _aux: while (true) {
     var rc8 = false;
     var x2 = null;
@@ -26293,7 +26607,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
         var x4 = $as_sci_$colon$colon(p3);
         var b = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(x4.head$5);
         var xs = x4.tl$5;
-        if (a.equals__O__Z(fieldType$3)) {
+        if (a.equals__O__Z(fieldType$4)) {
           var this$1 = acc;
           var this$2 = new $c_sci_$colon$colon().init___O__sci_List(b, this$1);
           var temp$acc = new $c_sci_$colon$colon().init___O__sci_List(a, this$2);
@@ -26444,6 +26758,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   };
   return $as_sc_Seq(elem$1)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.availableLayers = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer(arg$1);
+  return this.$$js$exported$meth$availableLayers__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__O(prep0)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.createNewField = (function(arg$1) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(arg$1);
   return this.$$js$exported$meth$createNewField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O(prep0)
@@ -26452,6 +26770,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   var prep0 = arg$1;
   var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_LocalizedString(arg$2);
   return this.$$js$exported$meth$getAvailableLocales__sjs_js_Array__Lru_ispras_lingvodoc_frontend_app_model_LocalizedString__O(prep0, prep1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.linkedLayersEnabled = (function() {
+  return this.$$js$exported$meth$linkedLayersEnabled__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.getLinkedLayerDisplayName = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer(arg$1);
+  return this.$$js$exported$meth$getLinkedLayerDisplayName__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__O(prep0)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.getLayerDisplayName = (function(arg$1) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer(arg$1);
@@ -26466,6 +26791,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prot
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer(arg$1);
   var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(arg$2);
   return this.$$js$exported$meth$moveFieldTypeUp__Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O(prep0, prep1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.selectField = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(arg$1);
+  return this.$$js$exported$meth$selectField__Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry__O(prep0)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateDictionaryController.prototype.addNameTranslation = (function(arg$1) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Translatable(arg$1);
@@ -28447,7 +28776,9 @@ function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry() {
   this.names$1 = null;
   this.fieldId$1 = null;
   this.translatable$1 = false;
-  this.dataType$1 = null
+  this.dataType$1 = null;
+  this.hasSubfield$1 = false;
+  this.subfieldId$1 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype = new $h_O();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry;
@@ -28528,11 +28859,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$j
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$dataType__s_Option__O = (function(x$1) {
   this.dataType$1 = x$1
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$subfieldId__T__O = (function(x$1) {
+  this.subfieldId$1 = x$1
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.names__sjs_js_Array = (function() {
   return this.names$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$names__O = (function() {
   return this.names$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$subfieldId__O = (function() {
+  return this.subfieldId$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$fieldId__T__O = (function(x$1) {
   this.fieldId$1 = x$1
@@ -28546,12 +28883,18 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$j
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$meth$canEqual__O__O = (function(other) {
   return $is_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry(other)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$translatable__Z__O = (function(x$1) {
+  this.translatable$1 = x$1
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.hashCode__I = (function() {
   var this$2 = $m_s_util_hashing_MurmurHash3$();
   return this$2.productHash__s_Product__I__I(this, (-889275714))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$translatable__Z__O = (function(x$1) {
-  this.translatable$1 = x$1
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$hasSubfield__Z__O = (function(x$1) {
+  this.hasSubfield$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$prop$hasSubfield__O = (function() {
+  return this.hasSubfield$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.productIterator__sc_Iterator = (function() {
   return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
@@ -28564,6 +28907,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.ini
   this.fieldId$1 = "";
   this.translatable$1 = true;
   this.dataType$1 = $m_s_None$();
+  this.hasSubfield$1 = false;
+  this.subfieldId$1 = "";
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.$$js$exported$meth$equals__O__O = (function(other) {
@@ -28576,6 +28921,26 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.can
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype.equals = (function(arg$1) {
   var prep0 = arg$1;
   return this.$$js$exported$meth$equals__O__O(prep0)
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype, "subfieldId", {
+  "set": (function(arg$1) {
+    var prep0 = $as_T(arg$1);
+    this.$$js$exported$prop$subfieldId__T__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$subfieldId__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype, "hasSubfield", {
+  "set": (function(arg$1) {
+    var prep0 = $uZ(arg$1);
+    this.$$js$exported$prop$hasSubfield__Z__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$hasSubfield__O()
+  }),
+  "enumerable": true
 });
 Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_FieldEntry.prototype, "dataType", {
   "set": (function(arg$1) {
@@ -28746,7 +29111,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupContent.prototype.$
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer() {
   $c_O.call(this);
   this.names$1 = null;
-  this.fieldEntries$1 = null
+  this.fieldEntries$1 = null;
+  this.rnd$1 = null;
+  this.internalId$1 = 0
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype = new $h_O();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer;
@@ -28798,7 +29165,11 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.equals__
         break
       }
     };
-    return (i$1 === $uI(array$2.length))
+    if ((i$1 === $uI(array$2.length))) {
+      return (x2.internalId$1 === this.internalId$1)
+    } else {
+      return false
+    }
   } else {
     return false
   }
@@ -28824,18 +29195,34 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.toString
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.$$js$exported$prop$names__sjs_js_Array__O = (function(x$1) {
   this.names$1 = x$1
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.$$js$exported$prop$internalId__O = (function() {
+  return this.internalId$1
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.$$js$exported$prop$fieldEntries__O = (function() {
   return this.fieldEntries$1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.names__sjs_js_Array = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.$$js$exported$prop$names__O = (function() {
   return this.names$1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.$$js$exported$prop$names__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.names__sjs_js_Array = (function() {
   return this.names$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.init___sjs_js_Array__sjs_js_Array = (function(names, fieldEntries) {
   this.names$1 = names;
   this.fieldEntries$1 = fieldEntries;
+  this.rnd$1 = new $c_s_util_Random().init___();
+  var this$1 = this.rnd$1;
+  var jsx$5 = this$1.self$1.nextInt__I__I(9);
+  var this$2 = this.rnd$1;
+  var jsx$4 = this$2.self$1.nextInt__I__I(9);
+  var this$3 = this.rnd$1;
+  var jsx$3 = this$3.self$1.nextInt__I__I(9);
+  var this$4 = this.rnd$1;
+  var jsx$2 = this$4.self$1.nextInt__I__I(9);
+  var this$5 = this.rnd$1;
+  var jsx$1 = this$5.self$1.nextInt__I__I(9);
+  var this$6 = this.rnd$1;
+  this.internalId$1 = ((((((((((10000 + (($imul(100000, jsx$5) + jsx$4) | 0)) | 0) + $imul(1000, jsx$3)) | 0) + $imul(100, jsx$2)) | 0) + $imul(10, jsx$1)) | 0) + this$6.self$1.nextInt__I__I(9)) | 0);
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.names$und$eq__sjs_js_Array__V = (function(x$1) {
@@ -28861,6 +29248,12 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.canEqual
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype.equals = (function(arg$1) {
   var prep0 = arg$1;
   return this.$$js$exported$meth$equals__O__O(prep0)
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype, "internalId", {
+  "get": (function() {
+    return this.$$js$exported$prop$internalId__O()
+  }),
+  "enumerable": true
 });
 Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Layer.prototype, "fieldEntries", {
   "set": (function(arg$1) {
