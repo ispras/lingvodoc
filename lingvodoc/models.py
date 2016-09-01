@@ -324,9 +324,7 @@ class CompositeIdMixin(object):
         client_by_id = get_client_counter(kwargs['client_id'])
         kwargs["object_id"] = client_by_id.counter
         # self.object_id = client_by_id.counter
-        client_by_id.counter += 1
-
-
+        client_by_id.counter = Client.counter + 1
         super().__init__(**kwargs)
 
 
