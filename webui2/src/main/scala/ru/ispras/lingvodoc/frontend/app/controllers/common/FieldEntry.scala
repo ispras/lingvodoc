@@ -11,6 +11,8 @@ case class FieldEntry(override var names: js.Array[LocalizedString]) extends Tra
   var fieldId: String = ""
   var translatable: Boolean = true
   var dataType: Option[TranslationGist] = None
+  var hasSubfield: Boolean = false
+  var subfieldId: String = ""
 
   override def equals(other: Any) = other match {
     case that: FieldEntry =>

@@ -129,6 +129,13 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     }
   }
 
+  @JSExport
+  def selectField(fieldEntry: FieldEntry) = {
+    if (fieldEntry.fieldId.equals("add_new_field")) {
+      fieldEntry.fieldId = ""
+      createNewField(fieldEntry)
+    }
+  }
 
   @JSExport
   def moveFieldTypeUp(layer: Layer, fieldType: FieldEntry) = {
@@ -165,6 +172,31 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   @JSExport
+  def getLinkedLayerDisplayName(layer: Layer) = {
+    val localeId = Utils.getLocale().getOrElse(2)
+
+    val indexBasedName = scope.layers.zipWithIndex.find(x => layer.equals(x._1)) match {
+      case Some(x) => "#" + (x._2 + 1).toString
+      case None => ""
+    }
+
+    layer.names.find(name => name.localeId == localeId) match {
+      case Some(name) => if (name.str.trim.nonEmpty) {
+        name.str
+      } else {
+        indexBasedName
+      }
+      case None => indexBasedName
+    }
+  }
+
+  @JSExport
+  def linkedLayersEnabled(): Boolean = {
+    scope.layers.size > 1
+  }
+
+
+  @JSExport
   def getAvailableLocales(translations: js.Array[LocalizedString], currentTranslation: LocalizedString): js.Array[Locale] = {
     val currentLocale = scope.locales.find(_.id == currentTranslation.localeId).get
     val otherTranslations = translations.filterNot(translation => translation.equals(currentTranslation))
@@ -192,13 +224,20 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     val instance = modal.open[FieldEntry](options)
 
     instance.result map {
-      f => createField(f)
+      f => createField(f) map {
+        nf => fieldEntry.fieldId = nf.getId
+      }
     }
   }
 
+  @JSExport
+  def availableLayers(layer: Layer): js.Array[Layer] = {
+    scope.layers.filterNot(_.equals(layer)).toJSArray
+  }
 
-  private[this] def createField(fieldType: FieldEntry) = {
 
+  private[this] def createField(fieldType: FieldEntry): Future[Field] = {
+    val p = Promise[Field]()
     // create gist
     backend.createTranslationGist("Field") onComplete {
       case Success(gistId) =>
@@ -219,12 +258,18 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
                   field =>
                     // add field to list of all available fields
                     scope.fields = scope.fields :+ field
+                    p.success(field)
                 }
             }
-          case Failure(e) => console.error(e.getMessage)
+          case Failure(e) =>
+            console.error(e.getMessage)
+            p.failure(e)
         }
-      case Failure(e) => console.error(e.getMessage)
+      case Failure(e) =>
+        console.error(e.getMessage)
+        p.failure(e)
     }
+    p.future
   }
 
 
