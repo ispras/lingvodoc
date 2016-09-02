@@ -211,6 +211,10 @@ def configure_routes(config):
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
                              'perspective',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
+    config.add_route(name='complex_create',
+                     pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
+                             'complex_create',
+                     factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     # API #GET
     # list perspectives

@@ -570,6 +570,70 @@ def create_perspective(request):  # tested & in docs
         return {'error': str(e)}
 
 
+@view_config(route_name = 'complex_create', renderer = 'json', request_method = 'POST', permission='create')
+def complex_create(request):
+    try:
+        from pdb import set_trace
+        parent_client_id = request.matchdict.get('dictionary_client_id')
+        parent_object_id = request.matchdict.get('dictionary_object_id')
+        result = list()
+        try:
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
+        except AttributeError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+        fake_ids = dict()
+        # set_trace()
+        for perspective_json in req:
+            path = request.route_url('create_perspective',
+                                     dictionary_client_id=parent_client_id,
+                                     dictionary_object_id=parent_object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = perspective_json
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            perspective = resp.json
+            result.append({'object_id': perspective['object_id'],
+                           'client_id': perspective['client_id']})
+            perspective_json['client_id'] = perspective['client_id']
+            perspective_json['object_id'] = perspective['object_id']
+            fake_ids[perspective_json['fake_id']] = perspective
+        # set_trace()
+        for perspective_json in req:
+            path = request.route_url('perspective_fields',
+                                     dictionary_client_id=parent_client_id,
+                                     dictionary_object_id=parent_object_id,
+                                     perspective_client_id=perspective_json['client_id'],
+                                     perspective_id=perspective_json['object_id'])
+            subreq = Request.blank(path)
+            subreq.method = 'PUT'
+            subreq.headers = request.headers
+            for field in perspective_json['fields']:
+                if field.get('link') and field['link'].get('fake_id'):
+                    field['link'] = fake_ids[field['link']['fake_id']]
+            subreq.json = perspective_json['fields']
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='perspectives', renderer='json', request_method='GET')
 def view_perspectives(request):
     response = list()
@@ -1039,7 +1103,7 @@ def view_perspective_fields(request):
             link_gist = DBSession.query(TranslationGist)\
                 .join(TranslationAtom)\
                 .filter(TranslationGist.type == 'Service',
-                        TranslationAtom.content == 'link',
+                        TranslationAtom.content == 'Link',
                         TranslationAtom.locale_id == 2).one()
             link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
         except NoResultFound:
@@ -1081,7 +1145,7 @@ def update_perspective_fields(request):
             link_gist = DBSession.query(TranslationGist)\
                 .join(TranslationAtom)\
                 .filter(TranslationGist.type == 'Service',
-                        TranslationAtom.content == 'link',
+                        TranslationAtom.content == 'Link',
                         TranslationAtom.locale_id == 2).one()
             link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
         except NoResultFound:
