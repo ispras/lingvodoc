@@ -30,7 +30,7 @@
                 </div>
                 <div class="btn-group col-md-4 col-sm-4 col-lg-4">
                     <button type="button" class="btn btn-info col-md-10 col-lg-11 col-sm-10 col-xs-8"
-                            data-toggle="dropdown">{{ dictionary.status }}
+                            data-toggle="dropdown">{{ controller.getDictionaryStatus(dictionary).content }}
                     </button>
                     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
                             aria-haspopup="true" aria-expanded="false">
@@ -38,9 +38,7 @@
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="" ng-click="controller.setDictionaryStatus(dictionary, 'Hidden')">Hidden</a></li>
-                        <li><a href="" ng-click="controller.setDictionaryStatus(dictionary, 'WiP')">WiP</a></li>
-                        <li><a href="" ng-click="controller.setDictionaryStatus(dictionary, 'Published')">Published</a></li>
+                        <li ng-repeat="status in controller.getStatuses()"><a href="" ng-click="controller.setDictionaryStatus(dictionary, status)">{{status.content}}</a></li>
                     </ul>
                 </div>
 

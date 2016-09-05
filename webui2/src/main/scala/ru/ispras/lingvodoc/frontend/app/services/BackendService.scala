@@ -63,13 +63,12 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     $http.get[js.Dynamic](url) onComplete {
       case Success(response) =>
         try {
-          val perspectives = read[Seq[Perspective]](js.JSON.stringify(response.perspectives))
+          val perspectives = read[Seq[Perspective]](js.JSON.stringify(response))
           p.success(perspectives)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed perspectives json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed perspectives data. Missing some " +
-            "required fields: " + e.getMessage))
-          case e: Throwable => p.failure(new BackendException("Unexpected exception:" + e.getMessage))
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspectives json.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspectives data. Missing some required fields.", e))
+          case e: Throwable => p.failure(BackendException("getDictionaryPerspectives: unexpected exception", e))
         }
 
       case Failure(e) => p.failure(new BackendException("Failed to get list of perspectives for dictionary " + dictionary.translation + ": " + e.getMessage))
@@ -362,7 +361,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
         //val publishedPerspectives = perspectives.filter(p => p.status.toUpperCase.equals("PUBLISHED"))
         val publishedPerspectives = perspectives
         p.success(publishedPerspectives)
-      case Failure(e) => p.failure(new BackendException("Failed to get published perspectives: " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to get published perspectives", e))
     }
     p.future
   }
@@ -654,14 +653,15 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     * @return
     */
   def allStatuses() = {
-    val defer = $q.defer[Unit]()
+    val p = Promise[Seq[TranslationGist]]()
 
     $http.get[js.Dynamic](getMethodUrl("all_statuses")) onComplete {
       case Success(response) =>
-        defer.resolve(())
-      case Failure(e) => defer.reject("Failed get list of status values: " + e.getMessage)
+        val statuses = read[Seq[TranslationGist]](js.JSON.stringify(response))
+        p.success(statuses)
+      case Failure(e) => p.failure(BackendException("Failed get list of status values.", e))
     }
-    defer.promise
+    p.future
   }
 
 

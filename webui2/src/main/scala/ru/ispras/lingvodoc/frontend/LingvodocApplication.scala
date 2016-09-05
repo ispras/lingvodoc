@@ -18,7 +18,7 @@ class RoutingConfig(routeProvider: RouteProvider) extends Config {
     .when("/dashboard", Route("/static/templates/dashboard.html", "Dashboard", "DashboardController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
-    .otherwise(Route("/home"))
+    .otherwise(Route("/"))
 }
 
 
@@ -32,7 +32,7 @@ object LingvodocApplication {
       .config[RoutingConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
-      .factory[ExceptionHandlerFactory]
+      //.factory[ExceptionHandlerFactory]
       .controller[MainController]
       .controller[NavigationController]
       .controller[LoginController]
