@@ -825,6 +825,54 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
+  def createDictionary(names: Seq[LocalizedString], language: Language): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    createTranslationGist("Dictionary") map {
+      gistId =>
+        Future.sequence(names.map(name => createTranslationAtom(gistId, name))) map {
+          _ =>
+            val req = js.Dynamic.literal("translation_gist_client_id" -> gistId.clientId,
+              "translation_gist_object_id" -> gistId.objectId,
+              "parent_client_id" -> language.clientId,
+              "parent_object_id" -> language.objectId
+            )
+
+            $http.post[js.Dynamic]("dictionary", req) onComplete {
+              case Success(response) =>
+                try {
+                  val id = read[CompositeId](js.JSON.stringify(response))
+                  p.success(id)
+                } catch {
+                  case e: upickle.Invalid.Json => p.failure(BackendException("Failed to create dictionary.", e))
+                  case e: upickle.Invalid.Data => p.failure(BackendException("Failed to create dictionary.", e))
+                }
+              case Failure(e) => p.failure(BackendException("Failed to create dictionary", e))
+            }
+        }
+    }
+
+    p.future
+  }
+
+
+  def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/complex_create"
+    $http.post[js.Dynamic](getMethodUrl(url), req.toJSArray) onComplete {
+      case Success(response) =>
+        try {
+          val id = read[CompositeId](js.JSON.stringify(response))
+          p.success(id)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to create perspective.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to create perspective.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to create perspective", e))
+    }
+    p.future
+  }
+
 
   def getLocales(): Future[Seq[Locale]] = {
     val defer = $q.defer[Seq[Locale]]()

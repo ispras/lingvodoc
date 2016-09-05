@@ -13,6 +13,7 @@ import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, T
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
+import scala.scalajs.js.{Dynamic, Object}
 import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.util.{Failure, Success}
 
@@ -28,9 +29,9 @@ trait CreateDictionaryScope extends Scope {
   var layers: js.Array[Layer] = js.native
   var fields: js.Array[Field] = js.native
   var dataTypes: js.Array[TranslationGist] = js.native
+  var dictionaryId: Option[CompositeId] = js.native
   var step: Int = js.native
 }
-
 
 @injectable("CreateDictionaryController")
 class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalService, backend: BackendService) extends AbstractController[CreateDictionaryScope](scope) {
@@ -45,12 +46,13 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   scope.layers = js.Array[Layer]()
   scope.fields = js.Array[Field]()
   scope.dataTypes = js.Array[TranslationGist]()
-  scope.step = 2
+  scope.dictionaryId = None
+
+  scope.step = 1
 
 
   // load data from backend
   load()
-
 
   @JSExport
   def getCurrentLocale() = {
@@ -78,20 +80,29 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     })
   }
 
+  @JSExport
+  def step2NextDisabled(): Boolean = {
+    scope.layers.isEmpty
+  }
+
 
   @JSExport
   def newLanguage() = {
-
 
   }
 
   @JSExport
   def createDictionary2() = {
 
-
     scope.languages.find(language => language.getId == scope.languageId) match {
       case Some(language) =>
-        scope.step = 2
+
+        backend.createDictionary(scope.names, language) map {
+          dictionaryId =>
+            scope.dictionaryId = Some(dictionaryId)
+            scope.step = 2
+        }
+
       case None =>
       // TODO: Add user friendly error message
     }
@@ -161,7 +172,6 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     layer.fieldEntries = aux(layer.fieldEntries.toList, Nil).reverse.toJSArray
   }
 
-
   @JSExport
   def getLayerDisplayName(layer: Layer) = {
     val localeId = Utils.getLocale().getOrElse(2)
@@ -195,6 +205,26 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     scope.layers.size > 1
   }
 
+  @JSExport
+  def linkFieldSelected(fieldEntry: FieldEntry): Boolean = {
+    scope.fields.find(field => field.getId == fieldEntry.fieldId) match {
+      case Some(field) =>
+        scope.dataTypes.find(dataType => dataType.clientId == field.dataTypeTranslationGistClientId && dataType.objectId == field.dataTypeTranslationGistObjectId) match {
+          case Some(dataType) => dataType.atoms.exists(atom => atom.content.equals("Link") && atom.localeId == 2)
+          case None => false
+        }
+      case None => false
+    }
+  }
+
+  @JSExport
+  def finish() = {
+    compilePerspective(scope.layers) map { f =>
+      f map {
+        _ => scope.step = 3
+      }
+    }
+  }
 
   @JSExport
   def getAvailableLocales(translations: js.Array[LocalizedString], currentTranslation: LocalizedString): js.Array[Locale] = {
@@ -235,6 +265,82 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     scope.layers.filterNot(_.equals(layer)).toJSArray
   }
 
+  private[this] def fieldToJS(field: Field): Object with Dynamic = {
+    js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId)
+  }
+
+  private[this] def createPerspectiveTranslationGist(layer: Layer): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+    backend.createTranslationGist("Perspective") onComplete {
+      case Success(gistId) =>
+        // create translation atoms
+        // TODO: add some error checks
+        val seqs = layer.names map {
+          name => backend.createTranslationAtom(gistId, name)
+        }
+        // make sure all translations created successfully
+        Future.sequence(seqs.toSeq) onComplete {
+          case Success(_) =>
+            p.success(gistId)
+          case Failure(e) =>
+            console.error(e.getMessage)
+            p.failure(e)
+        }
+      case Failure(e) =>
+        console.error(e.getMessage)
+        p.failure(e)
+
+    }
+    p.future
+  }
+
+  private[this] def compilePerspective(layers: Seq[Layer]) = {
+
+    val getField: (String) => Option[Field] = (fieldId: String) => {
+      scope.fields.find(_.getId == fieldId)
+    }
+
+    //
+    val con = layers.map { layer =>
+      createPerspectiveTranslationGist(layer).map {
+        gist =>
+          val fields = layer.fieldEntries.flatMap {
+            entry =>
+              getField(entry.fieldId) match {
+                case Some(field) =>
+
+                  val contains = (getField(entry.subfieldId) match {
+                    case Some(x) => (x :: Nil).toJSArray
+                    case None => js.Array[Field]()
+                  }).map(c => fieldToJS(c))
+
+                  val isLink = scope.dataTypes.find(dataType => dataType.clientId == field.dataTypeTranslationGistClientId && dataType.objectId == field.dataTypeTranslationGistObjectId) match {
+                    case Some(dataType) => dataType.atoms.exists(atom => atom.content.equals("Link") && atom.localeId == 2)
+                    case None => false
+                  }
+                  if (!isLink) {
+                    Some(js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId, "contains" -> contains))
+                  } else {
+                    scope.layers.exists(l => l.internalId == entry.linkedLayerId) match {
+                      case true => Some(js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId, "contains" -> contains, "link" -> js.Dynamic.literal("fake_id" -> entry.linkedLayerId)))
+                      case false => None
+                    }
+                  }
+                case None => None
+              }
+          }
+          js.Dynamic.literal("fake_id" -> layer.internalId,
+            "translation_gist_client_id" -> gist.clientId,
+            "translation_gist_object_id" -> gist.objectId,
+            "fields" -> fields)
+      }
+    }
+
+    Future.sequence(con) map {
+      ff => console.log(ff.toJSArray)
+        backend.createPerspectives(scope.dictionaryId.get, ff)
+    }
+  }
 
   private[this] def createField(fieldType: FieldEntry): Future[Field] = {
     val p = Promise[Field]()
@@ -272,7 +378,6 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     p.future
   }
 
-
   /**
     * Converts language tree to flat list of languages
     *
@@ -299,7 +404,6 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
 
     languages
   }
-
 
   /**
     * Loads data from backend

@@ -34,6 +34,7 @@ class CreateFieldController(scope: CreateFieldScope,
 
   scope.locales = params("locales").asInstanceOf[js.Array[Locale]]
   scope.fieldEntry = params("entry").asInstanceOf[FieldEntry]
+  scope.dataType = ""
   scope.dataTypes = params("dataTypes").asInstanceOf[js.Array[TranslationGist]]
   scope.dataTypeNames = dataTypesNames()
 
