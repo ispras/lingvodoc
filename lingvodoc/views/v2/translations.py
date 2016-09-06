@@ -252,7 +252,6 @@ def translation_search(request):
 def translation_service_search(request):
     try:
         req = request.json_body
-        print(type(req))
     except AttributeError:
         request.response.status = HTTPBadRequest.code
         return {'error': "invalid json"}

@@ -636,15 +636,29 @@ def complex_create(request):
 
 @view_config(route_name='perspectives', renderer='json', request_method='GET')
 def view_perspectives(request):
-    response = list()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
-    # published = request.matchdict.get('published', None)
+    published = request.params.get('published', None)
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such dictionary in the system")}
-    perspectives = []
+    perspectives = list()
+
+    if published:
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Published'}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            published = (state_translation_gist_client_id, state_translation_gist_object_id)
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
     for perspective in parent.dictionaryperspective:
         path = request.route_url('perspective',
                                  dictionary_client_id=parent_client_id,
@@ -655,11 +669,14 @@ def view_perspectives(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
+        if published and not (
+                        published[0] == resp.json.get('state_translation_gist_client_id') and
+                        published[1] == resp.json.get('state_translation_gist_object_id')):
+            continue
         if 'error' not in resp.json:
             perspectives += [resp.json]
-    response = perspectives
     request.response.status = HTTPOk.code
-    return response
+    return perspectives
 
 
 @view_config(route_name='perspective_roles', renderer='json', request_method='GET', permission='view')
