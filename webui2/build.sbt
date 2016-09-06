@@ -35,3 +35,6 @@ jsDependencies += "org.webjars.bower" % "bootstrap-validator" % "0.10.2"  / "0.1
 
 // Wavesurfer is not in webjars yet; perhaps we should create it ourselves
 jsDependencies += ProvidedJS / "wavesurfer.min.js"
+
+// library for context menus, https://github.com/Templarian/ui.bootstrap.contextMenu. WARN: we have modified it.
+jsDependencies += ProvidedJS / "contextMenu.js"

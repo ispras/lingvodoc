@@ -65,19 +65,6 @@ object Tier {
   // factory method, chooses right tier type and creates it
   def fromXML(tierXML: JQuery, owner: ELANDocumentJquery): Tier[IAnnotation] = {
     val ltRef = RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName)
-    try {
-      owner.getLinguisticType(ltRef).getStereotypeID match {
-        case None => new TopLevelTier(tierXML, owner)
-        case Some(Constraint.timeSubdivID) => new TimeSubdivisionTier(tierXML, owner)
-        case Some(Constraint.includedInID) => new IncludedInTier(tierXML, owner)
-        case Some(Constraint.symbolSubdivID) => new SymbolicSubdivisionTier(tierXML, owner)
-        case Some(Constraint.symbolAssocID) => new SymbolicAssociationTier(tierXML, owner)
-        case _ => ??? // impossible
-      }
-    }
-      catch {
-        case e: Exception => console.log(e.getStackTrace.mkString("\n"))
-      }
     owner.getLinguisticType(ltRef).getStereotypeID match {
       case None => new TopLevelTier(tierXML, owner)
       case Some(Constraint.timeSubdivID) => new TimeSubdivisionTier(tierXML, owner)

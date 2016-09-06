@@ -2,6 +2,8 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import org.scalajs.dom
 import org.scalajs.dom.raw.MouseEvent
+import ru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation
+import ru.ispras.lingvodoc.frontend.extras.elan.tier.ITier
 import scala.collection.mutable
 import scala.scalajs.js
 import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
@@ -9,7 +11,7 @@ import com.greencatsoft.angularjs.core.{Timeout, Scope}
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
-import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
+import ru.ispras.lingvodoc.frontend.extras.facades.{MenuOption, BootstrapContextMenu, WaveSurfer, WaveSurferOpts}
 import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
@@ -25,8 +27,11 @@ trait SoundMarkupScope extends Scope {
   var ruler: Double = js.native // coordinate of wavesurfer ruler
   var elan: ELANDocumentJquery = js.native
   var ws: WaveSurfer = js.native // for debugging, remove later
+
   var tierWidth: Int = js.native // displayed tier width in pixels
   var tiersNameWidth: Int = js.native // column with tier names width in pixels
+  var menuOptions: js.Array[js.Any] = js.native
+  var tmp: js.Dynamic = js.native
 }
 
 @injectable("SoundMarkupController")
@@ -37,13 +42,18 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             backend: BackendService,
                             params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[SoundMarkupScope](scope) {
-  scope.tierWidth = 40
-  scope.tiersNameWidth = 100
+  scope.tierWidth = 50
+  scope.tiersNameWidth = 140
+
+  scope.menuOptions = new BootstrapContextMenu(
+    MenuOption("New Annotation Here", (itemScope: js.Dynamic) => {console.log("new annotation here")})
+  ).toJS
+
 
   var waveSurfer: Option[WaveSurfer] = None
   var soundMarkup: Option[String] = None
 //  val soundAddress = params.get("soundAddress").map(_.toString)
-  val soundAddress = Some("http://localhost/getting_closer.wav")
+  val soundAddress = Some("http://localhost/getting_closer_short.wav")
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
@@ -55,6 +65,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var isDragging = false
   // true when we move right border of selection rectangle, false when left
   var rightBorderIsMoving = true
+  // true when ws finished loading
+  var isWSReady = false
 
   // d3 selection rectangle element
   var selectionRectangle: Option[Selection[EventTarget]] = None
@@ -62,6 +74,21 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // add scope to window for debugging
   dom.window.asInstanceOf[js.Dynamic].myScope = scope
+
+  /**
+    * Loading process requires a bit of explanation.
+    * 1) We can't load wavesurfer instance until the view is loaded, because WS will not find it's div element
+    *   otherwise
+    * 2) On the other hand, we can't fully render template without WS instance because we need sound's duration to
+    *   calculate right distances.
+    * 3) So, loading goes like this:
+    *   a) View is loaded with dummy distances, WS width is not known at the moment, scope.elan doesn't exists, etc
+    *   b) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method. Then markup
+    *     is parsed.
+    *   c) After that, Angular reloads the view, showing WaveSurfer and tiers/annotations; however, distances are still
+    *     dummy, because sound duration is not known
+    *   d) When sound is fully loaded, wsReady is triggered and executed. Angular is forced to update the view, and final
+    */
 
   // hack to initialize controller after loading the view
   // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
@@ -77,9 +104,16 @@ class SoundMarkupController(scope: SoundMarkupScope,
       })
       waveSurfer.foreach(_.on("seek", onWSSeek _)) // bind seek event
       waveSurfer.foreach(_.on("audioprocess", onWSPlaying _)) // bind playing event
+      waveSurfer.foreach(_.on("ready", wsReady _)) // bind playing event
       scope.ws = waveSurfer.get
       init()
     } // do not write anything here, outside if!
+  }
+
+  def wsReady(event: js.Dynamic): Unit = {
+    console.log("ws ready!")
+    isWSReady = true
+    scope.$apply({})
   }
 
   // In contract to the constructor, this method is called when waversurfer is already loaded
@@ -89,130 +123,68 @@ class SoundMarkupController(scope: SoundMarkupScope,
     //      case markup => parseMarkup(markup)
     //    }
     //  })
-    parseMarkup("fff", waveSurfer.map(_.getDuration().toLong * 1000).getOrElse(Long.MaxValue))
+    parseMarkup("fff")
 
     selectionRectangle = Some(d3.select("#selectionRect"))
   }
 
-  def parseMarkup(markup: String, duration: Long): Unit = {
-    val test_markup =
-      """<?xml version="1.0" encoding="UTF-8"?>
-         <ANNOTATION_DOCUMENT AUTHOR="" DATE="2016-08-28T15:55:36+03:00" FORMAT="2.8" VERSION="2.8" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.8.xsd">
-             <HEADER MEDIA_FILE="" TIME_UNITS="milliseconds">
-                 <MEDIA_DESCRIPTOR MEDIA_URL="file:///home/ars/tmp/tmp/Six_Degrees_Of_Inner_Turbulence.wav" MIME_TYPE="audio/x-wav" RELATIVE_MEDIA_URL="./Six_Degrees_Of_Inner_Turbulence.wav"/>
-                 <PROPERTY NAME="URN">urn:nl-mpi-tools-elan-eaf:a0e42b2b-d6a1-47a7-92ed-f54285fb6186</PROPERTY>
-                 <PROPERTY NAME="lastUsedAnnotationId">11</PROPERTY>
-             </HEADER>
-             <TIME_ORDER>
-                 <TIME_SLOT TIME_SLOT_ID="ts1" TIME_VALUE="1110"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts2" TIME_VALUE="1270"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts3" TIME_VALUE="2080"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts4" TIME_VALUE="2760"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts5" TIME_VALUE="2760"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts6" TIME_VALUE="3110"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts7" TIME_VALUE="3380"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts8" TIME_VALUE="3690"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts9" TIME_VALUE="3690"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts10" TIME_VALUE="3690"/>
-                 <TIME_SLOT TIME_SLOT_ID="ts11" TIME_VALUE="4770"/>
-             </TIME_ORDER>
-             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="top_level" TIER_ID="toplevel">
-                 <ANNOTATION>
-                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a1" TIME_SLOT_REF1="ts1" TIME_SLOT_REF2="ts3">
-                         <ANNOTATION_VALUE>грузите</ANNOTATION_VALUE>
-                     </ALIGNABLE_ANNOTATION>
-                 </ANNOTATION>
-                 <ANNOTATION>
-                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a2" TIME_SLOT_REF1="ts4" TIME_SLOT_REF2="ts8">
-                         <ANNOTATION_VALUE>бочки апельсины</ANNOTATION_VALUE>
-                     </ALIGNABLE_ANNOTATION>
-                 </ANNOTATION>
-                 <ANNOTATION>
-                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a3" TIME_SLOT_REF1="ts9" TIME_SLOT_REF2="ts11">
-                         <ANNOTATION_VALUE>командовать</ANNOTATION_VALUE>
-                     </ALIGNABLE_ANNOTATION>
-                 </ANNOTATION>
-             </TIER>
-             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="time_subdivision" PARENT_REF="toplevel" TIER_ID="time_subdivision">
-                 <ANNOTATION>
-                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a4" TIME_SLOT_REF1="ts1" TIME_SLOT_REF2="ts2">
-                         <ANNOTATION_VALUE>г</ANNOTATION_VALUE>
-                     </ALIGNABLE_ANNOTATION>
-                 </ANNOTATION>
-                 <ANNOTATION>
-                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a5" TIME_SLOT_REF1="ts2" TIME_SLOT_REF2="ts3">
-                         <ANNOTATION_VALUE>рузите</ANNOTATION_VALUE>
-                     </ALIGNABLE_ANNOTATION>
-                 </ANNOTATION>
-             </TIER>
-             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="included_in" PARENT_REF="toplevel" TIER_ID="included_in">
-                 <ANNOTATION>
-                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a6" TIME_SLOT_REF1="ts5" TIME_SLOT_REF2="ts6">
-                         <ANNOTATION_VALUE>бочки</ANNOTATION_VALUE>
-                     </ALIGNABLE_ANNOTATION>
-                 </ANNOTATION>
-                 <ANNOTATION>
-                     <ALIGNABLE_ANNOTATION ANNOTATION_ID="a7" TIME_SLOT_REF1="ts7" TIME_SLOT_REF2="ts10">
-                         <ANNOTATION_VALUE>апельсины</ANNOTATION_VALUE>
-                     </ALIGNABLE_ANNOTATION>
-                 </ANNOTATION>
-             </TIER>
-             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="symbolic_subdivision" PARENT_REF="toplevel" TIER_ID="symbolic_association">
-                 <ANNOTATION>
-                     <REF_ANNOTATION ANNOTATION_ID="a8" ANNOTATION_REF="a1">
-                         <ANNOTATION_VALUE>load</ANNOTATION_VALUE>
-                     </REF_ANNOTATION>
-                 </ANNOTATION>
-                 <ANNOTATION>
-                     <REF_ANNOTATION ANNOTATION_ID="a9" ANNOTATION_REF="a2">
-                         <ANNOTATION_VALUE>barrels oranges</ANNOTATION_VALUE>
-                     </REF_ANNOTATION>
-                 </ANNOTATION>
-             </TIER>
-             <TIER DEFAULT_LOCALE="en" LINGUISTIC_TYPE_REF="symbolic_subdivision" PARENT_REF="toplevel" TIER_ID="symbolic_subdivision">
-                 <ANNOTATION>
-                     <REF_ANNOTATION ANNOTATION_ID="a10" ANNOTATION_REF="a2">
-                         <ANNOTATION_VALUE>barrels</ANNOTATION_VALUE>
-                     </REF_ANNOTATION>
-                 </ANNOTATION>
-                 <ANNOTATION>
-                     <REF_ANNOTATION ANNOTATION_ID="a11" ANNOTATION_REF="a2" PREVIOUS_ANNOTATION="a10">
-                         <ANNOTATION_VALUE>oranges</ANNOTATION_VALUE>
-                     </REF_ANNOTATION>
-                 </ANNOTATION>
-             </TIER>
-             <LINGUISTIC_TYPE GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="top_level" TIME_ALIGNABLE="true"/>
-             <LINGUISTIC_TYPE CONSTRAINTS="Symbolic_Subdivision" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="symbolic_subdivision" TIME_ALIGNABLE="false"/>
-             <LINGUISTIC_TYPE CONSTRAINTS="Symbolic_Association" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="symbolic_association" TIME_ALIGNABLE="false"/>
-             <LINGUISTIC_TYPE CONSTRAINTS="Time_Subdivision" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="time_subdivision" TIME_ALIGNABLE="true"/>
-             <LINGUISTIC_TYPE CONSTRAINTS="Included_In" GRAPHIC_REFERENCES="false" LINGUISTIC_TYPE_ID="included_in" TIME_ALIGNABLE="true"/>
-             <LOCALE COUNTRY_CODE="US" LANGUAGE_CODE="en"/>
-             <CONSTRAINT DESCRIPTION="Time subdivision of parent annotation's time interval, no time gaps allowed within this interval" STEREOTYPE="Time_Subdivision"/>
-             <CONSTRAINT DESCRIPTION="Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered" STEREOTYPE="Symbolic_Subdivision"/>
-             <CONSTRAINT DESCRIPTION="1-1 association with a parent annotation" STEREOTYPE="Symbolic_Association"/>
-             <CONSTRAINT DESCRIPTION="Time alignable annotations within the parent annotation's time interval, gaps are allowed" STEREOTYPE="Included_In"/>
-         </ANNOTATION_DOCUMENT>
-      """
-      scope.elan = ELANDocumentJquery(test_markup, duration)
-      console.log(scope.elan.toString)
+  def parseMarkup(markup: String): Unit = {
+    val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
+      console.log(s"got ${textStatus.toString} from jquery get")
+      val test_markup = data.toString
+      try {
+        scope.elan = ELANDocumentJquery(test_markup, 0) // TODO: set duration after loading
+        console.log(scope.elan.toString)
+      } catch {
+        case e: Exception =>
+          console.error(e.getStackTrace.mkString("\n"))
+          throw e
+      }
       scope.ruler = 0
+    }
+
+    jQuery.get("http://localhost/test.eaf", success = action, dataType = "text")
   }
 
   @JSExport
-  def getWaveSurferWidth = js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString.toDouble
+  def getWaveSurferWidth = { console.log(s"width ${js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString} is called"); js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString.toDouble}
 
   @JSExport
-  def getWaveSurferHeight = js.Dynamic.global.document.getElementById("waveform").scrollHeight.toString.toDouble
+  def getWaveSurferHeight = { console.log("height is called"); js.Dynamic.global.document.getElementById("waveform").scrollHeight.toString.toDouble}
 
+  @JSExport
+  def getDuration = { if (isWSReady) waveSurfer.get.getDuration() else 42.0 }
+
+  @JSExport
+  def getCurrentTime = { if (isWSReady) waveSurfer.get.getCurrentTime() else 42.0 }
+
+  /**
+    * We have several metrics fully characterizing point in time:
+    * 1) Offset in pxs from svg left border
+    * 2) Progress in [0..1] of full sound duration
+    * 3) Time in seconds, double
+    * 4) Time in milliseconds, Long or String, if called from JS
+    */
+
+  // millis is Long number
+  @JSExport
+  def millisecToOffset(millis: String) = millis.toLong / 1000.0 / getDuration * getWaveSurferWidth
+
+  def offsetToProgress(offset: Double) = offset / getWaveSurferWidth
+
+  def progressToOffset(progress: Double) = progress * getWaveSurferWidth
+
+
+  // set wavesurfer & svg rulers to @offset pixels from start
   def svgSeek(offset: Double, forceApply: Boolean = false): Unit = {
     isWSSeeked = true
     setRulerOffset(offset, forceApply)
-    val progress = offset / getWaveSurferWidth
+    val progress = offsetToProgress(offset)
     waveSurfer.foreach(_.seekTo(progress))
   }
 
   def setRulerProgress(progress: Double, forceApply: Boolean = false, applyTimeout: Boolean = false): Unit =
-    setRulerOffset(progress * getWaveSurferWidth, forceApply, applyTimeout)
+    setRulerOffset(progressToOffset(progress), forceApply, applyTimeout)
 
   def setRulerOffset(offset: Double, forceApply: Boolean = false, applyTimeout: Boolean = false): Unit = {
     val action = () => { scope.ruler = offset }
@@ -224,16 +196,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
       })
     else
       action()
-  }
-
-  // not needed
-  @JSExport
-  def getDrawerWidth: Double = {
-    waveSurfer.map(_.drawer.width.toString.toDouble).getOrElse(0)
-  }
-  @JSExport
-  def getDrawerHeight: Double = {
-    waveSurfer.map(_.drawer.height.toString.toDouble).getOrElse(0)
   }
 
   @JSExport
@@ -261,7 +223,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def onWSPlaying(): Unit = {
-    val progress = waveSurfer.map(ws => ws.getCurrentTime() / ws.getDuration())
+    val progress = waveSurfer.map(ws => ws.getCurrentTime() / getDuration)
     progress.foreach(p => setRulerProgress(p, applyTimeout = true))
   }
 
@@ -275,9 +237,11 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // called on svg mouse down, prepares for dragging
   @JSExport
   def onSVGMouseDown(event: js.Dynamic): Unit = {
-    console.log("svg mouse down")
-    svgIsMouseDown = true
-    isDragging = false
+    if (event.which.asInstanceOf[Int] == 1) {
+      console.log("svg mouse down")
+      svgIsMouseDown = true
+      isDragging = false
+    }
   }
 
   @JSExport
@@ -321,57 +285,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
       svgSeek(cursorX)
     }
-  }
-
-  def onSelectionDragStart() = {
-    console.log("starting dragging")
-  }
-
-  def onSelectionDragging() = {
-    console.log("dragging")
-    if (!isDragging) { // executed on first drag event
-      selectionRectangle.foreach(_.remove())
-      selectionRectangle = Some(d3.select("#soundSVG").append("rect")
-        .attr("x", d3.event.asInstanceOf[js.Dynamic].x.toString.toDouble)
-        .attr("y", 0)
-        .attr("width", 0)
-        .attr("height", getWaveSurferHeight)
-        .attr("class", "sm-selecton-rectangle"))
-      isDragging = true
-    }
-    else { // executed on every subsequent drag event
-      val (oldx, cursorx) = (selectionRectangle.get.attr("x").toString.toDouble,
-        Math.min(getWaveSurferWidth, Math.max(0, d3.event.asInstanceOf[js.Dynamic].x.toString.toDouble)))
-      val oldWidth = selectionRectangle.get.attr("width").toString.toDouble
-
-      if ((rightBorderIsMoving && cursorx > oldx) || (!rightBorderIsMoving && cursorx >= oldx + oldWidth)) {
-        selectionRectangle.foreach(_.attr("width", cursorx - oldx))
-        rightBorderIsMoving = true
-      }
-      else {
-        selectionRectangle.foreach(_.attr("x", cursorx).attr("width", oldx + oldWidth - cursorx))
-        rightBorderIsMoving = false
-      }
-
-      svgSeek(cursorx, forceApply = true)
-    }
-  }
-  def onSelectionDragEnd() = {
-    console.log("ending dragging")
-    isDragging = false
-  }
-
-  @JSExport
-  def md(event: js.Dynamic) = {
-    console.log("hi from md")
-  }
-  @JSExport
-  def mm(event: js.Dynamic) = {
-    console.log("hi from mm")
-  }
-  @JSExport
-  def mu(event: js.Dynamic) = {
-    console.log("hi from mu")
   }
 }
 

@@ -16,6 +16,8 @@ trait IAnnotation {
   def startToString = start.toString
   @JSExport
   def endToString = end.toString
+  @JSExport
+  def durationToString = duration.toString
 
   @JSExport
   def getID = annotationID.value
@@ -27,6 +29,7 @@ trait IAnnotation {
   // for ref annotations start and end makes sense only for displaying. Measured in milliseconds.
   def start: Long
   def end: Long
+  def duration: Long = end - start
 
   // xml representation of content inside <ANNOTATION></ANNOTATION>
   protected def includedAnnotationToString: String

@@ -76,11 +76,10 @@ class ELANDocumentJquery private(annotDocXML: JQuery, val duration: Long) {
       // in PREVIOUS_ANNOTATION of ref annotations
       getRefTiers.flatMap(_.getAnnotations).foreach(annotation => {
         annotation.annotationRef.value = oldAnnotationIDstoNew(annotation.annotationRef.value)
-        annotation match {
-          case ssAnnotation: SymbolicSubdivisionAnnotation =>
-            val ssAnnotation = annotation.asInstanceOf[SymbolicSubdivisionAnnotation]
-            ssAnnotation.previousAnnotation.value.foreach(v =>
-              ssAnnotation.previousAnnotation.value = Some(oldAnnotationIDstoNew(v)))
+        if (annotation.isInstanceOf[SymbolicSubdivisionAnnotation]) {
+          val ssAnnotation = annotation.asInstanceOf[SymbolicSubdivisionAnnotation]
+          ssAnnotation.previousAnnotation.value.foreach(v =>
+            ssAnnotation.previousAnnotation.value = Some(oldAnnotationIDstoNew(v)))
         }
       })
   }
