@@ -108,18 +108,36 @@ AbstractController[DashboardScope](scope) {
     val instance = modal.open[Perspective](options)
 
     instance.result map {
-      case p: Perspective => console.log(p.toString)
+      p: Perspective => console.log(p.toString)
     }
   }
 
   @JSExport
-  def setDictionaryStatus(dictionary: Dictionary, status: String) = {
-    backend.setDictionaryStatus(dictionary, status)
+  def setDictionaryStatus(dictionary: Dictionary, status: TranslationAtom) = {
+
+    scope.statuses.find(gist => gist.clientId == status.parentClientId && gist.objectId == status.parentObjectId) match {
+      case Some(gist) => backend.setDictionaryStatus(dictionary, gist) onComplete {
+        case Success(_) =>
+          dictionary.stateTranslationGistClientId = gist.clientId
+          dictionary.stateTranslationGistObjectId = gist.objectId
+        case Failure(e) => throw ControllerException("Failed to set dictionary status!", e)
+      }
+      case None => throw new ControllerException("Status not found!")
+    }
   }
 
   @JSExport
-  def setPerspectiveStatus(dictionary: Dictionary, perspective: Perspective, status: String) = {
-    backend.setPerspectiveStatus(dictionary, perspective, status)
+  def setPerspectiveStatus(perspective: Perspective, status: TranslationAtom) = {
+
+    scope.statuses.find(gist => gist.clientId == status.parentClientId && gist.objectId == status.parentObjectId) match {
+      case Some(gist) => backend.setPerspectiveStatus(perspective, gist) onComplete {
+        case Success(_) =>
+          perspective.stateTranslationGistClientId = gist.clientId
+          perspective.stateTranslationGistObjectId = gist.objectId
+        case Failure(e) => throw ControllerException("Failed to set perspective status!", e)
+      }
+      case None => throw new ControllerException("Status not found!")
+    }
   }
 
   @JSExport
@@ -142,7 +160,6 @@ AbstractController[DashboardScope](scope) {
 
   @JSExport
   def getDictionaryStatus(dictionary: Dictionary): TranslationAtom = {
-
     val localeId = Utils.getLocale().getOrElse(2)
     scope.statuses.find(gist => gist.clientId == dictionary.stateTranslationGistClientId && gist.objectId == dictionary.stateTranslationGistObjectId) match {
       case Some(statusGist) => statusGist.atoms.find(atom => atom.localeId == localeId) match {
@@ -152,6 +169,20 @@ AbstractController[DashboardScope](scope) {
       case None => throw new ControllerException("Unknown status id!")
     }
   }
+
+  @JSExport
+  def getPerspectiveStatus(perspective: Perspective): TranslationAtom = {
+    val localeId = Utils.getLocale().getOrElse(2)
+    scope.statuses.find(gist => gist.clientId == perspective.stateTranslationGistClientId && gist.objectId == perspective.stateTranslationGistObjectId) match {
+      case Some(statusGist) => statusGist.atoms.find(atom => atom.localeId == localeId) match {
+        case Some(atom) => atom
+        case None => throw new ControllerException("Status has no translation for current locale!")
+      }
+      case None => throw new ControllerException("Unknown status id!")
+    }
+  }
+
+
 
 
   private[this] def load() = {

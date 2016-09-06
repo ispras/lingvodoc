@@ -37,7 +37,7 @@ class HomeController(scope: HomeScope, injector: Injector, backend: BackendServi
   private[this] def setPerspectives(languages: Seq[Language]): Unit = {
     for (language <- languages) {
       for (dictionary <- language.dictionaries) {
-        backend.getPublishedDictionaryPerspectives(dictionary) onComplete {
+        backend.getDictionaryPerspectives(dictionary, onlyPublished = true) onComplete {
           case Success(perspectives) =>
             dictionary.perspectives = perspectives.toJSArray
           case Failure(e) => exceptionHandler(BackendException("Failed to get published perspectives list", e), null)

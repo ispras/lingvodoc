@@ -8,7 +8,7 @@
                 <!-- List of all languages -->
                 <label for="language">Language</label>
                 <select id="language" class="form-control" ng-model="languageId"
-                        ng-options="language.getId as language.getTranslation() for language in languages track by language.getId">
+                        ng-options="language.getId as language.translation for language in languages track by language.getId">
                 </select>
 
                 <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>

@@ -1,0 +1,19 @@
+<div class="container">
+
+
+    <h1>Language <button type="button" aria-label="Add language" ng-click="controller.createRootLanguage()"><span
+            aria-hidden="true">+</span></button></h1>
+
+    <div ng-if="languages.length > 0">
+        <ul>
+            <li ng-repeat="language in languages" ng-include="'/static/templates/languagesTree.html'"></li>
+        </ul>
+    </div>
+
+
+    <div ng-if="languages.length == 0">
+        <span>No languages</span>
+    </div>
+
+
+</div>

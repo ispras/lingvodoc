@@ -1,15 +1,6 @@
-<h4>{{ language.translation }}</h4>
+<h4>{{ language.translation }} <button type="button" aria-label="Add language" ng-click="controller.createLanguage(language)"><span
+        aria-hidden="true">+</span></button></h4>
 
-<ul>
-    <li ng-repeat="dictionary in language.dictionaries">
-        {{ dictionary.translation }} <span ng-repeat="perspective in dictionary.perspectives" ng-init="authors=getPerspectiveAuthors(perspective)">
-                <a ng-attr-href=" {{ getPerspectiveLink(dictionary, perspective) }}">{{ perspective.translation }} <small ng-if="authors">({{ authors }})</small></a>
-        </span>
-
-    </li>
-</ul>
-
-<ul ng-if="language.contains">
-    <li ng-repeat="language in language.contains" ng-include="'languageTemplate.html'">
-    </li>
+<ul ng-if="language.languages">
+    <li ng-repeat="language in language.languages" ng-include="'/static/templates/languagesTree.html'"></li>
 </ul>

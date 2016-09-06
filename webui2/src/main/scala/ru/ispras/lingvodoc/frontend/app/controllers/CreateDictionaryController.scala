@@ -414,15 +414,12 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
       dataTypes => scope.dataTypes = dataTypes.toJSArray
     }
 
-
-
     // load list of fields
     backend.fields() onComplete {
       case Success(fields) =>
         scope.fields = fields.toJSArray
       case Failure(e) =>
     }
-
 
     // load list of locales
     backend.getLocales onComplete {
@@ -434,17 +431,9 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
       case Failure(e) =>
     }
 
-    // get list of languages
     backend.getLanguages onComplete {
       case Success(tree: Seq[Language]) =>
-        // translate every language in list
-        Future.sequence(flatLanguages(tree.toJSArray).map(language => {
-          backend.translateLanguage(language, Utils.getLocale().getOrElse(2))
-        })) onComplete {
-          case Success(translatedLanguages) =>
-            scope.languages = translatedLanguages.toJSArray
-          case Failure(e) =>
-        }
+        scope.languages = tree.toJSArray
       case Failure(e) =>
     }
   }
