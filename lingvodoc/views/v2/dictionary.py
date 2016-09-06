@@ -1023,7 +1023,7 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     subreq = Request.blank('/translation_service_search')
     subreq.method = 'POST'
     subreq.headers = request.headers
-    subreq.json = {'searchstring': 'WiP'}
+    subreq.json = {'searchstring': 'Published'}
     headers = dict()
     if request.headers.get('Cookie'):
         headers = {'Cookie': request.headers['Cookie']}
