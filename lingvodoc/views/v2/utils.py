@@ -186,6 +186,7 @@ def language_info(lang, request):
     result['object_id'] = lang.object_id
     result['translation_gist_client_id'] = lang.translation_gist_client_id
     result['translation_gist_object_id'] = lang.translation_gist_object_id
+    result['translation'] = lang.get_translation(request.cookies['locale_id'])
     if lang.locale:
         result['locale_exist'] = True
     else:
