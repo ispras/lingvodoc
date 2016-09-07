@@ -18,7 +18,7 @@
     <div>
         <!-- tier names -->
         <svg ng-attr-width="{{tiersNameWidth}}" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
-             style="float:left" ng-style="{'margin-top': controller.getWaveSurferHeight}">
+             style="float:left" ng-style="{'margin-top': wsHeight}">
             <svg x="0" ng-attr-y="{{$index * tierWidth}}" ng-repeat="tier in elan.tiersToJSArray">
                 <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tiersNameWidth}}" y2="0">
                 </line>

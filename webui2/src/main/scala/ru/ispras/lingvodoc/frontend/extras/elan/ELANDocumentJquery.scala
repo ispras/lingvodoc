@@ -159,6 +159,16 @@ object ELANDocumentJquery {
     jQuery(jQuery.parseXML(xmlString)).find(annotDocTagName),
     pxPerSec
   )
+  // stub document, used to avoid errors while real document is not yet loaded
+  def getDummy = ELANDocumentJquery(
+    """<?xml version="1.0" encoding="UTF-8"?>
+      <ANNOTATION_DOCUMENT AUTHOR="" DATE="2016-08-05T17:18:49+03:00" VERSION="2.8"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                            xsi:noNamespaceSchemaLocation="http://www.mpi.nl/tools/elan/EAFv2.8.xsd">
+          <HEADER/>
+          <TIME_ORDER/>
+      </ANNOTATION_DOCUMENT>
+    """, 0.0)
 }
 
 // Represents TIME_ORDER element
