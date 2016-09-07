@@ -43,6 +43,7 @@ trait WaveSurfer extends js.Object {
   def seekTo(progress: Double): js.Any = js.native
   def seekAndCenter(progress: Double): js.Any = js.native
   def drawer: js.Dynamic = js.native
+  def zoom(pxPerSec: Int): js.Any = js.native
 }
 
 

@@ -18,6 +18,15 @@ trait IAnnotation {
   def endToString = end.toString
   @JSExport
   def durationToString = duration.toString
+  // convert start, end and duration in seconds to displayed pixels using pxPerSec
+  @JSExport
+  var startOffset: Double
+  @JSExport
+  var endOffset: Double
+  @JSExport
+  var durationOffset: Double
+  // recalculate offsets
+  def setPxPerSec(pxPerSec: Double)
 
   @JSExport
   def getID = annotationID.value
@@ -43,10 +52,21 @@ abstract class Annotation(ao: AnnotationOpts) extends IAnnotation {
   var text = ao.text
   val owner = ao.owner
 
+  // we will calculate offsets (setPxPerSec method) as soon as whole document will be parsed
+  var startOffset: Double = _
+  var endOffset: Double = _
+  var durationOffset: Double = _
+
   override def toString = Utils.wrap(Annotation.tagName, includedAnnotationToString)
   // <ANNOTATION_VALUE> tag
-   protected final def content = Utils.wrap(Annotation.annotValueElName, text)
+  protected final def content = Utils.wrap(Annotation.annotValueElName, text)
   protected def attrsToString = s"$annotationID $extRef"
+
+  def setPxPerSec(pxPerSec: Double) = {
+    startOffset = Utils.millis2Sec(start) * pxPerSec
+    endOffset = Utils.millis2Sec(end) * pxPerSec
+    durationOffset = Utils.millis2Sec(duration) * pxPerSec
+  }
 }
 
 object Annotation {

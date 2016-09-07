@@ -3,75 +3,96 @@
 </div>
 
 <div class="modal-body">
-    <div id="waveform" ng-style="{'margin-left': tiersNameWidth}" >{{ controller.createWaveSurfer() }}</div>
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+        <span class="glyphicon glyphicon-play">Play/Pause full</span>
+    </button>
 
-    <!-- tier names -->
-    <svg ng-attr-width="{{tiersNameWidth}}" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
-         style="float:left">
-        <svg x="0" ng-attr-y="{{$index * tierWidth}}" ng-repeat="tier in elan.tiersToJSArray">
-            <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tiersNameWidth}}" y2="0">
-            </line>
-            <text text-anchor="middle" alignment-baseline="central" ng-attr-x="{{tiersNameWidth / 2}}" ng-attr-y="{{tierWidth / 2}}" >
-                {{ tier.getID }}
-            </text>
-            <line ng-if="$last" class="sm-tier-names-sep-line" x1="0" ng-attr-y1="{{tierWidth}}"
-                  ng-attr-x2="{{tiersNameWidth}}" ng-attr-y2="{{tierWidth}}">
-            </line>
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
+        <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
+    </button>
+
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
+        <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
+    </button>
+
+    <div>
+        <!-- tier names -->
+        <svg ng-attr-width="{{tiersNameWidth}}" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
+             style="float:left" ng-style="{'margin-top': controller.getWaveSurferHeight}">
+            <svg x="0" ng-attr-y="{{$index * tierWidth}}" ng-repeat="tier in elan.tiersToJSArray">
+                <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tiersNameWidth}}" y2="0">
+                </line>
+                <text text-anchor="middle" alignment-baseline="central" ng-attr-x="{{tiersNameWidth / 2}}" ng-attr-y="{{tierWidth / 2}}" >
+                    {{ tier.getID }}
+                </text>
+                <line ng-if="$last" class="sm-tier-names-sep-line" x1="0" ng-attr-y1="{{tierWidth}}"
+                      ng-attr-x2="{{tiersNameWidth}}" ng-attr-y2="{{tierWidth}}">
+                </line>
+            </svg>
         </svg>
-    </svg>
 
-    <!-- section with tiers -->
-    <svg id="soundSVG" style="float:right"
-         ng-attr-width="{{controller.getWaveSurferWidth}}" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
-         ng-click="controller.onSVGSeek($event)"
-         ng-mouseup="controller.onSVGMouseUp($event)" ng-mousedown="controller.onSVGMouseDown($event)"
-         ng-mousemove="controller.onSVGMouseMove($event)"
-         context-menu="menuOptions">
-            <!-- tiers -->
-            <svg x="0" ng-attr-y="{{$index * tierWidth}}" ng-repeat="tier in elan.tiersToJSArray"
-                 ng-click="controller.onTierClick($event, tier)">
-                <rect class="sm-tier" id="{{tier.getID + 'Rectangle'}}" x="0" y="0" width="100%"
-                      ng-attr-height="{{tierWidth}}"
-                      fill="{{$index % 2 == 0 ? 'grey' : 'white'}}"></rect>
-                <!-- annotations -->
-                <svg ng-attr-x="{{controller.millisecToOffset(annot.startToString)}}" y="0" ng-repeat="annot in tier.annotationsToJSArray"
-                     ng-attr-width="{{controller.millisecToOffset(annot.durationToString)}}" ng-attr-height="{{tierWidth}}">
-                    <rect x="0" y="0" ng-attr-width="{{controller.millisecToOffset(annot.durationToString)}}"
-                          ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.2">
+        <div style="overflow-x: scroll" ng-style="{'margin-left': tiersNameWidth}">
+            <div id="waveform" ng-style="{'width': fullWSWidth}">{{ controller.createWaveSurfer() }}</div>
+
+            <!-- section with tiers -->
+            <svg id="soundSVG"
+                 ng-attr-width="{{fullWSWidth}}" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
+                 ng-click="controller.onSVGSeek($event)"
+                 ng-mouseup="controller.onSVGMouseUp($event)" ng-mousedown="controller.onSVGMouseDown($event)"
+                 ng-mousemove="controller.onSVGMouseMove($event)"
+                 context-menu="menuOptions">
+                    <!-- tiers -->
+                    <svg x="0" ng-attr-y="{{$index * tierWidth}}" ng-repeat="tier in elan.tiersToJSArray"
+                         ng-click="controller.onTierClick($event, tier)">
+                        <rect class="sm-tier" id="{{tier.getID + 'Rectangle'}}" x="0" y="0" width="100%"
+                              ng-attr-height="{{tierWidth}}"
+                              fill="{{$index % 2 == 0 ? 'grey' : 'white'}}"></rect>
+                        <!-- annotations -->
+                        <svg ng-attr-x="{{annot.startOffset}}" y="0" ng-repeat="annot in tier.annotationsToJSArray"
+                             ng-attr-width="{{annot.durationOffset}}" ng-attr-height="{{tierWidth}}">
+                            <rect x="0" y="0" ng-attr-width="{{annot.durationOffset}}"
+                                  ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.2">
+                            </rect>
+                            <!-- left vertical line -->
+                            <line ng-class="tier.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
+                                  x1="1" y1="0" x2="1" ng-attr-y2="{{tierWidth}}">
+                            </line>
+                            <!-- middle horizontal line -->
+                            <line ng-class="tier.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
+                                  x1="0" ng-attr-y1="{{tierWidth / 2}}"
+                                  ng-attr-x2="{{annot.durationOffset}}" ng-attr-y2="{{tierWidth / 2}}">
+                            </line>
+                            <!-- right vertical line -->
+                            <line ng-class="tier.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
+                                  ng-attr-x1="{{annot.durationOffset}}" y1="0"
+                                  ng-attr-x2="{{annot.durationOffset}}" ng-attr-y2="{{tierWidth}}">
+                            </line>
+                            <text
+                                  x="5"
+                                  ng-attr-y="{{tierWidth / 2 - tierWidth * 0.2}}" >
+                                 {{ annot.text }}
+                            </text>
+                        </svg>
+                    </svg>
+
+                    <!-- rect to select new annotation duration -->
+                    <rect id="selectionRect" x="0" y="0" width="0" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
+                          class="sm-selection-rectangle">
                     </rect>
-                    <!-- left vertical line -->
-                    <line ng-class="tier.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                          x1="1" y1="0" x2="1" ng-attr-y2="{{tierWidth}}">
+
+                    <!-- ruler shows current position -->
+                    <line class="sm-ruler"
+                          ng-attr-x1="{{ruler}}" ng-attr-y1="0"
+                          ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierWidth * elan.tiersToJSArray.length}}">
                     </line>
-                    <!-- middle horizontal line -->
-                    <line ng-class="tier.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                          x1="0" ng-attr-y1="{{tierWidth / 2}}"
-                          ng-attr-x2="{{controller.millisecToOffset(annot.durationToString)}}" ng-attr-y2="{{tierWidth / 2}}">
-                    </line>
-                    <!-- right vertical line -->
-                    <line ng-class="tier.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                          ng-attr-x1="{{controller.millisecToOffset(annot.durationToString)}}" y1="0"
-                          ng-attr-x2="{{controller.millisecToOffset(annot.durationToString)}}" ng-attr-y2="{{tierWidth}}">
-                    </line>
-                    <text
-                          x="5"
-                          ng-attr-y="{{tierWidth / 2 - tierWidth * 0.2}}" >
-                         {{ annot.text }}
-                    </text>
-                </svg>
             </svg>
 
-            <!-- rect to select new annotation duration -->
-            <rect id="selectionRect" x="0" y="0" width="0" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
-                  class="sm-selection-rectangle">
-            </rect>
+        </div>
+    </div>
 
-            <!-- ruler shows current position -->
-            <line class="sm-ruler"
-                  ng-attr-x1="{{ruler}}" ng-attr-y1="0"
-                  ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierWidth * elan.tiersToJSArray.length}}">
-            </line>
-    </svg>
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+        <span class="glyphicon glyphicon-play">Play/Pause full</span>
+    </button>
 
     div height is {{ controller.getWaveSurferHeight }}
     div width is {{ controller.getWaveSurferWidth }}
@@ -107,12 +128,6 @@
             </table>
         </uib-tab>
     </uib-tabset>
-
-
-    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
-        <span class="glyphicon glyphicon-play">Play/Pause full</span>
-    </button>
-
 </div>
 
 

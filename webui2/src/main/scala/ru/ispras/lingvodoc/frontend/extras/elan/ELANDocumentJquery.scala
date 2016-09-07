@@ -19,9 +19,9 @@ import scala.scalajs.js.JSConverters._
 case class ELANPArserException(message: String) extends Exception(message)
 
 // Represents ELAN (EAF) document
+// @pxPerSec param is needed to calculate annotation lengths in pixels
 @JSExportAll
-class ELANDocumentJquery private(annotDocXML: JQuery, val duration: Long) {
-  // attributes
+class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Double) {
   val date = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.dateAttrName)
   val author = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.authorAttrName)
   val version = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.versionAttrName)
@@ -42,60 +42,11 @@ class ELANDocumentJquery private(annotDocXML: JQuery, val duration: Long) {
   private var lastUsedTimeSlotID: Long = 0
   private var lastUsedAnnotationID: Long = 0
   reindex()
+  setPxPerSec(pxPerSec)
 
-  /**
-    * We cannot reliably say whether this XML last time was modified via lingvodoc, ELAN or something else,
-    * and there is no unified way of counting time slot and annotations IDs in the specification.
-    * Because of that we are forced to reindex time slot and annotation IDs every time we read a EAF file.
-    * This function does the job: it counts IDs, renames them and sets two counters
-    */
-  private def reindex(): Unit = {
-      // reindex time slots
-      var oldTimeSlotIDsToNew: Map[String, String] = Map.empty
-      timeOrder.timeSlots = for ((id, value) <- timeOrder.timeSlots) yield {
-        lastUsedTimeSlotID += 1 // it doesn't matter, but ELAN indexes from 1, so we too
-        val newTimeSlot = tsIDFromNumber(lastUsedTimeSlotID)
-        oldTimeSlotIDsToNew += (id -> newTimeSlot)
-        (newTimeSlot, value)
-      }
-      // now substitute references to time slots in all alignable annotations
-    getTimeAlignableTiers.flatMap(_.getAnnotations).foreach(annotation => {
-        annotation.timeSlotRef1.value = oldTimeSlotIDsToNew(annotation.timeSlotRef1.value)
-        annotation.timeSlotRef2.value = oldTimeSlotIDsToNew(annotation.timeSlotRef2.value)
-      })
-
-      // reindex annotations
-      var oldAnnotationIDstoNew: Map[String, String] = Map.empty
-      tiers.foreach(_.getAnnotations.foreach(annotation => {
-        lastUsedAnnotationID += 1
-        val newAnnotationID = annotIDFromNumber(lastUsedAnnotationID)
-        oldAnnotationIDstoNew += (annotation.annotationID.value -> newAnnotationID)
-        annotation.annotationID.value = newAnnotationID
-      }))
-      // now substitute all references to them: they encounter in ANNOTATION_REF and
-      // in PREVIOUS_ANNOTATION of ref annotations
-      getRefTiers.flatMap(_.getAnnotations).foreach(annotation => {
-        annotation.annotationRef.value = oldAnnotationIDstoNew(annotation.annotationRef.value)
-        if (annotation.isInstanceOf[SymbolicSubdivisionAnnotation]) {
-          val ssAnnotation = annotation.asInstanceOf[SymbolicSubdivisionAnnotation]
-          ssAnnotation.previousAnnotation.value.foreach(v =>
-            ssAnnotation.previousAnnotation.value = Some(oldAnnotationIDstoNew(v)))
-        }
-      })
-  }
-
-  // xsd:ID can't start with a digit
-  private def tsIDFromNumber(id: Long) = "ts" + id
-  private def annotIDFromNumber(id: Long) = "a" + id
-
-  def issueTimeSlotID(): String = {
-    lastUsedTimeSlotID += 1
-    tsIDFromNumber(lastUsedTimeSlotID)
-  }
-
-  def issueAnnotationID(): String = {
-    lastUsedAnnotationID += 1
-    annotIDFromNumber(lastUsedAnnotationID)
+  def setPxPerSec(newPxPerSec: Double): Unit = {
+    pxPerSec = newPxPerSec
+    tiers.flatMap(_.getAnnotations).foreach(_.setPxPerSec(pxPerSec))
   }
 
   def getTierByID(id: String) = try {
@@ -120,6 +71,61 @@ class ELANDocumentJquery private(annotDocXML: JQuery, val duration: Long) {
     } catch {
       case e: java.util.NoSuchElementException => throw ELANPArserException(errorMsg)
     }
+  }
+
+  /**
+    * We cannot reliably say whether this XML last time was modified via lingvodoc, ELAN or something else,
+    * and there is no unified way of counting time slot and annotations IDs in the specification.
+    * Because of that we are forced to reindex time slot and annotation IDs every time we read a EAF file.
+    * This function does the job: it counts IDs, renames them and sets two counters
+    */
+  private def reindex(): Unit = {
+    // reindex time slots
+    var oldTimeSlotIDsToNew: Map[String, String] = Map.empty
+    timeOrder.timeSlots = for ((id, value) <- timeOrder.timeSlots) yield {
+      lastUsedTimeSlotID += 1 // it doesn't matter, but ELAN indexes from 1, so we too
+      val newTimeSlot = tsIDFromNumber(lastUsedTimeSlotID)
+      oldTimeSlotIDsToNew += (id -> newTimeSlot)
+      (newTimeSlot, value)
+    }
+    // now substitute references to time slots in all alignable annotations
+    getTimeAlignableTiers.flatMap(_.getAnnotations).foreach(annotation => {
+      annotation.timeSlotRef1.value = oldTimeSlotIDsToNew(annotation.timeSlotRef1.value)
+      annotation.timeSlotRef2.value = oldTimeSlotIDsToNew(annotation.timeSlotRef2.value)
+    })
+
+    // reindex annotations
+    var oldAnnotationIDstoNew: Map[String, String] = Map.empty
+    tiers.foreach(_.getAnnotations.foreach(annotation => {
+      lastUsedAnnotationID += 1
+      val newAnnotationID = annotIDFromNumber(lastUsedAnnotationID)
+      oldAnnotationIDstoNew += (annotation.annotationID.value -> newAnnotationID)
+      annotation.annotationID.value = newAnnotationID
+    }))
+    // now substitute all references to them: they encounter in ANNOTATION_REF and
+    // in PREVIOUS_ANNOTATION of ref annotations
+    getRefTiers.flatMap(_.getAnnotations).foreach(annotation => {
+      annotation.annotationRef.value = oldAnnotationIDstoNew(annotation.annotationRef.value)
+      if (annotation.isInstanceOf[SymbolicSubdivisionAnnotation]) {
+        val ssAnnotation = annotation.asInstanceOf[SymbolicSubdivisionAnnotation]
+        ssAnnotation.previousAnnotation.value.foreach(v =>
+          ssAnnotation.previousAnnotation.value = Some(oldAnnotationIDstoNew(v)))
+      }
+    })
+  }
+
+  // xsd:ID can't start with a digit
+  private def tsIDFromNumber(id: Long) = "ts" + id
+  private def annotIDFromNumber(id: Long) = "a" + id
+
+  private def issueTimeSlotID(): String = {
+    lastUsedTimeSlotID += 1
+    tsIDFromNumber(lastUsedTimeSlotID)
+  }
+
+  private def issueAnnotationID(): String = {
+    lastUsedAnnotationID += 1
+    annotIDFromNumber(lastUsedAnnotationID)
   }
 
 
@@ -149,9 +155,9 @@ object ELANDocumentJquery {
   // constrain maximum allowed time slot.
   // WARNING: it is assumed that the xmlString is a valid ELAN document matching xsd scheme.
   // Otherwise the result is undefined.
-  def apply(xmlString: String, duration: Long) = new ELANDocumentJquery(
+  def apply(xmlString: String, pxPerSec: Double) = new ELANDocumentJquery(
     jQuery(jQuery.parseXML(xmlString)).find(annotDocTagName),
-    duration
+    pxPerSec
   )
 }
 

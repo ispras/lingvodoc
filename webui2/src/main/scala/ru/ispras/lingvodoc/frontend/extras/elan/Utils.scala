@@ -10,6 +10,7 @@ import scala.collection.mutable.ListBuffer
 
 
 private [elan] object Utils {
+  def millis2Sec(millis: Long) = millis / 1000.0
   // convert JQuery object to XML string. This will not work if document starts with XML declaration <?xml...
   // see http://stackoverflow.com/questions/22647651/convert-xml-document-back-to-string-with-jquery
   def jQuery2XML(jq: JQuery): String = if (jq.length == 0)

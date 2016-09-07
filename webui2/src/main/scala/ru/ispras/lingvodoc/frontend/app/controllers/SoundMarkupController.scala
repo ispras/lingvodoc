@@ -25,12 +25,14 @@ import scala.scalajs.js.annotation.JSExport
 @js.native
 trait SoundMarkupScope extends Scope {
   var ruler: Double = js.native // coordinate of wavesurfer ruler
-  var elan: ELANDocumentJquery = js.native
+  var elan: ELANDocumentJquery = js.native // elan document itself
   var ws: WaveSurfer = js.native // for debugging, remove later
 
   var tierWidth: Int = js.native // displayed tier width in pixels
   var tiersNameWidth: Int = js.native // column with tier names width in pixels
+  var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas
   var menuOptions: js.Array[js.Any] = js.native
+
   var tmp: js.Dynamic = js.native
 }
 
@@ -48,17 +50,19 @@ class SoundMarkupController(scope: SoundMarkupScope,
   scope.menuOptions = new BootstrapContextMenu(
     MenuOption("New Annotation Here", (itemScope: js.Dynamic) => {console.log("new annotation here")})
   ).toJS
-
-
   var waveSurfer: Option[WaveSurfer] = None
+  private var _minPxPerSec=50
+  val pxPerSecStep = 30 // zoom in/out step
+  // fake value to avoid division by zero; on ws load, it will be set correctly
+  private var _duration: Double = 42.0
+  scope.fullWSWidth = 0.0
+
   var soundMarkup: Option[String] = None
 //  val soundAddress = params.get("soundAddress").map(_.toString)
-  val soundAddress = Some("http://localhost/getting_closer_short.wav")
+  val soundAddress = Some("http://localhost/getting_closer.wav")
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
-  // hack to distinguish situation when ws is sought by human or by us
-  var isWSSeeked = false
   // listen to svg mouseover while true, ignore it when false
   var svgIsMouseDown = false
   // true after first drag event, false after dragend
@@ -67,6 +71,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var rightBorderIsMoving = true
   // true when ws finished loading
   var isWSReady = false
+  // When wsSeek is called because user clicked on it, we must manually call apply, because it is not ng-click.
+  // However, in ome other cases, e.g. when user clicks on svg and then we update WS ruler, apply must not be called --
+  // set this flag to false in such situations.
+  var isWSNeedsToForceAngularRefresh = true
 
   // d3 selection rectangle element
   var selectionRectangle: Option[Selection[EventTarget]] = None
@@ -74,6 +82,21 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // add scope to window for debugging
   dom.window.asInstanceOf[js.Dynamic].myScope = scope
+
+  def minPxPerSec = _minPxPerSec
+  def minPxPerSec_=(mpps: Int) = {
+    _minPxPerSec = mpps
+    scope.elan.setPxPerSec(minPxPerSec)
+    isWSNeedsToForceAngularRefresh = false
+    waveSurfer.foreach(_.zoom(mpps))
+    updateFullWSWidth()
+  }
+  def duration = _duration
+  def duration_=(dur: Double) = {
+    _duration = dur
+    updateFullWSWidth()
+  }
+  def updateFullWSWidth() = { scope.fullWSWidth = minPxPerSec * duration }
 
   /**
     * Loading process requires a bit of explanation.
@@ -97,7 +120,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
     if (waveSurfer.isEmpty) {
       // params should be synchronized with sm-ruler css
       val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
-                               cursorWidth = 1, cursorColor = "red")
+                               cursorWidth = 1, cursorColor = "red",
+                               fillParent=false, minPxPerSec=minPxPerSec, scrollParent=false)
       waveSurfer = Some(WaveSurfer.create(wso))
       (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
         ws.load(sa)
@@ -113,6 +137,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def wsReady(event: js.Dynamic): Unit = {
     console.log("ws ready!")
     isWSReady = true
+    duration = getDuration
     scope.$apply({})
   }
 
@@ -133,7 +158,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       console.log(s"got ${textStatus.toString} from jquery get")
       val test_markup = data.toString
       try {
-        scope.elan = ELANDocumentJquery(test_markup, 0) // TODO: set duration after loading
+        scope.elan = ELANDocumentJquery(test_markup, minPxPerSec)
         console.log(scope.elan.toString)
       } catch {
         case e: Exception =>
@@ -147,10 +172,14 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   @JSExport
-  def getWaveSurferWidth = { console.log(s"width ${js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString} is called"); js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString.toDouble}
+  def getWaveSurferWidth = {
+//    console.log(s"width ${js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString} is called");
+    js.Dynamic.global.document.getElementById("waveform").scrollWidth.toString.toDouble}
 
   @JSExport
-  def getWaveSurferHeight = { console.log("height is called"); js.Dynamic.global.document.getElementById("waveform").scrollHeight.toString.toDouble}
+  def getWaveSurferHeight = {
+//    console.log("height is called")
+    js.Dynamic.global.document.getElementById("waveform").scrollHeight.toString.toDouble}
 
   @JSExport
   def getDuration = { if (isWSReady) waveSurfer.get.getDuration() else 42.0 }
@@ -176,9 +205,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
   // set wavesurfer & svg rulers to @offset pixels from start
-  def svgSeek(offset: Double, forceApply: Boolean = false): Unit = {
-    isWSSeeked = true
-    setRulerOffset(offset, forceApply)
+  def svgSeek(offset: Double): Unit = {
+    // no need to call setRulerOffset here; it will be called automatically because WS will invoke wsSeek itself.
+    isWSNeedsToForceAngularRefresh = false // ng-click will call apply
     val progress = offsetToProgress(offset)
     waveSurfer.foreach(_.seekTo(progress))
   }
@@ -205,6 +234,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
 
   @JSExport
+  def zoomIn(): Unit = { minPxPerSec += pxPerSecStep; }
+
+  @JSExport
+  def zoomOut(): Unit = { minPxPerSec -= pxPerSecStep; }
+
+  @JSExport
   def save(): Unit = {
     instance.close(())
   }
@@ -215,11 +250,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def onWSSeek(progress: Double): Unit = {
-    console.log("ws seeked")
-    if (isWSSeeked)
-      isWSSeeked = false
-    else
-      setRulerProgress(progress, forceApply = true)
+    setRulerProgress(progress, forceApply = isWSNeedsToForceAngularRefresh)
+    isWSNeedsToForceAngularRefresh = true
   }
 
   def onWSPlaying(): Unit = {
