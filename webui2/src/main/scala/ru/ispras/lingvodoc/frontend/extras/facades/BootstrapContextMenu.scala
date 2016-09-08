@@ -4,8 +4,9 @@ import scala.scalajs.js
 import scala.collection.mutable
 import js.JSConverters._
 
-class BootstrapContextMenu(s: MenuOption*) {
+class BootstrapContextMenu(s: Vector[MenuOption] = Vector()) {
   var options = s
+  def addOpt(mo: MenuOption) = new BootstrapContextMenu(options :+ mo)
   def toJS: js.Array[js.Any] = options.map(_.toJS).toJSArray
 }
 

@@ -33,6 +33,7 @@ trait SoundMarkupScope extends Scope {
   var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas
   var wsHeight: Int = js.native // height of wavesurfer
   var tierMenuOptions: js.Array[js.Any] = js.native
+  var annotMenuOptions: js.Array[js.Any] = js.native
 
   var tmp: js.Dynamic = js.native
 }
@@ -48,7 +49,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   scope.tierWidth = 50
   scope.tiersNameWidth = 140
 
-  scope.tierMenuOptions = SoundMarkupController.tierMenuOptions
   var waveSurfer: Option[WaveSurfer] = None // WS object
   private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
   val pxPerSecStep = 30 // zooming step
@@ -87,6 +87,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   //  })
   parseMarkup(dummyMarkupAddress)
 
+  setMenuOptions()
 
   // add scope to window for debugging
   dom.window.asInstanceOf[js.Dynamic].myScope = scope
@@ -111,6 +112,16 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   def updateFullWSWidth() = {
     scope.fullWSWidth = pxPerSec * duration
+  }
+
+  def setMenuOptions() = {
+    val tierMenuOptions = new BootstrapContextMenu().addOpt(
+      MenuOption("New Annotation Here",  newAnnotationHere _, Some({isNewAnnotationAllowedHere _}: js.Function1[js.Dynamic, Boolean]))
+    )
+    scope.tierMenuOptions = tierMenuOptions.toJS
+    scope.annotMenuOptions = tierMenuOptions.addOpt(
+      MenuOption("Edit Annotation Value", editAnnotationValue _)
+    ).toJS
   }
 
   /**
@@ -169,7 +180,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       val test_markup = data.toString
       try {
         scope.elan = ELANDocumentJquery(test_markup, pxPerSec)
-        // TODO: apply() here?
+        // TODO: apply() here? if markup will be loaded later than sound
 //        console.log(scope.elan.toString)
       } catch {
         case e: Exception =>
@@ -333,29 +344,26 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def leftBorderMillis = getSelectionRectangleLeftBorderMillis.toString
   @JSExport // TODO removeme
   def rightBorderMillis = getSelectionRectangleRightBorderMillis.toString
+
+  // These functions used context menu options
+  def isNewAnnotationAllowedHere(itemScope: js.Dynamic): Boolean = {
+    console.log("isNewAnnotationAllowedHere called")
+    true
+  }
+
+  def newAnnotationHere(itemScope: js.Dynamic): Unit = {
+    console.log(s"creating new annotation on tier ${itemScope.tier.asInstanceOf[ITier[IAnnotation]].getID}")
+    console.log("CALLLED")
+  }
+
+  def editAnnotationValue(itemScope: js.Dynamic): Unit = {
+    console.log(s"editing annotation value on annot ${itemScope.annot.asInstanceOf[IAnnotation].getID}")
+  }
 }
 
 object SoundMarkupController {
-  def isNewAnnotationAllowedHere = (itemScope: js.Dynamic) => {
-    console.log("isNewAnnotationAllowedHere called")
-    false
-  }
 
-  val tierMenuOptions = {
-    val action = (itemScope: js.Dynamic) => {
-      console.log(s"creating new annotation on tier ${itemScope.tier.asInstanceOf[ITier[IAnnotation]].getID}")
-      console.log("CALLLED")
-    }
-    val itemText = (itemScope: js.Dynamic) => {
-//      console.log(s"creating new annotation on tier ${itemScope.tier.asInstanceOf[ITier[IAnnotation]].getID}")
-      console.log("FFF")
-      "fff"
-    }
-    new BootstrapContextMenu(
-      MenuOption("New Annotation Here", action, Some({isNewAnnotationAllowedHere}: js.Function1[js.Dynamic, Boolean]))
-//      MenuOption({itemText}:js.Function, action, {disable}: js.Function)
-    ).toJS
-  }
+
 
 //  val AnnotationMenuOptions = {
 //    val

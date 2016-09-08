@@ -42,6 +42,17 @@
                  ng-mousemove="controller.onSVGMouseMove($event)"
 
             >
+                <!-- rect to select new annotation duration -->
+                <rect id="selectionRect" x="0" y="0" width="0" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
+                      class="sm-selection-rectangle">
+                </rect>
+
+                <!-- ruler shows current position -->
+                <line class="sm-ruler"
+                      ng-attr-x1="{{ruler}}" ng-attr-y1="0"
+                      ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierWidth * elan.tiersToJSArray.length}}">
+                </line>
+
                     <!-- tiers -->
                     <svg x="0" ng-attr-y="{{$index * tierWidth}}" ng-repeat="tier in elan.tiersToJSArray"
                          ng-click="controller.onTierClick($event, tier)"
@@ -52,7 +63,9 @@
                               fill="{{$index % 2 == 0 ? 'grey' : 'white'}}"></rect>
                         <!-- annotations -->
                         <svg ng-attr-x="{{annot.startOffset}}" y="0" ng-repeat="annot in tier.annotationsToJSArray"
-                             ng-attr-width="{{annot.durationOffset}}" ng-attr-height="{{tierWidth}}">
+                             ng-attr-width="{{annot.durationOffset}}" ng-attr-height="{{tierWidth}}"
+                             context-menu="annotMenuOptions"
+                        >
                             <rect x="0" y="0" ng-attr-width="{{annot.durationOffset}}"
                                   ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.2">
                             </rect>
@@ -78,16 +91,7 @@
                         </svg>
                     </svg>
 
-                    <!-- rect to select new annotation duration -->
-                    <rect id="selectionRect" x="0" y="0" width="0" ng-attr-height="{{tierWidth * elan.tiersToJSArray.length}}"
-                          class="sm-selection-rectangle">
-                    </rect>
 
-                    <!-- ruler shows current position -->
-                    <line class="sm-ruler"
-                          ng-attr-x1="{{ruler}}" ng-attr-y1="0"
-                          ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierWidth * elan.tiersToJSArray.length}}">
-                    </line>
             </svg>
 
         </div>
