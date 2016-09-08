@@ -1,23 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import org.scalajs.dom
-import org.scalajs.dom.raw.MouseEvent
 import ru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation
 import ru.ispras.lingvodoc.frontend.extras.elan.tier.ITier
-import scala.collection.mutable
-import scala.scalajs.js
-import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalInstance, ModalService, BackendService}
 import com.greencatsoft.angularjs.core.{Timeout, Scope}
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
-import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.facades.{MenuOption, BootstrapContextMenu, WaveSurfer, WaveSurferOpts}
 import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
-import scala.scalajs.js.JSConverters._
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import org.scalajs.jquery._
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -357,15 +352,30 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def editAnnotationValue(itemScope: js.Dynamic): Unit = {
-    console.log(s"editing annotation value on annot ${itemScope.annot.asInstanceOf[IAnnotation].getID}")
+    val annot = itemScope.annot.asInstanceOf[IAnnotation]
+    val isValid: String => (Boolean, Option[String]) = (newValue: String) => {
+      if (newValue == "грузите")
+        (true, None)
+      else
+        (false, Some("Invalid value!"))
+    }
+    console.log(s"editing annotation value on annot ${annot.getID}")
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/editTextField.html"
+    options.controller = "EditTextFieldController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "sm"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(originalValue = annot.text.asInstanceOf[js.Object],
+                           isValid = isValid.asInstanceOf[js.Object])
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[String](options)
+    instance.result map {
+      case newVal: String => console.log(s"new value for annotation ${annot.getID} is $newVal")
+    }
   }
-}
-
-object SoundMarkupController {
-
-
-
-//  val AnnotationMenuOptions = {
-//    val
-//  }
 }
