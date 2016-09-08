@@ -12,7 +12,7 @@ import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.facades.{MenuOption, BootstrapContextMenu, WaveSurfer, WaveSurferOpts}
-import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, ELANDocumentJquery}
+import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
 import scala.scalajs.js.JSConverters._
@@ -32,7 +32,7 @@ trait SoundMarkupScope extends Scope {
   var tiersNameWidth: Int = js.native // column with tier names width in pixels
   var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas
   var wsHeight: Int = js.native // height of wavesurfer
-  var menuOptions: js.Array[js.Any] = js.native
+  var tierMenuOptions: js.Array[js.Any] = js.native
 
   var tmp: js.Dynamic = js.native
 }
@@ -48,13 +48,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
   scope.tierWidth = 50
   scope.tiersNameWidth = 140
 
-  scope.menuOptions = new BootstrapContextMenu(
-    MenuOption("New Annotation Here", (itemScope: js.Dynamic) => {
-      console.log("new annotation here")
-    })
-  ).toJS
+  scope.tierMenuOptions = SoundMarkupController.tierMenuOptions
   var waveSurfer: Option[WaveSurfer] = None // WS object
-  private var _minPxPerSec = 50 // minimum pxls per second, all timing is bounded to it
+  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
   val pxPerSecStep = 30 // zooming step
   // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
   private var _duration: Double = 42.0
@@ -64,6 +60,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var soundMarkup: Option[String] = None
   //  val soundAddress = params.get("soundAddress").map(_.toString)
   val soundAddress = Some("http://localhost/getting_closer.wav")
+  val dummyMarkupAddress = "http://localhost/test.eaf"
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
@@ -88,20 +85,21 @@ class SoundMarkupController(scope: SoundMarkupScope,
   //      case markup => parseMarkup(markup)
   //    }
   //  })
-  parseMarkup("fff")
+  parseMarkup(dummyMarkupAddress)
 
 
   // add scope to window for debugging
   dom.window.asInstanceOf[js.Dynamic].myScope = scope
 
-  def minPxPerSec = _minPxPerSec
+  def pxPerSec = _pxPerSec
 
-  def minPxPerSec_=(mpps: Int) = {
-    _minPxPerSec = mpps
-    scope.elan.setPxPerSec(minPxPerSec)
+  def pxPerSec_=(mpps: Int) = {
+    _pxPerSec = mpps
+    scope.elan.setPxPerSec(pxPerSec)
     isWSNeedsToForceAngularRefresh = false
     waveSurfer.foreach(_.zoom(mpps))
     updateFullWSWidth()
+    syncRulersFromWS()
   }
 
   def duration = _duration
@@ -112,7 +110,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def updateFullWSWidth() = {
-    scope.fullWSWidth = minPxPerSec * duration
+    scope.fullWSWidth = pxPerSec * duration
   }
 
   /**
@@ -141,7 +139,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       // params should be synchronized with sm-ruler css
       val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
         cursorWidth = 1, cursorColor = "red",
-        fillParent = false, minPxPerSec = minPxPerSec, scrollParent = false,
+        fillParent = false, minPxPerSec = pxPerSec, scrollParent = false,
         height = scope.wsHeight)
       waveSurfer = Some(WaveSurfer.create(wso))
       (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
@@ -165,12 +163,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
 
-  def parseMarkup(markup: String): Unit = {
+  def parseMarkup(markupAddress: String): Unit = {
     scope.elan = ELANDocumentJquery.getDummy // to avoid errors while it is loading
     val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
       val test_markup = data.toString
       try {
-        scope.elan = ELANDocumentJquery(test_markup, minPxPerSec)
+        scope.elan = ELANDocumentJquery(test_markup, pxPerSec)
         // TODO: apply() here?
 //        console.log(scope.elan.toString)
       } catch {
@@ -181,13 +179,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
       scope.ruler = 0
     }
 
-    jQuery.get("http://localhost/test.eaf", success = action, dataType = "text")
+    jQuery.get(markupAddress, success = action, dataType = "text")
   }
 
-  @JSExport
+  @JSExport // TODO removeme
   def getDuration = { if (isWSReady) waveSurfer.get.getDuration() else 42.0 }
 
-  @JSExport
+  @JSExport // TODO removeme
   def getCurrentTime = { if (isWSReady) waveSurfer.get.getCurrentTime() else 42.0 }
 
   /**
@@ -201,6 +199,14 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def offsetToProgress(offset: Double) = offset / scope.fullWSWidth
 
   def progressToOffset(progress: Double) = progress * scope.fullWSWidth
+
+  def offsetToSec(offset: Double) = offset / pxPerSec
+
+  // sync rulers on wavesurfer's ruler position
+  def syncRulersFromWS(forceApply: Boolean = false, applyTimeout: Boolean = false) = {
+    val progress = waveSurfer.map(ws => ws.getCurrentTime() / duration)
+    progress.foreach(p => setRulerProgress(p, forceApply = forceApply, applyTimeout = applyTimeout))
+  }
 
 
   // set wavesurfer & svg rulers to @offset pixels from start
@@ -233,10 +239,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
 
   @JSExport
-  def zoomIn(): Unit = { minPxPerSec += pxPerSecStep; }
+  def zoomIn(): Unit = { pxPerSec += pxPerSecStep; }
 
   @JSExport
-  def zoomOut(): Unit = { minPxPerSec -= pxPerSecStep; }
+  def zoomOut(): Unit = { pxPerSec -= pxPerSecStep; }
 
   @JSExport
   def save(): Unit = {
@@ -253,10 +259,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     isWSNeedsToForceAngularRefresh = true
   }
 
-  def onWSPlaying(): Unit = {
-    val progress = waveSurfer.map(ws => ws.getCurrentTime() / duration)
-    progress.foreach(p => setRulerProgress(p, applyTimeout = true))
-  }
+  def onWSPlaying(): Unit = { syncRulersFromWS(applyTimeout = true) }
 
   // called when user clicks on svg, sets ruler to this place
   @JSExport
@@ -295,8 +298,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
       isDragging = true
     }
     else { // executed on every subsequent mouse move event
-      val oldX = selectionRectangle.get.attr("x").toString.toDouble
-      val oldWidth = selectionRectangle.get.attr("width").toString.toDouble
+      val oldX = getSelectionRectangleLeftBorderOffset
+      val oldWidth = getSelectionRectangleWidthOffset
 
       if ((rightBorderIsMoving && cursorX > oldX) ||
           (!rightBorderIsMoving && cursorX >= oldX + oldWidth)) {
@@ -317,5 +320,44 @@ class SoundMarkupController(scope: SoundMarkupScope,
       svgSeek(cursorX)
     }
   }
+
+  def getSelectionRectangleLeftBorderOffset = selectionRectangle.map(_.attr("x").toString.toDouble).getOrElse(0.0)
+  def getSelectionRectangleWidthOffset = selectionRectangle.map(_.attr("width").toString.toDouble).getOrElse(0.0)
+
+  def getSelectionRectangleLeftBorderMillis = Utils.sec2Millis(offsetToSec(getSelectionRectangleLeftBorderOffset))
+  def getSelectionRectangleRightBorderMillis = Utils.sec2Millis(offsetToSec(
+    getSelectionRectangleLeftBorderOffset + getSelectionRectangleWidthOffset)
+  )
+
+  @JSExport // TODO removeme
+  def leftBorderMillis = getSelectionRectangleLeftBorderMillis.toString
+  @JSExport // TODO removeme
+  def rightBorderMillis = getSelectionRectangleRightBorderMillis.toString
 }
 
+object SoundMarkupController {
+  def isNewAnnotationAllowedHere = (itemScope: js.Dynamic) => {
+    console.log("isNewAnnotationAllowedHere called")
+    false
+  }
+
+  val tierMenuOptions = {
+    val action = (itemScope: js.Dynamic) => {
+      console.log(s"creating new annotation on tier ${itemScope.tier.asInstanceOf[ITier[IAnnotation]].getID}")
+      console.log("CALLLED")
+    }
+    val itemText = (itemScope: js.Dynamic) => {
+//      console.log(s"creating new annotation on tier ${itemScope.tier.asInstanceOf[ITier[IAnnotation]].getID}")
+      console.log("FFF")
+      "fff"
+    }
+    new BootstrapContextMenu(
+      MenuOption("New Annotation Here", action, Some({isNewAnnotationAllowedHere}: js.Function1[js.Dynamic, Boolean]))
+//      MenuOption({itemText}:js.Function, action, {disable}: js.Function)
+    ).toJS
+  }
+
+//  val AnnotationMenuOptions = {
+//    val
+//  }
+}

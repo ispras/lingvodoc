@@ -21,10 +21,30 @@ class MenuOption(val itemText: js.Dynamic, val action: js.Dynamic, val disable: 
 }
 
 object MenuOption {
+  // action and disable param is $itemScope
   def apply(itemText: String, action: (js.Function1[js.Dynamic, Unit]),
-           disable: Option[js.Function1[js.Dynamic, Unit]] = None) = new MenuOption(
+           disable: Option[js.Function1[js.Dynamic, Boolean]] = None) = new MenuOption(
     itemText.asInstanceOf[js.Dynamic],
     action.asInstanceOf[js.Dynamic],
     disable.map(_.asInstanceOf[js.Dynamic])
   )
+  def apply(itemText: (js.Function1[js.Dynamic, String]),
+            action: (js.Function1[js.Dynamic, Unit])) = new MenuOption(
+    itemText.asInstanceOf[js.Dynamic],
+    action.asInstanceOf[js.Dynamic]
+  )
+  def apply(itemText: (js.Function1[js.Dynamic, String]),
+            action: (js.Function1[js.Dynamic, Unit]),
+            disable: Option[js.Function1[js.Dynamic, Boolean]]) = new MenuOption(
+    itemText.asInstanceOf[js.Dynamic],
+    action.asInstanceOf[js.Dynamic],
+    disable.map(_.asInstanceOf[js.Dynamic])
+  )
+//  // for use with $event and model. action and disable params are $itemScope, $event, model
+//  def apply(itemText: String, action: (js.Function3[js.Dynamic, js.Dynamic, js.Dynamic, Unit]),
+//            disable: Option[js.Function3[js.Dynamic, js.Dynamic, js.Dynamic, Unit]] = None) = new MenuOption(
+//    itemText.asInstanceOf[js.Dynamic],
+//    action.asInstanceOf[js.Dynamic],
+//    disable.map(_.asInstanceOf[js.Dynamic])
+//  )
 }
