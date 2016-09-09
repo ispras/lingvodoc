@@ -97,12 +97,13 @@ def create_entity(request):  # tested
         #     TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
         #     Field.client_id == req['field_client_id'], Field.object_id == req['field_object_id']).first()
         tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+            TranslationAtom.locale_id == 2,
             TranslationAtom.parent_client_id == TranslationGist.client_id,
             TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
             TranslationGist.client_id == Field.data_type_translation_gist_client_id,
             TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
             Field.client_id == req['field_client_id'], Field.object_id == req['field_object_id']).first()
-        data_type = tr_atom.content
+        data_type = tr_atom.content.lower()
         if req.get('self_client_id') and req.get('self_object_id'):
             upper_level = DBSession.query(Entity).filter_by(client_id=req['entity_client_id'],
                                                               object_id=req['entity_object_id']).first()
@@ -119,7 +120,7 @@ def create_entity(request):  # tested
         filename = req.get('filename')
         real_location = None
         url = None
-        if data_type == 'image' or data_type == 'sound' or data_type == 'markup':
+        if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
             real_location, url = create_object(request, req['content'], entity, data_type, filename)
             entity.content = url
             old_meta = entity.additional_metadata
