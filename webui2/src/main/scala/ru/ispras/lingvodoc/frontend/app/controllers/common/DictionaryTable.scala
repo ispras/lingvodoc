@@ -1,13 +1,15 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.common
 
-import ru.ispras.lingvodoc.frontend.app.model.{Entity, Field, LexicalEntry}
-
+import ru.ispras.lingvodoc.frontend.app.model._
 
 import scala.scalajs.js
 import scala.scalajs.js.Array
 import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
+import ru.ispras.lingvodoc.frontend.app.utils.Utils
+
 
 
 @JSExportAll
@@ -16,51 +18,49 @@ abstract class Column {
 }
 
 @JSExportAll
-case class SimpleColumn(entityType: String, dataType: String, displayName: String) extends Column {
-  override def getName(): String = displayName
+case class SimpleColumn(field: Field, dataType: TranslationGist) extends Column {
+  override def getName(): String = {
+    field.translation
+  }
 }
 
 @JSExportAll
-case class GroupColumn(group: String, columns: js.Array[Column], displayName: String) extends Column {
-  override def getName(): String = displayName
+case class MasterColumn(field: Field, dataType: TranslationGist, linkedColumns: js.Array[SimpleColumn]) extends Column {
+  override def getName(): String = {
+    field.translation
+  }
 }
 
 @JSExportAll
-case class MasterColumn(entityType: String, dataType: String, slaveColumns: js.Array[SimpleColumn], displayName: String) extends Column {
-  override def getName(): String = displayName
-}
-
-
-@JSExportAll
-case class Value(content: String, dataType: String, values: js.Array[Value]) {
+case class Value(content: String, dataType: TranslationGist, values: js.Array[Value]) {
   def getContent(): String = content
 }
 
 
 @JSExportAll
-abstract class GenericContent {
+abstract class GenericCell {
   def getType(): String
 }
 
-
 @JSExportAll
-case class Content(values: js.Array[Value]) extends GenericContent {
+case class Cell(values: js.Array[Value]) extends GenericCell {
   override def getType(): String = "content"
 }
 
 @JSExportAll
-case class GroupContent(contents: js.Array[Content]) extends GenericContent {
+case class GroupCell(contents: js.Array[Cell]) extends GenericCell {
   override def getType(): String = "group"
 }
 
 
 @JSExportAll
-case class Row(cells: js.Array[GenericContent])
+case class Row(entry: LexicalEntry, cells: js.Array[GenericCell])
 
 
 class DictionaryTable {
 
-  private var fields = Seq[Field]()
+  private var linkedPerspectives: Seq[Perspective] = Seq[Perspective]()
+  private var fields: Seq[Field] = Seq[Field]()
 
   @JSExport
   var header: js.Array[Column] = js.Array()
@@ -69,87 +69,96 @@ class DictionaryTable {
   var rows: js.Array[Row] = js.Array()
 
 
-  private def createColumn(field: Field): Column = {
-    field match {
-      case c if c.fields.nonEmpty => MasterColumn(field.translation, field.translation, field.fields.toSeq.map(f => SimpleColumn(f.translation, f.translation, f.translation)).toJSArray, field.translation)
-      case c if c.fields.isEmpty => SimpleColumn(field.translation, field.translation, field.translation)
-    }
+  protected def getContent(entities: Seq[Entity], column: SimpleColumn): Cell = {
+//    console.log((column.field :: Nil).toJSArray)
+//    console.log((entities).toJSArray)
+
+    val values = entities.filter(entity => entity.fieldClientId == column.field.clientId && entity.fieldObjectId == column.field.objectId).map(entity => {
+      Value(entity.content, column.dataType, js.Array())
+    }).toJSArray
+    
+    Cell(values)
   }
 
-
-  private def addColumn(field: Field) = {
-    val h = createColumn(field)
-    header.push(h)
-  }
-
-  private def getContent(entities: Seq[Entity], column: SimpleColumn): Content = {
-    val values: js.Array[Value] = entities.toJSArray.filter(entity => entity.entityType.equals(column.entityType)).map(entity => {
-      Value(entity.content, column.dataType, js.Array[Value]())
-    })
-    Content(values)
-  }
-
-  private def getContent(entities: Seq[Entity], column: MasterColumn): Content = {
-    val values: js.Array[Value] = entities.toJSArray.filter(entity => entity.entityType.equals(column.entityType)).map(entity => {
+  protected def getContent(entities: Seq[Entity], column: MasterColumn): Cell = {
+    val values: js.Array[Value] = entities.toJSArray.filter(entity => entity.fieldClientId == column.field.clientId && entity.fieldObjectId == column.field.objectId).map(entity => {
       var subEntities = Seq[Value]()
       // create list of sub-entities
       for (e <- entity.entities) {
-        val slaveColumnOpt = column.slaveColumns.find(f => f.entityType.equals(e.entityType))
+        val slaveColumnOpt = column.linkedColumns.find(f => f.field.clientId == e.fieldClientId && f.field.objectId == e.fieldObjectId)
         if (slaveColumnOpt.nonEmpty) {
           subEntities = subEntities :+ Value(e.content, slaveColumnOpt.get.dataType, js.Array())
         }
       }
       Value(entity.content, column.dataType, subEntities.toJSArray)
     })
-    Content(values)
+    Cell(values)
   }
 
-  private def addRow(entry: LexicalEntry) = {
-
-    val cccc: Array[GenericContent] = header.map {
+  def addEntry(entry: LexicalEntry) = {
+    val rowData: js.Array[Cell] = header.map {
       case column: SimpleColumn => getContent(entry.entities, column)
       case column: MasterColumn => getContent(entry.entities, column)
-
-      case column: GroupColumn =>
-        val contents = column.columns.map {
-          case c: SimpleColumn => getContent(entry.entities, c)
-          case c: MasterColumn => getContent(entry.entities, c)
-        }
-        GroupContent(contents)
-    }
-
-    rows = rows :+ Row(cccc)
+    }.toJSArray
+    rows = Row(entry, rowData.asInstanceOf[js.Array[GenericCell]]) +: rows
   }
 }
 
 object DictionaryTable {
-  def apply(fields: Seq[Field], entries: Seq[LexicalEntry]): DictionaryTable = {
+
+
+  def build(fields: Seq[Field], dataTypes: Seq[TranslationGist], entries: Seq[LexicalEntry]): DictionaryTable = {
 
     val table = new DictionaryTable()
 
-    // save raw fields
-    table.fields = fields
-
-    // create table header
-    for (field <- fields.toList) {
-      table.addColumn(field)
+    val columns = fields.flatMap { field =>
+      dataTypes.find(dataType => dataType.clientId == field.dataTypeTranslationGistClientId && dataType.objectId == field.dataTypeTranslationGistObjectId) match {
+        case Some(dataType) =>
+          val column: Column = field match {
+            case x if x.fields.nonEmpty =>
+              MasterColumn(field, dataType, x.fields.map { f =>
+                dataTypes.find(dataType => dataType.clientId == f.dataTypeTranslationGistClientId && dataType.objectId == f.dataTypeTranslationGistObjectId) match {
+                  case Some(linkedFieldDataType) => SimpleColumn(f, linkedFieldDataType)
+                  case None => throw new ControllerException("")
+                }
+              })
+            case x if x.fields.isEmpty => SimpleColumn(field, dataType)
+          }
+          Some(column)
+        case None => None
+      }
     }
 
-    // build table content
-    for (entry <- entries) {
-      table.addRow(entry)
+    val rows = entries.map { entry =>
+      val rowData: js.Array[Cell] = columns.map {
+        case column: SimpleColumn => table.getContent(entry.entities, column)
+        case column: MasterColumn => table.getContent(entry.entities, column)
+      }.toJSArray
+      Row(entry, rowData.asInstanceOf[js.Array[GenericCell]])
     }
 
-    table
-  }
-
-  def build(columns: Seq[Column], cells: Seq[GenericContent]): DictionaryTable = {
-    val table = new DictionaryTable()
     table.header = columns.toJSArray
-    table.rows = (Row(cells.toJSArray) :: Nil).toJSArray
+    table.rows = rows.toJSArray
+
+    console.log((table :: Nil).toJSArray)
+
     table
   }
-
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

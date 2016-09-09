@@ -47,7 +47,7 @@
                     </a>
                     <ul class="dropdown-menu">
                         <li><a href="#/dashboard">My dictionaries</a></li>
-                        <li><a href="#/create_dictionary">Create dictionary</a></li>
+                        <li><a href="#/dictionary/create">Create dictionary</a></li>
                         <li><a href="#/merge_master">Merge master</a></li>
                     </ul>
                 </li>
@@ -89,9 +89,6 @@
                         <li><a ng-click="controller.setLocale(3)"><span ng-if="controller.getLocale()===3" class="glyphicon glyphicon-ok"></span> German</a></li>
                     </ul>
                 </li>
-
-
-
 
             </ul>
         </div>

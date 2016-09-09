@@ -43,13 +43,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   scope.size = 20
 
 
-
-  @JSExport
-  def viewGroup(column: GroupColumn, content: GroupContent) = {
-    console.log((column :: Nil).toJSArray)
-    console.log((content :: Nil).toJSArray)
-  }
-
+  load()
 
   @JSExport
   def play(soundAddress: String, soundMarkupAddress: String) = {
@@ -78,26 +72,31 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   }
 
 
-  val dictionary = Dictionary.emptyDictionary(scope.dictionaryClientId, scope.dictionaryObjectId)
-  val perspective = Perspective.emptyPerspective(scope.perspectiveClientId, scope.perspectiveObjectId)
+  private[this] def load() = {
 
-  backend.getPublishedLexicalEntriesCount(dictionary, perspective) onComplete {
-    case Success(count) =>
-      scope.count = count
+    val dictionary = Dictionary.emptyDictionary(scope.dictionaryClientId, scope.dictionaryObjectId)
+    val perspective = Perspective.emptyPerspective(scope.perspectiveClientId, scope.perspectiveObjectId)
 
-      backend.getFields(dictionary, perspective) onComplete {
-        case Success(fields) =>
-
-          backend.getLexicalEntries(dictionary, perspective, LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
-            case Success(entries) =>
-              scope.dictionaryTable = DictionaryTable(fields, entries)
-              console.log(entries.toJSArray)
-
-
-            case Failure(e) => console.log(e.getMessage)
-          }
-        case Failure(e) =>
-      }
-    case Failure(e) => console.log(e.getMessage)
+    backend.dataTypes() onComplete {
+      case Success(dataTypes) =>
+        backend.getFields(dictionary, perspective) onComplete {
+          case Success(fields) =>
+            //backend.getPublishedLexicalEntriesCount(dictionary, perspective) onComplete {
+            //  case Success(count) =>
+            //    scope.count = count
+            //    backend.getLexicalEntries(dictionary, perspective, LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
+            //      case Success(entries) =>
+                    val entries = Seq[LexicalEntry]()
+                    scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
+            //      case Failure(e) => console.log(e.getMessage)
+            //    }
+            //  case Failure(e) => console.log(e.getMessage)
+            //}
+          case Failure(e) => console.log(e.getMessage)
+        }
+      case Failure(e) => console.log(e.getMessage)
+    }
   }
+
+
 }

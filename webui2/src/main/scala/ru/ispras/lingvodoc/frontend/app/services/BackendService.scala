@@ -478,24 +478,23 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   def getFields(dictionary: Dictionary, perspective: Perspective): Future[Seq[Field]] = {
     val p = Promise[Seq[Field]]()
 
-    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary
-      .objectId.toString) +
-      "/perspective/" + encodeURIComponent(perspective.clientId.toString) + "/" + encodeURIComponent(perspective
-      .objectId.toString) + "/fields"
+    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" +
+      encodeURIComponent(dictionary.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspective.clientId.toString) +
+      "/" + encodeURIComponent(perspective.objectId.toString) + "/fields"
 
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
-          val fields = read[Seq[Field]](js.JSON.stringify(response.fields))
+          val fields = read[Seq[Field]](js.JSON.stringify(response))
           p.success(fields)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed fields json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed fields data. Missing some " +
-            "required fields: " + e.getMessage))
-          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed fields json.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed fields data. Missing some required fields", e))
+          case e: Throwable => p.failure(BackendException("Unknown exception.", e))
         }
-      case Failure(e) => p.failure(new BackendException("Failed to fetch perspective fields: " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to fetch perspective fields.", e))
     }
     p.future
   }
@@ -597,7 +596,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
-          val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response.lexical_entries))
+          val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response))
           p.success(entries)
         } catch {
           case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed lexical entries json:" + e.getMessage))
@@ -609,6 +608,57 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
+
+  def createEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entity: EntityData): Future[CompositeId] = {
+
+    val p = Promise[CompositeId]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) +
+      "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) + "/entity"
+
+    $http.post[js.Dynamic](getMethodUrl(url), write(entity)) onComplete {
+      case Success(response) => p.success(read[CompositeId](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(new BackendException("Failed to update perspective fields: " + e.getMessage))
+    }
+    p.future
+  }
+
+
+
+  /**
+    * Gets count of all lexical entries
+    * @param dictionaryId
+    * @param perspectiveId
+    * @return
+    */
+  def getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Int] = {
+    val p = Promise[Int]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) +
+      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/all_count"
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(response.count.asInstanceOf[Int])
+        } catch {
+          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
+        }
+      case Failure(e) => p.failure(new BackendException("Failed to get lexical entries count: " + e.getMessage))
+    }
+    p.future
+  }
+
+
+
+
+
 
   /**
     * Get list of dictionaries
@@ -920,6 +970,69 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
+
+  /**
+    * Create a new lexical entry
+    * @param dictionaryId
+    * @param perspectiveId
+    * @return
+    */
+  def createLexicalEntry(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[CompositeId]= {
+    val p = Promise[CompositeId]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) + "/perspective/" +
+      encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) + "/lexical_entry"
+
+    $http.post[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val id = read[CompositeId](js.JSON.stringify(response))
+          p.success(id)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to create lexical entry.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to create lexical entry.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to create lexical entry", e))
+    }
+
+    p.future
+  }
+
+  /**
+    * Get lexical entry by id
+    * @param dictionaryId
+    * @param perspectiveId
+    * @param entryId
+    * @return
+    */
+  def getLexicalEntry(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId): Future[LexicalEntry] = {
+    val p = Promise[LexicalEntry]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) + "/perspective/" +
+      encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) + "/lexical_entry/" +
+      encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString)
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val entry = read[LexicalEntry](js.JSON.stringify(response))
+          p.success(entry)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to get lexical entry.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to get lexical entry.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get lexical entry", e))
+    }
+
+    p.future
+  }
+
+
 
 
   def getLocales(): Future[Seq[Locale]] = {

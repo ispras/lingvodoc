@@ -18,7 +18,8 @@ class RoutingConfig(routeProvider: RouteProvider) extends Config {
     .when("/signup", Route("/static/templates/signup.html", "Logout", "SignupController"))
     .when("/dashboard", Route("/static/templates/dashboard.html", "Dashboard", "DashboardController"))
     .when("/languages", Route("/static/templates/language.html", "Languages", "LanguageController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit", Route("/static/templates/editDictionary.html", "EditDictionary", "EditDictionaryController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
     .otherwise(Route("/404"))
 }

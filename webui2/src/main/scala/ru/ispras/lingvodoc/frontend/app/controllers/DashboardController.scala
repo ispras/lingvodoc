@@ -37,7 +37,7 @@ AbstractController[DashboardScope](scope) {
 
   @JSExport
   def getActionLink(dictionary: Dictionary, perspective: Perspective, action: String) = {
-    "/dictionary/" +
+    "#/dictionary/" +
       encodeURIComponent(dictionary.clientId.toString) + '/' +
       encodeURIComponent(dictionary.objectId.toString) + "/perspective/" +
       encodeURIComponent(perspective.clientId.toString) + "/" +
