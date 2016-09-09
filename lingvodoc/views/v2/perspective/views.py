@@ -1247,7 +1247,8 @@ def lexical_entries_all_count(request): # tested
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(LexicalEntry)\
-                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id).count()
+                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
+                           parent_object_id=parent.object_id).count()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -1312,17 +1313,12 @@ def lexical_entries_published_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            # lexical_entries_count = DBSession.query(LexicalEntry)\
-            #     .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .outerjoin(PublishGroupingEntity)\
-            #     .outerjoin(PublishLevelOneEntity)\
-            #     .outerjoin(PublishLevelTwoEntity)\
-            #     .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
-            #                 PublishLevelOneEntity.marked_for_deletion==False,
-            #                 PublishLevelTwoEntity.marked_for_deletion==False,
-            #                 ))\
-            #     .group_by(LexicalEntry).count()
-            lexical_entries_count = None
+            lexical_entries_count = DBSession.query(LexicalEntry)\
+                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .outerjoin(Entity)\
+                .filter(Entity.marked_for_deletion==False, Entity.publishingentity.published==True)\
+                .group_by(LexicalEntry).count()
+            # lexical_entries_count = None
 
             return {"count": lexical_entries_count}
     else:
