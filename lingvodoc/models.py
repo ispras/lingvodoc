@@ -147,19 +147,21 @@ def entity_content(xx, publish, root):
     if xx.publishingentity.published:
         published = True
     info = {'level': xx.__tablename__,
-            'content': xx.content,
             'object_id': xx.object_id,
             'client_id': xx.client_id,
             'parent_object_id': xx.parent_object_id,
             'parent_client_id': xx.parent_client_id,
-            'link_object_id': xx.link_object_id,
-            'link_client_id': xx.link_client_id,
             'field_client_id': xx.field_client_id,
             'field_object_id': xx.field_object_id,
             'locale_id': locale_id,
             'additional_metadata': additional_metadata,
             'contains': contains,
             'published': published}
+    if xx.link_client_id and xx.link_object_id:
+        info['link_client_id'] = xx.link_client_id
+        info['link_object_id'] = xx.link_object_id
+    if xx.link_client_id and xx.link_object_id:
+        info['content'] = xx.content
     return info
 
 
