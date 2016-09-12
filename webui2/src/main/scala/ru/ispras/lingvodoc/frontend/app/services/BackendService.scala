@@ -475,7 +475,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     * @param perspective
     * @return
     */
-  def getFields(dictionary: Dictionary, perspective: Perspective): Future[Seq[Field]] = {
+  def getFields(dictionary: CompositeId, perspective: CompositeId): Future[Seq[Field]] = {
     val p = Promise[Seq[Field]]()
 
     val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" +
@@ -529,7 +529,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     */
   def getPerspectiveFields(dictionary: Dictionary, perspective: Perspective): Future[Perspective] = {
     val p = Promise[Perspective]()
-    getFields(dictionary, perspective) onComplete {
+    getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
       case Success(fields) =>
         perspective.fields = fields.toJSArray
         p.success(perspective)
@@ -576,7 +576,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     * @param count
     * @return
     */
-  def getLexicalEntries(dictionary: Dictionary, perspective: Perspective, action: LexicalEntriesType, offset: Int, count: Int): Future[Seq[LexicalEntry]] = {
+  def getLexicalEntries(dictionary: CompositeId, perspective: CompositeId, action: LexicalEntriesType, offset: Int, count: Int): Future[Seq[LexicalEntry]] = {
     val p = Promise[Seq[LexicalEntry]]()
 
     import LexicalEntriesType._
@@ -609,6 +609,28 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+
+  def getEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Entity] = {
+
+    val p = Promise[Entity]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) +
+      "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) +
+      "/entity/" + encodeURIComponent(entityId.clientId.toString) + "/" +
+      encodeURIComponent(entityId.objectId.toString)
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) => p.success(read[Entity](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get entity", e))
+    }
+    p.future
+  }
+
+
   def createEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entity: EntityData): Future[CompositeId] = {
 
     val p = Promise[CompositeId]()
@@ -622,7 +644,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
     $http.post[js.Dynamic](getMethodUrl(url), write(entity)) onComplete {
       case Success(response) => p.success(read[CompositeId](js.JSON.stringify(response)))
-      case Failure(e) => p.failure(new BackendException("Failed to update perspective fields: " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to create entity", e))
     }
     p.future
   }

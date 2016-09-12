@@ -6,7 +6,8 @@ import upickle.default._
 import scala.scalajs.js.annotation.JSExportAll
 
 @JSExportAll
-case class EntityData(fieldClientId: Int, fieldObjectId: Int, localeId: Int, content: String) {
+case class EntityData(fieldClientId: Int, fieldObjectId: Int, localeId: Int) {
+  var content: Option[String] = None
   var linkClientId: Option[Int] = None
   var linkObjectId: Option[Int] = None
   var selfClientId: Option[Int] = None
@@ -21,8 +22,10 @@ object EntityData {
       var values = Seq[(String, Js.Value)](
         ("field_client_id", Js.Num(entity.fieldClientId)),
         ("field_object_id", Js.Num(entity.fieldObjectId)),
-        ("locale_id", Js.Num(entity.localeId)),
-        ("content", Js.Str(entity.content)))
+        ("locale_id", Js.Num(entity.localeId)))
+
+      if (entity.content.nonEmpty)
+        values = values :+ (("content", Js.Str(entity.content.get)))
 
       if (entity.linkClientId.nonEmpty)
         values = values :+ (("link_client_id", Js.Num(entity.linkClientId.get)))
@@ -36,6 +39,8 @@ object EntityData {
       if (entity.selfObjectId.nonEmpty)
         values = values :+ (("self_object_id", Js.Num(entity.selfObjectId.get)))
 
+      values = values :+ (("data_type", Js.Str("link")))
+
       Js.Obj(values: _*)
   }
 
@@ -44,7 +49,11 @@ object EntityData {
       val fieldClientId = js("field_client_id").num.toInt
       val fieldObjectId = js("field_object_id").num.toInt
       val localeId = js("locale_id").num.toInt
-      val content = js("content").str
+
+      val content = js.value.find(_._1 == "content") match {
+        case Some(c) => Some(c._2.str)
+        case None => None
+      }
 
       val linkClientId = js.value.find(_._1 == "link_client_id") match {
         case Some(l) => Some(l._2.num.toInt)
@@ -66,7 +75,8 @@ object EntityData {
         case None => None
       }
 
-      val entity = EntityData(fieldClientId, fieldObjectId, localeId, content)
+      val entity = EntityData(fieldClientId, fieldObjectId, localeId)
+      entity.content = content
       entity.linkClientId = linkClientId
       entity.linkObjectId = linkObjectId
       entity.selfClientId = selfClientId

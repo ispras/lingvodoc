@@ -7,7 +7,7 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
-import upickle.Js.Obj
+import upickle.Js._
 
 
 
@@ -18,7 +18,6 @@ case class Entity(override val clientId: Int,
                   var parentObjectId: Int,
                   var level: String,
                   var published: Boolean,
-                  //var markedForDeletion: Boolean,
                   var fieldClientId: Int,
                   var fieldObjectId: Int,
                   var content: String,
@@ -27,10 +26,12 @@ case class Entity(override val clientId: Int,
 
   var entities: js.Array[Entity] = js.Array()
   var metadata: js.Array[MetaData] = js.Array()
+  var link: Option[Link] = None
 }
 
 object Entity {
   implicit val writer = upickle.default.Writer[Entity] {
+    // FIXME: add link field
     t => Js.Obj(
       ("client_id", Js.Num(t.clientId)),
       ("object_id", Js.Num(t.objectId)),
@@ -38,7 +39,6 @@ object Entity {
       ("parent_object_id", Js.Num(t.parentObjectId)),
       ("level", Js.Str(t.level)),
       ("published", if (t.published) Js.True else Js.False),
-      //("marked_for_deletion", if (t.markedForDeletion) Js.True else Js.False),
       ("field_client_id", Js.Num(t.fieldClientId)),
       ("field_object_id", Js.Num(t.fieldObjectId)),
       ("content", Js.Str(t.content)),
@@ -58,7 +58,20 @@ object Entity {
           val level = jsVal("level").str
           val fieldClientId = jsVal("field_client_id").num.toInt
           val fieldObjectId = jsVal("field_object_id").num.toInt
-          val content = jsVal("content").str
+
+          val content = jsVal.value.find(_._1 == "content") match {
+            case Some(c) => c._2 match {
+              case Str(value) => value
+              case Obj(value) => "1"
+              case Arr(value) => "2"
+              case Num(value) => "3"
+              case False => "4"
+              case True => "5"
+              case Null => "6"
+            }
+            case None => "7"
+          }
+
 
           val localeId = jsVal("locale_id") match {
             case e: Js.Num => jsVal("locale_id").num.toInt
@@ -71,11 +84,14 @@ object Entity {
             case _ => false
           }
 
-//          val isMarkedForDeletion = jsVal("marked_for_deletion") match {
-//            case Js.True => true
-//            case Js.False => false
-//            case _ => false
-//          }
+          // optional link
+          val link = jsVal.value.find(_._1 == "link_client_id") match {
+            case Some(link_client) => jsVal.value.find(_._1 == "link_object_id") match {
+              case Some(link_object) => Some(Link(link_client._2.num.toInt, link_object._2.num.toInt))
+              case None => None
+            }
+            case None => None
+          }
 
           val e = Entity(clientId, objectId, parentClientId, parentObjectId, level, isPublished, fieldClientId, fieldObjectId, content, localeId)
 
@@ -92,6 +108,7 @@ object Entity {
             }
           }
           e.entities = subEntities.toJSArray
+          e.link = link
           e
         }
       })(jsobj)

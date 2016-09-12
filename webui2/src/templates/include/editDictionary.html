@@ -1,0 +1,122 @@
+<div class="row">
+    <div class="col-md-6">
+
+        <div class="btn-toolbar" role="toolbar" aria-label="">
+            <div class="btn-group" role="group" aria-label="">
+                <button type="button" class="btn btn-primary" ng-click="controller.addNewLexicalEntry()">
+                    <span class="glyphicon glyphicon-plus"></span>
+                </button>
+                <button type="button" class="btn btn-primary" ng-click="detectDuplicates()">Detect duplicates</button>
+                <button type="button" class="btn btn-primary" ng-click="mergeEntries()" ng-disabled="selectedEntries.length < 2">Merge</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <input type="text" class="form-control" placeholder="Filter..." ng-model="filterQuery">
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <table class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
+                <td> <!-- action --> </td>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr ng-repeat="row in dictionaryTable.rows">
+
+                <td ng-repeat="cell in row.cells" ng-init="rowIndex=$parent.$index; cellIndex=$index; column=dictionaryTable.header[$index]">
+
+
+                    <!-- text values -->
+                    <div ng-if="cell.getType() == 'content' && controller.dataTypeString(column.dataType) == 'Text'">
+
+                        <ul class="entries_list">
+                            <li ng-repeat="value in cell.values">
+                                {{ value.getContent() }}
+
+                            </li>
+                        </ul>
+
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.field)">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
+
+                        <br>
+
+                        <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
+                            <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.field, $event)">
+                        </div>
+
+                    </div>
+
+
+                    <!-- Image values -->
+                    <div ng-if="cell.getType() == 'content' && controller.dataTypeString(column.dataType) == 'Image'">
+                        <ul class="entries_list">
+                            <li ng-repeat="value in cell.values" ng-if="!value.markedForDeletion">
+                                <a ng-href="value.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
+                            </li>
+                        </ul>
+
+                    </div>
+
+                    <!-- Sound values -->
+                    <div ng-if="cell.getType() == 'content' && controller.dataTypeString(column.dataType) == 'Sound'">
+                        <ul class="entries_list">
+                            <li ng-repeat="value in cell.values" ng-if="!value.markedForDeletion">
+
+                                <button type="button" class="btn btn-default btn-sm" ng-if="value.values.length > 0" ng-click="controller.play(value.content, value.values[0].content)">
+                                    <span class="glyphicon glyphicon-play">Play sound</span>
+                                </button>
+
+                                <button type="button" class="btn btn-default btn-sm" ng-if="value.values.length > 0" ng-click="controller.viewSoundMarkup(value.content, value.values[0].content)">
+                                    <span class="glyphicon glyphicon-list">View markup</span>
+                                </button>
+
+                            </li>
+                        </ul>
+
+                    </div>
+
+
+                    <!-- Link values, e.g. paradigms  -->
+                    <div ng-if="cell.getType() == 'group' && controller.dataTypeString(column.dataType) == 'Link'">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.editLinkedPerspective(row.entry, column.field, cell.values)">
+                            <span class="glyphicon glyphicon-list">Edit ({{cell.values.length}})</span>
+                        </button>
+                    </div>
+
+
+
+                    <div ng-if="field.data_type == 'grouping_tag'">
+
+                        <button type="button" class="btn btn-default btn-sm"
+                                ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)"
+                                ng-if="fieldValues.length > 0">
+                            <span class="glyphicon glyphicon-list">View</span>
+                        </button>
+
+                    </div>
+
+
+                </td>
+
+                <td> <!-- action --> </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+</div>
+
+

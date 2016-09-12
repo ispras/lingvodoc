@@ -5,17 +5,18 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, TextValue, Value}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.URIUtils.encodeURIComponent
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
+
+import scala.scalajs.js.Array
 
 
 @js.native
@@ -53,11 +54,10 @@ AbstractController[EditDictionaryScope](scope) {
   scope.offset = 0
   scope.size = 20
 
-  val dictionary = Dictionary.emptyDictionary(scope.dictionaryClientId, scope.dictionaryObjectId)
-  val perspective = Perspective.emptyPerspective(scope.perspectiveClientId, scope.perspectiveObjectId)
+  private[this] val dictionary = Dictionary.emptyDictionary(scope.dictionaryClientId, scope.dictionaryObjectId)
+  private[this] val perspective = Perspective.emptyPerspective(scope.perspectiveClientId, scope.perspectiveObjectId)
 
-  var enabledInputs: Seq[(Int, Int)] = Seq[(Int, Int)]()
-
+  private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
 
   load()
 
@@ -110,24 +110,73 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def enableInput(id1: Int, id2: Int) = {
-    if (!isInputEnabled(id1, id2))
-      enabledInputs = enabledInputs :+ (id1, id2)
+  def enableInput(entry: LexicalEntry, field: Field) = {
+    if (!isInputEnabled(entry, field))
+      enabledInputs = enabledInputs :+ (entry.getId, field.getId)
   }
 
   @JSExport
-  def isInputEnabled(id1: Int, id2: Int): Boolean = {
-    enabledInputs.exists(input => input._1 == id1 && input._2 == id2)
+  def disableInput(entry: LexicalEntry, field: Field) = {
+    if (isInputEnabled(entry, field))
+      enabledInputs = enabledInputs.filterNot(p => p._1 == entry.getId && p._2 == field.getId)
+  }
+
+  @JSExport
+  def isInputEnabled(entry: LexicalEntry, field: Field): Boolean = {
+    enabledInputs.exists(input => input._1 == entry.getId && input._2 == field.getId)
   }
 
   @JSExport
   def saveTextValue(entry: LexicalEntry, field: Field, event: Event) = {
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
-    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2), textValue)
-    backend.createEntity(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId.fromObject(entry), entity) onComplete {
-      case Success(entityId) => console.log("created!")
-      case Failure(ex) =>console.log(ex.getMessage)
+
+    val dictionaryId = CompositeId.fromObject(dictionary)
+    val perspectiveId = CompositeId.fromObject(perspective)
+    val entryId = CompositeId.fromObject(entry)
+
+    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
+    entity.content = Some(textValue)
+    backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
+      case Success(entityId) =>
+        backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
+          case Success(newEntity) =>
+            scope.dictionaryTable.addEntity(entry, newEntity)
+            disableInput(entry, field)
+          case Failure(ex) => console.log(ex.getMessage)
+        }
+      case Failure(ex) => console.log(ex.getMessage)
+    }
+  }
+
+  @JSExport
+  def editLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/editLinkedDictionary.html"
+    options.controller = "EditDictionaryModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionaryClientId = scope.dictionaryClientId.asInstanceOf[js.Object],
+          dictionaryObjectId = scope.dictionaryObjectId.asInstanceOf[js.Object],
+          perspectiveClientId = scope.perspectiveClientId,
+          perspectiveObjectId = scope.perspectiveObjectId,
+          linkPerspectiveClientId = field.link.get.clientId,
+          linkPerspectiveObjectId = field.link.get.objectId,
+          lexicalEntry = entry.asInstanceOf[js.Object],
+          field = field.asInstanceOf[js.Object],
+          links = values.map { _.asInstanceOf[GroupValue].link }
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Seq[Entity]](options)
+    instance.result map { entities =>
+      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
     }
   }
 
@@ -136,15 +185,13 @@ AbstractController[EditDictionaryScope](scope) {
 
     backend.dataTypes() onComplete {
       case Success(dataTypes) =>
-        backend.getFields(dictionary, perspective) onComplete {
+        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
           case Success(fields) =>
             backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
               case Success(count) =>
                 scope.count = count
-                backend.getLexicalEntries(dictionary, perspective, LexicalEntriesType.All, scope.offset, scope.size) onComplete {
+                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, scope.offset, scope.size) onComplete {
                   case Success(entries) =>
-                    //console.log(entries.toJSArray)
-                    //val entries1 = Seq[LexicalEntry]()
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)
                 }

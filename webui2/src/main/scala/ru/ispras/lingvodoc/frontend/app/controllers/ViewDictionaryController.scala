@@ -79,7 +79,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
 
     backend.dataTypes() onComplete {
       case Success(dataTypes) =>
-        backend.getFields(dictionary, perspective) onComplete {
+        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
           case Success(fields) =>
             //backend.getPublishedLexicalEntriesCount(dictionary, perspective) onComplete {
             //  case Success(count) =>
