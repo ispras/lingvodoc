@@ -140,8 +140,8 @@ def create_entity(request):  # tested
                 entity.additional_metadata = json.dumps(new_meta)
         elif data_type == 'link':
             try:
-                entity.link_client_id = req['content']['client_id']
-                entity.link_object_id = req['content']['object_id']
+                entity.link_client_id = req['link_client_id']
+                entity.link_object_id = req['link_object_id']
             except (KeyError, TypeError):
                 request.response.status = HTTPBadRequest.code
                 return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
