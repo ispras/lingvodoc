@@ -160,7 +160,7 @@ def entity_content(xx, publish, root):
     if xx.link_client_id and xx.link_object_id:
         info['link_client_id'] = xx.link_client_id
         info['link_object_id'] = xx.link_object_id
-    if xx.link_client_id and xx.link_object_id:
+    if xx.content:
         info['content'] = xx.content
     return info
 
