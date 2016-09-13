@@ -12,6 +12,7 @@ trait DependentTier[+AnnotType <: IAnnotation] extends ITier[AnnotType] {
 
   def getParentTier = owner.getTierByID(parentRef)
 
+  // TODO: implement it for II and TS tiers
   def findAnnotationParent(annot: IAnnotation): IAnnotation = ???
 }
 

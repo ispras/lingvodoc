@@ -12,6 +12,7 @@ import org.scalajs.dom.console
 @js.native
 trait EditTextFieldControllerScope extends Scope {
   var originalValue: String = js.native
+  var invitation: String = js.native
 }
 
 @injectable("EditTextFieldController")
@@ -20,6 +21,7 @@ class EditTextFieldController(scope: EditTextFieldControllerScope,
                               params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[EditTextFieldControllerScope](scope) {
   scope.originalValue = params("originalValue").asInstanceOf[String]
+  scope.invitation = params("invitation").asInstanceOf[String]
   val isValid = params.getOrElse("isValid",
     (_: String) => (true, None)).asInstanceOf[String => (Boolean, Option[String])]
 

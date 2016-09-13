@@ -29,8 +29,6 @@ trait SoundMarkupScope extends Scope {
   var wsHeight: Int = js.native // height of wavesurfer
   var tierMenuOptions: js.Array[js.Any] = js.native
   var annotMenuOptions: js.Array[js.Any] = js.native
-
-  var tmp: js.Dynamic = js.native
 }
 
 @injectable("SoundMarkupController")
@@ -369,6 +367,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(originalValue = annot.text.asInstanceOf[js.Object],
+                           invitation = "Enter Annotation Value".asInstanceOf[js.Object],
                            isValid = isValid.asInstanceOf[js.Object])
       }
     ).asInstanceOf[js.Dictionary[js.Any]]

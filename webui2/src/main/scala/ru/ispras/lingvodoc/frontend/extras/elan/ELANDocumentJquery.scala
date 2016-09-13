@@ -155,7 +155,7 @@ object ELANDocumentJquery {
   // constrain maximum allowed time slot.
   // WARNING: it is assumed that the xmlString is a valid ELAN document matching xsd scheme.
   // Otherwise the result is undefined.
-  def apply(xmlString: String, pxPerSec: Double) = new ELANDocumentJquery(
+  def apply(xmlString: String, pxPerSec: Double = 0.0) = new ELANDocumentJquery(
     jQuery(jQuery.parseXML(xmlString)).find(annotDocTagName),
     pxPerSec
   )
