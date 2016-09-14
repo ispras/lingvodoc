@@ -44,7 +44,8 @@ from pyramid.view import view_config
 import sqlalchemy
 from sqlalchemy import (
     func,
-    and_
+    and_,
+    or_
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -1019,7 +1020,6 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     if 'group_by_lang' in req:
         group_by_lang = req['group_by_lang']
     dicts = DBSession.query(Dictionary)
-
     subreq = Request.blank('/translation_service_search')
     subreq.method = 'POST'
     subreq.headers = request.headers
@@ -1034,8 +1034,30 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
         state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
     else:
         raise KeyError("Something wrong with the base", resp.json['error'])
-    dicts = dicts.filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id)).join(DictionaryPerspective) \
-        .filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id))
+
+    subreq = Request.blank('/translation_service_search')
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    subreq.json = {'searchstring': 'Limited access'} # todo: fix
+    headers = dict()
+    if request.headers.get('Cookie'):
+        headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+
+    if 'error' not in resp.json:
+        limited_object_id, limited_client_id = resp.json['object_id'], resp.json['client_id']
+    else:
+        raise KeyError("Something wrong with the base", resp.json['error'])
+    dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                         Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                    and_(Dictionary.state_translation_gist_object_id == limited_object_id,
+                         Dictionary.state_translation_gist_client_id == limited_client_id))).join(
+        DictionaryPerspective) \
+        .filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                         DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                    and_(DictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                         DictionaryPerspective.state_translation_gist_client_id == limited_client_id)))
 
     if group_by_lang and not group_by_org:
         return group_by_languages(dicts, request)
