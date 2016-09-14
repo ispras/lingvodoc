@@ -105,8 +105,8 @@ def create_entity(request):  # tested
             Field.client_id == req['field_client_id'], Field.object_id == req['field_object_id']).first()
         data_type = tr_atom.content.lower()
         if req.get('self_client_id') and req.get('self_object_id'):
-            upper_level = DBSession.query(Entity).filter_by(client_id=req['entity_client_id'],
-                                                              object_id=req['entity_object_id']).first()
+            upper_level = DBSession.query(Entity).filter_by(client_id=req['self_client_id'],
+                                                              object_id=req['self_object_id']).first()
             if not upper_level:
                 return {'error': str("No such upper level in the system")}
         entity = Entity(client_id=client.id,
