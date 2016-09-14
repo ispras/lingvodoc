@@ -156,7 +156,8 @@ def entity_content(xx, publish, root):
             'locale_id': locale_id,
             'additional_metadata': additional_metadata,
             'contains': contains,
-            'published': published}
+            'published': published,
+            'marked_for_deletion': xx.marked_for_deletion}
     if xx.link_client_id and xx.link_object_id:
         info['link_client_id'] = xx.link_client_id
         info['link_object_id'] = xx.link_object_id
