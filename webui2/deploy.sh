@@ -12,3 +12,4 @@ cp -r src/templates/include/ ../lingvodoc/static/templates/
 
 
 cp src/css/*.css ../lingvodoc/static/css/
+cp src/images/* ../lingvodoc/static/images/

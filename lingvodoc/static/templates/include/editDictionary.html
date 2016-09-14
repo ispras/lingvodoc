@@ -35,12 +35,91 @@
 
 
                     <!-- text values -->
-                    <div ng-if="cell.getType() == 'content' && controller.dataTypeString(column.dataType) == 'Text'">
+                    <div ng-if="column.checkDataTypeName('Text')">
 
-                        <ul class="entries_list">
-                            <li ng-repeat="value in cell.values">
+                        <!-- simple column -->
+                        <ul class="tree" ng-if="column.getType()=='Simple'">
+                            <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                {{ value.getContent() }}
+                            </li>
+                        </ul>
+
+                        <!-- column has sub columns -->
+                        <ul class="tree" ng-if="column.getType()=='Master'">
+
+                            <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                <!-- display value -->
                                 {{ value.getContent() }}
 
+                                <!-- display values from sub columns -->
+                                <ul>
+                                    <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==cell.values.length-1}">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+                                            {{ linkedValue.getContent() }}
+                                        </div>
+
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
+                                            {{ linkedValue.getContent() }}
+                                        </div>
+
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                            {{ linkedValue.getContent() }}
+                                        </div>
+                                    </li>
+                                </ul>
+
+
+                                <!-- controls to add linked text value -->
+                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                        <span class="glyphicon glyphicon-plus"></span>
+                                    </button>
+
+                                    <br>
+
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
+                                        <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.linkedColumns[0].field, $event)">
+                                    </div>
+                                </div>
+
+                                <!-- controls to add linked sound/image value -->
+                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound')">
+
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                        <span class="glyphicon glyphicon-plus"></span>
+                                    </button>
+
+                                    <br>
+
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.linkedColumns[0].field)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(row.entry, column.field, $fileName, $fileType, $fileContent)">
+                        </span>
+                                    </div>
+                                </div>
+
+                            </li>
+
+                        </ul>
+
+                        <!-- controls -->
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.field)">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
+
+                        <br>
+
+                        <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
+                            <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.field, $event)">
+                        </div>
+                    </div>
+
+
+                    <!-- Image values -->
+                    <div ng-if="column.checkDataTypeName('Image')">
+                        <ul class="tree">
+                            <li ng-repeat="value in cell.values" ng-if="!value.markedForDeletion" ng-class="{last: $index==cell.values.length-1}">
+                                <a ng-href="value.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
                             </li>
                         </ul>
 
@@ -51,60 +130,106 @@
                         <br>
 
                         <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
-                            <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.field, $event)">
+                            <input type="file" value="" placeholder="">
+                        </div>
+
+                    </div>
+
+                    <!-- Sound values -->
+                    <div ng-if="column.checkDataTypeName('Sound')">
+
+                        <!-- simple column -->
+                        <ul class="tree" ng-if="column.getType()=='Simple'">
+                            <li ng-repeat="value in cell.values" ng-class="{last: '$index==cell.values.length-1'}" ng-class="{last: $index==cell.values.length-1}">
+
+                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.play(value.content)">
+                                    <span class="glyphicon glyphicon-play">Play</span>
+                                </button>
+
+                            </li>
+                        </ul>
+
+                        <!-- column has sub columns -->
+                        <ul class="tree" ng-if="column.getType()=='Master'">
+
+                            <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
+                                <!-- display value -->
+                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.play(value.content)">
+                                    <span class="glyphicon glyphicon-play">Play</span>
+                                </button>
+
+                                <!-- display values from sub columns -->
+                                <ul class="tree">
+                                    <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==cell.values.length-1}">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+                                            {{ linkedValue.getContent() }}
+                                        </div>
+
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
+                                            {{ linkedValue.getContent() }}
+                                        </div>
+
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                            {{ linkedValue.getContent() }}
+                                        </div>
+                                    </li>
+                                </ul>
+
+
+                                <!-- controls to add linked text value -->
+                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
+
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                        <span class="glyphicon glyphicon-plus"></span>
+                                    </button>
+
+                                    <br>
+
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.linkedColumns[0].field)">
+                                        <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.linkedColumns[0].field, $event, value)">
+                                    </div>
+                                </div>
+
+                                <!-- controls to add linked sound/image value -->
+                                <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound')">
+
+
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                        <span class="glyphicon glyphicon-plus"></span>
+                                    </button>
+
+                                    <br>
+
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, linkedColumns[0].field)">
+                                        <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(row.entry, column.field, $fileName, $fileType, $fileContent)"></span>
+                                    </div>
+                                </div>
+
+                            </li>
+
+                        </ul>
+
+
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.field)">
+                            <span class="glyphicon glyphicon-plus"></span>
+                        </button>
+
+                        <br>
+
+                        <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(row.entry, column.field, $fileName, $fileType, $fileContent)">
+                        </span>
                         </div>
 
                     </div>
 
 
-                    <!-- Image values -->
-                    <div ng-if="cell.getType() == 'content' && controller.dataTypeString(column.dataType) == 'Image'">
-                        <ul class="entries_list">
-                            <li ng-repeat="value in cell.values" ng-if="!value.markedForDeletion">
-                                <a ng-href="value.content" target="_blank"><span class="glyphicon glyphicon-list">View image</span></a>
-                            </li>
-                        </ul>
-
-                    </div>
-
-                    <!-- Sound values -->
-                    <div ng-if="cell.getType() == 'content' && controller.dataTypeString(column.dataType) == 'Sound'">
-                        <ul class="entries_list">
-                            <li ng-repeat="value in cell.values" ng-if="!value.markedForDeletion">
-
-                                <button type="button" class="btn btn-default btn-sm" ng-if="value.values.length > 0" ng-click="controller.play(value.content, value.values[0].content)">
-                                    <span class="glyphicon glyphicon-play">Play sound</span>
-                                </button>
-
-                                <button type="button" class="btn btn-default btn-sm" ng-if="value.values.length > 0" ng-click="controller.viewSoundMarkup(value.content, value.values[0].content)">
-                                    <span class="glyphicon glyphicon-list">View markup</span>
-                                </button>
-
-                            </li>
-                        </ul>
-
-                    </div>
-
-
                     <!-- Link values, e.g. paradigms  -->
-                    <div ng-if="cell.getType() == 'group' && controller.dataTypeString(column.dataType) == 'Link'">
+                    <div ng-if="column.checkDataTypeName('Link')">
                         <button type="button" class="btn btn-default btn-sm" ng-click="controller.editLinkedPerspective(row.entry, column.field, cell.values)">
                             <span class="glyphicon glyphicon-list">Edit ({{cell.values.length}})</span>
                         </button>
                     </div>
-
-
-
-                    <div ng-if="field.data_type == 'grouping_tag'">
-
-                        <button type="button" class="btn btn-default btn-sm"
-                                ng-click="viewGroupingTag(lexicalEntry, field, fieldValues)"
-                                ng-if="fieldValues.length > 0">
-                            <span class="glyphicon glyphicon-list">View</span>
-                        </button>
-
-                    </div>
-
 
                 </td>
 

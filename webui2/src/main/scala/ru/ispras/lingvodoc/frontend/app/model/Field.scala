@@ -12,14 +12,14 @@ import scala.scalajs.js.JSConverters._
 
 
 @JSExportAll
-case class Field(@key("client_id") override val clientId: Int,
-                 @key("object_id") override val objectId: Int,
-                 @key("translation") var translation: String,
-                 @key("translation_gist_client_id") var translationGistClientId: Int,
-                 @key("translation_gist_object_id") var translationGistObjectId: Int,
-                 @key("data_type_translation_gist_client_id") var dataTypeTranslationGistClientId: Int,
-                 @key("data_type_translation_gist_object_id") var dataTypeTranslationGistObjectId: Int,
-                 @key("is_translatable") var isTranslatable: Boolean,
+case class Field(override val clientId: Int,
+                 override val objectId: Int,
+                 var translation: String,
+                 var translationGistClientId: Int,
+                 var translationGistObjectId: Int,
+                 var dataTypeTranslationGistClientId: Int,
+                 var dataTypeTranslationGistObjectId: Int,
+                 var isTranslatable: Boolean,
                  var createdAt: String) extends Object(clientId, objectId) {
 
   var fields: js.Array[Field] = js.Array[Field]()

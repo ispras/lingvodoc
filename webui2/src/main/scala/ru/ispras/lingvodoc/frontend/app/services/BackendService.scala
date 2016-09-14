@@ -650,7 +650,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
-
   /**
     * Gets count of all lexical entries
     * @param dictionaryId
@@ -1063,10 +1062,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     defer.resolve(locales)
     defer.future
   }
-
-
-
-
 }
 
 

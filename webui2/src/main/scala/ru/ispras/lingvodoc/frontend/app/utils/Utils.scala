@@ -1,10 +1,9 @@
 package ru.ispras.lingvodoc.frontend.app.utils
 
-import ru.ispras.lingvodoc.frontend.app.model.{Field, Language}
+import ru.ispras.lingvodoc.frontend.app.model.{Field, Language, TranslationGist}
+
 import scala.scalajs.js.URIUtils
 import scala.scalajs.js.URIUtils._
-
-
 import org.scalajs.dom
 
 object Utils {
@@ -51,5 +50,12 @@ object Utils {
     Cookie.set("locale_id", localeId.toString)
   }
 
-
+  /**
+    * Gets dataType Name
+    * @param dataType
+    * @return
+    */
+  def getDataTypeName(dataType: TranslationGist): String = {
+    dataType.atoms.find(_.localeId == 2).get.content
+  }
 }

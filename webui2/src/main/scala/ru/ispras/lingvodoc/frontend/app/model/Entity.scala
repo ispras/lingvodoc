@@ -62,14 +62,14 @@ object Entity {
           val content = jsVal.value.find(_._1 == "content") match {
             case Some(c) => c._2 match {
               case Str(value) => value
-              case Obj(value) => "1"
-              case Arr(value) => "2"
-              case Num(value) => "3"
-              case False => "4"
-              case True => "5"
-              case Null => "6"
+              case Obj(value) => ""
+              case Arr(value) => ""
+              case Num(value) => ""
+              case False => ""
+              case True => ""
+              case Null => ""
             }
-            case None => "7"
+            case None => ""
           }
 
 

@@ -50,13 +50,15 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
   private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
 
-
   scope.count = 0
   scope.offset = 0
   scope.size = 20
 
-
   private[this] var createdEntities = Seq[Entity]()
+
+  private[this] var dataTypes = Seq[TranslationGist]()
+  private[this] var perspectiveFields = Seq[Field]()
+  private[this] var linkedPerspectiveFields = Seq[Field]()
 
 
   load()
@@ -104,6 +106,22 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
       enabledInputs = enabledInputs :+ (entry.getId, field.getId)
   }
 
+  /**
+    * Returns true if perspectives are mutually linked.
+    * @return
+    */
+  def isPerspectivesBidirectional: Boolean = {
+    // find Link datatype
+    val linkDataType = dataTypes.find(dataType => dataType.gistType == "Service" && dataType.atoms.exists(atom => atom.localeId == 2 && atom.content == "Link")).ensuring(_.nonEmpty).get
+    // checks
+    (for (x <- perspectiveFields; y <- linkedPerspectiveFields) yield (x, y)).filter { f =>
+      (f._1.dataTypeTranslationGistClientId == linkDataType.clientId && f._1.dataTypeTranslationGistObjectId == linkDataType.objectId) &&
+        (f._2.dataTypeTranslationGistClientId == linkDataType.clientId && f._2.dataTypeTranslationGistObjectId == linkDataType.objectId)
+    }.exists { p => p._1.link.get.clientId == linkPerspectiveId.clientId && p._1.link.get.objectId == linkPerspectiveId.objectId &&
+      p._2.link.get.clientId == perspectiveId.clientId && p._2.link.get.objectId == perspectiveId.objectId }
+  }
+
+
   @JSExport
   def disableInput(entry: LexicalEntry, field: Field) = {
     if (isInputEnabled(entry, field))
@@ -123,7 +141,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(textValue)
+    entity.content = Some(Left(textValue))
     backend.createEntity(dictionaryId, linkPerspectiveId, entryId, entity) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, linkPerspectiveId, entryId, entityId) onComplete {
@@ -146,17 +164,27 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   private[this] def load() = {
 
     backend.dataTypes() onComplete {
-      case Success(dataTypes) =>
-        backend.getFields(dictionaryId, linkPerspectiveId) onComplete {
+      case Success(allDataTypes) =>
+        dataTypes = allDataTypes
+        // get fields of main perspective
+        backend.getFields(dictionaryId, perspectiveId) onComplete {
           case Success(fields) =>
-            val reqs = links.toSeq.map { link => backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) }
-            Future.sequence(reqs) onComplete {
-              case Success(lexicalEntries) =>
-                scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, lexicalEntries)
-              case Failure(e) =>
+            perspectiveFields = fields
+            // get fields of this perspective
+            backend.getFields(dictionaryId, linkPerspectiveId) onComplete {
+              case Success(linkedFields) =>
+                linkedPerspectiveFields = linkedFields
+                val reqs = links.toSeq.map { link => backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) }
+                Future.sequence(reqs) onComplete {
+                  case Success(lexicalEntries) =>
+                    scope.dictionaryTable = DictionaryTable.build(linkedFields, dataTypes, lexicalEntries)
+                  case Failure(e) => console.log(e.getMessage)
+                }
+              case Failure(e) => console.log(e.getMessage)
             }
           case Failure(e) => console.log(e.getMessage)
         }
+
       case Failure(e) => console.log(e.getMessage)
     }
   }

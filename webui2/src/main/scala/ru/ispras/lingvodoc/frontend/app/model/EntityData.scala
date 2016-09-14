@@ -1,19 +1,24 @@
 package ru.ispras.lingvodoc.frontend.app.model
 
 import upickle.Js
+import upickle.Js._
 import upickle.default._
 
+import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
+
+
+@JSExportAll
+case class FileContent(@key("file_name") fileName: String, @key("file_name") fileType: String, @key("content") content: String)
 
 @JSExportAll
 case class EntityData(fieldClientId: Int, fieldObjectId: Int, localeId: Int) {
-  var content: Option[String] = None
+  var content: Option[Either[String, FileContent]] = None
   var linkClientId: Option[Int] = None
   var linkObjectId: Option[Int] = None
   var selfClientId: Option[Int] = None
   var selfObjectId: Option[Int] = None
 }
-
 
 object EntityData {
 
@@ -25,7 +30,13 @@ object EntityData {
         ("locale_id", Js.Num(entity.localeId)))
 
       if (entity.content.nonEmpty)
-        values = values :+ (("content", Js.Str(entity.content.get)))
+        entity.content.get match {
+          case Left(str) => values = values :+ (("content", Js.Str(str)))
+          case Right(obj) =>
+            values = values :+ (("filename", Js.Str(obj.fileName)))
+            values = values :+ (("filetype", Js.Str(obj.fileType)))
+            values = values :+ (("content", Js.Str(obj.content)))
+        }
 
       if (entity.linkClientId.nonEmpty)
         values = values :+ (("link_client_id", Js.Num(entity.linkClientId.get)))
@@ -39,8 +50,6 @@ object EntityData {
       if (entity.selfObjectId.nonEmpty)
         values = values :+ (("self_object_id", Js.Num(entity.selfObjectId.get)))
 
-      values = values :+ (("data_type", Js.Str("link")))
-
       Js.Obj(values: _*)
   }
 
@@ -51,7 +60,15 @@ object EntityData {
       val localeId = js("locale_id").num.toInt
 
       val content = js.value.find(_._1 == "content") match {
-        case Some(c) => Some(c._2.str)
+        case Some(c) => c._2 match {
+          case Str(value) => Some(Left(value))
+          case Obj(value) => Some(Right(readJs[FileContent](value._2)))
+          case Arr(value) => None
+          case Num(value) => None
+          case False => None
+          case True => None
+          case Null => None
+        }
         case None => None
       }
 

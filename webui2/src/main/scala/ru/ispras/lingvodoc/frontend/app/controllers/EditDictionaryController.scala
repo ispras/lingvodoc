@@ -5,7 +5,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, TextValue, Value}
+import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
@@ -16,7 +16,8 @@ import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
-import scala.scalajs.js.Array
+import scala.scalajs.js.UndefOr
+
 
 
 @js.native
@@ -127,7 +128,8 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def saveTextValue(entry: LexicalEntry, field: Field, event: Event) = {
+  def saveTextValue(entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
 
@@ -136,7 +138,42 @@ AbstractController[EditDictionaryScope](scope) {
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(textValue)
+    entity.content = Some(Left(textValue))
+
+    // self
+    parent map {
+      parentValue =>
+        entity.selfClientId = Some(parentValue.getEntity.clientId)
+        entity.selfObjectId = Some(parentValue.getEntity.objectId)
+    }
+
+    backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
+      case Success(entityId) =>
+        backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
+          case Success(newEntity) =>
+
+            parent.toOption match {
+              case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
+              case None => scope.dictionaryTable.addEntity(entry, newEntity)
+            }
+
+
+            disableInput(entry, field)
+          case Failure(ex) => console.log(ex.getMessage)
+        }
+      case Failure(ex) => console.log(ex.getMessage)
+    }
+  }
+
+
+  @JSExport
+  def saveFileValue(entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String) = {
+    val dictionaryId = CompositeId.fromObject(dictionary)
+    val perspectiveId = CompositeId.fromObject(perspective)
+    val entryId = CompositeId.fromObject(entry)
+
+    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
+    entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
     backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
@@ -147,7 +184,11 @@ AbstractController[EditDictionaryScope](scope) {
         }
       case Failure(ex) => console.log(ex.getMessage)
     }
+
   }
+
+
+
 
   @JSExport
   def editLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
