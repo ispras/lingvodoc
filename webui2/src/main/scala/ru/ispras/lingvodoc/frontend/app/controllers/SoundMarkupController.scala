@@ -60,7 +60,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var soundMarkup: Option[String] = None
   //  val soundAddress = params.get("soundAddress").map(_.toString)
   val soundAddress = Some("http://localhost/getting_closer.wav")
-  val dummyMarkupAddress = "http://localhost/test.eaf"
+  val dummyMarkupAddress = "http://localhost/test_live_big.eaf"
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
@@ -92,11 +92,17 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // add scope to window for debugging
   dom.window.asInstanceOf[js.Dynamic].myScope = scope
 
+  // merge viewDataDiff into scope's elanJS
+  def updateVD(viewDataDiff: js.Dynamic): Unit = {
+    jQuery.extend(true, scope.elanJS, viewDataDiff)
+  }
+
   def pxPerSec = _pxPerSec
 
   def pxPerSec_=(mpps: Int) = {
     _pxPerSec = mpps
-    scope.elan.setPxPerSec(pxPerSec)
+    val viewDataDiff = scope.elan.setPxPerSec(pxPerSec)
+    updateVD(viewDataDiff)
     isWSNeedsToForceAngularRefresh = false
     waveSurfer.foreach(_.zoom(mpps))
     updateFullWSWidth()

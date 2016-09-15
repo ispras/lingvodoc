@@ -67,7 +67,6 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
     val tierJS = mutable.Map.empty[String, js.Dynamic]
     tierJS("ID") = getID.asInstanceOf[js.Dynamic]
     tierJS("timeAlignable") = timeAlignable.asInstanceOf[js.Dynamic]
-    val r = scala.util.Random
     tierJS("index") = index.asInstanceOf[js.Dynamic]
 
     val annotationsJS: mutable.Map[String, js.Dynamic] =

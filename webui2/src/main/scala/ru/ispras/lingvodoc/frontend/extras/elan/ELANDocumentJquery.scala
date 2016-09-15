@@ -45,9 +45,10 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
   reindex()
   setPxPerSec(pxPerSec)
 
-  def setPxPerSec(newPxPerSec: Double): Unit = {
+  def setPxPerSec(newPxPerSec: Double): js.Dynamic = {
     pxPerSec = newPxPerSec
     tiers.flatMap(_.getAnnotations).foreach(_.setPxPerSec(pxPerSec))
+    toJS
   }
 
   def getTierByID(id: String) = try {
