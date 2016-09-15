@@ -281,7 +281,7 @@ object DictionaryTable {
     table.header = columns.toJSArray
     table.rows = rows.toJSArray
 
-    console.log(columns.toJSArray)
+    //console.log(columns.toJSArray)
     table
   }
 

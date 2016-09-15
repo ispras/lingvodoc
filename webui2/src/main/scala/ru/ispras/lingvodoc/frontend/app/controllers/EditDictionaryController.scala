@@ -23,16 +23,12 @@ import scala.scalajs.js.UndefOr
 @js.native
 trait EditDictionaryScope extends Scope {
 
-  var dictionaryClientId: Int = js.native
-  var dictionaryObjectId: Int = js.native
-  var perspectiveClientId: Int = js.native
-  var perspectiveObjectId: Int = js.native
-
-
-
   var count: Int = js.native
   var offset: Int = js.native
   var size: Int = js.native
+
+  var pageCount: Int = js.native
+
   var dictionaryTable: DictionaryTable = js.native
 
   var filter: String = js.native
@@ -46,21 +42,59 @@ trait EditDictionaryScope extends Scope {
 class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService) extends
 AbstractController[EditDictionaryScope](scope) {
 
-  scope.dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
-  scope.dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
-  scope.perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
-  scope.perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
+  private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
+  private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
+  private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
+  private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
 
-  scope.count = 0
-  scope.offset = 0
-  scope.size = 20
-
-  private[this] val dictionary = Dictionary.emptyDictionary(scope.dictionaryClientId, scope.dictionaryObjectId)
-  private[this] val perspective = Perspective.emptyPerspective(scope.perspectiveClientId, scope.perspectiveObjectId)
+  private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
+  private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
 
   private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
 
+  private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
+  private[this] var fields: Seq[Field] = Seq[Field]()
+
+  //scope.count = 0
+  scope.offset = 0
+  scope.size = 5
+  scope.pageCount = 0
+
   load()
+
+
+  @JSExport
+  def filterKeypress(event: Event) = {
+    val e = event.asInstanceOf[org.scalajs.dom.raw.KeyboardEvent]
+    if (e.keyCode == 13) {
+      val query = e.target.asInstanceOf[HTMLInputElement].value
+      loadSearch(query)
+    }
+  }
+
+
+  @JSExport
+  def loadPage(page: Int) = {
+    val offset = (page - 1) * scope.size
+    backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, offset, scope.size) onComplete {
+      case Success(entries) =>
+        scope.offset = offset
+        scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
+      case Failure(e) => console.log(e.getMessage)
+    }
+  }
+
+  @JSExport
+  def loadSearch(query: String) = {
+    backend.search(query, tagsOnly = false) map {
+      entries => scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
+    }
+  }
+
+  @JSExport
+  def range(min: Int, max: Int, step: Int) = {
+    (min to max by step).toSeq.toJSArray
+  }
 
   @JSExport
   def play(soundAddress: String, soundMarkupAddress: String) = {
@@ -79,8 +113,8 @@ AbstractController[EditDictionaryScope](scope) {
       params = () => {
         js.Dynamic.literal(
           soundAddress = soundAddress.asInstanceOf[js.Object],
-          dictionaryClientId = scope.dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = scope.dictionaryObjectId.asInstanceOf[js.Object]
+          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
         )
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
@@ -165,7 +199,6 @@ AbstractController[EditDictionaryScope](scope) {
     }
   }
 
-
   @JSExport
   def saveFileValue(entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String) = {
     val dictionaryId = CompositeId.fromObject(dictionary)
@@ -187,9 +220,6 @@ AbstractController[EditDictionaryScope](scope) {
 
   }
 
-
-
-
   @JSExport
   def editLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
 
@@ -202,10 +232,10 @@ AbstractController[EditDictionaryScope](scope) {
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(
-          dictionaryClientId = scope.dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = scope.dictionaryObjectId.asInstanceOf[js.Object],
-          perspectiveClientId = scope.perspectiveClientId,
-          perspectiveObjectId = scope.perspectiveObjectId,
+          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
+          perspectiveClientId = perspectiveClientId,
+          perspectiveObjectId = perspectiveObjectId,
           linkPerspectiveClientId = field.link.get.clientId,
           linkPerspectiveObjectId = field.link.get.objectId,
           lexicalEntry = entry.asInstanceOf[js.Object],
@@ -221,16 +251,20 @@ AbstractController[EditDictionaryScope](scope) {
     }
   }
 
-
   private[this] def load() = {
 
     backend.dataTypes() onComplete {
-      case Success(dataTypes) =>
+      case Success(d) =>
+        dataTypes = d
         backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
-          case Success(fields) =>
+          case Success(f) =>
+            fields = f
             backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
               case Success(count) =>
-                scope.count = count
+                //scope.count = count
+                scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
+
+
                 backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, scope.offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)

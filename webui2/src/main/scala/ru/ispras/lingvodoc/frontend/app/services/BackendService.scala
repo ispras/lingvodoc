@@ -1054,6 +1054,25 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
+  def search(query: String, tagsOnly: Boolean): Future[Seq[LexicalEntry]] = {
+    val p = Promise[Seq[LexicalEntry]]()
+    val url = "basic_search?leveloneentity=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent(tagsOnly.toString)
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response))
+          p.success(entries)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Search failed.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Search failed.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Search failed", e))
+    }
+    p.future
+  }
+
+
 
 
   def getLocales(): Future[Seq[Locale]] = {
