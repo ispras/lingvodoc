@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import org.scalajs.dom
+import ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.{TierJS, ELANDocumentJS}
 import ru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation
 import ru.ispras.lingvodoc.frontend.extras.elan.tier.ITier
 import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalInstance, ModalService, BackendService}
@@ -13,7 +14,10 @@ import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
 import org.scalajs.jquery._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+import scala.scalajs.js
+import js.JSConverters._
 
+import scala.collection.mutable
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
@@ -21,6 +25,7 @@ import scala.scalajs.js.annotation.JSExport
 trait SoundMarkupScope extends Scope {
   var ruler: Double = js.native // coordinate of wavesurfer ruler
   var elan: ELANDocumentJquery = js.native // elan document itself
+  var elanJS: js.Dynamic = js.native
   var ws: WaveSurfer = js.native // for debugging, remove later
 
   var tierWidth: Int = js.native // displayed tier width in pixels
@@ -39,6 +44,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             backend: BackendService,
                             params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[SoundMarkupScope](scope) {
+  scope.elanJS = js.Dynamic.global.elanDoc
+
   scope.tierWidth = 50
   scope.tiersNameWidth = 140
 
@@ -173,6 +180,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       val test_markup = data.toString
       try {
         scope.elan = ELANDocumentJquery(test_markup, pxPerSec)
+        scope.elanJS = scope.elan.toJS
         // TODO: apply() here? if markup will be loaded later than sound
 //        console.log(scope.elan.toString)
       } catch {

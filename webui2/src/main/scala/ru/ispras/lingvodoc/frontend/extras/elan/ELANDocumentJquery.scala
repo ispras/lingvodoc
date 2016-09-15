@@ -8,6 +8,7 @@ import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, RefTier, AlignableT
 import ru.ispras.lingvodoc.frontend.extras.elan.XMLAttrConversions._
 
 import scala.collection.immutable.{ListMap, HashMap}
+import scala.collection.mutable
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
 import scala.scalajs.js.JSConverters._
@@ -71,6 +72,22 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
     } catch {
       case e: java.util.NoSuchElementException => throw ELANPArserException(errorMsg)
     }
+  }
+
+  // assign to tiers their real indexes
+  def fixOrder(): Unit = {
+    tiers.zipWithIndex.foreach{case (tier, index) => tier.index = index}
+  }
+
+  // convert documnt to JS, i.e. to view representation
+  def toJS = {
+    val document = mutable.Map.empty[String, js.Dynamic]
+    document("numberOfTiers") = tiers.length.asInstanceOf[js.Dynamic]
+    fixOrder()
+    val tiersJS: mutable.Map[String, js.Dynamic] =
+      collection.mutable.Map() ++ tiers.map(tier => tier.getID -> tier.toJS).toMap
+    document("tiers") = tiersJS.toJSDictionary.asInstanceOf[js.Dynamic]
+    document.toJSDictionary.asInstanceOf[js.Dynamic]
   }
 
   /**

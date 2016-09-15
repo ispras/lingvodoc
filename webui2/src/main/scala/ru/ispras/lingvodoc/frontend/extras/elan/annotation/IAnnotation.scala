@@ -4,7 +4,10 @@ import org.scalajs.jquery.JQuery
 import ru.ispras.lingvodoc.frontend.extras.elan.tier.{ITier, AlignableTier, Tier}
 import ru.ispras.lingvodoc.frontend.extras.elan.{ELANPArserException, Utils, OptionalXMLAttr, RequiredXMLAttr}
 
+import scala.collection.mutable
+import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExportAll, JSExportDescendentObjects, JSExport}
+import scala.scalajs.js.JSConverters._
 
 @JSExportDescendentObjects
 trait IAnnotation {
@@ -31,6 +34,8 @@ trait IAnnotation {
   @JSExport
   def getID = annotationID.value
 
+  def toJS: js.Dynamic
+
   val annotationID: RequiredXMLAttr[String]
   val extRef: OptionalXMLAttr[String]
   val owner: ITier[IAnnotation]
@@ -56,6 +61,15 @@ abstract class Annotation(ao: AnnotationOpts) extends IAnnotation {
   var startOffset: Double = _
   var endOffset: Double = _
   var durationOffset: Double = _
+
+  def toJS = {
+    val annotationJS = mutable.Map.empty[String, js.Dynamic]
+    annotationJS("text") = text.asInstanceOf[js.Dynamic]
+    annotationJS("startOffset") = startOffset.asInstanceOf[js.Dynamic]
+    annotationJS("endOffset") = endOffset.asInstanceOf[js.Dynamic]
+    annotationJS("durationOffset") = durationOffset.asInstanceOf[js.Dynamic]
+    annotationJS.toJSDictionary.asInstanceOf[js.Dynamic]
+  }
 
   override def toString = Utils.wrap(Annotation.tagName, includedAnnotationToString)
   // <ANNOTATION_VALUE> tag

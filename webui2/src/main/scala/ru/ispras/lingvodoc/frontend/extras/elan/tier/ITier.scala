@@ -5,6 +5,7 @@ import ru.ispras.lingvodoc.frontend.extras.elan._
 import ru.ispras.lingvodoc.frontend.extras.elan.annotation.{RefAnnotation, AlignableAnnotation, IAnnotation}
 import ru.ispras.lingvodoc.frontend.extras.elan.XMLAttrConversions._
 
+import scala.collection.mutable
 import scala.scalajs.js
 import scala.scalajs.js.annotation.{JSExportAll, JSExportDescendentObjects, JSExport}
 import scala.scalajs.js.JSConverters._
@@ -32,6 +33,11 @@ trait ITier[+AnnotType <: IAnnotation] {
   @JSExport
   def annotationsToJSArray: js.Dynamic
 
+  // index which is used in the view
+  var index: Int
+
+  def toJS: js.Dynamic
+
   // get root document
   val owner: ELANDocumentJquery
   def getAnnotations: List[AnnotType]
@@ -46,6 +52,8 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
   val defaultLocale = to.defaultLocale
   val owner = to.owner
 
+  var index: Int = _
+
   def getLT = linguisticTypeRef
   def getID = tierID
   def annotationsToJSArray = getAnnotations.toJSArray.asInstanceOf[js.Dynamic]
@@ -53,6 +61,19 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
     getAnnotations.filter(_.getID == id).head
   } catch {
     case e: java.util.NoSuchElementException => throw ELANPArserException(s"Annotation with id $id not found")
+  }
+
+  def toJS = {
+    val tierJS = mutable.Map.empty[String, js.Dynamic]
+    tierJS("ID") = getID.asInstanceOf[js.Dynamic]
+    tierJS("timeAlignable") = timeAlignable.asInstanceOf[js.Dynamic]
+    val r = scala.util.Random
+    tierJS("index") = index.asInstanceOf[js.Dynamic]
+
+    val annotationsJS: mutable.Map[String, js.Dynamic] =
+      collection.mutable.Map() ++ getAnnotations.map(annot => annot.getID -> annot.toJS).toMap
+    tierJS("annotations") = annotationsJS.toJSDictionary.asInstanceOf[js.Dynamic]
+    tierJS.toJSDictionary.asInstanceOf[js.Dynamic]
   }
 
   private def attrsToString = s"$tierID $linguisticTypeRef $participant $annotator $defaultLocale"
