@@ -84,11 +84,11 @@ def basic_search(request):
                     perspective_tr = entry.parent.get_translation(request.cookies['locale_id'])
                     result['translation'] = perspective_tr
                     result['is_template'] = entry.parent.is_template
-                    result['status_client_id'] = entry.parent.state_translation_gist_client_id
-                    result['status_object_id'] = entry.parent.state_translation_gist_object_id
+                    result['state_translation_gist_client_id'] = entry.parent.state_translation_gist_client_id
+                    result['state_translation_gist_object_id'] = entry.parent.state_translation_gist_object_id
                     status = DBSession.query(TranslationAtom).filter_by(
                         parent_client_id = entry.parent.state_translation_gist_client_id,
-                        parent_object_id = entry.parent.state_translation_gist_object_id,
+                        parent_object_id = entry.parent.state_translation_gist_client_id,
                         locale_id=request.cookies['locale_id']
                     ).first()
                     if status:
@@ -115,13 +115,13 @@ def advanced_search(request):
         if not searchstring['searchstring']:
             raise HTTPBadRequest
         search_parts = searchstring['searchstring'].split()
-        search_expression = LevelOneEntity.content.like('%' + search_parts[0] + '%')
+        search_expression = Entity.content.like('%' + search_parts[0] + '%')
         for part in search_parts[1:]:
-            # search_expression = or_(search_expression, LevelOneEntity.content.like('%' + part + '%'))
+            # search_expression = or_(search_expression, Entity.content.like('%' + part + '%'))
             search_expression = list()
         if 'entity_type' in searchstring:
             # print(searchstring['entity_type'])
-            # search_expression = and_(search_expression, LevelOneEntity.entity_type == searchstring['entity_type'])
+            # search_expression = and_(search_expression, Entity.entity_type == searchstring['entity_type'])
             search_expression = list()
         return search_expression, searchstring['search_by_or']
 
@@ -142,8 +142,8 @@ def advanced_search(request):
         tmp_expression, to_do_or = make_expression_component(search_string)
         search_expression = operator_func(search_expression, tmp_expression)
 
-    # results_cursor = DBSession.query(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
-    #     .distinct(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
+    # results_cursor = DBSession.query(LevelOneEntity.parent_client_id, Entity.parent_object_id) \
+    #     .distinct(Entity.parent_client_id, Entity.parent_object_id) \
     #     .filter(search_expression)
     results_cursor = list()
     tmp_list = list()
@@ -151,12 +151,7 @@ def advanced_search(request):
         tmp_list.append(item)
 
     results_cursor = DBSession.query(LexicalEntry) \
-        .options(joinedload('leveloneentity').joinedload('leveltwoentity').subqueryload('publishleveltwoentity')) \
-        .options(joinedload('leveloneentity').subqueryload('publishleveloneentity')) \
-        .options(joinedload('groupingentity').subqueryload('publishgroupingentity')) \
-        .options(subqueryload('publishleveloneentity')) \
-        .options(subqueryload('publishleveltwoentity')) \
-        .options(subqueryload('publishgroupingentity')) #\
+        .options(joinedload('entity').subqueryload('publishentity'))
         # .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(tmp_list))
     result_list = list()
 
