@@ -1342,5 +1342,17 @@
     "1": "Изображение",
     "2": "Image",
     "3": "Image"
+  },
+  "Limited access": {
+    "type": "Service",
+    "1": "Ограниченный доступ",
+    "2": "Limited access",
+    "3": "Limited access"
+  },
+  "Grouping Tag": {
+    "type": "Service",
+    "1": "Группировочный тэг",
+    "2": "Grouping Tag",
+    "3": "Grouping Tag"
   }
 }
