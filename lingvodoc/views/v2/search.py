@@ -7,7 +7,9 @@ from lingvodoc.models import (
     DictionaryPerspective,
     Group,
     LexicalEntry,
-    User
+    User,
+    Entity,
+    TranslationAtom
 )
 
 from pyramid.httpexceptions import (
@@ -29,29 +31,29 @@ from sqlalchemy.orm import joinedload, subqueryload
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
 def basic_search(request):
     can_add_tags = request.params.get('can_add_tags')
-    searchstring = request.params.get('leveloneentity')
+    searchstring = request.params.get('searchstring')
     perspective_client_id = request.params.get('perspective_client_id')
     perspective_object_id = request.params.get('perspective_object_id')
     if searchstring:
         if len(searchstring) >= 2:
-            searchstring = request.params.get('leveloneentity')
+            searchstring = request.params.get('searchstring')
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
                     .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
             if group:
-                # results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
-                results_cursor = list()
+                results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'))
+                # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.join(LexicalEntry)\
                         .join(DictionaryPerspective)\
                         .filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
             else:
-                # results_cursor = DBSession.query(LevelOneEntity)\
-                #     .join(LexicalEntry)\
-                #     .join(DictionaryPerspective)
-                results_cursor = list()
+                results_cursor = DBSession.query(Entity)\
+                    .join(Entity.parent)\
+                    .join(DictionaryPerspective)
+                # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
@@ -59,18 +61,19 @@ def basic_search(request):
                     .join(BaseGroup)\
                     .join(User, Group.users)\
                     .join(Client)\
-                    .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
+                    .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
             results = []
             entries = set()
             if can_add_tags:
-                # results_cursor = results_cursor\
-                #     .filter(BaseGroup.subject=='lexical_entries_and_entities',
-                #             or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
-                #     .group_by(LevelOneEntity).having(func.count('*') == 2)
-                results_cursor = list()
+                results_cursor = results_cursor\
+                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
+                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+                    .group_by(Entity).having(func.count('*') == 2)
+                # results_cursor = list()
             else:
                 results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
             for item in results_cursor:
+                print(item.content)
                 entries.add(item.parent)
             for entry in entries:
                 if not entry.marked_for_deletion:
@@ -78,17 +81,23 @@ def basic_search(request):
                     result['lexical_entry'] = entry.track(False)
                     result['client_id'] = entry.parent_client_id
                     result['object_id'] = entry.parent_object_id
-                    perspective_tr = entry.parent.get_translation(request)
-                    result['translation_string'] = perspective_tr['translation_string']
-                    result['translation'] = perspective_tr['translation']
+                    perspective_tr = entry.parent.get_translation(request.cookies['locale_id'])
+                    result['translation'] = perspective_tr
                     result['is_template'] = entry.parent.is_template
-                    result['status'] = entry.parent.state
+                    result['status_client_id'] = entry.parent.state_translation_gist_client_id
+                    result['status_object_id'] = entry.parent.state_translation_gist_object_id
+                    status = DBSession.query(TranslationAtom).filter_by(
+                        parent_client_id = entry.parent.state_translation_gist_client_id,
+                        parent_object_id = entry.parent.state_translation_gist_object_id,
+                        locale_id=request.cookies['locale_id']
+                    ).first()
+                    if status:
+                        result['status'] = status.content
                     result['marked_for_deletion'] = entry.parent.marked_for_deletion
                     result['parent_client_id'] = entry.parent.parent_client_id
                     result['parent_object_id'] = entry.parent.parent_object_id
-                    dict_tr = entry.parent.parent.get_translation(request)
-                    result['parent_translation_string'] = dict_tr['translation_string']
-                    result['parent_translation'] = dict_tr['translation']
+                    dict_tr = entry.parent.parent.get_translation(request.cookies['locale_id'])
+                    result['parent_translation'] = dict_tr
                     results.append(result)
             request.response.status = HTTPOk.code
             return results
