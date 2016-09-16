@@ -25,6 +25,7 @@ from sqlalchemy import (
     tuple_
 )
 from sqlalchemy.orm import joinedload, subqueryload
+from pyramid.request import Request
 
 
 # TODO: completely broken!
@@ -73,29 +74,23 @@ def basic_search(request):
             else:
                 results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
             for item in results_cursor:
-                print(item.content)
                 entries.add(item.parent)
             for entry in entries:
                 if not entry.marked_for_deletion:
                     result = dict()
+                    print(entry.__class__)
+                    url = request.route_url('perspective',
+                                            dictionary_client_id=entry.parent.parent.client_id,
+                                            dictionary_object_id=entry.parent.parent.object_id,
+                                            perspective_client_id=entry.parent_client_id,
+                                            perspective_id=entry.parent_object_id)
+                    subreq = Request.blank(url)
+                    subreq.method = 'GET'
+                    headers = {'Cookie': request.headers['Cookie']}
+                    subreq.headers = headers
+                    resp = request.invoke_subrequest(subreq)
+                    result = resp.json
                     result['lexical_entry'] = entry.track(False)
-                    result['client_id'] = entry.parent_client_id
-                    result['object_id'] = entry.parent_object_id
-                    perspective_tr = entry.parent.get_translation(request.cookies['locale_id'])
-                    result['translation'] = perspective_tr
-                    result['is_template'] = entry.parent.is_template
-                    result['state_translation_gist_client_id'] = entry.parent.state_translation_gist_client_id
-                    result['state_translation_gist_object_id'] = entry.parent.state_translation_gist_object_id
-                    status = DBSession.query(TranslationAtom).filter_by(
-                        parent_client_id = entry.parent.state_translation_gist_client_id,
-                        parent_object_id = entry.parent.state_translation_gist_client_id,
-                        locale_id=request.cookies['locale_id']
-                    ).first()
-                    if status:
-                        result['status'] = status.content
-                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
-                    result['parent_client_id'] = entry.parent.parent_client_id
-                    result['parent_object_id'] = entry.parent.parent_object_id
                     dict_tr = entry.parent.parent.get_translation(request.cookies['locale_id'])
                     result['parent_translation'] = dict_tr
                     results.append(result)
@@ -158,6 +153,7 @@ def advanced_search(request):
     results = list()
     for item in results_cursor.all():
         if (item.client_id, item.object_id) in tmp_list:
+
             tmp_result = dict()
             tmp_result['lexical_entry'] = item.track(True)
             tmp_result['client_id'] = item.parent_client_id

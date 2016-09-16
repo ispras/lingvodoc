@@ -105,7 +105,7 @@ def view_perspective(request): # tested & in docs
         parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent:
             request.response.status = HTTPNotFound.code
-            return {'error': str("No such dictionary in the system")}
+            return {'error': str("No such dictionary in the system %s %s %s %s") % (client_id, object_id, parent_client_id, parent_object_id)}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     response = view_perspective_from_object(request, perspective)
