@@ -30,7 +30,7 @@
                 </div>
                 <div class="btn-group col-md-4 col-sm-4 col-lg-4">
                     <button type="button" class="btn btn-info col-md-10 col-lg-11 col-sm-10 col-xs-8"
-                            data-toggle="dropdown">{{ dictionary.status }}
+                            data-toggle="dropdown">{{ controller.getDictionaryStatus(dictionary).content }}
                     </button>
                     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
                             aria-haspopup="true" aria-expanded="false">
@@ -38,9 +38,7 @@
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="" ng-click="controller.setDictionaryStatus(dictionary, 'Hidden')">Hidden</a></li>
-                        <li><a href="" ng-click="controller.setDictionaryStatus(dictionary, 'WiP')">WiP</a></li>
-                        <li><a href="" ng-click="controller.setDictionaryStatus(dictionary, 'Published')">Published</a></li>
+                        <li ng-repeat="status in controller.getStatuses()"><a href="" ng-click="controller.setDictionaryStatus(dictionary, status)">{{status.content}}</a></li>
                     </ul>
                 </div>
 
@@ -62,8 +60,7 @@
                         </button>
                         <ul class="dropdown-menu">
                             <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'view') }}">View published</a></li>
-                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}">Edit</a>
-                            </li>
+                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}">Edit</a></li>
                             <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}">Publish</a>
                             </li>
                             <li role="separator" class="divider"></li>
@@ -76,7 +73,7 @@
                     <div class="btn-group btn-group-xs col-md-4 col-sm-4 col-lg-4 col-xs-4 ">
                         <button type="button"
                                 class="btn btn-info dropdown-toggle col-md-10 col-lg-11 col-sm-10 col-xs-8"
-                                data-toggle="dropdown">{{ perspective.status }}
+                                data-toggle="dropdown">{{ controller.getPerspectiveStatus(perspective).content }}
                         </button>
                         <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
                                 aria-haspopup="true" aria-expanded="false">
@@ -84,11 +81,7 @@
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href=""
-                                   ng-click="controller.setPerspectiveStatus(dictionary, perspective, 'Hidden')">Hidden</a></li>
-                            <li><a href="" ng-click="controller.setPerspectiveStatus(dictionary, perspective, 'WiP')">WiP</a></li>
-                            <li><a href="" ng-click="controller.setPerspectiveStatus(dictionary, perspective, 'Published')">Published</a>
-                            </li>
+                            <li ng-repeat="status in controller.getStatuses()"><a href="" ng-click="controller.setPerspectiveStatus(perspective, status)">{{status.content}}</a></li>
                         </ul>
                     </div>
                     <br><br>
@@ -104,5 +97,5 @@
 
     <hr>
 
-    <a href="#/new_dictionary" class="btn btn-primary">Create dictionary...</a>
+    <a href="#/dictionary/create" class="btn btn-primary">Create dictionary...</a>
 </div>

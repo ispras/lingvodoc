@@ -81,4 +81,109 @@
     stroke: red;
     stroke-width: 1
 }
+/* eaf (sound markup) editing staff end*/
 
+button.control-button {
+    -webkit-appearance: none;
+    padding: 0;
+    cursor: pointer;
+    background: 0 0;
+    border: 0;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    filter: alpha(opacity=20);
+    opacity: .2;
+}
+
+
+/* animations */
+.ng-hide {
+    opacity: 0;
+}
+
+.ng-hide-remove, .ng-hide-add {
+    display: block !important;
+}
+
+.ng-hide-remove {
+    transition: all linear 1000ms;
+}
+
+.ng-hide-add {
+    transition: all linear 500ms;
+}
+
+.animate-repeat {
+    line-height:30px;
+    list-style:none;
+    box-sizing:border-box;
+}
+
+.animate-repeat.ng-move,
+.animate-repeat.ng-enter,
+.animate-repeat.ng-leave {
+    transition:all linear 0.5s;
+}
+
+.animate-repeat.ng-leave.ng-leave-active,
+.animate-repeat.ng-move,
+.animate-repeat.ng-enter {
+    opacity:0;
+    max-height:0;
+}
+
+.animate-repeat.ng-leave,
+.animate-repeat.ng-move.ng-move-active,
+.animate-repeat.ng-enter.ng-enter-active {
+    opacity:1;
+    max-height:30px;
+}
+
+.animate-if {
+
+}
+
+.animate-if.ng-enter, .animate-if.ng-leave {
+    transition:all cubic-bezier(0.250, 0.460, 0.450, 0.940) 0.5s;
+}
+
+.animate-if.ng-enter,
+.animate-if.ng-leave.ng-leave-active {
+    opacity:0;
+}
+
+.animate-if.ng-leave,
+.animate-if.ng-enter.ng-enter-active {
+    opacity:1;
+}
+
+
+
+/* Tree-like ULs */
+ul.tree, ul.tree ul {
+    list-style-type: none;
+    background: url(../images/vline.png) repeat-y;
+    margin: 0;
+    padding: 0;
+}
+
+ul.tree ul {
+    margin-left: 10px;
+}
+
+ul.tree li {
+    margin: 0;
+    padding: 0 12px;
+    line-height: 20px;
+    background: url(../images/node.png) no-repeat;
+    color: #369;
+    font-weight: bold;
+}
+
+ul.tree li.last {
+    background: #f9f9f9 url(../images/lastnode.png) no-repeat;
+}
+/* Tree-like ULs END */

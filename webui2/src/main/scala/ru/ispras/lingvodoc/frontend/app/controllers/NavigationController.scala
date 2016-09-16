@@ -15,15 +15,24 @@ import scala.scalajs.js.JSConverters._
 import scala.util.{Failure, Success}
 import scala.scalajs.js.Date
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 @js.native
 trait NavigationScope extends Scope {
-
+  var locale: Int = js.native
 }
 
 @JSExport
 @injectable("NavigationController")
 class NavigationController(scope: NavigationScope, rootScope: RootScope, backend: BackendService, userService: UserService) extends AbstractController[NavigationScope](scope) {
+
+  // get locale. fallback to english if no locale received from backend
+  scope.locale = Utils.getLocale() match {
+    case Some(serverLocale) => serverLocale
+    case None =>
+      Utils.setLocale(2)
+      2 // english locale
+  }
 
   @JSExport
   def isAuthenticated() = {
@@ -35,16 +44,36 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, backend
     userService.getUser()
   }
 
+  @JSExport
+  def getLocale(): Int = {
+    scope.locale
+  }
 
+  @JSExport
+  def setLocale(locale: Int) = {
+    Utils.getLocale() match {
+      case Some(serverLocale) =>
+        if (serverLocale != locale) {
+          Utils.setLocale(locale)
+          rootScope.$emit("user.changeLocale")
+        }
+      case None =>
+        Utils.setLocale(locale)
+        rootScope.$emit("user.changeLocale")
+    }
+    scope.locale = locale
+  }
+
+  // user logged in
   rootScope.$on("user.login", () => {
-
     backend.getCurrentUser onComplete {
       case Success(user) =>
         userService.setUser(user)
-      case Failure(e) =>
+      case Failure(e) => console.log("error: " + e.getMessage)
     }
   })
 
+  // user logged out
   rootScope.$on("user.logout", () => {
     userService.removeUser()
   })

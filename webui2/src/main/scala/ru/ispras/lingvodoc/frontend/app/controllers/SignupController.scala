@@ -31,9 +31,9 @@ class SignupController(scope: SignupScope, location: Location, backend: BackendS
   scope.fullName = ""
   scope.email = ""
   scope.password = ""
-  scope.month = "0"
-  scope.day = "0"
-  scope.year = "0"
+  scope.month = "1"
+  scope.day = "1"
+  scope.year = "1980"
   scope.error = None
 
 
@@ -50,7 +50,7 @@ class SignupController(scope: SignupScope, location: Location, backend: BackendS
 
   @JSExport
   def signup() = {
-    backend.signup(scope.login, scope.fullName, scope.password, scope.email, scope.day, scope.month, scope.year) onComplete {
+    backend.signup(scope.login, scope.fullName, scope.password, scope.email, scope.day.toInt, scope.month.toInt, scope.year.toInt) onComplete {
       case Success(()) => location.path("login")
       case Failure(e) => scope.error = Some("some error")
     }

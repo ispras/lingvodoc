@@ -25,12 +25,15 @@ from ..models import (
     Client,
     Email,
     TranslationGist,
-    TranslationAtom
+    TranslationAtom,
+    Field,
+    DictionaryPerspectiveToField
     )
 
 import json
 
 test_init = True
+
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
@@ -39,7 +42,7 @@ def usage(argv):
     sys.exit(1)
 
 
-def create_translation(client_id, contents=[], gist_type='Service'):
+def create_translation(client_id, contents=list(), gist_type='Service'):
     gist = TranslationGist(client_id=client_id, type=gist_type)
     DBSession.add(gist)
     DBSession.flush()
@@ -50,12 +53,43 @@ def create_translation(client_id, contents=[], gist_type='Service'):
     return gist
 
 
+def find_service_translation(content, locale_id=2):
+    atom = DBSession.query(TranslationAtom).join(TranslationGist)\
+        .filter(TranslationAtom.content==content,
+                TranslationAtom.locale_id==locale_id,
+                TranslationGist.type=='Service').first()
+    if atom:
+        return atom.parent
+    else:
+        return None
+
+
+def find_translation(content, locale_id=2):
+    atom = DBSession.query(TranslationAtom).filter_by(content=content, locale_id=locale_id).first()
+    if atom:
+        return atom.parent
+    else:
+        return None
+
+
 def data_init(manager, accounts):
     with manager:
+
+        # creating base locales
+        ru_locale = Locale(shortcut="ru", intl_name="Russian (Русский)")
+        en_locale = Locale(shortcut="en", intl_name="English")
+        fi_locale = Locale(shortcut="fi", intl_name="Finnish (Suomi)")
+        fr_locale = Locale(shortcut="fr", intl_name="French (Français)")
+        de_locale = Locale(shortcut="de", intl_name="German (Deutsch)")
+
+        for locale in [ru_locale, en_locale, fi_locale, fr_locale, de_locale]:
+            DBSession.add(locale)
+        DBSession.flush()
+
         # Creating global administrator
         admin_account = DBSession.query(User).filter_by(login=accounts['administrator_login']).first()
         if admin_account:
-        # print("Admin record not found, initializing")
+            # print("Admin record not found, initializing")
             print("Admin record found", admin_account.id, admin_account.login)
             return
         admin_account = User(login=accounts['administrator_login'],
@@ -74,16 +108,6 @@ def data_init(manager, accounts):
         DBSession.add(client)
 
         DBSession.flush()
-
-        # creating base locales
-        ru_locale = Locale(shortcut="ru", intl_name="Russian (Русский)")
-        en_locale = Locale(shortcut="en", intl_name="English")
-        fi_locale = Locale(shortcut="fi", intl_name="Finnish (Suomi)")
-        fr_locale = Locale(shortcut="fr", intl_name="French (Français)")
-        de_locale = Locale(shortcut="de", intl_name="German (Deutsch)")
-
-        for locale in [ru_locale, en_locale, fi_locale, fr_locale, de_locale]:
-            DBSession.add(locale)
         locale_id = en_locale.id
 
         # Initializing base locales and languages
@@ -168,15 +192,20 @@ def data_init(manager, accounts):
         try:
             with open('lingvodoc/scripts/translations_base.json', 'r') as json_file:
                 translations = json.loads(json_file.read())
-        except:
+        except Exception as e:
+            import traceback
+            print('couldn\'t read json file with translations')
+            print(e.args)
+            traceback.print_exc()
             pass
-        for translation_string in translations:
+
+        for translation_string in sorted(translations):
             gist_type = translations[translation_string]['type']
             contents = list()
             for key in translations[translation_string]:
-                if key != 'type':
+                if key != 'type' :
                     contents.append((translations[translation_string][key], key))
-            last_gist = create_translation(client_id=client.id, contents=contents, gist_type=gist_type)
+            create_translation(client_id=client.id, contents=contents, gist_type=gist_type)
 
         create_gist_from_string("Can create dictionaries")
         base_groups.append(BaseGroup(name="Can create dictionaries",
@@ -400,10 +429,18 @@ def data_init(manager, accounts):
                            TranslationGist.type == 'Service')\
                     .one()
                 state_gist = translationatom.parent
-
+                dict_name_gist = find_translation('Dictionary of Middle-Ob dialect Mansi')
+                persp_name_gist = find_translation('Lingvodoc 0.98 etymology dictionary')
+                text_type_gist = find_service_translation('Text')
+                sound_type_gist = find_service_translation('Sound')
+                link_type_gist = find_service_translation('Link')
+                word_gist = find_translation('Word')
+                transcription_gist = find_translation('Transcription')
+                sound_gist = find_translation('Sound')
+                paradigm_gist = find_translation('Paradigmatic forms')
                 test_dict = Dictionary(client_id=test_client.id,
-                                       translation_gist_client_id=last_gist.client_id,
-                                       translation_gist_object_id=last_gist.object_id,
+                                       translation_gist_client_id=dict_name_gist.client_id,
+                                       translation_gist_object_id=dict_name_gist.object_id,
                                        parent_client_id=russian_language.client_id,
                                        parent_object_id=russian_language.object_id,
                                        state_translation_gist_client_id=state_gist.client_id,
@@ -412,8 +449,8 @@ def data_init(manager, accounts):
                 DBSession.flush()
 
                 test_persp = DictionaryPerspective(client_id=test_client.id,
-                                                   translation_gist_client_id=last_gist.client_id,
-                                                   translation_gist_object_id=last_gist.object_id,
+                                                   translation_gist_client_id=persp_name_gist.client_id,
+                                                   translation_gist_object_id=persp_name_gist.object_id,
                                                    parent_client_id=test_dict.client_id,
                                                    parent_object_id=test_dict.object_id,
                                                    state_translation_gist_client_id=state_gist.client_id,
@@ -421,8 +458,92 @@ def data_init(manager, accounts):
                 DBSession.add(test_persp)
                 DBSession.flush()
 
-            except:
+                test_persp_link = DictionaryPerspective(client_id=test_client.id,
+                                                   translation_gist_client_id=persp_name_gist.client_id,
+                                                   translation_gist_object_id=persp_name_gist.object_id,
+                                                   parent_client_id=test_dict.client_id,
+                                                   parent_object_id=test_dict.object_id,
+                                                   state_translation_gist_client_id=state_gist.client_id,
+                                                   state_translation_gist_object_id=state_gist.object_id)
+                DBSession.add(test_persp_link)
+                DBSession.flush()
+
+                word_field = Field(client_id=test_client.id,
+                                   translation_gist_client_id=word_gist.client_id,
+                                   translation_gist_object_id=word_gist.object_id,
+                                   data_type_translation_gist_client_id=text_type_gist.client_id,
+                                   data_type_translation_gist_object_id=text_type_gist.object_id)
+                DBSession.add(word_field)
+
+                sound_field = Field(client_id=test_client.id,
+                                   translation_gist_client_id=sound_gist.client_id,
+                                   translation_gist_object_id=sound_gist.object_id,
+                                   data_type_translation_gist_client_id=sound_type_gist.client_id,
+                                   data_type_translation_gist_object_id=sound_type_gist.object_id)
+                DBSession.add(sound_field)
+
+                transcription_field = Field(client_id=test_client.id,
+                                   translation_gist_client_id=transcription_gist.client_id,
+                                   translation_gist_object_id=transcription_gist.object_id,
+                                   data_type_translation_gist_client_id=text_type_gist.client_id,
+                                   data_type_translation_gist_object_id=text_type_gist.object_id)
+                DBSession.add(transcription_field)
+
+                paradigm_field = Field(client_id=test_client.id,
+                                   translation_gist_client_id=paradigm_gist.client_id,
+                                   translation_gist_object_id=paradigm_gist.object_id,
+                                   data_type_translation_gist_client_id=link_type_gist.client_id,
+                                   data_type_translation_gist_object_id=link_type_gist.object_id)
+                DBSession.add(paradigm_field)
+
+                field_1 = DictionaryPerspectiveToField(client_id=test_client.id,
+                                                       parent=test_persp,
+                                                       field=word_field,
+                                                       position=1
+                                                       )
+                field_2 = DictionaryPerspectiveToField(client_id=test_client.id,
+                                                       parent=test_persp,
+                                                       field=sound_field,
+                                                       position=2
+                                                       )
+                field_3 = DictionaryPerspectiveToField(client_id=test_client.id,
+                                                       parent=test_persp,
+                                                       field=transcription_field,
+                                                       upper_level=field_2,
+                                                       position=3
+                                                       )
+                field_4 = DictionaryPerspectiveToField(client_id=test_client.id,
+                                                       parent=test_persp,
+                                                       field=paradigm_field,
+                                                       link=test_persp_link,
+                                                       position=4
+                                                       )
+                for field in [field_1,field_2, field_3, field_4]:
+                    DBSession.add(field)
+
+                field_1 = DictionaryPerspectiveToField(client_id=test_client.id,
+                                                       parent=test_persp_link,
+                                                       field=word_field,
+                                                       position=1
+                                                       )
+                field_2 = DictionaryPerspectiveToField(client_id=test_client.id,
+                                                       parent=test_persp_link,
+                                                       field=transcription_field,
+                                                       position=2
+                                                       )
+                field_3 = DictionaryPerspectiveToField(client_id=test_client.id,
+                                                       parent=test_persp_link,
+                                                       field=sound_field,
+                                                       position=3
+                                                       )
+                for field in [field_1,field_2, field_3]:
+                    DBSession.add(field)
+
+            except Exception as e:
+                import traceback
                 print('couldn\'t create all test data')
+                print(e.args)
+                traceback.print_exc()
                 pass
 
 

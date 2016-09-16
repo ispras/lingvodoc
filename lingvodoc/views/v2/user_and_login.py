@@ -2,7 +2,6 @@ __author__ = 'alexander'
 
 from lingvodoc.exceptions import CommonException
 from lingvodoc.models import (
-    About,
     BaseGroup,
     Client,
     DBSession,
@@ -39,6 +38,7 @@ from sqlalchemy import (
 
 import datetime
 import logging
+import json
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +66,9 @@ def signup_post(request):  # tested
             return {'Error': "day, month or year of the birth is missing"}
         # birthday = datetime.datetime.strptime(day + month + year, "%d%m%Y").date()
         try:
+            day = int(day)
+            month = int(month)
+            year = int(year)
             birthday = datetime.date(year, month, day)
         except ValueError:
             request.response.status = HTTPBadRequest.code
@@ -79,7 +82,7 @@ def signup_post(request):  # tested
         pwd = Passhash(password=password)
         email = Email(email=email)
         new_user.password = pwd
-        new_user.email.append(email)
+        new_user.email = email
         DBSession.add(new_user)
         basegroups = []
         basegroups += [DBSession.query(BaseGroup).filter_by(name="Can create dictionaries").first()]
@@ -116,7 +119,7 @@ def login_get(request):
 
 @view_config(route_name='login', request_method='POST', renderer='json')
 def login_post(request):  # tested
-    next = request.params.get('next') or request.route_url('home')
+    # next = request.params.get('next') or request.route_url('home')
     login = request.POST.get('login', '')
     password = request.POST.get('password', '')
     # print(login)
@@ -282,19 +285,13 @@ def get_user_info(request):  # tested
     response['default_locale_id'] = user.default_locale_id
     response['birthday'] = str(user.birthday)
     response['signup_date'] = str(user.signup_date)
-    response['is_active'] = str(user.is_active)
-    email = None
-    if user.email:
-        for em in user.email:
-            email = em.email
-            break
-    response['email'] = email
-    about = None
-    if user.about:
-        for ab in user.about:
-            about = ab.content
-            break
-    response['about'] = about
+    response['is_active'] = user.is_active
+    response['email'] = user.email.email
+    meta = None
+    if user.additional_metadata:
+        meta = json.loads(user.additional_metadata)
+    if meta and meta.get('about'):
+        response['about'] = meta['about']
     organizations = []
     for organization in user.organizations:
         organizations += [{'organization_id':organization.id}]
@@ -365,21 +362,18 @@ def edit_user_info(request):  # TODO: test
     email = req.get('email')
     if email:
         if user.email:
-            for em in user.email:
-                em.email = email
+            user.email.email = email
         else:
             new_email = Email(user=user, email=email)
             DBSession.add(new_email)
             DBSession.flush()
     about = req.get('about')
     if about:
-        if user.about:
-            for ab in user.about:
-                ab.content = req['about']
-        else:
-            new_about = About(user=user, content=about)
-            DBSession.add(new_about)
-            DBSession.flush()
+        meta = None
+        if user.additional_metadata:
+            meta = json.loads(user.additional_metadata)
+        if meta and meta.get('about'):
+            response['about'] = meta['about']
     # response['is_active']=str(user.is_active)
     request.response.status = HTTPOk.code
     return response

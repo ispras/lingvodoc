@@ -5,14 +5,17 @@ import upickle.Js
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExportAll
 
+
 @JSExportAll
 case class Perspective(override val clientId: Int,
                        override val objectId: Int,
                        var parentClientId: Int,
                        var parentObjectId: Int,
                        var translation: String,
-                       var translationString: String,
-                       var status: String,
+                       var translationGistClientId: Int,
+                       var translationGistObjectId: Int,
+                       var stateTranslationGistClientId: Int,
+                       var stateTranslationGistObjectId: Int,
                        var isTemplate: Boolean,
                        var markedForDeletion: Boolean) extends Object(clientId, objectId) {
 
@@ -22,7 +25,7 @@ case class Perspective(override val clientId: Int,
 
 object Perspective {
   implicit val writer = upickle.default.Writer[Perspective] {
-    case perspective =>
+    perspective =>
       (new (Perspective => Js.Obj) {
         override def apply(f: Perspective): Js.Obj = {
 
@@ -37,8 +40,10 @@ object Perspective {
             ("parent_client_id", Js.Num(f.parentClientId)),
             ("parent_object_id", Js.Num(f.parentObjectId)),
             ("translation", Js.Str(f.translation)),
-            ("translation_string", Js.Str(f.translationString)),
-            ("status", Js.Str(f.status)),
+            ("translation_gist_client_id", Js.Num(f.translationGistClientId)),
+            ("translation_gist_object_id", Js.Num(f.translationGistObjectId)),
+            ("state_translation_gist_client_id", Js.Num(f.stateTranslationGistClientId)),
+            ("state_translation_gist_object_id", Js.Num(f.stateTranslationGistObjectId)),
             ("is_template", if (f.isTemplate) Js.True else Js.False),
             ("marked_for_deletion", if (f.markedForDeletion) Js.True else Js.False),
             ("fields", Js.Arr(fields:_*))
@@ -59,8 +64,10 @@ object Perspective {
           val parentClientId = js("parent_client_id").asInstanceOf[Js.Num].value.toInt
           val parentObjectId = js("parent_object_id").asInstanceOf[Js.Num].value.toInt
           val translation = js("translation").asInstanceOf[Js.Str].value
-          val translationString = js("translation_string").asInstanceOf[Js.Str].value
-          val status = js("status").asInstanceOf[Js.Str].value
+          val translationGistClientId = js("translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
+          val translationGistObjectId = js("translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
+          val stateTranslationGistClientId = js("state_translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
+          val stateTranslationGistObjectId = js("state_translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
 
 
           val isTemplate = js("is_template") match {
@@ -75,13 +82,13 @@ object Perspective {
             case _ => false
           }
 
-          Perspective(clientId, objectId, parentClientId, parentObjectId, translation, translationString, status, isTemplate, markedForDeletion)
+          Perspective(clientId, objectId, parentClientId, parentObjectId, translation, translationGistClientId, translationGistObjectId, stateTranslationGistClientId, stateTranslationGistObjectId, isTemplate, markedForDeletion)
         }
       })(jsval)
   }
 
   def emptyPerspective(clientId: Int, objectId: Int): Perspective = {
-    Perspective(clientId, objectId, Int.MinValue, Int.MinValue, "", "", "", isTemplate = false, markedForDeletion = false)
+    Perspective(clientId, objectId, Int.MinValue, Int.MinValue, "", Int.MinValue, Int.MinValue, Int.MinValue, Int.MinValue, isTemplate = false, markedForDeletion = false)
   }
 }
 

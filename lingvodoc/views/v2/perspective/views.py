@@ -24,6 +24,7 @@ from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
+from sqlalchemy.orm.exc import NoResultFound
 
 from lingvodoc.cache.caching import MEMOIZE
 from lingvodoc.exceptions import CommonException
@@ -33,12 +34,15 @@ from lingvodoc.models import (
     DBSession,
     Dictionary,
     DictionaryPerspective,
+    Entity,
     Group,
     LexicalEntry,
     Organization,
     User,
     TranslationAtom,
-    Field
+    TranslationGist,
+    Field,
+    DictionaryPerspectiveToField
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
@@ -295,7 +299,7 @@ def delete_perspective_meta(request):  # tested & in docs
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name='perspective_meta', renderer='json', request_method='GET')
+@view_config(route_name='perspective_meta', renderer='json', request_method='POST')
 def view_perspective_meta(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -308,13 +312,37 @@ def view_perspective_meta(request):  # tested & in docs
         return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if perspective:
-        if not perspective.marked_for_deletion:
-            if perspective.parent != parent:
-                request.response.status = HTTPNotFound.code
-                return {'error': str("No such pair of dictionary/perspective in the system")}
+    if perspective and not perspective.marked_for_deletion:
+        if perspective.parent != parent:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such pair of dictionary/perspective in the system")}
 
-            old_meta = json.loads(perspective.additional_metadata)
+        old_meta = json.loads(perspective.additional_metadata)
+        # import pdb
+        # pdb.set_trace()
+        try:
+            req = request.json_body
+        except AttributeError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+        except ValueError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+
+        if req:
+            print(request.json_body)
+            new_meta = dict()
+            for key in req:
+                if old_meta.get(key):
+                    new_meta[key] = old_meta[key]
+                else:
+                    request.response.status = HTTPNotFound.code
+                    return {'error': str("No such key in metadata:, %s" % key)}
+
+            response = new_meta
+            request.response.status = HTTPOk.code
+            return response
+        else:
             response = old_meta
             request.response.status = HTTPOk.code
             return response
@@ -452,13 +480,14 @@ def create_perspective(request):  # tested & in docs
         parent_client_id = request.matchdict.get('dictionary_client_id')
         parent_object_id = request.matchdict.get('dictionary_object_id')
 
-        if "json_body" not in request.__dict__:
+        try:
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
+        except AttributeError:
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
-            req = request.json_body
         translation_gist_client_id = req['translation_gist_client_id']
         translation_gist_object_id = req['translation_gist_object_id']
         is_template = req.get('is_template')
@@ -477,9 +506,9 @@ def create_perspective(request):  # tested & in docs
         latitude = req.get('latitude')
         longitude = req.get('longitude')
         if latitude:
-            coord['latitude']=latitude
+            coord['latitude'] = latitude
         if longitude:
-            coord['longitude']=longitude
+            coord['longitude'] = longitude
         additional_metadata = req.get('additional_metadata')
         if additional_metadata:
             additional_metadata.update(coord)
@@ -490,7 +519,7 @@ def create_perspective(request):  # tested & in docs
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
         subreq.headers = request.headers
-        subreq.json = json.dumps({'searchstring': 'WiP'})
+        subreq.json = {'searchstring': 'WiP'}
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -541,16 +570,95 @@ def create_perspective(request):  # tested & in docs
         return {'error': str(e)}
 
 
+@view_config(route_name = 'complex_create', renderer = 'json', request_method = 'POST', permission='create')
+def complex_create(request):
+    try:
+        from pdb import set_trace
+        parent_client_id = request.matchdict.get('dictionary_client_id')
+        parent_object_id = request.matchdict.get('dictionary_object_id')
+        result = list()
+        try:
+            if type(request.json_body) == str:
+                req = json.loads(request.json_body)
+            else:
+                req = request.json_body
+        except AttributeError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+        fake_ids = dict()
+        # set_trace()
+        for perspective_json in req:
+            path = request.route_url('create_perspective',
+                                     dictionary_client_id=parent_client_id,
+                                     dictionary_object_id=parent_object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            subreq.headers = request.headers
+            subreq.json = perspective_json
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+            perspective = resp.json
+            result.append({'object_id': perspective['object_id'],
+                           'client_id': perspective['client_id']})
+            perspective_json['client_id'] = perspective['client_id']
+            perspective_json['object_id'] = perspective['object_id']
+            fake_ids[perspective_json['fake_id']] = perspective
+        # set_trace()
+        for perspective_json in req:
+            path = request.route_url('perspective_fields',
+                                     dictionary_client_id=parent_client_id,
+                                     dictionary_object_id=parent_object_id,
+                                     perspective_client_id=perspective_json['client_id'],
+                                     perspective_id=perspective_json['object_id'])
+            subreq = Request.blank(path)
+            subreq.method = 'PUT'
+            subreq.headers = request.headers
+            for field in perspective_json['fields']:
+                if field.get('link') and field['link'].get('fake_id'):
+                    field['link'] = fake_ids[field['link']['fake_id']]
+            subreq.json = perspective_json['fields']
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            resp = request.invoke_subrequest(subreq)
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='perspectives', renderer='json', request_method='GET')
 def view_perspectives(request):
-    response = list()
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
+    published = request.params.get('published', None)
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
     if not parent:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such dictionary in the system")}
-    perspectives = []
+    perspectives = list()
+
+    if published:
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Published'}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            published = (state_translation_gist_client_id, state_translation_gist_object_id)
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
     for perspective in parent.dictionaryperspective:
         path = request.route_url('perspective',
                                  dictionary_client_id=parent_client_id,
@@ -561,11 +669,14 @@ def view_perspectives(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
+        if published and not (
+                        published[0] == resp.json.get('state_translation_gist_client_id') and
+                        published[1] == resp.json.get('state_translation_gist_object_id')):
+            continue
         if 'error' not in resp.json:
             perspectives += [resp.json]
-    response = perspectives
     request.response.status = HTTPOk.code
-    return response
+    return perspectives
 
 
 @view_config(route_name='perspective_roles', renderer='json', request_method='GET', permission='view')
@@ -876,15 +987,24 @@ def edit_perspective_status(request):  # tested & in docs
 @view_config(route_name='field', renderer='json', request_method='GET')
 def view_field(request):
     response = dict()
-    client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    client_id = request.matchdict.get('client_id')
+    object_id = request.matchdict.get('object_id')
     field = DBSession.query(Field).filter_by(client_id=client_id, object_id=object_id).first()
-    field = Field()
     if field:
         return view_field_from_object(request=request, field=field)
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such field in the system")}
+
+
+@view_config(route_name='fields', renderer='json', request_method='GET')
+def all_fields(request):
+    fields = DBSession.query(Field).filter_by().all()
+    response = list()
+    for field in fields:
+        response.append(view_field_from_object(request=request, field=field))
+    request.response.code = HTTPOk.code
+    return response
 
 
 @view_config(route_name='create_field', renderer='json', request_method='POST')
@@ -938,21 +1058,50 @@ def create_field(request):
         return {'error': str(e)}
 
 
-def view_nested_field(request, field):
-    field_object = DBSession.query(Field).filter_by(client_id=field['client_id'], object_id=field['object_id']).first()
+def create_nested_field(field, perspective, client_id, upper_level, link_ids, position):
+    field_object = DictionaryPerspectiveToField(client_id=client_id,
+                                                parent=perspective,
+                                                field_client_id=field['client_id'],
+                                                field_object_id=field['object_id'],
+                                                upper_level=upper_level,
+                                                position=position)
+    if field.get('link'):
+        # if field_object.field.data_type_translation_gist_client_id != link_ids['client_id'] or field_object.field.data_type_translation_gist_client_id != link_ids['client_id']:
+        #     return {'error':'wrong type for link'}
+        field_object.link_client_id = field['link']['client_id']
+        field_object.link_object_id = field['link']['object_id']
+    DBSession.flush()
+    contains = field.get('contains', None)
+    if contains:
+        inner_position = 1
+        for subfield in contains:
+            create_nested_field(subfield,
+                                perspective,
+                                client_id,
+                                upper_level=field_object,
+                                link_ids=link_ids,
+                                position=inner_position)
+            inner_position += 1
+    return
+
+
+def view_nested_field(request, field, link_ids):
+    field_object = field.field
     field_json = view_field_from_object(request=request, field=field_object)
+    field_json['position'] = field.position
     if 'error' in field_json:
         return field_json
-    if field.get('contains'):
-        contains = list()
-        for subfield in field['contains']:
-            subfield_json = view_nested_field(request, subfield)
-            if 'error' in subfield_json:
-                return subfield_json
-            contains.append(subfield_json)
+    contains = list()
+    for subfield in field.dictionaryperspectivetofield: #todo: order subfields
+        subfield_json = view_nested_field(request, subfield, link_ids)
+        if 'error' in subfield_json:
+            return subfield_json
+        contains.append(subfield_json)
+    if contains:
         field_json['contains'] = contains
-    if field.get('link'):
-        field_json['link'] = field['link']
+    if field_object.data_type_translation_gist_client_id == link_ids['client_id'] \
+            and field_object.data_type_translation_gist_object_id == link_ids['object_id']:
+        field_json['link'] = {'client_id': field.link_client_id, 'object_id': field.link_object_id}
     return field_json
 
 
@@ -963,9 +1112,22 @@ def view_perspective_fields(request):
     object_id = request.matchdict.get('perspective_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective and not perspective.marked_for_deletion:
-        fields = json.loads(perspective.additional_metadata)['fields']
+        fields = DBSession.query(DictionaryPerspectiveToField)\
+            .filter_by(parent=perspective, upper_level=None)\
+            .order_by(DictionaryPerspectiveToField.position)\
+            .all()
+        try:
+            link_gist = DBSession.query(TranslationGist)\
+                .join(TranslationAtom)\
+                .filter(TranslationGist.type == 'Service',
+                        TranslationAtom.content == 'Link',
+                        TranslationAtom.locale_id == 2).one()
+            link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
+        except NoResultFound:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("Something wrong with the base")}
         for field in fields:
-            response.append(view_nested_field(request, field))
+            response.append(view_nested_field(request, field, link_ids))
         request.response.status = HTTPOk.code
         return response
     else:
@@ -979,6 +1141,14 @@ def update_perspective_fields(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    variables = {'auth': authenticated_userid(request)}
+    client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+    if not client:
+        raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
     if perspective and not perspective.marked_for_deletion:
         try:
             if type(request.json_body) == str:
@@ -988,9 +1158,30 @@ def update_perspective_fields(request):
         except AttributeError:
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
-        additional_metadata = json.loads(perspective.additional_metadata)
-        additional_metadata.update({"fields": req})
-        perspective.additional_metadata = json.dumps(additional_metadata)
+        try:
+            link_gist = DBSession.query(TranslationGist)\
+                .join(TranslationAtom)\
+                .filter(TranslationGist.type == 'Service',
+                        TranslationAtom.content == 'Link',
+                        TranslationAtom.locale_id == 2).one()
+            link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
+        except NoResultFound:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("Something wrong with the base")}
+        fields = DBSession.query(DictionaryPerspectiveToField)\
+            .filter_by(parent=perspective)\
+            .all()
+        DBSession.flush()
+        for field in fields:
+            DBSession.delete(field)
+        position = 1
+        for field in req:
+            create_nested_field(field=field,
+                                perspective=perspective,
+                                client_id=client.id,
+                                upper_level=None,
+                                link_ids=link_ids, position=position)
+            position += 1
         request.response.status = HTTPOk.code
         return response
     else:
@@ -1010,8 +1201,7 @@ def lexical_entries_all(request):
     count = request.params.get('count') or 200
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if parent:
-        if not parent.marked_for_deletion:
+    if parent and not parent.marked_for_deletion:
             # lexes = DBSession.query(LexicalEntry) \
             #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
             #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
@@ -1024,13 +1214,17 @@ def lexical_entries_all(request):
             #     .join(LevelOneEntity) \
             #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
             #     .offset(start_from).limit(count)
-            lexes = list()
+            lexes = DBSession.query(LexicalEntry) \
+                .filter(LexicalEntry.parent == parent) \
+                .group_by(LexicalEntry) \
+                .offset(start_from).limit(count)
 
             result = deque()
             for entry in lexes.all():
                 result.append(entry.track(False))
+                # result.append({'client_id': entry.client_id, 'object_id': entry.object_id})
 
-            response['lexical_entries'] = list(result)
+            response = list(result)
 
             request.response.status = HTTPOk.code
             return response
@@ -1053,7 +1247,8 @@ def lexical_entries_all_count(request): # tested
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(LexicalEntry)\
-                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id).count()
+                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
+                           parent_object_id=parent.object_id).count()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -1118,17 +1313,12 @@ def lexical_entries_published_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            # lexical_entries_count = DBSession.query(LexicalEntry)\
-            #     .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-            #     .outerjoin(PublishGroupingEntity)\
-            #     .outerjoin(PublishLevelOneEntity)\
-            #     .outerjoin(PublishLevelTwoEntity)\
-            #     .filter(or_(PublishGroupingEntity.marked_for_deletion==False,
-            #                 PublishLevelOneEntity.marked_for_deletion==False,
-            #                 PublishLevelTwoEntity.marked_for_deletion==False,
-            #                 ))\
-            #     .group_by(LexicalEntry).count()
-            lexical_entries_count = None
+            lexical_entries_count = DBSession.query(LexicalEntry)\
+                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .outerjoin(Entity)\
+                .filter(Entity.marked_for_deletion==False, Entity.publishingentity.published==True)\
+                .group_by(LexicalEntry).count()
+            # lexical_entries_count = None
 
             return {"count": lexical_entries_count}
     else:
@@ -1136,7 +1326,6 @@ def lexical_entries_published_count(request):
         return {'error': str("No such perspective in the system")}
 
 
-# TODO: completely broken!
 @view_config(route_name='approve_entity', renderer='json', request_method='PATCH', permission='create')
 def approve_entity(request):
     try:
@@ -1152,52 +1341,13 @@ def approve_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        # {""}
-        for entry in req['entities']:
-            if entry['type'] == 'leveloneentity':
-                # entity = DBSession.query(LevelOneEntity).\
-                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                entity = None
-                if entity:
-                    if not entity.publishleveloneentity:
-                        # publishent = PublishLevelOneEntity(client_id=client.id, object_id=DBSession.query(PublishLevelOneEntity).filter_by(client_id=client.id).count() + 1,
-                        #                                    entity=entity, parent=entity.parent)
-                        # DBSession.add(publishent)
-                        publishent = None
-                    else:
-                        for ent in entity.publishleveloneentity:
-                            if ent.marked_for_deletion:
-                                ent.marked_for_deletion = False
-            elif entry['type'] == 'leveltwoentity':
-                # entity = DBSession.query(LevelTwoEntity).\
-                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                entity = None
-                if entity:
-                    if not entity.publishleveltwoentity:
-                        # publishent = PublishLevelTwoEntity(client_id=client.id, object_id=DBSession.query(PublishLevelTwoEntity).filter_by(client_id=client.id).count() + 1,
-                        #                                    entity=entity, parent=entity.parent.parent)
-                        # DBSession.add(publishent)
-                        publishent = None
-                    else:
-                        for ent in entity.publishleveltwoentity:
-                            if ent.marked_for_deletion:
-                                ent.marked_for_deletion = False
-            elif entry['type'] == 'groupingentity':
-                # entity = DBSession.query(GroupingEntity).\
-                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                entity = None
-                if entity:
-                    if not entity.publishgroupingentity:
-                        # publishent = PublishGroupingEntity(client_id=client.id, object_id=DBSession.query(PublishGroupingEntity).filter_by(client_id=client.id).count() + 1,
-                        #                                    entity=entity, parent=entity.parent)
-                        # DBSession.add(publishent)
-                        publishent = None
-                    else:
-                        for ent in entity.publishgroupingentity:
-                            if ent.marked_for_deletion:
-                                ent.marked_for_deletion = False
+        for entry in req:
+            entity = DBSession.query(Entity).\
+                filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+            if entity:
+                entity.publishingentity.published = True
             else:
-                raise CommonException("Unacceptable type")
+                raise CommonException("no such entity in system")
 
         request.response.status = HTTPOk.code
         return {}
@@ -1214,11 +1364,13 @@ def approve_entity(request):
         return {'error': str(e)}
 
 
-# TODO: completely broken!
 @view_config(route_name='approve_entity', renderer='json', request_method='DELETE', permission='delete')
 def disapprove_entity(request):
     try:
-        req = request.json_body
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -1227,35 +1379,13 @@ def disapprove_entity(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        for entry in req['entities']:
-            if entry['type'] == 'leveloneentity':
-                # entity = DBSession.query(LevelOneEntity).\
-                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                entity = None
-                if entity:
-                    for ent in entity.publishleveloneentity:
-                        ent.marked_for_deletion = True
-                        DBSession.flush()
-                else:
-                    log.debug("WARNING: NO ENTITY")
-            elif entry['type'] == 'leveltwoentity':
-                # entity = DBSession.query(LevelTwoEntity).\
-                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                entity = None
-                if entity:
-                    for ent in entity.publishleveltwoentity:
-                        ent.marked_for_deletion = True
-                        DBSession.flush()
-            elif entry['type'] == 'groupingentity':
-                # entity = DBSession.query(GroupingEntity).\
-                #     filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-                entity = None
-                if entity:
-                    for ent in entity.publishgroupingentity:
-                        ent.marked_for_deletion = True
-                        DBSession.flush()
+        for entry in req:
+            entity = DBSession.query(Entity).\
+                filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+            if entity:
+                entity.publishingentity.published = False
             else:
-                raise CommonException("Unacceptable type")
+                raise CommonException("no such entity in system")
 
         request.response.status = HTTPOk.code
         return {}
@@ -1272,7 +1402,6 @@ def disapprove_entity(request):
         return {'error': str(e)}
 
 
-# TODO: completely broken!
 @view_config(route_name='approve_all', renderer='json', request_method='PATCH', permission='create')
 def approve_all(request):
     response = dict()
@@ -1280,40 +1409,22 @@ def approve_all(request):
     object_id = request.matchdict.get('perspective_id')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    entities = []
     if parent:
         if not parent.marked_for_deletion:
             dictionary_client_id = parent.parent_client_id
             dictionary_object_id = parent.parent_object_id
-            lexes = DBSession.query(LexicalEntry).filter_by(parent=parent).all()
-            for lex in lexes:
-                # levones = DBSession.query(LevelOneEntity).filter_by(parent=lex).all()
-                levones = list()
-                for levone in levones:
-                    entities += [{'type': 'leveloneentity',
-                                         'client_id': levone.client_id,
-                                         'object_id': levone.object_id}]
-                    for levtwo in levone.leveltwoentity:
-                        entities += [{'type': 'leveltwoentity',
-                                             'client_id':levtwo.client_id,
-                                             'object_id':levtwo.object_id}]
-                # groupents = DBSession.query(GroupingEntity).filter_by(parent=lex).all()
-                groupents = list()
-                for groupent in groupents:
-                    entities += [{'type': 'groupingentity',
-                                         'client_id': groupent.client_id,
-                                         'object_id': groupent.object_id}]
+            entities = DBSession.query(Entity).join(LexicalEntry).filter(LexicalEntry.parent==parent).all()
+
             url = request.route_url('approve_entity',
                                     dictionary_client_id=dictionary_client_id,
                                     dictionary_object_id=dictionary_object_id,
                                     perspective_client_id=client_id,
                                     perspective_id=object_id)
             subreq = Request.blank(url)
-            jsn = dict()
-            jsn['entities'] = entities
-            subreq.json = json.dumps(jsn)
+            jsn = entities
+            subreq.json = jsn
             subreq.method = 'PATCH'
-            headers = {'Cookie':request.headers['Cookie']}
+            headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             request.invoke_subrequest(subreq)
 
@@ -1371,6 +1482,7 @@ def edit_dictionary_get(request):
                  'perspective_id': perspective_id}
 
     return render_to_response('../templates/edit_dictionary.pt', variables, request=request)
+
 
 @view_config(route_name='view_dictionary', renderer='../templates/view_dictionary.pt', request_method='GET')
 def view_dictionary_get(request):

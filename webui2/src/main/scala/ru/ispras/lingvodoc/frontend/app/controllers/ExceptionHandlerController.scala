@@ -3,6 +3,8 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core.Scope
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
+import org.scalajs.dom.console
+
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -10,6 +12,7 @@ import scala.scalajs.js.annotation.JSExport
 @js.native
 trait ExceptionHandlerScope extends Scope {
   var message: String = js.native
+  var causeMessage: String = js.native
   var stackTrace: String = js.native
 }
 
@@ -21,7 +24,8 @@ class ExceptionHandlerController(scope: ExceptionHandlerScope,
   private[this] val exception: Throwable = params("exception").asInstanceOf[Throwable]
 
   scope.message = exception.getMessage
-  scope.stackTrace = exception.getStackTrace.mkString("\n")
+  scope.causeMessage = exception.getCause.getMessage
+  scope.stackTrace = exception.getCause.getStackTrace.mkString("\n")
 
   @JSExport
   def ok() = {

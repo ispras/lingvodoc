@@ -4,11 +4,17 @@ from lingvodoc.models import (
     Client,
     DBSession,
     Dictionary,
+    DictionaryPerspective,
+    DictionaryPerspectiveToField,
+    Field,
+    LexicalEntry,
+    Entity,
     Language,
     Organization,
     User,
     UserBlobs,
-    TranslationAtom
+    TranslationAtom,
+    TranslationGist
 )
 
 from pyramid.request import Request
@@ -23,6 +29,16 @@ import base64
 import json
 import os
 import shutil
+
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPNotFound,
+    HTTPOk,
+    HTTPInternalServerError,
+    HTTPConflict
+)
+from lingvodoc.exceptions import CommonException
+from sqlalchemy.exc import IntegrityError
 
 def cache_clients():
     clients_to_users_dict = dict()
@@ -170,6 +186,7 @@ def language_info(lang, request):
     result['object_id'] = lang.object_id
     result['translation_gist_client_id'] = lang.translation_gist_client_id
     result['translation_gist_object_id'] = lang.translation_gist_object_id
+    result['translation'] = lang.get_translation(request.cookies['locale_id'])
     if lang.locale:
         result['locale_exist'] = True
     else:
@@ -192,6 +209,7 @@ def language_with_dicts(lang, dicts, request):
     result['object_id'] = lang.object_id
     result['translation_gist_client_id'] = lang.translation_gist_client_id
     result['translation_gist_object_id'] = lang.translation_gist_object_id
+    result['translation'] = lang.get_translation(request.cookies['locale_id'])
     if lang.locale:
         result['locale_exist'] = True
     else:
@@ -364,9 +382,16 @@ def view_perspective_from_object(request, perspective):
             response['translation_gist_object_id'] = perspective.translation_gist_object_id
             response['state_translation_gist_client_id'] = perspective.state_translation_gist_client_id
             response['state_translation_gist_object_id'] = perspective.state_translation_gist_object_id
+            atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=perspective.state_translation_gist_client_id,
+                                                              parent_object_id=perspective.state_translation_gist_object_id,
+                                                              locale_id=int(request.cookies['locale_id'])).first()
+            if atom:
+                response['status'] = atom.content
             response['marked_for_deletion'] = perspective.marked_for_deletion
             response['is_template'] = perspective.is_template
-            response['additional_metadata'] = perspective.additional_metadata
+            # response['additional_metadata'] = perspective.additional_metadata
+            if perspective.additional_metadata:
+                response['additional_metadata'] = [key for key in json.loads(perspective.additional_metadata)]
             response['translation'] = perspective.get_translation(request.cookies['locale_id'])
             if perspective.additional_metadata:
                 meta = json.loads(perspective.additional_metadata)
@@ -395,7 +420,7 @@ def view_field_from_object(request, field):
     response = dict()
     if field and not field.marked_for_deletion:
         response['client_id'] = field.client_id
-        response['client_id'] = field.client_id
+        response['object_id'] = field.object_id
         response['created_at'] = str(field.created_at)
         response['data_type_translation_gist_client_id'] = field.data_type_translation_gist_client_id
         response['data_type_translation_gist_object_id'] = field.data_type_translation_gist_object_id
@@ -406,7 +431,88 @@ def view_field_from_object(request, field):
         atom = DBSession.query(TranslationAtom).filter_by(parent_client_id=field.data_type_translation_gist_client_id,
                                                           parent_object_id=field.data_type_translation_gist_object_id,
                                                           locale_id=int(request.cookies['locale_id'])).first()
-        response['data_type'] = atom.content
-
+        if atom:
+            response['data_type'] = atom.content
+        else:
+            print('no atom content for ids', field.data_type_translation_gist_client_id, field.data_type_translation_gist_object_id)
         return response
     return {'error': 'no field'}
+
+
+def combine(*decorators):
+    def floo(view_callable):
+        for decorator in decorators:
+            view_callable = decorator(view_callable)
+        return view_callable
+    return floo
+
+
+def view_edit_delete_decorator(view_callable):
+    def inner(context, request):  # TODO: pass object better way (not too sure, request.object may be the best way)
+        client_id = request.matchdict.get('client_id')
+        object_id = request.matchdict.get('object_id')
+        # translationatom = DBSession.query(TranslationAtom).filter_by(client_id=client_id, object_id=object_id).first()
+        tables = [
+            Dictionary,
+            DictionaryPerspective,
+            DictionaryPerspectiveToField,
+            Field,
+            LexicalEntry,
+            Entity,
+            Language,
+            UserBlobs,
+            TranslationAtom,
+            TranslationGist
+        ]
+        queries = list()
+        for table in tables:
+            queries.append(DBSession.query(table.client_id, table.object_id, table.__tablename__))
+        db_object = DBSession.query().filter_by(client_id=client_id, object_id=object_id).first()
+        if db_object:
+            request.object = db_object
+            request.response.status = HTTPOk.code
+            tmp = view_callable(context, request)
+            return tmp
+        request.response.status = HTTPNotFound.code
+        return HTTPNotFound(json={'error': "No such translationgist in the system"})
+    return inner
+
+
+# TODO: delete
+def translation_atom_decorator(view_callable):
+    def inner(context, request):
+        client_id = request.matchdict.get('client_id')
+        object_id = request.matchdict.get('object_id')
+        translationatom = DBSession.query(TranslationAtom).filter_by(client_id=client_id, object_id=object_id).first()
+        if translationatom:
+            request.object = translationatom
+            request.response.status = HTTPOk.code
+            tmp = view_callable(context, request)
+            return tmp
+        request.response.status = HTTPNotFound.code
+        return HTTPNotFound(json={'error': "No such translationgist in the system"})
+    return inner
+
+
+def json_request_errors(view_callable):
+    def inner(context, request):
+        try:
+            try_to_decode = request.json_body  # will throw exception on this, if no or invalid json were given
+            return view_callable(context, request)
+        except (AttributeError, ValueError):
+            return HTTPBadRequest(json={'error': "invalid json"})
+
+    return inner
+
+
+def create_errors(view_callable):
+    def inner(context, request):
+        try:
+            return view_callable(context, request)
+        except KeyError as e:
+            return HTTPBadRequest(json={'error': str(e)})
+        except IntegrityError as e:
+            return HTTPInternalServerError(json={'error': str(e)})
+        except CommonException as e:
+            return HTTPConflict(json={'error': str(e)})
+    return inner

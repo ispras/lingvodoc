@@ -44,7 +44,8 @@ from pyramid.view import view_config
 import sqlalchemy
 from sqlalchemy import (
     func,
-    and_
+    and_,
+    or_
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -57,11 +58,14 @@ def create_dictionary(request):  # tested & in docs
     try:
 
         variables = {'auth': request.authenticated_userid}
-
-        if type(request.json_body) == str:
-            req = json.loads(request.json_body)
-        else:
+        try:
             req = request.json_body
+        except AttributeError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
+        except ValueError:
+            request.response.status = HTTPBadRequest.code
+            return {'error': "invalid json"}
         parent_client_id = req['parent_client_id']
         parent_object_id = req['parent_object_id']
         translation_gist_client_id = req['translation_gist_client_id']
@@ -80,7 +84,7 @@ def create_dictionary(request):  # tested & in docs
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
         subreq.headers = request.headers
-        subreq.json = json.dumps({'searchstring': 'WiP'})
+        subreq.json = {'searchstring': 'WiP'}
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -138,7 +142,11 @@ def view_dictionary(request):  # tested & in docs
         response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
         response['additional_metadata'] = dictionary.additional_metadata
-        response['translation'] = dictionary.get_translation(request.cookies['locale_id'])
+        if request.cookies.get('locale_id'):
+            locale_id = request.cookies['locale_id']
+        else:
+            locale_id = 2
+        response['translation'] = dictionary.get_translation(locale_id)
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code
@@ -199,7 +207,7 @@ def delete_dictionary(request):  # tested & in docs
     return {'error': str("No such dictionary in the system")}
 
 
-# TODO: completely broken!
+# TODO: completely broken! (and unnecessary)
 @view_config(route_name='dictionary_copy', renderer='json', request_method='POST', permission='edit')
 def copy_dictionary(request):
     response = dict()
@@ -210,10 +218,10 @@ def copy_dictionary(request):
         path = request.route_url('create_dictionary')
         subreq = Request.blank(path)
         subreq.method = 'POST'
-        subreq.json = json.dumps({'translation_gist_client_id': parent.translation_gist_client_id,
+        subreq.json = {'translation_gist_client_id': parent.translation_gist_client_id,
                                   'translation_gist_object_id': parent.translation_gist_object_id,
                                   'parent_client_id': parent.parent_client_id,
-                                  'parent_object_id': parent.parent_object_id})
+                                  'parent_object_id': parent.parent_object_id}
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -237,7 +245,7 @@ def copy_dictionary(request):
                                  object_id=new_dict.object_id)
         subreq = Request.blank(path)
         subreq.method = 'POST'
-        subreq.json = json.dumps(resp.json)
+        subreq.json = resp.json
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -255,7 +263,7 @@ def copy_dictionary(request):
                                  object_id=new_dict.object_id)
         subreq = Request.blank(path)
         subreq.method = 'PUT'
-        subreq.json = json.dumps(resp.json)
+        subreq.json = resp.json
         headers = {'Cookie': request.headers['Cookie']}
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
@@ -267,8 +275,8 @@ def copy_dictionary(request):
                                      dictionary_object_id=new_dict.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            subreq.json = json.dumps({'translation_gist_client_id': parent.translation_gist_client_id,
-                                  'translation_gist_object_id': parent.translation_gist_object_id})
+            subreq.json = {'translation_gist_client_id': parent.translation_gist_client_id,
+                                  'translation_gist_object_id': parent.translation_gist_object_id}
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -297,7 +305,7 @@ def copy_dictionary(request):
                                      perspective_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            subreq.json = json.dumps(resp.json)
+            subreq.json = resp.json
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -320,7 +328,7 @@ def copy_dictionary(request):
                                      perspective_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'PUT'
-            subreq.json = json.dumps(resp.json)
+            subreq.json = resp.json
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -343,7 +351,7 @@ def copy_dictionary(request):
                                      perspective_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
-            subreq.json = json.dumps(resp.json)
+            subreq.json = resp.json
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
@@ -873,8 +881,10 @@ def dictionaries_list(request):  # TODO: test
             subreq = Request.blank('/translation_service_search')
             subreq.method = 'POST'
             subreq.headers = request.headers
-            subreq.json = json.dumps({'searchstring': 'WiP'})
-            headers = {'Cookie': request.headers['Cookie']}
+            subreq.json = {'searchstring': 'WiP'}
+            headers = dict()
+            if request.headers.get('Cookie'):
+                headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
 
@@ -1010,12 +1020,13 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     if 'group_by_lang' in req:
         group_by_lang = req['group_by_lang']
     dicts = DBSession.query(Dictionary)
-
     subreq = Request.blank('/translation_service_search')
     subreq.method = 'POST'
     subreq.headers = request.headers
-    subreq.json = json.dumps({'searchstring': 'WiP'})
-    headers = {'Cookie': request.headers['Cookie']}
+    subreq.json = {'searchstring': 'Published'}
+    headers = dict()
+    if request.headers.get('Cookie'):
+        headers = {'Cookie': request.headers['Cookie']}
     subreq.headers = headers
     resp = request.invoke_subrequest(subreq)
 
@@ -1023,8 +1034,30 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
         state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
     else:
         raise KeyError("Something wrong with the base", resp.json['error'])
-    dicts = dicts.filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id)).join(DictionaryPerspective) \
-        .filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id))
+
+    subreq = Request.blank('/translation_service_search')
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    subreq.json = {'searchstring': 'Limited access'} # todo: fix
+    headers = dict()
+    if request.headers.get('Cookie'):
+        headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+
+    if 'error' not in resp.json:
+        limited_object_id, limited_client_id = resp.json['object_id'], resp.json['client_id']
+    else:
+        raise KeyError("Something wrong with the base", resp.json['error'])
+    dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                         Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                    and_(Dictionary.state_translation_gist_object_id == limited_object_id,
+                         Dictionary.state_translation_gist_client_id == limited_client_id))).join(
+        DictionaryPerspective) \
+        .filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                         DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                    and_(DictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                         DictionaryPerspective.state_translation_gist_client_id == limited_client_id)))
 
     if group_by_lang and not group_by_org:
         return group_by_languages(dicts, request)

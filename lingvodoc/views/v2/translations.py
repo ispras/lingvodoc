@@ -46,6 +46,7 @@ from sqlalchemy.exc import IntegrityError
 import datetime
 import json
 from sqlalchemy.orm.exc import NoResultFound
+from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator
 # search (filter by input, type and (?) locale)
 
 
@@ -93,13 +94,12 @@ def delete_translationgist(request):
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
     translationgist = DBSession.query(TranslationGist).filter_by(client_id=client_id, object_id=object_id).first()
-    if translationgist:
-        if not translationgist.marked_for_deletion:
-            for translationatom in translationgist.translationatom:
-                translationatom.marked_for_deletion = True
-            translationgist.marked_for_deletion = True
-            request.response.status = HTTPOk.code
-            return response
+    if translationgist and not translationgist.marked_for_deletion:
+        for translationatom in translationgist.translationatom:
+            translationatom.marked_for_deletion = True
+        translationgist.marked_for_deletion = True
+        request.response.status = HTTPOk.code
+        return response
     request.response.status = HTTPNotFound.code
     return {'error': str("No such translationgist in the system")}
 
@@ -122,7 +122,7 @@ def create_translationgist(request):
         DBSession.add(translationgist)
         DBSession.flush()
         basegroups = []
-        basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can delete translationgist").first()]
+        basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete translationgist").first()]
         groups = []
         for base in basegroups:
             group = Group(subject_client_id=translationgist.client_id, subject_object_id=translationgist.object_id, parent=base)
@@ -146,17 +146,13 @@ def create_translationgist(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='translationatom', renderer='json', request_method='GET')
+@view_config(decorator=translation_atom_decorator, route_name='translationatom', renderer='json', request_method='GET')
 def view_translationatom(request):
-    client_id = request.matchdict.get('client_id')
-    object_id = request.matchdict.get('object_id')
-    translationatom = DBSession.query(TranslationAtom).filter_by(client_id=client_id, object_id=object_id).first()
-    if translationatom:
-        response = translationatom_contents(translationatom)
-        request.response.status = HTTPOk.code
-        return response
-    request.response.status = HTTPNotFound.code
-    return {'error': str("No such translationatom in the system")}
+    response = translationatom_contents(request.object)
+    # print(request.__dict__)
+    # del request.object
+    # print(request.__dict__)
+    return response
 
 
 @view_config(route_name='translationatom', renderer='json', request_method='PUT')
@@ -201,7 +197,7 @@ def create_translationatom(request):
             DBSession.add(translationatom)
             DBSession.flush()
             basegroups = []
-            basegroups += [DBSession.query(BaseGroup).filter_by(translation_string="Can edit translationatom").first()]
+            basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit translationatom").first()]
             groups = []
             for base in basegroups:
                 group = Group(subject_client_id=translationatom.client_id, subject_object_id=translationatom.object_id, parent=base)
@@ -227,7 +223,7 @@ def create_translationatom(request):
         return {'error': str(e)}
 
 
-@view_config(route_name='translation_search', renderer='json', request_method='POST')
+@view_config(decorator=json_request_errors, route_name='translation_search', renderer='json', request_method='POST')
 def translation_search(request):
     response = list()
     req = request.json_body
@@ -254,11 +250,14 @@ def translation_search(request):
 
 @view_config(route_name='translation_service_search', renderer='json', request_method='POST')
 def translation_service_search(request):
-
-    if type(request.json_body) == str:
-        req = json.loads(request.json_body)
-    else:
+    try:
         req = request.json_body
+    except AttributeError:
+        request.response.status = HTTPBadRequest.code
+        return {'error': "invalid json"}
+    except ValueError:
+        request.response.status = HTTPBadRequest.code
+        return {'error': "invalid json"}
     searchstring = req['searchstring']
     try:
         translationatom = DBSession.query(TranslationAtom)\

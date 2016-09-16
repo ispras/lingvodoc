@@ -12,18 +12,21 @@ import upickle.default._
 @JSExportAll
 case class Language(override val clientId: Int,
                     override val objectId: Int,
-                    translation: String,
-                    translationString: String,
+                    var translationGistClientId: Int,
+                    var translationGistObjectId: Int,
+                    var translation: String,
                     languages: js.Array[Language],
-                    dictionaries: js.Array[Dictionary]) extends Object(clientId, objectId)
+                    dictionaries: js.Array[Dictionary]) extends Object(clientId, objectId) {
+}
 
 object Language {
   implicit val writer = upickle.default.Writer[Language] {
-    case t => Js.Obj(
-      ("client_id", Js.Num(t.clientId)),
-      ("object_id", Js.Num(t.objectId)),
-      ("translation", Js.Str(t.translation)),
-      ("translation_string", Js.Str(t.translationString))
+    language => Js.Obj(
+      ("client_id", Js.Num(language.clientId)),
+      ("object_id", Js.Num(language.objectId)),
+      ("translation_gist_client_id", Js.Num(language.translationGistClientId)),
+      ("translation_gist_object_id", Js.Num(language.translationGistObjectId)),
+      ("translation", Js.Str(language.translation))
     )
   }
 
@@ -33,10 +36,17 @@ object Language {
       // Otherwise optimizer may crush with StackOverflow exception
       (new ((Js.Obj) => Language) {
         def apply(js: Js.Obj): Language = {
-          val clientId = js("client_id").asInstanceOf[Js.Num].value.toInt
-          val objectId = js("object_id").asInstanceOf[Js.Num].value.toInt
-          val translation = js("translation").asInstanceOf[Js.Str].value
-          val translationString = js("translation_string").asInstanceOf[Js.Str].value
+          val clientId = js("client_id").num.toInt
+          val objectId = js("object_id").num.toInt
+          val translationGistClientId = js("translation_gist_client_id").num.toInt
+          val translationGistObjectId = js("translation_gist_object_id").num.toInt
+
+          val translation = js.value.find(_._1 == "translation") match {
+            case Some(_) => js("translation").str
+            case None => "no translation"
+          }
+
+          //val translation = js("translation").str
 
           // get array of child languages or empty list if there are none
           val langs = js.value.find(_._1 == "contains").getOrElse(("contains", Js.Arr()))._2.asInstanceOf[Js.Arr]
@@ -54,7 +64,7 @@ object Language {
               case _ =>
             }
           }
-          Language(clientId, objectId, translation, translationString, childLanguages.toJSArray, dictionaries.toJSArray)
+          Language(clientId, objectId, translationGistClientId, translationGistObjectId, translation, childLanguages.toJSArray, dictionaries.toJSArray)
         }
       })(jsval)
   }
