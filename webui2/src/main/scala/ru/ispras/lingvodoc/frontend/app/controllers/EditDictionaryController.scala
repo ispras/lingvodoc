@@ -5,6 +5,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
+import org.singlespaced.d3js.d3
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
@@ -15,6 +16,7 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.js.UndefOr
 
@@ -30,8 +32,6 @@ trait EditDictionaryScope extends Scope {
   var pageCount: Int = js.native
 
   var dictionaryTable: DictionaryTable = js.native
-
-  var filter: String = js.native
 
   var enabledInputs: js.Array[Any] = js.native
 
@@ -50,11 +50,20 @@ AbstractController[EditDictionaryScope](scope) {
   private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
   private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
 
-  //private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
   private[this] var enabledInputs: Seq[String] = Seq[String]()
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
+
+  private [this] var waveSurfer: Option[WaveSurfer] = None
+  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
+  val pxPerSecStep = 30 // zooming step
+  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
+  private var _duration: Double = 42.0
+  var fullWSWidth = 0.0 // again, will be known after audio load
+  var wsHeight = 128
+  var soundMarkup: Option[String] = None
+
 
   //scope.count = 0
   scope.offset = 0
@@ -100,13 +109,49 @@ AbstractController[EditDictionaryScope](scope) {
     (min to max by step).toSeq.toJSArray
   }
 
+
   @JSExport
-  def play(soundAddress: String, soundMarkupAddress: String) = {
-    console.log(s"playing $soundAddress with markup $soundMarkupAddress")
+  def createWaveSurfer(): Unit = {
+    if (waveSurfer.isEmpty) {
+      // params should be synchronized with sm-ruler css
+      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
+        cursorWidth = 1, cursorColor = "red",
+        fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
+        height = wsHeight)
+      waveSurfer = Some(WaveSurfer.create(wso))
+    }
+  }
+
+  def pxPerSec = _pxPerSec
+
+  def pxPerSec_=(mpps: Int) = {
+    _pxPerSec = mpps
+    waveSurfer.foreach(_.zoom(mpps))
   }
 
   @JSExport
-  def viewSoundMarkup(soundAddress: String, soundMarkupAddress: String) = {
+  def play(soundAddress: String) = {
+    console.log(s"playing $soundAddress")
+    (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
+      ws.load(sa)
+    })
+  }
+
+  @JSExport
+  def playPause() = waveSurfer.foreach(_.playPause())
+
+  @JSExport
+  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
+
+  @JSExport
+  def zoomIn() = { pxPerSec += pxPerSecStep; }
+
+  @JSExport
+  def zoomOut() = { pxPerSec -= pxPerSecStep; }
+
+
+  @JSExport
+  def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/soundMarkup.html"
     options.controller = "SoundMarkupController"
@@ -117,6 +162,7 @@ AbstractController[EditDictionaryScope](scope) {
       params = () => {
         js.Dynamic.literal(
           soundAddress = soundAddress.asInstanceOf[js.Object],
+          markupAddress = markupAddress.asInstanceOf[js.Object],
           dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
           dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
         )
@@ -193,7 +239,7 @@ AbstractController[EditDictionaryScope](scope) {
           case Success(newEntity) =>
 
             parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
+              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
               case None => scope.dictionaryTable.addEntity(entry, newEntity)
             }
 
@@ -229,7 +275,7 @@ AbstractController[EditDictionaryScope](scope) {
           case Success(newEntity) =>
 
             parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
+              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
               case None => scope.dictionaryTable.addEntity(entry, newEntity)
             }
 

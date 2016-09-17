@@ -84,13 +84,13 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.markup(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
                                         </div>
@@ -152,7 +152,7 @@
                         <ul class="tree" ng-if="column.getType()=='Simple'">
                             <li ng-repeat="value in cell.values">
 
-                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.content)">
+                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
                                     <span class="glyphicon glyphicon-play">Play</span>
                                 </button>
 
@@ -176,7 +176,7 @@
 
                             <li ng-repeat="value in cell.values">
                                 <!-- display value -->
-                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.content)">
+                                <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
                                     <span class="glyphicon glyphicon-play">Play</span>
                                 </button>
 
@@ -192,13 +192,13 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.markup(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
                                         </div>
@@ -291,13 +291,13 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.markup(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
                                         </div>
@@ -391,13 +391,13 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.markup(linkedValue.content)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
                                         </div>

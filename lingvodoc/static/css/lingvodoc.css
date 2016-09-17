@@ -52,6 +52,37 @@
     margin-bottom: 10px;
 }
 
+/* eaf (sound markup) editing staff */
+.sm-selection-rectangle {
+    fill: blue;
+    opacity: 0.2;
+}
+
+.sm-tier {
+    opacity: 0.2;
+}
+
+.sm-ta-annot-line {
+    stroke: black;
+    stroke-width: 1
+}
+
+.sm-ref-annot-line {
+    stroke: yellow;
+    stroke-width: 1
+}
+
+.sm-tier-names-sep-line {
+    stroke: grey;
+    stroke-width: 1;
+}
+
+.sm-ruler {
+    stroke: red;
+    stroke-width: 1
+}
+/* eaf (sound markup) editing staff end*/
+
 button.control-button {
     -webkit-appearance: none;
     padding: 0;
@@ -66,7 +97,6 @@ button.control-button {
     filter: alpha(opacity=20);
     opacity: .2;
 }
-
 
 
 /* animations */
@@ -129,7 +159,6 @@ button.control-button {
 .animate-if.ng-enter.ng-enter-active {
     opacity:1;
 }
-
 
 
 

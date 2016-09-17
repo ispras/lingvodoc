@@ -1017,6 +1017,18 @@ var $asArrayOf_J = $makeAsArrayOfPrimitive($isArrayOf_J, "J");
 var $asArrayOf_F = $makeAsArrayOfPrimitive($isArrayOf_F, "F");
 var $asArrayOf_D = $makeAsArrayOfPrimitive($isArrayOf_D, "D");
 
+function $is_F1(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.F1)))
+}
+function $as_F1(obj) {
+  return (($is_F1(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.Function1"))
+}
+function $isArrayOf_F1(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.F1)))
+}
+function $asArrayOf_F1(obj, depth) {
+  return (($isArrayOf_F1(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.Function1;", depth))
+}
 function $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V($$this) {
   var assertion = ($$this.scope$1 !== null);
   if ((!assertion)) {
@@ -1114,6 +1126,45 @@ function $isArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_Transla
 }
 function $asArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_Translatable(obj, depth) {
   return (($isArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_Translatable(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.app.controllers.common.Translatable;", depth))
+}
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation;", depth))
+}
+function $s_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation$class__duration__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation__J($$this) {
+  var t = $$this.end__J();
+  var lo = t.lo$2;
+  var hi = t.hi$2;
+  var b = $$this.start__J();
+  var bhi = b.hi$2;
+  var lo$1 = ((lo - b.lo$2) | 0);
+  var hi$1 = ((((-2147483648) ^ lo$1) > ((-2147483648) ^ lo)) ? (((-1) + ((hi - bhi) | 0)) | 0) : ((hi - bhi) | 0));
+  return new $c_sjsr_RuntimeLong().init___I__I(lo$1, hi$1)
+}
+function $s_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$class__getParentTier__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier($$this) {
+  var jsx$1 = $$this.owner$1;
+  var attr = $$this.parentRef__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr();
+  return jsx$1.getTierByID__T__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier($as_T(attr.value$1))
+}
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.tier.ITier"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.tier.ITier;", depth))
 }
 function $is_Lupickle_GeneratedUtil(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lupickle_GeneratedUtil)))
@@ -1270,6 +1321,29 @@ function $s_s_Product3$class__productElement__s_Product3__I__O($$this, n) {
     }
     case 2: {
       return $$this.$$und3$1;
+      break
+    }
+    default: {
+      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + n))
+    }
+  }
+}
+function $s_s_Product4$class__productElement__s_Product4__I__O($$this, n) {
+  switch (n) {
+    case 0: {
+      return $$this.$$und1$1;
+      break
+    }
+    case 1: {
+      return $$this.$$und2$1;
+      break
+    }
+    case 2: {
+      return $$this.$$und3$1;
+      break
+    }
+    case 3: {
+      return $$this.$$und4$1;
       break
     }
     default: {
@@ -1472,21 +1546,6 @@ function $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurren
   })($$this, p, f)), executor);
   return p
 }
-function $s_s_concurrent_Future$class__onSuccess__s_concurrent_Future__s_PartialFunction__s_concurrent_ExecutionContext__V($$this, pf, executor) {
-  $$this.onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($$this$1, pf$1) {
-    return (function(x0$1$2) {
-      var x0$1 = $as_s_util_Try(x0$1$2);
-      if ($is_s_util_Success(x0$1)) {
-        var x2 = $as_s_util_Success(x0$1);
-        var v = x2.value$2;
-        var this$1 = $m_s_Predef$();
-        return pf$1.applyOrElse__O__F1__O(v, this$1.singleton$und$less$colon$less$2)
-      } else {
-        return (void 0)
-      }
-    })
-  })($$this, pf)), executor)
-}
 function $is_s_concurrent_OnCompleteRunnable(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.s_concurrent_OnCompleteRunnable)))
 }
@@ -1663,6 +1722,9 @@ function $s_sc_IndexedSeqOptimized$class__lengthCompare__sc_IndexedSeqOptimized_
 function $s_sc_IndexedSeqOptimized$class__last__sc_IndexedSeqOptimized__O($$this) {
   return (($$this.length__I() > 0) ? $$this.apply__I__O((((-1) + $$this.length__I()) | 0)) : $s_sc_TraversableLike$class__last__sc_TraversableLike__O($$this))
 }
+function $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O($$this, op) {
+  return (($$this.length__I() > 0) ? $s_sc_IndexedSeqOptimized$class__foldl__p0__sc_IndexedSeqOptimized__I__I__O__F2__O($$this, 1, $$this.length__I(), $$this.apply__I__O(0), op) : $s_sc_TraversableOnce$class__reduceLeft__sc_TraversableOnce__F2__O($$this, op))
+}
 function $s_sc_IndexedSeqOptimized$class__find__sc_IndexedSeqOptimized__F1__s_Option($$this, p) {
   var len = $$this.length__I();
   var i = 0;
@@ -1802,6 +1864,9 @@ function $s_sc_IterableLike$class__copyToArray__sc_IterableLike__O__I__I__V($$th
     i = ((1 + i) | 0)
   }
 }
+function $s_sc_IterableLike$class__isEmpty__sc_IterableLike__Z($$this) {
+  return (!$$this.iterator__sc_Iterator().hasNext__Z())
+}
 function $s_sc_IterableLike$class__take__sc_IterableLike__I__O($$this, n) {
   var b = $$this.newBuilder__scm_Builder();
   if ((n <= 0)) {
@@ -1826,6 +1891,17 @@ function $s_sc_IterableLike$class__sameElements__sc_IterableLike__sc_GenIterable
     }
   };
   return ((!these.hasNext__Z()) && (!those.hasNext__Z()))
+}
+function $s_sc_IterableLike$class__zipWithIndex__sc_IterableLike__scg_CanBuildFrom__O($$this, bf) {
+  var b = bf.apply__O__scm_Builder($$this.repr__O());
+  var i = new $c_sr_IntRef().init___I(0);
+  $$this.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($$this$1, b$1, i$1) {
+    return (function(x$2) {
+      b$1.$$plus$eq__O__scm_Builder(new $c_T2().init___O__O(x$2, i$1.elem$1));
+      i$1.elem$1 = ((1 + i$1.elem$1) | 0)
+    })
+  })($$this, b, i)));
+  return b.result__O()
 }
 function $s_sc_Iterator$class__toStream__sc_Iterator__sci_Stream($$this) {
   if ($$this.hasNext__Z()) {
@@ -1994,17 +2070,11 @@ function $s_sc_LinearSeqOptimized$class__contains__sc_LinearSeqOptimized__O__Z($
   };
   return false
 }
-function $s_sc_MapLike$class__apply__sc_MapLike__O__O($$this, key) {
-  var x1 = $$this.get__O__s_Option(key);
-  var x = $m_s_None$();
-  if ((x === x1)) {
-    return $s_sc_MapLike$class__$default__sc_MapLike__O__O($$this, key)
-  } else if ($is_s_Some(x1)) {
-    var x2 = $as_s_Some(x1);
-    var value = x2.x$2;
-    return value
+function $s_sc_LinearSeqOptimized$class__reduceLeft__sc_LinearSeqOptimized__F2__O($$this, f) {
+  if ($$this.isEmpty__Z()) {
+    throw new $c_jl_UnsupportedOperationException().init___T("empty.reduceLeft")
   } else {
-    throw new $c_s_MatchError().init___O(x1)
+    return $as_sc_LinearSeqOptimized($$this.tail__O()).foldLeft__O__F2__O($$this.head__O(), f)
   }
 }
 function $s_sc_MapLike$class__addString__sc_MapLike__scm_StringBuilder__T__T__T__scm_StringBuilder($$this, b, start, sep, end) {
@@ -2024,17 +2094,30 @@ function $s_sc_MapLike$class__addString__sc_MapLike__scm_StringBuilder__T__T__T_
   var this$3 = new $c_sc_Iterator$$anon$11().init___sc_Iterator__F1(this$2, f);
   return $s_sc_TraversableOnce$class__addString__sc_TraversableOnce__scm_StringBuilder__T__T__T__scm_StringBuilder(this$3, b, start, sep, end)
 }
+function $s_sc_MapLike$class__apply__sc_MapLike__O__O($$this, key) {
+  var x1 = $$this.get__O__s_Option(key);
+  var x = $m_s_None$();
+  if ((x === x1)) {
+    return $s_sc_MapLike$class__$default__sc_MapLike__O__O($$this, key)
+  } else if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var value = x2.x$2;
+    return value
+  } else {
+    throw new $c_s_MatchError().init___O(x1)
+  }
+}
 function $s_sc_MapLike$class__isEmpty__sc_MapLike__Z($$this) {
   return ($$this.size__I() === 0)
-}
-function $s_sc_MapLike$class__contains__sc_MapLike__O__Z($$this, key) {
-  return $$this.get__O__s_Option(key).isDefined__Z()
 }
 function $s_sc_MapLike$class__toBuffer__sc_MapLike__scm_Buffer($$this) {
   var result = new $c_scm_ArrayBuffer().init___I($$this.size__I());
   var xs = $$this.seq__sc_TraversableOnce();
   result.$$plus$plus$eq__sc_TraversableOnce__scm_ArrayBuffer(xs);
   return result
+}
+function $s_sc_MapLike$class__contains__sc_MapLike__O__Z($$this, key) {
+  return $$this.get__O__s_Option(key).isDefined__Z()
 }
 function $s_sc_MapLike$class__$default__sc_MapLike__O__O($$this, key) {
   throw new $c_ju_NoSuchElementException().init___T(("key not found: " + key))
@@ -2086,6 +2169,15 @@ function $s_sc_SeqLike$class__contains__sc_SeqLike__O__Z($$this, elem) {
 }
 function $s_sc_SetLike$class__isEmpty__sc_SetLike__Z($$this) {
   return ($$this.size__I() === 0)
+}
+function $s_sc_SetLike$class__$$plus$plus__sc_SetLike__sc_GenTraversableOnce__sc_Set($$this, elems) {
+  var x$1 = $as_sc_Set($$this);
+  return $as_sc_Set(elems.seq__sc_TraversableOnce().$$div$colon__O__F2__O(x$1, new $c_sjsr_AnonFunction2().init___sjs_js_Function2((function($$this$1) {
+    return (function(x$2$2, x$3$2) {
+      var x$2 = $as_sc_Set(x$2$2);
+      return x$2.$$plus__O__sc_Set(x$3$2)
+    })
+  })($$this))))
 }
 function $s_sc_SetLike$class__toBuffer__sc_SetLike__scm_Buffer($$this) {
   var result = new $c_scm_ArrayBuffer().init___I($$this.size__I());
@@ -2205,7 +2297,7 @@ function $s_sc_TraversableOnce$class__collectFirst__sc_TraversableOnce__s_Partia
     if ($is_sr_NonLocalReturnControl(e)) {
       var ex = $as_sr_NonLocalReturnControl(e);
       if ((ex.key$2 === nonLocalReturnKey1)) {
-        return $as_s_Option(ex.value$f)
+        return $as_s_Option(ex.value__O())
       } else {
         throw ex
       }
@@ -2213,6 +2305,11 @@ function $s_sc_TraversableOnce$class__collectFirst__sc_TraversableOnce__s_Partia
       throw e
     }
   }
+}
+function $s_sc_TraversableOnce$class__to__sc_TraversableOnce__scg_CanBuildFrom__O($$this, cbf) {
+  var b = cbf.apply__scm_Builder();
+  b.$$plus$plus$eq__sc_TraversableOnce__scg_Growable($$this.seq__sc_TraversableOnce());
+  return b.result__O()
 }
 function $s_sc_TraversableOnce$class__addString__sc_TraversableOnce__scm_StringBuilder__T__T__T__scm_StringBuilder($$this, b, start, sep, end) {
   var first = new $c_sr_BooleanRef().init___Z(true);
@@ -2232,19 +2329,23 @@ function $s_sc_TraversableOnce$class__addString__sc_TraversableOnce__scm_StringB
   b.append__T__scm_StringBuilder(end);
   return b
 }
-function $s_sc_TraversableOnce$class__to__sc_TraversableOnce__scg_CanBuildFrom__O($$this, cbf) {
-  var b = cbf.apply__scm_Builder();
-  b.$$plus$plus$eq__sc_TraversableOnce__scg_Growable($$this.seq__sc_TraversableOnce());
-  return b.result__O()
-}
-function $s_sc_TraversableOnce$class__foldLeft__sc_TraversableOnce__O__F2__O($$this, z, op) {
-  var result = new $c_sr_ObjectRef().init___O(z);
-  $$this.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($$this$1, result$1, op$1) {
+function $s_sc_TraversableOnce$class__reduceLeft__sc_TraversableOnce__F2__O($$this, op) {
+  if ($$this.isEmpty__Z()) {
+    throw new $c_jl_UnsupportedOperationException().init___T("empty.reduceLeft")
+  };
+  var first = new $c_sr_BooleanRef().init___Z(true);
+  var acc = new $c_sr_ObjectRef().init___O(0);
+  $$this.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($$this$1, first$1, acc$1, op$1) {
     return (function(x$2) {
-      result$1.elem$1 = op$1.apply__O__O__O(result$1.elem$1, x$2)
+      if (first$1.elem$1) {
+        acc$1.elem$1 = x$2;
+        first$1.elem$1 = false
+      } else {
+        acc$1.elem$1 = op$1.apply__O__O__O(acc$1.elem$1, x$2)
+      }
     })
-  })($$this, result, op)));
-  return result.elem$1
+  })($$this, first, acc, op)));
+  return acc.elem$1
 }
 function $s_sc_TraversableOnce$class__toArray__sc_TraversableOnce__s_reflect_ClassTag__O($$this, evidence$1) {
   if ($$this.isTraversableAgain__Z()) {
@@ -2255,10 +2356,22 @@ function $s_sc_TraversableOnce$class__toArray__sc_TraversableOnce__s_reflect_Cla
     return $$this.toBuffer__scm_Buffer().toArray__s_reflect_ClassTag__O(evidence$1)
   }
 }
+function $s_sc_TraversableOnce$class__foldLeft__sc_TraversableOnce__O__F2__O($$this, z, op) {
+  var result = new $c_sr_ObjectRef().init___O(z);
+  $$this.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($$this$1, result$1, op$1) {
+    return (function(x$2) {
+      result$1.elem$1 = op$1.apply__O__O__O(result$1.elem$1, x$2)
+    })
+  })($$this, result, op)));
+  return result.elem$1
+}
 function $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T($$this, start, sep, end) {
   var this$1 = $$this.addString__scm_StringBuilder__T__T__T__scm_StringBuilder(new $c_scm_StringBuilder().init___(), start, sep, end);
   var this$2 = this$1.underlying$5;
   return this$2.content$1
+}
+function $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option($$this, op) {
+  return ($$this.isEmpty__Z() ? $m_s_None$() : new $c_s_Some().init___O($$this.reduceLeft__F2__O(op)))
 }
 function $s_sc_TraversableOnce$class__nonEmpty__sc_TraversableOnce__Z($$this) {
   return (!$$this.isEmpty__Z())
@@ -2364,6 +2477,20 @@ function $s_sci_StringLike$class__split__sci_StringLike__C__AT($$this, separator
     return array
   }
 }
+function $s_sci_StringLike$class__parseBoolean__p0__sci_StringLike__T__Z($$this, s) {
+  if ((s !== null)) {
+    var x1 = $as_T(s.toLowerCase());
+    if ((x1 === "true")) {
+      return true
+    } else if ((x1 === "false")) {
+      return false
+    } else {
+      throw new $c_jl_IllegalArgumentException().init___T((("For input string: \"" + s) + "\""))
+    }
+  } else {
+    throw new $c_jl_IllegalArgumentException().init___T("For input string: \"null\"")
+  }
+}
 function $s_sci_StringLike$class__slice__sci_StringLike__I__I__O($$this, from, until) {
   var start = ((from > 0) ? from : 0);
   var that = $$this.length__I();
@@ -2386,6 +2513,46 @@ function $s_sci_StringLike$class__stripSuffix__sci_StringLike__T__T($$this, suff
   } else {
     return $$this.toString__T()
   }
+}
+function $s_sci_StringLike$class__stripMargin__sci_StringLike__C__T($$this, marginChar) {
+  var buf = new $c_scm_StringBuilder().init___();
+  var this$1 = new $c_sci_StringLike$$anon$1().init___sci_StringLike($$this);
+  while (this$1.hasNext__Z()) {
+    var arg1 = this$1.next__T();
+    var len = $uI(arg1.length);
+    var index = 0;
+    while (true) {
+      if ((index < len)) {
+        var index$1 = index;
+        var jsx$1 = ((65535 & $uI(arg1.charCodeAt(index$1))) <= 32)
+      } else {
+        var jsx$1 = false
+      };
+      if (jsx$1) {
+        index = ((1 + index) | 0)
+      } else {
+        break
+      }
+    };
+    if ((index < len)) {
+      var index$2 = index;
+      var jsx$3 = ((65535 & $uI(arg1.charCodeAt(index$2))) === marginChar)
+    } else {
+      var jsx$3 = false
+    };
+    if (jsx$3) {
+      var beginIndex = ((1 + index) | 0);
+      var jsx$2 = $as_T(arg1.substring(beginIndex))
+    } else {
+      var jsx$2 = arg1
+    };
+    buf.append__T__scm_StringBuilder(jsx$2)
+  };
+  var this$7 = buf.underlying$5;
+  return this$7.content$1
+}
+function $s_sci_StringLike$class__scala$collection$immutable$StringLike$$isLineBreak__sci_StringLike__C__Z($$this, c) {
+  return ((c === 10) || (c === 12))
 }
 function $s_sci_VectorPointer$class__gotoFreshPosWritable1__sci_VectorPointer__I__I__I__V($$this, oldIndex, newIndex, xor) {
   $s_sci_VectorPointer$class__stabilize__sci_VectorPointer__I__V($$this, oldIndex);
@@ -4467,6 +4634,37 @@ function $m_Lorg_scalajs_dom_package$() {
   return $n_Lorg_scalajs_dom_package$
 }
 /** @constructor */
+function $c_Lorg_scalajs_jquery_package$() {
+  $c_O.call(this);
+  this.jQuery$1 = null
+}
+$c_Lorg_scalajs_jquery_package$.prototype = new $h_O();
+$c_Lorg_scalajs_jquery_package$.prototype.constructor = $c_Lorg_scalajs_jquery_package$;
+/** @constructor */
+function $h_Lorg_scalajs_jquery_package$() {
+  /*<skip>*/
+}
+$h_Lorg_scalajs_jquery_package$.prototype = $c_Lorg_scalajs_jquery_package$.prototype;
+$c_Lorg_scalajs_jquery_package$.prototype.init___ = (function() {
+  $n_Lorg_scalajs_jquery_package$ = this;
+  this.jQuery$1 = $g.jQuery;
+  return this
+});
+var $d_Lorg_scalajs_jquery_package$ = new $TypeData().initClass({
+  Lorg_scalajs_jquery_package$: 0
+}, false, "org.scalajs.jquery.package$", {
+  Lorg_scalajs_jquery_package$: 1,
+  O: 1
+});
+$c_Lorg_scalajs_jquery_package$.prototype.$classData = $d_Lorg_scalajs_jquery_package$;
+var $n_Lorg_scalajs_jquery_package$ = (void 0);
+function $m_Lorg_scalajs_jquery_package$() {
+  if ((!$n_Lorg_scalajs_jquery_package$)) {
+    $n_Lorg_scalajs_jquery_package$ = new $c_Lorg_scalajs_jquery_package$().init___()
+  };
+  return $n_Lorg_scalajs_jquery_package$
+}
+/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$() {
   $c_O.call(this)
 }
@@ -4481,7 +4679,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.init___ = (func
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_greencatsoft_angularjs_Module = (function() {
-  var jsx$24 = $m_Lcom_greencatsoft_angularjs_Angular$().module__T__sc_Seq__Lcom_greencatsoft_angularjs_Module("LingvodocModule", $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["ngRoute", "ngAnimate", "ui.bootstrap"]))));
+  var jsx$25 = $m_Lcom_greencatsoft_angularjs_Angular$().module__T__sc_Seq__Lcom_greencatsoft_angularjs_Module("LingvodocModule", $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu"]))));
   var handler = (function(f) {
     return (function(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20) {
       return f.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
@@ -4489,7 +4687,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$1().init___());
   var proxy = ["$routeProvider"];
   proxy.push(handler);
-  var jsx$23 = jsx$24.$$config__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module(proxy);
+  var jsx$24 = jsx$25.$$config__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module(proxy);
   var handler$2 = (function(f$1) {
     return (function(arg1$1, arg2$1, arg3$1, arg4$1, arg5$1, arg6$1, arg7$1, arg8$1, arg9$1, arg10$1, arg11$1, arg12$1, arg13$1, arg14$1, arg15$1, arg16$1, arg17$1, arg18$1, arg19$1, arg20$1) {
       return f$1.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$1, arg2$1, arg3$1, arg4$1, arg5$1, arg6$1, arg7$1, arg8$1, arg9$1, arg10$1, arg11$1, arg12$1, arg13$1, arg14$1, arg15$1, arg16$1, arg17$1, arg18$1, arg19$1, arg20$1)
@@ -4497,7 +4695,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$2().init___());
   var proxy$2 = ["$http", "$q"];
   proxy$2.push(handler$2);
-  var jsx$22 = jsx$23.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("BackendService", proxy$2);
+  var jsx$23 = jsx$24.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("BackendService", proxy$2);
   var handler$3 = (function(f$2) {
     return (function(arg1$2, arg2$2, arg3$2, arg4$2, arg5$2, arg6$2, arg7$2, arg8$2, arg9$2, arg10$2, arg11$2, arg12$2, arg13$2, arg14$2, arg15$2, arg16$2, arg17$2, arg18$2, arg19$2, arg20$2) {
       return f$2.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$2, arg2$2, arg3$2, arg4$2, arg5$2, arg6$2, arg7$2, arg8$2, arg9$2, arg10$2, arg11$2, arg12$2, arg13$2, arg14$2, arg15$2, arg16$2, arg17$2, arg18$2, arg19$2, arg20$2)
@@ -4505,7 +4703,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$3().init___());
   var proxy$3 = ["BackendService"];
   proxy$3.push(handler$3);
-  var jsx$21 = jsx$22.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("UserService", proxy$3);
+  var jsx$22 = jsx$23.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("UserService", proxy$3);
   var handler$4 = (function(f$3) {
     return (function(arg1$3, arg2$3, arg3$3, arg4$3, arg5$3, arg6$3, arg7$3, arg8$3, arg9$3, arg10$3, arg11$3, arg12$3, arg13$3, arg14$3, arg15$3, arg16$3, arg17$3, arg18$3, arg19$3, arg20$3) {
       return f$3.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$3, arg2$3, arg3$3, arg4$3, arg5$3, arg6$3, arg7$3, arg8$3, arg9$3, arg10$3, arg11$3, arg12$3, arg13$3, arg14$3, arg15$3, arg16$3, arg17$3, arg18$3, arg19$3, arg20$3)
@@ -4513,7 +4711,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$4().init___());
   var proxy$4 = ["$scope", "BackendService"];
   proxy$4.push(handler$4);
-  var jsx$20 = jsx$21.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("MainController", proxy$4);
+  var jsx$21 = jsx$22.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("MainController", proxy$4);
   var handler$5 = (function(f$4) {
     return (function(arg1$4, arg2$4, arg3$4, arg4$4, arg5$4, arg6$4, arg7$4, arg8$4, arg9$4, arg10$4, arg11$4, arg12$4, arg13$4, arg14$4, arg15$4, arg16$4, arg17$4, arg18$4, arg19$4, arg20$4) {
       return f$4.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$4, arg2$4, arg3$4, arg4$4, arg5$4, arg6$4, arg7$4, arg8$4, arg9$4, arg10$4, arg11$4, arg12$4, arg13$4, arg14$4, arg15$4, arg16$4, arg17$4, arg18$4, arg19$4, arg20$4)
@@ -4521,7 +4719,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$5().init___());
   var proxy$5 = ["$scope", "$rootScope", "BackendService", "UserService"];
   proxy$5.push(handler$5);
-  var jsx$19 = jsx$20.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("NavigationController", proxy$5);
+  var jsx$20 = jsx$21.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("NavigationController", proxy$5);
   var handler$6 = (function(f$5) {
     return (function(arg1$5, arg2$5, arg3$5, arg4$5, arg5$5, arg6$5, arg7$5, arg8$5, arg9$5, arg10$5, arg11$5, arg12$5, arg13$5, arg14$5, arg15$5, arg16$5, arg17$5, arg18$5, arg19$5, arg20$5) {
       return f$5.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$5, arg2$5, arg3$5, arg4$5, arg5$5, arg6$5, arg7$5, arg8$5, arg9$5, arg10$5, arg11$5, arg12$5, arg13$5, arg14$5, arg15$5, arg16$5, arg17$5, arg18$5, arg19$5, arg20$5)
@@ -4529,7 +4727,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$6().init___());
   var proxy$6 = ["$scope", "$location", "$rootScope", "BackendService"];
   proxy$6.push(handler$6);
-  var jsx$18 = jsx$19.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LoginController", proxy$6);
+  var jsx$19 = jsx$20.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LoginController", proxy$6);
   var handler$7 = (function(f$6) {
     return (function(arg1$6, arg2$6, arg3$6, arg4$6, arg5$6, arg6$6, arg7$6, arg8$6, arg9$6, arg10$6, arg11$6, arg12$6, arg13$6, arg14$6, arg15$6, arg16$6, arg17$6, arg18$6, arg19$6, arg20$6) {
       return f$6.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$6, arg2$6, arg3$6, arg4$6, arg5$6, arg6$6, arg7$6, arg8$6, arg9$6, arg10$6, arg11$6, arg12$6, arg13$6, arg14$6, arg15$6, arg16$6, arg17$6, arg18$6, arg19$6, arg20$6)
@@ -4537,7 +4735,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$7().init___());
   var proxy$7 = ["$scope", "$location", "$rootScope", "BackendService"];
   proxy$7.push(handler$7);
-  var jsx$17 = jsx$18.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LogoutController", proxy$7);
+  var jsx$18 = jsx$19.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LogoutController", proxy$7);
   var handler$8 = (function(f$7) {
     return (function(arg1$7, arg2$7, arg3$7, arg4$7, arg5$7, arg6$7, arg7$7, arg8$7, arg9$7, arg10$7, arg11$7, arg12$7, arg13$7, arg14$7, arg15$7, arg16$7, arg17$7, arg18$7, arg19$7, arg20$7) {
       return f$7.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$7, arg2$7, arg3$7, arg4$7, arg5$7, arg6$7, arg7$7, arg8$7, arg9$7, arg10$7, arg11$7, arg12$7, arg13$7, arg14$7, arg15$7, arg16$7, arg17$7, arg18$7, arg19$7, arg20$7)
@@ -4545,7 +4743,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$8().init___());
   var proxy$8 = ["$scope", "$location", "BackendService"];
   proxy$8.push(handler$8);
-  var jsx$16 = jsx$17.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SignupController", proxy$8);
+  var jsx$17 = jsx$18.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SignupController", proxy$8);
   var handler$9 = (function(f$8) {
     return (function(arg1$8, arg2$8, arg3$8, arg4$8, arg5$8, arg6$8, arg7$8, arg8$8, arg9$8, arg10$8, arg11$8, arg12$8, arg13$8, arg14$8, arg15$8, arg16$8, arg17$8, arg18$8, arg19$8, arg20$8) {
       return f$8.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$8, arg2$8, arg3$8, arg4$8, arg5$8, arg6$8, arg7$8, arg8$8, arg9$8, arg10$8, arg11$8, arg12$8, arg13$8, arg14$8, arg15$8, arg16$8, arg17$8, arg18$8, arg19$8, arg20$8)
@@ -4553,7 +4751,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$9().init___());
   var proxy$9 = ["$scope", "$uibModal", "UserService", "BackendService"];
   proxy$9.push(handler$9);
-  var jsx$15 = jsx$16.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DashboardController", proxy$9);
+  var jsx$16 = jsx$17.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DashboardController", proxy$9);
   var handler$10 = (function(f$9) {
     return (function(arg1$9, arg2$9, arg3$9, arg4$9, arg5$9, arg6$9, arg7$9, arg8$9, arg9$9, arg10$9, arg11$9, arg12$9, arg13$9, arg14$9, arg15$9, arg16$9, arg17$9, arg18$9, arg19$9, arg20$9) {
       return f$9.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$9, arg2$9, arg3$9, arg4$9, arg5$9, arg6$9, arg7$9, arg8$9, arg9$9, arg10$9, arg11$9, arg12$9, arg13$9, arg14$9, arg15$9, arg16$9, arg17$9, arg18$9, arg19$9, arg20$9)
@@ -4561,15 +4759,15 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$10().init___());
   var proxy$10 = ["$scope", "$uibModal", "BackendService"];
   proxy$10.push(handler$10);
-  var jsx$14 = jsx$15.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LanguageController", proxy$10);
+  var jsx$15 = jsx$16.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LanguageController", proxy$10);
   var handler$11 = (function(f$10) {
     return (function(arg1$10, arg2$10, arg3$10, arg4$10, arg5$10, arg6$10, arg7$10, arg8$10, arg9$10, arg10$10, arg11$10, arg12$10, arg13$10, arg14$10, arg15$10, arg16$10, arg17$10, arg18$10, arg19$10, arg20$10) {
       return f$10.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$10, arg2$10, arg3$10, arg4$10, arg5$10, arg6$10, arg7$10, arg8$10, arg9$10, arg10$10, arg11$10, arg12$10, arg13$10, arg14$10, arg15$10, arg16$10, arg17$10, arg18$10, arg19$10, arg20$10)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$11().init___());
-  var proxy$11 = ["$scope", "$injector", "BackendService"];
+  var proxy$11 = ["$scope", "$injector", "BackendService", "$uibModal"];
   proxy$11.push(handler$11);
-  var jsx$13 = jsx$14.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("HomeController", proxy$11);
+  var jsx$14 = jsx$15.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("HomeController", proxy$11);
   var handler$12 = (function(f$11) {
     return (function(arg1$11, arg2$11, arg3$11, arg4$11, arg5$11, arg6$11, arg7$11, arg8$11, arg9$11, arg10$11, arg11$11, arg12$11, arg13$11, arg14$11, arg15$11, arg16$11, arg17$11, arg18$11, arg19$11, arg20$11) {
       return f$11.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$11, arg2$11, arg3$11, arg4$11, arg5$11, arg6$11, arg7$11, arg8$11, arg9$11, arg10$11, arg11$11, arg12$11, arg13$11, arg14$11, arg15$11, arg16$11, arg17$11, arg18$11, arg19$11, arg20$11)
@@ -4577,7 +4775,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$12().init___());
   var proxy$12 = ["$scope", "$uibModalInstance", "BackendService", "params"];
   proxy$12.push(handler$12);
-  var jsx$12 = jsx$13.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateLanguageController", proxy$12);
+  var jsx$13 = jsx$14.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateLanguageController", proxy$12);
   var handler$13 = (function(f$12) {
     return (function(arg1$12, arg2$12, arg3$12, arg4$12, arg5$12, arg6$12, arg7$12, arg8$12, arg9$12, arg10$12, arg11$12, arg12$12, arg13$12, arg14$12, arg15$12, arg16$12, arg17$12, arg18$12, arg19$12, arg20$12) {
       return f$12.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$12, arg2$12, arg3$12, arg4$12, arg5$12, arg6$12, arg7$12, arg8$12, arg9$12, arg10$12, arg11$12, arg12$12, arg13$12, arg14$12, arg15$12, arg16$12, arg17$12, arg18$12, arg19$12, arg20$12)
@@ -4585,7 +4783,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$13().init___());
   var proxy$13 = ["$scope", "$uibModal", "BackendService"];
   proxy$13.push(handler$13);
-  var jsx$11 = jsx$12.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateDictionaryController", proxy$13);
+  var jsx$12 = jsx$13.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateDictionaryController", proxy$13);
   var handler$14 = (function(f$13) {
     return (function(arg1$13, arg2$13, arg3$13, arg4$13, arg5$13, arg6$13, arg7$13, arg8$13, arg9$13, arg10$13, arg11$13, arg12$13, arg13$13, arg14$13, arg15$13, arg16$13, arg17$13, arg18$13, arg19$13, arg20$13) {
       return f$13.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$13, arg2$13, arg3$13, arg4$13, arg5$13, arg6$13, arg7$13, arg8$13, arg9$13, arg10$13, arg11$13, arg12$13, arg13$13, arg14$13, arg15$13, arg16$13, arg17$13, arg18$13, arg19$13, arg20$13)
@@ -4593,7 +4791,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$14().init___());
   var proxy$14 = ["$scope", "$uibModal", "$uibModalInstance", "BackendService", "params"];
   proxy$14.push(handler$14);
-  var jsx$10 = jsx$11.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryModalController", proxy$14);
+  var jsx$11 = jsx$12.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryModalController", proxy$14);
   var handler$15 = (function(f$14) {
     return (function(arg1$14, arg2$14, arg3$14, arg4$14, arg5$14, arg6$14, arg7$14, arg8$14, arg9$14, arg10$14, arg11$14, arg12$14, arg13$14, arg14$14, arg15$14, arg16$14, arg17$14, arg18$14, arg19$14, arg20$14) {
       return f$14.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$14, arg2$14, arg3$14, arg4$14, arg5$14, arg6$14, arg7$14, arg8$14, arg9$14, arg10$14, arg11$14, arg12$14, arg13$14, arg14$14, arg15$14, arg16$14, arg17$14, arg18$14, arg19$14, arg20$14)
@@ -4601,7 +4799,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$15().init___());
   var proxy$15 = ["$scope", "$uibModalInstance", "$uibModal", "BackendService", "params"];
   proxy$15.push(handler$15);
-  var jsx$9 = jsx$10.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectivePropertiesController", proxy$15);
+  var jsx$10 = jsx$11.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectivePropertiesController", proxy$15);
   var handler$16 = (function(f$15) {
     return (function(arg1$15, arg2$15, arg3$15, arg4$15, arg5$15, arg6$15, arg7$15, arg8$15, arg9$15, arg10$15, arg11$15, arg12$15, arg13$15, arg14$15, arg15$15, arg16$15, arg17$15, arg18$15, arg19$15, arg20$15) {
       return f$15.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$15, arg2$15, arg3$15, arg4$15, arg5$15, arg6$15, arg7$15, arg8$15, arg9$15, arg10$15, arg11$15, arg12$15, arg13$15, arg14$15, arg15$15, arg16$15, arg17$15, arg18$15, arg19$15, arg20$15)
@@ -4609,7 +4807,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$16().init___());
   var proxy$16 = ["$scope", "$uibModalInstance", "BackendService", "params"];
   proxy$16.push(handler$16);
-  var jsx$8 = jsx$9.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DictionaryPropertiesController", proxy$16);
+  var jsx$9 = jsx$10.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DictionaryPropertiesController", proxy$16);
   var handler$17 = (function(f$16) {
     return (function(arg1$16, arg2$16, arg3$16, arg4$16, arg5$16, arg6$16, arg7$16, arg8$16, arg9$16, arg10$16, arg11$16, arg12$16, arg13$16, arg14$16, arg15$16, arg16$16, arg17$16, arg18$16, arg19$16, arg20$16) {
       return f$16.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$16, arg2$16, arg3$16, arg4$16, arg5$16, arg6$16, arg7$16, arg8$16, arg9$16, arg10$16, arg11$16, arg12$16, arg13$16, arg14$16, arg15$16, arg16$16, arg17$16, arg18$16, arg19$16, arg20$16)
@@ -4617,7 +4815,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$17().init___());
   var proxy$17 = ["$scope", "$routeParams", "$uibModal", "BackendService"];
   proxy$17.push(handler$17);
-  var jsx$7 = jsx$8.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryController", proxy$17);
+  var jsx$8 = jsx$9.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryController", proxy$17);
   var handler$18 = (function(f$17) {
     return (function(arg1$17, arg2$17, arg3$17, arg4$17, arg5$17, arg6$17, arg7$17, arg8$17, arg9$17, arg10$17, arg11$17, arg12$17, arg13$17, arg14$17, arg15$17, arg16$17, arg17$17, arg18$17, arg19$17, arg20$17) {
       return f$17.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$17, arg2$17, arg3$17, arg4$17, arg5$17, arg6$17, arg7$17, arg8$17, arg9$17, arg10$17, arg11$17, arg12$17, arg13$17, arg14$17, arg15$17, arg16$17, arg17$17, arg18$17, arg19$17, arg20$17)
@@ -4625,7 +4823,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$18().init___());
   var proxy$18 = ["$scope", "$uibModal", "$uibModalInstance", "BackendService"];
   proxy$18.push(handler$18);
-  var jsx$6 = jsx$7.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectiveMapController", proxy$18);
+  var jsx$7 = jsx$8.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectiveMapController", proxy$18);
   var handler$19 = (function(f$18) {
     return (function(arg1$18, arg2$18, arg3$18, arg4$18, arg5$18, arg6$18, arg7$18, arg8$18, arg9$18, arg10$18, arg11$18, arg12$18, arg13$18, arg14$18, arg15$18, arg16$18, arg17$18, arg18$18, arg19$18, arg20$18) {
       return f$18.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$18, arg2$18, arg3$18, arg4$18, arg5$18, arg6$18, arg7$18, arg8$18, arg9$18, arg10$18, arg11$18, arg12$18, arg13$18, arg14$18, arg15$18, arg16$18, arg17$18, arg18$18, arg19$18, arg20$18)
@@ -4633,15 +4831,15 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$19().init___());
   var proxy$19 = ["$scope", "$routeParams", "$uibModal", "BackendService"];
   proxy$19.push(handler$19);
-  var jsx$5 = jsx$6.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ViewDictionaryController", proxy$19);
+  var jsx$6 = jsx$7.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ViewDictionaryController", proxy$19);
   var handler$20 = (function(f$19) {
     return (function(arg1$19, arg2$19, arg3$19, arg4$19, arg5$19, arg6$19, arg7$19, arg8$19, arg9$19, arg10$19, arg11$19, arg12$19, arg13$19, arg14$19, arg15$19, arg16$19, arg17$19, arg18$19, arg19$19, arg20$19) {
       return f$19.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$19, arg2$19, arg3$19, arg4$19, arg5$19, arg6$19, arg7$19, arg8$19, arg9$19, arg10$19, arg11$19, arg12$19, arg13$19, arg14$19, arg15$19, arg16$19, arg17$19, arg18$19, arg19$19, arg20$19)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$20().init___());
-  var proxy$20 = ["$scope", "$uibModalInstance", "$uibModal", "BackendService", "params"];
+  var proxy$20 = ["$scope", "$timeout", "$uibModalInstance", "$uibModal", "BackendService", "params"];
   proxy$20.push(handler$20);
-  var jsx$4 = jsx$5.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SoundMarkupController", proxy$20);
+  var jsx$5 = jsx$6.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SoundMarkupController", proxy$20);
   var handler$21 = (function(f$20) {
     return (function(arg1$20, arg2$20, arg3$20, arg4$20, arg5$20, arg6$20, arg7$20, arg8$20, arg9$20, arg10$20, arg11$20, arg12$20, arg13$20, arg14$20, arg15$20, arg16$20, arg17$20, arg18$20, arg19$20, arg20$20) {
       return f$20.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$20, arg2$20, arg3$20, arg4$20, arg5$20, arg6$20, arg7$20, arg8$20, arg9$20, arg10$20, arg11$20, arg12$20, arg13$20, arg14$20, arg15$20, arg16$20, arg17$20, arg18$20, arg19$20, arg20$20)
@@ -4649,31 +4847,39 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$21().init___());
   var proxy$21 = ["$scope", "$uibModalInstance", "params"];
   proxy$21.push(handler$21);
-  var jsx$3 = jsx$4.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ExceptionHandlerController", proxy$21);
+  var jsx$4 = jsx$5.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditTextFieldController", proxy$21);
   var handler$22 = (function(f$21) {
     return (function(arg1$21, arg2$21, arg3$21, arg4$21, arg5$21, arg6$21, arg7$21, arg8$21, arg9$21, arg10$21, arg11$21, arg12$21, arg13$21, arg14$21, arg15$21, arg16$21, arg17$21, arg18$21, arg19$21, arg20$21) {
       return f$21.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$21, arg2$21, arg3$21, arg4$21, arg5$21, arg6$21, arg7$21, arg8$21, arg9$21, arg10$21, arg11$21, arg12$21, arg13$21, arg14$21, arg15$21, arg16$21, arg17$21, arg18$21, arg19$21, arg20$21)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$22().init___());
-  var proxy$22 = ["$scope", "$uibModalInstance", "BackendService", "params"];
+  var proxy$22 = ["$scope", "$uibModalInstance", "params"];
   proxy$22.push(handler$22);
-  var jsx$2 = jsx$3.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateFieldController", proxy$22);
+  var jsx$3 = jsx$4.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ExceptionHandlerController", proxy$22);
   var handler$23 = (function(f$22) {
     return (function(arg1$22, arg2$22, arg3$22, arg4$22, arg5$22, arg6$22, arg7$22, arg8$22, arg9$22, arg10$22, arg11$22, arg12$22, arg13$22, arg14$22, arg15$22, arg16$22, arg17$22, arg18$22, arg19$22, arg20$22) {
       return f$22.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$22, arg2$22, arg3$22, arg4$22, arg5$22, arg6$22, arg7$22, arg8$22, arg9$22, arg10$22, arg11$22, arg12$22, arg13$22, arg14$22, arg15$22, arg16$22, arg17$22, arg18$22, arg19$22, arg20$22)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$23().init___());
-  var proxy$23 = [];
+  var proxy$23 = ["$scope", "$uibModalInstance", "BackendService", "params"];
   proxy$23.push(handler$23);
-  var jsx$1 = jsx$2.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("convertToNumber", proxy$23);
+  var jsx$2 = jsx$3.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateFieldController", proxy$23);
   var handler$24 = (function(f$23) {
     return (function(arg1$23, arg2$23, arg3$23, arg4$23, arg5$23, arg6$23, arg7$23, arg8$23, arg9$23, arg10$23, arg11$23, arg12$23, arg13$23, arg14$23, arg15$23, arg16$23, arg17$23, arg18$23, arg19$23, arg20$23) {
       return f$23.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$23, arg2$23, arg3$23, arg4$23, arg5$23, arg6$23, arg7$23, arg8$23, arg9$23, arg10$23, arg11$23, arg12$23, arg13$23, arg14$23, arg15$23, arg16$23, arg17$23, arg18$23, arg19$23, arg20$23)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24().init___());
-  var proxy$24 = ["$parse"];
+  var proxy$24 = [];
   proxy$24.push(handler$24);
-  return jsx$1.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("onReadFile", proxy$24)
+  var jsx$1 = jsx$2.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("convertToNumber", proxy$24);
+  var handler$25 = (function(f$24) {
+    return (function(arg1$24, arg2$24, arg3$24, arg4$24, arg5$24, arg6$24, arg7$24, arg8$24, arg9$24, arg10$24, arg11$24, arg12$24, arg13$24, arg14$24, arg15$24, arg16$24, arg17$24, arg18$24, arg19$24, arg20$24) {
+      return f$24.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$24, arg2$24, arg3$24, arg4$24, arg5$24, arg6$24, arg7$24, arg8$24, arg9$24, arg10$24, arg11$24, arg12$24, arg13$24, arg14$24, arg15$24, arg16$24, arg17$24, arg18$24, arg19$24, arg20$24)
+    })
+  })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25().init___());
+  var proxy$25 = ["$parse"];
+  proxy$25.push(handler$25);
+  return jsx$1.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("onReadFile", proxy$25)
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.$$js$exported$meth$main__O = (function() {
   return this.main__Lcom_greencatsoft_angularjs_Module()
@@ -4822,142 +5028,106 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.$$js$exported$prop$rows__O = (function() {
   return this.rows$1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.$$js$exported$prop$header__sjs_js_Array__O = (function(x$1) {
-  this.header$1 = x$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_Entity__V = (function(entry, parentEntity, entity) {
-  var array = this.rows$1;
-  var len = $uI(array.length);
-  var i = 0;
-  while (true) {
-    if ((i < len)) {
-      var index = i;
-      var arg1 = array[index];
-      var row = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Row(arg1);
-      var jsx$1 = (!(row.entry$1.getId__T() === entry.getId__T()))
-    } else {
-      var jsx$1 = false
-    };
-    if (jsx$1) {
-      i = ((1 + i) | 0)
-    } else {
-      break
-    }
-  };
-  var i$1 = i;
-  var x1 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.findField__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_Option = (function(fields, fieldId) {
+  var x1 = fields.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(fieldId$1) {
+    return (function(f$2) {
+      var f = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(f$2);
+      return ((f.clientId$2 === fieldId$1.clientId$2) && (f.objectId$2 === fieldId$1.objectId$2))
+    })
+  })(fieldId)));
   if ($is_s_Some(x1)) {
     var x2 = $as_s_Some(x1);
-    var row$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Row(x2.x$2);
-    var elem$1 = false;
-    elem$1 = false;
-    var array$1 = row$1.cells$1;
-    var len$1 = $uI(array$1.length);
-    var i$2 = 0;
-    while (true) {
-      if ((i$2 < len$1)) {
-        var index$1 = i$2;
-        var arg1$1 = array$1[index$1];
-        $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GenericCell(arg1$1);
-        var jsx$2 = (!elem$1)
-      } else {
-        var jsx$2 = false
-      };
-      if (jsx$2) {
-        i$2 = ((1 + i$2) | 0)
-      } else {
-        break
-      }
-    };
-    var n = i$2;
-    var x = ((n > 0) ? n : 0);
-    var y = $uI(array$1.length);
-    var hi = ((x < y) ? x : y);
-    var array$2 = [];
-    var i$3 = 0;
-    while ((i$3 < hi)) {
-      var index$2 = i$3;
-      var elem = array$1[index$2];
-      array$2.push(elem);
-      i$3 = ((1 + i$3) | 0)
-    };
-    var i$4 = 0;
-    var len$2 = $uI(array$2.length);
-    while ((i$4 < len$2)) {
-      var index$3 = i$4;
-      var arg1$2 = array$2[index$3];
-      var cell = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GenericCell(arg1$2);
-      var array$3 = cell.values$1;
-      var len$3 = $uI(array$3.length);
-      var i$5 = 0;
-      while (true) {
-        if ((i$5 < len$3)) {
-          var index$4 = i$5;
-          var arg1$3 = array$3[index$4];
-          var v = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1$3);
-          var jsx$3 = (!(v.entity$1.getId__T() === parentEntity.getId__T()))
-        } else {
-          var jsx$3 = false
-        };
-        if (jsx$3) {
-          i$5 = ((1 + i$5) | 0)
-        } else {
-          break
-        }
-      };
-      var i$6 = i$5;
-      var x1$1 = ((i$6 < $uI(array$3.length)) ? new $c_s_Some().init___O(array$3[i$6]) : $m_s_None$());
-      if ($is_s_Some(x1$1)) {
-        var x2$1 = $as_s_Some(x1$1);
-        var value = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2$1.x$2);
-        var x1$2 = new $c_s_Some().init___O(value)
-      } else {
-        var x$1 = $m_s_None$();
-        if ((!(x$1 === x1$1))) {
-          throw new $c_s_MatchError().init___O(x1$1)
-        };
-        var elem$2 = $m_s_None$();
-        var elem$1$1 = null;
-        elem$1$1 = elem$2;
-        var i$7 = 0;
-        var len$4 = $uI(array$3.length);
-        while ((i$7 < len$4)) {
-          var index$5 = i$7;
-          var arg1$4 = array$3[index$5];
-          var v$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1$4);
-          if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$1)) {
-            var x2$2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$1);
-            var array$4 = x2$2.values$2;
-            elem$1$1 = this.findValue__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_Option(new $c_sjs_js_WrappedArray().init___sjs_js_Array(array$4), parentEntity)
-          } else {
-            elem$1$1 = $m_s_None$()
-          };
-          i$7 = ((1 + i$7) | 0)
-        };
-        var x1$2 = $as_s_Option(elem$1$1)
-      };
-      if ($is_s_Some(x1$2)) {
-        var x2$3 = $as_s_Some(x1$2);
-        var value$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2$3.x$2);
-        if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(value$1)) {
-          var x2$2$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(value$1);
-          x2$2$1.values$2.push(this.entityToValue__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(entity));
-          elem$1 = true
-        }
-      } else {
-        var x$2$1 = $m_s_None$();
-        if ((!(x$2$1 === x1$2))) {
-          throw new $c_s_MatchError().init___O(x1$2)
-        }
-      };
-      i$4 = ((1 + i$4) | 0)
-    }
+    var field = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(x2.x$2);
+    return new $c_s_Some().init___O(field)
   } else {
-    var x$4 = $m_s_None$();
-    if ((!(x$4 === x1))) {
+    var x = $m_s_None$();
+    if ((x === x1)) {
+      var elem = $m_s_None$();
+      var result = new $c_sr_ObjectRef().init___O(elem);
+      fields.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, fieldId$1$1, result$1) {
+        return (function(v$2) {
+          var v = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(v$2);
+          if ((v !== null)) {
+            var array = v.fields$2;
+            var len = $uI(array.length);
+            var i = 0;
+            while (true) {
+              if ((i < len)) {
+                var index = i;
+                var arg1 = array[index];
+                var f$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg1);
+                var jsx$1 = (!((f$1.clientId$2 === fieldId$1$1.clientId$2) && (f$1.objectId$2 === fieldId$1$1.objectId$2)))
+              } else {
+                var jsx$1 = false
+              };
+              if (jsx$1) {
+                i = ((1 + i) | 0)
+              } else {
+                break
+              }
+            };
+            var i$1 = i;
+            var x1$1 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+            if ($is_s_Some(x1$1)) {
+              var x2$1 = $as_s_Some(x1$1);
+              var field$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(x2$1.x$2);
+              var x1$2$1 = new $c_s_Some().init___O(field$1)
+            } else {
+              var x$1 = $m_s_None$();
+              if ((!(x$1 === x1$1))) {
+                throw new $c_s_MatchError().init___O(x1$1)
+              };
+              var elem$1 = $m_s_None$();
+              var elem$1$1 = null;
+              elem$1$1 = elem$1;
+              var i$2 = 0;
+              var len$1 = $uI(array.length);
+              while ((i$2 < len$1)) {
+                var index$1 = i$2;
+                var arg1$1 = array[index$1];
+                var v$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg1$1);
+                if ((v$1 !== null)) {
+                  var array$1 = v$1.fields$2;
+                  var x1$2 = arg$outer.findField__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_Option(new $c_sjs_js_WrappedArray().init___sjs_js_Array(array$1), fieldId$1$1);
+                  if ($is_s_Some(x1$2)) {
+                    var x2$2 = $as_s_Some(x1$2);
+                    var x$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(x2$2.x$2);
+                    elem$1$1 = new $c_s_Some().init___O(x$2)
+                  } else {
+                    var x$2$1 = $m_s_None$();
+                    if ((!(x$2$1 === x1$2))) {
+                      throw new $c_s_MatchError().init___O(x1$2)
+                    }
+                  }
+                };
+                i$2 = ((1 + i$2) | 0)
+              };
+              var x1$2$1 = $as_s_Option(elem$1$1)
+            };
+            if ($is_s_Some(x1$2$1)) {
+              var x2$2$1 = $as_s_Some(x1$2$1);
+              var x$3 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(x2$2$1.x$2);
+              result$1.elem$1 = new $c_s_Some().init___O(x$3)
+            } else {
+              var x$2$2 = $m_s_None$();
+              if ((!(x$2$2 === x1$2$1))) {
+                throw new $c_s_MatchError().init___O(x1$2$1)
+              }
+            };
+            return (void 0)
+          } else {
+            return $m_s_None$()
+          }
+        })
+      })(this, fieldId, result)));
+      return $as_s_Option(result.elem$1)
+    } else {
       throw new $c_s_MatchError().init___O(x1)
     }
   }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.$$js$exported$prop$header__sjs_js_Array__O = (function(x$1) {
+  this.header$1 = x$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O = (function(entry, entity) {
   var array = this.rows$1;
@@ -5149,100 +5319,19 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
   };
   this.rows$1 = array$9
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.findValue__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_Option = (function(values, entity) {
-  var x1 = values.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entity$2) {
-    return (function(v$2) {
-      var v = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(v$2);
-      return (v.entity$1.getId__T() === entity$2.getId__T())
-    })
-  })(entity)));
-  if ($is_s_Some(x1)) {
-    var x2 = $as_s_Some(x1);
-    var value = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2.x$2);
-    return new $c_s_Some().init___O(value)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.addEntity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value__Lru_ispras_lingvodoc_frontend_app_model_Entity__I = (function(value, entity) {
+  if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(value)) {
+    var x2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(value);
+    return $uI(x2.values$2.push(this.entityToValue__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(entity)))
   } else {
-    var x = $m_s_None$();
-    if ((x === x1)) {
-      var elem = $m_s_None$();
-      var result = new $c_sr_ObjectRef().init___O(elem);
-      values.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, entity$2$1, result$1) {
-        return (function(v$2$1) {
-          var v$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(v$2$1);
-          if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$1)) {
-            var x2$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$1);
-            var array = x2$1.values$2;
-            var len = $uI(array.length);
-            var i = 0;
-            while (true) {
-              if ((i < len)) {
-                var index = i;
-                var arg1 = array[index];
-                var v$3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
-                var jsx$2 = (!(v$3.entity$1.getId__T() === entity$2$1.getId__T()))
-              } else {
-                var jsx$2 = false
-              };
-              if (jsx$2) {
-                i = ((1 + i) | 0)
-              } else {
-                break
-              }
-            };
-            var i$1 = i;
-            var x1$1 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
-            if ($is_s_Some(x1$1)) {
-              var x2$2 = $as_s_Some(x1$1);
-              var value$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2$2.x$2);
-              var jsx$1 = new $c_s_Some().init___O(value$1)
-            } else {
-              var x$1 = $m_s_None$();
-              if ((x$1 === x1$1)) {
-                var elem$1 = $m_s_None$();
-                var elem$1$1 = null;
-                elem$1$1 = elem$1;
-                var i$2 = 0;
-                var len$1 = $uI(array.length);
-                while ((i$2 < len$1)) {
-                  var index$1 = i$2;
-                  var arg1$1 = array[index$1];
-                  var v$4 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1$1);
-                  if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$4)) {
-                    var x2$3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$4);
-                    var array$1 = x2$3.values$2;
-                    elem$1$1 = arg$outer.findValue__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_Option(new $c_sjs_js_WrappedArray().init___sjs_js_Array(array$1), entity$2$1)
-                  } else {
-                    elem$1$1 = $m_s_None$()
-                  };
-                  i$2 = ((1 + i$2) | 0)
-                };
-                var jsx$1 = $as_s_Option(elem$1$1)
-              } else {
-                var jsx$1;
-                throw new $c_s_MatchError().init___O(x1$1)
-              }
-            }
-          } else {
-            var jsx$1 = $m_s_None$()
-          };
-          result$1.elem$1 = jsx$1
-        })
-      })(this, entity, result)));
-      return $as_s_Option(result.elem$1)
-    } else {
-      throw new $c_s_MatchError().init___O(x1)
-    }
+    throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ModelException().init___T("Attempt to add nested value to value which do not support nested values!")
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.$$js$exported$prop$header__O = (function() {
   return this.header$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.entityToValue__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value = (function(entity) {
-  var x1 = this.fields$1.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entity$1) {
-    return (function(f$2) {
-      var f = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(f$2);
-      return ((f.clientId$2 === entity$1.fieldClientId$2) && (f.objectId$2 === entity$1.fieldObjectId$2))
-    })
-  })(entity)));
+  var x1 = this.findField__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_Option(this.fields$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(entity.fieldClientId$2, entity.fieldObjectId$2));
   if ($is_s_Some(x1)) {
     var x2 = $as_s_Some(x1);
     var field = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(x2.x$2);
@@ -5272,6 +5361,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
       if ((x1$3 === "Text")) {
         return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__sjs_js_Array(entity, dataType, array$1)
       } else if ((x1$3 === "Sound")) {
+        return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__sjs_js_Array(entity, dataType, array$1)
+      } else if ((x1$3 === "Praat markup")) {
+        return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__sjs_js_Array(entity, dataType, array$1)
+      } else if ((x1$3 === "ELAN markup")) {
         return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__sjs_js_Array(entity, dataType, array$1)
       } else if ((x1$3 === "Image")) {
         return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__sjs_js_Array(entity, dataType, array$1)
@@ -5519,9 +5612,301 @@ function $asArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(o
   return (($isArrayOf_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.app.controllers.common.Value;", depth))
 }
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS() {
+  $c_O.call(this);
+  this.text$1 = null;
+  this.startOffset$1 = 0.0;
+  this.endOffset$1 = 0.0;
+  this.durationOffset$1 = 0.0
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$startOffset__D__O = (function(x$1) {
+  this.startOffset$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$startOffset__O = (function() {
+  return this.startOffset$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$endOffset__D__O = (function(x$1) {
+  this.endOffset$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$text__O = (function() {
+  return this.text$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$durationOffset__D__O = (function(x$1) {
+  this.durationOffset$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$durationOffset__O = (function() {
+  return this.durationOffset$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.init___T__D__D__D = (function(text, startOffset, endOffset, durationOffset) {
+  this.text$1 = text;
+  this.startOffset$1 = startOffset;
+  this.endOffset$1 = endOffset;
+  this.durationOffset$1 = durationOffset;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$endOffset__O = (function() {
+  return this.endOffset$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$$js$exported$prop$text__T__O = (function(x$1) {
+  this.text$1 = x$1
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype, "durationOffset", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$durationOffset__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$durationOffset__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype, "endOffset", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$endOffset__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$endOffset__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype, "startOffset", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$startOffset__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$startOffset__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype, "text", {
+  "set": (function(arg$1) {
+    var prep0 = $as_T(arg$1);
+    this.$$js$exported$prop$text__T__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$text__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.AnnotationJS", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS;
+/** @constructor */
+$e.AnnotationJS = (function(arg$1, arg$2, arg$3, arg$4) {
+  var $thiz = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS();
+  var prep0 = $as_T(arg$1);
+  var prep1 = $uD(arg$2);
+  var prep2 = $uD(arg$3);
+  var prep3 = $uD(arg$4);
+  $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype.init___T__D__D__D.call($thiz, prep0, prep1, prep2, prep3);
+  return $thiz
+});
+$e.AnnotationJS.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_AnnotationJS.prototype;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS() {
+  $c_O.call(this);
+  this.tiers$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype.init___sjs_js_Dictionary = (function(tiers) {
+  this.tiers$1 = tiers;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype.$$js$exported$prop$tiers__sjs_js_Dictionary__O = (function(x$1) {
+  this.tiers$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype.$$js$exported$prop$tiers__O = (function() {
+  return this.tiers$1
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype, "tiers", {
+  "set": (function(arg$1) {
+    var prep0 = arg$1;
+    this.$$js$exported$prop$tiers__sjs_js_Dictionary__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$tiers__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.ELANDocumentJS", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS;
+/** @constructor */
+$e.ELANDocumentJS = (function(arg$1) {
+  var $thiz = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS();
+  var prep0 = arg$1;
+  $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype.init___sjs_js_Dictionary.call($thiz, prep0);
+  return $thiz
+});
+$e.ELANDocumentJS.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_ELANDocumentJS.prototype;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point() {
+  $c_O.call(this);
+  this.x$1 = 0.0;
+  this.y$1 = 0.0
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.$$js$exported$prop$sum__O = (function() {
+  return this.sum__D()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.$$js$exported$prop$x__O = (function() {
+  return this.x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.$$js$exported$prop$sum__D__O = (function(v) {
+  this.sum$und$eq__D__V(v)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.init___D__D = (function(_x, _y) {
+  this.x$1 = _x;
+  this.y$1 = _y;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.abs__D = (function() {
+  var a = ((this.x$1 * this.x$1) + (this.y$1 * this.y$1));
+  return $uD($g.Math.sqrt(a))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.$$js$exported$prop$y__D__O = (function(x$1) {
+  this.y$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.$$js$exported$prop$y__O = (function() {
+  return this.y$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.$$js$exported$prop$abs__O = (function() {
+  return this.abs__D()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.sum$und$eq__D__V = (function(v) {
+  this.y$1 = (v - this.x$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.sum__D = (function() {
+  return (this.x$1 + this.y$1)
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype, "sum", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$sum__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$sum__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype, "abs", {
+  "get": (function() {
+    return this.$$js$exported$prop$abs__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype, "y", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$y__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$y__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype, "x", {
+  "get": (function() {
+    return this.$$js$exported$prop$x__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.Point", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point;
+/** @constructor */
+$e.Point = (function(arg$1, arg$2) {
+  var $thiz = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point();
+  var prep0 = $uD(arg$1);
+  var prep1 = $uD(arg$2);
+  $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype.init___D__D.call($thiz, prep0, prep1);
+  return $thiz
+});
+$e.Point.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_Point.prototype;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS() {
+  $c_O.call(this);
+  this.annotations$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype.$$js$exported$prop$annotations__sjs_js_Dictionary__O = (function(x$1) {
+  this.annotations$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype.init___sjs_js_Dictionary = (function(annotations) {
+  this.annotations$1 = annotations;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype.$$js$exported$prop$annotations__O = (function() {
+  return this.annotations$1
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype, "annotations", {
+  "set": (function(arg$1) {
+    var prep0 = arg$1;
+    this.$$js$exported$prop$annotations__sjs_js_Dictionary__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$annotations__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.TierJS", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS;
+/** @constructor */
+$e.TierJS = (function(arg$1) {
+  var $thiz = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS();
+  var prep0 = arg$1;
+  $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype.init___sjs_js_Dictionary.call($thiz, prep0);
+  return $thiz
+});
+$e.TierJS.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_soundmarkupviewdata_TierJS.prototype;
+/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1() {
   $c_O.call(this);
-  this.derive$macro$1$1 = null;
+  this.derive$macro$51$1 = null;
   this.bitmap$0$1 = false
 }
 $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype = new $h_O();
@@ -5531,18 +5916,18 @@ function $h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonf
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype.derive$macro$51__Lupickle_Types$Reader = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$51$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$51$1)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype.derive$macro$1$lzycompute__p1__Lupickle_Types$Reader = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype.derive$macro$51$lzycompute__p1__Lupickle_Types$Reader = (function() {
   if ((!this.bitmap$0$1)) {
-    this.derive$macro$1$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1().init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1(this));
+    this.derive$macro$51$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1().init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1(this));
     this.bitmap$0$1 = true
   };
-  return this.derive$macro$1$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1.prototype.derive$macro$1__Lupickle_Types$Reader = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$1$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$1$1)
+  return this.derive$macro$51$1
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1: 0
@@ -5659,7 +6044,7 @@ function $asArrayOf_Lru_ispras_lingvodoc_frontend_app_model_Object(obj, depth) {
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3() {
   $c_O.call(this);
-  this.derive$macro$33$1 = null;
+  this.derive$macro$61$1 = null;
   this.bitmap$0$1 = false
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype = new $h_O();
@@ -5669,15 +6054,15 @@ function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3() 
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype.derive$macro$33__Lupickle_Types$Writer = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$33$lzycompute__p1__Lupickle_Types$Writer() : this.derive$macro$33$1)
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype.derive$macro$61__Lupickle_Types$Writer = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$61$lzycompute__p1__Lupickle_Types$Writer() : this.derive$macro$61$1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype.derive$macro$33$lzycompute__p1__Lupickle_Types$Writer = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype.derive$macro$61$lzycompute__p1__Lupickle_Types$Writer = (function() {
   if ((!this.bitmap$0$1)) {
-    this.derive$macro$33$1 = new $c_Lupickle_Types$Knot$Writer().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3(this));
+    this.derive$macro$61$1 = new $c_Lupickle_Types$Knot$Writer().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3(this));
     this.bitmap$0$1 = true
   };
-  return this.derive$macro$33$1
+  return this.derive$macro$61$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function($$outer) {
   return this
@@ -5692,7 +6077,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3.prototype.$
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6() {
   $c_O.call(this);
-  this.derive$macro$79$1 = null;
+  this.derive$macro$107$1 = null;
   this.bitmap$0$1 = false
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype = new $h_O();
@@ -5702,18 +6087,18 @@ function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6() 
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype.derive$macro$79$lzycompute__p1__Lupickle_Types$Writer = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype.derive$macro$107$lzycompute__p1__Lupickle_Types$Writer = (function() {
   if ((!this.bitmap$0$1)) {
-    this.derive$macro$79$1 = new $c_Lupickle_Types$Knot$Writer().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6(this));
+    this.derive$macro$107$1 = new $c_Lupickle_Types$Knot$Writer().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6(this));
     this.bitmap$0$1 = true
   };
-  return this.derive$macro$79$1
+  return this.derive$macro$107$1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype.derive$macro$107__Lupickle_Types$Writer = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$107$lzycompute__p1__Lupickle_Types$Writer() : this.derive$macro$107$1)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function($$outer) {
   return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype.derive$macro$79__Lupickle_Types$Writer = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$79$lzycompute__p1__Lupickle_Types$Writer() : this.derive$macro$79$1)
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6: 0
@@ -5725,7 +6110,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6.prototype.$
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1() {
   $c_O.call(this);
-  this.derive$macro$1$1 = null;
+  this.derive$macro$19$1 = null;
   this.bitmap$0$1 = false
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1.prototype = new $h_O();
@@ -5738,15 +6123,15 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuse
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1.prototype.derive$macro$1$lzycompute__p1__Lupickle_Types$Reader = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1.prototype.derive$macro$19__Lupickle_Types$Reader = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$19$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$19$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1.prototype.derive$macro$19$lzycompute__p1__Lupickle_Types$Reader = (function() {
   if ((!this.bitmap$0$1)) {
-    this.derive$macro$1$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1(this));
+    this.derive$macro$19$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1(this));
     this.bitmap$0$1 = true
   };
-  return this.derive$macro$1$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1.prototype.derive$macro$1__Lupickle_Types$Reader = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$1$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$1$1)
+  return this.derive$macro$19$1
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1: 0
@@ -5756,42 +6141,42 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allSta
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2() {
   $c_O.call(this);
-  this.derive$macro$18$1 = null;
+  this.derive$macro$36$1 = null;
   this.bitmap$0$1 = false
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19 = (function($$outer) {
-  return this
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype.derive$macro$36__Lupickle_Types$Reader = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$36$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$36$1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype.derive$macro$18__Lupickle_Types$Reader = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$18$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$18$1)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype.derive$macro$18$lzycompute__p1__Lupickle_Types$Reader = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype.derive$macro$36$lzycompute__p1__Lupickle_Types$Reader = (function() {
   if ((!this.bitmap$0$1)) {
-    this.derive$macro$18$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2(this));
+    this.derive$macro$36$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2(this));
     this.bitmap$0$1 = true
   };
-  return this.derive$macro$18$1
+  return this.derive$macro$36$1
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2: 1,
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19 = (function($$outer) {
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2: 1,
   O: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10() {
   $c_O.call(this);
-  this.derive$macro$143$1 = null;
+  this.derive$macro$171$1 = null;
   this.bitmap$0$1 = false
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype = new $h_O();
@@ -5801,18 +6186,18 @@ function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$d
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype.derive$macro$143$lzycompute__p1__Lupickle_Types$Reader = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype.derive$macro$171$lzycompute__p1__Lupickle_Types$Reader = (function() {
   if ((!this.bitmap$0$1)) {
-    this.derive$macro$143$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10(this));
+    this.derive$macro$171$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10(this));
     this.bitmap$0$1 = true
   };
-  return this.derive$macro$143$1
+  return this.derive$macro$171$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype.derive$macro$143__Lupickle_Types$Reader = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$143$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$143$1)
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype.derive$macro$171__Lupickle_Types$Reader = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$171$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$171$1)
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10: 0
@@ -5822,42 +6207,42 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTy
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11() {
   $c_O.call(this);
-  this.derive$macro$160$1 = null;
+  this.derive$macro$188$1 = null;
   this.bitmap$0$1 = false
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype.derive$macro$160__Lupickle_Types$Reader = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$160$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$160$1)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype.derive$macro$160$lzycompute__p1__Lupickle_Types$Reader = (function() {
-  if ((!this.bitmap$0$1)) {
-    this.derive$macro$160$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11(this));
-    this.bitmap$0$1 = true
-  };
-  return this.derive$macro$160$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31 = (function($$outer) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31 = (function($$outer) {
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11: 1,
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype.derive$macro$188__Lupickle_Types$Reader = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$188$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$188$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype.derive$macro$188$lzycompute__p1__Lupickle_Types$Reader = (function() {
+  if ((!this.bitmap$0$1)) {
+    this.derive$macro$188$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11(this));
+    this.bitmap$0$1 = true
+  };
+  return this.derive$macro$188$1
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11: 1,
   O: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4() {
   $c_O.call(this);
-  this.derive$macro$43$1 = null;
+  this.derive$macro$71$1 = null;
   this.bitmap$0$1 = false
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype = new $h_O();
@@ -5867,18 +6252,18 @@ function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$g
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype.derive$macro$43$lzycompute__p1__Lupickle_Types$Reader = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype.derive$macro$71$lzycompute__p1__Lupickle_Types$Reader = (function() {
   if ((!this.bitmap$0$1)) {
-    this.derive$macro$43$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4(this));
+    this.derive$macro$71$1 = new $c_Lupickle_Types$Knot$Reader().init___Lupickle_Types$Knot$__F0($m_Lupickle_default$().Knot__Lupickle_Types$Knot$(), new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4(this));
     this.bitmap$0$1 = true
   };
-  return this.derive$macro$43$1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype.derive$macro$43__Lupickle_Types$Reader = (function() {
-  return ((!this.bitmap$0$1) ? this.derive$macro$43$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$43$1)
+  return this.derive$macro$71$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2 = (function($$outer) {
   return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4.prototype.derive$macro$71__Lupickle_Types$Reader = (function() {
+  return ((!this.bitmap$0$1) ? this.derive$macro$71$lzycompute__p1__Lupickle_Types$Reader() : this.derive$macro$71$1)
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4: 0
@@ -6229,6 +6614,3111 @@ function $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$() {
   return $n_Lru_ispras_lingvodoc_frontend_app_utils_Utils$
 }
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint() {
+  $c_O.call(this);
+  this.stereotype$1 = null;
+  this.description$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.toString__T = (function() {
+  return new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["<", " ", " ", "/>"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().tagName$1, this.stereotype$1, this.description$1]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr = (function(stereotype, description) {
+  this.stereotype$1 = stereotype;
+  this.description$1 = description;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.$$js$exported$prop$description__O = (function() {
+  return this.description$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.init___T__s_Option = (function(stereotype, description) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().stereotypeAttrName$1;
+  var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr().init___T__O(name, stereotype);
+  var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().descrAttrName$1;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.call(this, jsx$1, new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name$1, description));
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.$$js$exported$prop$stereotype__O = (function() {
+  return this.stereotype$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype, "description", {
+  "get": (function() {
+    return this.$$js$exported$prop$description__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype, "stereotype", {
+  "get": (function() {
+    return this.$$js$exported$prop$stereotype__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Constraint: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Constraint", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Constraint: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$() {
+  $c_O.call(this);
+  this.x$23$1 = null;
+  this.tagName$1 = null;
+  this.stereotypeAttrName$1 = null;
+  this.descrAttrName$1 = null;
+  this.x$24$1 = null;
+  this.timeSubdivID$1 = null;
+  this.timeSubdivDescr$1 = null;
+  this.x$25$1 = null;
+  this.symbolSubdivID$1 = null;
+  this.symbolSubdivDescr$1 = null;
+  this.x$26$1 = null;
+  this.symbolAssocID$1 = null;
+  this.symbolAssocDescr$1 = null;
+  this.x$27$1 = null;
+  this.includedInID$1 = null;
+  this.includedInDescr$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$ = this;
+  this.x$23$1 = new $c_T3().init___O__O__O("CONSTRAINT", "STEREOTYPE", "DESCRIPTION");
+  this.tagName$1 = $as_T(this.x$23$1.$$und1$1);
+  this.stereotypeAttrName$1 = $as_T(this.x$23$1.$$und2$1);
+  this.descrAttrName$1 = $as_T(this.x$23$1.$$und3$1);
+  this.x$24$1 = new $c_T2().init___O__O("Time_Subdivision", "Time subdivision of parent annotation's time interval, no time gaps allowed within this interval");
+  this.timeSubdivID$1 = $as_T(this.x$24$1.$$und1$f);
+  this.timeSubdivDescr$1 = $as_T(this.x$24$1.$$und2$f);
+  this.x$25$1 = new $c_T2().init___O__O("Symbolic_Subdivision", "Symbolic subdivision of a parent annotation. Annotations refering to the same parent are ordered");
+  this.symbolSubdivID$1 = $as_T(this.x$25$1.$$und1$f);
+  this.symbolSubdivDescr$1 = $as_T(this.x$25$1.$$und2$f);
+  this.x$26$1 = new $c_T2().init___O__O("Symbolic_Association", "1-1 association with a parent annotation");
+  this.symbolAssocID$1 = $as_T(this.x$26$1.$$und1$f);
+  this.symbolAssocDescr$1 = $as_T(this.x$26$1.$$und2$f);
+  this.x$27$1 = new $c_T2().init___O__O("Included_In", "Time alignable annotations within the parent annotation's time interval, gaps are allowed");
+  this.includedInID$1 = $as_T(this.x$27$1.$$und1$f);
+  this.includedInDescr$1 = $as_T(this.x$27$1.$$und2$f);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$.prototype.predefinedConstraints__sci_Map = (function() {
+  var self = this.timeSubdivID$1;
+  var y = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint().init___T__s_Option(this.timeSubdivID$1, new $c_s_Some().init___O(this.timeSubdivDescr$1));
+  var jsx$3 = new $c_T2().init___O__O(self, y);
+  var self$1 = this.symbolSubdivID$1;
+  var y$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint().init___T__s_Option(this.symbolSubdivID$1, new $c_s_Some().init___O(this.symbolSubdivDescr$1));
+  var jsx$2 = new $c_T2().init___O__O(self$1, y$1);
+  var self$2 = this.symbolAssocID$1;
+  var y$2 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint().init___T__s_Option(this.symbolAssocID$1, new $c_s_Some().init___O(this.symbolAssocDescr$1));
+  var jsx$1 = new $c_T2().init___O__O(self$2, y$2);
+  var self$3 = this.includedInID$1;
+  var y$3 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint().init___T__s_Option(this.includedInID$1, new $c_s_Some().init___O(this.includedInDescr$1));
+  var array = [jsx$3, jsx$2, jsx$1, new $c_T2().init___O__O(self$3, y$3)];
+  var this$10 = new $c_scm_MapBuilder().init___sc_GenMap($m_sci_Map$EmptyMap$());
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    this$10.$$plus$eq__T2__scm_MapBuilder($as_T2(arg1));
+    i = ((1 + i) | 0)
+  };
+  return $as_sci_Map(this$10.elems$1)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Constraint$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery() {
+  $c_O.call(this);
+  this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$pxPerSec$1 = 0.0;
+  this.date$1 = null;
+  this.author$1 = null;
+  this.version$1 = null;
+  this.format$1 = null;
+  this.header$1 = null;
+  this.timeOrder$1 = null;
+  this.constraints$1 = null;
+  this.linguisticTypes$1 = null;
+  this.tiers$1 = null;
+  this.locales$1 = null;
+  this.controlledVocabulary$1 = null;
+  this.lexiconRef$1 = null;
+  this.externalRef$1 = null;
+  this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedTimeSlotID$1 = $m_sjsr_RuntimeLong$().Zero__sjsr_RuntimeLong();
+  this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedAnnotationID$1 = $m_sjsr_RuntimeLong$().Zero__sjsr_RuntimeLong()
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.getTimeAlignableTiers__sci_List = (function() {
+  var this$1 = this.tiers$1;
+  $m_sci_List$();
+  var b = new $c_scm_ListBuffer().init___();
+  var these = this$1;
+  while ((!these.isEmpty__Z())) {
+    var arg1 = these.head__O();
+    var x$4 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(arg1);
+    if (($is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(x$4) !== false)) {
+      b.$$plus$eq__O__scm_ListBuffer(arg1)
+    };
+    these = $as_sci_List(these.tail__O())
+  };
+  var this$4 = b.toList__sci_List();
+  var f = (function(x$5$2) {
+    var x$5 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(x$5$2);
+    return $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(x$5)
+  });
+  var this$3 = $m_sci_List$();
+  var bf = this$3.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$4 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1$1 = this$4.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$4.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$2 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$2), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b$1 = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$4, bf);
+    var these$1 = this$4;
+    while ((!these$1.isEmpty__Z())) {
+      var arg1$3 = these$1.head__O();
+      b$1.$$plus$eq__O__scm_Builder(f(arg1$3));
+      these$1 = $as_sci_List(these$1.tail__O())
+    };
+    var jsx$1 = b$1.result__O()
+  };
+  return $as_sci_List(jsx$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.tiersToJSArray__sjs_js_Array = (function() {
+  var col = this.tiers$1;
+  if ($is_sjs_js_ArrayOps(col)) {
+    var x2 = $as_sjs_js_ArrayOps(col);
+    return x2.scala$scalajs$js$ArrayOps$$array$f
+  } else if ($is_sjs_js_WrappedArray(col)) {
+    var x3 = $as_sjs_js_WrappedArray(col);
+    return x3.array$6
+  } else {
+    var result = [];
+    var these = col;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      $uI(result.push(arg1));
+      these = $as_sci_List(these.tail__O())
+    };
+    return result
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$getRefTiers__O = (function() {
+  return this.getRefTiers__sci_List()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.init___Lorg_scalajs_jquery_JQuery__D = (function(annotDocXML, pxPerSec) {
+  this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$pxPerSec$1 = pxPerSec;
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().dateAttrName$1;
+  this.date$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(annotDocXML, name, $m_s_None$());
+  var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().authorAttrName$1;
+  this.author$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(annotDocXML, name$1, $m_s_None$());
+  var name$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().versionAttrName$1;
+  this.version$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(annotDocXML, name$2, $m_s_None$());
+  this.format$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(annotDocXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().formatAttrName$1, new $c_s_Some().init___O("2.7"));
+  this.header$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header().init___Lorg_scalajs_jquery_JQuery(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().tagName$1));
+  this.timeOrder$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder().init___Lorg_scalajs_jquery_JQuery(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tagName$1));
+  this.constraints$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().predefinedConstraints__sci_Map();
+  this.linguisticTypes$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().fromXMLs__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery__sci_Map(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().tagName$1), this);
+  this.tiers$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().fromXMLs__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery__sci_List(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().tagName$1), this);
+  this.locales$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$().fromXMLs__Lorg_scalajs_jquery_JQuery__sci_List(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$().tagName$1));
+  this.controlledVocabulary$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2XML__Lorg_scalajs_jquery_JQuery__T(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().controlledVocTagName$1));
+  this.lexiconRef$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2XML__Lorg_scalajs_jquery_JQuery__T(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().lexRefTagName$1));
+  this.externalRef$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2XML__Lorg_scalajs_jquery_JQuery__T(annotDocXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().extRefTagName$1));
+  this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedTimeSlotID$1 = $m_sjsr_RuntimeLong$().Zero__sjsr_RuntimeLong();
+  this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedAnnotationID$1 = $m_sjsr_RuntimeLong$().Zero__sjsr_RuntimeLong();
+  this.reindex__p1__V();
+  this.setPxPerSec__D__sjs_js_Dynamic(this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$pxPerSec$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$meth$fixOrder__O = (function() {
+  this.fixOrder__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$controlledVocabulary__O = (function() {
+  return this.controlledVocabulary$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$tsIDFromNumber__J__T = (function(id) {
+  return ("ts" + id)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$tiers__sci_List__O = (function(x$1) {
+  this.tiers$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.toString__T = (function() {
+  var x = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["|<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n        |", "\n    "])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().annotDocTagName$1, this.content__p1__T(), this.attrsToString__p1__T())]));
+  var this$2 = new $c_sci_StringOps().init___T(x);
+  return $s_sci_StringLike$class__stripMargin__sci_StringLike__C__T(this$2, 124)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$externalRef__O = (function() {
+  return this.externalRef$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$constraints__O = (function() {
+  return this.constraints$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.getRefTiers__sci_List = (function() {
+  var this$1 = this.tiers$1;
+  $m_sci_List$();
+  var b = new $c_scm_ListBuffer().init___();
+  var these = this$1;
+  while ((!these.isEmpty__Z())) {
+    var arg1 = these.head__O();
+    var x$6 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(arg1);
+    if (($is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(x$6) !== false)) {
+      b.$$plus$eq__O__scm_ListBuffer(arg1)
+    };
+    these = $as_sci_List(these.tail__O())
+  };
+  var this$4 = b.toList__sci_List();
+  var f = (function(x$7$2) {
+    var x$7 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(x$7$2);
+    return $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(x$7)
+  });
+  var this$3 = $m_sci_List$();
+  var bf = this$3.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$4 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1$1 = this$4.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$4.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$2 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$2), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b$1 = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$4, bf);
+    var these$1 = this$4;
+    while ((!these$1.isEmpty__Z())) {
+      var arg1$3 = these$1.head__O();
+      b$1.$$plus$eq__O__scm_Builder(f(arg1$3));
+      these$1 = $as_sci_List(these$1.tail__O())
+    };
+    var jsx$1 = b$1.result__O()
+  };
+  return $as_sci_List(jsx$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.getTierByID__T__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier = (function(id) {
+  try {
+    var this$1 = this.tiers$1;
+    $m_sci_List$();
+    var b = new $c_scm_ListBuffer().init___();
+    var these = this$1;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      var x$3 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(arg1);
+      var attr = x$3.tierID$1;
+      if ((($as_T(attr.value$1) === id) !== false)) {
+        b.$$plus$eq__O__scm_ListBuffer(arg1)
+      };
+      these = $as_sci_List(these.tail__O())
+    };
+    return $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(b.toList__sci_List().head__O())
+  } catch (e) {
+    if ($is_ju_NoSuchElementException(e)) {
+      $as_ju_NoSuchElementException(e);
+      throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Tier with id ", " not found"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([id])))
+    } else {
+      throw e
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.reindex__p1__V = (function() {
+  var elem = $m_sci_Map$EmptyMap$();
+  var oldTimeSlotIDsToNew = new $c_sr_ObjectRef().init___O(elem);
+  var jsx$3 = this.timeOrder$1;
+  var this$3 = this.timeOrder$1.timeSlots$1;
+  var p = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(check$ifrefutable$1$2) {
+    var check$ifrefutable$1 = $as_T2(check$ifrefutable$1$2);
+    return (check$ifrefutable$1 !== null)
+  }));
+  var jsx$2 = new $c_sc_TraversableLike$WithFilter().init___sc_TraversableLike__F1(this$3, p);
+  var jsx$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, oldTimeSlotIDsToNew$1) {
+    return (function(x$9$2) {
+      var x$9 = $as_T2(x$9$2);
+      if ((x$9 !== null)) {
+        var id = $as_T(x$9.$$und1$f);
+        var value = $as_s_Option(x$9.$$und2$f);
+        var b = arg$outer.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedTimeSlotID$1;
+        var bhi = b.hi$2;
+        var lo = ((1 + b.lo$2) | 0);
+        var hi = ((lo === 0) ? ((1 + bhi) | 0) : bhi);
+        arg$outer.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedTimeSlotID$1 = new $c_sjsr_RuntimeLong().init___I__I(lo, hi);
+        var newTimeSlot = arg$outer.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$tsIDFromNumber__J__T(arg$outer.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedTimeSlotID$1);
+        oldTimeSlotIDsToNew$1.elem$1 = $as_sci_Map(oldTimeSlotIDsToNew$1.elem$1).$$plus__T2__sci_Map(new $c_T2().init___O__O(id, newTimeSlot));
+        return new $c_T2().init___O__O(newTimeSlot, value)
+      } else {
+        throw new $c_s_MatchError().init___O(x$9)
+      }
+    })
+  })(this, oldTimeSlotIDsToNew));
+  var this$7 = $m_sci_Map$();
+  jsx$3.timeSlots$1 = $as_sci_Map(jsx$2.map__F1__scg_CanBuildFrom__O(jsx$1, new $c_scg_GenMapFactory$MapCanBuildFrom().init___scg_GenMapFactory(this$7)));
+  var this$9 = this.getTimeAlignableTiers__sci_List();
+  var f = (function(x$10$2) {
+    var x$10 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(x$10$2);
+    return x$10.annotations__sci_List()
+  });
+  var this$8 = $m_sci_List$();
+  var bf = this$8.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$9 === $m_sci_Nil$())) {
+      var jsx$4 = $m_sci_Nil$()
+    } else {
+      var rest = this$9;
+      var found = new $c_sr_BooleanRef().init___Z(false);
+      var h = new $c_sr_ObjectRef().init___O(null);
+      var t = new $c_sr_ObjectRef().init___O(null);
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1 = rest.head__O();
+        $as_sc_GenTraversableOnce(f(arg1)).seq__sc_TraversableOnce().foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, found$1, h$1, t$1) {
+          return (function(b$2) {
+            if ((!found$1.elem$1)) {
+              h$1.elem$1 = new $c_sci_$colon$colon().init___O__sci_List(b$2, $m_sci_Nil$());
+              t$1.elem$1 = $as_sci_$colon$colon(h$1.elem$1);
+              found$1.elem$1 = true
+            } else {
+              var nx = new $c_sci_$colon$colon().init___O__sci_List(b$2, $m_sci_Nil$());
+              $as_sci_$colon$colon(t$1.elem$1).tl$5 = nx;
+              t$1.elem$1 = nx
+            }
+          })
+        })(this$9, found, h, t)));
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$4 = ((!found.elem$1) ? $m_sci_Nil$() : $as_sci_$colon$colon(h.elem$1))
+    }
+  } else {
+    $m_sci_List$();
+    var b$1 = new $c_scm_ListBuffer().init___();
+    var these = this$9;
+    while ((!these.isEmpty__Z())) {
+      var arg1$1 = these.head__O();
+      var xs = $as_sc_GenTraversableOnce(f(arg1$1)).seq__sc_TraversableOnce();
+      b$1.$$plus$plus$eq__sc_TraversableOnce__scm_ListBuffer(xs);
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$4 = b$1.toList__sci_List()
+  };
+  var this$14 = $as_sci_List(jsx$4);
+  var these$1 = this$14;
+  while ((!these$1.isEmpty__Z())) {
+    var arg1$2 = these$1.head__O();
+    var annotation = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(arg1$2);
+    annotation.timeSlotRef1$2.value$1 = $as_sci_Map(oldTimeSlotIDsToNew.elem$1).apply__O__O(annotation.timeSlotRef1$2.value$1);
+    annotation.timeSlotRef2$2.value$1 = $as_sci_Map(oldTimeSlotIDsToNew.elem$1).apply__O__O(annotation.timeSlotRef2$2.value$1);
+    these$1 = $as_sci_List(these$1.tail__O())
+  };
+  var elem$1 = $m_sci_Map$EmptyMap$();
+  var elem$1$1 = null;
+  elem$1$1 = elem$1;
+  var this$17 = this.tiers$1;
+  var these$2 = this$17;
+  while ((!these$2.isEmpty__Z())) {
+    var v1 = these$2.head__O();
+    var x$11 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(v1);
+    var this$18 = x$11.annotations__sci_List();
+    var these$3 = this$18;
+    while ((!these$3.isEmpty__Z())) {
+      var arg1$3 = these$3.head__O();
+      var annotation$1 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(arg1$3);
+      var b$3 = this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedAnnotationID$1;
+      var bhi$1 = b$3.hi$2;
+      var lo$1 = ((1 + b$3.lo$2) | 0);
+      var hi$1 = ((lo$1 === 0) ? ((1 + bhi$1) | 0) : bhi$1);
+      this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedAnnotationID$1 = new $c_sjsr_RuntimeLong().init___I__I(lo$1, hi$1);
+      var newAnnotationID = this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$annotIDFromNumber__J__T(this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$lastUsedAnnotationID$1);
+      var jsx$5 = $as_sci_Map(elem$1$1);
+      var self = annotation$1.annotationID$1.value$1;
+      elem$1$1 = jsx$5.$$plus__T2__sci_Map(new $c_T2().init___O__O(self, newAnnotationID));
+      annotation$1.annotationID$1.value$1 = newAnnotationID;
+      these$3 = $as_sci_List(these$3.tail__O())
+    };
+    these$2 = $as_sci_List(these$2.tail__O())
+  };
+  var this$23 = this.getRefTiers__sci_List();
+  var f$1 = (function(x$12$2) {
+    var x$12 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(x$12$2);
+    return x$12.annotations__sci_List()
+  });
+  var this$22 = $m_sci_List$();
+  var bf$1 = this$22.ReusableCBFInstance$2;
+  if ((bf$1 === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$23 === $m_sci_Nil$())) {
+      var jsx$6 = $m_sci_Nil$()
+    } else {
+      var rest$1 = this$23;
+      var found$2 = new $c_sr_BooleanRef().init___Z(false);
+      var h$2 = new $c_sr_ObjectRef().init___O(null);
+      var t$2 = new $c_sr_ObjectRef().init___O(null);
+      while ((rest$1 !== $m_sci_Nil$())) {
+        var arg1$4 = rest$1.head__O();
+        $as_sc_GenTraversableOnce(f$1(arg1$4)).seq__sc_TraversableOnce().foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this$1, found$3, h$3, t$3) {
+          return (function(b$2$1) {
+            if ((!found$3.elem$1)) {
+              h$3.elem$1 = new $c_sci_$colon$colon().init___O__sci_List(b$2$1, $m_sci_Nil$());
+              t$3.elem$1 = $as_sci_$colon$colon(h$3.elem$1);
+              found$3.elem$1 = true
+            } else {
+              var nx$1 = new $c_sci_$colon$colon().init___O__sci_List(b$2$1, $m_sci_Nil$());
+              $as_sci_$colon$colon(t$3.elem$1).tl$5 = nx$1;
+              t$3.elem$1 = nx$1
+            }
+          })
+        })(this$23, found$2, h$2, t$2)));
+        rest$1 = $as_sci_List(rest$1.tail__O())
+      };
+      var jsx$6 = ((!found$2.elem$1) ? $m_sci_Nil$() : $as_sci_$colon$colon(h$2.elem$1))
+    }
+  } else {
+    $m_sci_List$();
+    var b$4 = new $c_scm_ListBuffer().init___();
+    var these$4 = this$23;
+    while ((!these$4.isEmpty__Z())) {
+      var arg1$5 = these$4.head__O();
+      var xs$1 = $as_sc_GenTraversableOnce(f$1(arg1$5)).seq__sc_TraversableOnce();
+      b$4.$$plus$plus$eq__sc_TraversableOnce__scm_ListBuffer(xs$1);
+      these$4 = $as_sci_List(these$4.tail__O())
+    };
+    var jsx$6 = b$4.toList__sci_List()
+  };
+  var this$28 = $as_sci_List(jsx$6);
+  var these$5 = this$28;
+  while ((!these$5.isEmpty__Z())) {
+    var v1$1 = these$5.head__O();
+    var annotation$2 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(v1$1);
+    annotation$2.annotationRef$2.value$1 = $as_sci_Map(elem$1$1).apply__O__O(annotation$2.annotationRef$2.value$1);
+    if ($is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(annotation$2)) {
+      var ssAnnotation = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(annotation$2);
+      var this$29 = ssAnnotation.previousAnnotation$3.value$1;
+      if ((!this$29.isEmpty__Z())) {
+        var arg1$6 = this$29.get__O();
+        var v = $as_T(arg1$6);
+        ssAnnotation.previousAnnotation$3.value$1 = new $c_s_Some().init___O($as_sci_Map(elem$1$1).apply__O__O(v))
+      }
+    };
+    these$5 = $as_sci_List(these$5.tail__O())
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$version__O = (function() {
+  return this.version$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.content__p1__T = (function() {
+  var jsx$7 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", " ", " ", " "]));
+  var jsx$6 = this.header$1;
+  var jsx$5 = this.timeOrder$1;
+  var this$1 = this.tiers$1;
+  var jsx$4 = $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this$1, "", "\n", "");
+  var this$2 = this.linguisticTypes$1;
+  var this$3 = new $c_sc_MapLike$DefaultValuesIterable().init___sc_MapLike(this$2);
+  var jsx$3 = jsx$7.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$6, jsx$5, jsx$4, $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this$3, "", "\n", "")]));
+  var jsx$2 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", ""]));
+  var this$4 = this.locales$1;
+  var jsx$1 = $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this$4, "", "\n", "");
+  var this$5 = this.constraints$1;
+  var this$6 = new $c_sc_MapLike$DefaultValuesIterable().init___sc_MapLike(this$5);
+  return ((("" + jsx$3) + jsx$2.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$1, $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this$6, "", "\n", "")]))) + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", "  ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.controlledVocabulary$1, this.lexiconRef$1, this.externalRef$1])))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.setPxPerSec__D__sjs_js_Dynamic = (function(newPxPerSec) {
+  this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$pxPerSec$1 = newPxPerSec;
+  var this$2 = this.tiers$1;
+  var f = (function(x$1$2) {
+    var x$1 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(x$1$2);
+    return x$1.annotations__sci_List()
+  });
+  var this$1 = $m_sci_List$();
+  var bf = this$1.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$2 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var rest = this$2;
+      var found = new $c_sr_BooleanRef().init___Z(false);
+      var h = new $c_sr_ObjectRef().init___O(null);
+      var t = new $c_sr_ObjectRef().init___O(null);
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1 = rest.head__O();
+        $as_sc_GenTraversableOnce(f(arg1)).seq__sc_TraversableOnce().foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, found$1, h$1, t$1) {
+          return (function(b$2) {
+            if ((!found$1.elem$1)) {
+              h$1.elem$1 = new $c_sci_$colon$colon().init___O__sci_List(b$2, $m_sci_Nil$());
+              t$1.elem$1 = $as_sci_$colon$colon(h$1.elem$1);
+              found$1.elem$1 = true
+            } else {
+              var nx = new $c_sci_$colon$colon().init___O__sci_List(b$2, $m_sci_Nil$());
+              $as_sci_$colon$colon(t$1.elem$1).tl$5 = nx;
+              t$1.elem$1 = nx
+            }
+          })
+        })(this$2, found, h, t)));
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = ((!found.elem$1) ? $m_sci_Nil$() : $as_sci_$colon$colon(h.elem$1))
+    }
+  } else {
+    $m_sci_List$();
+    var b = new $c_scm_ListBuffer().init___();
+    var these = this$2;
+    while ((!these.isEmpty__Z())) {
+      var arg1$1 = these.head__O();
+      var xs = $as_sc_GenTraversableOnce(f(arg1$1)).seq__sc_TraversableOnce();
+      b.$$plus$plus$eq__sc_TraversableOnce__scm_ListBuffer(xs);
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.toList__sci_List()
+  };
+  var this$7 = $as_sci_List(jsx$1);
+  var these$1 = this$7;
+  while ((!these$1.isEmpty__Z())) {
+    var arg1$2 = these$1.head__O();
+    var x$2 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(arg1$2);
+    x$2.setPxPerSec__D__V(this.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$pxPerSec$1);
+    these$1 = $as_sci_List(these$1.tail__O())
+  };
+  return this.toJS__sjs_js_Dynamic()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$author__O = (function() {
+  return this.author$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.getLinguisticType__T__Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType = (function(ltRef) {
+  var jsx$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Linguistic type ", " not found; loaded linguistic types are "])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([ltRef]));
+  var this$1 = this.linguisticTypes$1;
+  var this$3 = new $c_sc_MapLike$DefaultValuesIterable().init___sc_MapLike(this$1);
+  var this$2 = $m_sc_Iterable$();
+  var bf = this$2.ReusableCBFInstance$2;
+  var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$3, bf);
+  var this$4 = this$3.$$outer$f.valuesIterator__sc_Iterator();
+  while (this$4.hasNext__Z()) {
+    var arg1 = this$4.next__O();
+    var x$8 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(arg1);
+    b.$$plus$eq__O__scm_Builder($as_T(x$8.linguisticTypeID$1.value$1))
+  };
+  var errorMsg = (("" + jsx$1) + $as_sc_TraversableOnce(b.result__O()).mkString__T__T(", "));
+  try {
+    return $as_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(this.linguisticTypes$1.apply__O__O(ltRef))
+  } catch (e) {
+    if ($is_ju_NoSuchElementException(e)) {
+      $as_ju_NoSuchElementException(e);
+      throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T(errorMsg)
+    } else {
+      throw e
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$meth$getTimeSlotValue__T__O = (function(id) {
+  return this.timeOrder$1.getTimeSlotValue__T__J(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$locales__O = (function() {
+  return this.locales$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$lexiconRef__O = (function() {
+  return this.lexiconRef$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$meth$getTierByID__T__O = (function(id) {
+  return this.getTierByID__T__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.fixOrder__V = (function() {
+  var this$2 = this.tiers$1;
+  var this$1 = $m_sci_List$();
+  var bf = this$1.ReusableCBFInstance$2;
+  var this$3 = $as_sci_List($s_sc_IterableLike$class__zipWithIndex__sc_IterableLike__scg_CanBuildFrom__O(this$2, bf));
+  var these = this$3;
+  while ((!these.isEmpty__Z())) {
+    var arg1 = these.head__O();
+    var x0$1 = $as_T2(arg1);
+    if ((x0$1 !== null)) {
+      var tier = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(x0$1.$$und1$f);
+      var index = $uI(x0$1.$$und2$f);
+      tier.index$1 = index
+    } else {
+      throw new $c_s_MatchError().init___O(x0$1)
+    };
+    these = $as_sci_List(these.tail__O())
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$timeOrder__O = (function() {
+  return this.timeOrder$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.toJS__sjs_js_Dynamic = (function() {
+  var document = new $c_scm_HashMap().init___();
+  var this$2 = this.tiers$1;
+  var value = $s_sc_LinearSeqOptimized$class__length__sc_LinearSeqOptimized__I(this$2);
+  document.put__O__O__s_Option("numberOfTiers", value);
+  this.fixOrder__V();
+  var this$8 = $as_scm_MapLike($m_scm_Map$().apply__sc_Seq__sc_GenMap($m_sci_Nil$()));
+  var this$7 = this.tiers$1;
+  var f = (function(tier$2) {
+    var tier = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(tier$2);
+    var attr = tier.tierID$1;
+    var self = $as_T(attr.value$1);
+    var y = tier.toJS__sjs_js_Dynamic();
+    return new $c_T2().init___O__O(self, y)
+  });
+  var this$6 = $m_sci_List$();
+  var bf = this$6.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$7 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$7.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$7.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$7, bf);
+    var these = this$7;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  var xs = $as_sc_TraversableOnce(jsx$1).toMap__s_Predef$$less$colon$less__sci_Map($m_s_Predef$().singleton$und$less$colon$less$2);
+  var this$9 = $as_scm_Map($as_scg_Growable(this$8.empty__sc_Map()).$$plus$plus$eq__sc_TraversableOnce__scg_Growable(this$8));
+  var tiersJS = $as_scm_Map($s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this$9, xs));
+  var this$11 = $m_sjs_js_JSConverters$JSRichGenMap$();
+  var result = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
+  tiersJS.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, result$1) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_T2(x0$1$2);
+      if ((x0$1 !== null)) {
+        var key = $as_T(x0$1.$$und1$f);
+        var value$1 = x0$1.$$und2$f;
+        result$1[key] = value$1
+      } else {
+        throw new $c_s_MatchError().init___O(x0$1)
+      }
+    })
+  })(this$11, result)));
+  document.put__O__O__s_Option("tiers", result);
+  var result$2 = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
+  var iterTable = document.table$5;
+  var idx = $s_scm_HashTable$class__scala$collection$mutable$HashTable$$lastPopulatedIndex__scm_HashTable__I(document);
+  var es = iterTable.u[idx];
+  while ((es !== null)) {
+    var arg1$3 = es;
+    var e = $as_scm_DefaultEntry(arg1$3);
+    var _1 = e.key$1;
+    var _2 = e.value$1;
+    var key$1 = $as_T(_1);
+    result$2[key$1] = _2;
+    es = $as_scm_HashEntry(es.next$1);
+    while (((es === null) && (idx > 0))) {
+      idx = (((-1) + idx) | 0);
+      es = iterTable.u[idx]
+    }
+  };
+  return result$2
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$getTimeAlignableTiers__O = (function() {
+  return this.getTimeAlignableTiers__sci_List()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$meth$getLinguisticType__T__O = (function(ltRef) {
+  return this.getLinguisticType__T__Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(ltRef)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.ru$ispras$lingvodoc$frontend$extras$elan$ELANDocumentJquery$$annotIDFromNumber__J__T = (function(id) {
+  return ("a" + id)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$tiers__O = (function() {
+  return this.tiers$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$toJS__O = (function() {
+  return this.toJS__sjs_js_Dynamic()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$meth$setPxPerSec__D__O = (function(newPxPerSec) {
+  return this.setPxPerSec__D__sjs_js_Dynamic(newPxPerSec)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$date__O = (function() {
+  return this.date$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$tiersToJSArray__O = (function() {
+  return this.tiersToJSArray__sjs_js_Array()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$format__O = (function() {
+  return this.format$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.attrsToString__p1__T = (function() {
+  return new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", " ", " ", " ", " ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.date$1, this.author$1, this.version$1, this.format$1, $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().xmlnsXsi$1, $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().schemaLoc$1]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$$js$exported$prop$header__O = (function() {
+  return this.header$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "tiersToJSArray", {
+  "get": (function() {
+    return this.$$js$exported$prop$tiersToJSArray__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "toJS", {
+  "get": (function() {
+    return this.$$js$exported$prop$toJS__O()
+  }),
+  "enumerable": true
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.fixOrder = (function() {
+  return this.$$js$exported$meth$fixOrder__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.getLinguisticType = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$getLinguisticType__T__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.getTimeSlotValue = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$getTimeSlotValue__T__O(prep0)
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "getRefTiers", {
+  "get": (function() {
+    return this.$$js$exported$prop$getRefTiers__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "getTimeAlignableTiers", {
+  "get": (function() {
+    return this.$$js$exported$prop$getTimeAlignableTiers__O()
+  }),
+  "enumerable": true
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.getTierByID = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$getTierByID__T__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.setPxPerSec = (function(arg$1) {
+  var prep0 = $uD(arg$1);
+  return this.$$js$exported$meth$setPxPerSec__D__O(prep0)
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "externalRef", {
+  "get": (function() {
+    return this.$$js$exported$prop$externalRef__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "lexiconRef", {
+  "get": (function() {
+    return this.$$js$exported$prop$lexiconRef__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "controlledVocabulary", {
+  "get": (function() {
+    return this.$$js$exported$prop$controlledVocabulary__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "locales", {
+  "get": (function() {
+    return this.$$js$exported$prop$locales__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "tiers", {
+  "set": (function(arg$1) {
+    var prep0 = $as_sci_List(arg$1);
+    this.$$js$exported$prop$tiers__sci_List__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$tiers__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "constraints", {
+  "get": (function() {
+    return this.$$js$exported$prop$constraints__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "timeOrder", {
+  "get": (function() {
+    return this.$$js$exported$prop$timeOrder__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "header", {
+  "get": (function() {
+    return this.$$js$exported$prop$header__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "format", {
+  "get": (function() {
+    return this.$$js$exported$prop$format__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "version", {
+  "get": (function() {
+    return this.$$js$exported$prop$version__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "author", {
+  "get": (function() {
+    return this.$$js$exported$prop$author__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype, "date", {
+  "get": (function() {
+    return this.$$js$exported$prop$date__O()
+  }),
+  "enumerable": true
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.ELANDocumentJquery"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.ELANDocumentJquery;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.ELANDocumentJquery", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$() {
+  $c_O.call(this);
+  this.annotDocTagName$1 = null;
+  this.x$13$1 = null;
+  this.dateAttrName$1 = null;
+  this.authorAttrName$1 = null;
+  this.versionAttrName$1 = null;
+  this.formatAttrName$1 = null;
+  this.x$14$1 = null;
+  this.controlledVocTagName$1 = null;
+  this.lexRefTagName$1 = null;
+  this.extRefTagName$1 = null;
+  this.xmlnsXsi$1 = null;
+  this.schemaLoc$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$ = this;
+  this.annotDocTagName$1 = "ANNOTATION_DOCUMENT";
+  this.x$13$1 = new $c_T4().init___O__O__O__O("DATE", "AUTHOR", "VERSION", "FORMAT");
+  this.dateAttrName$1 = $as_T(this.x$13$1.$$und1$1);
+  this.authorAttrName$1 = $as_T(this.x$13$1.$$und2$1);
+  this.versionAttrName$1 = $as_T(this.x$13$1.$$und3$1);
+  this.formatAttrName$1 = $as_T(this.x$13$1.$$und4$1);
+  this.x$14$1 = new $c_T3().init___O__O__O("CONTROLLED_VOCABULARY", "LEXICON_REF", "EXTERNAL_REF");
+  this.controlledVocTagName$1 = $as_T(this.x$14$1.$$und1$1);
+  this.lexRefTagName$1 = $as_T(this.x$14$1.$$und2$1);
+  this.extRefTagName$1 = $as_T(this.x$14$1.$$und3$1);
+  this.xmlnsXsi$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr().init___T__O("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+  this.schemaLoc$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr().init___T__O("xsi:noNamespaceSchemaLocation", "http://www.mpi.nl/tools/elan/EAFv2.7.xsd");
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$.prototype.apply__T__D__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(xmlString, pxPerSec) {
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery().init___Lorg_scalajs_jquery_JQuery__D((0, $m_Lorg_scalajs_jquery_package$().jQuery$1)($m_Lorg_scalajs_jquery_package$().jQuery$1.parseXML(xmlString)).find(this.annotDocTagName$1), pxPerSec)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.ELANDocumentJquery$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header() {
+  $c_O.call(this);
+  this.mediaDescriptor$1 = null;
+  this.linkedFileDescriptor$1 = null;
+  this.props$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Header() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.toString__T = (function() {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().tagName$1, this.content__p1__T(), $m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().timeUnits$1.toString__T())
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.$$js$exported$prop$props__O = (function() {
+  return this.props$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.init___Lorg_scalajs_jquery_JQuery = (function(headerXML) {
+  var value = headerXML.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().mfAttrName$1);
+  if ((value !== (void 0))) {
+    $as_T(value);
+    var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " attribute is deprecated and ignored by ELAN"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().mfAttrName$1]));
+    jsx$1.warn(s)
+  };
+  var value$1 = headerXML.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().timeUnits$1.name$1);
+  if ((value$1 === (void 0))) {
+    var jsx$2 = true
+  } else {
+    var x$1 = $as_T(value$1);
+    var jsx$2 = (!(x$1 === $m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().timeUnits$1.value$1))
+  };
+  if (jsx$2) {
+    var value$2 = value$1
+  } else {
+    var value$2 = (void 0)
+  };
+  if ((value$2 !== (void 0))) {
+    $as_T(value$2);
+    var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " are always ", " in ELAN"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().timeUnits$1.name$1, $m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().timeUnits$1.value$1]));
+    jsx$3.warn(s$1)
+  };
+  this.mediaDescriptor$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().fromMultiple__Lorg_scalajs_jquery_JQuery__s_Option(headerXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().tagName$1));
+  this.linkedFileDescriptor$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().fromMultiple__Lorg_scalajs_jquery_JQuery__s_Option(headerXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().tagName$1));
+  this.props$1 = this.parseProps__p1__sci_List__sci_Map($m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(headerXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().propTagName$1)));
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.content__p1__T = (function() {
+  var jsx$2 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", " ", ""]));
+  var this$1 = this.mediaDescriptor$1;
+  var jsx$1 = (this$1.isEmpty__Z() ? "" : this$1.get__O());
+  var this$2 = this.linkedFileDescriptor$1;
+  return jsx$2.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$1, (this$2.isEmpty__Z() ? "" : this$2.get__O()), this.propsToString__p1__T()]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.$$js$exported$prop$linkedFileDescriptor__O = (function() {
+  return this.linkedFileDescriptor$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.$$js$exported$prop$mediaDescriptor__O = (function() {
+  return this.mediaDescriptor$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.propsToString__p1__T = (function() {
+  var this$3 = this.props$1;
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x0$1$2) {
+    var x0$1 = $as_T2(x0$1$2);
+    if ((x0$1 !== null)) {
+      var k = $as_T(x0$1.$$und1$f);
+      var v = $as_T(x0$1.$$und2$f);
+      var jsx$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$();
+      var jsx$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().propTagName$1;
+      var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().propAttrName$1;
+      return jsx$2.wrap__T__T__T__T(jsx$1, v, new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr().init___T__O(name, k).toString__T())
+    } else {
+      throw new $c_s_MatchError().init___O(x0$1)
+    }
+  }));
+  var this$2 = $m_sci_Iterable$();
+  var bf = this$2.ReusableCBFInstance$2;
+  return $as_sc_TraversableOnce($s_sc_TraversableLike$class__map__sc_TraversableLike__F1__scg_CanBuildFrom__O(this$3, f, bf)).mkString__T__T("\n")
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.parseProps__p1__sci_List__sci_Map = (function(propXMLs) {
+  var f = (function(propXML$2) {
+    var value = propXML$2.attr("NAME");
+    if ((value === (void 0))) {
+      throw new $c_ju_NoSuchElementException().init___T("undefined.get")
+    };
+    var y = $as_T(propXML$2.text());
+    return new $c_T2().init___O__O(value, y)
+  });
+  var this$6 = $m_sci_List$();
+  var bf = this$6.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((propXMLs === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = propXMLs.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(propXMLs.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(propXMLs, bf);
+    var these = propXMLs;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  return $as_sc_TraversableOnce(jsx$1).toMap__s_Predef$$less$colon$less__sci_Map($m_s_Predef$().singleton$und$less$colon$less$2)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.$$js$exported$prop$props__sci_Map__O = (function(x$1) {
+  this.props$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype, "props", {
+  "set": (function(arg$1) {
+    var prep0 = $as_sci_Map(arg$1);
+    this.$$js$exported$prop$props__sci_Map__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$props__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype, "linkedFileDescriptor", {
+  "get": (function() {
+    return this.$$js$exported$prop$linkedFileDescriptor__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype, "mediaDescriptor", {
+  "get": (function() {
+    return this.$$js$exported$prop$mediaDescriptor__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Header = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Header: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Header", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Header: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Header;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$() {
+  $c_O.call(this);
+  this.x$2$1 = null;
+  this.tagName$1 = null;
+  this.mfAttrName$1 = null;
+  this.propTagName$1 = null;
+  this.propAttrName$1 = null;
+  this.timeUnits$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Header$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Header$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_Header$ = this;
+  this.x$2$1 = new $c_T4().init___O__O__O__O("HEADER", "MEDIA_FILE", "PROPERTY", "NAME");
+  this.tagName$1 = $as_T(this.x$2$1.$$und1$1);
+  this.mfAttrName$1 = $as_T(this.x$2$1.$$und2$1);
+  this.propTagName$1 = $as_T(this.x$2$1.$$und3$1);
+  this.propAttrName$1 = $as_T(this.x$2$1.$$und4$1);
+  this.timeUnits$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr().init___T__O("TIME_UNITS", "milliseconds");
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Header$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Header$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Header$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Header$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Header$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_Header$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_Header$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_Header$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_Header$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Header$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_Header$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType() {
+  $c_O.call(this);
+  this.linguisticTypeID$1 = null;
+  this.timeAlignable$1 = null;
+  this.constraints$1 = null;
+  this.graphicReferences$1 = null;
+  this.controlledVocabularyRef$1 = null;
+  this.extRef$1 = null;
+  this.lexiconRef$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(linguisticTypeXML, owner) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().ltIDAttrName$1;
+  var jsx$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(linguisticTypeXML, name, $m_s_None$());
+  var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().timeAlignAttrName$1;
+  var value = linguisticTypeXML.attr(name$1);
+  var this$6 = ((value === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value));
+  if (this$6.isEmpty__Z()) {
+    var valOpt = $m_s_None$()
+  } else {
+    var arg1 = this$6.get__O();
+    var x$4 = $as_T(arg1);
+    var this$8 = new $c_sci_StringOps().init___T(x$4);
+    var $$this = this$8.repr$1;
+    var valOpt = new $c_s_Some().init___O($s_sci_StringLike$class__parseBoolean__p0__sci_StringLike__T__Z(this$8, $$this))
+  };
+  var jsx$2 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name$1, valOpt);
+  var jsx$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(linguisticTypeXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().constraintsAttrName$1);
+  var name$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().graphicReferencesAttrName$1;
+  var value$1 = linguisticTypeXML.attr(name$2);
+  var this$15 = ((value$1 === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value$1));
+  if (this$15.isEmpty__Z()) {
+    var valOpt$1 = $m_s_None$()
+  } else {
+    var arg1$1 = this$15.get__O();
+    var x$4$1 = $as_T(arg1$1);
+    var this$17 = new $c_sci_StringOps().init___T(x$4$1);
+    var $$this$1 = this$17.repr$1;
+    var valOpt$1 = new $c_s_Some().init___O($s_sci_StringLike$class__parseBoolean__p0__sci_StringLike__T__Z(this$17, $$this$1))
+  };
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.call(this, jsx$3, jsx$2, jsx$1, new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name$2, valOpt$1), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(linguisticTypeXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().controlledVocRefAttrName$1), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(linguisticTypeXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().extRefAttrName$1), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(linguisticTypeXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().lexRefAttrName$1), owner);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$linguisticTypeID__O = (function() {
+  return this.linguisticTypeID$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$getStereotypeID__O = (function() {
+  var attr = this.constraints$1;
+  return attr.value$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.ru$ispras$lingvodoc$frontend$extras$elan$LinguisticType$$isTimeAlignable__Z = (function() {
+  var x1 = this.constraints$1.value$1;
+  matchEnd19: {
+    var jsx$1;
+    var x = $m_s_None$();
+    if ((x === x1)) {
+      var jsx$1 = true;
+      break matchEnd19
+    };
+    if ($is_s_Some(x1)) {
+      var x2 = $as_s_Some(x1);
+      var p3 = $as_T(x2.x$2);
+      if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().timeSubdivID$1 === p3)) {
+        var jsx$1 = true;
+        break matchEnd19
+      }
+    };
+    if ($is_s_Some(x1)) {
+      var x4 = $as_s_Some(x1);
+      var p5 = $as_T(x4.x$2);
+      if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().includedInID$1 === p5)) {
+        var jsx$1 = true;
+        break matchEnd19
+      }
+    };
+    var jsx$1 = false
+  };
+  if (jsx$1) {
+    var result = true
+  } else {
+    matchEnd25: {
+      var jsx$2;
+      if ($is_s_Some(x1)) {
+        var x6 = $as_s_Some(x1);
+        var p7 = $as_T(x6.x$2);
+        if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().symbolAssocID$1 === p7)) {
+          var jsx$2 = true;
+          break matchEnd25
+        }
+      };
+      if ($is_s_Some(x1)) {
+        var x8 = $as_s_Some(x1);
+        var p9 = $as_T(x8.x$2);
+        if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().symbolSubdivID$1 === p9)) {
+          var jsx$2 = true;
+          break matchEnd25
+        }
+      };
+      var jsx$2 = false
+    };
+    if ((!jsx$2)) {
+      throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Wrong constraint id ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([x1])))
+    };
+    var result = false
+  };
+  return result
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.toString__T = (function() {
+  return (("" + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["<", " ", " ", " ", " ", " "])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().tagName$1, this.linguisticTypeID$1, this.timeAlignable$1, this.constraints$1, this.graphicReferences$1]))) + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", " ", "/>"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.controlledVocabularyRef$1, this.extRef$1, this.lexiconRef$1])))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$constraints__O = (function() {
+  return this.constraints$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$lexiconRef__O = (function() {
+  return this.lexiconRef$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$extRef__O = (function() {
+  return this.extRef$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$controlledVocabularyRef__O = (function() {
+  return this.controlledVocabularyRef$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$graphicReferences__O = (function() {
+  return this.graphicReferences$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(linguisticTypeID, timeAlignable, constraints, graphicReferences, controlledVocabularyRef, extRef, lexiconRef, owner) {
+  this.linguisticTypeID$1 = linguisticTypeID;
+  this.timeAlignable$1 = timeAlignable;
+  this.constraints$1 = constraints;
+  this.graphicReferences$1 = graphicReferences;
+  this.controlledVocabularyRef$1 = controlledVocabularyRef;
+  this.extRef$1 = extRef;
+  this.lexiconRef$1 = lexiconRef;
+  var this$4 = constraints.value$1;
+  var this$2 = owner.constraints$1;
+  var this$3 = new $c_sci_MapLike$ImmutableDefaultKeySet().init___sci_MapLike(this$2);
+  var eta$0$1 = $s_sc_SetLike$class__toBuffer__sc_SetLike__scm_Buffer(this$3);
+  if (this$4.isEmpty__Z()) {
+    var this$5 = $m_s_None$()
+  } else {
+    var arg1 = this$4.get__O();
+    var this$5 = new $c_s_Some().init___O(eta$0$1.contains__O__Z(arg1))
+  };
+  if ((!$uZ((this$5.isEmpty__Z() || this$5.get__O())))) {
+    throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Wrong constraint ", " for LT ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([constraints.value$1, linguisticTypeID.value$1])))
+  };
+  var this$7 = timeAlignable.value$1;
+  if ((!this$7.isEmpty__Z())) {
+    var arg1$1 = this$7.get__O();
+    var ta = $uZ(arg1$1);
+    if ((ta !== this.ru$ispras$lingvodoc$frontend$extras$elan$LinguisticType$$isTimeAlignable__Z())) {
+      $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().warn("Ignored TIME_ALIGNABLE value is not consistent with CONSTRAINTS")
+    }
+  };
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$$js$exported$prop$timeAlignable__O = (function() {
+  return this.timeAlignable$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "getStereotypeID", {
+  "get": (function() {
+    return this.$$js$exported$prop$getStereotypeID__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "lexiconRef", {
+  "get": (function() {
+    return this.$$js$exported$prop$lexiconRef__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "extRef", {
+  "get": (function() {
+    return this.$$js$exported$prop$extRef__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "controlledVocabularyRef", {
+  "get": (function() {
+    return this.$$js$exported$prop$controlledVocabularyRef__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "graphicReferences", {
+  "get": (function() {
+    return this.$$js$exported$prop$graphicReferences__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "constraints", {
+  "get": (function() {
+    return this.$$js$exported$prop$constraints__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "timeAlignable", {
+  "get": (function() {
+    return this.$$js$exported$prop$timeAlignable__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype, "linguisticTypeID", {
+  "get": (function() {
+    return this.$$js$exported$prop$linguisticTypeID__O()
+  }),
+  "enumerable": true
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.LinguisticType"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.LinguisticType;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.LinguisticType", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$() {
+  $c_O.call(this);
+  this.x$19$1 = null;
+  this.tagName$1 = null;
+  this.ltIDAttrName$1 = null;
+  this.timeAlignAttrName$1 = null;
+  this.constraintsAttrName$1 = null;
+  this.graphicReferencesAttrName$1 = null;
+  this.x$20$1 = null;
+  this.controlledVocRefAttrName$1 = null;
+  this.extRefAttrName$1 = null;
+  this.lexRefAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$ = this;
+  this.x$19$1 = new $c_T5().init___O__O__O__O__O("LINGUISTIC_TYPE", "LINGUISTIC_TYPE_ID", "TIME_ALIGNABLE", "CONSTRAINTS", "GRAPHIC_REFERENCES");
+  this.tagName$1 = $as_T(this.x$19$1.$$und1$1);
+  this.ltIDAttrName$1 = $as_T(this.x$19$1.$$und2$1);
+  this.timeAlignAttrName$1 = $as_T(this.x$19$1.$$und3$1);
+  this.constraintsAttrName$1 = $as_T(this.x$19$1.$$und4$1);
+  this.graphicReferencesAttrName$1 = $as_T(this.x$19$1.$$und5$1);
+  this.x$20$1 = new $c_T3().init___O__O__O("CONTROLLED_VOCABULARY_REF", "EXT_REF", "LEXICON_REF");
+  this.controlledVocRefAttrName$1 = $as_T(this.x$20$1.$$und1$1);
+  this.extRefAttrName$1 = $as_T(this.x$20$1.$$und2$1);
+  this.lexRefAttrName$1 = $as_T(this.x$20$1.$$und3$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$.prototype.fromXMLs__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery__sci_Map = (function(linguisticTypeXMLs, owner) {
+  var this$4 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(linguisticTypeXMLs);
+  var f = (function(owner$1) {
+    return (function(ltXML$2) {
+      var lt = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(ltXML$2, owner$1);
+      var self = lt.linguisticTypeID$1.value$1;
+      return new $c_T2().init___O__O(self, lt)
+    })
+  })(owner);
+  var this$3 = $m_sci_List$();
+  var bf = this$3.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$4 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$4.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$4.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$4, bf);
+    var these = this$4;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  return $as_sc_TraversableOnce(jsx$1).toMap__s_Predef$$less$colon$less__sci_Map($m_s_Predef$().singleton$und$less$colon$less$2)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.LinguisticType$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor() {
+  $c_O.call(this);
+  this.linkURL$1 = null;
+  this.mimeType$1 = null;
+  this.relativeLinkURL$1 = null;
+  this.timeOrigin$1 = null;
+  this.associatedWith$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$$js$exported$prop$associatedWith__O = (function() {
+  return this.associatedWith$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$$js$exported$prop$mimeType__O = (function() {
+  return this.mimeType$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$$js$exported$meth$join__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor__O = (function(lfd2) {
+  return this.join__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(lfd2)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.toString__T = (function() {
+  return new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["<", " ", " ", " ", " ", " ", "/>"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().tagName$1, this.linkURL$1, this.mimeType$1, this.relativeLinkURL$1, this.timeOrigin$1, this.associatedWith$1]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.init___Lorg_scalajs_jquery_JQuery = (function(lfdXML) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().luAttrName$1;
+  this.linkURL$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(lfdXML, name, $m_s_None$());
+  var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().mtAttrName$1;
+  this.mimeType$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(lfdXML, name$1, $m_s_None$());
+  this.relativeLinkURL$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(lfdXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().rluAttrName$1);
+  var name$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().toAttrName$1;
+  var value = lfdXML.attr(name$2);
+  var this$7 = ((value === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value));
+  if (this$7.isEmpty__Z()) {
+    var valOpt = $m_s_None$()
+  } else {
+    var arg1 = this$7.get__O();
+    var x$4 = $as_T(arg1);
+    var this$9 = new $c_sci_StringOps().init___T(x$4);
+    var this$11 = $m_jl_Long$();
+    var $$this = this$9.repr$1;
+    var valOpt = new $c_s_Some().init___O(this$11.parseLong__T__I__J($$this, 10))
+  };
+  this.timeOrigin$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name$2, valOpt);
+  this.associatedWith$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(lfdXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().awAttrName$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$$js$exported$prop$timeOrigin__O = (function() {
+  return this.timeOrigin$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.join__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor = (function(lfd2) {
+  this.relativeLinkURL$1.updateValue__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__V(lfd2.relativeLinkURL$1);
+  this.timeOrigin$1.updateValue__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__V(lfd2.timeOrigin$1);
+  this.associatedWith$1.updateValue__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__V(lfd2.associatedWith$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$$js$exported$prop$linkURL__O = (function() {
+  return this.linkURL$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$$js$exported$prop$relativeLinkURL__O = (function() {
+  return this.relativeLinkURL$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.join = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(arg$1);
+  return this.$$js$exported$meth$join__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype, "associatedWith", {
+  "get": (function() {
+    return this.$$js$exported$prop$associatedWith__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype, "timeOrigin", {
+  "get": (function() {
+    return this.$$js$exported$prop$timeOrigin__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype, "relativeLinkURL", {
+  "get": (function() {
+    return this.$$js$exported$prop$relativeLinkURL__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype, "mimeType", {
+  "get": (function() {
+    return this.$$js$exported$prop$mimeType__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype, "linkURL", {
+  "get": (function() {
+    return this.$$js$exported$prop$linkURL__O()
+  }),
+  "enumerable": true
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.LinkedFileDescriptor"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.LinkedFileDescriptor;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.LinkedFileDescriptor", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$() {
+  $c_O.call(this);
+  this.x$10$1 = null;
+  this.tagName$1 = null;
+  this.luAttrName$1 = null;
+  this.mtAttrName$1 = null;
+  this.rluAttrName$1 = null;
+  this.toAttrName$1 = null;
+  this.awAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$ = this;
+  this.x$10$1 = new $c_T6().init___O__O__O__O__O__O("LINKED_FILE_DESCRIPTOR", "LINK_URL", "MIME_TYPE", "RELATIVE_LINK_URL", "TIME_ORIGIN", "ASSOCIATED_WITH");
+  this.tagName$1 = $as_T(this.x$10$1.$$und1$1);
+  this.luAttrName$1 = $as_T(this.x$10$1.$$und2$1);
+  this.mtAttrName$1 = $as_T(this.x$10$1.$$und3$1);
+  this.rluAttrName$1 = $as_T(this.x$10$1.$$und4$1);
+  this.toAttrName$1 = $as_T(this.x$10$1.$$und5$1);
+  this.awAttrName$1 = $as_T(this.x$10$1.$$und6$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$.prototype.fromMultiple__Lorg_scalajs_jquery_JQuery__s_Option = (function(lfdXMLs) {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().fromMultiple__Lorg_scalajs_jquery_JQuery__F1__F2__s_Option(lfdXMLs, new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(lfdXML$2) {
+    $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$();
+    return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor().init___Lorg_scalajs_jquery_JQuery(lfdXML$2)
+  })), new $c_sjsr_AnonFunction2().init___sjs_js_Function2((function(x$8$2, x$9$2) {
+    var x$8 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(x$8$2);
+    var x$9 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(x$9$2);
+    return x$8.join__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor__Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor(x$9)
+  })))
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.LinkedFileDescriptor$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_LinkedFileDescriptor$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale() {
+  $c_O.call(this);
+  this.langCode$1 = null;
+  this.countCode$1 = null;
+  this.variant$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Locale() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.$$js$exported$prop$variant__O = (function() {
+  return this.variant$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.toString__T = (function() {
+  return new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["<", " ", " ", " ", "/>"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$().tagName$1, this.langCode$1, this.countCode$1, this.variant$1]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.$$js$exported$prop$langCode__O = (function() {
+  return this.langCode$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.$$js$exported$prop$countCode__O = (function() {
+  return this.countCode$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr = (function(langCode, countCode, variant) {
+  this.langCode$1 = langCode;
+  this.countCode$1 = countCode;
+  this.variant$1 = variant;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype, "variant", {
+  "get": (function() {
+    return this.$$js$exported$prop$variant__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype, "countCode", {
+  "get": (function() {
+    return this.$$js$exported$prop$countCode__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype, "langCode", {
+  "get": (function() {
+    return this.$$js$exported$prop$langCode__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Locale = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Locale: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Locale", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Locale: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Locale;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$() {
+  $c_O.call(this);
+  this.x$22$1 = null;
+  this.tagName$1 = null;
+  this.langCodeAttrName$1 = null;
+  this.countCodeAttrName$1 = null;
+  this.variantAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$ = this;
+  this.x$22$1 = new $c_T4().init___O__O__O__O("LOCALE", "LANGUAGE_CODE", "COUNTRY_CODE", "VARIANT");
+  this.tagName$1 = $as_T(this.x$22$1.$$und1$1);
+  this.langCodeAttrName$1 = $as_T(this.x$22$1.$$und2$1);
+  this.countCodeAttrName$1 = $as_T(this.x$22$1.$$und3$1);
+  this.variantAttrName$1 = $as_T(this.x$22$1.$$und4$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype.apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_Locale = (function(locXML) {
+  var name = this.langCodeAttrName$1;
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale().init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr($m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(locXML, name, $m_s_None$()), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(locXML, this.countCodeAttrName$1), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(locXML, this.variantAttrName$1))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype.fromXMLs__Lorg_scalajs_jquery_JQuery__sci_List = (function(locXMLs) {
+  var this$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(locXMLs);
+  var f = (function(x$21$2) {
+    return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$().apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_Locale(x$21$2)
+  });
+  var this$1 = $m_sci_List$();
+  var bf = this$1.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$2 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$2.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$2.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$2, bf);
+    var these = this$2;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  return $as_sci_List(jsx$1)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Locale$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Locale$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Locale$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_Locale$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor() {
+  $c_O.call(this);
+  this.mediaURL$1 = null;
+  this.mimeType$1 = null;
+  this.relativeMediaUrl$1 = null;
+  this.timeOrigin$1 = null;
+  this.extractedFrom$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$$js$exported$prop$mimeType__O = (function() {
+  return this.mimeType$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.toString__T = (function() {
+  return new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["<", " ", " ", " ", " ", " ", "/>"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().tagName$1, this.mediaURL$1, this.mimeType$1, this.relativeMediaUrl$1, this.timeOrigin$1, this.extractedFrom$1]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.init___Lorg_scalajs_jquery_JQuery = (function(mdXML) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().muAttrName$1;
+  this.mediaURL$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(mdXML, name, $m_s_None$());
+  var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().mtAttrName$1;
+  this.mimeType$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(mdXML, name$1, $m_s_None$());
+  this.relativeMediaUrl$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(mdXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().rmuAttrName$1);
+  var name$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().toAttrName$1;
+  var value = mdXML.attr(name$2);
+  var this$7 = ((value === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value));
+  if (this$7.isEmpty__Z()) {
+    var valOpt = $m_s_None$()
+  } else {
+    var arg1 = this$7.get__O();
+    var x$4 = $as_T(arg1);
+    var this$9 = new $c_sci_StringOps().init___T(x$4);
+    var this$11 = $m_jl_Long$();
+    var $$this = this$9.repr$1;
+    var valOpt = new $c_s_Some().init___O(this$11.parseLong__T__I__J($$this, 10))
+  };
+  this.timeOrigin$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name$2, valOpt);
+  this.extractedFrom$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(mdXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().efAttrName$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$$js$exported$prop$timeOrigin__O = (function() {
+  return this.timeOrigin$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$$js$exported$prop$mediaURL__O = (function() {
+  return this.mediaURL$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.join__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor = (function(md2) {
+  this.relativeMediaUrl$1.updateValue__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__V(md2.relativeMediaUrl$1);
+  this.timeOrigin$1.updateValue__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__V(md2.timeOrigin$1);
+  this.extractedFrom$1.updateValue__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__V(md2.extractedFrom$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$$js$exported$meth$join__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor__O = (function(md2) {
+  return this.join__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(md2)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$$js$exported$prop$relativeMediaUrl__O = (function() {
+  return this.relativeMediaUrl$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$$js$exported$prop$extractedFrom__O = (function() {
+  return this.extractedFrom$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.join = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(arg$1);
+  return this.$$js$exported$meth$join__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype, "extractedFrom", {
+  "get": (function() {
+    return this.$$js$exported$prop$extractedFrom__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype, "timeOrigin", {
+  "get": (function() {
+    return this.$$js$exported$prop$timeOrigin__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype, "relativeMediaUrl", {
+  "get": (function() {
+    return this.$$js$exported$prop$relativeMediaUrl__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype, "mimeType", {
+  "get": (function() {
+    return this.$$js$exported$prop$mimeType__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype, "mediaURL", {
+  "get": (function() {
+    return this.$$js$exported$prop$mediaURL__O()
+  }),
+  "enumerable": true
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.MediaDescriptor"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.MediaDescriptor;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.MediaDescriptor", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$() {
+  $c_O.call(this);
+  this.x$6$1 = null;
+  this.tagName$1 = null;
+  this.muAttrName$1 = null;
+  this.mtAttrName$1 = null;
+  this.rmuAttrName$1 = null;
+  this.toAttrName$1 = null;
+  this.efAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$ = this;
+  this.x$6$1 = new $c_T6().init___O__O__O__O__O__O("MEDIA_DESCRIPTOR", "MEDIA_URL", "MIME_TYPE", "RELATIVE_MEDIA_URL", "TIME_ORIGIN", "EXTRACTED_FROM");
+  this.tagName$1 = $as_T(this.x$6$1.$$und1$1);
+  this.muAttrName$1 = $as_T(this.x$6$1.$$und2$1);
+  this.mtAttrName$1 = $as_T(this.x$6$1.$$und3$1);
+  this.rmuAttrName$1 = $as_T(this.x$6$1.$$und4$1);
+  this.toAttrName$1 = $as_T(this.x$6$1.$$und5$1);
+  this.efAttrName$1 = $as_T(this.x$6$1.$$und6$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$.prototype.fromMultiple__Lorg_scalajs_jquery_JQuery__s_Option = (function(mdXMLs) {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().fromMultiple__Lorg_scalajs_jquery_JQuery__F1__F2__s_Option(mdXMLs, new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(mdXML$2) {
+    $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$();
+    return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor().init___Lorg_scalajs_jquery_JQuery(mdXML$2)
+  })), new $c_sjsr_AnonFunction2().init___sjs_js_Function2((function(x$4$2, x$5$2) {
+    var x$4 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(x$4$2);
+    var x$5 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(x$5$2);
+    return x$4.join__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor__Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor(x$5)
+  })))
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.MediaDescriptor$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_MediaDescriptor$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$() {
+  $c_O.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$.prototype.init___ = (function() {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$.prototype.apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr = (function(jQuery, name) {
+  var value = jQuery.attr(name);
+  var this$5 = ((value === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value));
+  if (this$5.isEmpty__Z()) {
+    var valOpt = $m_s_None$()
+  } else {
+    var arg1 = this$5.get__O();
+    var x$4 = $as_T(arg1);
+    var valOpt = new $c_s_Some().init___O(x$4)
+  };
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name, valOpt)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.OptionalXMLAttr$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$() {
+  $c_O.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$.prototype.init___ = (function() {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$.prototype.apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr = (function(jqEl, name, defaultValue) {
+  try {
+    var value = jqEl.attr(name);
+    var this$6 = ((value === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value));
+    if (this$6.isEmpty__Z()) {
+      var valOpt = $m_s_None$()
+    } else {
+      var arg1 = this$6.get__O();
+      var x$4 = $as_T(arg1);
+      var valOpt = new $c_s_Some().init___O(x$4)
+    };
+    var this$9 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name, valOpt).value$1;
+    var value$1 = (this$9.isEmpty__Z() ? defaultValue.get__O() : this$9.get__O())
+  } catch (e) {
+    var value$1;
+    if ($is_ju_NoSuchElementException(e)) {
+      $as_ju_NoSuchElementException(e);
+      throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T((("" + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Not found required attribute ", " in "])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([name]))) + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["xml ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2XML__Lorg_scalajs_jquery_JQuery__T(jqEl)]))))
+    } else {
+      throw e
+    }
+  };
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr().init___T__O(name, value$1)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.RequiredXMLAttr$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder() {
+  $c_O.call(this);
+  this.timeSlots$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.$$js$exported$prop$timeSlots__O = (function() {
+  return this.timeSlots$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.$$js$exported$meth$toString__O = (function() {
+  return this.toString__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.toString__T = (function() {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tagName$1, this.content__p1__sci_Iterable().mkString__T__T("\n"), "")
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.content__p1__sci_Iterable = (function() {
+  var this$4 = this.timeSlots$1;
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x0$2$2) {
+    var x0$2 = $as_T2(x0$2$2);
+    if ((x0$2 !== null)) {
+      var id = $as_T(x0$2.$$und1$f);
+      var value = $as_s_Option(x0$2.$$und2$f);
+      var jsx$3 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["<", " ", " ", " />"]));
+      var jsx$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tsTagName$1;
+      var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tsIdAttrName$1;
+      var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr().init___T__O(name, id);
+      var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tvAttrName$1;
+      return jsx$3.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([jsx$2, jsx$1, new $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr().init___T__s_Option(name$1, value)]))
+    } else {
+      throw new $c_s_MatchError().init___O(x0$2)
+    }
+  }));
+  var this$3 = $m_sci_Iterable$();
+  var bf = this$3.ReusableCBFInstance$2;
+  return $as_sci_Iterable($s_sc_TraversableLike$class__map__sc_TraversableLike__F1__scg_CanBuildFrom__O(this$4, f, bf))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.init___Lorg_scalajs_jquery_JQuery = (function(timeOrderXML) {
+  var this$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(timeOrderXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tsTagName$1));
+  var this$1 = $m_sci_List$();
+  var bf = this$1.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$2 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var v1 = this$2.head__O();
+      var value = v1.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tsIdAttrName$1);
+      if ((value === (void 0))) {
+        throw new $c_ju_NoSuchElementException().init___T("undefined.get")
+      };
+      var value$1 = v1.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tvAttrName$1);
+      var this$10 = ((value$1 === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value$1));
+      if (this$10.isEmpty__Z()) {
+        var y = $m_s_None$()
+      } else {
+        var arg1 = this$10.get__O();
+        var x$15 = $as_T(arg1);
+        var this$12 = new $c_sci_StringOps().init___T(x$15);
+        var this$14 = $m_jl_Long$();
+        var $$this = this$12.repr$1;
+        var y = new $c_s_Some().init___O(this$14.parseLong__T__I__J($$this, 10))
+      };
+      var h = new $c_sci_$colon$colon().init___O__sci_List(new $c_T2().init___O__O(value, y), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$2.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var v1$1 = rest.head__O();
+        var value$2 = v1$1.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tsIdAttrName$1);
+        if ((value$2 === (void 0))) {
+          throw new $c_ju_NoSuchElementException().init___T("undefined.get")
+        };
+        var value$3 = v1$1.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tvAttrName$1);
+        var this$23 = ((value$3 === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value$3));
+        if (this$23.isEmpty__Z()) {
+          var y$1 = $m_s_None$()
+        } else {
+          var arg1$1 = this$23.get__O();
+          var x$15$1 = $as_T(arg1$1);
+          var this$25 = new $c_sci_StringOps().init___T(x$15$1);
+          var this$27 = $m_jl_Long$();
+          var $$this$1 = this$25.repr$1;
+          var y$1 = new $c_s_Some().init___O(this$27.parseLong__T__I__J($$this$1, 10))
+        };
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(new $c_T2().init___O__O(value$2, y$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$2, bf);
+    var these = this$2;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      var value$4 = arg1$2.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tsIdAttrName$1);
+      if ((value$4 === (void 0))) {
+        throw new $c_ju_NoSuchElementException().init___T("undefined.get")
+      };
+      var value$5 = arg1$2.attr($m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().tvAttrName$1);
+      var this$36 = ((value$5 === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value$5));
+      if (this$36.isEmpty__Z()) {
+        var y$2 = $m_s_None$()
+      } else {
+        var arg1$3 = this$36.get__O();
+        var x$15$2 = $as_T(arg1$3);
+        var this$38 = new $c_sci_StringOps().init___T(x$15$2);
+        var this$40 = $m_jl_Long$();
+        var $$this$2 = this$38.repr$1;
+        var y$2 = new $c_s_Some().init___O(this$40.parseLong__T__I__J($$this$2, 10))
+      };
+      b.$$plus$eq__O__scm_Builder(new $c_T2().init___O__O(value$4, y$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  this.timeSlots$1 = $as_sc_TraversableOnce(jsx$1).toMap__s_Predef$$less$colon$less__sci_Map($m_s_Predef$().singleton$und$less$colon$less$2);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.$$js$exported$meth$getTimeSlotValue__T__O = (function(id) {
+  return this.getTimeSlotValue__T__J(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.$$js$exported$prop$timeSlots__sci_Map__O = (function(x$1) {
+  this.timeSlots$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.getTimeSlotValue__T__J = (function(id) {
+  try {
+    return $uJ($as_s_Option(this.timeSlots$1.apply__O__O(id)).get__O())
+  } catch (e) {
+    if ($is_ju_NoSuchElementException(e)) {
+      $as_ju_NoSuchElementException(e);
+      throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["TimeSlot with id ", " doesn't exists or has no value"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([id])))
+    } else {
+      throw e
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.toString = (function() {
+  return this.$$js$exported$meth$toString__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.getTimeSlotValue = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$getTimeSlotValue__T__O(prep0)
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype, "timeSlots", {
+  "set": (function(arg$1) {
+    var prep0 = $as_sci_Map(arg$1);
+    this.$$js$exported$prop$timeSlots__sci_Map__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$timeSlots__O()
+  }),
+  "enumerable": true
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.TimeOrder", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$() {
+  $c_O.call(this);
+  this.x$16$1 = null;
+  this.tagName$1 = null;
+  this.tsTagName$1 = null;
+  this.tsIdAttrName$1 = null;
+  this.tvAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$ = this;
+  this.x$16$1 = new $c_T4().init___O__O__O__O("TIME_ORDER", "TIME_SLOT", "TIME_SLOT_ID", "TIME_VALUE");
+  this.tagName$1 = $as_T(this.x$16$1.$$und1$1);
+  this.tsTagName$1 = $as_T(this.x$16$1.$$und2$1);
+  this.tsIdAttrName$1 = $as_T(this.x$16$1.$$und3$1);
+  this.tvAttrName$1 = $as_T(this.x$16$1.$$und4$1);
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.TimeOrder$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_TimeOrder$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$() {
+  $c_O.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.init___ = (function() {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.fromMultiple__Lorg_scalajs_jquery_JQuery__F1__F2__s_Option = (function(xmls, apply, join) {
+  var this$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(xmls);
+  var z = $m_s_None$();
+  var op = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1().init___F1__F2(apply, join);
+  return $as_s_Option($s_sc_LinearSeqOptimized$class__foldLeft__sc_LinearSeqOptimized__O__F2__O(this$1, z, op))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.sec2Millis__D__J = (function(sec) {
+  var x = (1000 * sec);
+  var this$5 = $m_sjsr_RuntimeLong$();
+  var value = $uD($g.Math.round(x));
+  var lo = this$5.scala$scalajs$runtime$RuntimeLong$$fromDoubleImpl__D__I(value);
+  var hi = this$5.scala$scalajs$runtime$RuntimeLong$$hiReturn$f;
+  return new $c_sjsr_RuntimeLong().init___I__I(lo, hi)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.wrap__T__T__T__T = (function(tagName, content, attrs) {
+  var x = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["|<", " ", ">\n        |  ", "\n        |</", ">\n        |\n     "])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([tagName, attrs, content, tagName]));
+  var this$2 = new $c_sci_StringOps().init___T(x);
+  return $s_sci_StringLike$class__stripMargin__sci_StringLike__C__T(this$2, 124)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.millis2Sec__J__D = (function(millis) {
+  return ($m_sjsr_RuntimeLong$().scala$scalajs$runtime$RuntimeLong$$toDouble__I__I__D(millis.lo$2, millis.hi$2) / 1000.0)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List = (function(jq) {
+  var buf = new $c_scm_ListBuffer().init___();
+  jq.each((function(f) {
+    return (function() {
+      return f.apply__O__O(this)
+    })
+  })(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(buf$1) {
+    return (function(el$2) {
+      var jqEl = (0, $m_Lorg_scalajs_jquery_package$().jQuery$1)(el$2);
+      return buf$1.$$plus$eq__O__scm_ListBuffer(jqEl)
+    })
+  })(buf))));
+  return buf.toList__sci_List()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.jQuery2XML__Lorg_scalajs_jquery_JQuery__T = (function(jq) {
+  if (($uI(jq.length) === 0)) {
+    return ""
+  } else {
+    var jqCloned = jq.clone();
+    return $as_T(jqCloned.appendTo("<x></x>").parent().html())
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Utils$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Utils$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Utils$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$() {
+  $c_O.call(this);
+  this.x$1$1 = null;
+  this.tagName$1 = null;
+  this.tsRef1AttrName$1 = null;
+  this.tsRef2AttrName$1 = null;
+  this.svgRefAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$ = this;
+  this.x$1$1 = new $c_T4().init___O__O__O__O("ALIGNABLE_ANNOTATION", "TIME_SLOT_REF1", "TIME_SLOT_REF2", "SVG_REF");
+  this.tagName$1 = $as_T(this.x$1$1.$$und1$1);
+  this.tsRef1AttrName$1 = $as_T(this.x$1$1.$$und2$1);
+  this.tsRef2AttrName$1 = $as_T(this.x$1$1.$$und3$1);
+  this.svgRefAttrName$1 = $as_T(this.x$1$1.$$und4$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$.prototype.apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation = (function(annotXML, owner) {
+  var jsx$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$();
+  var jsx$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().tagName$1;
+  var jsx$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Only alignable annotations are allowed in this tier ", ""]));
+  var attr = owner.tierID$1;
+  var includedAnnotationXML = jsx$3.validateAnnotationType__Lorg_scalajs_jquery_JQuery__T__T__Lorg_scalajs_jquery_JQuery(annotXML, jsx$2, jsx$1.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$as_T(attr.value$1)])));
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(includedAnnotationXML, owner)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.AlignableAnnotation$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts() {
+  $c_O.call(this);
+  this.timeSlotRef1$1 = null;
+  this.timeSlotRef2$1 = null;
+  this.svgRef$1 = null;
+  this.owner$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier = (function(aaXML, owner) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().tsRef1AttrName$1;
+  var jsx$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(aaXML, name, $m_s_None$());
+  var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().tsRef2AttrName$1;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.call(this, jsx$1, $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(aaXML, name$1, $m_s_None$()), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(aaXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().svgRefAttrName$1), owner);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier = (function(timeSlotRef1, timeSlotRef2, svgRef, owner) {
+  this.timeSlotRef1$1 = timeSlotRef1;
+  this.timeSlotRef2$1 = timeSlotRef2;
+  this.svgRef$1 = svgRef;
+  this.owner$1 = owner;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.AlignableAnnotationOpts", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$() {
+  $c_O.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$.prototype.init___ = (function() {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$.prototype.apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation = (function(annotXML, owner) {
+  var jsx$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$();
+  var jsx$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().tagName$1;
+  var jsx$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Only alignable annotations are allowed in this tier ", ""]));
+  var attr = owner.tierID$1;
+  var includedAnnotationXML = jsx$3.validateAnnotationType__Lorg_scalajs_jquery_JQuery__T__T__Lorg_scalajs_jquery_JQuery(annotXML, jsx$2, jsx$1.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$as_T(attr.value$1)])));
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier(includedAnnotationXML, owner)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.AlignableDependentAnnotation$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$() {
+  $c_O.call(this);
+  this.tagName$1 = null;
+  this.x$1$1 = null;
+  this.annotIDAttrName$1 = null;
+  this.extRefAttrName$1 = null;
+  this.annotValueElName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$ = this;
+  this.tagName$1 = "ANNOTATION";
+  this.x$1$1 = new $c_T3().init___O__O__O("ANNOTATION_ID", "EXT_REF", "ANNOTATION_VALUE");
+  this.annotIDAttrName$1 = $as_T(this.x$1$1.$$und1$1);
+  this.extRefAttrName$1 = $as_T(this.x$1$1.$$und2$1);
+  this.annotValueElName$1 = $as_T(this.x$1$1.$$und3$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$.prototype.validateAnnotationType__Lorg_scalajs_jquery_JQuery__T__T__Lorg_scalajs_jquery_JQuery = (function(annotXML, allowedAnnot, errorMsg) {
+  var includedAnnotationXML = annotXML.children().first();
+  if (($objectToString(includedAnnotationXML.prop("tagName")) !== allowedAnnot)) {
+    throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T(errorMsg)
+  };
+  return includedAnnotationXML
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.Annotation$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts() {
+  $c_O.call(this);
+  this.annotationID$1 = null;
+  this.extRef$1 = null;
+  this.text$1 = null;
+  this.owner$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier = (function(includedAnnotationXML, owner) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().annotIDAttrName$1;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__T__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier.call(this, $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(includedAnnotationXML, name, $m_s_None$()), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(includedAnnotationXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().extRefAttrName$1), $as_T(includedAnnotationXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().annotValueElName$1).text()), owner);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__T__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier = (function(annotationID, extRef, text, owner) {
+  this.annotationID$1 = annotationID;
+  this.extRef$1 = extRef;
+  this.text$1 = text;
+  this.owner$1 = owner;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.AnnotationOpts", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$() {
+  $c_O.call(this);
+  this.x$1$1 = null;
+  this.tagName$1 = null;
+  this.annotRefAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$ = this;
+  this.x$1$1 = new $c_T2().init___O__O("REF_ANNOTATION", "ANNOTATION_REF");
+  this.tagName$1 = $as_T(this.x$1$1.$$und1$f);
+  this.annotRefAttrName$1 = $as_T(this.x$1$1.$$und2$f);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$.prototype.apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation = (function(annotXML, owner) {
+  var includedAnnotationXML = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().validateAnnotationType__Lorg_scalajs_jquery_JQuery__T__T__Lorg_scalajs_jquery_JQuery(annotXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$().tagName$1, new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Only ref annotations are allowed in tier ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([owner.tierID$1.value$1])));
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(includedAnnotationXML, owner)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.RefAnnotation$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts() {
+  $c_O.call(this);
+  this.annotationRef$1 = null;
+  this.owner$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier = (function(annotationRef, owner) {
+  this.annotationRef$1 = annotationRef;
+  this.owner$1 = owner;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier = (function(raXML, owner) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$().annotRefAttrName$1;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.call(this, $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(raXML, name, $m_s_None$()), owner);
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.RefAnnotationOpts", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$() {
+  $c_O.call(this);
+  this.prevAnnotAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$.prototype.init___ = (function() {
+  this.prevAnnotAttrName$1 = "PREVIOUS_ANNOTATION";
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$.prototype.apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation = (function(ssAnnotXML, owner) {
+  var includedAnnotationXML = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().validateAnnotationType__Lorg_scalajs_jquery_JQuery__T__T__Lorg_scalajs_jquery_JQuery(ssAnnotXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$().tagName$1, new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Only ref annotations are allowed in tier ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([owner.tierID$1.value$1])));
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(includedAnnotationXML, owner)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.SymbolicSubdivisionAnnotation$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$() {
+  $c_O.call(this);
+  this.parentRefAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$.prototype.init___ = (function() {
+  this.parentRefAttrName$1 = "PARENT_REF";
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.DependentTier$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts() {
+  $c_O.call(this);
+  this.parentRef$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype.init___Lorg_scalajs_jquery_JQuery = (function(tierXML) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$().parentRefAttrName$1;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.call(this, $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(tierXML, name, $m_s_None$()));
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr = (function(parentRef) {
+  this.parentRef$1 = parentRef;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.DependentTierOpts", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$() {
+  $c_O.call(this);
+  this.x$3$1 = null;
+  this.tagName$1 = null;
+  this.tIDAttrName$1 = null;
+  this.lTypeRefAttrName$1 = null;
+  this.partAttrName$1 = null;
+  this.annotAttrName$1 = null;
+  this.defLocAttrName$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype.init___ = (function() {
+  $n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$ = this;
+  this.x$3$1 = new $c_T6().init___O__O__O__O__O__O("TIER", "TIER_ID", "LINGUISTIC_TYPE_REF", "PARTICIPANT", "ANNOTATOR", "DEFAULT_LOCALE");
+  this.tagName$1 = $as_T(this.x$3$1.$$und1$1);
+  this.tIDAttrName$1 = $as_T(this.x$3$1.$$und2$1);
+  this.lTypeRefAttrName$1 = $as_T(this.x$3$1.$$und3$1);
+  this.partAttrName$1 = $as_T(this.x$3$1.$$und4$1);
+  this.annotAttrName$1 = $as_T(this.x$3$1.$$und5$1);
+  this.defLocAttrName$1 = $as_T(this.x$3$1.$$und6$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype.fromXMLs__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery__sci_List = (function(tierXMLs, owner) {
+  var this$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(tierXMLs);
+  var f = (function(owner$1) {
+    return (function(x$2$2) {
+      return $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().fromXML__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier(x$2$2, owner$1)
+    })
+  })(owner);
+  var this$1 = $m_sci_List$();
+  var bf = this$1.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$2 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$2.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$2.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$2, bf);
+    var these = this$2;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  return $as_sci_List(jsx$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype.fromXML__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier = (function(tierXML, owner) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().lTypeRefAttrName$1;
+  var ltRef = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(tierXML, name, $m_s_None$());
+  var rc16 = false;
+  var x2 = null;
+  var this$3 = owner.getLinguisticType__T__Lru_ispras_lingvodoc_frontend_extras_elan_LinguisticType($as_T(ltRef.value$1));
+  var attr = this$3.constraints$1;
+  var x1 = attr.value$1;
+  var x = $m_s_None$();
+  if ((x === x1)) {
+    return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(tierXML, owner)
+  };
+  if ($is_s_Some(x1)) {
+    rc16 = true;
+    x2 = $as_s_Some(x1);
+    var p3 = $as_T(x2.x$2);
+    if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().timeSubdivID$1 === p3)) {
+      return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(tierXML, owner)
+    }
+  };
+  if (rc16) {
+    var p5 = $as_T(x2.x$2);
+    if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().includedInID$1 === p5)) {
+      return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(tierXML, owner)
+    }
+  };
+  if (rc16) {
+    var p7 = $as_T(x2.x$2);
+    if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().symbolSubdivID$1 === p7)) {
+      return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(tierXML, owner)
+    }
+  };
+  if (rc16) {
+    var p9 = $as_T(x2.x$2);
+    if (($m_Lru_ispras_lingvodoc_frontend_extras_elan_Constraint$().symbolAssocID$1 === p9)) {
+      return new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(tierXML, owner)
+    }
+  };
+  $m_s_Predef$().$$qmark$qmark$qmark__sr_Nothing$()
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.Tier$", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$ = new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts() {
+  $c_O.call(this);
+  this.tierID$1 = null;
+  this.linguisticTypeRef$1 = null;
+  this.participant$1 = null;
+  this.annotator$1 = null;
+  this.defaultLocale$1 = null;
+  this.owner$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(tierXML, owner) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().tIDAttrName$1;
+  var jsx$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(tierXML, name, $m_s_None$());
+  var name$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().lTypeRefAttrName$1;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery.call(this, jsx$1, $m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(tierXML, name$1, $m_s_None$()), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(tierXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().partAttrName$1), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(tierXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().annotAttrName$1), $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(tierXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().defLocAttrName$1), owner);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(tierID, linguisticTypeRef, participant, annotator, defaultLocale, owner) {
+  this.tierID$1 = tierID;
+  this.linguisticTypeRef$1 = linguisticTypeRef;
+  this.participant$1 = participant;
+  this.annotator$1 = annotator;
+  this.defaultLocale$1 = defaultLocale;
+  this.owner$1 = owner;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.TierOpts", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu() {
+  $c_O.call(this);
+  this.options$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype.toJS__sjs_js_Array = (function() {
+  var this$2 = this.options$1;
+  $m_sci_Vector$();
+  var bf = $m_sc_IndexedSeq$().ReusableCBF$6;
+  var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$2, bf);
+  var this$3 = this$2.iterator__sci_VectorIterator();
+  while (this$3.$$undhasNext$2) {
+    var arg1 = this$3.next__O();
+    var x$1 = $as_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption(arg1);
+    b.$$plus$eq__O__scm_Builder(x$1.toJS__sjs_js_Any())
+  };
+  var col = $as_sc_GenTraversableOnce(b.result__O());
+  var this$6 = $m_sjsr_package$();
+  if ($is_sjs_js_ArrayOps(col)) {
+    var x2 = $as_sjs_js_ArrayOps(col);
+    return x2.scala$scalajs$js$ArrayOps$$array$f
+  } else if ($is_sjs_js_WrappedArray(col)) {
+    var x3 = $as_sjs_js_WrappedArray(col);
+    return x3.array$6
+  } else {
+    var result = [];
+    col.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, result$1) {
+      return (function(x$2) {
+        return $uI(result$1.push(x$2))
+      })
+    })(this$6, result)));
+    return result
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype.init___sci_Vector = (function(s) {
+  this.options$1 = s;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype.addOpt__Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption__Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu = (function(mo) {
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu().init___sci_Vector($as_sci_Vector(this.options$1.$$colon$plus__O__scg_CanBuildFrom__O(mo, ($m_sci_Vector$(), $m_sc_IndexedSeq$().ReusableCBF$6))))
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.facades.BootstrapContextMenu", {
+  Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption() {
+  $c_O.call(this);
+  this.itemText$1 = null;
+  this.action$1 = null;
+  this.disable$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption.prototype.toJS__sjs_js_Any = (function() {
+  $m_scm_Seq$();
+  var array = [this.itemText$1, this.action$1];
+  if (($uI(array.length) === 0)) {
+    var this$2 = new $c_scm_ArrayBuffer().init___();
+    var optionSeq = this$2
+  } else {
+    var b = new $c_scm_ArrayBuffer().init___();
+    var n = $uI(array.length);
+    var n$1 = ((b.size0$6 + n) | 0);
+    $s_scm_ResizableArray$class__ensureSize__scm_ResizableArray__I__V(b, n$1);
+    var xs = b.array$6;
+    var start = b.size0$6;
+    var i = 0;
+    var j = start;
+    var x = $uI(array.length);
+    var x$1 = ((x < n) ? x : n);
+    var that = ((xs.u.length - start) | 0);
+    var end = ((x$1 < that) ? x$1 : that);
+    while ((i < end)) {
+      var jsx$1 = j;
+      var index = i;
+      xs.u[jsx$1] = array[index];
+      i = ((1 + i) | 0);
+      j = ((1 + j) | 0)
+    };
+    b.size0$6 = ((b.size0$6 + n) | 0);
+    var optionSeq = b
+  };
+  var x1 = this.disable$1;
+  if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var dis = x2.x$2;
+    var this$12 = optionSeq;
+    var this$11 = $m_scm_Seq$();
+    var bf = this$11.ReusableCBFInstance$2;
+    optionSeq = $as_scm_Seq($s_sc_SeqLike$class__$$colon$plus__sc_SeqLike__O__scg_CanBuildFrom__O(this$12, dis, bf))
+  } else {
+    var x$2 = $m_s_None$();
+    if ((x$2 === x1)) {
+      optionSeq = optionSeq
+    } else {
+      throw new $c_s_MatchError().init___O(x1)
+    }
+  };
+  var col = optionSeq;
+  var this$15 = $m_sjsr_package$();
+  if ($is_sjs_js_ArrayOps(col)) {
+    var x2$1 = $as_sjs_js_ArrayOps(col);
+    return x2$1.scala$scalajs$js$ArrayOps$$array$f
+  } else if ($is_sjs_js_WrappedArray(col)) {
+    var x3 = $as_sjs_js_WrappedArray(col);
+    return x3.array$6
+  } else {
+    var result = [];
+    col.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, result$1) {
+      return (function(x$2$1) {
+        return $uI(result$1.push(x$2$1))
+      })
+    })(this$15, result)));
+    return result
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption.prototype.init___sjs_js_Dynamic__sjs_js_Dynamic__s_Option = (function(itemText, action, disable) {
+  this.itemText$1 = itemText;
+  this.action$1 = action;
+  this.disable$1 = disable;
+  return this
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.facades.MenuOption"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.facades.MenuOption;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.facades.MenuOption", {
+  Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$() {
+  $c_O.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$.prototype.init___ = (function() {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$.prototype.apply__T__sjs_js_Function1__s_Option__Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption = (function(itemText, action, disable) {
+  if (disable.isEmpty__Z()) {
+    var jsx$1 = $m_s_None$()
+  } else {
+    var arg1 = disable.get__O();
+    var jsx$1 = new $c_s_Some().init___O(arg1)
+  };
+  return new $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption().init___sjs_js_Dynamic__sjs_js_Dynamic__s_Option(itemText, action, jsx$1)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$ = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.facades.MenuOption$", {
+  Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$: 1,
+  O: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$;
+var $n_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$ = (void 0);
+function $m_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$() {
+  if ((!$n_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$)) {
+    $n_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$ = new $c_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$().init___()
+  };
+  return $n_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$
+}
+/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$() {
   $c_O.call(this)
 }
@@ -6242,11 +9732,17 @@ $h_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$.prototype = $c_L
 $c_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$.prototype.init___ = (function() {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$.prototype.apply__T__T__T__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts = (function(container, waveColor, progressColor) {
+$c_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$.prototype.apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts = (function(container, waveColor, progressColor, cursorWidth, cursorColor, scrollParent, minPxPerSec, fillParent, height) {
   return {
     "container": container,
     "waveColor": waveColor,
-    "progressColor": progressColor
+    "progressColor": progressColor,
+    "cursorWidth": cursorWidth,
+    "cursorColor": cursorColor,
+    "scrollParent": scrollParent,
+    "minPxPerSec": minPxPerSec,
+    "fillParent": fillParent,
+    "height": height
   }
 });
 var $d_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$ = new $TypeData().initClass({
@@ -7622,7 +11118,7 @@ $c_s_concurrent_impl_Promise$.prototype.scala$concurrent$impl$Promise$$resolveTr
 $c_s_concurrent_impl_Promise$.prototype.resolver__p1__jl_Throwable__s_util_Try = (function(throwable) {
   if ($is_sr_NonLocalReturnControl(throwable)) {
     var x2 = $as_sr_NonLocalReturnControl(throwable);
-    return new $c_s_util_Success().init___O(x2.value$f)
+    return new $c_s_util_Success().init___O(x2.value__O())
   } else if ($is_s_util_control_ControlThrowable(throwable)) {
     var x3 = $as_s_util_control_ControlThrowable(throwable);
     return new $c_s_util_Failure().init___jl_Throwable(new $c_ju_concurrent_ExecutionException().init___T__jl_Throwable("Boxed ControlThrowable", $as_jl_Throwable(x3)))
@@ -8328,6 +11824,9 @@ function $h_scg_GenMapFactory() {
   /*<skip>*/
 }
 $h_scg_GenMapFactory.prototype = $c_scg_GenMapFactory.prototype;
+$c_scg_GenMapFactory.prototype.apply__sc_Seq__sc_GenMap = (function(elems) {
+  return $as_sc_GenMap($as_scm_Builder(this.newBuilder__scm_Builder().$$plus$plus$eq__sc_TraversableOnce__scg_Growable(elems)).result__O())
+});
 $c_scg_GenMapFactory.prototype.newBuilder__scm_Builder = (function() {
   return new $c_scm_MapBuilder().init___sc_GenMap(this.empty__sc_GenMap())
 });
@@ -8785,6 +12284,37 @@ function $m_scm_WrappedArray$() {
   return $n_scm_WrappedArray$
 }
 /** @constructor */
+function $c_sjs_js_ArrayOps$() {
+  $c_O.call(this)
+}
+$c_sjs_js_ArrayOps$.prototype = new $h_O();
+$c_sjs_js_ArrayOps$.prototype.constructor = $c_sjs_js_ArrayOps$;
+/** @constructor */
+function $h_sjs_js_ArrayOps$() {
+  /*<skip>*/
+}
+$h_sjs_js_ArrayOps$.prototype = $c_sjs_js_ArrayOps$.prototype;
+$c_sjs_js_ArrayOps$.prototype.init___ = (function() {
+  return this
+});
+$c_sjs_js_ArrayOps$.prototype.scala$scalajs$js$ArrayOps$$throwUnsupported__T__sr_Nothing$ = (function(msg) {
+  throw new $c_jl_UnsupportedOperationException().init___T(msg)
+});
+var $d_sjs_js_ArrayOps$ = new $TypeData().initClass({
+  sjs_js_ArrayOps$: 0
+}, false, "scala.scalajs.js.ArrayOps$", {
+  sjs_js_ArrayOps$: 1,
+  O: 1
+});
+$c_sjs_js_ArrayOps$.prototype.$classData = $d_sjs_js_ArrayOps$;
+var $n_sjs_js_ArrayOps$ = (void 0);
+function $m_sjs_js_ArrayOps$() {
+  if ((!$n_sjs_js_ArrayOps$)) {
+    $n_sjs_js_ArrayOps$ = new $c_sjs_js_ArrayOps$().init___()
+  };
+  return $n_sjs_js_ArrayOps$
+}
+/** @constructor */
 function $c_sjs_js_Dictionary$() {
   $c_O.call(this)
 }
@@ -8835,6 +12365,34 @@ function $m_sjs_js_Dictionary$() {
     $n_sjs_js_Dictionary$ = new $c_sjs_js_Dictionary$().init___()
   };
   return $n_sjs_js_Dictionary$
+}
+/** @constructor */
+function $c_sjs_js_JSConverters$JSRichGenMap$() {
+  $c_O.call(this)
+}
+$c_sjs_js_JSConverters$JSRichGenMap$.prototype = new $h_O();
+$c_sjs_js_JSConverters$JSRichGenMap$.prototype.constructor = $c_sjs_js_JSConverters$JSRichGenMap$;
+/** @constructor */
+function $h_sjs_js_JSConverters$JSRichGenMap$() {
+  /*<skip>*/
+}
+$h_sjs_js_JSConverters$JSRichGenMap$.prototype = $c_sjs_js_JSConverters$JSRichGenMap$.prototype;
+$c_sjs_js_JSConverters$JSRichGenMap$.prototype.init___ = (function() {
+  return this
+});
+var $d_sjs_js_JSConverters$JSRichGenMap$ = new $TypeData().initClass({
+  sjs_js_JSConverters$JSRichGenMap$: 0
+}, false, "scala.scalajs.js.JSConverters$JSRichGenMap$", {
+  sjs_js_JSConverters$JSRichGenMap$: 1,
+  O: 1
+});
+$c_sjs_js_JSConverters$JSRichGenMap$.prototype.$classData = $d_sjs_js_JSConverters$JSRichGenMap$;
+var $n_sjs_js_JSConverters$JSRichGenMap$ = (void 0);
+function $m_sjs_js_JSConverters$JSRichGenMap$() {
+  if ((!$n_sjs_js_JSConverters$JSRichGenMap$)) {
+    $n_sjs_js_JSConverters$JSRichGenMap$ = new $c_sjs_js_JSConverters$JSRichGenMap$().init___()
+  };
+  return $n_sjs_js_JSConverters$JSRichGenMap$
 }
 /** @constructor */
 function $c_sjs_js_WrappedDictionary$Cache$() {
@@ -10502,26 +14060,26 @@ var $d_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1 = new $
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2() {
+function $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1() {
   $c_O.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2() {
+function $h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.apply__O__O = (function(v1) {
   return this.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Field($as_Lupickle_Js$Obj(v1).value$1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype.toString__T = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.toString__T = (function() {
   return "<function1>"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Field = (function(js) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Field = (function(js) {
   var this$1 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
   var clientId = $doubleToInt($as_Lupickle_Js$Num($as_Lupickle_Js$Value($s_Lupickle_Js$Value$class__obj__Lupickle_Js$Value__sci_Map(this$1).apply__O__O("client_id"))).value$1);
   var this$2 = new $c_Lupickle_Js$Obj().init___sc_Seq(js);
@@ -10611,30 +14169,30 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype.ap
   field.link$2 = link;
   return field
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.model.Field$$anonfun$1$$anon$2", {
-  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.model.Field$$anonfun$1$$anon$1", {
+  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1: 1,
   O: 1,
   F1: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2() {
   $c_O.call(this);
   this.field$1$1 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype = new $h_O();
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.apply__O__O = (function(v1) {
   return new $c_Lupickle_Js$Obj().init___sc_Seq(this.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq($as_Lru_ispras_lingvodoc_frontend_app_model_Field(v1)))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq = (function(f) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq = (function(f) {
   var array = f.fields$2;
   var array$1 = [];
   $uI(array.length);
@@ -10666,21 +14224,21 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype.ap
   };
   return values
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype.toString__T = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.toString__T = (function() {
   return "<function1>"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2__Lru_ispras_lingvodoc_frontend_app_model_Field = (function($$outer, field$1) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2__Lru_ispras_lingvodoc_frontend_app_model_Field = (function($$outer, field$1) {
   this.field$1$1 = field$1;
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.model.Field$$anonfun$2$$anon$1", {
-  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.model.Field$$anonfun$2$$anon$2", {
+  Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2: 1,
   O: 1,
   F1: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_model_Language$$anonfun$1$$anon$1() {
   $c_O.call(this)
@@ -11007,6 +14565,457 @@ var $d_Lru_ispras_lingvodoc_frontend_app_model_SearchResult$$anonfun$2$$anon$2 =
   F1: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_SearchResult$$anonfun$2$$anon$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_SearchResult$$anonfun$2$$anon$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr() {
+  $c_O.call(this);
+  this.name$1 = null;
+  this.value$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype.toString__T = (function() {
+  var this$1 = this.value$1;
+  if (this$1.isEmpty__Z()) {
+    return ""
+  } else {
+    var arg1 = this$1.get__O();
+    return (((this.name$1 + "=\"") + arg1) + "\"")
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype.updateValue__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__V = (function(attr2) {
+  var this$1 = attr2.value$1;
+  this.value$1 = (this$1.isEmpty__Z() ? this.value$1 : this$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype.init___T__s_Option = (function(name, value) {
+  this.name$1 = name;
+  this.value$1 = value;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.OptionalXMLAttr", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_XMLAttr: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr() {
+  $c_O.call(this);
+  this.name$1 = null;
+  this.value$1 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.prototype.toString__T = (function() {
+  return (((this.name$1 + "=\"") + this.value$1) + "\"")
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.prototype.init___T__O = (function(name, value) {
+  this.name$1 = name;
+  this.value$1 = value;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.RequiredXMLAttr", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_XMLAttr: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation() {
+  $c_O.call(this);
+  this.annotationID$1 = null;
+  this.extRef$1 = null;
+  this.text$1 = null;
+  this.owner$1 = null;
+  this.startOffset$1 = 0.0;
+  this.endOffset$1 = 0.0;
+  this.durationOffset$1 = 0.0
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$startOffset__D__O = (function(x$1) {
+  this.startOffset$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$startOffset__O = (function() {
+  return this.startOffset$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$endOffset__D__O = (function(x$1) {
+  this.endOffset$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts = (function(ao) {
+  this.annotationID$1 = ao.annotationID$1;
+  this.extRef$1 = ao.extRef$1;
+  this.text$1 = ao.text$1;
+  this.owner$1 = ao.owner$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.toString__T = (function() {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().tagName$1, this.includedAnnotationToString__T(), "")
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$text__O = (function() {
+  return this.text$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$durationOffset__D__O = (function(x$1) {
+  this.durationOffset$1 = x$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.setPxPerSec__D__V = (function(pxPerSec) {
+  this.startOffset$1 = ($m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().millis2Sec__J__D(this.start__J()) * pxPerSec);
+  this.endOffset$1 = ($m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().millis2Sec__J__D(this.end__J()) * pxPerSec);
+  this.durationOffset$1 = ($m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().millis2Sec__J__D($s_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation$class__duration__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation__J(this)) * pxPerSec)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$startToString__O = (function() {
+  var t = this.start__J();
+  var lo = t.lo$2;
+  var hi = t.hi$2;
+  return $m_sjsr_RuntimeLong$().scala$scalajs$runtime$RuntimeLong$$toString__I__I__T(lo, hi)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$durationOffset__O = (function() {
+  return this.durationOffset$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$endToString__O = (function() {
+  var t = this.end__J();
+  var lo = t.lo$2;
+  var hi = t.hi$2;
+  return $m_sjsr_RuntimeLong$().scala$scalajs$runtime$RuntimeLong$$toString__I__I__T(lo, hi)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.attrsToString__T = (function() {
+  return new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.annotationID$1, this.extRef$1]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.toJS__sjs_js_Dynamic = (function() {
+  var annotationJS = new $c_scm_HashMap().init___();
+  var value = this.text$1;
+  annotationJS.put__O__O__s_Option("text", value);
+  var value$1 = this.startOffset$1;
+  annotationJS.put__O__O__s_Option("startOffset", value$1);
+  var value$2 = this.endOffset$1;
+  annotationJS.put__O__O__s_Option("endOffset", value$2);
+  var value$3 = this.durationOffset$1;
+  annotationJS.put__O__O__s_Option("durationOffset", value$3);
+  var result = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
+  var iterTable = annotationJS.table$5;
+  var idx = $s_scm_HashTable$class__scala$collection$mutable$HashTable$$lastPopulatedIndex__scm_HashTable__I(annotationJS);
+  var es = iterTable.u[idx];
+  while ((es !== null)) {
+    var arg1 = es;
+    var e = $as_scm_DefaultEntry(arg1);
+    var _1 = e.key$1;
+    var _2 = e.value$1;
+    var key = $as_T(_1);
+    result[key] = _2;
+    es = $as_scm_HashEntry(es.next$1);
+    while (((es === null) && (idx > 0))) {
+      idx = (((-1) + idx) | 0);
+      es = iterTable.u[idx]
+    }
+  };
+  return result
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$durationToString__O = (function() {
+  var t = $s_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation$class__duration__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation__J(this);
+  var lo = t.lo$2;
+  var hi = t.hi$2;
+  return $m_sjsr_RuntimeLong$().scala$scalajs$runtime$RuntimeLong$$toString__I__I__T(lo, hi)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$endOffset__O = (function() {
+  return this.endOffset$1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$getID__O = (function() {
+  return $as_T(this.annotationID$1.value$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.$$js$exported$prop$text__T__O = (function(x$1) {
+  this.text$1 = x$1
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "getID", {
+  "get": (function() {
+    return this.$$js$exported$prop$getID__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "durationOffset", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$durationOffset__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$durationOffset__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "endOffset", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$endOffset__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$endOffset__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "startOffset", {
+  "set": (function(arg$1) {
+    var prep0 = $uD(arg$1);
+    this.$$js$exported$prop$startOffset__D__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$startOffset__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "durationToString", {
+  "get": (function() {
+    return this.$$js$exported$prop$durationToString__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "endToString", {
+  "get": (function() {
+    return this.$$js$exported$prop$endToString__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "startToString", {
+  "get": (function() {
+    return this.$$js$exported$prop$startToString__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype, "text", {
+  "set": (function(arg$1) {
+    var prep0 = $as_T(arg$1);
+    this.$$js$exported$prop$text__T__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$text__O()
+  }),
+  "enumerable": true
+});
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier() {
+  $c_O.call(this);
+  this.tierID$1 = null;
+  this.linguisticTypeRef$1 = null;
+  this.participant$1 = null;
+  this.annotator$1 = null;
+  this.defaultLocale$1 = null;
+  this.owner$1 = null;
+  this.index$1 = 0
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype = new $h_O();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.$$js$exported$prop$annotationsToJSArray__O = (function() {
+  return this.annotationsToJSArray__sjs_js_Dynamic()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.toString__T = (function() {
+  var jsx$2 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$();
+  var jsx$1 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier$().tagName$1;
+  var this$1 = this.annotations__sci_List();
+  return jsx$2.wrap__T__T__T__T(jsx$1, $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this$1, "", "\n", ""), this.attrsToString__p1__T())
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(to) {
+  this.tierID$1 = to.tierID$1;
+  this.linguisticTypeRef$1 = to.linguisticTypeRef$1;
+  this.participant$1 = to.participant$1;
+  this.annotator$1 = to.annotator$1;
+  this.defaultLocale$1 = to.defaultLocale$1;
+  this.owner$1 = to.owner$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.getAnnotationByID__T__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation = (function(id) {
+  try {
+    var this$1 = this.annotations__sci_List();
+    $m_sci_List$();
+    var b = new $c_scm_ListBuffer().init___();
+    var these = this$1;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      var x$1 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(arg1);
+      if ((($as_T(x$1.annotationID$1.value$1) === id) !== false)) {
+        b.$$plus$eq__O__scm_ListBuffer(arg1)
+      };
+      these = $as_sci_List(these.tail__O())
+    };
+    return $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(b.toList__sci_List().head__O())
+  } catch (e) {
+    if ($is_ju_NoSuchElementException(e)) {
+      $as_ju_NoSuchElementException(e);
+      throw new $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException().init___T(new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["Annotation with id ", " not found"])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([id])))
+    } else {
+      throw e
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.$$js$exported$prop$getLT__O = (function() {
+  var attr = this.linguisticTypeRef$1;
+  return $as_T(attr.value$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.annotationsToJSArray__sjs_js_Dynamic = (function() {
+  var col = this.annotations__sci_List();
+  if ($is_sjs_js_ArrayOps(col)) {
+    var x2 = $as_sjs_js_ArrayOps(col);
+    return x2.scala$scalajs$js$ArrayOps$$array$f
+  } else if ($is_sjs_js_WrappedArray(col)) {
+    var x3 = $as_sjs_js_WrappedArray(col);
+    return x3.array$6
+  } else {
+    var result = [];
+    var these = col;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      $uI(result.push(arg1));
+      these = $as_sci_List(these.tail__O())
+    };
+    return result
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.toJS__sjs_js_Dynamic = (function() {
+  var tierJS = new $c_scm_HashMap().init___();
+  var attr = this.tierID$1;
+  var value = $as_T(attr.value$1);
+  tierJS.put__O__O__s_Option("ID", value);
+  var value$1 = this.timeAlignable__Z();
+  tierJS.put__O__O__s_Option("timeAlignable", value$1);
+  var value$2 = this.index$1;
+  tierJS.put__O__O__s_Option("index", value$2);
+  var this$7 = $as_scm_MapLike($m_scm_Map$().apply__sc_Seq__sc_GenMap($m_sci_Nil$()));
+  var this$6 = this.annotations__sci_List();
+  var f = (function(annot$2) {
+    var annot = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(annot$2);
+    var self = $as_T(annot.annotationID$1.value$1);
+    var y = annot.toJS__sjs_js_Dynamic();
+    return new $c_T2().init___O__O(self, y)
+  });
+  var this$5 = $m_sci_List$();
+  var bf = this$5.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$6 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$6.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$6.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$6, bf);
+    var these = this$6;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  var xs = $as_sc_TraversableOnce(jsx$1).toMap__s_Predef$$less$colon$less__sci_Map($m_s_Predef$().singleton$und$less$colon$less$2);
+  var this$8 = $as_scm_Map($as_scg_Growable(this$7.empty__sc_Map()).$$plus$plus$eq__sc_TraversableOnce__scg_Growable(this$7));
+  var annotationsJS = $as_scm_Map($s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this$8, xs));
+  var this$10 = $m_sjs_js_JSConverters$JSRichGenMap$();
+  var result = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
+  annotationsJS.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, result$1) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_T2(x0$1$2);
+      if ((x0$1 !== null)) {
+        var key = $as_T(x0$1.$$und1$f);
+        var value$3 = x0$1.$$und2$f;
+        result$1[key] = value$3
+      } else {
+        throw new $c_s_MatchError().init___O(x0$1)
+      }
+    })
+  })(this$10, result)));
+  tierJS.put__O__O__s_Option("annotations", result);
+  var result$2 = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
+  var iterTable = tierJS.table$5;
+  var idx = $s_scm_HashTable$class__scala$collection$mutable$HashTable$$lastPopulatedIndex__scm_HashTable__I(tierJS);
+  var es = iterTable.u[idx];
+  while ((es !== null)) {
+    var arg1$3 = es;
+    var e = $as_scm_DefaultEntry(arg1$3);
+    var _1 = e.key$1;
+    var _2 = e.value$1;
+    var key$1 = $as_T(_1);
+    result$2[key$1] = _2;
+    es = $as_scm_HashEntry(es.next$1);
+    while (((es === null) && (idx > 0))) {
+      idx = (((-1) + idx) | 0);
+      es = iterTable.u[idx]
+    }
+  };
+  return result$2
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.$$js$exported$prop$getID__O = (function() {
+  var attr = this.tierID$1;
+  return $as_T(attr.value$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.attrsToString__p1__T = (function() {
+  return new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", " ", " ", " ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.tierID$1, this.linguisticTypeRef$1, this.participant$1, this.annotator$1, this.defaultLocale$1]))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.$$js$exported$prop$timeAlignable__O = (function() {
+  return this.timeAlignable__Z()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.$$js$exported$prop$stereotype__O = (function() {
+  return this.stereotype__T()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype, "annotationsToJSArray", {
+  "get": (function() {
+    return this.$$js$exported$prop$annotationsToJSArray__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype, "getID", {
+  "get": (function() {
+    return this.$$js$exported$prop$getID__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype, "getLT", {
+  "get": (function() {
+    return this.$$js$exported$prop$getLT__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype, "stereotype", {
+  "get": (function() {
+    return this.$$js$exported$prop$stereotype__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype, "timeAlignable", {
+  "get": (function() {
+    return this.$$js$exported$prop$timeAlignable__O()
+  }),
+  "enumerable": true
+});
 /** @constructor */
 function $c_Lupickle_Implicits$Internal$$anon$2() {
   $c_O.call(this);
@@ -11942,6 +15951,15 @@ $c_sc_TraversableLike$WithFilter.prototype.foreach__F1__V = (function(f) {
     })
   })(this, f)))
 });
+$c_sc_TraversableLike$WithFilter.prototype.map__F1__scg_CanBuildFrom__O = (function(f, bf) {
+  var b = bf.apply__O__scm_Builder(this.$$outer$f.repr__O());
+  this.$$outer$f.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, f$1, b$1) {
+    return (function(x$2) {
+      return ($uZ($this.p$1.apply__O__O(x$2)) ? b$1.$$plus$eq__O__scm_Builder(f$1.apply__O__O(x$2)) : (void 0))
+    })
+  })(this, f, b)));
+  return b.result__O()
+});
 $c_sc_TraversableLike$WithFilter.prototype.init___sc_TraversableLike__F1 = (function($$outer, p) {
   this.p$1 = p;
   if (($$outer === null)) {
@@ -12868,6 +16886,9 @@ function $h_sr_AbstractFunction3() {
   /*<skip>*/
 }
 $h_sr_AbstractFunction3.prototype = $c_sr_AbstractFunction3.prototype;
+$c_sr_AbstractFunction3.prototype.toString__T = (function() {
+  return "<function3>"
+});
 /** @constructor */
 function $c_sr_AbstractFunction4() {
   $c_O.call(this)
@@ -14155,7 +18176,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getDictio
   $m_Lupickle_default$();
   var indent = 0;
   var this$3 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService(this);
-  var evidence$1 = this$3.derive$macro$33__Lupickle_Types$Writer();
+  var evidence$1 = this$3.derive$macro$61__Lupickle_Types$Writer();
   var s = $s_Lupickle_Types$class__write__Lupickle_Types__O__I__Lupickle_Types$Writer__T(this$4, query, indent, evidence$1);
   var jsx$1 = jsx$3.post(jsx$2, s);
   jsx$4.promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(jsx$1).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise(this, p), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -14166,49 +18187,6 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.init___Lc
   this.$$q$1 = $$q;
   this.baseUrl$1 = "";
   return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getSoundMarkup__I__I__s_concurrent_Future = (function(clientID, objectID) {
-  var req = $as_T($g.JSON.stringify({
-    "client_id": clientID,
-    "object_id": objectID
-  }));
-  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
-  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.post(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T("convert/markup"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$27) {
-    return (function(x0$33$2) {
-      var x0$33 = $as_s_util_Try(x0$33$2);
-      if ($is_s_util_Success(x0$33)) {
-        var x2 = $as_s_util_Success(x0$33);
-        var response = x2.value$2;
-        try {
-          var this$5 = $m_Lupickle_default$();
-          var expr = $as_T($g.JSON.stringify(response.content));
-          var evidence$3 = $as_Lupickle_Types$Reader($m_Lupickle_default$().StringRW$1);
-          var markup = $as_T($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$5, expr, evidence$3));
-          return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$27, markup)
-        } catch (e) {
-          if ($is_Lupickle_Invalid$Json(e)) {
-            var e$3 = $as_Lupickle_Invalid$Json(e);
-            var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Malformed markup json:" + e$3.s$1));
-            return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$27, cause)
-          } else if ($is_Lupickle_Invalid$Data(e)) {
-            var e$2 = $as_Lupickle_Invalid$Data(e);
-            var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Malformed markup data. Missing some required fields: " + e$2.s$1));
-            return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$27, cause$1)
-          } else {
-            throw e
-          }
-        }
-      } else if ($is_s_util_Failure(x0$33)) {
-        var x3 = $as_s_util_Failure(x0$33);
-        var e$4 = x3.exception$2;
-        var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get sound markup: " + e$4.getMessage__T()));
-        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$27, cause$2)
-      } else {
-        throw new $c_s_MatchError().init___O(x0$33)
-      }
-    })
-  })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
-  return p
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.fields__s_concurrent_Future = (function() {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
@@ -14363,7 +18341,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updateDic
   $m_Lupickle_default$();
   var indent = 0;
   var this$7 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService(this);
-  var evidence$1 = this$7.derive$macro$79__Lupickle_Types$Writer();
+  var evidence$1 = this$7.derive$macro$107__Lupickle_Types$Writer();
   var s = $s_Lupickle_Types$class__write__Lupickle_Types__O__I__Lupickle_Types$Writer__T(this$8, dictionary, indent, evidence$1);
   var jsx$4 = jsx$6.put(jsx$5, s);
   jsx$7.promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(jsx$4).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$9) {
@@ -14564,6 +18542,105 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_UserService = new $TypeData().
   Lcom_greencatsoft_angularjs_Initializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_UserService.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_UserService;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.call(this);
+  this.timeSlotRef1$2 = null;
+  this.timeSlotRef2$2 = null;
+  this.svgRef$2 = null;
+  this.owner$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.owner__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier = (function() {
+  return this.owner$2
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts = (function(aao, ao) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, ao);
+  this.timeSlotRef1$2 = aao.timeSlotRef1$1;
+  this.timeSlotRef2$2 = aao.timeSlotRef2$1;
+  this.svgRef$2 = aao.svgRef$1;
+  this.owner$2 = aao.owner$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.start__J = (function() {
+  var this$1 = this.owner__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier().owner$1;
+  var id = $as_T(this.timeSlotRef1$2.value$1);
+  return this$1.timeOrder$1.getTimeSlotValue__T__J(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.includedAnnotationToString__T = (function() {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().tagName$1, $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().annotValueElName$1, this.text$1, ""), this.attrsToString__T())
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.attrsToString__T = (function() {
+  return (("" + $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.attrsToString__T.call(this)) + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", " ", " ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.timeSlotRef1$2, this.timeSlotRef2$2, this.svgRef$2])))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier = (function(alignAnnotXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(alignAnnotXML, owner), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(alignAnnotXML, owner));
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.end__J = (function() {
+  var this$1 = this.owner__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier().owner$1;
+  var id = $as_T(this.timeSlotRef2$2.value$1);
+  return this$1.timeOrder$1.getTimeSlotValue__T__J(id)
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.AlignableAnnotation"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.annotation.AlignableAnnotation;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.AlignableAnnotation", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.call(this);
+  this.timeAlignable$2 = false
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(to) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, to);
+  this.timeAlignable$2 = true;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype.timeAlignable__Z = (function() {
+  return this.timeAlignable$2
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.tier.AlignableTier"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.tier.AlignableTier;", depth))
+}
 /** @constructor */
 function $c_Lupickle_Implicits$Internal$$anon$1() {
   $c_O.call(this);
@@ -14960,6 +19037,18 @@ function $h_jl_Exception() {
   /*<skip>*/
 }
 $h_jl_Exception.prototype = $c_jl_Exception.prototype;
+function $is_jl_Exception(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.jl_Exception)))
+}
+function $as_jl_Exception(obj) {
+  return (($is_jl_Exception(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "java.lang.Exception"))
+}
+function $isArrayOf_jl_Exception(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.jl_Exception)))
+}
+function $asArrayOf_jl_Exception(obj, depth) {
+  return (($isArrayOf_jl_Exception(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Ljava.lang.Exception;", depth))
+}
 /** @constructor */
 function $c_jl_Integer$() {
   $c_O.call(this);
@@ -15999,6 +20088,9 @@ $c_s_Predef$.prototype.require__Z__V = (function(requirement) {
   if ((!requirement)) {
     throw new $c_jl_IllegalArgumentException().init___T("requirement failed")
   }
+});
+$c_s_Predef$.prototype.$$qmark$qmark$qmark__sr_Nothing$ = (function() {
+  throw new $c_s_NotImplementedError().init___()
 });
 var $d_s_Predef$ = new $TypeData().initClass({
   s_Predef$: 0
@@ -17113,6 +21205,20 @@ function $h_scg_ImmutableMapFactory() {
 }
 $h_scg_ImmutableMapFactory.prototype = $c_scg_ImmutableMapFactory.prototype;
 /** @constructor */
+function $c_scg_MutableMapFactory() {
+  $c_scg_MapFactory.call(this)
+}
+$c_scg_MutableMapFactory.prototype = new $h_scg_MapFactory();
+$c_scg_MutableMapFactory.prototype.constructor = $c_scg_MutableMapFactory;
+/** @constructor */
+function $h_scg_MutableMapFactory() {
+  /*<skip>*/
+}
+$h_scg_MutableMapFactory.prototype = $c_scg_MutableMapFactory.prototype;
+$c_scg_MutableMapFactory.prototype.newBuilder__scm_Builder = (function() {
+  return $as_scm_Builder(this.empty__sc_Map())
+});
+/** @constructor */
 function $c_sci_$colon$colon$() {
   $c_O.call(this)
 }
@@ -17232,6 +21338,36 @@ $c_sci_Stream$StreamWithFilter.prototype.foreach__F1__V = (function(f) {
       continue _foreach
     };
     break
+  }
+});
+$c_sci_Stream$StreamWithFilter.prototype.tailMap$1__p2__sci_Stream__F1__sci_Stream = (function(coll, f$3) {
+  var head = null;
+  var tail = new $c_sr_ObjectRef().init___O(coll);
+  while (true) {
+    if ($as_sci_Stream(tail.elem$1).isEmpty__Z()) {
+      return $m_sci_Stream$Empty$()
+    };
+    head = $as_sci_Stream(tail.elem$1).head__O();
+    tail.elem$1 = $as_sci_Stream($as_sci_Stream(tail.elem$1).tail__O());
+    if ($uZ(this.p$2.apply__O__O(head))) {
+      var hd = f$3.apply__O__O(head);
+      var tl = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function($this, f$3$1, tail$1) {
+        return (function() {
+          return $this.tailMap$1__p2__sci_Stream__F1__sci_Stream($as_sci_Stream(tail$1.elem$1), f$3$1)
+        })
+      })(this, f$3, tail));
+      return new $c_sci_Stream$Cons().init___O__F0(hd, tl)
+    }
+  }
+});
+$c_sci_Stream$StreamWithFilter.prototype.map__F1__scg_CanBuildFrom__O = (function(f, bf) {
+  var this$1 = $as_sci_Stream(this.$$outer$f);
+  if ($is_sci_Stream$StreamBuilder(bf.apply__O__scm_Builder(this$1))) {
+    $as_sci_Stream(this.$$outer$f);
+    var x = this.tailMap$1__p2__sci_Stream__F1__sci_Stream($as_sci_Stream(this.$$outer$f), f);
+    return x
+  } else {
+    return $c_sc_TraversableLike$WithFilter.prototype.map__F1__scg_CanBuildFrom__O.call(this, f, bf)
   }
 });
 $c_sci_Stream$StreamWithFilter.prototype.init___sci_Stream__F1 = (function($$outer, p) {
@@ -17452,6 +21588,34 @@ var $d_sjsr_AnonFunction2 = new $TypeData().initClass({
   F2: 1
 });
 $c_sjsr_AnonFunction2.prototype.$classData = $d_sjsr_AnonFunction2;
+/** @constructor */
+function $c_sjsr_AnonFunction3() {
+  $c_sr_AbstractFunction3.call(this);
+  this.f$2 = null
+}
+$c_sjsr_AnonFunction3.prototype = new $h_sr_AbstractFunction3();
+$c_sjsr_AnonFunction3.prototype.constructor = $c_sjsr_AnonFunction3;
+/** @constructor */
+function $h_sjsr_AnonFunction3() {
+  /*<skip>*/
+}
+$h_sjsr_AnonFunction3.prototype = $c_sjsr_AnonFunction3.prototype;
+$c_sjsr_AnonFunction3.prototype.init___sjs_js_Function3 = (function(f) {
+  this.f$2 = f;
+  return this
+});
+$c_sjsr_AnonFunction3.prototype.apply__O__O__O__O = (function(arg1, arg2, arg3) {
+  return (0, this.f$2)(arg1, arg2, arg3)
+});
+var $d_sjsr_AnonFunction3 = new $TypeData().initClass({
+  sjsr_AnonFunction3: 0
+}, false, "scala.scalajs.runtime.AnonFunction3", {
+  sjsr_AnonFunction3: 1,
+  sr_AbstractFunction3: 1,
+  O: 1,
+  F3: 1
+});
+$c_sjsr_AnonFunction3.prototype.$classData = $d_sjsr_AnonFunction3;
 /** @constructor */
 function $c_sjsr_RuntimeLong$() {
   $c_O.call(this);
@@ -18048,6 +22212,191 @@ function $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$()
   };
   return $n_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$
 }
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.call(this);
+  this.annotationRef$2 = null;
+  this.owner$2 = null;
+  this.getParentAnnotation$2 = null;
+  this.bitmap$0$2 = false
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.start__J = (function() {
+  return this.getParentAnnotation__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation().start__J()
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.getParentAnnotation$lzycompute__p2__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation = (function() {
+  if ((!this.bitmap$0$2)) {
+    var this$1 = this.owner$2;
+    this.getParentAnnotation$2 = $s_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier$class__getParentTier__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(this$1).getAnnotationByID__T__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation($as_T(this.annotationRef$2.value$1));
+    this.bitmap$0$2 = true
+  };
+  return this.getParentAnnotation$2
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.includedAnnotationToString__T = (function() {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$().tagName$1, $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().wrap__T__T__T__T($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().annotValueElName$1, this.text$1, ""), this.attrsToString__T())
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts = (function(rao, ao) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, ao);
+  this.annotationRef$2 = rao.annotationRef$1;
+  this.owner$2 = rao.owner$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.attrsToString__T = (function() {
+  return (("" + $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation.prototype.attrsToString__T.call(this)) + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.annotationRef$2])))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.getParentAnnotation__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation = (function() {
+  return ((!this.bitmap$0$2) ? this.getParentAnnotation$lzycompute__p2__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation() : this.getParentAnnotation$2)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier = (function(refAnnotXML, owner) {
+  var name = $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$().annotRefAttrName$1;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts().init___Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier($m_Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__s_Option__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr(refAnnotXML, name, $m_s_None$()), owner), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(refAnnotXML, owner));
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.end__J = (function() {
+  return this.getParentAnnotation__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation().end__J()
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.RefAnnotation"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.annotation.RefAnnotation;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.RefAnnotation", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_DependentAnnotation: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.call(this);
+  this.dto$2 = null;
+  this.timeAlignable$2 = false;
+  this.parentRef$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(dto, to) {
+  this.dto$2 = dto;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, to);
+  this.timeAlignable$2 = false;
+  this.parentRef$2 = dto.parentRef$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype.timeAlignable__Z = (function() {
+  return this.timeAlignable$2
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype.parentRef__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr = (function() {
+  return this.parentRef$2
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.tier.RefTier"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.tier.RefTier;", depth))
+}
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.call(this);
+  this.annotations$3 = null;
+  this.stereotype$3 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(topLevelTierXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, ($m_sci_List$(), $m_sci_Nil$()), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(topLevelTierXML, owner));
+  var this$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(topLevelTierXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().tagName$1));
+  var f = (function(arg$outer) {
+    return (function(x$1$2) {
+      return $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation$().apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation(x$1$2, arg$outer)
+    })
+  })(this);
+  var this$2 = $m_sci_List$();
+  var bf = this$2.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$3 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$3.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$3.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$3, bf);
+    var these = this$3;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  this.annotations$3 = $as_sci_List(jsx$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(annotations, to) {
+  this.annotations$3 = annotations;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, to);
+  this.stereotype$3 = "Top-level";
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype.annotations__sci_List = (function() {
+  return this.annotations$3
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype.stereotype__T = (function() {
+  return this.stereotype$3
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.TopLevelTier", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TopLevelTier;
 function $is_T(obj) {
   return ((typeof obj) === "string")
 }
@@ -18520,6 +22869,31 @@ function $m_s_Array$() {
   return $n_s_Array$
 }
 /** @constructor */
+function $c_s_NotImplementedError() {
+  $c_jl_Error.call(this)
+}
+$c_s_NotImplementedError.prototype = new $h_jl_Error();
+$c_s_NotImplementedError.prototype.constructor = $c_s_NotImplementedError;
+/** @constructor */
+function $h_s_NotImplementedError() {
+  /*<skip>*/
+}
+$h_s_NotImplementedError.prototype = $c_s_NotImplementedError.prototype;
+$c_s_NotImplementedError.prototype.init___ = (function() {
+  $c_jl_Throwable.prototype.init___T__jl_Throwable.call(this, "an implementation is missing", null);
+  return this
+});
+var $d_s_NotImplementedError = new $TypeData().initClass({
+  s_NotImplementedError: 0
+}, false, "scala.NotImplementedError", {
+  s_NotImplementedError: 1,
+  jl_Error: 1,
+  jl_Throwable: 1,
+  O: 1,
+  Ljava_io_Serializable: 1
+});
+$c_s_NotImplementedError.prototype.$classData = $d_s_NotImplementedError;
+/** @constructor */
 function $c_s_Predef$$eq$colon$eq() {
   $c_O.call(this)
 }
@@ -18781,11 +23155,22 @@ $c_sc_AbstractIterator.prototype.toIterator__sc_Iterator = (function() {
 $c_sc_AbstractIterator.prototype.isEmpty__Z = (function() {
   return $s_sc_Iterator$class__isEmpty__sc_Iterator__Z(this)
 });
+$c_sc_AbstractIterator.prototype.toList__sci_List = (function() {
+  var this$1 = $m_sci_List$();
+  var cbf = this$1.ReusableCBFInstance$2;
+  return $as_sci_List($s_sc_TraversableOnce$class__to__sc_TraversableOnce__scg_CanBuildFrom__O(this, cbf))
+});
+$c_sc_AbstractIterator.prototype.mkString__T__T = (function(sep) {
+  return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, "", sep, "")
+});
 $c_sc_AbstractIterator.prototype.toString__T = (function() {
   return $s_sc_Iterator$class__toString__sc_Iterator__T(this)
 });
 $c_sc_AbstractIterator.prototype.foreach__F1__V = (function(f) {
   $s_sc_Iterator$class__foreach__sc_Iterator__F1__V(this, f)
+});
+$c_sc_AbstractIterator.prototype.reduceLeftOption__F2__s_Option = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option(this, op)
 });
 $c_sc_AbstractIterator.prototype.foldLeft__O__F2__O = (function(z, op) {
   return $s_sc_TraversableOnce$class__foldLeft__sc_TraversableOnce__O__F2__O(this, z, op)
@@ -18812,6 +23197,9 @@ $c_sc_AbstractIterator.prototype.toStream__sci_Stream = (function() {
 $c_sc_AbstractIterator.prototype.addString__scm_StringBuilder__T__T__T__scm_StringBuilder = (function(b, start, sep, end) {
   return $s_sc_TraversableOnce$class__addString__sc_TraversableOnce__scm_StringBuilder__T__T__T__scm_StringBuilder(this, b, start, sep, end)
 });
+$c_sc_AbstractIterator.prototype.$$div$colon__O__F2__O = (function(z, op) {
+  return $s_sc_TraversableOnce$class__foldLeft__sc_TraversableOnce__O__F2__O(this, z, op)
+});
 $c_sc_AbstractIterator.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
   $s_sc_Iterator$class__copyToArray__sc_Iterator__O__I__I__V(this, xs, start, len)
 });
@@ -18825,6 +23213,9 @@ $c_sc_AbstractIterator.prototype.toMap__s_Predef$$less$colon$less__sci_Map = (fu
     b.$$plus$eq__T2__scm_MapBuilder($as_T2(arg1))
   };
   return $as_sci_Map(b.elems$1)
+});
+$c_sc_AbstractIterator.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeft__sc_TraversableOnce__F2__O(this, op)
 });
 /** @constructor */
 function $c_scg_SetFactory() {
@@ -18902,6 +23293,18 @@ $c_sci_ListSet$ListSetBuilder.prototype.$$plus$eq__O__sci_ListSet$ListSetBuilder
 $c_sci_ListSet$ListSetBuilder.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
   return $s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this, xs)
 });
+function $is_sci_ListSet$ListSetBuilder(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sci_ListSet$ListSetBuilder)))
+}
+function $as_sci_ListSet$ListSetBuilder(obj) {
+  return (($is_sci_ListSet$ListSetBuilder(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.collection.immutable.ListSet$ListSetBuilder"))
+}
+function $isArrayOf_sci_ListSet$ListSetBuilder(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.sci_ListSet$ListSetBuilder)))
+}
+function $asArrayOf_sci_ListSet$ListSetBuilder(obj, depth) {
+  return (($isArrayOf_sci_ListSet$ListSetBuilder(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.immutable.ListSet$ListSetBuilder;", depth))
+}
 var $d_sci_ListSet$ListSetBuilder = new $TypeData().initClass({
   sci_ListSet$ListSetBuilder: 0
 }, false, "scala.collection.immutable.ListSet$ListSetBuilder", {
@@ -19095,6 +23498,43 @@ $c_scm_LazyBuilder.prototype.sizeHint__I__V = (function(size) {
 $c_scm_LazyBuilder.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
   return this.$$plus$plus$eq__sc_TraversableOnce__scm_LazyBuilder(xs)
 });
+/** @constructor */
+function $c_scm_Map$() {
+  $c_scg_MutableMapFactory.call(this)
+}
+$c_scm_Map$.prototype = new $h_scg_MutableMapFactory();
+$c_scm_Map$.prototype.constructor = $c_scm_Map$;
+/** @constructor */
+function $h_scm_Map$() {
+  /*<skip>*/
+}
+$h_scm_Map$.prototype = $c_scm_Map$.prototype;
+$c_scm_Map$.prototype.init___ = (function() {
+  return this
+});
+$c_scm_Map$.prototype.empty__sc_Map = (function() {
+  return new $c_scm_HashMap().init___()
+});
+$c_scm_Map$.prototype.empty__sc_GenMap = (function() {
+  return new $c_scm_HashMap().init___()
+});
+var $d_scm_Map$ = new $TypeData().initClass({
+  scm_Map$: 0
+}, false, "scala.collection.mutable.Map$", {
+  scm_Map$: 1,
+  scg_MutableMapFactory: 1,
+  scg_MapFactory: 1,
+  scg_GenMapFactory: 1,
+  O: 1
+});
+$c_scm_Map$.prototype.$classData = $d_scm_Map$;
+var $n_scm_Map$ = (void 0);
+function $m_scm_Map$() {
+  if ((!$n_scm_Map$)) {
+    $n_scm_Map$ = new $c_scm_Map$().init___()
+  };
+  return $n_scm_Map$
+}
 /** @constructor */
 function $c_scm_MapBuilder() {
   $c_O.call(this);
@@ -19316,17 +23756,28 @@ $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.toIterator__sc_Iterator
 $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.isEmpty__Z = (function() {
   return $s_sc_Iterator$class__isEmpty__sc_Iterator__Z(this)
 });
+$c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.toList__sci_List = (function() {
+  var this$1 = $m_sci_List$();
+  var cbf = this$1.ReusableCBFInstance$2;
+  return $as_sci_List($s_sc_TraversableOnce$class__to__sc_TraversableOnce__scg_CanBuildFrom__O(this, cbf))
+});
 $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.init___sjs_js_Dictionary = (function(dict) {
   this.dict$1 = dict;
   this.keys$1 = $g.Object.keys(dict);
   this.index$1 = 0;
   return this
 });
+$c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.mkString__T__T = (function(sep) {
+  return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, "", sep, "")
+});
 $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.toString__T = (function() {
   return $s_sc_Iterator$class__toString__sc_Iterator__T(this)
 });
 $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.foreach__F1__V = (function(f) {
   $s_sc_Iterator$class__foreach__sc_Iterator__F1__V(this, f)
+});
+$c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.reduceLeftOption__F2__s_Option = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option(this, op)
 });
 $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.foldLeft__O__F2__O = (function(z, op) {
   return $s_sc_TraversableOnce$class__foldLeft__sc_TraversableOnce__O__F2__O(this, z, op)
@@ -19368,6 +23819,9 @@ $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.toStream__sci_Stream = 
 $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.addString__scm_StringBuilder__T__T__T__scm_StringBuilder = (function(b, start, sep, end) {
   return $s_sc_TraversableOnce$class__addString__sc_TraversableOnce__scm_StringBuilder__T__T__T__scm_StringBuilder(this, b, start, sep, end)
 });
+$c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.$$div$colon__O__F2__O = (function(z, op) {
+  return $s_sc_TraversableOnce$class__foldLeft__sc_TraversableOnce__O__F2__O(this, z, op)
+});
 $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
   $s_sc_Iterator$class__copyToArray__sc_Iterator__O__I__I__V(this, xs, start, len)
 });
@@ -19381,6 +23835,9 @@ $c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.toMap__s_Predef$$less$c
     b.$$plus$eq__T2__scm_MapBuilder(arg1)
   };
   return $as_sci_Map(b.elems$1)
+});
+$c_sjs_js_WrappedDictionary$DictionaryIterator.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeft__sc_TraversableOnce__F2__O(this, op)
 });
 var $d_sjs_js_WrappedDictionary$DictionaryIterator = new $TypeData().initClass({
   sjs_js_WrappedDictionary$DictionaryIterator: 0
@@ -20007,6 +24464,12 @@ $h_Lcom_greencatsoft_angularjs_Requires$Requirement$.prototype = $c_Lcom_greenca
 $c_Lcom_greencatsoft_angularjs_Requires$Requirement$.prototype.toString__T = (function() {
   return "Requirement"
 });
+$c_Lcom_greencatsoft_angularjs_Requires$Requirement$.prototype.apply__T__Z__Z__Lcom_greencatsoft_angularjs_Requires$Requirement = (function(name, lookup, optional) {
+  return new $c_Lcom_greencatsoft_angularjs_Requires$Requirement().init___Lcom_greencatsoft_angularjs_Requires__T__Z__Z(this.$$outer$2, name, lookup, optional)
+});
+$c_Lcom_greencatsoft_angularjs_Requires$Requirement$.prototype.apply__O__O__O__O = (function(v1, v2, v3) {
+  return this.apply__T__Z__Z__Lcom_greencatsoft_angularjs_Requires$Requirement($as_T(v1), $uZ(v2), $uZ(v3))
+});
 $c_Lcom_greencatsoft_angularjs_Requires$Requirement$.prototype.init___Lcom_greencatsoft_angularjs_Requires = (function($$outer) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
@@ -20290,7 +24753,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$11.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$11.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController().init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeScope__Lcom_greencatsoft_angularjs_core_Injector__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2));
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController().init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeScope__Lcom_greencatsoft_angularjs_core_Injector__Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lru_ispras_lingvodoc_frontend_app_services_ModalService(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), a3);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -20720,7 +25183,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$20.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$20.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3), a4);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupScope__Lcom_greencatsoft_angularjs_core_Timeout__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, a2, a3, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a4), a5);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -20763,7 +25226,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$21.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$21.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerController().init___Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary(a0, a1, a2);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldControllerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary(a0, a1, a2);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -20806,7 +25269,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$22.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$22.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldController().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), a3);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerController().init___Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary(a0, a1, a2);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -20849,11 +25312,10 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$23.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$23.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_ConvertToNumberDirective().init___();
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldController().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), a3);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
-  var config = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
-  var result = $s_Lcom_greencatsoft_angularjs_Requires$class__buildConfig__Lcom_greencatsoft_angularjs_Requires__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
-  var this$1 = $m_s_Option$().apply__O__s_Option(result);
+  $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
+  var this$1 = $m_s_Option$().apply__O__s_Option(null);
   if (this$1.isEmpty__Z()) {
     var opt = $m_s_None$()
   } else {
@@ -20893,10 +25355,10 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_OnReadFileDirective().init___Lcom_greencatsoft_angularjs_core_Parse(a0);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_ConvertToNumberDirective().init___();
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   var config = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
-  var result = $s_Lcom_greencatsoft_angularjs_RestrictedDirective$class__buildConfig__Lcom_greencatsoft_angularjs_RestrictedDirective__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
+  var result = $s_Lcom_greencatsoft_angularjs_Requires$class__buildConfig__Lcom_greencatsoft_angularjs_Requires__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
   var this$1 = $m_s_Option$().apply__O__s_Option(result);
   if (this$1.isEmpty__Z()) {
     var opt = $m_s_None$()
@@ -20922,6 +25384,50 @@ var $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24 = new $Typ
   Ljava_io_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25() {
+  $c_sr_AbstractFunction21.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype = new $h_sr_AbstractFunction21();
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype = $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype;
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype.init___ = (function() {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_OnReadFileDirective().init___Lcom_greencatsoft_angularjs_core_Parse(a0);
+  $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
+  var config = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
+  var result = $s_Lcom_greencatsoft_angularjs_RestrictedDirective$class__buildConfig__Lcom_greencatsoft_angularjs_RestrictedDirective__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
+  var this$1 = $m_s_Option$().apply__O__s_Option(result);
+  if (this$1.isEmpty__Z()) {
+    var opt = $m_s_None$()
+  } else {
+    var arg1 = this$1.get__O();
+    var opt = new $c_s_Some().init___O(arg1)
+  };
+  if (opt.isEmpty__Z()) {
+    return (void 0)
+  } else {
+    var arg1$1 = opt.get__O();
+    return arg1$1
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25: 0
+}, false, "ru.ispras.lingvodoc.frontend.LingvodocApplication$$anonfun$25", {
+  Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25: 1,
+  sr_AbstractFunction21: 1,
+  O: 1,
+  F21: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$3() {
   $c_sr_AbstractFunction21.call(this)
@@ -22493,8 +26999,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
   while ((i < len)) {
     var index = i;
     var arg1 = array[index];
-    var x$3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
-    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$3).link$2;
+    var x$6 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
+    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$6).link$2;
     array$1.push(elem);
     i = ((1 + i) | 0)
   };
@@ -22865,7 +27371,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
             var x = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2$2.x$2);
             var this$4 = arg$outer.$$outer$2;
             var jsx$1 = this$4.scope$1.dictionaryTable;
-            $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_Entity__V(arg$outer.entry$2$f, x.entity$1, newEntity)
+            $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value__Lru_ispras_lingvodoc_frontend_app_model_Entity__I(x, newEntity)
           } else {
             var x$2 = $m_s_None$();
             if ((x$2 === x1$2)) {
@@ -22961,7 +27467,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
             var x = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2$2.x$2);
             var this$4 = arg$outer.$$outer$2;
             var jsx$1 = this$4.scope$1.dictionaryTable;
-            $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_Entity__V(arg$outer.entry$1$f, x.entity$1, newEntity)
+            $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value__Lru_ispras_lingvodoc_frontend_app_model_Entity__I(x, newEntity)
           } else {
             var x$2 = $m_s_None$();
             if ((x$2 === x1$2)) {
@@ -23688,6 +28194,130 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$
   Ljava_io_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$setPerspectives$1$$anonfun$apply$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$setPerspectives$1$$anonfun$apply$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any(v1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any = (function(x$6) {
+  return x$6.on("seek", (function(arg$outer) {
+    return (function(progress$2) {
+      var progress = $uD(progress$2);
+      arg$outer.$$outer$2.onWSSeek__D__V(progress)
+    })
+  })(this))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.SoundMarkupController$$anonfun$createWaveSurfer$4", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any(v1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any = (function(x$7) {
+  return x$7.on("audioprocess", (function(arg$outer) {
+    return (function() {
+      arg$outer.$$outer$2.onWSPlaying__V()
+    })
+  })(this))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.SoundMarkupController$$anonfun$createWaveSurfer$5", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any(v1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any = (function(x$8) {
+  return x$8.on("ready", (function(arg$outer) {
+    return (function(event$2) {
+      arg$outer.$$outer$2.wsReady__sjs_js_Dynamic__V(event$2)
+    })
+  })(this))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.SoundMarkupController$$anonfun$createWaveSurfer$6", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -24774,7 +29404,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4.prot
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4(this);
-  return this$1.derive$macro$1__Lupickle_Types$Reader()
+  return this$1.derive$macro$51__Lupickle_Types$Reader()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
@@ -24791,19 +29421,19 @@ var $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4 
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype.apply__Lupickle_Types$Reader = (function() {
+$h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$10 = $m_Lupickle_default$();
-  var f = new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1().init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1(this);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1().init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1(this);
   var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array(["file_name", "file_name", "content"]);
   var len = $uI(xs.array$6.length);
   var array = $newArrayObject($d_T.getArrayOf(), [len]);
@@ -24833,60 +29463,60 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$ano
   var evidence$8 = $as_Lupickle_Types$Reader($s_Lupickle_Generated$class__Tuple3R__Lupickle_Generated__O__O__O__O(this$9, evidence$10, evidence$11, evidence$12));
   return $s_Lupickle_Implicits$class__CaseR__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Reader__Lupickle_Types$Reader(this$10, f, array, array$1, evidence$8)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.model.EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1", {
-  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.model.EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1", {
+  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1() {
   $c_sr_AbstractFunction1.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype.apply__O__O = (function(v1) {
   return this.apply__T3__Lru_ispras_lingvodoc_frontend_app_model_FileContent($as_T3(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype.apply__T3__Lru_ispras_lingvodoc_frontend_app_model_FileContent = (function(derive$macro$9) {
-  var arg1 = derive$macro$9.$$und1$1;
-  var arg2 = derive$macro$9.$$und2$1;
-  var arg3 = derive$macro$9.$$und3$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype.apply__T3__Lru_ispras_lingvodoc_frontend_app_model_FileContent = (function(derive$macro$59) {
+  var arg1 = derive$macro$59.$$und1$1;
+  var arg2 = derive$macro$59.$$und2$1;
+  var arg3 = derive$macro$59.$$und3$1;
   var fileName = $as_T(arg1);
   var fileType = $as_T(arg2);
   var content = $as_T(arg3);
   return new $c_Lru_ispras_lingvodoc_frontend_app_model_FileContent().init___T__T__T(fileName, fileType, content)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1 = (function($$outer) {
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.model.EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1", {
-  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.model.EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1", {
+  Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$1;
+$c_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_EntityData$$anonfun$1$$anonfun$4$$anon$1$$anonfun$derive$macro$51$1$$anonfun$apply$1;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2() {
   $c_sr_AbstractFunction1.call(this)
@@ -24905,7 +29535,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2.prototype.apply__O__
   return new $c_Lupickle_Js$Obj().init___sc_Seq(this.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq($as_Lru_ispras_lingvodoc_frontend_app_model_Field(v1)))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq = (function(field) {
-  return new $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2__Lru_ispras_lingvodoc_frontend_app_model_Field(this, field).apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq(field)
+  return new $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2__Lru_ispras_lingvodoc_frontend_app_model_Field(this, field).apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sc_Seq(field)
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$2: 0
@@ -25861,17 +30491,17 @@ var $d_Lru_ispras_lingvodoc_frontend_app_model_User = new $TypeData().initClass(
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_User.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_User;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype.apply__Lupickle_Types$Writer = (function() {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype.apply__Lupickle_Types$Writer = (function() {
   var this$12 = $m_Lupickle_default$();
   var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$0$2) {
     var x$0 = $as_Lru_ispras_lingvodoc_frontend_app_model_DictionaryQuery(x$0$2);
@@ -25910,35 +30540,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$de
   var evidence$9 = $as_Lupickle_Types$Writer($s_Lupickle_Generated$class__Tuple2W__Lupickle_Generated__O__O__O(this$11, evidence$3, evidence$4));
   return $s_Lupickle_Implicits$class__CaseW__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Writer__Lupickle_Types$Writer(this$12, f, array, array$1, evidence$9)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Writer()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3 = (function($$outer) {
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anon$3$$anonfun$derive$macro$33$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anon$3$$anonfun$derive$macro$61$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$33$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$3$$anonfun$derive$macro$61$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype.apply__Lupickle_Types$Writer = (function() {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype.apply__Lupickle_Types$Writer = (function() {
   var this$10 = $m_Lupickle_default$();
   var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$0$2) {
     var x$0 = $as_Lru_ispras_lingvodoc_frontend_app_model_Dictionary(x$0$2);
@@ -25979,23 +30609,23 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$de
   var evidence$9 = $as_Lupickle_Types$Writer($s_Lupickle_Generated$class__Tuple9W__Lupickle_Generated__O__O__O__O__O__O__O__O__O__O(this$9, evidence$73, evidence$74, evidence$75, evidence$76, evidence$77, evidence$78, evidence$79, evidence$80, evidence$81));
   return $s_Lupickle_Implicits$class__CaseW__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Writer__Lupickle_Types$Writer(this$10, f, array, array$1, evidence$9)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Writer()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6 = (function($$outer) {
   return this
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anon$6$$anonfun$derive$macro$79$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anon$6$$anonfun$derive$macro$107$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$79$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$6$$anonfun$derive$macro$107$1;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -26068,7 +30698,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuse
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11(this);
-  return this$1.derive$macro$1__Lupickle_Types$Reader()
+  return this$1.derive$macro$19__Lupickle_Types$Reader()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
@@ -26085,19 +30715,19 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allSta
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype.apply__Lupickle_Types$Reader = (function() {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$13 = $m_Lupickle_default$();
-  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1(this);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1(this);
   var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array(["client_id", "object_id", "created_at", "type", "contains"]);
   var len = $uI(xs.array$6.length);
   var array = $newArrayObject($d_T.getArrayOf(), [len]);
@@ -26128,115 +30758,118 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuse
   var this$11 = $m_Lupickle_default$();
   var cbf = new $c_sjs_js_Any$CanBuildFromArray$1().init___();
   var this$10 = $m_Lupickle_default$().Internal__Lupickle_Implicits$Internal$();
-  var r = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1(this);
+  var r = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1(this);
   var r$1 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$10, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.TranslationAtom", r);
   var evidence$30 = $s_Lupickle_Implicits$class__SeqishR__Lupickle_Implicits__scg_CanBuildFrom__Lupickle_Types$Reader__Lupickle_Types$Reader(this$11, cbf, r$1);
   var evidence$8 = $as_Lupickle_Types$Reader($s_Lupickle_Generated$class__Tuple5R__Lupickle_Generated__O__O__O__O__O__O(this$12, evidence$26, evidence$27, evidence$28, evidence$29, evidence$30));
   return $s_Lupickle_Implicits$class__CaseR__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Reader__Lupickle_Types$Reader(this$13, f, array, array$1, evidence$8)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17() {
   $c_sr_AbstractFunction1.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype.apply__O__O = (function(v1) {
   return this.apply__T5__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist($as_T5(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype.apply__T5__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist = (function(derive$macro$16) {
-  var arg1 = derive$macro$16.$$und1$1;
-  var arg2 = derive$macro$16.$$und2$1;
-  var arg3 = derive$macro$16.$$und3$1;
-  var arg4 = derive$macro$16.$$und4$1;
-  var arg5 = derive$macro$16.$$und5$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype.apply__T5__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist = (function(derive$macro$34) {
+  var arg1 = derive$macro$34.$$und1$1;
+  var arg2 = derive$macro$34.$$und2$1;
+  var arg3 = derive$macro$34.$$und3$1;
+  var arg4 = derive$macro$34.$$und4$1;
+  var arg5 = derive$macro$34.$$und5$1;
   var clientId = $uI(arg1);
   var objectId = $uI(arg2);
   var createAt = $as_T(arg3);
   var gistType = $as_T(arg4);
   return new $c_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist().init___I__I__T__T__sjs_js_Array(clientId, objectId, createAt, gistType, arg5)
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$17;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$17;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype.apply__Lupickle_Types$Reader = (function() {
-  var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19(this);
-  return this$1.derive$macro$18__Lupickle_Types$Reader()
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype.apply__Lupickle_Types$Reader = (function() {
+  var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19(this);
+  return this$1.derive$macro$36__Lupickle_Types$Reader()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1 = (function($$outer) {
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19: 1,
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1 = (function($$outer) {
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype.apply__Lupickle_Types$Reader = (function() {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2 = (function($$outer) {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$10 = $m_Lupickle_default$();
-  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1(this);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1(this);
   var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array(["client_id", "object_id", "parent_client_id", "parent_object_id", "content", "locale_id"]);
   var len = $uI(xs.array$6.length);
   var array = $newArrayObject($d_T.getArrayOf(), [len]);
@@ -26269,47 +30902,44 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuse
   var evidence$8 = $as_Lupickle_Types$Reader($s_Lupickle_Generated$class__Tuple6R__Lupickle_Generated__O__O__O__O__O__O__O(this$9, evidence$37, evidence$38, evidence$39, evidence$40, evidence$41, evidence$42));
   return $s_Lupickle_Implicits$class__CaseR__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Reader__Lupickle_Types$Reader(this$10, f, array, array$1, evidence$8)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2 = (function($$outer) {
-  return this
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20() {
   $c_sr_AbstractFunction1.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype.apply__O__O = (function(v1) {
   return this.apply__T6__Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom($as_T6(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype.apply__T6__Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom = (function(derive$macro$31) {
-  var arg1 = derive$macro$31.$$und1$1;
-  var arg2 = derive$macro$31.$$und2$1;
-  var arg3 = derive$macro$31.$$und3$1;
-  var arg4 = derive$macro$31.$$und4$1;
-  var arg5 = derive$macro$31.$$und5$1;
-  var arg6 = derive$macro$31.$$und6$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype.apply__T6__Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom = (function(derive$macro$49) {
+  var arg1 = derive$macro$49.$$und1$1;
+  var arg2 = derive$macro$49.$$und2$1;
+  var arg3 = derive$macro$49.$$und3$1;
+  var arg4 = derive$macro$49.$$und4$1;
+  var arg5 = derive$macro$49.$$und5$1;
+  var arg6 = derive$macro$49.$$und6$1;
   var clientId = $uI(arg1);
   var objectId = $uI(arg2);
   var parentClientId = $uI(arg3);
@@ -26318,17 +30948,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuse
   var localeId = $uI(arg6);
   return new $c_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom().init___I__I__I__I__T__I(clientId, objectId, parentClientId, parentObjectId, content, localeId)
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$1$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$18$1$$anonfun$apply$20;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1$$anonfun$11$$anon$1$$anonfun$derive$macro$19$1$$anonfun$apply$19$$anon$2$$anonfun$derive$macro$36$1$$anonfun$apply$20;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -27213,7 +31843,7 @@ function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$d
 $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19.prototype;
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19(this);
-  return this$1.derive$macro$143__Lupickle_Types$Reader()
+  return this$1.derive$macro$171__Lupickle_Types$Reader()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1 = (function($$outer) {
   return this
@@ -27233,19 +31863,19 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTy
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype.apply__Lupickle_Types$Reader = (function() {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$13 = $m_Lupickle_default$();
-  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1(this);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1(this);
   var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array(["client_id", "object_id", "created_at", "type", "contains"]);
   var len = $uI(xs.array$6.length);
   var array = $newArrayObject($d_T.getArrayOf(), [len]);
@@ -27276,118 +31906,118 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$
   var this$11 = $m_Lupickle_default$();
   var cbf = new $c_sjs_js_Any$CanBuildFromArray$1().init___();
   var this$10 = $m_Lupickle_default$().Internal__Lupickle_Implicits$Internal$();
-  var r = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1(this);
+  var r = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1(this);
   var r$1 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$10, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.TranslationAtom", r);
   var evidence$30 = $s_Lupickle_Implicits$class__SeqishR__Lupickle_Implicits__scg_CanBuildFrom__Lupickle_Types$Reader__Lupickle_Types$Reader(this$11, cbf, r$1);
   var evidence$8 = $as_Lupickle_Types$Reader($s_Lupickle_Generated$class__Tuple5R__Lupickle_Generated__O__O__O__O__O__O(this$12, evidence$26, evidence$27, evidence$28, evidence$29, evidence$30));
   return $s_Lupickle_Implicits$class__CaseR__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Reader__Lupickle_Types$Reader(this$13, f, array, array$1, evidence$8)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29() {
   $c_sr_AbstractFunction1.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype.apply__O__O = (function(v1) {
-  return this.apply__T5__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist($as_T5(v1))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1 = (function($$outer) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype.apply__T5__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist = (function(derive$macro$158) {
-  var arg1 = derive$macro$158.$$und1$1;
-  var arg2 = derive$macro$158.$$und2$1;
-  var arg3 = derive$macro$158.$$und3$1;
-  var arg4 = derive$macro$158.$$und4$1;
-  var arg5 = derive$macro$158.$$und5$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype.apply__O__O = (function(v1) {
+  return this.apply__T5__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist($as_T5(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype.apply__T5__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist = (function(derive$macro$186) {
+  var arg1 = derive$macro$186.$$und1$1;
+  var arg2 = derive$macro$186.$$und2$1;
+  var arg3 = derive$macro$186.$$und3$1;
+  var arg4 = derive$macro$186.$$und4$1;
+  var arg5 = derive$macro$186.$$und5$1;
   var clientId = $uI(arg1);
   var objectId = $uI(arg2);
   var createAt = $as_T(arg3);
   var gistType = $as_T(arg4);
   return new $c_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist().init___I__I__T__T__sjs_js_Array(clientId, objectId, createAt, gistType, arg5)
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$29;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$29;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype.apply__Lupickle_Types$Reader = (function() {
-  var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31(this);
-  return this$1.derive$macro$160__Lupickle_Types$Reader()
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1 = (function($$outer) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype.apply__Lupickle_Types$Reader = (function() {
+  var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31(this);
+  return this$1.derive$macro$188__Lupickle_Types$Reader()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11 = (function($$outer) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype.apply__Lupickle_Types$Reader = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$10 = $m_Lupickle_default$();
-  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1(this);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1(this);
   var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array(["client_id", "object_id", "parent_client_id", "parent_object_id", "content", "locale_id"]);
   var len = $uI(xs.array$6.length);
   var array = $newArrayObject($d_T.getArrayOf(), [len]);
@@ -27420,44 +32050,44 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$
   var evidence$8 = $as_Lupickle_Types$Reader($s_Lupickle_Generated$class__Tuple6R__Lupickle_Generated__O__O__O__O__O__O__O(this$9, evidence$37, evidence$38, evidence$39, evidence$40, evidence$41, evidence$42));
   return $s_Lupickle_Implicits$class__CaseR__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Reader__Lupickle_Types$Reader(this$10, f, array, array$1, evidence$8)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32() {
   $c_sr_AbstractFunction1.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype.apply__O__O = (function(v1) {
   return this.apply__T6__Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom($as_T6(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype.apply__T6__Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom = (function(derive$macro$173) {
-  var arg1 = derive$macro$173.$$und1$1;
-  var arg2 = derive$macro$173.$$und2$1;
-  var arg3 = derive$macro$173.$$und3$1;
-  var arg4 = derive$macro$173.$$und4$1;
-  var arg5 = derive$macro$173.$$und5$1;
-  var arg6 = derive$macro$173.$$und6$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype.apply__T6__Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom = (function(derive$macro$201) {
+  var arg1 = derive$macro$201.$$und1$1;
+  var arg2 = derive$macro$201.$$und2$1;
+  var arg3 = derive$macro$201.$$und3$1;
+  var arg4 = derive$macro$201.$$und4$1;
+  var arg5 = derive$macro$201.$$und5$1;
+  var arg6 = derive$macro$201.$$und6$1;
   var clientId = $uI(arg1);
   var objectId = $uI(arg2);
   var parentClientId = $uI(arg3);
@@ -27466,17 +32096,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$
   var localeId = $uI(arg6);
   return new $c_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom().init___I__I__I__I__T__I(clientId, objectId, parentClientId, parentObjectId, content, localeId)
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$143$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$160$1$$anonfun$apply$32;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1$$anonfun$19$$anon$10$$anonfun$derive$macro$171$1$$anonfun$apply$31$$anon$11$$anonfun$derive$macro$188$1$$anonfun$apply$32;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -27713,7 +32343,7 @@ function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$g
 $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2.prototype;
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$1 = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2(this);
-  return this$1.derive$macro$43__Lupickle_Types$Reader()
+  return this$1.derive$macro$71__Lupickle_Types$Reader()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
@@ -27733,22 +32363,22 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDic
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1() {
   $c_sr_AbstractFunction0.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype = new $h_sr_AbstractFunction0();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4 = (function($$outer) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4 = (function($$outer) {
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype.apply__Lupickle_Types$Reader = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype.apply__Lupickle_Types$Reader = (function() {
   var this$10 = $m_Lupickle_default$();
-  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1(this);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1(this);
   var xs = new $c_sjs_js_WrappedArray().init___sjs_js_Array(["client_id", "object_id", "parent_client_id", "parent_object_id", "translation", "translation_gist_client_id", "translation_gist_object_id", "state_translation_gist_client_id", "state_translation_gist_object_id"]);
   var len = $uI(xs.array$6.length);
   var array = $newArrayObject($d_T.getArrayOf(), [len]);
@@ -27784,47 +32414,44 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
   var evidence$8 = $as_Lupickle_Types$Reader($s_Lupickle_Generated$class__Tuple9R__Lupickle_Generated__O__O__O__O__O__O__O__O__O__O(this$9, evidence$82, evidence$83, evidence$84, evidence$85, evidence$86, evidence$87, evidence$88, evidence$89, evidence$90));
   return $s_Lupickle_Implicits$class__CaseR__Lupickle_Implicits__F1__AT__ALupickle_Js$Value__Lupickle_Types$Reader__Lupickle_Types$Reader(this$10, f, array, array$1, evidence$8)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype.apply__O = (function() {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype.apply__O = (function() {
   return this.apply__Lupickle_Types$Reader()
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1: 1,
   sr_AbstractFunction0: 1,
   O: 1,
   F0: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2() {
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2() {
   $c_sr_AbstractFunction1.call(this)
 }
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2() {
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1 = (function($$outer) {
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype.apply__O__O = (function(v1) {
   return this.apply__T9__Lru_ispras_lingvodoc_frontend_app_model_Dictionary($as_T9(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype.apply__T9__Lru_ispras_lingvodoc_frontend_app_model_Dictionary = (function(derive$macro$59) {
-  var arg1 = derive$macro$59.$$und1$1;
-  var arg2 = derive$macro$59.$$und2$1;
-  var arg3 = derive$macro$59.$$und3$1;
-  var arg4 = derive$macro$59.$$und4$1;
-  var arg5 = derive$macro$59.$$und5$1;
-  var arg6 = derive$macro$59.$$und6$1;
-  var arg7 = derive$macro$59.$$und7$1;
-  var arg8 = derive$macro$59.$$und8$1;
-  var arg9 = derive$macro$59.$$und9$1;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype.apply__T9__Lru_ispras_lingvodoc_frontend_app_model_Dictionary = (function(derive$macro$87) {
+  var arg1 = derive$macro$87.$$und1$1;
+  var arg2 = derive$macro$87.$$und2$1;
+  var arg3 = derive$macro$87.$$und3$1;
+  var arg4 = derive$macro$87.$$und4$1;
+  var arg5 = derive$macro$87.$$und5$1;
+  var arg6 = derive$macro$87.$$und6$1;
+  var arg7 = derive$macro$87.$$und7$1;
+  var arg8 = derive$macro$87.$$und8$1;
+  var arg9 = derive$macro$87.$$und9$1;
   var clientId = $uI(arg1);
   var objectId = $uI(arg2);
   var parentClientId = $uI(arg3);
@@ -27836,17 +32463,20 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
   var stateTranslationGistObjectId = $uI(arg9);
   return new $c_Lru_ispras_lingvodoc_frontend_app_model_Dictionary().init___I__I__I__I__T__I__I__I__I(clientId, objectId, parentClientId, parentObjectId, translation, translationGistClientId, translationGistObjectId, stateTranslationGistClientId, stateTranslationGistObjectId)
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2: 1,
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1 = (function($$outer) {
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$43$1$$anonfun$apply$2;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionaries$1$$anonfun$2$$anon$4$$anonfun$derive$macro$71$1$$anonfun$apply$2;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDictionariesWithPerspectives$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -27982,7 +32612,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getDiction
       if ($is_sr_NonLocalReturnControl(e)) {
         var ex = $as_sr_NonLocalReturnControl(e);
         if ((ex.key$2 === nonLocalReturnKey1)) {
-          var jsx$1 = ex.value$f
+          var jsx$1 = ex.value__O()
         } else {
           var jsx$1;
           throw ex
@@ -28830,6 +33460,302 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory = new $Type
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_UserServiceFactory;
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1() {
+  $c_sr_AbstractFunction2.call(this);
+  this.apply$1$2 = null;
+  this.join$1$f = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype = new $h_sr_AbstractFunction2();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype.apply__s_Option__Lorg_scalajs_jquery_JQuery__s_Option = (function(acc, newXML) {
+  var xo = new $c_s_Some().init___O(this.apply$1$2.apply__O__O(newXML));
+  var jsx$2 = xo.toList__sci_List();
+  var jsx$1 = acc.toList__sci_List();
+  var this$3 = $m_sc_Iterable$();
+  var this$4 = $as_sc_TraversableOnce(jsx$2.$$plus$plus__sc_GenTraversableOnce__scg_CanBuildFrom__O(jsx$1, this$3.ReusableCBFInstance$2));
+  var op = new $c_sjsr_AnonFunction2().init___sjs_js_Function2((function(arg$outer) {
+    return (function(x$1$2, x$2$2) {
+      return arg$outer.join$1$f.apply__O__O__O(x$1$2, x$2$2)
+    })
+  })(this));
+  return this$4.reduceLeftOption__F2__s_Option(op)
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype.init___F1__F2 = (function(apply$1, join$1) {
+  this.apply$1$2 = apply$1;
+  this.join$1$f = join$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype.apply__O__O__O = (function(v1, v2) {
+  return this.apply__s_Option__Lorg_scalajs_jquery_JQuery__s_Option($as_s_Option(v1), v2)
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.Utils$$anonfun$fromMultiple$1", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1: 1,
+  sr_AbstractFunction2: 1,
+  O: 1,
+  F2: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$$anonfun$fromMultiple$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.call(this);
+  this.owner$3 = null;
+  this.getParentAnnotation$3 = null;
+  this.bitmap$0$3 = false
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype.owner__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier = (function() {
+  return this.owner$3
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier = (function(alignAnnotXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, owner, new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier(alignAnnotXML, owner), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(alignAnnotXML, owner));
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts = (function(owner, aao, ao) {
+  this.owner$3 = owner;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, aao, ao);
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.AlignableDependentAnnotation", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_DependentAnnotation: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.call(this);
+  this.previousAnnotation$3 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts = (function(previousAnnotation, rao, ao) {
+  this.previousAnnotation$3 = previousAnnotation;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, rao, ao);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype.attrsToString__T = (function() {
+  return (("" + $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation.prototype.attrsToString__T.call(this)) + new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array([" ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([this.previousAnnotation$3])))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier = (function(ssAnnotXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts.call(this, $m_Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr$().apply__Lorg_scalajs_jquery_JQuery__T__Lru_ispras_lingvodoc_frontend_extras_elan_OptionalXMLAttr(ssAnnotXML, $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$().prevAnnotAttrName$1), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotationOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier(ssAnnotXML, owner), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AnnotationOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(ssAnnotXML, owner));
+  return this
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.SymbolicSubdivisionAnnotation"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.annotation.SymbolicSubdivisionAnnotation;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.annotation.SymbolicSubdivisionAnnotation", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_annotation_DependentAnnotation: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(to) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, to);
+  return this
+});
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.call(this);
+  this.annotations$3 = null;
+  this.stereotype$3 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(SATierXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, ($m_sci_List$(), $m_sci_Nil$()), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts().init___Lorg_scalajs_jquery_JQuery(SATierXML), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(SATierXML, owner));
+  var this$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(SATierXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().tagName$1));
+  var f = (function(arg$outer) {
+    return (function(x$1$2) {
+      return $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation$().apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_RefAnnotation(x$1$2, arg$outer)
+    })
+  })(this);
+  var this$2 = $m_sci_List$();
+  var bf = this$2.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$3 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$3.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$3.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$3, bf);
+    var these = this$3;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  this.annotations$3 = $as_sci_List(jsx$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype.annotations__sci_List = (function() {
+  return this.annotations$3
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype.stereotype__T = (function() {
+  return this.stereotype$3
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(annotations, rto, to) {
+  this.annotations$3 = annotations;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, rto, to);
+  this.stereotype$3 = "Symbolic Association";
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.SymbolicAssociationTier", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicAssociationTier;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.call(this);
+  this.annotations$3 = null;
+  this.stereotype$3 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(SSTierXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, ($m_sci_List$(), $m_sci_Nil$()), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts().init___Lorg_scalajs_jquery_JQuery(SSTierXML), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(SSTierXML, owner));
+  var this$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(SSTierXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().tagName$1));
+  var f = (function(arg$outer) {
+    return (function(x$1$2) {
+      return $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation$().apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_SymbolicSubdivisionAnnotation(x$1$2, arg$outer)
+    })
+  })(this);
+  var this$2 = $m_sci_List$();
+  var bf = this$2.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$3 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$3.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$3.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$3, bf);
+    var these = this$3;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  this.annotations$3 = $as_sci_List(jsx$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype.annotations__sci_List = (function() {
+  return this.annotations$3
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype.stereotype__T = (function() {
+  return this.stereotype$3
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(annotations, rto, to) {
+  this.annotations$3 = annotations;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, rto, to);
+  this.stereotype$3 = "Symbolic Subdivision";
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.SymbolicSubdivisionTier", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_RefTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_SymbolicSubdivisionTier;
+/** @constructor */
 function $c_Lupickle_Implicits$$anonfun$SeqishW$1() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null;
@@ -29374,6 +34300,18 @@ $c_ju_NoSuchElementException.prototype.init___T = (function(s) {
   $c_jl_Throwable.prototype.init___T__jl_Throwable.call(this, s, null);
   return this
 });
+function $is_ju_NoSuchElementException(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.ju_NoSuchElementException)))
+}
+function $as_ju_NoSuchElementException(obj) {
+  return (($is_ju_NoSuchElementException(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "java.util.NoSuchElementException"))
+}
+function $isArrayOf_ju_NoSuchElementException(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.ju_NoSuchElementException)))
+}
+function $asArrayOf_ju_NoSuchElementException(obj, depth) {
+  return (($isArrayOf_ju_NoSuchElementException(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Ljava.util.NoSuchElementException;", depth))
+}
 var $d_ju_NoSuchElementException = new $TypeData().initClass({
   ju_NoSuchElementException: 0
 }, false, "java.util.NoSuchElementException", {
@@ -30397,6 +35335,11 @@ $c_sc_LinearSeqLike$$anon$1.prototype.next__O = (function() {
     return $m_sc_Iterator$().empty$1.next__O()
   }
 });
+$c_sc_LinearSeqLike$$anon$1.prototype.toList__sci_List = (function() {
+  var xs = this.these$2.toList__sci_List();
+  this.these$2 = $as_sc_LinearSeqLike(this.these$2.take__I__O(0));
+  return xs
+});
 $c_sc_LinearSeqLike$$anon$1.prototype.hasNext__Z = (function() {
   return (!this.these$2.isEmpty__Z())
 });
@@ -30411,6 +35354,72 @@ var $d_sc_LinearSeqLike$$anon$1 = new $TypeData().initClass({
   sc_GenTraversableOnce: 1
 });
 $c_sc_LinearSeqLike$$anon$1.prototype.$classData = $d_sc_LinearSeqLike$$anon$1;
+/** @constructor */
+function $c_sc_MapLike$$anon$1() {
+  $c_sc_AbstractIterator.call(this);
+  this.iter$2 = null
+}
+$c_sc_MapLike$$anon$1.prototype = new $h_sc_AbstractIterator();
+$c_sc_MapLike$$anon$1.prototype.constructor = $c_sc_MapLike$$anon$1;
+/** @constructor */
+function $h_sc_MapLike$$anon$1() {
+  /*<skip>*/
+}
+$h_sc_MapLike$$anon$1.prototype = $c_sc_MapLike$$anon$1.prototype;
+$c_sc_MapLike$$anon$1.prototype.next__O = (function() {
+  return $as_T2(this.iter$2.next__O()).$$und1$f
+});
+$c_sc_MapLike$$anon$1.prototype.hasNext__Z = (function() {
+  return this.iter$2.hasNext__Z()
+});
+$c_sc_MapLike$$anon$1.prototype.init___sc_MapLike = (function($$outer) {
+  this.iter$2 = $$outer.iterator__sc_Iterator();
+  return this
+});
+var $d_sc_MapLike$$anon$1 = new $TypeData().initClass({
+  sc_MapLike$$anon$1: 0
+}, false, "scala.collection.MapLike$$anon$1", {
+  sc_MapLike$$anon$1: 1,
+  sc_AbstractIterator: 1,
+  O: 1,
+  sc_Iterator: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1
+});
+$c_sc_MapLike$$anon$1.prototype.$classData = $d_sc_MapLike$$anon$1;
+/** @constructor */
+function $c_sc_MapLike$$anon$2() {
+  $c_sc_AbstractIterator.call(this);
+  this.iter$2 = null
+}
+$c_sc_MapLike$$anon$2.prototype = new $h_sc_AbstractIterator();
+$c_sc_MapLike$$anon$2.prototype.constructor = $c_sc_MapLike$$anon$2;
+/** @constructor */
+function $h_sc_MapLike$$anon$2() {
+  /*<skip>*/
+}
+$h_sc_MapLike$$anon$2.prototype = $c_sc_MapLike$$anon$2.prototype;
+$c_sc_MapLike$$anon$2.prototype.next__O = (function() {
+  return $as_T2(this.iter$2.next__O()).$$und2$f
+});
+$c_sc_MapLike$$anon$2.prototype.hasNext__Z = (function() {
+  return this.iter$2.hasNext__Z()
+});
+$c_sc_MapLike$$anon$2.prototype.init___sc_MapLike = (function($$outer) {
+  this.iter$2 = $$outer.iterator__sc_Iterator();
+  return this
+});
+var $d_sc_MapLike$$anon$2 = new $TypeData().initClass({
+  sc_MapLike$$anon$2: 0
+}, false, "scala.collection.MapLike$$anon$2", {
+  sc_MapLike$$anon$2: 1,
+  sc_AbstractIterator: 1,
+  O: 1,
+  sc_Iterator: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1
+});
+$c_sc_MapLike$$anon$2.prototype.$classData = $d_sc_MapLike$$anon$2;
 /** @constructor */
 function $c_sc_Traversable$() {
   $c_scg_GenTraversableFactory.call(this);
@@ -30677,6 +35686,12 @@ $c_sci_StreamIterator.prototype.next__O = (function() {
     return result
   }
 });
+$c_sci_StreamIterator.prototype.toList__sci_List = (function() {
+  var this$1 = this.toStream__sci_Stream();
+  var this$2 = $m_sci_List$();
+  var cbf = this$2.ReusableCBFInstance$2;
+  return $as_sci_List($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this$1, cbf))
+});
 $c_sci_StreamIterator.prototype.init___sci_Stream = (function(self) {
   this.these$2 = new $c_sci_StreamIterator$LazyCell().init___sci_StreamIterator__F0(this, new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function($this, self$1) {
     return (function() {
@@ -30710,6 +35725,65 @@ var $d_sci_StreamIterator = new $TypeData().initClass({
   sc_GenTraversableOnce: 1
 });
 $c_sci_StreamIterator.prototype.$classData = $d_sci_StreamIterator;
+/** @constructor */
+function $c_sci_StringLike$$anon$1() {
+  $c_sc_AbstractIterator.call(this);
+  this.str$2 = null;
+  this.len$2 = 0;
+  this.index$2 = 0;
+  this.$$outer$2 = null
+}
+$c_sci_StringLike$$anon$1.prototype = new $h_sc_AbstractIterator();
+$c_sci_StringLike$$anon$1.prototype.constructor = $c_sci_StringLike$$anon$1;
+/** @constructor */
+function $h_sci_StringLike$$anon$1() {
+  /*<skip>*/
+}
+$h_sci_StringLike$$anon$1.prototype = $c_sci_StringLike$$anon$1.prototype;
+$c_sci_StringLike$$anon$1.prototype.next__O = (function() {
+  return this.next__T()
+});
+$c_sci_StringLike$$anon$1.prototype.next__T = (function() {
+  if ((this.index$2 >= this.len$2)) {
+    throw new $c_ju_NoSuchElementException().init___T("next on empty iterator")
+  };
+  var start = this.index$2;
+  while (((this.index$2 < this.len$2) && (!$s_sci_StringLike$class__scala$collection$immutable$StringLike$$isLineBreak__sci_StringLike__C__Z(this.$$outer$2, this.$$outer$2.apply__I__C(this.index$2))))) {
+    this.index$2 = ((1 + this.index$2) | 0)
+  };
+  this.index$2 = ((1 + this.index$2) | 0);
+  var thiz = this.str$2;
+  var x = this.index$2;
+  var that = this.len$2;
+  var endIndex = ((x < that) ? x : that);
+  return $as_T(thiz.substring(start, endIndex))
+});
+$c_sci_StringLike$$anon$1.prototype.hasNext__Z = (function() {
+  return (this.index$2 < this.len$2)
+});
+$c_sci_StringLike$$anon$1.prototype.init___sci_StringLike = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.str$2 = $$outer.toString__T();
+  var thiz = this.str$2;
+  this.len$2 = $uI(thiz.length);
+  this.index$2 = 0;
+  return this
+});
+var $d_sci_StringLike$$anon$1 = new $TypeData().initClass({
+  sci_StringLike$$anon$1: 0
+}, false, "scala.collection.immutable.StringLike$$anon$1", {
+  sci_StringLike$$anon$1: 1,
+  sc_AbstractIterator: 1,
+  O: 1,
+  sc_Iterator: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1
+});
+$c_sci_StringLike$$anon$1.prototype.$classData = $d_sci_StringLike$$anon$1;
 /** @constructor */
 function $c_sci_Traversable$() {
   $c_scg_GenTraversableFactory.call(this)
@@ -31144,6 +36218,72 @@ var $d_scm_FlatHashTable$$anon$1 = new $TypeData().initClass({
 });
 $c_scm_FlatHashTable$$anon$1.prototype.$classData = $d_scm_FlatHashTable$$anon$1;
 /** @constructor */
+function $c_scm_HashMap$$anon$3() {
+  $c_sc_AbstractIterator.call(this);
+  this.iter$2 = null
+}
+$c_scm_HashMap$$anon$3.prototype = new $h_sc_AbstractIterator();
+$c_scm_HashMap$$anon$3.prototype.constructor = $c_scm_HashMap$$anon$3;
+/** @constructor */
+function $h_scm_HashMap$$anon$3() {
+  /*<skip>*/
+}
+$h_scm_HashMap$$anon$3.prototype = $c_scm_HashMap$$anon$3.prototype;
+$c_scm_HashMap$$anon$3.prototype.next__O = (function() {
+  return $as_scm_DefaultEntry(this.iter$2.next__O()).key$1
+});
+$c_scm_HashMap$$anon$3.prototype.init___scm_HashMap = (function($$outer) {
+  this.iter$2 = new $c_scm_HashTable$$anon$1().init___scm_HashTable($$outer);
+  return this
+});
+$c_scm_HashMap$$anon$3.prototype.hasNext__Z = (function() {
+  return this.iter$2.hasNext__Z()
+});
+var $d_scm_HashMap$$anon$3 = new $TypeData().initClass({
+  scm_HashMap$$anon$3: 0
+}, false, "scala.collection.mutable.HashMap$$anon$3", {
+  scm_HashMap$$anon$3: 1,
+  sc_AbstractIterator: 1,
+  O: 1,
+  sc_Iterator: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1
+});
+$c_scm_HashMap$$anon$3.prototype.$classData = $d_scm_HashMap$$anon$3;
+/** @constructor */
+function $c_scm_HashMap$$anon$4() {
+  $c_sc_AbstractIterator.call(this);
+  this.iter$2 = null
+}
+$c_scm_HashMap$$anon$4.prototype = new $h_sc_AbstractIterator();
+$c_scm_HashMap$$anon$4.prototype.constructor = $c_scm_HashMap$$anon$4;
+/** @constructor */
+function $h_scm_HashMap$$anon$4() {
+  /*<skip>*/
+}
+$h_scm_HashMap$$anon$4.prototype = $c_scm_HashMap$$anon$4.prototype;
+$c_scm_HashMap$$anon$4.prototype.next__O = (function() {
+  return $as_scm_DefaultEntry(this.iter$2.next__O()).value$1
+});
+$c_scm_HashMap$$anon$4.prototype.init___scm_HashMap = (function($$outer) {
+  this.iter$2 = new $c_scm_HashTable$$anon$1().init___scm_HashTable($$outer);
+  return this
+});
+$c_scm_HashMap$$anon$4.prototype.hasNext__Z = (function() {
+  return this.iter$2.hasNext__Z()
+});
+var $d_scm_HashMap$$anon$4 = new $TypeData().initClass({
+  scm_HashMap$$anon$4: 0
+}, false, "scala.collection.mutable.HashMap$$anon$4", {
+  scm_HashMap$$anon$4: 1,
+  sc_AbstractIterator: 1,
+  O: 1,
+  sc_Iterator: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1
+});
+$c_scm_HashMap$$anon$4.prototype.$classData = $d_scm_HashMap$$anon$4;
+/** @constructor */
 function $c_scm_HashTable$$anon$1() {
   $c_sc_AbstractIterator.call(this);
   this.iterTable$2 = null;
@@ -31279,6 +36419,12 @@ function $h_sr_NonLocalReturnControl() {
 $h_sr_NonLocalReturnControl.prototype = $c_sr_NonLocalReturnControl.prototype;
 $c_sr_NonLocalReturnControl.prototype.fillInStackTrace__jl_Throwable = (function() {
   return this
+});
+$c_sr_NonLocalReturnControl.prototype.value__O = (function() {
+  return this.value$f
+});
+$c_sr_NonLocalReturnControl.prototype.value$mcV$sp__V = (function() {
+  this.value__O()
 });
 $c_sr_NonLocalReturnControl.prototype.init___O__O = (function(key, value) {
   this.key$2 = key;
@@ -34262,7 +39408,14 @@ function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryControll
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspective$f = null;
   this.enabledInputs$2 = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dataTypes$f = null;
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$fields$f = null
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$fields$f = null;
+  this.waveSurfer$2 = null;
+  this.$$undpxPerSec$2 = 0;
+  this.pxPerSecStep$2 = 0;
+  this.$$undduration$2 = 0.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 0;
+  this.soundMarkup$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController;
@@ -34326,6 +39479,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   };
   return result
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.playPause__V = (function() {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.playPause()
+  }
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__V = (function(inputId, entry, field, fileName, fileType, fileContent, parent) {
   $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
   var o = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dictionary$f;
@@ -34349,13 +39509,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   };
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(dictionaryId, perspectiveId, entryId, entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$saveFileValue$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__sjs_js_UndefOr__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, inputId, entry, parent, dictionaryId, perspectiveId, entryId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$play__T__T__O = (function(soundAddress, soundMarkupAddress) {
-  this.play__T__T__V(soundAddress, soundMarkupAddress)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$viewSoundMarkup__T__T__O = (function(soundAddress, markupAddress) {
+  this.viewSoundMarkup__T__T__V(soundAddress, markupAddress)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$viewSoundMarkup__T__T__O = (function(soundAddress, soundMarkupAddress) {
-  this.viewSoundMarkup__T__T__V(soundAddress, soundMarkupAddress)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.viewSoundMarkup__T__T__V = (function(soundAddress, soundMarkupAddress) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.viewSoundMarkup__T__T__V = (function(soundAddress, markupAddress) {
   var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
   options.templateUrl = "/static/templates/modal/soundMarkup.html";
   options.controller = "SoundMarkupController";
@@ -34363,38 +39520,48 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   options.keyboard = false;
   options.size = "lg";
   options.resolve = {
-    "params": (function(arg$outer, soundAddress$1) {
+    "params": (function(arg$outer, soundAddress$1, markupAddress$1) {
       return (function() {
         return {
           "soundAddress": soundAddress$1,
+          "markupAddress": markupAddress$1,
           "dictionaryClientId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dictionaryClientId$f,
           "dictionaryObjectId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dictionaryObjectId$f
         }
       })
-    })(this, soundAddress)
+    })(this, soundAddress, markupAddress)
   };
   this.modal$2.open(options)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$zoomIn__O = (function() {
+  this.zoomIn__V()
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.load__p2__V = (function() {
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.zoomIn__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 + this.pxPerSecStep$2) | 0))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.disableInput__T__V = (function(id) {
   if (this.isInputEnabled__T__Z(id)) {
     var this$1 = this.enabledInputs$2;
     var p = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(id$1) {
-      return (function(x$2$2) {
-        var x$2 = $as_T(x$2$2);
-        return (x$2 === id$1)
+      return (function(x$5$2) {
+        var x$5 = $as_T(x$5$2);
+        return (x$5 === id$1)
       })
     })(id));
     this.enabledInputs$2 = $as_sc_Seq($s_sc_TraversableLike$class__filterImpl__p0__sc_TraversableLike__F1__Z__O(this$1, p, true))
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.isInputEnabled__T__Z = (function(id) {
-  return this.enabledInputs$2.contains__O__Z(id)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$play__T__O = (function(soundAddress) {
+  this.play__T__V(soundAddress)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$filterKeypress__Lcom_greencatsoft_angularjs_core_Event__O = (function(event) {
   return this.filterKeypress__Lcom_greencatsoft_angularjs_core_Event__O(event)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.isInputEnabled__T__Z = (function(id) {
+  return this.enabledInputs$2.contains__O__Z(id)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.addNewLexicalEntry__V = (function() {
   var jsx$2 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f;
@@ -34405,8 +39572,29 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   var o$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspective$f;
   jsx$2.createLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$addNewLexicalEntry$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$createWaveSurfer__O = (function() {
+  this.createWaveSurfer__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.pxPerSec$und$eq__I__V = (function(mpps) {
+  this.$$undpxPerSec$2 = mpps;
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.zoom(mpps)
+  }
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$enableInput__T__O = (function(id) {
   this.enableInput__T__V(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$zoomOut__O = (function() {
+  this.zoomOut__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.play__I__I__V = (function(start, end) {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.play(start, end)
+  }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.loadSearch__T__s_concurrent_Future = (function(query) {
   var this$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f.search__T__s_Option__Z__s_concurrent_Future(query, new $c_s_Some().init___O(new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspectiveClientId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspectiveObjectId$f)), false);
@@ -34436,6 +39624,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   };
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(dictionaryId, perspectiveId, entryId, entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$saveTextValue$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__sjs_js_UndefOr__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, inputId, entry, parent, dictionaryId, perspectiveId, entryId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$playPause__O = (function() {
+  this.playPause__V()
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.editLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future = (function(entry, field, values) {
   var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
   options.templateUrl = "/static/templates/modal/editLinkedDictionary.html";
@@ -34456,11 +39647,6 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
   return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f$1, executor)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.play__T__T__V = (function(soundAddress, soundMarkupAddress) {
-  var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["playing ", " with markup ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([soundAddress, soundMarkupAddress]));
-  jsx$1.log(s)
-});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__O = (function(inputId, entry, field, fileName, fileType, fileContent, parent) {
   this.saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__V(inputId, entry, field, fileName, fileType, fileContent, parent)
 });
@@ -34472,6 +39658,42 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__O = (function(inputId, entry, field, event, parent) {
   this.saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__V(inputId, entry, field, event, parent)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.play__T__V = (function(soundAddress) {
+  var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["playing ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([soundAddress]));
+  jsx$1.log(s);
+  var _1 = this.waveSurfer$2;
+  var _2 = new $c_s_Some().init___O(soundAddress);
+  var _1$1 = _1.toList__sci_List();
+  var _2$1 = _2.toList__sci_List();
+  var nonLocalReturnKey5 = new $c_O().init___();
+  try {
+    var elems2 = new $c_sc_LinearSeqLike$$anon$1().init___sc_LinearSeqLike(_2$1);
+    var these = _1$1;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      if (elems2.hasNext__Z()) {
+        var arg2 = elems2.next__O();
+        var sa = $as_T(arg2);
+        arg1.load(sa)
+      } else {
+        throw new $c_sr_NonLocalReturnControl$mcV$sp().init___O__sr_BoxedUnit(nonLocalReturnKey5, (void 0))
+      };
+      these = $as_sci_List(these.tail__O())
+    }
+  } catch (e) {
+    if ($is_sr_NonLocalReturnControl(e)) {
+      var ex = $as_sr_NonLocalReturnControl(e);
+      if ((ex.key$2 === nonLocalReturnKey5)) {
+        ex.value$mcV$sp__V()
+      } else {
+        throw ex
+      }
+    } else {
+      throw e
+    }
+  }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.filterKeypress__Lcom_greencatsoft_angularjs_core_Event__O = (function(event) {
   if (($uI(event.keyCode) === 13)) {
@@ -34565,6 +39787,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   this.enabledInputs$2 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dataTypes$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$fields$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.waveSurfer$2 = $m_s_None$();
+  this.$$undpxPerSec$2 = 50;
+  this.pxPerSecStep$2 = 30;
+  this.$$undduration$2 = 42.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 128;
+  this.soundMarkup$2 = $m_s_None$();
   this.scope$1.offset = 0;
   this.scope$1.size = 5;
   this.scope$1.pageCount = 0;
@@ -34608,11 +39837,25 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$editLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O = (function(entry, field, values) {
   return this.editLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future(entry, field, values)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$addNewLexicalEntry__O = (function() {
-  this.addNewLexicalEntry__V()
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.createWaveSurfer__V = (function() {
+  if (this.waveSurfer$2.isEmpty__Z()) {
+    var x$13 = this.$$undpxPerSec$2;
+    var x$15 = this.wsHeight$2;
+    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple", 1, "red", false, x$13, true, x$15);
+    this.waveSurfer$2 = new $c_s_Some().init___O($g.WaveSurfer.create(wso))
+  }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O = (function(dataType) {
   return this.dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__T(dataType)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$addNewLexicalEntry__O = (function() {
+  this.addNewLexicalEntry__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$play__I__I__O = (function(start, end) {
+  this.play__I__I__V(start, end)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.zoomOut__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 - this.pxPerSecStep$2) | 0))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$disableInput__T__O = (function(id) {
   this.disableInput__T__V(id)
@@ -34672,10 +39915,42 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   var prep1 = $as_T(arg$2);
   return this.$$js$exported$meth$viewSoundMarkup__T__T__O(prep0, prep1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.play = (function(arg$1, arg$2) {
-  var prep0 = $as_T(arg$1);
-  var prep1 = $as_T(arg$2);
-  return this.$$js$exported$meth$play__T__T__O(prep0, prep1)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.zoomOut = (function() {
+  return this.$$js$exported$meth$zoomOut__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.zoomIn = (function() {
+  return this.$$js$exported$meth$zoomIn__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.play = (function(arg$1) {
+  var jsx$1 = (arguments.length | 0);
+  var jsx$2 = 1;
+  var arg$rest = [];
+  while ((jsx$2 < jsx$1)) {
+    arg$rest.push(arguments[jsx$2]);
+    jsx$2 = ((jsx$2 + 1) | 0)
+  };
+  switch ($uI(arg$rest.length)) {
+    case 1: {
+      var prep0 = $uI(arg$1);
+      var prep1 = $uI(arg$rest[0]);
+      return this.$$js$exported$meth$play__I__I__O(prep0, prep1);
+      break
+    }
+    case 0: {
+      var prep0 = $as_T(arg$1);
+      return this.$$js$exported$meth$play__T__O(prep0);
+      break
+    }
+    default: {
+      throw "No matching overload"
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.playPause = (function() {
+  return this.$$js$exported$meth$playPause__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.createWaveSurfer = (function() {
+  return this.$$js$exported$meth$createWaveSurfer__O()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.range = (function(arg$1, arg$2, arg$3) {
   var prep0 = $uI(arg$1);
@@ -34974,6 +40249,112 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalControll
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController;
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController() {
+  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
+  this.modalInstance$2 = null;
+  this.isValid$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.$$js$exported$meth$ok__O = (function() {
+  this.ok__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.ok__V = (function() {
+  var x1 = $as_T2(this.isValid$2.apply__O__O($as_T(this.scope$1.originalValue)));
+  matchEnd14: {
+    if ((x1 !== null)) {
+      var p2 = $uZ(x1.$$und1$f);
+      if ((p2 === true)) {
+        this.modalInstance$2.close($as_T(this.scope$1.originalValue));
+        break matchEnd14
+      }
+    };
+    if ((x1 !== null)) {
+      var p4 = $uZ(x1.$$und1$f);
+      var p5 = $as_s_Option(x1.$$und2$f);
+      if ((p4 === false)) {
+        if ($is_s_Some(p5)) {
+          var x6 = $as_s_Some(p5);
+          var errorMsg = $as_T(x6.x$2);
+          $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log(errorMsg);
+          break matchEnd14
+        }
+      }
+    };
+    if ((x1 !== null)) {
+      var p7 = $uZ(x1.$$und1$f);
+      var p8 = $as_s_Option(x1.$$und2$f);
+      if ((p7 === false)) {
+        var x = $m_s_None$();
+        if ((x === p8)) {
+          break matchEnd14
+        }
+      }
+    };
+    throw new $c_s_MatchError().init___O(x1)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldControllerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary = (function(scope, modalInstance, params) {
+  this.modalInstance$2 = modalInstance;
+  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
+  var jsx$1 = this.scope$1;
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "originalValue")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: originalValue")
+  };
+  jsx$1.originalValue = $as_T(params.originalValue);
+  var jsx$2 = this.scope$1;
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "invitation")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: invitation")
+  };
+  jsx$2.invitation = $as_T(params.invitation);
+  var x1 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "isValid")) ? new $c_s_Some().init___O(params.isValid) : $m_s_None$());
+  if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var v = x2.x$2;
+    var jsx$3 = v
+  } else {
+    var x = $m_s_None$();
+    if ((!(x === x1))) {
+      throw new $c_s_MatchError().init___O(x1)
+    };
+    var jsx$3 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$1$2) {
+      $as_T(x$1$2);
+      return new $c_T2().init___O__O(true, $m_s_None$())
+    }))
+  };
+  this.isValid$2 = $as_F1(jsx$3);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.$$js$exported$meth$cancel__O = (function() {
+  this.cancel__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.cancel__V = (function() {
+  this.modalInstance$2.dismiss((void 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.cancel = (function() {
+  return this.$$js$exported$meth$cancel__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.ok = (function() {
+  return this.$$js$exported$meth$ok__O()
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditTextFieldController", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController: 1,
+  Lcom_greencatsoft_angularjs_AbstractController: 1,
+  O: 1,
+  Lcom_greencatsoft_angularjs_Controller: 1,
+  Lcom_greencatsoft_angularjs_Service: 1,
+  Lcom_greencatsoft_angularjs_Initializable: 1,
+  Lcom_greencatsoft_angularjs_core_ScopeOps: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController;
+/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
   this.instance$2 = null;
@@ -35057,6 +40438,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerController.prot
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$backend$f = null;
+  this.modal$2 = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$exceptionHandler$f = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
@@ -35072,8 +40454,12 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.ru$isp
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.$$js$exported$meth$getPerspectiveAuthors__Lru_ispras_lingvodoc_frontend_app_model_Perspective__O = (function(perspective) {
   return "Metadata is not supported!"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeScope__Lcom_greencatsoft_angularjs_core_Injector__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function(scope, injector, backend) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.$$js$exported$meth$playSound__T__T__O = (function(soundAddress, soundMarkupAddress) {
+  this.playSound__T__T__V(soundAddress, soundMarkupAddress)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeScope__Lcom_greencatsoft_angularjs_core_Injector__Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lru_ispras_lingvodoc_frontend_app_services_ModalService = (function(scope, injector, backend, modal) {
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$backend$f = backend;
+  this.modal$2 = modal;
   $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$exceptionHandler$f = injector.get("$exceptionHandler");
   var jsx$2 = this.scope$1;
@@ -35098,11 +40484,36 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.init__
   this.load__p2__s_concurrent_Future();
   return this
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.playSound__T__T__V = (function(soundAddress, soundMarkupAddress) {
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/soundMarkup.html";
+  options.controller = "SoundMarkupController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "lg";
+  options.resolve = {
+    "params": (function(soundAddress$1) {
+      return (function() {
+        return {
+          "soundAddress": soundAddress$1,
+          "dictionaryClientId": 1,
+          "dictionaryObjectId": 2
+        }
+      })
+    })(soundAddress)
+  };
+  this.modal$2.open(options)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.load__p2__s_concurrent_Future = (function() {
   var this$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$backend$f.allStatuses__s_concurrent_Future();
   var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeController(this);
   var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
   return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.playSound = (function(arg$1, arg$2) {
+  var prep0 = $as_T(arg$1);
+  var prep1 = $as_T(arg$2);
+  return this.$$js$exported$meth$playSound__T__T__O(prep0, prep1)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.getPerspectiveAuthors = (function(arg$1) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(arg$1);
@@ -35752,11 +41163,24 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_SignupController.prototype.$cla
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
+  this.timeout$2 = null;
   this.instance$2 = null;
+  this.modal$2 = null;
   this.waveSurfer$2 = null;
+  this.$$undpxPerSec$2 = 0;
+  this.pxPerSecStep$2 = 0;
+  this.$$undduration$2 = 0.0;
+  this.soundMarkup$2 = null;
   this.soundAddress$2 = null;
-  this.dictionaryClientId$2 = 0;
-  this.dictionaryObjectId$2 = 0
+  this.markupAddress$2 = null;
+  this.dictionaryClientId$2 = null;
+  this.dictionaryObjectId$2 = null;
+  this.svgIsMouseDown$2 = false;
+  this.isDragging$2 = false;
+  this.rightBorderIsMoving$2 = false;
+  this.isWSReady$2 = false;
+  this.isWSNeedsToForceAngularRefresh$2 = false;
+  this.selectionRectangle$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController;
@@ -35765,88 +41189,604 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController(
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$onSVGMouseUp__sjs_js_Dynamic__O = (function(event) {
+  this.onSVGMouseUp__sjs_js_Dynamic__V(event)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$prop$getDuration__O = (function() {
+  return this.getDuration__D()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGMouseUp__sjs_js_Dynamic__V = (function(event) {
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("svg mouse up");
+  this.svgIsMouseDown$2 = false
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.playPause__V = (function() {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.playPause()
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.getSelectionRectangleLeftBorderMillis__J = (function() {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().sec2Millis__D__J(this.offsetToSec__D__D(this.getSelectionRectangleLeftBorderOffset__D()))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.syncRulersFromWS__Z__Z__V = (function(forceApply, applyTimeout) {
+  var this$1 = this.waveSurfer$2;
+  if (this$1.isEmpty__Z()) {
+    var progress = $m_s_None$()
+  } else {
+    var arg1 = this$1.get__O();
+    var progress = new $c_s_Some().init___O(($uD(arg1.getCurrentTime()) / this.$$undduration$2))
+  };
+  if ((!progress.isEmpty__Z())) {
+    var arg1$1 = progress.get__O();
+    var p = $uD(arg1$1);
+    this.setRulerProgress__D__Z__Z__V(p, forceApply, applyTimeout)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.wsReady__sjs_js_Dynamic__V = (function(event) {
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("ws ready!");
+  this.isWSReady$2 = true;
+  this.duration$und$eq__D__V(this.getDuration__D());
+  this.updateFullWSWidth__V();
+  this.scope$1.$apply((void 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.getSelectionRectangleWidthOffset__D = (function() {
+  var this$1 = this.selectionRectangle$2;
+  if (this$1.isEmpty__Z()) {
+    var this$5 = $m_s_None$()
+  } else {
+    var arg1 = this$1.get__O();
+    var x = $as_T(arg1.attr("width"));
+    var this$3 = new $c_sci_StringOps().init___T(x);
+    var jsx$1 = $m_jl_Double$();
+    var $$this = this$3.repr$1;
+    var this$5 = new $c_s_Some().init___O(jsx$1.parseDouble__T__D($$this))
+  };
+  return $uD((this$5.isEmpty__Z() ? 0.0 : this$5.get__O()))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.newAnnotationHere__sjs_js_Dynamic__V = (function(itemScope) {
+  var jsx$2 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+  var jsx$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["creating new annotation on tier ", ""]));
+  var this$1 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier(itemScope.tier);
+  var attr = this$1.tierID$1;
+  var s = jsx$1.s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$as_T(attr.value$1)]));
+  jsx$2.log(s);
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("CALLLED")
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onWSPlaying__V = (function() {
+  this.syncRulersFromWS__Z__Z__V(false, true)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$onSVGMouseDown__sjs_js_Dynamic__O = (function(event) {
+  this.onSVGMouseDown__sjs_js_Dynamic__V(event)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.offsetToProgress__D__D = (function(offset) {
+  return (offset / $uD(this.scope$1.fullWSWidth))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$zoomIn__O = (function() {
+  this.zoomIn__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.editAnnotationValue__sjs_js_Dynamic__V = (function(itemScope) {
+  var annot = $as_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_IAnnotation(itemScope.annot);
+  var isValid = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(newValue$2) {
+    var newValue = $as_T(newValue$2);
+    return ((newValue === "\u0433\u0440\u0443\u0437\u0438\u0442\u0435") ? new $c_T2().init___O__O(true, $m_s_None$()) : new $c_T2().init___O__O(false, new $c_s_Some().init___O("Invalid value!")))
+  }));
+  var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["editing annotation value on annot ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$as_T(annot.annotationID$1.value$1)]));
+  jsx$1.log(s);
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/editTextField.html";
+  options.controller = "EditTextFieldController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "sm";
+  options.resolve = {
+    "params": (function(annot$1, isValid$1) {
+      return (function() {
+        return {
+          "originalValue": annot$1.text$1,
+          "invitation": "Enter Annotation Value",
+          "isValid": isValid$1
+        }
+      })
+    })(annot, isValid)
+  };
+  var instance = this.modal$2.open(options);
+  var this$3 = $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(instance.result);
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(annot$1$1) {
+    return (function(x0$1$2) {
+      var x0$1 = $as_T(x0$1$2);
+      if ((x0$1 !== null)) {
+        var jsx$2 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+        var s$1 = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["new value for annotation ", " is ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([$as_T(annot$1$1.annotationID$1.value$1), x0$1]));
+        jsx$2.log(s$1)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$1)
+      }
+    })
+  })(annot));
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$3, f, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.progressToOffset__D__D = (function(progress) {
+  return (progress * $uD(this.scope$1.fullWSWidth))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGSeek__sjs_js_Dynamic__V = (function(event) {
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("svg seeking");
+  this.svgSeek__D__V($uD(event.offsetX))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.zoomIn__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 + this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.duration$und$eq__D__V = (function(dur) {
+  this.$$undduration$2 = dur;
+  this.updateFullWSWidth__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$prop$rightBorderMillis__O = (function() {
+  var t = this.getSelectionRectangleRightBorderMillis__J();
+  var lo = t.lo$2;
+  var hi = t.hi$2;
+  return $m_sjsr_RuntimeLong$().scala$scalajs$runtime$RuntimeLong$$toString__I__I__T(lo, hi)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$createWaveSurfer__O = (function() {
   this.createWaveSurfer__V()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary = (function(scope, instance, modal, backend, params) {
-  this.instance$2 = instance;
-  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
-  this.waveSurfer$2 = $m_s_None$();
-  var this$4 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "soundAddress")) ? new $c_s_Some().init___O(params.soundAddress) : $m_s_None$());
-  if (this$4.isEmpty__Z()) {
-    var jsx$1 = $m_s_None$()
-  } else {
-    var arg1 = this$4.get__O();
-    var jsx$1 = new $c_s_Some().init___O($objectToString(arg1))
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.pxPerSec$und$eq__I__V = (function(mpps) {
+  this.$$undpxPerSec$2 = mpps;
+  var viewDataDiff = $as_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(this.scope$1.elan).setPxPerSec__D__sjs_js_Dynamic(this.$$undpxPerSec$2);
+  this.updateVD__sjs_js_Dynamic__V(viewDataDiff);
+  this.isWSNeedsToForceAngularRefresh$2 = false;
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.zoom(mpps)
   };
-  this.soundAddress$2 = $as_T(jsx$1.get__O());
-  var this$7 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryClientId")) ? new $c_s_Some().init___O(params.dictionaryClientId) : $m_s_None$());
-  if (this$7.isEmpty__Z()) {
-    var jsx$2 = $m_s_None$()
+  this.updateFullWSWidth__V();
+  this.syncRulersFromWS__Z__Z__V(false, false)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.isNewAnnotationAllowedHere__sjs_js_Dynamic__Z = (function(itemScope) {
+  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("isNewAnnotationAllowedHere called");
+  return true
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.getDuration__D = (function() {
+  return (this.isWSReady$2 ? $uD(this.waveSurfer$2.get__O().getDuration()) : 42.0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$zoomOut__O = (function() {
+  this.zoomOut__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onWSSeek__D__V = (function(progress) {
+  this.setRulerProgress__D__Z__Z__V(progress, this.isWSNeedsToForceAngularRefresh$2, false);
+  this.isWSNeedsToForceAngularRefresh$2 = true
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.setRulerOffset__D__Z__Z__V = (function(offset, forceApply, applyTimeout) {
+  var action = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function(arg$outer, offset$1) {
+    return (function() {
+      arg$outer.scope$1.ruler = offset$1
+    })
+  })(this, offset));
+  if (applyTimeout) {
+    (0, this.timeout$2)((function(f) {
+      return (function() {
+        return f.apply__O()
+      })
+    })(action))
+  } else if (forceApply) {
+    var jsx$1 = this.scope$1;
+    action.apply__O();
+    var value = (void 0);
+    jsx$1.$apply(value)
   } else {
-    var arg1$1 = this$7.get__O();
-    var x = $objectToString(arg1$1);
-    var this$9 = new $c_sci_StringOps().init___T(x);
-    var this$11 = $m_jl_Integer$();
-    var $$this = this$9.repr$1;
-    var jsx$2 = new $c_s_Some().init___O(this$11.parseInt__T__I__I($$this, 10))
+    action.apply__O()
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.play__I__I__V = (function(start, end) {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.play(start, end)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGMouseMove__sjs_js_Dynamic__V = (function(event) {
+  if ((!this.svgIsMouseDown$2)) {
+    return (void 0)
   };
-  this.dictionaryClientId$2 = $uI(jsx$2.get__O());
-  var this$14 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryObjectId")) ? new $c_s_Some().init___O(params.dictionaryObjectId) : $m_s_None$());
-  if (this$14.isEmpty__Z()) {
-    var jsx$3 = $m_s_None$()
+  var a = $uD(this.scope$1.fullWSWidth);
+  var x = $objectToString(event.offsetX);
+  var this$2 = new $c_sci_StringOps().init___T(x);
+  var jsx$1 = $m_jl_Double$();
+  var $$this = this$2.repr$1;
+  var b = jsx$1.parseDouble__T__D($$this);
+  var b$1 = $uD($g.Math.max(0.0, b));
+  var cursorX = $uD($g.Math.min(a, b$1));
+  if ((!this.isDragging$2)) {
+    var this$6 = this.selectionRectangle$2;
+    if ((!this$6.isEmpty__Z())) {
+      var arg1 = this$6.get__O();
+      arg1.attr("x", cursorX).attr("width", 0)
+    };
+    this.isDragging$2 = true
   } else {
-    var arg1$2 = this$14.get__O();
-    var x$1 = $objectToString(arg1$2);
-    var this$16 = new $c_sci_StringOps().init___T(x$1);
-    var this$18 = $m_jl_Integer$();
-    var $$this$1 = this$16.repr$1;
-    var jsx$3 = new $c_s_Some().init___O(this$18.parseInt__T__I__I($$this$1, 10))
+    var oldX = this.getSelectionRectangleLeftBorderOffset__D();
+    var oldWidth = this.getSelectionRectangleWidthOffset__D();
+    if (((this.rightBorderIsMoving$2 && (cursorX > oldX)) || ((!this.rightBorderIsMoving$2) && (cursorX >= (oldX + oldWidth))))) {
+      if ((!this.rightBorderIsMoving$2)) {
+        var this$15 = this.selectionRectangle$2;
+        if ((!this$15.isEmpty__Z())) {
+          var arg1$1 = this$15.get__O();
+          var a$1 = (oldX + oldWidth);
+          var jsx$2 = arg1$1.attr("x", a$1);
+          var a$2 = ((cursorX - oldX) - oldWidth);
+          jsx$2.attr("width", a$2)
+        }
+      } else {
+        var this$24 = this.selectionRectangle$2;
+        if ((!this$24.isEmpty__Z())) {
+          var arg1$2 = this$24.get__O();
+          var a$3 = (cursorX - oldX);
+          arg1$2.attr("width", a$3)
+        }
+      };
+      this.rightBorderIsMoving$2 = true
+    } else {
+      if (this.rightBorderIsMoving$2) {
+        var this$29 = this.selectionRectangle$2;
+        if ((!this$29.isEmpty__Z())) {
+          var arg1$3 = this$29.get__O();
+          var jsx$3 = arg1$3.attr("x", cursorX);
+          var a$4 = (oldX - cursorX);
+          jsx$3.attr("width", a$4)
+        }
+      } else {
+        var this$38 = this.selectionRectangle$2;
+        if ((!this$38.isEmpty__Z())) {
+          var arg1$4 = this$38.get__O();
+          var jsx$4 = arg1$4.attr("x", cursorX);
+          var a$5 = ((oldX + oldWidth) - cursorX);
+          jsx$4.attr("width", a$5)
+        }
+      };
+      this.rightBorderIsMoving$2 = false
+    };
+    this.svgSeek__D__V(cursorX)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.getSelectionRectangleLeftBorderOffset__D = (function() {
+  var this$1 = this.selectionRectangle$2;
+  if (this$1.isEmpty__Z()) {
+    var this$5 = $m_s_None$()
+  } else {
+    var arg1 = this$1.get__O();
+    var x = $as_T(arg1.attr("x"));
+    var this$3 = new $c_sci_StringOps().init___T(x);
+    var jsx$1 = $m_jl_Double$();
+    var $$this = this$3.repr$1;
+    var this$5 = new $c_s_Some().init___O(jsx$1.parseDouble__T__D($$this))
   };
-  this.dictionaryObjectId$2 = $uI(jsx$3.get__O());
-  var jsx$4 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-  var value = this.dictionaryClientId$2;
-  jsx$4.log(value);
-  var jsx$5 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-  var value$1 = this.dictionaryObjectId$2;
-  jsx$5.log(value$1);
-  var this$21 = backend.getSoundMarkup__I__I__s_concurrent_Future(this.dictionaryClientId$2, this.dictionaryObjectId$2);
-  var pf = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController(this);
-  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
-  $s_s_concurrent_Future$class__onSuccess__s_concurrent_Future__s_PartialFunction__s_concurrent_ExecutionContext__V(this$21, pf, executor);
-  return this
+  return $uD((this$5.isEmpty__Z() ? 0.0 : this$5.get__O()))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$playPause__O = (function() {
+  this.playPause__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.setMenuOptions__V = (function() {
+  var tierMenuOptions = new $c_Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu().init___sci_Vector($as_sci_Vector($m_s_package$().Vector$1.apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()))).addOpt__Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption__Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu($m_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$().apply__T__sjs_js_Function1__s_Option__Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption("New Annotation Here", (function(arg$outer) {
+    return (function(itemScope$2) {
+      arg$outer.newAnnotationHere__sjs_js_Dynamic__V(itemScope$2)
+    })
+  })(this), new $c_s_Some().init___O((function(arg$outer$1) {
+    return (function(itemScope$2$1) {
+      return arg$outer$1.isNewAnnotationAllowedHere__sjs_js_Dynamic__Z(itemScope$2$1)
+    })
+  })(this))));
+  this.scope$1.tierMenuOptions = tierMenuOptions.toJS__sjs_js_Array();
+  this.scope$1.annotMenuOptions = tierMenuOptions.addOpt__Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption__Lru_ispras_lingvodoc_frontend_extras_facades_BootstrapContextMenu($m_Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption$().apply__T__sjs_js_Function1__s_Option__Lru_ispras_lingvodoc_frontend_extras_facades_MenuOption("Edit Annotation Value", (function(arg$outer$2) {
+    return (function(itemScope$2$2) {
+      arg$outer$2.editAnnotationValue__sjs_js_Dynamic__V(itemScope$2$2)
+    })
+  })(this), $m_s_None$())).toJS__sjs_js_Array()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.getCurrentTime__D = (function() {
+  return (this.isWSReady$2 ? $uD(this.waveSurfer$2.get__O().getCurrentTime()) : 42.0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.offsetToSec__D__D = (function(offset) {
+  return (offset / this.$$undpxPerSec$2)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.save__V = (function() {
-  var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple");
-  var ws = $g.WaveSurfer.create(wso);
-  ws.load("audio.wav")
+  this.instance$2.close((void 0))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$cancel__O = (function() {
   this.cancel__V()
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$prop$getCurrentTime__O = (function() {
+  return this.getCurrentTime__D()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$prop$leftBorderMillis__O = (function() {
+  var t = this.getSelectionRectangleLeftBorderMillis__J();
+  var lo = t.lo$2;
+  var hi = t.hi$2;
+  return $m_sjsr_RuntimeLong$().scala$scalajs$runtime$RuntimeLong$$toString__I__I__T(lo, hi)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.cancel__V = (function() {
   this.instance$2.close((void 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.parseMarkup__T__V = (function(markupAddress) {
+  this.scope$1.elan = ($m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$(), $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().apply__T__D__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n      <ANNOTATION_DOCUMENT AUTHOR=\"\" DATE=\"2016-08-05T17:18:49+03:00\" VERSION=\"2.8\"\n                           xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n                            xsi:noNamespaceSchemaLocation=\"http://www.mpi.nl/tools/elan/EAFv2.8.xsd\">\n          <HEADER/>\n          <TIME_ORDER/>\n      </ANNOTATION_DOCUMENT>\n    ", 0.0));
+  var action = new $c_sjsr_AnonFunction3().init___sjs_js_Function3((function(arg$outer) {
+    return (function(data$2, textStatus$2, jqXHR$2) {
+      $as_T(textStatus$2);
+      var test_markup = $objectToString(data$2);
+      try {
+        arg$outer.scope$1.elan = $m_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery$().apply__T__D__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(test_markup, arg$outer.$$undpxPerSec$2);
+        arg$outer.scope$1.elanJS = $as_Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(arg$outer.scope$1.elan).toJS__sjs_js_Dynamic()
+      } catch (e) {
+        var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
+        if ($is_jl_Exception(e$2)) {
+          var e$3 = $as_jl_Exception(e$2);
+          var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+          var xs = e$3.getStackTrace__Ajl_StackTraceElement();
+          var b = new $c_scm_StringBuilder().init___();
+          var elem$1 = false;
+          elem$1 = true;
+          b.append__T__scm_StringBuilder("");
+          var i = 0;
+          var len = xs.u.length;
+          while ((i < len)) {
+            var index = i;
+            var arg1 = xs.u[index];
+            if (elem$1) {
+              b.append__O__scm_StringBuilder(arg1);
+              elem$1 = false
+            } else {
+              b.append__T__scm_StringBuilder("\n");
+              b.append__O__scm_StringBuilder(arg1)
+            };
+            i = ((1 + i) | 0)
+          };
+          b.append__T__scm_StringBuilder("");
+          var this$6 = b.underlying$5;
+          var s = this$6.content$1;
+          jsx$1.error(s);
+          throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(e$3)
+        } else {
+          throw e
+        }
+      };
+      arg$outer.scope$1.ruler = 0.0
+    })
+  })(this));
+  var x$29 = (function(f) {
+    return (function(arg1$1, arg2, arg3) {
+      return f.apply__O__O__O__O(arg1$1, arg2, arg3)
+    })
+  })(action);
+  $m_Lorg_scalajs_jquery_package$().jQuery$1.get(markupAddress, (void 0), x$29, "text")
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.setRulerProgress__D__Z__Z__V = (function(progress, forceApply, applyTimeout) {
+  this.setRulerOffset__D__Z__Z__V(this.progressToOffset__D__D(progress), forceApply, applyTimeout)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$onSVGSeek__sjs_js_Dynamic__O = (function(event) {
+  this.onSVGSeek__sjs_js_Dynamic__V(event)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGMouseDown__sjs_js_Dynamic__V = (function(event) {
+  if (($uI(event.which) === 1)) {
+    $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("svg mouse down");
+    this.svgIsMouseDown$2 = true;
+    this.isDragging$2 = false
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.updateVD__sjs_js_Dynamic__V = (function(viewDataDiff) {
+  $m_Lorg_scalajs_jquery_package$().jQuery$1.extend(true, this.scope$1.elanJS, viewDataDiff)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$save__O = (function() {
   this.save__V()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.createWaveSurfer__V = (function() {
   if (this.waveSurfer$2.isEmpty__Z()) {
-    $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log("FFFFFFFFFFFFFFFFFf");
-    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple");
+    var x$25 = this.$$undpxPerSec$2;
+    var x$27 = $uI(this.scope$1.wsHeight);
+    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple", 1, "red", false, x$25, false, x$27);
     this.waveSurfer$2 = new $c_s_Some().init___O($g.WaveSurfer.create(wso));
-    var this$2 = this.waveSurfer$2;
-    if ((!this$2.isEmpty__Z())) {
-      var arg1 = this$2.get__O();
-      arg1.load(this.soundAddress$2)
-    }
+    var _1 = this.waveSurfer$2;
+    var _2 = this.soundAddress$2;
+    var _1$1 = _1.toList__sci_List();
+    var _2$1 = _2.toList__sci_List();
+    var nonLocalReturnKey5 = new $c_O().init___();
+    try {
+      var elems2 = new $c_sc_LinearSeqLike$$anon$1().init___sc_LinearSeqLike(_2$1);
+      var these = _1$1;
+      while ((!these.isEmpty__Z())) {
+        var arg1 = these.head__O();
+        if (elems2.hasNext__Z()) {
+          var arg2 = elems2.next__O();
+          var sa = $as_T(arg2);
+          arg1.load(sa)
+        } else {
+          throw new $c_sr_NonLocalReturnControl$mcV$sp().init___O__sr_BoxedUnit(nonLocalReturnKey5, (void 0))
+        };
+        these = $as_sci_List(these.tail__O())
+      }
+    } catch (e) {
+      if ($is_sr_NonLocalReturnControl(e)) {
+        var ex = $as_sr_NonLocalReturnControl(e);
+        if ((ex.key$2 === nonLocalReturnKey5)) {
+          ex.value$mcV$sp__V()
+        } else {
+          throw ex
+        }
+      } else {
+        throw e
+      }
+    };
+    var this$6 = this.waveSurfer$2;
+    var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$4().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController(this);
+    if ((!this$6.isEmpty__Z())) {
+      var v1 = this$6.get__O();
+      f.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any(v1)
+    };
+    var this$7 = this.waveSurfer$2;
+    var f$1 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$5().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController(this);
+    if ((!this$7.isEmpty__Z())) {
+      var v1$1 = this$7.get__O();
+      f$1.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any(v1$1)
+    };
+    var this$8 = this.waveSurfer$2;
+    var f$2 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$createWaveSurfer$6().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController(this);
+    if ((!this$8.isEmpty__Z())) {
+      var v1$2 = this$8.get__O();
+      f$2.apply__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurfer__sjs_js_Any(v1$2)
+    };
+    this.scope$1.ws = this.waveSurfer$2.get__O();
+    this.selectionRectangle$2 = new $c_s_Some().init___O($g.d3.select("#selectionRect"))
   }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$play__I__I__O = (function(start, end) {
+  this.play__I__I__V(start, end)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.getSelectionRectangleRightBorderMillis__J = (function() {
+  return $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().sec2Millis__D__J(this.offsetToSec__D__D((this.getSelectionRectangleLeftBorderOffset__D() + this.getSelectionRectangleWidthOffset__D())))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.updateFullWSWidth__V = (function() {
+  this.scope$1.fullWSWidth = (this.$$undpxPerSec$2 * this.$$undduration$2)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$$js$exported$meth$onSVGMouseMove__sjs_js_Dynamic__O = (function(event) {
+  this.onSVGMouseMove__sjs_js_Dynamic__V(event)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.svgSeek__D__V = (function(offset) {
+  this.isWSNeedsToForceAngularRefresh$2 = false;
+  var progress = this.offsetToProgress__D__D(offset);
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.seekTo(progress)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.zoomOut__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 - this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupScope__Lcom_greencatsoft_angularjs_core_Timeout__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary = (function(scope, timeout, instance, modal, backend, params) {
+  this.timeout$2 = timeout;
+  this.instance$2 = instance;
+  this.modal$2 = modal;
+  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
+  this.scope$1.elanJS = $g.elanDoc;
+  this.scope$1.tierWidth = 50;
+  this.scope$1.tiersNameWidth = 140;
+  this.waveSurfer$2 = $m_s_None$();
+  this.$$undpxPerSec$2 = 50;
+  this.pxPerSecStep$2 = 30;
+  this.$$undduration$2 = 42.0;
+  this.scope$1.fullWSWidth = 0.0;
+  this.scope$1.wsHeight = 128;
+  this.soundMarkup$2 = $m_s_None$();
+  var this$6 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "soundAddress")) ? new $c_s_Some().init___O(params.soundAddress) : $m_s_None$());
+  if (this$6.isEmpty__Z()) {
+    var jsx$1 = $m_s_None$()
+  } else {
+    var arg1 = this$6.get__O();
+    var jsx$1 = new $c_s_Some().init___O($objectToString(arg1))
+  };
+  this.soundAddress$2 = jsx$1;
+  var this$9 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "markupAddress")) ? new $c_s_Some().init___O(params.markupAddress) : $m_s_None$());
+  if (this$9.isEmpty__Z()) {
+    var jsx$2 = $m_s_None$()
+  } else {
+    var arg1$1 = this$9.get__O();
+    var jsx$2 = new $c_s_Some().init___O($objectToString(arg1$1))
+  };
+  this.markupAddress$2 = jsx$2;
+  var this$12 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryClientId")) ? new $c_s_Some().init___O(params.dictionaryClientId) : $m_s_None$());
+  if (this$12.isEmpty__Z()) {
+    var jsx$3 = $m_s_None$()
+  } else {
+    var arg1$2 = this$12.get__O();
+    var x = $objectToString(arg1$2);
+    var this$14 = new $c_sci_StringOps().init___T(x);
+    var this$16 = $m_jl_Integer$();
+    var $$this = this$14.repr$1;
+    var jsx$3 = new $c_s_Some().init___O(this$16.parseInt__T__I__I($$this, 10))
+  };
+  this.dictionaryClientId$2 = jsx$3;
+  var this$19 = ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryObjectId")) ? new $c_s_Some().init___O(params.dictionaryObjectId) : $m_s_None$());
+  if (this$19.isEmpty__Z()) {
+    var jsx$4 = $m_s_None$()
+  } else {
+    var arg1$3 = this$19.get__O();
+    var x$1 = $objectToString(arg1$3);
+    var this$21 = new $c_sci_StringOps().init___T(x$1);
+    var this$23 = $m_jl_Integer$();
+    var $$this$1 = this$21.repr$1;
+    var jsx$4 = new $c_s_Some().init___O(this$23.parseInt__T__I__I($$this$1, 10))
+  };
+  this.dictionaryObjectId$2 = jsx$4;
+  this.svgIsMouseDown$2 = false;
+  this.isDragging$2 = false;
+  this.rightBorderIsMoving$2 = true;
+  this.isWSReady$2 = false;
+  this.isWSNeedsToForceAngularRefresh$2 = true;
+  this.selectionRectangle$2 = $m_s_None$();
+  this.parseMarkup__T__V($as_T(this.markupAddress$2.get__O()));
+  this.setMenuOptions__V();
+  $m_Lorg_scalajs_dom_package$().window__Lorg_scalajs_dom_raw_Window().myScope = this.scope$1;
+  return this
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype, "rightBorderMillis", {
+  "get": (function() {
+    return this.$$js$exported$prop$rightBorderMillis__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype, "leftBorderMillis", {
+  "get": (function() {
+    return this.$$js$exported$prop$leftBorderMillis__O()
+  }),
+  "enumerable": true
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGMouseMove = (function(arg$1) {
+  var prep0 = arg$1;
+  return this.$$js$exported$meth$onSVGMouseMove__sjs_js_Dynamic__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGMouseUp = (function(arg$1) {
+  var prep0 = arg$1;
+  return this.$$js$exported$meth$onSVGMouseUp__sjs_js_Dynamic__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGMouseDown = (function(arg$1) {
+  var prep0 = arg$1;
+  return this.$$js$exported$meth$onSVGMouseDown__sjs_js_Dynamic__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.onSVGSeek = (function(arg$1) {
+  var prep0 = arg$1;
+  return this.$$js$exported$meth$onSVGSeek__sjs_js_Dynamic__O(prep0)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.cancel = (function() {
   return this.$$js$exported$meth$cancel__O()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.save = (function() {
   return this.$$js$exported$meth$save__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.zoomOut = (function() {
+  return this.$$js$exported$meth$zoomOut__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.zoomIn = (function() {
+  return this.$$js$exported$meth$zoomIn__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.play = (function(arg$1, arg$2) {
+  var prep0 = $uI(arg$1);
+  var prep1 = $uI(arg$2);
+  return this.$$js$exported$meth$play__I__I__O(prep0, prep1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.playPause = (function() {
+  return this.$$js$exported$meth$playPause__O()
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype, "getCurrentTime", {
+  "get": (function() {
+    return this.$$js$exported$prop$getCurrentTime__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype, "getDuration", {
+  "get": (function() {
+    return this.$$js$exported$prop$getDuration__O()
+  }),
+  "enumerable": true
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.createWaveSurfer = (function() {
   return this.$$js$exported$meth$createWaveSurfer__O()
@@ -35863,44 +41803,6 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController = new
   Lcom_greencatsoft_angularjs_core_ScopeOps: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController;
-/** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1() {
-  $c_sr_AbstractPartialFunction.call(this)
-}
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype = new $h_sr_AbstractPartialFunction();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype.isDefinedAt__T__Z = (function(x1) {
-  return true
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController = (function($$outer) {
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype.applyOrElse__T__F1__O = (function(x1, $default) {
-  $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console().log(x1)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype.isDefinedAt__O__Z = (function(x) {
-  return this.isDefinedAt__T__Z($as_T(x))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype.applyOrElse__O__F1__O = (function(x, $default) {
-  return this.applyOrElse__T__F1__O($as_T(x), $default)
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.SoundMarkupController$$anonfun$1", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1: 1,
-  sr_AbstractPartialFunction: 1,
-  O: 1,
-  F1: 1,
-  s_PartialFunction: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$1;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
@@ -38680,7 +44582,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1.prototype.init___ = 
 $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1.prototype.applyOrElse__Lupickle_Js$Value__F1__O = (function(x1, $default) {
   if ($is_Lupickle_Js$Obj(x1)) {
     var x2 = ((x1 === null) ? null : $as_Lupickle_Js$Obj(x1).value$1);
-    return new $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$2().init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1(this).apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Field(x2)
+    return new $c_Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_model_Field$$anonfun$1(this).apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Field(x2)
   } else {
     return $default.apply__O__O(x1)
   }
@@ -40604,6 +46506,174 @@ var $d_Lru_ispras_lingvodoc_frontend_app_model_User$$anonfun$1 = new $TypeData()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_User$$anonfun$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_model_User$$anonfun$1;
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.call(this);
+  this.annotations$4 = null;
+  this.dto$4 = null;
+  this.parentRef$4 = null;
+  this.stereotype$4 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(IITierXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, ($m_sci_List$(), $m_sci_Nil$()), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts().init___Lorg_scalajs_jquery_JQuery(IITierXML), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(IITierXML, owner));
+  var this$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(IITierXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().tagName$1));
+  var f = (function(arg$outer) {
+    return (function(x$1$2) {
+      return $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$().apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation(x$1$2, arg$outer)
+    })
+  })(this);
+  var this$2 = $m_sci_List$();
+  var bf = this$2.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$3 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$3.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$3.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$3, bf);
+    var these = this$3;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  this.annotations$4 = $as_sci_List(jsx$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.annotations__sci_List = (function() {
+  return this.annotations$4
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.stereotype__T = (function() {
+  return this.stereotype$4
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.parentRef__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr = (function() {
+  return this.parentRef$4
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(annotations, dto, to) {
+  this.annotations$4 = annotations;
+  this.dto$4 = dto;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, to);
+  this.parentRef$4 = dto.parentRef$1;
+  this.stereotype$4 = "Included In";
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.IncludedInTier", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_IncludedInTier;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier() {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.call(this);
+  this.annotations$4 = null;
+  this.dto$4 = null;
+  this.parentRef$4 = null;
+  this.stereotype$4 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype = new $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery = (function(TSTierXML, owner) {
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, ($m_sci_List$(), $m_sci_Nil$()), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts().init___Lorg_scalajs_jquery_JQuery(TSTierXML), new $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts().init___Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_ELANDocumentJquery(TSTierXML, owner));
+  var this$3 = $m_Lru_ispras_lingvodoc_frontend_extras_elan_Utils$().jQuery2List__Lorg_scalajs_jquery_JQuery__sci_List(TSTierXML.find($m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_Annotation$().tagName$1));
+  var f = (function(arg$outer) {
+    return (function(x$1$2) {
+      return $m_Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation$().apply__Lorg_scalajs_jquery_JQuery__Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier__Lru_ispras_lingvodoc_frontend_extras_elan_annotation_AlignableDependentAnnotation(x$1$2, arg$outer)
+    })
+  })(this);
+  var this$2 = $m_sci_List$();
+  var bf = this$2.ReusableCBFInstance$2;
+  if ((bf === $m_sci_List$().ReusableCBFInstance$2)) {
+    if ((this$3 === $m_sci_Nil$())) {
+      var jsx$1 = $m_sci_Nil$()
+    } else {
+      var arg1 = this$3.head__O();
+      var h = new $c_sci_$colon$colon().init___O__sci_List(f(arg1), $m_sci_Nil$());
+      var t = h;
+      var rest = $as_sci_List(this$3.tail__O());
+      while ((rest !== $m_sci_Nil$())) {
+        var arg1$1 = rest.head__O();
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(f(arg1$1), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      };
+      var jsx$1 = h
+    }
+  } else {
+    var b = $s_sc_TraversableLike$class__builder$1__p0__sc_TraversableLike__scg_CanBuildFrom__scm_Builder(this$3, bf);
+    var these = this$3;
+    while ((!these.isEmpty__Z())) {
+      var arg1$2 = these.head__O();
+      b.$$plus$eq__O__scm_Builder(f(arg1$2));
+      these = $as_sci_List(these.tail__O())
+    };
+    var jsx$1 = b.result__O()
+  };
+  this.annotations$4 = $as_sci_List(jsx$1);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.annotations__sci_List = (function() {
+  return this.annotations$4
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.stereotype__T = (function() {
+  return this.stereotype$4
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.parentRef__Lru_ispras_lingvodoc_frontend_extras_elan_RequiredXMLAttr = (function() {
+  return this.parentRef$4
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.init___sci_List__Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTierOpts__Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts = (function(annotations, dto, to) {
+  this.annotations$4 = annotations;
+  this.dto$4 = dto;
+  $c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier.prototype.init___Lru_ispras_lingvodoc_frontend_extras_elan_tier_TierOpts.call(this, to);
+  this.parentRef$4 = dto.parentRef$1;
+  this.stereotype$4 = "Time Subdivision";
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.tier.TimeSubdivisionTier", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableDependentTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_AlignableTier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_Tier: 1,
+  O: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_ITier: 1,
+  Lru_ispras_lingvodoc_frontend_extras_elan_tier_DependentTier: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_tier_TimeSubdivisionTier;
+/** @constructor */
 function $c_Lupickle_Generated$$anonfun$Tuple3R$1() {
   $c_sr_AbstractPartialFunction.call(this);
   this.$$outer$2 = null;
@@ -42322,6 +48392,81 @@ var $d_T3 = new $TypeData().initClass({
 });
 $c_T3.prototype.$classData = $d_T3;
 /** @constructor */
+function $c_T4() {
+  $c_O.call(this);
+  this.$$und1$1 = null;
+  this.$$und2$1 = null;
+  this.$$und3$1 = null;
+  this.$$und4$1 = null
+}
+$c_T4.prototype = new $h_O();
+$c_T4.prototype.constructor = $c_T4;
+/** @constructor */
+function $h_T4() {
+  /*<skip>*/
+}
+$h_T4.prototype = $c_T4.prototype;
+$c_T4.prototype.productPrefix__T = (function() {
+  return "Tuple4"
+});
+$c_T4.prototype.productArity__I = (function() {
+  return 4
+});
+$c_T4.prototype.equals__O__Z = (function(x$1) {
+  if ((this === x$1)) {
+    return true
+  } else if ($is_T4(x$1)) {
+    var Tuple4$1 = $as_T4(x$1);
+    return ((($m_sr_BoxesRunTime$().equals__O__O__Z(this.$$und1$1, Tuple4$1.$$und1$1) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$und2$1, Tuple4$1.$$und2$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$und3$1, Tuple4$1.$$und3$1)) && $m_sr_BoxesRunTime$().equals__O__O__Z(this.$$und4$1, Tuple4$1.$$und4$1))
+  } else {
+    return false
+  }
+});
+$c_T4.prototype.productElement__I__O = (function(n) {
+  return $s_s_Product4$class__productElement__s_Product4__I__O(this, n)
+});
+$c_T4.prototype.toString__T = (function() {
+  return (((((((("(" + this.$$und1$1) + ",") + this.$$und2$1) + ",") + this.$$und3$1) + ",") + this.$$und4$1) + ")")
+});
+$c_T4.prototype.init___O__O__O__O = (function(_1, _2, _3, _4) {
+  this.$$und1$1 = _1;
+  this.$$und2$1 = _2;
+  this.$$und3$1 = _3;
+  this.$$und4$1 = _4;
+  return this
+});
+$c_T4.prototype.hashCode__I = (function() {
+  var this$2 = $m_s_util_hashing_MurmurHash3$();
+  return this$2.productHash__s_Product__I__I(this, (-889275714))
+});
+$c_T4.prototype.productIterator__sc_Iterator = (function() {
+  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
+});
+function $is_T4(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.T4)))
+}
+function $as_T4(obj) {
+  return (($is_T4(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.Tuple4"))
+}
+function $isArrayOf_T4(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.T4)))
+}
+function $asArrayOf_T4(obj, depth) {
+  return (($isArrayOf_T4(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.Tuple4;", depth))
+}
+var $d_T4 = new $TypeData().initClass({
+  T4: 0
+}, false, "scala.Tuple4", {
+  T4: 1,
+  O: 1,
+  s_Product4: 1,
+  s_Product: 1,
+  s_Equals: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_T4.prototype.$classData = $d_T4;
+/** @constructor */
 function $c_T5() {
   $c_O.call(this);
   this.$$und1$1 = null;
@@ -43647,6 +49792,41 @@ var $d_sjsr_UndefinedBehaviorError = new $TypeData().initClass({
 });
 $c_sjsr_UndefinedBehaviorError.prototype.$classData = $d_sjsr_UndefinedBehaviorError;
 /** @constructor */
+function $c_sr_NonLocalReturnControl$mcV$sp() {
+  $c_sr_NonLocalReturnControl.call(this);
+  this.value$mcV$sp$f = null
+}
+$c_sr_NonLocalReturnControl$mcV$sp.prototype = new $h_sr_NonLocalReturnControl();
+$c_sr_NonLocalReturnControl$mcV$sp.prototype.constructor = $c_sr_NonLocalReturnControl$mcV$sp;
+/** @constructor */
+function $h_sr_NonLocalReturnControl$mcV$sp() {
+  /*<skip>*/
+}
+$h_sr_NonLocalReturnControl$mcV$sp.prototype = $c_sr_NonLocalReturnControl$mcV$sp.prototype;
+$c_sr_NonLocalReturnControl$mcV$sp.prototype.value__O = (function() {
+  return (void 0)
+});
+$c_sr_NonLocalReturnControl$mcV$sp.prototype.value$mcV$sp__V = (function() {
+  /*<skip>*/
+});
+$c_sr_NonLocalReturnControl$mcV$sp.prototype.init___O__sr_BoxedUnit = (function(key, value$mcV$sp) {
+  this.value$mcV$sp$f = value$mcV$sp;
+  $c_sr_NonLocalReturnControl.prototype.init___O__O.call(this, key, null);
+  return this
+});
+var $d_sr_NonLocalReturnControl$mcV$sp = new $TypeData().initClass({
+  sr_NonLocalReturnControl$mcV$sp: 0
+}, false, "scala.runtime.NonLocalReturnControl$mcV$sp", {
+  sr_NonLocalReturnControl$mcV$sp: 1,
+  sr_NonLocalReturnControl: 1,
+  jl_Throwable: 1,
+  O: 1,
+  Ljava_io_Serializable: 1,
+  s_util_control_ControlThrowable: 1,
+  s_util_control_NoStackTrace: 1
+});
+$c_sr_NonLocalReturnControl$mcV$sp.prototype.$classData = $d_sr_NonLocalReturnControl$mcV$sp;
+/** @constructor */
 function $c_Lcom_greencatsoft_angularjs_core_HttpException() {
   $c_jl_Exception.call(this);
   this.status$3 = null;
@@ -44245,6 +50425,82 @@ var $d_Lru_ispras_lingvodoc_frontend_app_exceptions_ModelException = new $TypeDa
 });
 $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ModelException.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_exceptions_ModelException;
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException() {
+  $c_jl_Exception.call(this);
+  this.message$3 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype = new $h_jl_Exception();
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype = $c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype;
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.productPrefix__T = (function() {
+  return "ELANPArserException"
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.productArity__I = (function() {
+  return 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.equals__O__Z = (function(x$1) {
+  if ((this === x$1)) {
+    return true
+  } else if ($is_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(x$1)) {
+    var ELANPArserException$1 = $as_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(x$1);
+    return (this.message$3 === ELANPArserException$1.message$3)
+  } else {
+    return false
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.productElement__I__O = (function(x$1) {
+  switch (x$1) {
+    case 0: {
+      return this.message$3;
+      break
+    }
+    default: {
+      throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.init___T = (function(message) {
+  this.message$3 = message;
+  $c_jl_Throwable.prototype.init___T__jl_Throwable.call(this, message, null);
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.hashCode__I = (function() {
+  var this$2 = $m_s_util_hashing_MurmurHash3$();
+  return this$2.productHash__s_Product__I__I(this, (-889275714))
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.productIterator__sc_Iterator = (function() {
+  return new $c_sr_ScalaRunTime$$anon$1().init___s_Product(this)
+});
+function $is_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException)))
+}
+function $as_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(obj) {
+  return (($is_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "ru.ispras.lingvodoc.frontend.extras.elan.ELANPArserException"))
+}
+function $isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException)))
+}
+function $asArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(obj, depth) {
+  return (($isArrayOf_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lru.ispras.lingvodoc.frontend.extras.elan.ELANPArserException;", depth))
+}
+var $d_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException: 0
+}, false, "ru.ispras.lingvodoc.frontend.extras.elan.ELANPArserException", {
+  Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException: 1,
+  jl_Exception: 1,
+  jl_Throwable: 1,
+  O: 1,
+  Ljava_io_Serializable: 1,
+  s_Product: 1,
+  s_Equals: 1,
+  s_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_extras_elan_ELANPArserException;
+/** @constructor */
 function $c_jl_JSConsoleBasedPrintStream() {
   $c_Ljava_io_PrintStream.call(this);
   this.isErr$4 = null;
@@ -44776,6 +51032,44 @@ function $m_scm_IndexedSeq$() {
     $n_scm_IndexedSeq$ = new $c_scm_IndexedSeq$().init___()
   };
   return $n_scm_IndexedSeq$
+}
+/** @constructor */
+function $c_scm_Seq$() {
+  $c_scg_SeqFactory.call(this)
+}
+$c_scm_Seq$.prototype = new $h_scg_SeqFactory();
+$c_scm_Seq$.prototype.constructor = $c_scm_Seq$;
+/** @constructor */
+function $h_scm_Seq$() {
+  /*<skip>*/
+}
+$h_scm_Seq$.prototype = $c_scm_Seq$.prototype;
+$c_scm_Seq$.prototype.init___ = (function() {
+  $c_scg_GenTraversableFactory.prototype.init___.call(this);
+  return this
+});
+$c_scm_Seq$.prototype.newBuilder__scm_Builder = (function() {
+  return new $c_scm_ArrayBuffer().init___()
+});
+var $d_scm_Seq$ = new $TypeData().initClass({
+  scm_Seq$: 0
+}, false, "scala.collection.mutable.Seq$", {
+  scm_Seq$: 1,
+  scg_SeqFactory: 1,
+  scg_GenSeqFactory: 1,
+  scg_GenTraversableFactory: 1,
+  scg_GenericCompanion: 1,
+  O: 1,
+  scg_TraversableFactory: 1,
+  scg_GenericSeqCompanion: 1
+});
+$c_scm_Seq$.prototype.$classData = $d_scm_Seq$;
+var $n_scm_Seq$ = (void 0);
+function $m_scm_Seq$() {
+  if ((!$n_scm_Seq$)) {
+    $n_scm_Seq$ = new $c_scm_Seq$().init___()
+  };
+  return $n_scm_Seq$
 }
 /** @constructor */
 function $c_sjs_js_WrappedArray$() {
@@ -46890,6 +53184,11 @@ $h_sc_AbstractTraversable.prototype = $c_sc_AbstractTraversable.prototype;
 $c_sc_AbstractTraversable.prototype.copyToArray__O__I__V = (function(xs, start) {
   $s_sc_TraversableOnce$class__copyToArray__sc_TraversableOnce__O__I__V(this, xs, start)
 });
+$c_sc_AbstractTraversable.prototype.toList__sci_List = (function() {
+  var this$1 = $m_sci_List$();
+  var cbf = this$1.ReusableCBFInstance$2;
+  return $as_sci_List($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this, cbf))
+});
 $c_sc_AbstractTraversable.prototype.flatMap__F1__scg_CanBuildFrom__O = (function(f, bf) {
   return $s_sc_TraversableLike$class__flatMap__sc_TraversableLike__F1__scg_CanBuildFrom__O(this, f, bf)
 });
@@ -46902,6 +53201,12 @@ $c_sc_AbstractTraversable.prototype.mkString__T__T__T__T = (function(start, sep,
 $c_sc_AbstractTraversable.prototype.withFilter__F1__scg_FilterMonadic = (function(p) {
   return new $c_sc_TraversableLike$WithFilter().init___sc_TraversableLike__F1(this, p)
 });
+$c_sc_AbstractTraversable.prototype.toString__T = (function() {
+  return $s_sc_TraversableLike$class__toString__sc_TraversableLike__T(this)
+});
+$c_sc_AbstractTraversable.prototype.reduceLeftOption__F2__s_Option = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option(this, op)
+});
 $c_sc_AbstractTraversable.prototype.foldLeft__O__F2__O = (function(z, op) {
   return $s_sc_TraversableOnce$class__foldLeft__sc_TraversableOnce__O__F2__O(this, z, op)
 });
@@ -46910,13 +53215,13 @@ $c_sc_AbstractTraversable.prototype.toVector__sci_Vector = (function() {
   var cbf = $m_sc_IndexedSeq$().ReusableCBF$6;
   return $as_sci_Vector($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this, cbf))
 });
-$c_sc_AbstractTraversable.prototype.size__I = (function() {
-  return $s_sc_TraversableOnce$class__size__sc_TraversableOnce__I(this)
-});
 $c_sc_AbstractTraversable.prototype.toBuffer__scm_Buffer = (function() {
   var this$1 = $m_scm_ArrayBuffer$();
   var cbf = this$1.ReusableCBFInstance$2;
   return $as_scm_Buffer($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this, cbf))
+});
+$c_sc_AbstractTraversable.prototype.size__I = (function() {
+  return $s_sc_TraversableOnce$class__size__sc_TraversableOnce__I(this)
 });
 $c_sc_AbstractTraversable.prototype.mkString__T = (function() {
   return this.mkString__T__T("")
@@ -46929,6 +53234,9 @@ $c_sc_AbstractTraversable.prototype.addString__scm_StringBuilder__T__T__T__scm_S
 });
 $c_sc_AbstractTraversable.prototype.repr__O = (function() {
   return this
+});
+$c_sc_AbstractTraversable.prototype.$$div$colon__O__F2__O = (function(z, op) {
+  return this.foldLeft__O__F2__O(z, op)
 });
 $c_sc_AbstractTraversable.prototype.isTraversableAgain__Z = (function() {
   return true
@@ -46947,6 +53255,9 @@ $c_sc_AbstractTraversable.prototype.map__F1__scg_CanBuildFrom__O = (function(f, 
 });
 $c_sc_AbstractTraversable.prototype.toArray__s_reflect_ClassTag__O = (function(evidence$1) {
   return $s_sc_TraversableOnce$class__toArray__sc_TraversableOnce__s_reflect_ClassTag__O(this, evidence$1)
+});
+$c_sc_AbstractTraversable.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeft__sc_TraversableOnce__F2__O(this, op)
 });
 $c_sc_AbstractTraversable.prototype.newBuilder__scm_Builder = (function() {
   return this.companion__scg_GenericCompanion().newBuilder__scm_Builder()
@@ -47088,6 +53399,18 @@ function $isArrayOf_sc_LinearSeqOptimized(obj, depth) {
 function $asArrayOf_sc_LinearSeqOptimized(obj, depth) {
   return (($isArrayOf_sc_LinearSeqOptimized(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.LinearSeqOptimized;", depth))
 }
+function $is_sc_SetLike(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sc_SetLike)))
+}
+function $as_sc_SetLike(obj) {
+  return (($is_sc_SetLike(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.collection.SetLike"))
+}
+function $isArrayOf_sc_SetLike(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.sc_SetLike)))
+}
+function $asArrayOf_sc_SetLike(obj, depth) {
+  return (($isArrayOf_sc_SetLike(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.SetLike;", depth))
+}
 /** @constructor */
 function $c_sc_AbstractIterable() {
   $c_sc_AbstractTraversable.call(this)
@@ -47099,18 +53422,33 @@ function $h_sc_AbstractIterable() {
   /*<skip>*/
 }
 $h_sc_AbstractIterable.prototype = $c_sc_AbstractIterable.prototype;
+$c_sc_AbstractIterable.prototype.seq__sc_TraversableOnce = (function() {
+  return this.seq__sc_Iterable()
+});
 $c_sc_AbstractIterable.prototype.head__O = (function() {
   return this.iterator__sc_Iterator().next__O()
 });
+$c_sc_AbstractIterable.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_sc_AbstractIterable.prototype.toIterator__sc_Iterator = (function() {
   return this.iterator__sc_Iterator()
+});
+$c_sc_AbstractIterable.prototype.sameElements__sc_GenIterable__Z = (function(that) {
+  return $s_sc_IterableLike$class__sameElements__sc_IterableLike__sc_GenIterable__Z(this, that)
 });
 $c_sc_AbstractIterable.prototype.exists__F1__Z = (function(p) {
   var this$1 = this.iterator__sc_Iterator();
   return $s_sc_Iterator$class__exists__sc_Iterator__F1__Z(this$1, p)
 });
-$c_sc_AbstractIterable.prototype.sameElements__sc_GenIterable__Z = (function(that) {
-  return $s_sc_IterableLike$class__sameElements__sc_IterableLike__sc_GenIterable__Z(this, that)
+$c_sc_AbstractIterable.prototype.thisCollection__sc_Traversable = (function() {
+  return this.thisCollection__sc_Iterable()
+});
+$c_sc_AbstractIterable.prototype.seq__sc_Iterable = (function() {
+  return this
+});
+$c_sc_AbstractIterable.prototype.isEmpty__Z = (function() {
+  return $s_sc_IterableLike$class__isEmpty__sc_IterableLike__Z(this)
 });
 $c_sc_AbstractIterable.prototype.companion__scg_GenericCompanion = (function() {
   return $m_sc_Iterable$()
@@ -47127,11 +53465,11 @@ $c_sc_AbstractIterable.prototype.find__F1__s_Option = (function(p) {
   var this$1 = this.iterator__sc_Iterator();
   return $s_sc_Iterator$class__find__sc_Iterator__F1__s_Option(this$1, p)
 });
-$c_sc_AbstractIterable.prototype.drop__I__O = (function(n) {
-  return $s_sc_IterableLike$class__drop__sc_IterableLike__I__O(this, n)
-});
 $c_sc_AbstractIterable.prototype.toStream__sci_Stream = (function() {
   return this.iterator__sc_Iterator().toStream__sci_Stream()
+});
+$c_sc_AbstractIterable.prototype.drop__I__O = (function(n) {
+  return $s_sc_IterableLike$class__drop__sc_IterableLike__I__O(this, n)
 });
 $c_sc_AbstractIterable.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
   $s_sc_IterableLike$class__copyToArray__sc_IterableLike__O__I__I__V(this, xs, start, len)
@@ -47210,6 +53548,11 @@ $c_sci_StringOps.prototype.sameElements__sc_GenIterable__Z = (function(that) {
 $c_sci_StringOps.prototype.exists__F1__Z = (function(p) {
   return $s_sc_IndexedSeqOptimized$class__exists__sc_IndexedSeqOptimized__F1__Z(this, p)
 });
+$c_sci_StringOps.prototype.toList__sci_List = (function() {
+  var this$1 = $m_sci_List$();
+  var cbf = this$1.ReusableCBFInstance$2;
+  return $as_sci_List($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this, cbf))
+});
 $c_sci_StringOps.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
 });
@@ -47220,6 +53563,13 @@ $c_sci_StringOps.prototype.thisCollection__sc_Traversable = (function() {
 $c_sci_StringOps.prototype.equals__O__Z = (function(x$1) {
   return $m_sci_StringOps$().equals$extension__T__O__Z(this.repr$1, x$1)
 });
+$c_sci_StringOps.prototype.apply__I__C = (function(index) {
+  var $$this = this.repr$1;
+  return (65535 & $uI($$this.charCodeAt(index)))
+});
+$c_sci_StringOps.prototype.mkString__T__T = (function(sep) {
+  return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, "", sep, "")
+});
 $c_sci_StringOps.prototype.mkString__T__T__T__T = (function(start, sep, end) {
   return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, start, sep, end)
 });
@@ -47229,6 +53579,9 @@ $c_sci_StringOps.prototype.toString__T = (function() {
 });
 $c_sci_StringOps.prototype.foreach__F1__V = (function(f) {
   $s_sc_IndexedSeqOptimized$class__foreach__sc_IndexedSeqOptimized__F1__V(this, f)
+});
+$c_sci_StringOps.prototype.reduceLeftOption__F2__s_Option = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option(this, op)
 });
 $c_sci_StringOps.prototype.foldLeft__O__F2__O = (function(z, op) {
   var $$this = this.repr$1;
@@ -47287,6 +53640,10 @@ $c_sci_StringOps.prototype.addString__scm_StringBuilder__T__T__T__scm_StringBuil
 $c_sci_StringOps.prototype.repr__O = (function() {
   return this.repr$1
 });
+$c_sci_StringOps.prototype.$$div$colon__O__F2__O = (function(z, op) {
+  var $$this = this.repr$1;
+  return $s_sc_IndexedSeqOptimized$class__foldl__p0__sc_IndexedSeqOptimized__I__I__O__F2__O(this, 0, $uI($$this.length), z, op)
+});
 $c_sci_StringOps.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
   $s_sc_IndexedSeqOptimized$class__copyToArray__sc_IndexedSeqOptimized__O__I__I__V(this, xs, start, len)
 });
@@ -47316,6 +53673,9 @@ $c_sci_StringOps.prototype.toMap__s_Predef$$less$colon$less__sci_Map = (function
 $c_sci_StringOps.prototype.toCollection__O__sc_Seq = (function(repr) {
   var repr$1 = $as_T(repr);
   return new $c_sci_WrappedString().init___T(repr$1)
+});
+$c_sci_StringOps.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O(this, op)
 });
 $c_sci_StringOps.prototype.newBuilder__scm_Builder = (function() {
   return new $c_scm_StringBuilder().init___()
@@ -47359,6 +53719,62 @@ var $d_sci_StringOps = new $TypeData().initClass({
   jl_Comparable: 1
 });
 $c_sci_StringOps.prototype.$classData = $d_sci_StringOps;
+/** @constructor */
+function $c_sc_MapLike$DefaultValuesIterable() {
+  $c_sc_AbstractIterable.call(this);
+  this.$$outer$f = null
+}
+$c_sc_MapLike$DefaultValuesIterable.prototype = new $h_sc_AbstractIterable();
+$c_sc_MapLike$DefaultValuesIterable.prototype.constructor = $c_sc_MapLike$DefaultValuesIterable;
+/** @constructor */
+function $h_sc_MapLike$DefaultValuesIterable() {
+  /*<skip>*/
+}
+$h_sc_MapLike$DefaultValuesIterable.prototype = $c_sc_MapLike$DefaultValuesIterable.prototype;
+$c_sc_MapLike$DefaultValuesIterable.prototype.foreach__F1__V = (function(f) {
+  var this$1 = this.$$outer$f.valuesIterator__sc_Iterator();
+  $s_sc_Iterator$class__foreach__sc_Iterator__F1__V(this$1, f)
+});
+$c_sc_MapLike$DefaultValuesIterable.prototype.size__I = (function() {
+  return this.$$outer$f.size__I()
+});
+$c_sc_MapLike$DefaultValuesIterable.prototype.iterator__sc_Iterator = (function() {
+  return this.$$outer$f.valuesIterator__sc_Iterator()
+});
+$c_sc_MapLike$DefaultValuesIterable.prototype.init___sc_MapLike = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$f = $$outer
+  };
+  return this
+});
+var $d_sc_MapLike$DefaultValuesIterable = new $TypeData().initClass({
+  sc_MapLike$DefaultValuesIterable: 0
+}, false, "scala.collection.MapLike$DefaultValuesIterable", {
+  sc_MapLike$DefaultValuesIterable: 1,
+  sc_AbstractIterable: 1,
+  sc_AbstractTraversable: 1,
+  O: 1,
+  sc_Traversable: 1,
+  sc_TraversableLike: 1,
+  scg_HasNewBuilder: 1,
+  scg_FilterMonadic: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1,
+  sc_GenTraversableLike: 1,
+  sc_Parallelizable: 1,
+  sc_GenTraversable: 1,
+  scg_GenericTraversableTemplate: 1,
+  sc_Iterable: 1,
+  sc_GenIterable: 1,
+  sc_GenIterableLike: 1,
+  sc_IterableLike: 1,
+  s_Equals: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_sc_MapLike$DefaultValuesIterable.prototype.$classData = $d_sc_MapLike$DefaultValuesIterable;
 function $is_sc_Seq(obj) {
   return (!(!((obj && obj.$classData) && obj.$classData.ancestors.sc_Seq)))
 }
@@ -47413,6 +53829,11 @@ $c_scm_ArrayOps$ofRef.prototype.exists__F1__Z = (function(p) {
 $c_scm_ArrayOps$ofRef.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
 });
+$c_scm_ArrayOps$ofRef.prototype.toList__sci_List = (function() {
+  var this$1 = $m_sci_List$();
+  var cbf = this$1.ReusableCBFInstance$2;
+  return $as_sci_List($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this, cbf))
+});
 $c_scm_ArrayOps$ofRef.prototype.thisCollection__sc_Traversable = (function() {
   var $$this = this.repr$1;
   return new $c_scm_WrappedArray$ofRef().init___AO($$this)
@@ -47423,11 +53844,17 @@ $c_scm_ArrayOps$ofRef.prototype.equals__O__Z = (function(x$1) {
 $c_scm_ArrayOps$ofRef.prototype.mkString__T__T__T__T = (function(start, sep, end) {
   return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, start, sep, end)
 });
+$c_scm_ArrayOps$ofRef.prototype.mkString__T__T = (function(sep) {
+  return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, "", sep, "")
+});
 $c_scm_ArrayOps$ofRef.prototype.toString__T = (function() {
   return $s_sc_TraversableLike$class__toString__sc_TraversableLike__T(this)
 });
 $c_scm_ArrayOps$ofRef.prototype.foreach__F1__V = (function(f) {
   $s_sc_IndexedSeqOptimized$class__foreach__sc_IndexedSeqOptimized__F1__V(this, f)
+});
+$c_scm_ArrayOps$ofRef.prototype.reduceLeftOption__F2__s_Option = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option(this, op)
 });
 $c_scm_ArrayOps$ofRef.prototype.foldLeft__O__F2__O = (function(z, op) {
   var $$this = this.repr$1;
@@ -47459,12 +53886,12 @@ $c_scm_ArrayOps$ofRef.prototype.iterator__sc_Iterator = (function() {
   var $$this = this.repr$1;
   return new $c_sc_IndexedSeqLike$Elements().init___sc_IndexedSeqLike__I__I(this, 0, $$this.u.length)
 });
-$c_scm_ArrayOps$ofRef.prototype.mkString__T = (function() {
-  return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, "", "", "")
-});
 $c_scm_ArrayOps$ofRef.prototype.length__I = (function() {
   var $$this = this.repr$1;
   return $$this.u.length
+});
+$c_scm_ArrayOps$ofRef.prototype.mkString__T = (function() {
+  return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, "", "", "")
 });
 $c_scm_ArrayOps$ofRef.prototype.toStream__sci_Stream = (function() {
   var $$this = this.repr$1;
@@ -47489,15 +53916,19 @@ $c_scm_ArrayOps$ofRef.prototype.addString__scm_StringBuilder__T__T__T__scm_Strin
 $c_scm_ArrayOps$ofRef.prototype.repr__O = (function() {
   return this.repr$1
 });
+$c_scm_ArrayOps$ofRef.prototype.$$div$colon__O__F2__O = (function(z, op) {
+  var $$this = this.repr$1;
+  return $s_sc_IndexedSeqOptimized$class__foldl__p0__sc_IndexedSeqOptimized__I__I__O__F2__O(this, 0, $$this.u.length, z, op)
+});
 $c_scm_ArrayOps$ofRef.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
   $s_scm_ArrayOps$class__copyToArray__scm_ArrayOps__O__I__I__V(this, xs, start, len)
-});
-$c_scm_ArrayOps$ofRef.prototype.isTraversableAgain__Z = (function() {
-  return true
 });
 $c_scm_ArrayOps$ofRef.prototype.hashCode__I = (function() {
   var $$this = this.repr$1;
   return $$this.hashCode__I()
+});
+$c_scm_ArrayOps$ofRef.prototype.isTraversableAgain__Z = (function() {
+  return true
 });
 $c_scm_ArrayOps$ofRef.prototype.toMap__s_Predef$$less$colon$less__sci_Map = (function(ev) {
   var b = new $c_scm_MapBuilder().init___sc_GenMap($m_sci_Map$EmptyMap$());
@@ -47516,6 +53947,9 @@ $c_scm_ArrayOps$ofRef.prototype.toMap__s_Predef$$less$colon$less__sci_Map = (fun
 $c_scm_ArrayOps$ofRef.prototype.toCollection__O__sc_Seq = (function(repr) {
   var repr$1 = $asArrayOf_O(repr, 1);
   return new $c_scm_WrappedArray$ofRef().init___AO(repr$1)
+});
+$c_scm_ArrayOps$ofRef.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O(this, op)
 });
 $c_scm_ArrayOps$ofRef.prototype.newBuilder__scm_Builder = (function() {
   var $$this = this.repr$1;
@@ -47642,6 +54076,11 @@ $c_sjs_js_ArrayOps.prototype.sameElements__sc_GenIterable__Z = (function(that) {
 $c_sjs_js_ArrayOps.prototype.exists__F1__Z = (function(p) {
   return $s_sc_IndexedSeqOptimized$class__exists__sc_IndexedSeqOptimized__F1__Z(this, p)
 });
+$c_sjs_js_ArrayOps.prototype.toList__sci_List = (function() {
+  var this$1 = $m_sci_List$();
+  var cbf = this$1.ReusableCBFInstance$2;
+  return $as_sci_List($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this, cbf))
+});
 $c_sjs_js_ArrayOps.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
 });
@@ -47650,6 +54089,9 @@ $c_sjs_js_ArrayOps.prototype.thisCollection__sc_Traversable = (function() {
 });
 $c_sjs_js_ArrayOps.prototype.equals__O__Z = (function(that) {
   return $s_sc_GenSeqLike$class__equals__sc_GenSeqLike__O__Z(this, that)
+});
+$c_sjs_js_ArrayOps.prototype.mkString__T__T = (function(sep) {
+  return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, "", sep, "")
 });
 $c_sjs_js_ArrayOps.prototype.mkString__T__T__T__T = (function(start, sep, end) {
   return $s_sc_TraversableOnce$class__mkString__sc_TraversableOnce__T__T__T__T(this, start, sep, end)
@@ -47667,6 +54109,9 @@ $c_sjs_js_ArrayOps.prototype.toString__T = (function() {
 });
 $c_sjs_js_ArrayOps.prototype.foreach__F1__V = (function(f) {
   $s_sc_IndexedSeqOptimized$class__foreach__sc_IndexedSeqOptimized__F1__V(this, f)
+});
+$c_sjs_js_ArrayOps.prototype.reduceLeftOption__F2__s_Option = (function(op) {
+  return $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option(this, op)
 });
 $c_sjs_js_ArrayOps.prototype.foldLeft__O__F2__O = (function(z, op) {
   return $s_sc_IndexedSeqOptimized$class__foldl__p0__sc_IndexedSeqOptimized__I__I__O__F2__O(this, 0, $uI(this.scala$scalajs$js$ArrayOps$$array$f.length), z, op)
@@ -47723,15 +54168,18 @@ $c_sjs_js_ArrayOps.prototype.addString__scm_StringBuilder__T__T__T__scm_StringBu
 $c_sjs_js_ArrayOps.prototype.repr__O = (function() {
   return this.scala$scalajs$js$ArrayOps$$array$f
 });
+$c_sjs_js_ArrayOps.prototype.$$div$colon__O__F2__O = (function(z, op) {
+  return $s_sc_IndexedSeqOptimized$class__foldl__p0__sc_IndexedSeqOptimized__I__I__O__F2__O(this, 0, $uI(this.scala$scalajs$js$ArrayOps$$array$f.length), z, op)
+});
 $c_sjs_js_ArrayOps.prototype.$$plus$eq__O__scm_Builder = (function(elem) {
   this.scala$scalajs$js$ArrayOps$$array$f.push(elem);
   return this
 });
-$c_sjs_js_ArrayOps.prototype.sizeHint__I__V = (function(size) {
-  /*<skip>*/
-});
 $c_sjs_js_ArrayOps.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
   $s_sc_IndexedSeqOptimized$class__copyToArray__sc_IndexedSeqOptimized__O__I__I__V(this, xs, start, len)
+});
+$c_sjs_js_ArrayOps.prototype.sizeHint__I__V = (function(size) {
+  /*<skip>*/
 });
 $c_sjs_js_ArrayOps.prototype.hashCode__I = (function() {
   return $m_s_util_hashing_MurmurHash3$().seqHash__sc_Seq__I(this.seq__sc_IndexedSeq())
@@ -47757,6 +54205,27 @@ $c_sjs_js_ArrayOps.prototype.init___sjs_js_Array = (function(array) {
 });
 $c_sjs_js_ArrayOps.prototype.toCollection__O__sc_Seq = (function(repr) {
   return new $c_sjs_js_WrappedArray().init___sjs_js_Array(repr)
+});
+$c_sjs_js_ArrayOps.prototype.reduceLeft__F2__O = (function(op) {
+  var length = $uI(this.scala$scalajs$js$ArrayOps$$array$f.length);
+  if ((length <= 0)) {
+    $m_sjs_js_ArrayOps$().scala$scalajs$js$ArrayOps$$throwUnsupported__T__sr_Nothing$("empty.reduceLeft")
+  };
+  var start = 1;
+  var z = this.scala$scalajs$js$ArrayOps$$array$f[0];
+  _loop: while (true) {
+    if ((start === length)) {
+      return z
+    } else {
+      var temp$start = ((1 + start) | 0);
+      var jsx$1 = z;
+      var index = start;
+      var temp$z = op.apply__O__O__O(jsx$1, this.scala$scalajs$js$ArrayOps$$array$f[index]);
+      start = temp$start;
+      z = temp$z;
+      continue _loop
+    }
+  }
 });
 $c_sjs_js_ArrayOps.prototype.newBuilder__scm_Builder = (function() {
   return new $c_sjs_js_ArrayOps().init___()
@@ -47830,6 +54299,18 @@ function $isArrayOf_sc_LinearSeq(obj, depth) {
 function $asArrayOf_sc_LinearSeq(obj, depth) {
   return (($isArrayOf_sc_LinearSeq(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.LinearSeq;", depth))
 }
+function $is_scm_MapLike(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.scm_MapLike)))
+}
+function $as_scm_MapLike(obj) {
+  return (($is_scm_MapLike(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.collection.mutable.MapLike"))
+}
+function $isArrayOf_scm_MapLike(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.scm_MapLike)))
+}
+function $asArrayOf_scm_MapLike(obj, depth) {
+  return (($isArrayOf_scm_MapLike(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.mutable.MapLike;", depth))
+}
 /** @constructor */
 function $c_sc_AbstractSeq() {
   $c_sc_AbstractIterable.call(this)
@@ -47897,14 +54378,17 @@ $c_sc_AbstractMap.prototype.seq__sc_TraversableOnce = (function() {
 $c_sc_AbstractMap.prototype.apply__O__O = (function(key) {
   return $s_sc_MapLike$class__apply__sc_MapLike__O__O(this, key)
 });
+$c_sc_AbstractMap.prototype.seq__sc_Iterable = (function() {
+  return this.seq__sc_Map()
+});
+$c_sc_AbstractMap.prototype.isEmpty__Z = (function() {
+  return $s_sc_MapLike$class__isEmpty__sc_MapLike__Z(this)
+});
 $c_sc_AbstractMap.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
 $c_sc_AbstractMap.prototype.runWith__F1__F1 = (function(action) {
   return $s_s_PartialFunction$class__runWith__s_PartialFunction__F1__F1(this, action)
-});
-$c_sc_AbstractMap.prototype.isEmpty__Z = (function() {
-  return $s_sc_MapLike$class__isEmpty__sc_MapLike__Z(this)
 });
 $c_sc_AbstractMap.prototype.equals__O__Z = (function(that) {
   return $s_sc_GenMapLike$class__equals__sc_GenMapLike__O__Z(this, that)
@@ -47912,8 +54396,14 @@ $c_sc_AbstractMap.prototype.equals__O__Z = (function(that) {
 $c_sc_AbstractMap.prototype.toString__T = (function() {
   return $s_sc_TraversableLike$class__toString__sc_TraversableLike__T(this)
 });
+$c_sc_AbstractMap.prototype.keysIterator__sc_Iterator = (function() {
+  return new $c_sc_MapLike$$anon$1().init___sc_MapLike(this)
+});
 $c_sc_AbstractMap.prototype.empty__sc_Map = (function() {
   return $m_sci_Map$EmptyMap$()
+});
+$c_sc_AbstractMap.prototype.toBuffer__scm_Buffer = (function() {
+  return $s_sc_MapLike$class__toBuffer__sc_MapLike__scm_Buffer(this)
 });
 $c_sc_AbstractMap.prototype.orElse__s_PartialFunction__s_PartialFunction = (function(that) {
   return new $c_s_PartialFunction$OrElse().init___s_PartialFunction__s_PartialFunction(this, that)
@@ -47921,8 +54411,8 @@ $c_sc_AbstractMap.prototype.orElse__s_PartialFunction__s_PartialFunction = (func
 $c_sc_AbstractMap.prototype.seq__sc_Map = (function() {
   return this
 });
-$c_sc_AbstractMap.prototype.toBuffer__scm_Buffer = (function() {
-  return $s_sc_MapLike$class__toBuffer__sc_MapLike__scm_Buffer(this)
+$c_sc_AbstractMap.prototype.valuesIterator__sc_Iterator = (function() {
+  return new $c_sc_MapLike$$anon$2().init___sc_MapLike(this)
 });
 $c_sc_AbstractMap.prototype.contains__O__Z = (function(key) {
   return $s_sc_MapLike$class__contains__sc_MapLike__O__Z(this, key)
@@ -47933,19 +54423,19 @@ $c_sc_AbstractMap.prototype.addString__scm_StringBuilder__T__T__T__scm_StringBui
 $c_sc_AbstractMap.prototype.isDefinedAt__O__Z = (function(key) {
   return this.contains__O__Z(key)
 });
+$c_sc_AbstractMap.prototype.applyOrElse__O__F1__O = (function(x, $default) {
+  return $s_s_PartialFunction$class__applyOrElse__s_PartialFunction__O__F1__O(this, x, $default)
+});
 $c_sc_AbstractMap.prototype.hashCode__I = (function() {
   var this$1 = $m_s_util_hashing_MurmurHash3$();
   var xs = this.seq__sc_Map();
   return this$1.unorderedHash__sc_TraversableOnce__I__I(xs, this$1.mapSeed$2)
 });
-$c_sc_AbstractMap.prototype.applyOrElse__O__F1__O = (function(x, $default) {
-  return $s_s_PartialFunction$class__applyOrElse__s_PartialFunction__O__F1__O(this, x, $default)
+$c_sc_AbstractMap.prototype.newBuilder__scm_Builder = (function() {
+  return new $c_scm_MapBuilder().init___sc_GenMap(this.empty__sc_Map())
 });
 $c_sc_AbstractMap.prototype.stringPrefix__T = (function() {
   return "Map"
-});
-$c_sc_AbstractMap.prototype.newBuilder__scm_Builder = (function() {
-  return new $c_scm_MapBuilder().init___sc_GenMap(this.empty__sc_Map())
 });
 /** @constructor */
 function $c_sc_AbstractSet() {
@@ -47975,7 +54465,11 @@ $c_sc_AbstractSet.prototype.toBuffer__scm_Buffer = (function() {
 });
 $c_sc_AbstractSet.prototype.hashCode__I = (function() {
   var this$1 = $m_s_util_hashing_MurmurHash3$();
-  return this$1.unorderedHash__sc_TraversableOnce__I__I(this, this$1.setSeed$2)
+  var xs = this.seq__sc_Set();
+  return this$1.unorderedHash__sc_TraversableOnce__I__I(xs, this$1.setSeed$2)
+});
+$c_sc_AbstractSet.prototype.$$plus$plus__sc_GenTraversableOnce__sc_Set = (function(elems) {
+  return $s_sc_SetLike$class__$$plus$plus__sc_SetLike__sc_GenTraversableOnce__sc_Set(this, elems)
 });
 $c_sc_AbstractSet.prototype.newBuilder__scm_Builder = (function() {
   return new $c_scm_SetBuilder().init___sc_Set(this.empty__sc_Set())
@@ -48124,6 +54618,48 @@ var $d_sc_MapLike$MappedValues = new $TypeData().initClass({
 });
 $c_sc_MapLike$MappedValues.prototype.$classData = $d_sc_MapLike$MappedValues;
 /** @constructor */
+function $c_sc_MapLike$DefaultKeySet() {
+  $c_sc_AbstractSet.call(this);
+  this.$$outer$f = null
+}
+$c_sc_MapLike$DefaultKeySet.prototype = new $h_sc_AbstractSet();
+$c_sc_MapLike$DefaultKeySet.prototype.constructor = $c_sc_MapLike$DefaultKeySet;
+/** @constructor */
+function $h_sc_MapLike$DefaultKeySet() {
+  /*<skip>*/
+}
+$h_sc_MapLike$DefaultKeySet.prototype = $c_sc_MapLike$DefaultKeySet.prototype;
+$c_sc_MapLike$DefaultKeySet.prototype.foreach__F1__V = (function(f) {
+  var this$1 = this.$$outer$f.keysIterator__sc_Iterator();
+  $s_sc_Iterator$class__foreach__sc_Iterator__F1__V(this$1, f)
+});
+$c_sc_MapLike$DefaultKeySet.prototype.size__I = (function() {
+  return this.$$outer$f.size__I()
+});
+$c_sc_MapLike$DefaultKeySet.prototype.iterator__sc_Iterator = (function() {
+  return this.$$outer$f.keysIterator__sc_Iterator()
+});
+$c_sc_MapLike$DefaultKeySet.prototype.init___sc_MapLike = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$f = $$outer
+  };
+  return this
+});
+function $is_scm_Seq(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.scm_Seq)))
+}
+function $as_scm_Seq(obj) {
+  return (($is_scm_Seq(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.collection.mutable.Seq"))
+}
+function $isArrayOf_scm_Seq(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.scm_Seq)))
+}
+function $asArrayOf_scm_Seq(obj, depth) {
+  return (($isArrayOf_scm_Seq(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.mutable.Seq;", depth))
+}
+/** @constructor */
 function $c_sci_AbstractMap() {
   $c_sc_AbstractMap.call(this)
 }
@@ -48138,6 +54674,9 @@ $c_sci_AbstractMap.prototype.seq__sc_TraversableOnce = (function() {
   return this
 });
 $c_sci_AbstractMap.prototype.thisCollection__sc_Traversable = (function() {
+  return this
+});
+$c_sci_AbstractMap.prototype.seq__sc_Iterable = (function() {
   return this
 });
 $c_sci_AbstractMap.prototype.companion__scg_GenericCompanion = (function() {
@@ -48175,11 +54714,14 @@ $c_sci_ListSet.prototype.head__O = (function() {
 $c_sci_ListSet.prototype.apply__O__O = (function(v1) {
   return this.contains__O__Z(v1)
 });
-$c_sci_ListSet.prototype.isEmpty__Z = (function() {
-  return true
+$c_sci_ListSet.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_sci_ListSet.prototype.thisCollection__sc_Traversable = (function() {
   return this
+});
+$c_sci_ListSet.prototype.isEmpty__Z = (function() {
+  return true
 });
 $c_sci_ListSet.prototype.scala$collection$immutable$ListSet$$unchecked$undouter__sci_ListSet = (function() {
   throw new $c_ju_NoSuchElementException().init___T("Empty ListSet has no outer pointer")
@@ -48199,14 +54741,29 @@ $c_sci_ListSet.prototype.iterator__sc_Iterator = (function() {
 $c_sci_ListSet.prototype.empty__sc_Set = (function() {
   return $m_sci_ListSet$EmptyListSet$()
 });
+$c_sci_ListSet.prototype.seq__sc_Set = (function() {
+  return this
+});
 $c_sci_ListSet.prototype.contains__O__Z = (function(elem) {
   return false
+});
+$c_sci_ListSet.prototype.$$plus$plus__sc_GenTraversableOnce__sci_ListSet = (function(xs) {
+  if (xs.isEmpty__Z()) {
+    return this
+  } else {
+    var this$1 = new $c_sci_ListSet$ListSetBuilder().init___sci_ListSet(this);
+    var xs$1 = xs.seq__sc_TraversableOnce();
+    return $as_sci_ListSet$ListSetBuilder($s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this$1, xs$1)).result__sci_ListSet()
+  }
 });
 $c_sci_ListSet.prototype.$$plus__O__sc_Set = (function(elem) {
   return this.$$plus__O__sci_ListSet(elem)
 });
 $c_sci_ListSet.prototype.tail__sci_ListSet = (function() {
   throw new $c_ju_NoSuchElementException().init___T("Next of an empty set")
+});
+$c_sci_ListSet.prototype.$$plus$plus__sc_GenTraversableOnce__sc_Set = (function(elems) {
+  return this.$$plus$plus__sc_GenTraversableOnce__sci_ListSet(elems)
 });
 $c_sci_ListSet.prototype.stringPrefix__T = (function() {
   return "ListSet"
@@ -48246,6 +54803,9 @@ $c_sci_Set$EmptySet$.prototype.apply__O__O = (function(v1) {
 $c_sci_Set$EmptySet$.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
+$c_sci_Set$EmptySet$.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_sci_Set$EmptySet$.prototype.companion__scg_GenericCompanion = (function() {
   return $m_sci_Set$()
 });
@@ -48260,6 +54820,9 @@ $c_sci_Set$EmptySet$.prototype.iterator__sc_Iterator = (function() {
 });
 $c_sci_Set$EmptySet$.prototype.empty__sc_Set = (function() {
   return $m_sci_Set$EmptySet$()
+});
+$c_sci_Set$EmptySet$.prototype.seq__sc_Set = (function() {
+  return this
 });
 $c_sci_Set$EmptySet$.prototype.$$plus__O__sc_Set = (function(elem) {
   return new $c_sci_Set$Set1().init___O(elem)
@@ -48327,6 +54890,9 @@ $c_sci_Set$Set1.prototype.seq__sc_TraversableOnce = (function() {
 $c_sci_Set$Set1.prototype.apply__O__O = (function(v1) {
   return this.contains__O__Z(v1)
 });
+$c_sci_Set$Set1.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_sci_Set$Set1.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
@@ -48353,6 +54919,9 @@ $c_sci_Set$Set1.prototype.iterator__sc_Iterator = (function() {
 });
 $c_sci_Set$Set1.prototype.empty__sc_Set = (function() {
   return $m_sci_Set$EmptySet$()
+});
+$c_sci_Set$Set1.prototype.seq__sc_Set = (function() {
+  return this
 });
 $c_sci_Set$Set1.prototype.$$plus__O__sci_Set = (function(elem) {
   return (this.contains__O__Z(elem) ? this : new $c_sci_Set$Set2().init___O__O(this.elem1$4, elem))
@@ -48420,6 +54989,9 @@ $c_sci_Set$Set2.prototype.seq__sc_TraversableOnce = (function() {
 $c_sci_Set$Set2.prototype.apply__O__O = (function(v1) {
   return this.contains__O__Z(v1)
 });
+$c_sci_Set$Set2.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_sci_Set$Set2.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
@@ -48448,6 +55020,9 @@ $c_sci_Set$Set2.prototype.iterator__sc_Iterator = (function() {
 });
 $c_sci_Set$Set2.prototype.empty__sc_Set = (function() {
   return $m_sci_Set$EmptySet$()
+});
+$c_sci_Set$Set2.prototype.seq__sc_Set = (function() {
+  return this
 });
 $c_sci_Set$Set2.prototype.$$plus__O__sci_Set = (function(elem) {
   return (this.contains__O__Z(elem) ? this : new $c_sci_Set$Set3().init___O__O__O(this.elem1$4, this.elem2$4, elem))
@@ -48516,6 +55091,9 @@ $c_sci_Set$Set3.prototype.seq__sc_TraversableOnce = (function() {
 $c_sci_Set$Set3.prototype.apply__O__O = (function(v1) {
   return this.contains__O__Z(v1)
 });
+$c_sci_Set$Set3.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_sci_Set$Set3.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
@@ -48546,6 +55124,9 @@ $c_sci_Set$Set3.prototype.iterator__sc_Iterator = (function() {
 });
 $c_sci_Set$Set3.prototype.empty__sc_Set = (function() {
   return $m_sci_Set$EmptySet$()
+});
+$c_sci_Set$Set3.prototype.seq__sc_Set = (function() {
+  return this
 });
 $c_sci_Set$Set3.prototype.$$plus__O__sci_Set = (function(elem) {
   return (this.contains__O__Z(elem) ? this : new $c_sci_Set$Set4().init___O__O__O__O(this.elem1$4, this.elem2$4, this.elem3$4, elem))
@@ -48615,6 +55196,9 @@ $c_sci_Set$Set4.prototype.seq__sc_TraversableOnce = (function() {
 $c_sci_Set$Set4.prototype.apply__O__O = (function(v1) {
   return this.contains__O__Z(v1)
 });
+$c_sci_Set$Set4.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_sci_Set$Set4.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
@@ -48640,6 +55224,9 @@ $c_sci_Set$Set4.prototype.iterator__sc_Iterator = (function() {
 });
 $c_sci_Set$Set4.prototype.empty__sc_Set = (function() {
   return $m_sci_Set$EmptySet$()
+});
+$c_sci_Set$Set4.prototype.seq__sc_Set = (function() {
+  return this
 });
 $c_sci_Set$Set4.prototype.$$plus__O__sci_Set = (function(elem) {
   if (this.contains__O__Z(elem)) {
@@ -48746,14 +55333,14 @@ function $h_sci_HashSet() {
   /*<skip>*/
 }
 $h_sci_HashSet.prototype = $c_sci_HashSet.prototype;
-$c_sci_HashSet.prototype.seq__sc_TraversableOnce = (function() {
-  return this
-});
 $c_sci_HashSet.prototype.updated0__O__I__I__sci_HashSet = (function(key, hash, level) {
   return new $c_sci_HashSet$HashSet1().init___O__I(key, hash)
 });
 $c_sci_HashSet.prototype.computeHash__O__I = (function(key) {
   return this.improve__I__I($m_sr_ScalaRunTime$().hash__O__I(key))
+});
+$c_sci_HashSet.prototype.seq__sc_TraversableOnce = (function() {
+  return this
 });
 $c_sci_HashSet.prototype.init___ = (function() {
   return this
@@ -48763,6 +55350,9 @@ $c_sci_HashSet.prototype.apply__O__O = (function(v1) {
 });
 $c_sci_HashSet.prototype.$$plus__O__sci_HashSet = (function(e) {
   return this.updated0__O__I__I__sci_HashSet(e, this.computeHash__O__I(e), 0)
+});
+$c_sci_HashSet.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_sci_HashSet.prototype.thisCollection__sc_Traversable = (function() {
   return this
@@ -48797,14 +55387,17 @@ $c_sci_HashSet.prototype.improve__I__I = (function(hcode) {
   h = ((h + (h << 4)) | 0);
   return (h ^ ((h >>> 10) | 0))
 });
+$c_sci_HashSet.prototype.seq__sc_Set = (function() {
+  return this
+});
 $c_sci_HashSet.prototype.contains__O__Z = (function(e) {
   return this.get0__O__I__I__Z(e, this.computeHash__O__I(e), 0)
 });
-$c_sci_HashSet.prototype.$$plus__O__sc_Set = (function(elem) {
-  return this.$$plus__O__sci_HashSet(elem)
-});
 $c_sci_HashSet.prototype.get0__O__I__I__Z = (function(key, hash, level) {
   return false
+});
+$c_sci_HashSet.prototype.$$plus__O__sc_Set = (function(elem) {
+  return this.$$plus__O__sci_HashSet(elem)
 });
 $c_sci_HashSet.prototype.subsetOf0__sci_HashSet__I__Z = (function(that, level) {
   return true
@@ -49033,6 +55626,87 @@ var $d_sci_ListSet$Node = new $TypeData().initClass({
 });
 $c_sci_ListSet$Node.prototype.$classData = $d_sci_ListSet$Node;
 /** @constructor */
+function $c_sci_MapLike$ImmutableDefaultKeySet() {
+  $c_sc_MapLike$DefaultKeySet.call(this)
+}
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype = new $h_sc_MapLike$DefaultKeySet();
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.constructor = $c_sci_MapLike$ImmutableDefaultKeySet;
+/** @constructor */
+function $h_sci_MapLike$ImmutableDefaultKeySet() {
+  /*<skip>*/
+}
+$h_sci_MapLike$ImmutableDefaultKeySet.prototype = $c_sci_MapLike$ImmutableDefaultKeySet.prototype;
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.seq__sc_TraversableOnce = (function() {
+  return this
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.apply__O__O = (function(v1) {
+  return this.$$outer$f.contains__O__Z(v1)
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.seq__sc_Iterable = (function() {
+  return this
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.thisCollection__sc_Traversable = (function() {
+  return this
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.companion__scg_GenericCompanion = (function() {
+  return $m_sci_Set$()
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.init___sci_MapLike = (function($$outer) {
+  $c_sc_MapLike$DefaultKeySet.prototype.init___sc_MapLike.call(this, $$outer);
+  return this
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.empty__sc_Set = (function() {
+  return $m_sci_Set$EmptySet$()
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.seq__sc_Set = (function() {
+  return this
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.$$plus__O__sci_Set = (function(elem) {
+  return (this.$$outer$f.contains__O__Z(elem) ? this : $as_sci_Set($as_sc_SetLike($m_sci_Set$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$())).$$plus$plus__sc_GenTraversableOnce__sc_Set(this).$$plus__O__sc_Set(elem)))
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.$$plus__O__sc_Set = (function(elem) {
+  return this.$$plus__O__sci_Set(elem)
+});
+var $d_sci_MapLike$ImmutableDefaultKeySet = new $TypeData().initClass({
+  sci_MapLike$ImmutableDefaultKeySet: 0
+}, false, "scala.collection.immutable.MapLike$ImmutableDefaultKeySet", {
+  sci_MapLike$ImmutableDefaultKeySet: 1,
+  sc_MapLike$DefaultKeySet: 1,
+  sc_AbstractSet: 1,
+  sc_AbstractIterable: 1,
+  sc_AbstractTraversable: 1,
+  O: 1,
+  sc_Traversable: 1,
+  sc_TraversableLike: 1,
+  scg_HasNewBuilder: 1,
+  scg_FilterMonadic: 1,
+  sc_TraversableOnce: 1,
+  sc_GenTraversableOnce: 1,
+  sc_GenTraversableLike: 1,
+  sc_Parallelizable: 1,
+  sc_GenTraversable: 1,
+  scg_GenericTraversableTemplate: 1,
+  sc_Iterable: 1,
+  sc_GenIterable: 1,
+  sc_GenIterableLike: 1,
+  sc_IterableLike: 1,
+  s_Equals: 1,
+  sc_Set: 1,
+  F1: 1,
+  sc_GenSet: 1,
+  sc_GenSetLike: 1,
+  scg_GenericSetTemplate: 1,
+  sc_SetLike: 1,
+  scg_Subtractable: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1,
+  sci_Set: 1,
+  sci_Iterable: 1,
+  sci_Traversable: 1,
+  s_Immutable: 1
+});
+$c_sci_MapLike$ImmutableDefaultKeySet.prototype.$classData = $d_sci_MapLike$ImmutableDefaultKeySet;
+/** @constructor */
 function $c_scm_AbstractSeq() {
   $c_sc_AbstractSeq.call(this)
 }
@@ -49044,6 +55718,9 @@ function $h_scm_AbstractSeq() {
 }
 $h_scm_AbstractSeq.prototype = $c_scm_AbstractSeq.prototype;
 $c_scm_AbstractSeq.prototype.seq__sc_TraversableOnce = (function() {
+  return this.seq__scm_Seq()
+});
+$c_scm_AbstractSeq.prototype.seq__sc_Iterable = (function() {
   return this.seq__scm_Seq()
 });
 $c_scm_AbstractSeq.prototype.seq__scm_Seq = (function() {
@@ -49308,6 +55985,9 @@ $c_sci_ListMap.prototype.value__O = (function() {
 $c_sci_ListMap.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
+$c_sci_ListMap.prototype.$$plus__T2__sci_Map = (function(kv) {
+  return this.updated__O__O__sci_ListMap(kv.$$und1$f, kv.$$und2$f)
+});
 $c_sci_ListMap.prototype.empty__sc_Map = (function() {
   return $m_sci_ListMap$EmptyListMap$()
 });
@@ -49367,6 +56047,11 @@ function $h_sci_Map$EmptyMap$() {
 $h_sci_Map$EmptyMap$.prototype = $c_sci_Map$EmptyMap$.prototype;
 $c_sci_Map$EmptyMap$.prototype.init___ = (function() {
   return this
+});
+$c_sci_Map$EmptyMap$.prototype.$$plus__T2__sci_Map = (function(kv) {
+  var key = kv.$$und1$f;
+  var value = kv.$$und2$f;
+  return new $c_sci_Map$Map1().init___O__O(key, value)
 });
 $c_sci_Map$EmptyMap$.prototype.iterator__sc_Iterator = (function() {
   return $m_sc_Iterator$().empty$1
@@ -49450,6 +56135,9 @@ $c_sci_Map$Map1.prototype.init___O__O = (function(key1, value1) {
 $c_sci_Map$Map1.prototype.foreach__F1__V = (function(f) {
   f.apply__O__O(new $c_T2().init___O__O(this.key1$5, this.value1$5))
 });
+$c_sci_Map$Map1.prototype.$$plus__T2__sci_Map = (function(kv) {
+  return this.updated__O__O__sci_Map(kv.$$und1$f, kv.$$und2$f)
+});
 $c_sci_Map$Map1.prototype.iterator__sc_Iterator = (function() {
   $m_sc_Iterator$();
   var elems = new $c_sjs_js_WrappedArray().init___sjs_js_Array([new $c_T2().init___O__O(this.key1$5, this.value1$5)]);
@@ -49525,6 +56213,9 @@ $h_sci_Map$Map2.prototype = $c_sci_Map$Map2.prototype;
 $c_sci_Map$Map2.prototype.foreach__F1__V = (function(f) {
   f.apply__O__O(new $c_T2().init___O__O(this.key1$5, this.value1$5));
   f.apply__O__O(new $c_T2().init___O__O(this.key2$5, this.value2$5))
+});
+$c_sci_Map$Map2.prototype.$$plus__T2__sci_Map = (function(kv) {
+  return this.updated__O__O__sci_Map(kv.$$und1$f, kv.$$und2$f)
 });
 $c_sci_Map$Map2.prototype.iterator__sc_Iterator = (function() {
   $m_sc_Iterator$();
@@ -49611,6 +56302,9 @@ $c_sci_Map$Map3.prototype.foreach__F1__V = (function(f) {
   f.apply__O__O(new $c_T2().init___O__O(this.key1$5, this.value1$5));
   f.apply__O__O(new $c_T2().init___O__O(this.key2$5, this.value2$5));
   f.apply__O__O(new $c_T2().init___O__O(this.key3$5, this.value3$5))
+});
+$c_sci_Map$Map3.prototype.$$plus__T2__sci_Map = (function(kv) {
+  return this.updated__O__O__sci_Map(kv.$$und1$f, kv.$$und2$f)
 });
 $c_sci_Map$Map3.prototype.init___O__O__O__O__O__O = (function(key1, value1, key2, value2, key3, value3) {
   this.key1$5 = key1;
@@ -49703,6 +56397,9 @@ $c_sci_Map$Map4.prototype.foreach__F1__V = (function(f) {
   f.apply__O__O(new $c_T2().init___O__O(this.key3$5, this.value3$5));
   f.apply__O__O(new $c_T2().init___O__O(this.key4$5, this.value4$5))
 });
+$c_sci_Map$Map4.prototype.$$plus__T2__sci_Map = (function(kv) {
+  return this.updated__O__O__sci_Map(kv.$$und1$f, kv.$$und2$f)
+});
 $c_sci_Map$Map4.prototype.iterator__sc_Iterator = (function() {
   $m_sc_Iterator$();
   var elems = new $c_sjs_js_WrappedArray().init___sjs_js_Array([new $c_T2().init___O__O(this.key1$5, this.value1$5), new $c_T2().init___O__O(this.key2$5, this.value2$5), new $c_T2().init___O__O(this.key3$5, this.value3$5), new $c_T2().init___O__O(this.key4$5, this.value4$5)]);
@@ -49782,17 +56479,23 @@ function $h_sci_MapLike$$anon$2() {
   /*<skip>*/
 }
 $h_sci_MapLike$$anon$2.prototype = $c_sci_MapLike$$anon$2.prototype;
-$c_sci_MapLike$$anon$2.prototype.seq__sc_TraversableOnce = (function() {
-  return this
-});
 $c_sci_MapLike$$anon$2.prototype.init___sci_MapLike__F1 = (function($$outer, f$1) {
   $c_sc_MapLike$MappedValues.prototype.init___sc_MapLike__F1.call(this, $$outer, f$1);
+  return this
+});
+$c_sci_MapLike$$anon$2.prototype.seq__sc_TraversableOnce = (function() {
   return this
 });
 $c_sci_MapLike$$anon$2.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
+$c_sci_MapLike$$anon$2.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_sci_MapLike$$anon$2.prototype.$$plus__T2__sc_Map = (function(kv) {
+  return $s_sci_DefaultMap$class__$$plus__sci_DefaultMap__T2__sci_Map(this, kv)
+});
+$c_sci_MapLike$$anon$2.prototype.$$plus__T2__sci_Map = (function(kv) {
   return $s_sci_DefaultMap$class__$$plus__sci_DefaultMap__T2__sci_Map(this, kv)
 });
 $c_sci_MapLike$$anon$2.prototype.companion__scg_GenericCompanion = (function() {
@@ -49850,6 +56553,18 @@ var $d_sci_MapLike$$anon$2 = new $TypeData().initClass({
   sci_MapLike: 1
 });
 $c_sci_MapLike$$anon$2.prototype.$classData = $d_sci_MapLike$$anon$2;
+function $is_scm_Set(obj) {
+  return (!(!((obj && obj.$classData) && obj.$classData.ancestors.scm_Set)))
+}
+function $as_scm_Set(obj) {
+  return (($is_scm_Set(obj) || (obj === null)) ? obj : $throwClassCastException(obj, "scala.collection.mutable.Set"))
+}
+function $isArrayOf_scm_Set(obj, depth) {
+  return (!(!(((obj && obj.$classData) && (obj.$classData.arrayDepth === depth)) && obj.$classData.arrayBase.ancestors.scm_Set)))
+}
+function $asArrayOf_scm_Set(obj, depth) {
+  return (($isArrayOf_scm_Set(obj, depth) || (obj === null)) ? obj : $throwArrayCastException(obj, "Lscala.collection.mutable.Set;", depth))
+}
 /** @constructor */
 function $c_sci_HashMap() {
   $c_sci_AbstractMap.call(this)
@@ -49878,6 +56593,9 @@ $c_sci_HashMap.prototype.updated0__O__I__I__O__T2__sci_HashMap$Merger__sci_HashM
 });
 $c_sci_HashMap.prototype.get0__O__I__I__s_Option = (function(key, hash, level) {
   return $m_s_None$()
+});
+$c_sci_HashMap.prototype.$$plus__T2__sci_Map = (function(kv) {
+  return this.$$plus__T2__sci_HashMap(kv)
 });
 $c_sci_HashMap.prototype.foreach__F1__V = (function(f) {
   /*<skip>*/
@@ -50186,18 +56904,27 @@ $c_sci_List.prototype.seq__sc_TraversableOnce = (function() {
 $c_sci_List.prototype.apply__I__O = (function(n) {
   return $s_sc_LinearSeqOptimized$class__apply__sc_LinearSeqOptimized__I__O(this, n)
 });
+$c_sci_List.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_sci_List.prototype.lengthCompare__I__I = (function(len) {
   return $s_sc_LinearSeqOptimized$class__lengthCompare__sc_LinearSeqOptimized__I__I(this, len)
+});
+$c_sci_List.prototype.sameElements__sc_GenIterable__Z = (function(that) {
+  return $s_sc_LinearSeqOptimized$class__sameElements__sc_LinearSeqOptimized__sc_GenIterable__Z(this, that)
 });
 $c_sci_List.prototype.apply__O__O = (function(v1) {
   var n = $uI(v1);
   return $s_sc_LinearSeqOptimized$class__apply__sc_LinearSeqOptimized__I__O(this, n)
 });
-$c_sci_List.prototype.sameElements__sc_GenIterable__Z = (function(that) {
-  return $s_sc_LinearSeqOptimized$class__sameElements__sc_LinearSeqOptimized__sc_GenIterable__Z(this, that)
-});
 $c_sci_List.prototype.exists__F1__Z = (function(p) {
   return $s_sc_LinearSeqOptimized$class__exists__sc_LinearSeqOptimized__F1__Z(this, p)
+});
+$c_sci_List.prototype.toList__sci_List = (function() {
+  return this
+});
+$c_sci_List.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_sci_List.prototype.thisCollection__sc_Traversable = (function() {
   return this
@@ -50236,6 +56963,31 @@ $c_sci_List.prototype.flatMap__F1__scg_CanBuildFrom__O = (function(f, bf) {
 $c_sci_List.prototype.drop__I__sc_LinearSeqOptimized = (function(n) {
   return this.drop__I__sci_List(n)
 });
+$c_sci_List.prototype.take__I__sci_List = (function(n) {
+  if ((this.isEmpty__Z() || (n <= 0))) {
+    return $m_sci_Nil$()
+  } else {
+    var h = new $c_sci_$colon$colon().init___O__sci_List(this.head__O(), $m_sci_Nil$());
+    var t = h;
+    var rest = $as_sci_List(this.tail__O());
+    var i = 1;
+    while (true) {
+      if (rest.isEmpty__Z()) {
+        return this
+      };
+      if ((i < n)) {
+        i = ((1 + i) | 0);
+        var nx = new $c_sci_$colon$colon().init___O__sci_List(rest.head__O(), $m_sci_Nil$());
+        t.tl$5 = nx;
+        t = nx;
+        rest = $as_sci_List(rest.tail__O())
+      } else {
+        break
+      }
+    };
+    return h
+  }
+});
 $c_sci_List.prototype.companion__scg_GenericCompanion = (function() {
   return $m_sci_List$()
 });
@@ -50248,6 +57000,9 @@ $c_sci_List.prototype.foreach__F1__V = (function(f) {
 });
 $c_sci_List.prototype.foldLeft__O__F2__O = (function(z, op) {
   return $s_sc_LinearSeqOptimized$class__foldLeft__sc_LinearSeqOptimized__O__F2__O(this, z, op)
+});
+$c_sci_List.prototype.$$colon$colon$colon__sci_List__sci_List = (function(prefix) {
+  return (this.isEmpty__Z() ? prefix : (prefix.isEmpty__Z() ? this : new $c_scm_ListBuffer().init___().$$plus$plus$eq__sc_TraversableOnce__scm_ListBuffer(prefix).prependToList__sci_List__sci_List(this)))
 });
 $c_sci_List.prototype.reverse__O = (function() {
   return this.reverse__sci_List()
@@ -50267,11 +57022,17 @@ $c_sci_List.prototype.drop__I__sci_List = (function(n) {
 $c_sci_List.prototype.find__F1__s_Option = (function(p) {
   return $s_sc_LinearSeqOptimized$class__find__sc_LinearSeqOptimized__F1__s_Option(this, p)
 });
-$c_sci_List.prototype.seq__sc_Seq = (function() {
-  return this
+$c_sci_List.prototype.$$plus$plus__sc_GenTraversableOnce__scg_CanBuildFrom__O = (function(that, bf) {
+  return ((bf === $m_sci_List$().ReusableCBFInstance$2) ? that.seq__sc_TraversableOnce().toList__sci_List().$$colon$colon$colon__sci_List__sci_List(this) : $s_sc_TraversableLike$class__$$plus$plus__sc_TraversableLike__sc_GenTraversableOnce__scg_CanBuildFrom__O(this, that, bf))
 });
 $c_sci_List.prototype.length__I = (function() {
   return $s_sc_LinearSeqOptimized$class__length__sc_LinearSeqOptimized__I(this)
+});
+$c_sci_List.prototype.seq__sc_Seq = (function() {
+  return this
+});
+$c_sci_List.prototype.take__I__O = (function(n) {
+  return this.take__I__sci_List(n)
 });
 $c_sci_List.prototype.toStream__sci_Stream = (function() {
   return (this.isEmpty__Z() ? $m_sci_Stream$Empty$() : new $c_sci_Stream$Cons().init___O__F0(this.head__O(), new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function($this) {
@@ -50283,11 +57044,11 @@ $c_sci_List.prototype.toStream__sci_Stream = (function() {
 $c_sci_List.prototype.drop__I__O = (function(n) {
   return this.drop__I__sci_List(n)
 });
-$c_sci_List.prototype.thisCollection__sc_Seq = (function() {
-  return this
-});
 $c_sci_List.prototype.contains__O__Z = (function(elem) {
   return $s_sc_LinearSeqOptimized$class__contains__sc_LinearSeqOptimized__O__Z(this, elem)
+});
+$c_sci_List.prototype.thisCollection__sc_Seq = (function() {
+  return this
 });
 $c_sci_List.prototype.isDefinedAt__O__Z = (function(x) {
   var x$1 = $uI(x);
@@ -50319,6 +57080,9 @@ $c_sci_List.prototype.map__F1__scg_CanBuildFrom__O = (function(f, bf) {
 $c_sci_List.prototype.toCollection__O__sc_Seq = (function(repr) {
   var repr$1 = $as_sc_LinearSeqLike(repr);
   return $as_sc_LinearSeq(repr$1)
+});
+$c_sci_List.prototype.reduceLeft__F2__O = (function(f) {
+  return $s_sc_LinearSeqOptimized$class__reduceLeft__sc_LinearSeqOptimized__F2__O(this, f)
 });
 $c_sci_List.prototype.reverse__sci_List = (function() {
   var result = $m_sci_Nil$();
@@ -50603,18 +57367,24 @@ $c_sci_Stream.prototype.reverse__sci_Stream = (function() {
 $c_sci_Stream.prototype.apply__I__O = (function(n) {
   return $s_sc_LinearSeqOptimized$class__apply__sc_LinearSeqOptimized__I__O(this, n)
 });
+$c_sci_Stream.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_sci_Stream.prototype.lengthCompare__I__I = (function(len) {
   return $s_sc_LinearSeqOptimized$class__lengthCompare__sc_LinearSeqOptimized__I__I(this, len)
-});
-$c_sci_Stream.prototype.sameElements__sc_GenIterable__Z = (function(that) {
-  return $s_sc_LinearSeqOptimized$class__sameElements__sc_LinearSeqOptimized__sc_GenIterable__Z(this, that)
 });
 $c_sci_Stream.prototype.apply__O__O = (function(v1) {
   var n = $uI(v1);
   return $s_sc_LinearSeqOptimized$class__apply__sc_LinearSeqOptimized__I__O(this, n)
 });
+$c_sci_Stream.prototype.sameElements__sc_GenIterable__Z = (function(that) {
+  return $s_sc_LinearSeqOptimized$class__sameElements__sc_LinearSeqOptimized__sc_GenIterable__Z(this, that)
+});
 $c_sci_Stream.prototype.exists__F1__Z = (function(p) {
   return $s_sc_LinearSeqOptimized$class__exists__sc_LinearSeqOptimized__F1__Z(this, p)
+});
+$c_sci_Stream.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_sci_Stream.prototype.thisCollection__sc_Traversable = (function() {
   return this
@@ -50711,6 +57481,9 @@ $c_sci_Stream.prototype.mkString__T = (function() {
 });
 $c_sci_Stream.prototype.seq__sc_Seq = (function() {
   return this
+});
+$c_sci_Stream.prototype.take__I__O = (function(n) {
+  return this.take__I__sci_Stream(n)
 });
 $c_sci_Stream.prototype.toStream__sci_Stream = (function() {
   return this
@@ -50855,9 +57628,45 @@ $c_sci_Stream.prototype.map__F1__scg_CanBuildFrom__O = (function(f, bf) {
     return $s_sc_TraversableLike$class__map__sc_TraversableLike__F1__scg_CanBuildFrom__O(this, f, bf)
   }
 });
+$c_sci_Stream.prototype.take__I__sci_Stream = (function(n) {
+  if (((n <= 0) || this.isEmpty__Z())) {
+    $m_sci_Stream$();
+    return $m_sci_Stream$Empty$()
+  } else if ((n === 1)) {
+    var hd = this.head__O();
+    var tl = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function($this) {
+      return (function() {
+        $m_sci_Stream$();
+        return $m_sci_Stream$Empty$()
+      })
+    })(this));
+    return new $c_sci_Stream$Cons().init___O__F0(hd, tl)
+  } else {
+    var hd$1 = this.head__O();
+    var tl$1 = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function(this$2$1, n$1) {
+      return (function() {
+        return $as_sci_Stream(this$2$1.tail__O()).take__I__sci_Stream((((-1) + n$1) | 0))
+      })
+    })(this, n));
+    return new $c_sci_Stream$Cons().init___O__F0(hd$1, tl$1)
+  }
+});
 $c_sci_Stream.prototype.toCollection__O__sc_Seq = (function(repr) {
   var repr$1 = $as_sc_LinearSeqLike(repr);
   return $as_sc_LinearSeq(repr$1)
+});
+$c_sci_Stream.prototype.reduceLeft__F2__O = (function(f) {
+  if (this.isEmpty__Z()) {
+    throw new $c_jl_UnsupportedOperationException().init___T("empty.reduceLeft")
+  } else {
+    var reducedRes = this.head__O();
+    var left = $as_sci_Stream(this.tail__O());
+    while ((!left.isEmpty__Z())) {
+      reducedRes = f.apply__O__O__O(reducedRes, left.head__O());
+      left = $as_sci_Stream(left.tail__O())
+    };
+    return reducedRes
+  }
 });
 $c_sci_Stream.prototype.append__F0__sci_Stream = (function(rest) {
   if (this.isEmpty__Z()) {
@@ -51512,6 +58321,9 @@ $c_sci_Vector.prototype.apply__I__O = (function(index) {
   var xor = (idx ^ this.focus$4);
   return $s_sci_VectorPointer$class__getElem__sci_VectorPointer__I__I__O(this, idx, xor)
 });
+$c_sci_Vector.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_sci_Vector.prototype.depth__I = (function() {
   return this.depth$4
 });
@@ -51533,6 +58345,9 @@ $c_sci_Vector.prototype.initIterator__sci_VectorIterator__V = (function(s) {
     var xor = (this.startIndex$4 ^ this.focus$4);
     $s_sci_VectorPointer$class__gotoPos__sci_VectorPointer__I__I__V(s, index$1, xor)
   }
+});
+$c_sci_Vector.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_sci_Vector.prototype.thisCollection__sc_Traversable = (function() {
   return this
@@ -52062,8 +58877,14 @@ $c_sci_WrappedString.prototype.apply__I__O = (function(idx) {
   var c = (65535 & $uI(thiz.charCodeAt(idx)));
   return new $c_jl_Character().init___C(c)
 });
+$c_sci_WrappedString.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_sci_WrappedString.prototype.lengthCompare__I__I = (function(len) {
   return $s_sc_IndexedSeqOptimized$class__lengthCompare__sc_IndexedSeqOptimized__I__I(this, len)
+});
+$c_sci_WrappedString.prototype.sameElements__sc_GenIterable__Z = (function(that) {
+  return $s_sc_IndexedSeqOptimized$class__sameElements__sc_IndexedSeqOptimized__sc_GenIterable__Z(this, that)
 });
 $c_sci_WrappedString.prototype.apply__O__O = (function(v1) {
   var n = $uI(v1);
@@ -52071,23 +58892,27 @@ $c_sci_WrappedString.prototype.apply__O__O = (function(v1) {
   var c = (65535 & $uI(thiz.charCodeAt(n)));
   return new $c_jl_Character().init___C(c)
 });
-$c_sci_WrappedString.prototype.sameElements__sc_GenIterable__Z = (function(that) {
-  return $s_sc_IndexedSeqOptimized$class__sameElements__sc_IndexedSeqOptimized__sc_GenIterable__Z(this, that)
-});
 $c_sci_WrappedString.prototype.exists__F1__Z = (function(p) {
   return $s_sc_IndexedSeqOptimized$class__exists__sc_IndexedSeqOptimized__F1__Z(this, p)
 });
 $c_sci_WrappedString.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
 });
+$c_sci_WrappedString.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_sci_WrappedString.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
-$c_sci_WrappedString.prototype.toString__T = (function() {
-  return this.self$4
+$c_sci_WrappedString.prototype.apply__I__C = (function(n) {
+  var thiz = this.self$4;
+  return (65535 & $uI(thiz.charCodeAt(n)))
 });
 $c_sci_WrappedString.prototype.companion__scg_GenericCompanion = (function() {
   return $m_sci_IndexedSeq$()
+});
+$c_sci_WrappedString.prototype.toString__T = (function() {
+  return this.self$4
 });
 $c_sci_WrappedString.prototype.foreach__F1__V = (function(f) {
   $s_sc_IndexedSeqOptimized$class__foreach__sc_IndexedSeqOptimized__F1__V(this, f)
@@ -52112,15 +58937,15 @@ $c_sci_WrappedString.prototype.iterator__sc_Iterator = (function() {
 $c_sci_WrappedString.prototype.find__F1__s_Option = (function(p) {
   return $s_sc_IndexedSeqOptimized$class__find__sc_IndexedSeqOptimized__F1__s_Option(this, p)
 });
-$c_sci_WrappedString.prototype.seq__sc_Seq = (function() {
-  return this
+$c_sci_WrappedString.prototype.mkString__T = (function() {
+  return this.self$4
 });
 $c_sci_WrappedString.prototype.length__I = (function() {
   var thiz = this.self$4;
   return $uI(thiz.length)
 });
-$c_sci_WrappedString.prototype.mkString__T = (function() {
-  return this.self$4
+$c_sci_WrappedString.prototype.seq__sc_Seq = (function() {
+  return this
 });
 $c_sci_WrappedString.prototype.drop__I__O = (function(n) {
   var thiz = this.self$4;
@@ -52171,6 +58996,9 @@ $c_sci_WrappedString.prototype.slice__I__I__sci_WrappedString = (function(from, 
 $c_sci_WrappedString.prototype.toCollection__O__sc_Seq = (function(repr) {
   var repr$1 = $as_sci_WrappedString(repr);
   return repr$1
+});
+$c_sci_WrappedString.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O(this, op)
 });
 $c_sci_WrappedString.prototype.newBuilder__scm_Builder = (function() {
   return $m_sci_WrappedString$().newBuilder__scm_Builder()
@@ -52448,6 +59276,9 @@ $h_scm_AbstractMap.prototype = $c_scm_AbstractMap.prototype;
 $c_scm_AbstractMap.prototype.seq__sc_TraversableOnce = (function() {
   return this
 });
+$c_scm_AbstractMap.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_scm_AbstractMap.prototype.companion__scg_GenericCompanion = (function() {
   return $m_scm_Iterable$()
 });
@@ -52477,6 +59308,9 @@ $h_scm_AbstractSet.prototype = $c_scm_AbstractSet.prototype;
 $c_scm_AbstractSet.prototype.isEmpty__Z = (function() {
   return $s_sc_SetLike$class__isEmpty__sc_SetLike__Z(this)
 });
+$c_scm_AbstractSet.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_scm_AbstractSet.prototype.equals__O__Z = (function(that) {
   return $s_sc_GenSetLike$class__equals__sc_GenSetLike__O__Z(this, that)
 });
@@ -52493,18 +59327,18 @@ $c_scm_AbstractSet.prototype.toBuffer__scm_Buffer = (function() {
 $c_scm_AbstractSet.prototype.sizeHintBounded__I__sc_TraversableLike__V = (function(size, boundingColl) {
   $s_scm_Builder$class__sizeHintBounded__scm_Builder__I__sc_TraversableLike__V(this, size, boundingColl)
 });
+$c_scm_AbstractSet.prototype.sizeHint__I__V = (function(size) {
+  /*<skip>*/
+});
 $c_scm_AbstractSet.prototype.hashCode__I = (function() {
   var this$1 = $m_s_util_hashing_MurmurHash3$();
   return this$1.unorderedHash__sc_TraversableOnce__I__I(this, this$1.setSeed$2)
 });
-$c_scm_AbstractSet.prototype.sizeHint__I__V = (function(size) {
-  /*<skip>*/
+$c_scm_AbstractSet.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
+  return $s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this, xs)
 });
 $c_scm_AbstractSet.prototype.newBuilder__scm_Builder = (function() {
   return $as_scm_Builder($as_sc_Set($as_sc_GenSet(this.companion__scg_GenericCompanion().empty__sc_GenTraversable())))
-});
-$c_scm_AbstractSet.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
-  return $s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this, xs)
 });
 $c_scm_AbstractSet.prototype.stringPrefix__T = (function() {
   return "Set"
@@ -52666,6 +59500,9 @@ $c_scm_WrappedArray.prototype.seq__sc_TraversableOnce = (function() {
 $c_scm_WrappedArray.prototype.head__O = (function() {
   return $s_sc_IndexedSeqOptimized$class__head__sc_IndexedSeqOptimized__O(this)
 });
+$c_scm_WrappedArray.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_scm_WrappedArray.prototype.lengthCompare__I__I = (function(len) {
   return $s_sc_IndexedSeqOptimized$class__lengthCompare__sc_IndexedSeqOptimized__I__I(this, len)
 });
@@ -52674,6 +59511,9 @@ $c_scm_WrappedArray.prototype.sameElements__sc_GenIterable__Z = (function(that) 
 });
 $c_scm_WrappedArray.prototype.exists__F1__Z = (function(p) {
   return $s_sc_IndexedSeqOptimized$class__exists__sc_IndexedSeqOptimized__F1__Z(this, p)
+});
+$c_scm_WrappedArray.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_scm_WrappedArray.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
@@ -52734,6 +59574,9 @@ $c_scm_WrappedArray.prototype.hashCode__I = (function() {
 $c_scm_WrappedArray.prototype.toCollection__O__sc_Seq = (function(repr) {
   var repr$1 = $as_scm_WrappedArray(repr);
   return repr$1
+});
+$c_scm_WrappedArray.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O(this, op)
 });
 $c_scm_WrappedArray.prototype.newBuilder__scm_Builder = (function() {
   return new $c_scm_WrappedArrayBuilder().init___s_reflect_ClassTag(this.elemTag__s_reflect_ClassTag())
@@ -52824,6 +59667,9 @@ $c_scm_HashMap.prototype.foreach__F1__V = (function(f) {
 $c_scm_HashMap.prototype.empty__sc_Map = (function() {
   return new $c_scm_HashMap().init___()
 });
+$c_scm_HashMap.prototype.keysIterator__sc_Iterator = (function() {
+  return new $c_scm_HashMap$$anon$3().init___scm_HashMap(this)
+});
 $c_scm_HashMap.prototype.size__I = (function() {
   return this.tableSize$5
 });
@@ -52845,6 +59691,9 @@ $c_scm_HashMap.prototype.iterator__sc_Iterator = (function() {
     })
   })(this));
   return new $c_sc_Iterator$$anon$11().init___sc_Iterator__F1(this$1, f)
+});
+$c_scm_HashMap.prototype.valuesIterator__sc_Iterator = (function() {
+  return new $c_scm_HashMap$$anon$4().init___scm_HashMap(this)
 });
 $c_scm_HashMap.prototype.init___scm_HashTable$Contents = (function(contents) {
   $s_scm_HashTable$class__$$init$__scm_HashTable__V(this);
@@ -52986,6 +59835,12 @@ $c_scm_HashSet.prototype.$$plus__O__sc_Set = (function(elem) {
   var this$1 = new $c_scm_HashSet().init___();
   var this$2 = $as_scm_HashSet($s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this$1, this));
   return this$2.$$plus$eq__O__scm_HashSet(elem)
+});
+$c_scm_HashSet.prototype.$$plus$plus__sc_GenTraversableOnce__sc_Set = (function(elems) {
+  var this$1 = new $c_scm_HashSet().init___();
+  var this$2 = $as_scm_HashSet($s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this$1, this));
+  var xs = elems.seq__sc_TraversableOnce();
+  return $as_scm_Set($s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this$2, xs))
 });
 $c_scm_HashSet.prototype.$$plus$eq__O__scm_HashSet = (function(elem) {
   $s_scm_FlatHashTable$class__addElem__scm_FlatHashTable__O__Z(this, elem);
@@ -54011,10 +60866,6 @@ function $h_scm_ListBuffer() {
   /*<skip>*/
 }
 $h_scm_ListBuffer.prototype = $c_scm_ListBuffer.prototype;
-$c_scm_ListBuffer.prototype.copyToArray__O__I__V = (function(xs, start) {
-  var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
-  $s_sc_TraversableOnce$class__copyToArray__sc_TraversableOnce__O__I__V(this$1, xs, start)
-});
 $c_scm_ListBuffer.prototype.copy__p6__V = (function() {
   if (this.scala$collection$mutable$ListBuffer$$start$6.isEmpty__Z()) {
     return (void 0)
@@ -54027,6 +60878,10 @@ $c_scm_ListBuffer.prototype.copy__p6__V = (function() {
     this.$$plus$eq__O__scm_ListBuffer(cursor.head__O());
     cursor = $as_sci_List(cursor.tail__O())
   }
+});
+$c_scm_ListBuffer.prototype.copyToArray__O__I__V = (function(xs, start) {
+  var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
+  $s_sc_TraversableOnce$class__copyToArray__sc_TraversableOnce__O__I__V(this$1, xs, start)
 });
 $c_scm_ListBuffer.prototype.init___ = (function() {
   this.scala$collection$mutable$ListBuffer$$start$6 = $m_sci_Nil$();
@@ -54044,6 +60899,9 @@ $c_scm_ListBuffer.prototype.apply__I__O = (function(n) {
     var this$2 = this.scala$collection$mutable$ListBuffer$$start$6;
     return $s_sc_LinearSeqOptimized$class__apply__sc_LinearSeqOptimized__I__O(this$2, n)
   }
+});
+$c_scm_ListBuffer.prototype.thisCollection__sc_Iterable = (function() {
+  return this
 });
 $c_scm_ListBuffer.prototype.lengthCompare__I__I = (function(len) {
   var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
@@ -54100,6 +60958,10 @@ $c_scm_ListBuffer.prototype.foreach__F1__V = (function(f) {
     these = $as_sci_List(these.tail__O())
   }
 });
+$c_scm_ListBuffer.prototype.reduceLeftOption__F2__s_Option = (function(op) {
+  var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
+  return $s_sc_TraversableOnce$class__reduceLeftOption__sc_TraversableOnce__F2__s_Option(this$1, op)
+});
 $c_scm_ListBuffer.prototype.foldLeft__O__F2__O = (function(z, op) {
   var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
   return $s_sc_LinearSeqOptimized$class__foldLeft__sc_LinearSeqOptimized__O__F2__O(this$1, z, op)
@@ -54139,6 +61001,17 @@ $c_scm_ListBuffer.prototype.seq__sc_Seq = (function() {
 $c_scm_ListBuffer.prototype.toStream__sci_Stream = (function() {
   return this.scala$collection$mutable$ListBuffer$$start$6.toStream__sci_Stream()
 });
+$c_scm_ListBuffer.prototype.prependToList__sci_List__sci_List = (function(xs) {
+  if (this.scala$collection$mutable$ListBuffer$$start$6.isEmpty__Z()) {
+    return xs
+  } else {
+    if (this.exported$6) {
+      this.copy__p6__V()
+    };
+    this.last0$6.tl$5 = xs;
+    return this.toList__sci_List()
+  }
+});
 $c_scm_ListBuffer.prototype.contains__O__Z = (function(elem) {
   var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
   return $s_sc_LinearSeqOptimized$class__contains__sc_LinearSeqOptimized__O__Z(this$1, elem)
@@ -54167,15 +61040,19 @@ $c_scm_ListBuffer.prototype.isDefinedAt__O__Z = (function(x) {
   var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
   return $s_sc_LinearSeqOptimized$class__isDefinedAt__sc_LinearSeqOptimized__I__Z(this$1, x$1)
 });
+$c_scm_ListBuffer.prototype.$$div$colon__O__F2__O = (function(z, op) {
+  var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
+  return $s_sc_LinearSeqOptimized$class__foldLeft__sc_LinearSeqOptimized__O__F2__O(this$1, z, op)
+});
 $c_scm_ListBuffer.prototype.$$plus$eq__O__scm_Builder = (function(elem) {
   return this.$$plus$eq__O__scm_ListBuffer(elem)
-});
-$c_scm_ListBuffer.prototype.sizeHint__I__V = (function(size) {
-  /*<skip>*/
 });
 $c_scm_ListBuffer.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
   var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
   $s_sc_IterableLike$class__copyToArray__sc_IterableLike__O__I__I__V(this$1, xs, start, len)
+});
+$c_scm_ListBuffer.prototype.sizeHint__I__V = (function(size) {
+  /*<skip>*/
 });
 $c_scm_ListBuffer.prototype.toMap__s_Predef$$less$colon$less__sci_Map = (function(ev) {
   var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
@@ -54210,6 +61087,10 @@ $c_scm_ListBuffer.prototype.$$plus$plus$eq__sc_TraversableOnce__scm_ListBuffer =
     };
     return $as_scm_ListBuffer($s_scg_Growable$class__$$plus$plus$eq__scg_Growable__sc_TraversableOnce__scg_Growable(this, xs))
   }
+});
+$c_scm_ListBuffer.prototype.reduceLeft__F2__O = (function(op) {
+  var this$1 = this.scala$collection$mutable$ListBuffer$$start$6;
+  return $s_sc_LinearSeqOptimized$class__reduceLeft__sc_LinearSeqOptimized__F2__O(this$1, op)
 });
 $c_scm_ListBuffer.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
   return this.$$plus$plus$eq__sc_TraversableOnce__scm_ListBuffer(xs)
@@ -54314,6 +61195,9 @@ $c_scm_StringBuilder.prototype.apply__I__O = (function(idx) {
   var c = (65535 & $uI(thiz.charCodeAt(idx)));
   return new $c_jl_Character().init___C(c)
 });
+$c_scm_StringBuilder.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_scm_StringBuilder.prototype.lengthCompare__I__I = (function(len) {
   return $s_sc_IndexedSeqOptimized$class__lengthCompare__sc_IndexedSeqOptimized__I__I(this, len)
 });
@@ -54333,6 +61217,9 @@ $c_scm_StringBuilder.prototype.exists__F1__Z = (function(p) {
 $c_scm_StringBuilder.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
 });
+$c_scm_StringBuilder.prototype.seq__sc_Iterable = (function() {
+  return this
+});
 $c_scm_StringBuilder.prototype.thisCollection__sc_Traversable = (function() {
   return this
 });
@@ -54340,6 +61227,11 @@ $c_scm_StringBuilder.prototype.subSequence__I__I__jl_CharSequence = (function(st
   var this$1 = this.underlying$5;
   var thiz = this$1.content$1;
   return $as_T(thiz.substring(start, end))
+});
+$c_scm_StringBuilder.prototype.apply__I__C = (function(index) {
+  var this$1 = this.underlying$5;
+  var thiz = this$1.content$1;
+  return (65535 & $uI(thiz.charCodeAt(index)))
 });
 $c_scm_StringBuilder.prototype.$$plus$eq__O__scg_Growable = (function(elem) {
   if ((elem === null)) {
@@ -54400,14 +61292,14 @@ $c_scm_StringBuilder.prototype.init___I__T = (function(initCapacity, initValue) 
   $c_scm_StringBuilder.prototype.init___jl_StringBuilder.call(this, new $c_jl_StringBuilder().init___I((($uI(initValue.length) + initCapacity) | 0)).append__T__jl_StringBuilder(initValue));
   return this
 });
+$c_scm_StringBuilder.prototype.mkString__T = (function() {
+  var this$1 = this.underlying$5;
+  return this$1.content$1
+});
 $c_scm_StringBuilder.prototype.length__I = (function() {
   var this$1 = this.underlying$5;
   var thiz = this$1.content$1;
   return $uI(thiz.length)
-});
-$c_scm_StringBuilder.prototype.mkString__T = (function() {
-  var this$1 = this.underlying$5;
-  return this$1.content$1
 });
 $c_scm_StringBuilder.prototype.seq__sc_Seq = (function() {
   return this
@@ -54445,11 +61337,11 @@ $c_scm_StringBuilder.prototype.$$plus$eq__O__scm_Builder = (function(elem) {
   };
   return this.$$plus$eq__C__scm_StringBuilder(jsx$1)
 });
-$c_scm_StringBuilder.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
-  $s_sc_IndexedSeqOptimized$class__copyToArray__sc_IndexedSeqOptimized__O__I__I__V(this, xs, start, len)
-});
 $c_scm_StringBuilder.prototype.sizeHint__I__V = (function(size) {
   /*<skip>*/
+});
+$c_scm_StringBuilder.prototype.copyToArray__O__I__I__V = (function(xs, start, len) {
+  $s_sc_IndexedSeqOptimized$class__copyToArray__sc_IndexedSeqOptimized__O__I__I__V(this, xs, start, len)
 });
 $c_scm_StringBuilder.prototype.hashCode__I = (function() {
   return $m_s_util_hashing_MurmurHash3$().seqHash__sc_Seq__I(this)
@@ -54469,6 +61361,9 @@ $c_scm_StringBuilder.prototype.append__C__scm_StringBuilder = (function(x) {
 $c_scm_StringBuilder.prototype.toCollection__O__sc_Seq = (function(repr) {
   var repr$1 = $as_scm_StringBuilder(repr);
   return repr$1
+});
+$c_scm_StringBuilder.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O(this, op)
 });
 $c_scm_StringBuilder.prototype.newBuilder__scm_Builder = (function() {
   return new $c_scm_GrowingBuilder().init___scg_Growable(new $c_scm_StringBuilder().init___())
@@ -54567,21 +61462,27 @@ $c_sjs_js_WrappedArray.prototype.head__O = (function() {
 $c_sjs_js_WrappedArray.prototype.apply__I__O = (function(index) {
   return this.array$6[index]
 });
+$c_sjs_js_WrappedArray.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_sjs_js_WrappedArray.prototype.lengthCompare__I__I = (function(len) {
   return $s_sc_IndexedSeqOptimized$class__lengthCompare__sc_IndexedSeqOptimized__I__I(this, len)
-});
-$c_sjs_js_WrappedArray.prototype.sameElements__sc_GenIterable__Z = (function(that) {
-  return $s_sc_IndexedSeqOptimized$class__sameElements__sc_IndexedSeqOptimized__sc_GenIterable__Z(this, that)
 });
 $c_sjs_js_WrappedArray.prototype.apply__O__O = (function(v1) {
   var index = $uI(v1);
   return this.array$6[index]
+});
+$c_sjs_js_WrappedArray.prototype.sameElements__sc_GenIterable__Z = (function(that) {
+  return $s_sc_IndexedSeqOptimized$class__sameElements__sc_IndexedSeqOptimized__sc_GenIterable__Z(this, that)
 });
 $c_sjs_js_WrappedArray.prototype.exists__F1__Z = (function(p) {
   return $s_sc_IndexedSeqOptimized$class__exists__sc_IndexedSeqOptimized__F1__Z(this, p)
 });
 $c_sjs_js_WrappedArray.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
+});
+$c_sjs_js_WrappedArray.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_sjs_js_WrappedArray.prototype.thisCollection__sc_Traversable = (function() {
   return this
@@ -54617,11 +61518,11 @@ $c_sjs_js_WrappedArray.prototype.iterator__sc_Iterator = (function() {
 $c_sjs_js_WrappedArray.prototype.seq__scm_Seq = (function() {
   return this
 });
-$c_sjs_js_WrappedArray.prototype.sizeHintBounded__I__sc_TraversableLike__V = (function(size, boundingColl) {
-  $s_scm_Builder$class__sizeHintBounded__scm_Builder__I__sc_TraversableLike__V(this, size, boundingColl)
-});
 $c_sjs_js_WrappedArray.prototype.find__F1__s_Option = (function(p) {
   return $s_sc_IndexedSeqOptimized$class__find__sc_IndexedSeqOptimized__F1__s_Option(this, p)
+});
+$c_sjs_js_WrappedArray.prototype.sizeHintBounded__I__sc_TraversableLike__V = (function(size, boundingColl) {
+  $s_scm_Builder$class__sizeHintBounded__scm_Builder__I__sc_TraversableLike__V(this, size, boundingColl)
 });
 $c_sjs_js_WrappedArray.prototype.length__I = (function() {
   return $uI(this.array$6.length)
@@ -54662,6 +61563,9 @@ $c_sjs_js_WrappedArray.prototype.init___sjs_js_Array = (function(array) {
 });
 $c_sjs_js_WrappedArray.prototype.toCollection__O__sc_Seq = (function(repr) {
   return $as_scm_IndexedSeq(repr)
+});
+$c_sjs_js_WrappedArray.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O(this, op)
 });
 $c_sjs_js_WrappedArray.prototype.stringPrefix__T = (function() {
   return "WrappedArray"
@@ -54768,6 +61672,9 @@ $c_scm_ArrayBuffer.prototype.head__O = (function() {
 $c_scm_ArrayBuffer.prototype.apply__I__O = (function(idx) {
   return $s_scm_ResizableArray$class__apply__scm_ResizableArray__I__O(this, idx)
 });
+$c_scm_ArrayBuffer.prototype.thisCollection__sc_Iterable = (function() {
+  return this
+});
 $c_scm_ArrayBuffer.prototype.lengthCompare__I__I = (function(len) {
   return $s_sc_IndexedSeqOptimized$class__lengthCompare__sc_IndexedSeqOptimized__I__I(this, len)
 });
@@ -54783,6 +61690,9 @@ $c_scm_ArrayBuffer.prototype.exists__F1__Z = (function(p) {
 });
 $c_scm_ArrayBuffer.prototype.isEmpty__Z = (function() {
   return $s_sc_IndexedSeqOptimized$class__isEmpty__sc_IndexedSeqOptimized__Z(this)
+});
+$c_scm_ArrayBuffer.prototype.seq__sc_Iterable = (function() {
+  return this
 });
 $c_scm_ArrayBuffer.prototype.thisCollection__sc_Traversable = (function() {
   return this
@@ -54881,6 +61791,9 @@ $c_scm_ArrayBuffer.prototype.hashCode__I = (function() {
 });
 $c_scm_ArrayBuffer.prototype.toCollection__O__sc_Seq = (function(repr) {
   return $as_scm_IndexedSeq(repr)
+});
+$c_scm_ArrayBuffer.prototype.reduceLeft__F2__O = (function(op) {
+  return $s_sc_IndexedSeqOptimized$class__reduceLeft__sc_IndexedSeqOptimized__F2__O(this, op)
 });
 $c_scm_ArrayBuffer.prototype.$$plus$plus$eq__sc_TraversableOnce__scg_Growable = (function(xs) {
   return this.$$plus$plus$eq__sc_TraversableOnce__scm_ArrayBuffer(xs)

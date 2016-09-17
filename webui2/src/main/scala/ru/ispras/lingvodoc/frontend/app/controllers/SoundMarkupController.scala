@@ -58,9 +58,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
   scope.wsHeight = 128
 
   var soundMarkup: Option[String] = None
-  //  val soundAddress = params.get("soundAddress").map(_.toString)
-  val soundAddress = Some("http://localhost/getting_closer.wav")
-  val dummyMarkupAddress = "http://localhost/test_live_big.eaf"
+  val soundAddress = params.get("soundAddress").map(_.toString)
+  val markupAddress = params.get("markupAddress").map(_.toString)
+
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
@@ -85,7 +85,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   //      case markup => parseMarkup(markup)
   //    }
   //  })
-  parseMarkup(dummyMarkupAddress)
+  parseMarkup(markupAddress.get)
 
   setMenuOptions()
 
