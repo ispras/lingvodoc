@@ -434,10 +434,16 @@ def data_init(manager, accounts):
                 text_type_gist = find_service_translation('Text')
                 sound_type_gist = find_service_translation('Sound')
                 link_type_gist = find_service_translation('Link')
+                image_type_gist = find_service_translation('Image')
+                elan_type_gist = find_service_translation('ELAN markup')
+                praat_type_gist = find_service_translation('Praat markup')
                 word_gist = find_translation('Word')
                 transcription_gist = find_translation('Transcription')
                 sound_gist = find_translation('Sound')
                 paradigm_gist = find_translation('Paradigmatic forms')
+                praat_gist = find_translation('Spectrogram')
+                image_gist = find_translation('Image ')
+                elan_gist = find_translation('ELAN markup ')
                 test_dict = Dictionary(client_id=test_client.id,
                                        translation_gist_client_id=dict_name_gist.client_id,
                                        translation_gist_object_id=dict_name_gist.object_id,
@@ -495,6 +501,30 @@ def data_init(manager, accounts):
                                    data_type_translation_gist_client_id=link_type_gist.client_id,
                                    data_type_translation_gist_object_id=link_type_gist.object_id)
                 DBSession.add(paradigm_field)
+
+
+                image_field = Field(client_id=test_client.id,
+                                   translation_gist_client_id=image_gist.client_id,
+                                   translation_gist_object_id=image_gist.object_id,
+                                   data_type_translation_gist_client_id=image_type_gist.client_id,
+                                   data_type_translation_gist_object_id=image_type_gist.object_id)
+                DBSession.add(image_field)
+
+
+                elan_field = Field(client_id=test_client.id,
+                                   translation_gist_client_id=elan_gist.client_id,
+                                   translation_gist_object_id=elan_gist.object_id,
+                                   data_type_translation_gist_client_id=elan_type_gist.client_id,
+                                   data_type_translation_gist_object_id=elan_type_gist.object_id)
+                DBSession.add(elan_field)
+
+
+                praat_field = Field(client_id=test_client.id,
+                                   translation_gist_client_id=praat_gist.client_id,
+                                   translation_gist_object_id=praat_gist.object_id,
+                                   data_type_translation_gist_client_id=praat_type_gist.client_id,
+                                   data_type_translation_gist_object_id=praat_type_gist.object_id)
+                DBSession.add(praat_field)
 
                 field_1 = DictionaryPerspectiveToField(client_id=test_client.id,
                                                        parent=test_persp,
