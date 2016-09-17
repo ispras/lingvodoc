@@ -1337,10 +1337,22 @@
     "2": "ELAN markup",
     "3": "ELAN markup"
   },
+  "elan markup": {
+    "type": "Field",
+    "1": "ELAN разметка",
+    "2": "ELAN markup ",
+    "3": "ELAN markup"
+  },
   "Image": {
     "type": "Service",
     "1": "Изображение",
     "2": "Image",
+    "3": "Image"
+  },
+  "image": {
+    "type": "Field",
+    "1": "Изображение",
+    "2": "Image ",
     "3": "Image"
   },
   "Limited access": {
