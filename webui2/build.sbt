@@ -12,6 +12,8 @@ libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.3.9"
 libraryDependencies += "com.greencatsoft" %%% "scalajs-angular" % "0.8-SNAPSHOT"
 libraryDependencies += "io.surfkit" %%% "scalajs-google-maps" % "0.1-SNAPSHOT"
 libraryDependencies += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
+libraryDependencies += "be.doeraene" %%% "scalajs-jquery" % "0.9.0" // jquery facade, used for xml parsing
+libraryDependencies += "org.singlespaced" %%% "scalajs-d3" % "0.3.3" // d3 facade, used for eaf editing
 
 
 libraryDependencies += "org.webjars" % "jquery" % "2.2.1"
@@ -38,4 +40,6 @@ jsDependencies += "org.webjars.bower" % "bootstrap-validator" % "0.10.2"  / "0.1
 
 // Wavesurfer is not in webjars yet; perhaps we should create it ourselves
 jsDependencies += ProvidedJS / "wavesurfer.min.js"
-libraryDependencies += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
+
+// library for context menus, https://github.com/Templarian/ui.bootstrap.contextMenu. WARN: we have modified it.
+jsDependencies += ProvidedJS / "contextMenu.js"

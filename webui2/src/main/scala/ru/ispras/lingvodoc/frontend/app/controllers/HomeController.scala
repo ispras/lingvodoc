@@ -4,6 +4,7 @@ import com.greencatsoft.angularjs.core.{Injector, Scope}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
+import ru.ispras.lingvodoc.frontend.app.services.{ModalService, ModalOptions, BackendService}
 import ru.ispras.lingvodoc.frontend.app.model.{Field, Language, Perspective}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ExceptionHandlerFactory}
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
@@ -21,7 +22,7 @@ trait HomeScope extends Scope {
 }
 
 @injectable("HomeController")
-class HomeController(scope: HomeScope, injector: Injector, backend: BackendService) extends AbstractController[HomeScope](scope) {
+class HomeController(scope: HomeScope, injector: Injector, backend: BackendService, modal: ModalService) extends AbstractController[HomeScope](scope) {
 
   private[this] val exceptionHandler = injector.get[Function2[Throwable, Object, Unit]]("$exceptionHandler")
 
@@ -47,6 +48,29 @@ class HomeController(scope: HomeScope, injector: Injector, backend: BackendServi
     }
   }
 
+
+  // FIXME: temporary, remove when viewing dictionaries will work
+  @JSExport
+  def playSound(soundAddress: String, soundMarkupAddress: String) = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/soundMarkup.html"
+    options.controller = "SoundMarkupController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          soundAddress = soundAddress.asInstanceOf[js.Object],
+          dictionaryClientId = 1.asInstanceOf[js.Object],
+          dictionaryObjectId = 2.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Unit](options)
+  }
+
   private[this] def load() = {
 
     backend.allStatuses() map { _ =>
@@ -57,7 +81,14 @@ class HomeController(scope: HomeScope, injector: Injector, backend: BackendServi
         case Failure(e) => exceptionHandler(BackendException("Failed to get published dictionaries list", e), null)
       }
     }
-
-
   }
+
+
+//  backend.getPublishedDictionaries onComplete {
+//    case Success(languages) =>
+//      console.log(languages.toJSArray)
+//      setPerspectives(languages)
+//      scope.languages = languages.toJSArray
+//    case Failure(e) => console.log(e.getMessage)
+//  }
 }
