@@ -50,7 +50,8 @@ AbstractController[EditDictionaryScope](scope) {
   private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
   private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
 
-  private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
+  //private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
+  private[this] var enabledInputs: Seq[String] = Seq[String]()
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -148,24 +149,42 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def enableInput(entry: LexicalEntry, field: Field) = {
-    if (!isInputEnabled(entry, field))
-      enabledInputs = enabledInputs :+ (entry.getId, field.getId)
+  def enableInput(cell: GenericCell, value: UndefOr[Value]) = {
+    if (!isInputEnabled(cell, value)) {
+      val enableId = value.toOption match {
+        case Some(v) => v.internalId
+        case None => cell.internalId
+      }
+      enabledInputs = enabledInputs :+ enableId
+    }
   }
 
   @JSExport
-  def disableInput(entry: LexicalEntry, field: Field) = {
-    if (isInputEnabled(entry, field))
-      enabledInputs = enabledInputs.filterNot(p => p._1 == entry.getId && p._2 == field.getId)
+  def disableInput(cell: GenericCell, value: UndefOr[Value]) = {
+    if (isInputEnabled(cell, value)) {
+      val disableId = value.toOption match {
+        case Some(v) => v.internalId
+        case None => cell.internalId
+      }
+      enabledInputs = enabledInputs.filterNot(id => id.equals(disableId))
+    }
   }
 
   @JSExport
-  def isInputEnabled(entry: LexicalEntry, field: Field): Boolean = {
-    enabledInputs.exists(input => input._1 == entry.getId && input._2 == field.getId)
+  def isInputEnabled(cell: GenericCell, value: UndefOr[Value]): Boolean = {
+    val enableId = value.toOption match {
+      case Some(v) => v.internalId
+      case None => cell.internalId
+    }
+    enabledInputs.exists(_.equals(enableId))
   }
 
   @JSExport
-  def saveTextValue(entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+  def saveTextValue(row: Row, cell: GenericCell, event: Event, parent: UndefOr[Value]) = {
+    //def saveTextValue(entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+
+    val field = cell.getField()
+    val entry = row.entry
 
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
@@ -191,11 +210,11 @@ AbstractController[EditDictionaryScope](scope) {
 
             parent.toOption match {
               case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
+                disableInput(cell, x)
               case None => scope.dictionaryTable.addEntity(entry, newEntity)
+                disableInput(cell, js.undefined)
             }
 
-
-            disableInput(entry, field)
           case Failure(ex) => console.log(ex.getMessage)
         }
       case Failure(ex) => console.log(ex.getMessage)
@@ -203,19 +222,37 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def saveFileValue(entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String) = {
+  def saveFileValue(row: Row, cell: GenericCell, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
+
+    val entry = row.entry
+    val field = cell.getField()
+
     val dictionaryId = CompositeId.fromObject(dictionary)
     val perspectiveId = CompositeId.fromObject(perspective)
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
     entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
+
+    // self
+    parent map {
+      parentValue =>
+        entity.selfClientId = Some(parentValue.getEntity.clientId)
+        entity.selfObjectId = Some(parentValue.getEntity.objectId)
+    }
+
     backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
           case Success(newEntity) =>
-            scope.dictionaryTable.addEntity(entry, newEntity)
-            disableInput(entry, field)
+
+            parent.toOption match {
+              case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
+                disableInput(cell, x)
+              case None => scope.dictionaryTable.addEntity(entry, newEntity)
+                disableInput(cell, js.undefined)
+            }
+
           case Failure(ex) => console.log(ex.getMessage)
         }
       case Failure(ex) => console.log(ex.getMessage)
@@ -253,6 +290,7 @@ AbstractController[EditDictionaryScope](scope) {
       entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
     }
   }
+
 
   private[this] def load() = {
 

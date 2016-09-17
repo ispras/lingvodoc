@@ -8,7 +8,7 @@ import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.exceptions.{ControllerException, ModelException}
-import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.app.utils.{GUIDGenerator, Utils}
 
 
 
@@ -17,6 +17,8 @@ abstract class Column(field: Field, dataType: TranslationGist) {
   def getType(): String
   def getName(): String
   def getField(): Field = field
+
+  val internalId = GUIDGenerator.generate()
 
   def checkDataTypeName(dataTypeName: String): Boolean = {
     dataType.atoms.find(a => a.localeId == 2) match {
@@ -55,10 +57,13 @@ case class GroupColumn(field: Field, dataType: TranslationGist) extends Column(f
   }
 }
 
-
+@JSExportAll
 abstract class Value(entity: Entity) {
   def getType(): String
   def getContent(): String
+
+  val internalId = GUIDGenerator.generate()
+
   def getEntity(): Entity = {
     entity
   }
@@ -83,6 +88,8 @@ abstract class GenericCell(values: js.Array[Value], field: Field) {
   def getType(): String
   def getValues() = values
   def getField() = field
+
+  val internalId = GUIDGenerator.generate()
 }
 
 @JSExportAll
