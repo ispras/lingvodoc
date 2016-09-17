@@ -12,25 +12,21 @@
     <br>
 
     <div class="row" style="margin: 30px 0">
-        <div class="col-sm-10">
-            <wavesurfer url="" wave-color="#337ab7" progress-color="#23527c" height="128"></wavesurfer>
-            <wavesurfer-spectrogram></wavesurfer-spectrogram>
-        </div>
 
-        <div class="col-sm-2">
-            <button ng-class="{disabled: !isMediaFileAvailable()}" class="btn btn-success btn-block"
-                    ng-click="playPause()">
-                <span id="play" ng-show="paused">
-                    <i class="glyphicon glyphicon-play"></i>
-                    Play
-                </span>
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+            <span class="glyphicon glyphicon-play">Play/Pause full</span>
+        </button>
 
-                <span id="pause" ng-show="!paused">
-                    <i class="glyphicon glyphicon-pause"></i>
-                    Pause
-                </span>
-            </button>
-        </div>
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
+            <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
+        </button>
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
+            <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
+        </button>
+
+        <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+
     </div>
 
 

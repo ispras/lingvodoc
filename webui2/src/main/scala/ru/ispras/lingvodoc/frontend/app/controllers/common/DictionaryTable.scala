@@ -8,7 +8,7 @@ import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.exceptions.{ControllerException, ModelException}
-import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.app.utils.{GUIDGenerator, Utils}
 
 
 
@@ -18,10 +18,13 @@ abstract class Column(field: Field, dataType: TranslationGist) {
   def getName(): String
   def getField(): Field = field
 
+  val internalId = GUIDGenerator.generate()
+
   def checkDataTypeName(dataTypeName: String): Boolean = {
     dataType.atoms.find(a => a.localeId == 2) match {
       case Some(atom) => atom.content.equals(dataTypeName)
-      case None => false
+      case None =>
+        false
     }
   }
 }
@@ -55,10 +58,13 @@ case class GroupColumn(field: Field, dataType: TranslationGist) extends Column(f
   }
 }
 
-
+@JSExportAll
 abstract class Value(entity: Entity) {
   def getType(): String
   def getContent(): String
+
+  val internalId = GUIDGenerator.generate()
+
   def getEntity(): Entity = {
     entity
   }
@@ -83,6 +89,8 @@ abstract class GenericCell(values: js.Array[Value], field: Field) {
   def getType(): String
   def getValues() = values
   def getField() = field
+
+  val internalId = GUIDGenerator.generate()
 }
 
 @JSExportAll
@@ -163,23 +171,21 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
   }
 
 
-  protected def entityToValue(entity: Entity): Value = {
-    fields.find { f => f.clientId == entity.fieldClientId && f.objectId == entity.fieldObjectId } match {
-      case Some(field) =>
-      dataTypes.find { d => d.clientId == field.dataTypeTranslationGistClientId && d.objectId == field.dataTypeTranslationGistObjectId } match {
-        case Some(dataType) =>
-
-          val entities = entity.entities.map(e => entityToValue(e))
-
-          Utils.getDataTypeName(dataType) match {
-            case "Text" => TextValue(entity, dataType, entities)
-            case "Sound" => TextValue(entity, dataType, entities)
-            case "Image" => TextValue(entity, dataType, entities)
-            case "Link" => GroupValue(entity, dataType, entity.link.get)
+  protected def findField(fields: Seq[Field], fieldId: CompositeId): Option[Field] = {
+    fields.find(f => f.clientId == fieldId.clientId && f.objectId == fieldId.objectId ) match {
+      case Some(field) => Some(field)
+      case None =>
+        var result: Option[Field] = None
+        for (v <- fields) {
+          v match {
+            case sv: Field => findField(sv.fields, fieldId) match {
+              case Some(x) => result = Some(x)
+              case None =>
+            }
+            case _ => None
           }
-        case None => throw new ModelException("Entity refers to the unknown data type!")
-      }
-      case None => throw new ModelException("Entity refers to the unknown field!")
+        }
+        result
     }
   }
 
@@ -189,8 +195,11 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
       case None =>
         var result: Option[Value] = None
         for (v <- values) {
-          result = v match {
-            case sv: TextValue => findValue(sv.values, entity)
+          v match {
+            case sv: TextValue => findValue(sv.values, entity) match {
+              case Some(x) => result = Some(x)
+              case None =>
+            }
             case _ => None
           }
         }
@@ -198,6 +207,29 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
     }
   }
 
+
+  protected def entityToValue(entity: Entity): Value = {
+    findField(fields, CompositeId(entity.fieldClientId, entity.fieldObjectId)) match {
+      case Some(field) =>
+      dataTypes.find { d => d.clientId == field.dataTypeTranslationGistClientId && d.objectId == field.dataTypeTranslationGistObjectId } match {
+        case Some(dataType) =>
+
+          val entities = entity.entities.map(e => entityToValue(e))
+
+          Utils.getDataTypeName(dataType) match {
+            case "Text" => TextValue(entity, dataType, entities)
+            case "Sound" => TextValue(entity, dataType, entities)
+            case "Praat markup" => TextValue(entity, dataType, entities)
+            case "ELAN markup" => TextValue(entity, dataType, entities)
+            case "Image" => TextValue(entity, dataType, entities)
+            case "Link" => GroupValue(entity, dataType, entity.link.get)
+          }
+        case None => throw new ModelException("Entity refers to the unknown data type!")
+      }
+      case None =>
+        throw new ModelException("Entity refers to the unknown field!")
+    }
+  }
 
   def addEntity(value: Value, entity: Entity) = {
     value match {
@@ -210,14 +242,18 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
   def addEntity(entry: LexicalEntry, parentEntity: Entity, entity: Entity) = {
     rows.find { row => row.entry.getId == entry.getId } match {
       case Some(row) =>
-        var foundCell = false
-        row.cells.takeWhile(_ => !foundCell).foreach(cell =>
+        row.cells.foreach(cell =>
           findValue(cell.getValues(), parentEntity) match {
             case Some(value) =>
               value match {
                 case v: TextValue =>
-                  v.values.push(entityToValue(entity))
-                  foundCell = true
+
+                  console.log((v :: Nil).toJSArray)
+                  console.log((entity :: Nil).toJSArray)
+
+                  if (v.entity.clientId == entity.parentClientId && v.entity.clientId == entity.parentClientId) {
+                    v.values.push(entityToValue(entity))
+                  }
                 case _ =>
               }
             case None =>

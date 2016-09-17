@@ -29,8 +29,7 @@ object LingvodocApplication {
 
   @JSExport
   def main() = {
-
-    Angular.module("LingvodocModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap"))
+    Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu"))
       .config[RoutingConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
@@ -52,9 +51,11 @@ object LingvodocApplication {
       .controller[PerspectiveMapController]
       .controller[ViewDictionaryController]
       .controller[SoundMarkupController]
+      .controller[EditTextFieldController]
       .controller[ExceptionHandlerController]
       .controller[CreateFieldController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
+    //      .directive[myDragDirective]
   }
 }
