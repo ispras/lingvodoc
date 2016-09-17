@@ -1,20 +1,29 @@
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-8">
 
         <div class="btn-toolbar" role="toolbar" aria-label="">
             <div class="btn-group" role="group" aria-label="">
-                <button type="button" class="btn btn-primary" ng-click="controller.addNewLexicalEntry()">
+                <button type="button" class="btn btn-default" ng-click="controller.addNewLexicalEntry()">
                     <span class="glyphicon glyphicon-plus"></span>
                 </button>
-                <button type="button" class="btn btn-primary" ng-click="detectDuplicates()">Detect duplicates</button>
-                <button type="button" class="btn btn-primary" ng-click="mergeEntries()" ng-disabled="selectedEntries.length < 2">Merge</button>
+                <button type="button" class="btn btn-default" ng-click="detectDuplicates()">Detect duplicates</button>
+                <button type="button" class="btn btn-default" ng-click="mergeEntries()" ng-disabled="selectedEntries.length < 2">Merge</button>
             </div>
         </div>
     </div>
 
-    <div class="col-md-6">
-        <input type="text" class="form-control" placeholder="Filter..." ng-keypress="controller.filterKeypress($event)">
+    <div class="col-md-4">
+        <div class="input-group">
+            <span class="input-group-addon" id="filter-addon">Filter</span>
+            <input type="text" class="form-control" id="filter" aria-describedby="filter-addon" ng-keypress="controller.filterKeypress($event)">
+        </div>
     </div>
+
+
+</div>
+
+<div class="row">
+    <div class="col-md-12"></div>
 </div>
 
 <div class="row">
@@ -72,29 +81,28 @@
                                 <!-- controls to add linked text value -->
                                 <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
 
-                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(value.internalId)">
                                         <span class="glyphicon glyphicon-plus"></span>
                                     </button>
 
                                     <br>
 
-                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
-                                        <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.linkedColumns[0].field, $event)">
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
+                                        <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
                                     </div>
                                 </div>
 
                                 <!-- controls to add linked sound/image value -->
                                 <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound')">
 
-                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(value.internalId)">
                                         <span class="glyphicon glyphicon-plus"></span>
                                     </button>
 
                                     <br>
 
-                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.linkedColumns[0].field)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(row.entry, column.field, $fileName, $fileType, $fileContent)">
-                        </span>
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
+                                        <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $fileName, $fileType, $fileContent, value)"></span>
                                     </div>
                                 </div>
 
@@ -103,14 +111,14 @@
                         </ul>
 
                         <!-- controls -->
-                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.field)">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(cell.internalId)">
                             <span class="glyphicon glyphicon-plus"></span>
                         </button>
 
                         <br>
 
-                        <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
-                            <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.field, $event)">
+                        <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
+                            <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(cell.internalId, row.entry, column.field, $event)">
                         </div>
                     </div>
 
@@ -123,13 +131,13 @@
                             </li>
                         </ul>
 
-                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.field)">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(cell.internalId)">
                             <span class="glyphicon glyphicon-plus"></span>
                         </button>
 
                         <br>
 
-                        <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
+                        <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
                             <input type="file" value="" placeholder="">
                         </div>
 
@@ -179,14 +187,14 @@
                                 <!-- controls to add linked text value -->
                                 <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
 
-                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(value.internalId)">
                                         <span class="glyphicon glyphicon-plus"></span>
                                     </button>
 
                                     <br>
 
-                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.linkedColumns[0].field)">
-                                        <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(row.entry, column.linkedColumns[0].field, $event, value)">
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
+                                        <input type="text" value="" placeholder="" ng-blur="controller.saveTextValue(value.internalId, row.entry, column.linkedColumns[0].field, $event, value)">
                                     </div>
                                 </div>
 
@@ -194,14 +202,14 @@
                                 <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound')">
 
 
-                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.linkedColumns[0].field)">
+                                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(value.internalId)">
                                         <span class="glyphicon glyphicon-plus"></span>
                                     </button>
 
                                     <br>
 
-                                    <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, linkedColumns[0].field)">
-                                        <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(row.entry, column.field, $fileName, $fileType, $fileContent)"></span>
+                                    <div class="animate-if" ng-if="controller.isInputEnabled(value.internalId)">
+                                        <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(value.internalId, row.entry, column.linkedColumns[0].field, $fileName, $fileType, $fileContent, value)"></span>
                                     </div>
                                 </div>
 
@@ -210,14 +218,14 @@
                         </ul>
 
 
-                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(row.entry, column.field)">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.enableInput(cell.internalId)">
                             <span class="glyphicon glyphicon-plus"></span>
                         </button>
 
                         <br>
 
-                        <div class="animate-if" ng-if="controller.isInputEnabled(row.entry, column.field)">
-                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(row.entry, column.field, $fileName, $fileType, $fileContent)">
+                        <div class="animate-if" ng-if="controller.isInputEnabled(cell.internalId)">
+                            <span class="btn btn-default btn-file">Upload file <input type="file" on-read-file="controller.saveFileValue(cell.internalId, row.entry, column.field, $fileName, $fileType, $fileContent)">
                         </span>
                         </div>
 

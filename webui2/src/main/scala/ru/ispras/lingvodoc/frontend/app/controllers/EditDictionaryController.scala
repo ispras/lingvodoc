@@ -149,42 +149,26 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def enableInput(cell: GenericCell, value: UndefOr[Value]) = {
-    if (!isInputEnabled(cell, value)) {
-      val enableId = value.toOption match {
-        case Some(v) => v.internalId
-        case None => cell.internalId
-      }
-      enabledInputs = enabledInputs :+ enableId
+  def enableInput(id: String) = {
+    if (!isInputEnabled(id)) {
+      enabledInputs = enabledInputs :+ id
     }
   }
 
   @JSExport
-  def disableInput(cell: GenericCell, value: UndefOr[Value]) = {
-    if (isInputEnabled(cell, value)) {
-      val disableId = value.toOption match {
-        case Some(v) => v.internalId
-        case None => cell.internalId
-      }
-      enabledInputs = enabledInputs.filterNot(id => id.equals(disableId))
+  def disableInput(id: String) = {
+    if (isInputEnabled(id)) {
+      enabledInputs = enabledInputs.filterNot(_.equals(id))
     }
   }
 
   @JSExport
-  def isInputEnabled(cell: GenericCell, value: UndefOr[Value]): Boolean = {
-    val enableId = value.toOption match {
-      case Some(v) => v.internalId
-      case None => cell.internalId
-    }
-    enabledInputs.exists(_.equals(enableId))
+  def isInputEnabled(id: String): Boolean = {
+    enabledInputs.contains(id)
   }
 
   @JSExport
-  def saveTextValue(row: Row, cell: GenericCell, event: Event, parent: UndefOr[Value]) = {
-    //def saveTextValue(entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
-
-    val field = cell.getField()
-    val entry = row.entry
+    def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
 
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
@@ -210,10 +194,10 @@ AbstractController[EditDictionaryScope](scope) {
 
             parent.toOption match {
               case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
-                disableInput(cell, x)
               case None => scope.dictionaryTable.addEntity(entry, newEntity)
-                disableInput(cell, js.undefined)
             }
+
+            disableInput(inputId)
 
           case Failure(ex) => console.log(ex.getMessage)
         }
@@ -222,10 +206,8 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def saveFileValue(row: Row, cell: GenericCell, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
+  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
 
-    val entry = row.entry
-    val field = cell.getField()
 
     val dictionaryId = CompositeId.fromObject(dictionary)
     val perspectiveId = CompositeId.fromObject(perspective)
@@ -248,10 +230,10 @@ AbstractController[EditDictionaryScope](scope) {
 
             parent.toOption match {
               case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
-                disableInput(cell, x)
               case None => scope.dictionaryTable.addEntity(entry, newEntity)
-                disableInput(cell, js.undefined)
             }
+
+            disableInput(inputId)
 
           case Failure(ex) => console.log(ex.getMessage)
         }
