@@ -23,7 +23,8 @@ abstract class Column(field: Field, dataType: TranslationGist) {
   def checkDataTypeName(dataTypeName: String): Boolean = {
     dataType.atoms.find(a => a.localeId == 2) match {
       case Some(atom) => atom.content.equals(dataTypeName)
-      case None => false
+      case None =>
+        false
     }
   }
 }

@@ -5053,10 +5053,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
         i$1 = ((1 + i$1) | 0)
       };
       var this$10 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$3);
-      var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(column$3) {
+      var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(column$1) {
         return (function(entity$2) {
           var entity$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(entity$2);
-          return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__sjs_js_Array(entity$1, column$3.dataType$2, [])
+          return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__sjs_js_Array(entity$1, column$1.dataType$2, [])
         })
       })(x2));
       var b = new $c_sjs_js_ArrayOps().init___();
@@ -5115,10 +5115,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
         i$3 = ((1 + i$3) | 0)
       };
       var this$26 = new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$7);
-      var f$6 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(column$1) {
+      var f$6 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(column$3) {
         return (function(entity$2$1) {
           var entity$5 = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(entity$2$1);
-          return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__Lru_ispras_lingvodoc_frontend_app_model_Link(entity$5, column$1.dataType$2, $as_Lru_ispras_lingvodoc_frontend_app_model_Link(entity$5.link$2.get__O()))
+          return new $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue().init___Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__Lru_ispras_lingvodoc_frontend_app_model_Link(entity$5, column$3.dataType$2, $as_Lru_ispras_lingvodoc_frontend_app_model_Link(entity$5.link$2.get__O()))
         })
       })(x4));
       var b$4 = new $c_sjs_js_ArrayOps().init___();
@@ -5150,10 +5150,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
   this.rows$1 = array$9
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.findValue__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_Option = (function(values, entity) {
-  var x1 = values.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entity$4) {
+  var x1 = values.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entity$2) {
     return (function(v$2) {
       var v = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(v$2);
-      return (v.entity$1.getId__T() === entity$4.getId__T())
+      return (v.entity$1.getId__T() === entity$2.getId__T())
     })
   })(entity)));
   if ($is_s_Some(x1)) {
@@ -5165,7 +5165,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
     if ((x === x1)) {
       var elem = $m_s_None$();
       var result = new $c_sr_ObjectRef().init___O(elem);
-      values.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, entity$4$1, result$1) {
+      values.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, entity$2$1, result$1) {
         return (function(v$2$1) {
           var v$1 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(v$2$1);
           if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$1)) {
@@ -5178,7 +5178,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
                 var index = i;
                 var arg1 = array[index];
                 var v$3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
-                var jsx$2 = (!(v$3.entity$1.getId__T() === entity$4$1.getId__T()))
+                var jsx$2 = (!(v$3.entity$1.getId__T() === entity$2$1.getId__T()))
               } else {
                 var jsx$2 = false
               };
@@ -5209,7 +5209,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
                   if ($is_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$4)) {
                     var x2$3 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_TextValue(v$4);
                     var array$1 = x2$3.values$2;
-                    elem$1$1 = arg$outer.findValue__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_Option(new $c_sjs_js_WrappedArray().init___sjs_js_Array(array$1), entity$4$1)
+                    elem$1$1 = arg$outer.findValue__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_Option(new $c_sjs_js_WrappedArray().init___sjs_js_Array(array$1), entity$2$1)
                   } else {
                     elem$1$1 = $m_s_None$()
                   };
@@ -5237,10 +5237,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototyp
   return this.header$1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable.prototype.entityToValue__Lru_ispras_lingvodoc_frontend_app_model_Entity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value = (function(entity) {
-  var x1 = this.fields$1.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entity$2) {
+  var x1 = this.fields$1.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entity$1) {
     return (function(f$2) {
       var f = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(f$2);
-      return ((f.clientId$2 === entity$2.fieldClientId$2) && (f.objectId$2 === entity$2.fieldObjectId$2))
+      return ((f.clientId$2 === entity$1.fieldClientId$2) && (f.objectId$2 === entity$1.fieldObjectId$2))
     })
   })(entity)));
   if ($is_s_Some(x1)) {
