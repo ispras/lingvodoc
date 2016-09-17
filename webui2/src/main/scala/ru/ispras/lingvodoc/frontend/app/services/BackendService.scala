@@ -1054,14 +1054,21 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
-  def search(query: String, tagsOnly: Boolean): Future[Seq[LexicalEntry]] = {
-    val p = Promise[Seq[LexicalEntry]]()
-    val url = "basic_search?leveloneentity=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent(tagsOnly.toString)
+  def search(query: String, perspectiveId: Option[CompositeId], tagsOnly: Boolean): Future[Seq[SearchResult]] = {
+    val p = Promise[Seq[SearchResult]]()
+
+    var url = "basic_search?searchstring=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent(tagsOnly.toString)
+
+    perspectiveId match {
+      case Some(id) => url = url + "&perspective_client_id=" + encodeURIComponent(id.clientId.toString) +  "&perspective_object_id=" + encodeURIComponent(id.objectId.toString)
+      case None =>
+    }
+
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
-          val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response))
+          val entries = read[Seq[SearchResult]](js.JSON.stringify(response))
           p.success(entries)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Search failed.", e))

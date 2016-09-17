@@ -160,7 +160,7 @@
 
                                 <!-- display values from sub columns -->
                                 <ul class="tree">
-                                    <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==cell.values.length-1}">
+                                    <li ng-repeat="linkedValue in value.values" ng-class="{last: $index==value.values.length-1}">
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }}
                                         </div>

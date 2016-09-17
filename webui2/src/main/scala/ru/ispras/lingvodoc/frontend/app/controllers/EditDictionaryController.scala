@@ -86,8 +86,11 @@ AbstractController[EditDictionaryScope](scope) {
 
   @JSExport
   def loadSearch(query: String) = {
-    backend.search(query, tagsOnly = false) map {
-      entries => scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
+    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
+      results =>
+        console.log(results.toJSArray)
+        val entries = results map(_.lexicalEntry)
+        scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
   }
 

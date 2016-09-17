@@ -1,17 +1,17 @@
-package ru.ispras.lingvodoc.frontend.app
+package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.Scope
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model.{Language, Locale, LocalizedString}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance}
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 
 
