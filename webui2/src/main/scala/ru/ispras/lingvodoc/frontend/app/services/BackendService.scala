@@ -830,6 +830,22 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
+  def updateTranslationAtom(translationAtom: TranslationAtom): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val url = "translationatom/" + encodeURIComponent(translationAtom.clientId.toString) + "/" + encodeURIComponent(translationAtom.objectId.toString)
+
+    val req = JSON.stringify(js.Dynamic.literal(
+      "content" -> translationAtom.content
+    ))
+
+    $http.put[js.Dynamic](getMethodUrl(url), req) onComplete {
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update translation atom", e))
+    }
+    p.future
+  }
+
   def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
     val defer = $q.defer[TranslationGist]()
     val url = "translationgist/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)

@@ -4,14 +4,26 @@
 
 <div class="modal-body">
 
-    <label for="dictionaryName">Dictionary name</label>
-    <input type="text" id="dictionaryName" class="form-control" placeholder="" required autofocus ng-model="dictionary.translation">
-
+    <!-- List of all languages -->
     <label for="language">Language</label>
-    <select id="language" class="form-control" ng-model="selectedLanguageId"
-            ng-options="language.getId as language.translation for language in languages">
-        <option></option>
+    <select id="language" class="form-control" ng-model="languageId"
+            ng-options="language.getId as language.translation for language in languages track by language.getId">
     </select>
+
+    <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
+    <hr>
+
+    <div>
+        <div ng-repeat="name in translations">
+            <label for="localized-name-{{$index}}"
+                   ng-bind="controller.getLocaleName(name.localeId)"></label>
+            <input type="text" id="localized-name-{{$index}}" class="form-control" ng-model="name.str"
+                   placeholder="">
+        </div>
+    </div>
+
+
+
 </div>
 
 <div class="modal-footer">

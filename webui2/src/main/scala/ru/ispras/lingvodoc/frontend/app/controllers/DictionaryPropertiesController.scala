@@ -4,11 +4,13 @@ import com.greencatsoft.angularjs.core.Scope
 import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.model.{Dictionary, Language}
+import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
+import ru.ispras.lingvodoc.frontend.app.model.{Dictionary, Language, LocalizedString, TranslationGist}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils
-
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+
+import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.JSConverters._
@@ -16,11 +18,10 @@ import scala.util.{Failure, Success}
 
 @js.native
 trait DictionaryPropertiesScope extends Scope {
-  var originalDictionary: Dictionary = js.native
   var dictionary: Dictionary = js.native
   var languages: js.Array[Language] = js.native
+  var translations: js.Array[LocalizedString] = js.native
   var selectedLanguageId: String = js.native
-  var dictionaryLanguageId: String = js.native
 }
 
 @injectable("DictionaryPropertiesController")
@@ -31,44 +32,49 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
   extends AbstractController[DictionaryPropertiesScope](scope) {
 
   // create a backup copy of dictionary
-  scope.originalDictionary = params("dictionary").asInstanceOf[Dictionary]
-  scope.dictionary = scope.originalDictionary.copy()
+  private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
+  scope.dictionary = dictionary.copy()
+
+  // dictionary translation gist
+  private [this] var translationGist: Option[TranslationGist] = None
 
   @JSExport
   def ok() = {
-    var update = false
-
     scope.languages.find(lang => lang.getId == scope.selectedLanguageId) match {
       case Some(selectedLanguage) =>
         // check if language has changed
-        scope.languages.find(lang => lang.clientId == scope.originalDictionary.parentClientId &&
-          lang.objectId == scope.originalDictionary.parentObjectId) match {
-          case Some(originalLanguage) =>
-            if (scope.selectedLanguageId != originalLanguage.getId) {
-              scope.dictionary.parentClientId = selectedLanguage.clientId
-              scope.dictionary.parentObjectId = selectedLanguage.objectId
-              update = true
-            }
-          case None =>
-            // dictionary contains reference to non-existent language???
-            console.warn("dictionary contains reference to non-existent language.")
+        if (selectedLanguage.clientId != dictionary.parentClientId || selectedLanguage.objectId != dictionary.parentObjectId) {
+          // update language
+          scope.dictionary.parentClientId = selectedLanguage.clientId
+          scope.dictionary.parentObjectId = selectedLanguage.objectId
+
+          backend.updateDictionary(scope.dictionary) onComplete {
+            case Success(_) =>
+
+              // create a list of updated translation atoms
+              // Array of (atom, updatedString)
+              val updatedAtoms = translationGist.map { gist =>
+                gist.atoms.map(atom => (atom, LocalizedString(atom.localeId, atom.content))) zip scope.translations flatMap {
+                  case (original, updated) => if (original._2.str.equals(updated.str)) Some(original._1, updated) else None
+                }
+              }
+              // update atoms
+              updatedAtoms.foreach { updated =>
+                val reqs = updated.map { case (atom, str) =>
+                  atom.content = str.str
+                  backend.updateTranslationAtom(atom)
+                }.toSeq
+
+                Future.sequence(reqs) onComplete {
+                  case Success(_) => modalInstance.close(scope.dictionary)
+                  case Failure(e) =>
+                }
+              }
+
+            case Failure(e) =>
+          }
         }
-      case None =>
-        console.warn("selected language doesn't exist.")
-    }
-
-    if (scope.dictionary.translation != scope.originalDictionary.translation) {
-      update = true
-    }
-
-    if (update) {
-      backend.updateDictionary(scope.dictionary) onComplete {
-        case Success(_) => modalInstance.close(scope.dictionary)
-        case Failure(e) =>
-          modalInstance.dismiss(())
-      }
-    } else {
-      modalInstance.dismiss(())
+      case None => throw new ControllerException("Dictionary contains reference to non-existent language.")
     }
   }
 
@@ -77,18 +83,34 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
     modalInstance.dismiss(())
   }
 
-  backend.getLanguages onComplete {
-    case Success(languages) =>
-      scope.languages = utils.Utils.flattenLanguages(languages).toJSArray
-      languages.find(lang => lang.clientId == scope.dictionary.parentClientId &&
-        lang.objectId == scope.dictionary.parentObjectId) match {
-        case Some(language) =>
-          scope.selectedLanguageId = language.getId
-        case None =>
-          // dictionary contains reference to non-existent language???
-          console.warn("dictionary contains reference to non-existent language.")
-      }
 
-    case Failure(e) => println(e.getMessage)
+  private[this] def load() = {
+
+    // get translations
+    backend.translationGist(dictionary.translationGistClientId, dictionary.translationGistObjectId) onComplete {
+      case Success(gist) =>
+
+        translationGist = Some(gist)
+        scope.translations = gist.atoms.map(atom => LocalizedString(atom.localeId, atom.content)).toJSArray
+
+        // get list of languages
+        backend.getLanguages onComplete {
+          case Success(languages) =>
+            scope.languages = utils.Utils.flattenLanguages(languages).toJSArray
+            scope.languages.find(lang => lang.clientId == dictionary.parentClientId &&
+              lang.objectId == dictionary.parentObjectId) match {
+              case Some(language) =>
+                scope.selectedLanguageId = language.getId
+
+              case None =>
+                // dictionary contains reference to non-existent language???
+                console.warn("dictionary contains reference to non-existent language.")
+            }
+
+          case Failure(e) => println(e.getMessage)
+        }
+
+      case Failure(e) =>
+    }
   }
 }
