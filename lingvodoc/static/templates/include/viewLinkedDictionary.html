@@ -226,8 +226,8 @@
                 </td>
 
                 <td>
-                    <button type="button" class="btn btn-default btn-sm" ng-click="controller.add(row.entry, column.field, cell.values)">
-                        <span class="glyphicon glyphicon-list">Add</span>
+                    <button type="button" class="btn btn-default btn-sm" ng-disabled="controller.isLexicalEntryLinked(row.entry)" ng-click="controller.addLinkToLexicalEntry(row.entry)">
+                        <span class="glyphicon glyphicon-plus-sign">Add</span>
                     </button>
                 </td>
 

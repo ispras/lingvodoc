@@ -158,9 +158,11 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
             entity.linkObjectId = Some(entry.objectId)
             backend.createEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), entity) onComplete {
               case Success(entityId) =>
-                backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
+                backend.getEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), entityId) onComplete {
+                // backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
                   case Success(newEntity) =>
                     createdEntities = createdEntities :+ newEntity
+                    lexicalEntry.entities.push(newEntity)
                   case Failure(ex) => throw ControllerException("Attempt to get link entity failed", ex)
                 }
               case Failure(ex) => throw ControllerException("Attempt to create link entity failed", ex)
@@ -175,11 +177,11 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   @JSExport
   def loadPage(page: Int) = {
     val offset = (page - 1) * scope.size
-    backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) onComplete {
+    backend.getLexicalEntries(dictionaryId, linkPerspectiveId, LexicalEntriesType.All, offset, scope.size) onComplete {
       case Success(entries) =>
         scope.offset = offset
-        scope.linkedDictionaryTable = DictionaryTable.build(perspectiveFields, dataTypes, entries)
-      case Failure(e) => console.log(e.getMessage)
+        scope.linkedDictionaryTable = DictionaryTable.build(linkedPerspectiveFields, dataTypes, entries)
+      case Failure(e) => console.error(e.getMessage)
     }
   }
 
@@ -197,19 +199,24 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     }
   }
 
-  /**
-    * Returns true if perspectives are mutually linked.
-    * @return
-    */
-  def isPerspectivesBidirectional: Boolean = {
-    // find Link datatype
-    val linkDataType = dataTypes.find(dataType => dataType.gistType == "Service" && dataType.atoms.exists(atom => atom.localeId == 2 && atom.content == "Link")).ensuring(_.nonEmpty).get
-    // checks
-    (for (x <- perspectiveFields; y <- linkedPerspectiveFields) yield (x, y)).filter { f =>
-      (f._1.dataTypeTranslationGistClientId == linkDataType.clientId && f._1.dataTypeTranslationGistObjectId == linkDataType.objectId) &&
-        (f._2.dataTypeTranslationGistClientId == linkDataType.clientId && f._2.dataTypeTranslationGistObjectId == linkDataType.objectId)
-    }.exists { p => p._1.link.get.clientId == linkPerspectiveId.clientId && p._1.link.get.objectId == linkPerspectiveId.objectId &&
-      p._2.link.get.clientId == perspectiveId.clientId && p._2.link.get.objectId == perspectiveId.objectId }
+  @JSExport
+  def addLinkToLexicalEntry(entry: LexicalEntry) = {
+    // add link to this lexical entry
+    scope.dictionaryTable.addEntry(entry)
+    // create corresponding entity in main perspective
+    val entity = EntityData(field.clientId, field.objectId, 2)
+    entity.linkClientId = Some(entry.clientId)
+    entity.linkObjectId = Some(entry.objectId)
+    backend.createEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), entity) onComplete {
+      case Success(entityId) =>
+        backend.getEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), entityId) onComplete {
+          case Success(newEntity) =>
+            lexicalEntry.entities.push(newEntity)
+            createdEntities = createdEntities :+ newEntity
+          case Failure(ex) => throw ControllerException("Attempt to get link entity failed", ex)
+        }
+      case Failure(ex) => throw ControllerException("Attempt to create link entity failed", ex)
+    }
   }
 
 
@@ -335,6 +342,37 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
   @JSExport
+  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
+    options.controller = "ViewDictionaryModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
+          linkPerspectiveClientId = perspectiveClientId,
+          linkPerspectiveObjectId = perspectiveObjectId,
+          perspectiveClientId = field.link.get.clientId,
+          perspectiveObjectId = field.link.get.objectId,
+          lexicalEntry = entry.asInstanceOf[js.Object],
+          field = field.asInstanceOf[js.Object],
+          links = values.map { _.asInstanceOf[GroupValue].link }
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Seq[Entity]](options)
+    instance.result map { entities =>
+      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
+    }
+  }
+
+  @JSExport
   def linkedPerspectiveName(): String = {
     perspectiveTranslation match {
       case Some(gist) =>
@@ -347,6 +385,24 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     }
   }
 
+  @JSExport
+  def isLexicalEntryLinked(entry: LexicalEntry): Boolean = {
+    (dataTypes.find(d => d.atoms.exists(atom => atom.localeId == 2 && atom.content == "Link")) map {
+      linkDataType =>
+        val linkFields = perspectiveFields.filter(field => field.dataTypeTranslationGistClientId == linkDataType.clientId && field.dataTypeTranslationGistObjectId == linkDataType.objectId)
+        
+        val linkEntities = linkFields.flatMap {
+          field =>
+            lexicalEntry.entities.filter(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId)
+        }
+
+        linkEntities.exists { e => e.link match {
+          case Some(link) => link.clientId == entry.clientId && link.objectId == entry.objectId
+          case None => false
+        }}
+    }).get
+  }
+
 
   @JSExport
   def close() = {
@@ -357,7 +413,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
   private[this] def load() = {
 
-    backend.getPerspective(perspectiveId) map {
+    backend.getPerspective(linkPerspectiveId) map {
       p =>
         backend.translationGist(p.translationGistClientId, p.translationGistObjectId) map {
           gist =>
@@ -375,20 +431,21 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
           case Success(fields) =>
             perspectiveFields = fields
 
-            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
-              case Success(count) =>
-                scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, scope.offset, scope.size) onComplete {
-                  case Success(entries) =>
-                    scope.linkedDictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-                  case Failure(e) => console.log(e.getMessage)
-                }
-              case Failure(e) => console.log(e.getMessage)
-            }
-
             // get fields of this perspective
             backend.getFields(dictionaryId, linkPerspectiveId) onComplete {
               case Success(linkedFields) =>
+
+                backend.getLexicalEntriesCount(dictionaryId, linkPerspectiveId) onComplete {
+                  case Success(count) =>
+                    scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
+                    backend.getLexicalEntries(dictionaryId, linkPerspectiveId, LexicalEntriesType.All, scope.offset, scope.size) onComplete {
+                      case Success(entries) =>
+                        scope.linkedDictionaryTable = DictionaryTable.build(linkedFields, dataTypes, entries)
+                      case Failure(e) => console.log(e.getMessage)
+                    }
+                  case Failure(e) => console.log(e.getMessage)
+                }
+
                 linkedPerspectiveFields = linkedFields
                 val reqs = links.toSeq.map { link => backend.getLexicalEntry(dictionaryId, linkPerspectiveId, CompositeId(link.clientId, link.objectId)) }
                 Future.sequence(reqs) onComplete {
