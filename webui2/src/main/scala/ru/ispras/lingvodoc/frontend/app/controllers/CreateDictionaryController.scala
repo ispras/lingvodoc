@@ -379,33 +379,6 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   }
 
   /**
-    * Converts language tree to flat list of languages
-    *
-    * @param languagesTree
-    * @return
-    */
-  private[this] def flatLanguages(languagesTree: js.Array[Language]): Seq[Language] = {
-
-    val flatSubLanguages = new ((Language) => Seq[Language]) {
-      override def apply(language: Language): Seq[Language] = {
-        var languages = Seq[Language]()
-        for (childLanguage <- language.languages) {
-          val ch = apply(childLanguage)
-          languages = languages ++ ch
-        }
-        languages = languages :+ language
-        languages
-      }
-    }
-    var languages = Seq[Language]()
-    for (language <- languagesTree) {
-      languages = languages ++ flatSubLanguages(language)
-    }
-
-    languages
-  }
-
-  /**
     * Loads data from backend
     */
   def load(): Unit = {
@@ -433,7 +406,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
 
     backend.getLanguages onComplete {
       case Success(tree: Seq[Language]) =>
-        scope.languages = tree.toJSArray
+        scope.languages = Utils.flattenLanguages(tree).toJSArray
       case Failure(e) =>
     }
   }

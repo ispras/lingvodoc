@@ -49,28 +49,6 @@ class HomeController(scope: HomeScope, injector: Injector, backend: BackendServi
   }
 
 
-  // FIXME: temporary, remove when viewing dictionaries will work
-  @JSExport
-  def playSound(soundAddress: String, soundMarkupAddress: String) = {
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html"
-    options.controller = "SoundMarkupController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          soundAddress = soundAddress.asInstanceOf[js.Object],
-          dictionaryClientId = 1.asInstanceOf[js.Object],
-          dictionaryObjectId = 2.asInstanceOf[js.Object]
-        )
-      }
-    ).asInstanceOf[js.Dictionary[js.Any]]
-
-    val instance = modal.open[Unit](options)
-  }
-
   private[this] def load() = {
 
     backend.allStatuses() map { _ =>
@@ -82,13 +60,4 @@ class HomeController(scope: HomeScope, injector: Injector, backend: BackendServi
       }
     }
   }
-
-
-//  backend.getPublishedDictionaries onComplete {
-//    case Success(languages) =>
-//      console.log(languages.toJSArray)
-//      setPerspectives(languages)
-//      scope.languages = languages.toJSArray
-//    case Failure(e) => console.log(e.getMessage)
-//  }
 }

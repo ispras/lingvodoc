@@ -21,6 +21,7 @@ object Utils {
     acc
   }
 
+  @deprecated("deprecated in favor of userService", "01-09-2016")
   def getUserId: Int = {
     0
   }
