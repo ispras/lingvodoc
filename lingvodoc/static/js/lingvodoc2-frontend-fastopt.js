@@ -41995,7 +41995,6 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerController.prot
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$backend$f = null;
-  this.modal$2 = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$exceptionHandler$f = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
@@ -42011,12 +42010,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.ru$isp
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.$$js$exported$meth$getPerspectiveAuthors__Lru_ispras_lingvodoc_frontend_app_model_Perspective__O = (function(perspective) {
   return "Metadata is not supported!"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.$$js$exported$meth$playSound__T__T__O = (function(soundAddress, soundMarkupAddress) {
-  this.playSound__T__T__V(soundAddress, soundMarkupAddress)
-});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeScope__Lcom_greencatsoft_angularjs_core_Injector__Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lru_ispras_lingvodoc_frontend_app_services_ModalService = (function(scope, injector, backend, modal) {
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$backend$f = backend;
-  this.modal$2 = modal;
   $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$exceptionHandler$f = injector.get("$exceptionHandler");
   var jsx$2 = this.scope$1;
@@ -42041,36 +42036,11 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.init__
   this.load__p2__s_concurrent_Future();
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.playSound__T__T__V = (function(soundAddress, soundMarkupAddress) {
-  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
-  options.templateUrl = "/static/templates/modal/soundMarkup.html";
-  options.controller = "SoundMarkupController";
-  options.backdrop = false;
-  options.keyboard = false;
-  options.size = "lg";
-  options.resolve = {
-    "params": (function(soundAddress$1) {
-      return (function() {
-        return {
-          "soundAddress": soundAddress$1,
-          "dictionaryClientId": 1,
-          "dictionaryObjectId": 2
-        }
-      })
-    })(soundAddress)
-  };
-  this.modal$2.open(options)
-});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.load__p2__s_concurrent_Future = (function() {
   var this$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$backend$f.allStatuses__s_concurrent_Future();
   var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeController(this);
   var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
   return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.playSound = (function(arg$1, arg$2) {
-  var prep0 = $as_T(arg$1);
-  var prep1 = $as_T(arg$2);
-  return this.$$js$exported$meth$playSound__T__T__O(prep0, prep1)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.getPerspectiveAuthors = (function(arg$1) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(arg$1);
