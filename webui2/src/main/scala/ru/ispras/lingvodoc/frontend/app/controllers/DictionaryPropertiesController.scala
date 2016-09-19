@@ -5,7 +5,7 @@ import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
-import ru.ispras.lingvodoc.frontend.app.model.{Dictionary, Language, LocalizedString, TranslationGist}
+import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
@@ -33,13 +33,31 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
 
   // create a backup copy of dictionary
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
+  private[this] var locales = js.Array[Locale]()
+
   scope.dictionary = dictionary.copy()
+  scope.languages = js.Array()
+  scope.translations = js.Array()
+  scope.selectedLanguageId = ""
 
   // dictionary translation gist
   private [this] var translationGist: Option[TranslationGist] = None
 
+  load()
+
+  @JSExport
+  def getLocaleName(localeId: Int): String = {
+    locales.find(l => l.id == localeId) match {
+      case Some(locale) => locale.name
+      case None => "Unknown locale"
+    }
+  }
+
   @JSExport
   def ok() = {
+
+    var updateRequests = Seq[Future[Unit]]()
+
     scope.languages.find(lang => lang.getId == scope.selectedLanguageId) match {
       case Some(selectedLanguage) =>
         // check if language has changed
@@ -48,33 +66,30 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
           scope.dictionary.parentClientId = selectedLanguage.clientId
           scope.dictionary.parentObjectId = selectedLanguage.objectId
 
-          backend.updateDictionary(scope.dictionary) onComplete {
-            case Success(_) =>
-
-              // create a list of updated translation atoms
-              // Array of (atom, updatedString)
-              val updatedAtoms = translationGist.map { gist =>
-                gist.atoms.map(atom => (atom, LocalizedString(atom.localeId, atom.content))) zip scope.translations flatMap {
-                  case (original, updated) => if (original._2.str.equals(updated.str)) Some(original._1, updated) else None
-                }
-              }
-              // update atoms
-              updatedAtoms.foreach { updated =>
-                val reqs = updated.map { case (atom, str) =>
-                  atom.content = str.str
-                  backend.updateTranslationAtom(atom)
-                }.toSeq
-
-                Future.sequence(reqs) onComplete {
-                  case Success(_) => modalInstance.close(scope.dictionary)
-                  case Failure(e) =>
-                }
-              }
-
-            case Failure(e) =>
-          }
+          updateRequests = updateRequests :+ backend.updateDictionary(scope.dictionary)
         }
       case None => throw new ControllerException("Dictionary contains reference to non-existent language.")
+    }
+
+    // create a list of updated translation atoms
+    // Array of (atom, updatedString)
+    val updatedAtoms = translationGist.map { gist =>
+      gist.atoms.sortBy(_.localeId).map(atom => (atom, LocalizedString(atom.localeId, atom.content))) zip scope.translations flatMap {
+        case (original, updated) =>
+          if (!original._2.str.equals(updated.str) && updated.str.nonEmpty) Some(original._1, updated) else None
+      }
+    }
+    // update atoms
+    updatedAtoms.foreach { updated =>
+      updateRequests = updateRequests ++ updated.map { case (atom, str) =>
+        atom.content = str.str
+        backend.updateTranslationAtom(atom)
+      }.toSeq
+    }
+
+    Future.sequence(updateRequests) onComplete {
+      case Success(_) => modalInstance.close(scope.dictionary)
+      case Failure(e) =>
     }
   }
 
@@ -86,12 +101,20 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
 
   private[this] def load() = {
 
+    // load list of locales
+    backend.getLocales onComplete {
+      case Success(l) =>
+        // generate localized names
+        locales = l.toJSArray
+      case Failure(e) =>
+    }
+
     // get translations
     backend.translationGist(dictionary.translationGistClientId, dictionary.translationGistObjectId) onComplete {
       case Success(gist) =>
 
         translationGist = Some(gist)
-        scope.translations = gist.atoms.map(atom => LocalizedString(atom.localeId, atom.content)).toJSArray
+        scope.translations = gist.atoms.sortBy(_.localeId).map(atom => LocalizedString(atom.localeId, atom.content)).toJSArray
 
         // get list of languages
         backend.getLanguages onComplete {
@@ -101,6 +124,7 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
               lang.objectId == dictionary.parentObjectId) match {
               case Some(language) =>
                 scope.selectedLanguageId = language.getId
+                console.log("Selected id=" + scope.selectedLanguageId)
 
               case None =>
                 // dictionary contains reference to non-existent language???
