@@ -390,7 +390,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     (dataTypes.find(d => d.atoms.exists(atom => atom.localeId == 2 && atom.content == "Link")) map {
       linkDataType =>
         val linkFields = perspectiveFields.filter(field => field.dataTypeTranslationGistClientId == linkDataType.clientId && field.dataTypeTranslationGistObjectId == linkDataType.objectId)
-        
+
         val linkEntities = linkFields.flatMap {
           field =>
             lexicalEntry.entities.filter(e => e.fieldClientId == field.clientId && e.fieldObjectId == field.objectId)
