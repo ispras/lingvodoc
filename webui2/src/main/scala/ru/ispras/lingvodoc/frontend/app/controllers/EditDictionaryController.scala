@@ -33,7 +33,8 @@ trait EditDictionaryScope extends Scope {
 
   var dictionaryTable: DictionaryTable = js.native
 
-  var enabledInputs: js.Array[Any] = js.native
+  //var enabledInputs: js.Array[Any] = js.native
+  var selectedEntries: js.Array[String] = js.native
 
 }
 
@@ -52,6 +53,8 @@ AbstractController[EditDictionaryScope](scope) {
 
   private[this] var enabledInputs: Seq[String] = Seq[String]()
 
+  private[this] var createdLexicalEntries: Seq[LexicalEntry] = Seq[LexicalEntry]()
+
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
 
@@ -69,6 +72,8 @@ AbstractController[EditDictionaryScope](scope) {
   scope.offset = 0
   scope.size = 5
   scope.pageCount = 0
+
+  scope.selectedEntries = js.Array[String]()
 
   load()
 
@@ -131,7 +136,6 @@ AbstractController[EditDictionaryScope](scope) {
 
   @JSExport
   def play(soundAddress: String) = {
-    console.log(s"playing $soundAddress")
     (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
       ws.load(sa)
     })
@@ -173,17 +177,50 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
+  def toggleSelectedEntries(id: String) = {
+    if (scope.selectedEntries.contains(id)) {
+      scope.selectedEntries = scope.selectedEntries.filterNot(_ == id)
+    } else {
+      scope.selectedEntries.push(id)
+    }
+  }
+
+  @JSExport
+  def mergeEntries() = {
+    val entries = scope.selectedEntries.flatMap {
+      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map(_.entry)
+    }
+  }
+
+  @JSExport
   def addNewLexicalEntry() = {
     backend.createLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
       case Success(entryId) =>
         backend.getLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), entryId) onComplete {
           case Success(entry) =>
             scope.dictionaryTable.addEntry(entry)
+            createdLexicalEntries = createdLexicalEntries :+ entry
           case Failure(e) =>
         }
       case Failure(e) => throw ControllerException("Attempt to create a new lexical entry failed", e)
     }
   }
+
+  @JSExport
+  def createdByUser(lexicalEntry: LexicalEntry): Boolean = {
+    createdLexicalEntries.contains(lexicalEntry)
+  }
+
+  @JSExport
+  def removeEntry(lexicalEntry: LexicalEntry) = {
+    lexicalEntry.markedForDeletion = true
+  }
+
+  @JSExport
+  def removeEntity(lexicalEntry: LexicalEntry, entity: Entity) = {
+    backend.removeEntity(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity))
+  }
+
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {

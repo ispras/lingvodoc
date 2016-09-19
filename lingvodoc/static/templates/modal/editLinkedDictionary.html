@@ -4,6 +4,24 @@
 
 <div class="modal-body">
 
+    <div>
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+            <span class="glyphicon glyphicon-play">Play/Pause full</span>
+        </button>
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
+            <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
+        </button>
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
+            <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
+        </button>
+
+        <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+
+    </div>
+
+
     <div ng-include="'/static/templates/include/editDictionary.html'"></div>
 
 </div>

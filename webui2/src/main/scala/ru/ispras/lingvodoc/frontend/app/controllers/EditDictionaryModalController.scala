@@ -4,16 +4,18 @@ import com.greencatsoft.angularjs.core.{Event, Scope}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
-import ru.ispras.lingvodoc.frontend.app.controllers.common.DictionaryTable
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
@@ -48,7 +50,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val linkPerspectiveId = CompositeId(linkPerspectiveClientId, linkPerspectiveObjectId)
 
-  private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
+  private[this] var enabledInputs: Seq[String] = Seq[String]()
 
   scope.count = 0
   scope.offset = 0
@@ -60,8 +62,84 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   private[this] var perspectiveFields = Seq[Field]()
   private[this] var linkedPerspectiveFields = Seq[Field]()
 
+  // wavesurfer
+  private [this] var waveSurfer: Option[WaveSurfer] = None
+  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
+  val pxPerSecStep = 30 // zooming step
+  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
+  private var _duration: Double = 42.0
+  var fullWSWidth = 0.0 // again, will be known after audio load
+  var wsHeight = 128
+  var soundMarkup: Option[String] = None
+
+
 
   load()
+
+
+  @JSExport
+  def createWaveSurfer(): Unit = {
+    if (waveSurfer.isEmpty) {
+      // params should be synchronized with sm-ruler css
+      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
+        cursorWidth = 1, cursorColor = "red",
+        fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
+        height = wsHeight)
+      waveSurfer = Some(WaveSurfer.create(wso))
+    }
+  }
+
+  def pxPerSec = _pxPerSec
+
+  def pxPerSec_=(mpps: Int) = {
+    _pxPerSec = mpps
+    waveSurfer.foreach(_.zoom(mpps))
+  }
+
+  @JSExport
+  def play(soundAddress: String) = {
+    (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
+      ws.load(sa)
+    })
+  }
+
+  @JSExport
+  def playPause() = waveSurfer.foreach(_.playPause())
+
+  @JSExport
+  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
+
+  @JSExport
+  def zoomIn() = { pxPerSec += pxPerSecStep; }
+
+  @JSExport
+  def zoomOut() = { pxPerSec -= pxPerSecStep; }
+
+
+  @JSExport
+  def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/soundMarkup.html"
+    options.controller = "SoundMarkupController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          soundAddress = soundAddress.asInstanceOf[js.Object],
+          markupAddress = markupAddress.asInstanceOf[js.Object],
+          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Unit](options)
+  }
+
+
+
 
   @JSExport
   def addNewLexicalEntry() = {
@@ -100,12 +178,6 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     }
   }
 
-  @JSExport
-  def enableInput(entry: LexicalEntry, field: Field) = {
-    if (!isInputEnabled(entry, field))
-      enabledInputs = enabledInputs :+ (entry.getId, field.getId)
-  }
-
   /**
     * Returns true if perspectives are mutually linked.
     * @return
@@ -123,18 +195,27 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
 
   @JSExport
-  def disableInput(entry: LexicalEntry, field: Field) = {
-    if (isInputEnabled(entry, field))
-      enabledInputs = enabledInputs.filterNot(p => p._1 == entry.getId && p._2 == field.getId)
+  def enableInput(id: String) = {
+    if (!isInputEnabled(id)) {
+      enabledInputs = enabledInputs :+ id
+    }
   }
 
   @JSExport
-  def isInputEnabled(entry: LexicalEntry, field: Field): Boolean = {
-    enabledInputs.exists(input => input._1 == entry.getId && input._2 == field.getId)
+  def disableInput(id: String) = {
+    if (isInputEnabled(id)) {
+      enabledInputs = enabledInputs.filterNot(_.equals(id))
+    }
   }
 
   @JSExport
-  def saveTextValue(entry: LexicalEntry, field: Field, event: Event) = {
+  def isInputEnabled(id: String): Boolean = {
+    enabledInputs.contains(id)
+  }
+
+  @JSExport
+  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
 
@@ -142,17 +223,98 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
     entity.content = Some(Left(textValue))
+
+    // self
+    parent map {
+      parentValue =>
+        entity.selfClientId = Some(parentValue.getEntity.clientId)
+        entity.selfObjectId = Some(parentValue.getEntity.objectId)
+    }
+
     backend.createEntity(dictionaryId, linkPerspectiveId, entryId, entity) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, linkPerspectiveId, entryId, entityId) onComplete {
           case Success(newEntity) =>
-            scope.dictionaryTable.addEntity(entry, newEntity)
-            disableInput(entry, field)
+
+            parent.toOption match {
+              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
+              case None => scope.dictionaryTable.addEntity(entry, newEntity)
+            }
+
+            disableInput(inputId)
+
           case Failure(ex) => console.log(ex.getMessage)
         }
       case Failure(ex) => console.log(ex.getMessage)
     }
   }
+
+  @JSExport
+  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
+
+
+    val entryId = CompositeId.fromObject(entry)
+
+    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
+    entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
+
+    // self
+    parent map {
+      parentValue =>
+        entity.selfClientId = Some(parentValue.getEntity.clientId)
+        entity.selfObjectId = Some(parentValue.getEntity.objectId)
+    }
+
+    backend.createEntity(dictionaryId, linkPerspectiveId, entryId, entity) onComplete {
+      case Success(entityId) =>
+        backend.getEntity(dictionaryId, linkPerspectiveId, entryId, entityId) onComplete {
+          case Success(newEntity) =>
+
+            parent.toOption match {
+              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
+              case None => scope.dictionaryTable.addEntity(entry, newEntity)
+            }
+
+            disableInput(inputId)
+
+          case Failure(ex) => console.log(ex.getMessage)
+        }
+      case Failure(ex) => console.log(ex.getMessage)
+    }
+
+  }
+
+  @JSExport
+  def editLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/editLinkedDictionary.html"
+    options.controller = "EditDictionaryModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object],
+          perspectiveClientId = perspectiveClientId,
+          perspectiveObjectId = perspectiveObjectId,
+          linkPerspectiveClientId = field.link.get.clientId,
+          linkPerspectiveObjectId = field.link.get.objectId,
+          lexicalEntry = entry.asInstanceOf[js.Object],
+          field = field.asInstanceOf[js.Object],
+          links = values.map { _.asInstanceOf[GroupValue].link }
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Seq[Entity]](options)
+    instance.result map { entities =>
+      entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
+    }
+  }
+
 
   @JSExport
   def close() = {

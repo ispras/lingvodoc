@@ -21,7 +21,8 @@ case class Entity(override val clientId: Int,
                   var fieldClientId: Int,
                   var fieldObjectId: Int,
                   var content: String,
-                  var localeId: Int
+                  var localeId: Int,
+                  var markedForDeletion: Boolean
                  ) extends Object(clientId, objectId) {
 
   var entities: js.Array[Entity] = js.Array()
@@ -42,7 +43,8 @@ object Entity {
       ("field_client_id", Js.Num(t.fieldClientId)),
       ("field_object_id", Js.Num(t.fieldObjectId)),
       ("content", Js.Str(t.content)),
-      ("locale_id", Js.Num(t.localeId))
+      ("locale_id", Js.Num(t.localeId)),
+      ("marked_for_deletion", if (t.markedForDeletion) Js.True else Js.False)
     )
   }
 
@@ -93,7 +95,13 @@ object Entity {
             case None => None
           }
 
-          val e = Entity(clientId, objectId, parentClientId, parentObjectId, level, isPublished, fieldClientId, fieldObjectId, content, localeId)
+          val isMarkedForDeletion = jsobj("marked_for_deletion") match {
+            case Js.True => true
+            case Js.False => false
+            case _ => false
+          }
+
+          val e = Entity(clientId, objectId, parentClientId, parentObjectId, level, isPublished, fieldClientId, fieldObjectId, content, localeId, isMarkedForDeletion)
 
           // get array of entities
           val entities = jsVal.value.find(_._1 == "contains").getOrElse(("contains", Js.Arr()))._2.asInstanceOf[Js.Arr]
