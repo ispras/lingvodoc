@@ -45,6 +45,7 @@ object LingvodocApplication {
       .controller[CreateLanguageController]
       .controller[CreateDictionaryController]
       .controller[EditDictionaryModalController]
+      .controller[ViewDictionaryModalController]
       .controller[PerspectivePropertiesController]
       .controller[DictionaryPropertiesController]
       .controller[EditDictionaryController]

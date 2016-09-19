@@ -660,6 +660,26 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def removeEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Unit] = {
+
+    val p = Promise[Unit]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) +
+      "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) + "/entity/" + encodeURIComponent(entityId.clientId.toString) + "/" +
+      encodeURIComponent(entityId.objectId.toString)
+
+    $http.delete(getMethodUrl(url)) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to remove entity", e))
+    }
+    p.future
+  }
+
+
   /**
     * Gets count of all lexical entries
     *

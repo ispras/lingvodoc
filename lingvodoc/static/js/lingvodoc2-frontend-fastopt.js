@@ -4705,7 +4705,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.init___ = (func
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_greencatsoft_angularjs_Module = (function() {
-  var jsx$25 = $m_Lcom_greencatsoft_angularjs_Angular$().module__T__sc_Seq__Lcom_greencatsoft_angularjs_Module("LingvodocModule", $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu"]))));
+  var jsx$26 = $m_Lcom_greencatsoft_angularjs_Angular$().module__T__sc_Seq__Lcom_greencatsoft_angularjs_Module("LingvodocModule", $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu"]))));
   var handler = (function(f) {
     return (function(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20) {
       return f.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
@@ -4713,7 +4713,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$1().init___());
   var proxy = ["$routeProvider"];
   proxy.push(handler);
-  var jsx$24 = jsx$25.$$config__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module(proxy);
+  var jsx$25 = jsx$26.$$config__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module(proxy);
   var handler$2 = (function(f$1) {
     return (function(arg1$1, arg2$1, arg3$1, arg4$1, arg5$1, arg6$1, arg7$1, arg8$1, arg9$1, arg10$1, arg11$1, arg12$1, arg13$1, arg14$1, arg15$1, arg16$1, arg17$1, arg18$1, arg19$1, arg20$1) {
       return f$1.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$1, arg2$1, arg3$1, arg4$1, arg5$1, arg6$1, arg7$1, arg8$1, arg9$1, arg10$1, arg11$1, arg12$1, arg13$1, arg14$1, arg15$1, arg16$1, arg17$1, arg18$1, arg19$1, arg20$1)
@@ -4721,7 +4721,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$2().init___());
   var proxy$2 = ["$http", "$q"];
   proxy$2.push(handler$2);
-  var jsx$23 = jsx$24.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("BackendService", proxy$2);
+  var jsx$24 = jsx$25.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("BackendService", proxy$2);
   var handler$3 = (function(f$2) {
     return (function(arg1$2, arg2$2, arg3$2, arg4$2, arg5$2, arg6$2, arg7$2, arg8$2, arg9$2, arg10$2, arg11$2, arg12$2, arg13$2, arg14$2, arg15$2, arg16$2, arg17$2, arg18$2, arg19$2, arg20$2) {
       return f$2.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$2, arg2$2, arg3$2, arg4$2, arg5$2, arg6$2, arg7$2, arg8$2, arg9$2, arg10$2, arg11$2, arg12$2, arg13$2, arg14$2, arg15$2, arg16$2, arg17$2, arg18$2, arg19$2, arg20$2)
@@ -4729,7 +4729,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$3().init___());
   var proxy$3 = ["BackendService"];
   proxy$3.push(handler$3);
-  var jsx$22 = jsx$23.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("UserService", proxy$3);
+  var jsx$23 = jsx$24.$$factory__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("UserService", proxy$3);
   var handler$4 = (function(f$3) {
     return (function(arg1$3, arg2$3, arg3$3, arg4$3, arg5$3, arg6$3, arg7$3, arg8$3, arg9$3, arg10$3, arg11$3, arg12$3, arg13$3, arg14$3, arg15$3, arg16$3, arg17$3, arg18$3, arg19$3, arg20$3) {
       return f$3.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$3, arg2$3, arg3$3, arg4$3, arg5$3, arg6$3, arg7$3, arg8$3, arg9$3, arg10$3, arg11$3, arg12$3, arg13$3, arg14$3, arg15$3, arg16$3, arg17$3, arg18$3, arg19$3, arg20$3)
@@ -4737,7 +4737,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$4().init___());
   var proxy$4 = ["$scope", "BackendService"];
   proxy$4.push(handler$4);
-  var jsx$21 = jsx$22.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("MainController", proxy$4);
+  var jsx$22 = jsx$23.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("MainController", proxy$4);
   var handler$5 = (function(f$4) {
     return (function(arg1$4, arg2$4, arg3$4, arg4$4, arg5$4, arg6$4, arg7$4, arg8$4, arg9$4, arg10$4, arg11$4, arg12$4, arg13$4, arg14$4, arg15$4, arg16$4, arg17$4, arg18$4, arg19$4, arg20$4) {
       return f$4.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$4, arg2$4, arg3$4, arg4$4, arg5$4, arg6$4, arg7$4, arg8$4, arg9$4, arg10$4, arg11$4, arg12$4, arg13$4, arg14$4, arg15$4, arg16$4, arg17$4, arg18$4, arg19$4, arg20$4)
@@ -4745,7 +4745,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$5().init___());
   var proxy$5 = ["$scope", "$rootScope", "BackendService", "UserService"];
   proxy$5.push(handler$5);
-  var jsx$20 = jsx$21.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("NavigationController", proxy$5);
+  var jsx$21 = jsx$22.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("NavigationController", proxy$5);
   var handler$6 = (function(f$5) {
     return (function(arg1$5, arg2$5, arg3$5, arg4$5, arg5$5, arg6$5, arg7$5, arg8$5, arg9$5, arg10$5, arg11$5, arg12$5, arg13$5, arg14$5, arg15$5, arg16$5, arg17$5, arg18$5, arg19$5, arg20$5) {
       return f$5.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$5, arg2$5, arg3$5, arg4$5, arg5$5, arg6$5, arg7$5, arg8$5, arg9$5, arg10$5, arg11$5, arg12$5, arg13$5, arg14$5, arg15$5, arg16$5, arg17$5, arg18$5, arg19$5, arg20$5)
@@ -4753,7 +4753,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$6().init___());
   var proxy$6 = ["$scope", "$location", "$rootScope", "BackendService"];
   proxy$6.push(handler$6);
-  var jsx$19 = jsx$20.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LoginController", proxy$6);
+  var jsx$20 = jsx$21.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LoginController", proxy$6);
   var handler$7 = (function(f$6) {
     return (function(arg1$6, arg2$6, arg3$6, arg4$6, arg5$6, arg6$6, arg7$6, arg8$6, arg9$6, arg10$6, arg11$6, arg12$6, arg13$6, arg14$6, arg15$6, arg16$6, arg17$6, arg18$6, arg19$6, arg20$6) {
       return f$6.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$6, arg2$6, arg3$6, arg4$6, arg5$6, arg6$6, arg7$6, arg8$6, arg9$6, arg10$6, arg11$6, arg12$6, arg13$6, arg14$6, arg15$6, arg16$6, arg17$6, arg18$6, arg19$6, arg20$6)
@@ -4761,7 +4761,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$7().init___());
   var proxy$7 = ["$scope", "$location", "$rootScope", "BackendService"];
   proxy$7.push(handler$7);
-  var jsx$18 = jsx$19.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LogoutController", proxy$7);
+  var jsx$19 = jsx$20.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LogoutController", proxy$7);
   var handler$8 = (function(f$7) {
     return (function(arg1$7, arg2$7, arg3$7, arg4$7, arg5$7, arg6$7, arg7$7, arg8$7, arg9$7, arg10$7, arg11$7, arg12$7, arg13$7, arg14$7, arg15$7, arg16$7, arg17$7, arg18$7, arg19$7, arg20$7) {
       return f$7.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$7, arg2$7, arg3$7, arg4$7, arg5$7, arg6$7, arg7$7, arg8$7, arg9$7, arg10$7, arg11$7, arg12$7, arg13$7, arg14$7, arg15$7, arg16$7, arg17$7, arg18$7, arg19$7, arg20$7)
@@ -4769,7 +4769,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$8().init___());
   var proxy$8 = ["$scope", "$location", "BackendService"];
   proxy$8.push(handler$8);
-  var jsx$17 = jsx$18.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SignupController", proxy$8);
+  var jsx$18 = jsx$19.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SignupController", proxy$8);
   var handler$9 = (function(f$8) {
     return (function(arg1$8, arg2$8, arg3$8, arg4$8, arg5$8, arg6$8, arg7$8, arg8$8, arg9$8, arg10$8, arg11$8, arg12$8, arg13$8, arg14$8, arg15$8, arg16$8, arg17$8, arg18$8, arg19$8, arg20$8) {
       return f$8.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$8, arg2$8, arg3$8, arg4$8, arg5$8, arg6$8, arg7$8, arg8$8, arg9$8, arg10$8, arg11$8, arg12$8, arg13$8, arg14$8, arg15$8, arg16$8, arg17$8, arg18$8, arg19$8, arg20$8)
@@ -4777,7 +4777,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$9().init___());
   var proxy$9 = ["$scope", "$uibModal", "UserService", "BackendService"];
   proxy$9.push(handler$9);
-  var jsx$16 = jsx$17.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DashboardController", proxy$9);
+  var jsx$17 = jsx$18.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DashboardController", proxy$9);
   var handler$10 = (function(f$9) {
     return (function(arg1$9, arg2$9, arg3$9, arg4$9, arg5$9, arg6$9, arg7$9, arg8$9, arg9$9, arg10$9, arg11$9, arg12$9, arg13$9, arg14$9, arg15$9, arg16$9, arg17$9, arg18$9, arg19$9, arg20$9) {
       return f$9.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$9, arg2$9, arg3$9, arg4$9, arg5$9, arg6$9, arg7$9, arg8$9, arg9$9, arg10$9, arg11$9, arg12$9, arg13$9, arg14$9, arg15$9, arg16$9, arg17$9, arg18$9, arg19$9, arg20$9)
@@ -4785,7 +4785,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$10().init___());
   var proxy$10 = ["$scope", "$uibModal", "BackendService"];
   proxy$10.push(handler$10);
-  var jsx$15 = jsx$16.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LanguageController", proxy$10);
+  var jsx$16 = jsx$17.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("LanguageController", proxy$10);
   var handler$11 = (function(f$10) {
     return (function(arg1$10, arg2$10, arg3$10, arg4$10, arg5$10, arg6$10, arg7$10, arg8$10, arg9$10, arg10$10, arg11$10, arg12$10, arg13$10, arg14$10, arg15$10, arg16$10, arg17$10, arg18$10, arg19$10, arg20$10) {
       return f$10.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$10, arg2$10, arg3$10, arg4$10, arg5$10, arg6$10, arg7$10, arg8$10, arg9$10, arg10$10, arg11$10, arg12$10, arg13$10, arg14$10, arg15$10, arg16$10, arg17$10, arg18$10, arg19$10, arg20$10)
@@ -4793,7 +4793,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$11().init___());
   var proxy$11 = ["$scope", "$injector", "BackendService", "$uibModal"];
   proxy$11.push(handler$11);
-  var jsx$14 = jsx$15.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("HomeController", proxy$11);
+  var jsx$15 = jsx$16.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("HomeController", proxy$11);
   var handler$12 = (function(f$11) {
     return (function(arg1$11, arg2$11, arg3$11, arg4$11, arg5$11, arg6$11, arg7$11, arg8$11, arg9$11, arg10$11, arg11$11, arg12$11, arg13$11, arg14$11, arg15$11, arg16$11, arg17$11, arg18$11, arg19$11, arg20$11) {
       return f$11.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$11, arg2$11, arg3$11, arg4$11, arg5$11, arg6$11, arg7$11, arg8$11, arg9$11, arg10$11, arg11$11, arg12$11, arg13$11, arg14$11, arg15$11, arg16$11, arg17$11, arg18$11, arg19$11, arg20$11)
@@ -4801,7 +4801,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$12().init___());
   var proxy$12 = ["$scope", "$uibModalInstance", "BackendService", "params"];
   proxy$12.push(handler$12);
-  var jsx$13 = jsx$14.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateLanguageController", proxy$12);
+  var jsx$14 = jsx$15.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateLanguageController", proxy$12);
   var handler$13 = (function(f$12) {
     return (function(arg1$12, arg2$12, arg3$12, arg4$12, arg5$12, arg6$12, arg7$12, arg8$12, arg9$12, arg10$12, arg11$12, arg12$12, arg13$12, arg14$12, arg15$12, arg16$12, arg17$12, arg18$12, arg19$12, arg20$12) {
       return f$12.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$12, arg2$12, arg3$12, arg4$12, arg5$12, arg6$12, arg7$12, arg8$12, arg9$12, arg10$12, arg11$12, arg12$12, arg13$12, arg14$12, arg15$12, arg16$12, arg17$12, arg18$12, arg19$12, arg20$12)
@@ -4809,7 +4809,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$13().init___());
   var proxy$13 = ["$scope", "$uibModal", "BackendService"];
   proxy$13.push(handler$13);
-  var jsx$12 = jsx$13.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateDictionaryController", proxy$13);
+  var jsx$13 = jsx$14.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateDictionaryController", proxy$13);
   var handler$14 = (function(f$13) {
     return (function(arg1$13, arg2$13, arg3$13, arg4$13, arg5$13, arg6$13, arg7$13, arg8$13, arg9$13, arg10$13, arg11$13, arg12$13, arg13$13, arg14$13, arg15$13, arg16$13, arg17$13, arg18$13, arg19$13, arg20$13) {
       return f$13.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$13, arg2$13, arg3$13, arg4$13, arg5$13, arg6$13, arg7$13, arg8$13, arg9$13, arg10$13, arg11$13, arg12$13, arg13$13, arg14$13, arg15$13, arg16$13, arg17$13, arg18$13, arg19$13, arg20$13)
@@ -4817,63 +4817,63 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$14().init___());
   var proxy$14 = ["$scope", "$uibModal", "$uibModalInstance", "BackendService", "params"];
   proxy$14.push(handler$14);
-  var jsx$11 = jsx$12.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryModalController", proxy$14);
+  var jsx$12 = jsx$13.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryModalController", proxy$14);
   var handler$15 = (function(f$14) {
     return (function(arg1$14, arg2$14, arg3$14, arg4$14, arg5$14, arg6$14, arg7$14, arg8$14, arg9$14, arg10$14, arg11$14, arg12$14, arg13$14, arg14$14, arg15$14, arg16$14, arg17$14, arg18$14, arg19$14, arg20$14) {
       return f$14.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$14, arg2$14, arg3$14, arg4$14, arg5$14, arg6$14, arg7$14, arg8$14, arg9$14, arg10$14, arg11$14, arg12$14, arg13$14, arg14$14, arg15$14, arg16$14, arg17$14, arg18$14, arg19$14, arg20$14)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$15().init___());
-  var proxy$15 = ["$scope", "$uibModalInstance", "$uibModal", "BackendService", "params"];
+  var proxy$15 = ["$scope", "$uibModal", "$uibModalInstance", "BackendService", "params"];
   proxy$15.push(handler$15);
-  var jsx$10 = jsx$11.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectivePropertiesController", proxy$15);
+  var jsx$11 = jsx$12.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ViewDictionaryModalController", proxy$15);
   var handler$16 = (function(f$15) {
     return (function(arg1$15, arg2$15, arg3$15, arg4$15, arg5$15, arg6$15, arg7$15, arg8$15, arg9$15, arg10$15, arg11$15, arg12$15, arg13$15, arg14$15, arg15$15, arg16$15, arg17$15, arg18$15, arg19$15, arg20$15) {
       return f$15.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$15, arg2$15, arg3$15, arg4$15, arg5$15, arg6$15, arg7$15, arg8$15, arg9$15, arg10$15, arg11$15, arg12$15, arg13$15, arg14$15, arg15$15, arg16$15, arg17$15, arg18$15, arg19$15, arg20$15)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$16().init___());
-  var proxy$16 = ["$scope", "$uibModalInstance", "BackendService", "params"];
+  var proxy$16 = ["$scope", "$uibModalInstance", "$uibModal", "BackendService", "params"];
   proxy$16.push(handler$16);
-  var jsx$9 = jsx$10.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DictionaryPropertiesController", proxy$16);
+  var jsx$10 = jsx$11.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectivePropertiesController", proxy$16);
   var handler$17 = (function(f$16) {
     return (function(arg1$16, arg2$16, arg3$16, arg4$16, arg5$16, arg6$16, arg7$16, arg8$16, arg9$16, arg10$16, arg11$16, arg12$16, arg13$16, arg14$16, arg15$16, arg16$16, arg17$16, arg18$16, arg19$16, arg20$16) {
       return f$16.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$16, arg2$16, arg3$16, arg4$16, arg5$16, arg6$16, arg7$16, arg8$16, arg9$16, arg10$16, arg11$16, arg12$16, arg13$16, arg14$16, arg15$16, arg16$16, arg17$16, arg18$16, arg19$16, arg20$16)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$17().init___());
-  var proxy$17 = ["$scope", "$routeParams", "$uibModal", "BackendService"];
+  var proxy$17 = ["$scope", "$uibModalInstance", "BackendService", "params"];
   proxy$17.push(handler$17);
-  var jsx$8 = jsx$9.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryController", proxy$17);
+  var jsx$9 = jsx$10.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("DictionaryPropertiesController", proxy$17);
   var handler$18 = (function(f$17) {
     return (function(arg1$17, arg2$17, arg3$17, arg4$17, arg5$17, arg6$17, arg7$17, arg8$17, arg9$17, arg10$17, arg11$17, arg12$17, arg13$17, arg14$17, arg15$17, arg16$17, arg17$17, arg18$17, arg19$17, arg20$17) {
       return f$17.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$17, arg2$17, arg3$17, arg4$17, arg5$17, arg6$17, arg7$17, arg8$17, arg9$17, arg10$17, arg11$17, arg12$17, arg13$17, arg14$17, arg15$17, arg16$17, arg17$17, arg18$17, arg19$17, arg20$17)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$18().init___());
-  var proxy$18 = ["$scope", "$uibModal", "$uibModalInstance", "BackendService"];
+  var proxy$18 = ["$scope", "$routeParams", "$uibModal", "BackendService"];
   proxy$18.push(handler$18);
-  var jsx$7 = jsx$8.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectiveMapController", proxy$18);
+  var jsx$8 = jsx$9.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditDictionaryController", proxy$18);
   var handler$19 = (function(f$18) {
     return (function(arg1$18, arg2$18, arg3$18, arg4$18, arg5$18, arg6$18, arg7$18, arg8$18, arg9$18, arg10$18, arg11$18, arg12$18, arg13$18, arg14$18, arg15$18, arg16$18, arg17$18, arg18$18, arg19$18, arg20$18) {
       return f$18.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$18, arg2$18, arg3$18, arg4$18, arg5$18, arg6$18, arg7$18, arg8$18, arg9$18, arg10$18, arg11$18, arg12$18, arg13$18, arg14$18, arg15$18, arg16$18, arg17$18, arg18$18, arg19$18, arg20$18)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$19().init___());
-  var proxy$19 = ["$scope", "$routeParams", "$uibModal", "BackendService"];
+  var proxy$19 = ["$scope", "$uibModal", "$uibModalInstance", "BackendService"];
   proxy$19.push(handler$19);
-  var jsx$6 = jsx$7.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ViewDictionaryController", proxy$19);
+  var jsx$7 = jsx$8.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("PerspectiveMapController", proxy$19);
   var handler$20 = (function(f$19) {
     return (function(arg1$19, arg2$19, arg3$19, arg4$19, arg5$19, arg6$19, arg7$19, arg8$19, arg9$19, arg10$19, arg11$19, arg12$19, arg13$19, arg14$19, arg15$19, arg16$19, arg17$19, arg18$19, arg19$19, arg20$19) {
       return f$19.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$19, arg2$19, arg3$19, arg4$19, arg5$19, arg6$19, arg7$19, arg8$19, arg9$19, arg10$19, arg11$19, arg12$19, arg13$19, arg14$19, arg15$19, arg16$19, arg17$19, arg18$19, arg19$19, arg20$19)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$20().init___());
-  var proxy$20 = ["$scope", "$timeout", "$uibModalInstance", "$uibModal", "BackendService", "params"];
+  var proxy$20 = ["$scope", "$routeParams", "$uibModal", "BackendService"];
   proxy$20.push(handler$20);
-  var jsx$5 = jsx$6.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SoundMarkupController", proxy$20);
+  var jsx$6 = jsx$7.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ViewDictionaryController", proxy$20);
   var handler$21 = (function(f$20) {
     return (function(arg1$20, arg2$20, arg3$20, arg4$20, arg5$20, arg6$20, arg7$20, arg8$20, arg9$20, arg10$20, arg11$20, arg12$20, arg13$20, arg14$20, arg15$20, arg16$20, arg17$20, arg18$20, arg19$20, arg20$20) {
       return f$20.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$20, arg2$20, arg3$20, arg4$20, arg5$20, arg6$20, arg7$20, arg8$20, arg9$20, arg10$20, arg11$20, arg12$20, arg13$20, arg14$20, arg15$20, arg16$20, arg17$20, arg18$20, arg19$20, arg20$20)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$21().init___());
-  var proxy$21 = ["$scope", "$uibModalInstance", "params"];
+  var proxy$21 = ["$scope", "$timeout", "$uibModalInstance", "$uibModal", "BackendService", "params"];
   proxy$21.push(handler$21);
-  var jsx$4 = jsx$5.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditTextFieldController", proxy$21);
+  var jsx$5 = jsx$6.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("SoundMarkupController", proxy$21);
   var handler$22 = (function(f$21) {
     return (function(arg1$21, arg2$21, arg3$21, arg4$21, arg5$21, arg6$21, arg7$21, arg8$21, arg9$21, arg10$21, arg11$21, arg12$21, arg13$21, arg14$21, arg15$21, arg16$21, arg17$21, arg18$21, arg19$21, arg20$21) {
       return f$21.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$21, arg2$21, arg3$21, arg4$21, arg5$21, arg6$21, arg7$21, arg8$21, arg9$21, arg10$21, arg11$21, arg12$21, arg13$21, arg14$21, arg15$21, arg16$21, arg17$21, arg18$21, arg19$21, arg20$21)
@@ -4881,31 +4881,39 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.main__Lcom_gree
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$22().init___());
   var proxy$22 = ["$scope", "$uibModalInstance", "params"];
   proxy$22.push(handler$22);
-  var jsx$3 = jsx$4.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ExceptionHandlerController", proxy$22);
+  var jsx$4 = jsx$5.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("EditTextFieldController", proxy$22);
   var handler$23 = (function(f$22) {
     return (function(arg1$22, arg2$22, arg3$22, arg4$22, arg5$22, arg6$22, arg7$22, arg8$22, arg9$22, arg10$22, arg11$22, arg12$22, arg13$22, arg14$22, arg15$22, arg16$22, arg17$22, arg18$22, arg19$22, arg20$22) {
       return f$22.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$22, arg2$22, arg3$22, arg4$22, arg5$22, arg6$22, arg7$22, arg8$22, arg9$22, arg10$22, arg11$22, arg12$22, arg13$22, arg14$22, arg15$22, arg16$22, arg17$22, arg18$22, arg19$22, arg20$22)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$23().init___());
-  var proxy$23 = ["$scope", "$uibModalInstance", "BackendService", "params"];
+  var proxy$23 = ["$scope", "$uibModalInstance", "params"];
   proxy$23.push(handler$23);
-  var jsx$2 = jsx$3.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateFieldController", proxy$23);
+  var jsx$3 = jsx$4.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("ExceptionHandlerController", proxy$23);
   var handler$24 = (function(f$23) {
     return (function(arg1$23, arg2$23, arg3$23, arg4$23, arg5$23, arg6$23, arg7$23, arg8$23, arg9$23, arg10$23, arg11$23, arg12$23, arg13$23, arg14$23, arg15$23, arg16$23, arg17$23, arg18$23, arg19$23, arg20$23) {
       return f$23.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$23, arg2$23, arg3$23, arg4$23, arg5$23, arg6$23, arg7$23, arg8$23, arg9$23, arg10$23, arg11$23, arg12$23, arg13$23, arg14$23, arg15$23, arg16$23, arg17$23, arg18$23, arg19$23, arg20$23)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24().init___());
-  var proxy$24 = [];
+  var proxy$24 = ["$scope", "$uibModalInstance", "BackendService", "params"];
   proxy$24.push(handler$24);
-  var jsx$1 = jsx$2.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("convertToNumber", proxy$24);
+  var jsx$2 = jsx$3.$$controller__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("CreateFieldController", proxy$24);
   var handler$25 = (function(f$24) {
     return (function(arg1$24, arg2$24, arg3$24, arg4$24, arg5$24, arg6$24, arg7$24, arg8$24, arg9$24, arg10$24, arg11$24, arg12$24, arg13$24, arg14$24, arg15$24, arg16$24, arg17$24, arg18$24, arg19$24, arg20$24) {
       return f$24.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$24, arg2$24, arg3$24, arg4$24, arg5$24, arg6$24, arg7$24, arg8$24, arg9$24, arg10$24, arg11$24, arg12$24, arg13$24, arg14$24, arg15$24, arg16$24, arg17$24, arg18$24, arg19$24, arg20$24)
     })
   })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25().init___());
-  var proxy$25 = ["$parse"];
+  var proxy$25 = [];
   proxy$25.push(handler$25);
-  return jsx$1.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("onReadFile", proxy$25)
+  var jsx$1 = jsx$2.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("convertToNumber", proxy$25);
+  var handler$26 = (function(f$25) {
+    return (function(arg1$25, arg2$25, arg3$25, arg4$25, arg5$25, arg6$25, arg7$25, arg8$25, arg9$25, arg10$25, arg11$25, arg12$25, arg13$25, arg14$25, arg15$25, arg16$25, arg17$25, arg18$25, arg19$25, arg20$25) {
+      return f$25.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr(this, arg1$25, arg2$25, arg3$25, arg4$25, arg5$25, arg6$25, arg7$25, arg8$25, arg9$25, arg10$25, arg11$25, arg12$25, arg13$25, arg14$25, arg15$25, arg16$25, arg17$25, arg18$25, arg19$25, arg20$25)
+    })
+  })(new $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26().init___());
+  var proxy$26 = ["$parse"];
+  proxy$26.push(handler$26);
+  return jsx$1.$$directive__T__Lcom_greencatsoft_angularjs_ServiceDefinition__Lcom_greencatsoft_angularjs_Module("onReadFile", proxy$26)
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$.prototype.$$js$exported$meth$main__O = (function() {
   return this.main__Lcom_greencatsoft_angularjs_Module()
@@ -14022,7 +14030,8 @@ function $asArrayOf_Ljava_nio_charset_Charset(obj, depth) {
 }
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1() {
-  $c_O.call(this)
+  $c_O.call(this);
+  this.x2$1$1 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype = new $h_O();
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1;
@@ -14037,7 +14046,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.a
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.toString__T = (function() {
   return "<function1>"
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1__sc_Seq = (function($$outer, x2$1) {
+  this.x2$1$1 = x2$1;
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity = (function(jsVal) {
@@ -14167,13 +14177,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.a
     };
     var link = $m_s_None$()
   };
-  var e = new $c_Lru_ispras_lingvodoc_frontend_app_model_Entity().init___I__I__I__I__T__Z__I__I__T__I(clientId, objectId, parentClientId, parentObjectId, level, isPublished, fieldClientId, fieldObjectId, content, localeId);
-  var this$21 = jsVal.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$4$2) {
+  var this$21 = new $c_Lupickle_Js$Obj().init___sc_Seq(this.x2$1$1);
+  var x1$7 = $as_Lupickle_Js$Value($s_Lupickle_Js$Value$class__obj__Lupickle_Js$Value__sci_Map(this$21).apply__O__O("marked_for_deletion"));
+  var x$17 = $m_Lupickle_Js$True$();
+  var isMarkedForDeletion = (x$17 === x1$7);
+  var e = new $c_Lru_ispras_lingvodoc_frontend_app_model_Entity().init___I__I__I__I__T__Z__I__I__T__I__Z(clientId, objectId, parentClientId, parentObjectId, level, isPublished, fieldClientId, fieldObjectId, content, localeId, isMarkedForDeletion);
+  var this$22 = jsVal.find__F1__s_Option(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$4$2) {
     var x$4$1 = $as_T2(x$4$2);
     var x$8 = x$4$1.$$und1$f;
     return ((x$8 !== null) && $objectEquals(x$8, "contains"))
   })));
-  var ev$1 = $as_T2((this$21.isEmpty__Z() ? new $c_T2().init___O__O("contains", new $c_Lupickle_Js$Arr().init___sc_Seq($m_sci_Nil$())) : this$21.get__O())).$$und2$f;
+  var ev$1 = $as_T2((this$22.isEmpty__Z() ? new $c_T2().init___O__O("contains", new $c_Lupickle_Js$Arr().init___sc_Seq($m_sci_Nil$())) : this$22.get__O())).$$und2$f;
   var entities = ((ev$1 === null) ? null : $as_Lupickle_Js$Arr(ev$1).value$1);
   var elem = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   var subEntities = new $c_sr_ObjectRef().init___O(elem);
@@ -14184,13 +14198,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.a
         var x2$1 = ((jsEntity === null) ? null : $as_Lupickle_Js$Obj(jsEntity).value$1);
         var jsx$3 = $as_sc_Seq(subEntities$1.elem$1);
         var jsx$2 = arg$outer.apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity(x2$1);
-        var this$23 = $m_sc_Seq$();
-        subEntities$1.elem$1 = $as_sc_Seq(jsx$3.$$colon$plus__O__scg_CanBuildFrom__O(jsx$2, this$23.ReusableCBFInstance$2))
+        var this$24 = $m_sc_Seq$();
+        subEntities$1.elem$1 = $as_sc_Seq(jsx$3.$$colon$plus__O__scg_CanBuildFrom__O(jsx$2, this$24.ReusableCBFInstance$2))
       }
     })
   })(this, subEntities)));
   var col = $as_sc_Seq(subEntities.elem$1);
-  var this$26 = $m_sjsr_package$();
+  var this$27 = $m_sjsr_package$();
   if ($is_sjs_js_ArrayOps(col)) {
     var x2$5 = $as_sjs_js_ArrayOps(col);
     var jsx$4 = x2$5.scala$scalajs$js$ArrayOps$$array$f
@@ -14203,7 +14217,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1.prototype.a
       return (function(x$2$3) {
         return $uI(result$1.push(x$2$3))
       })
-    })(this$26, result)));
+    })(this$27, result)));
     var jsx$4 = result
   };
   e.entities$2 = jsx$4;
@@ -17519,7 +17533,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$.prototype.init___ = (function
   var this$1 = $m_Lupickle_default$().Writer__Lupickle_Types$Writer$();
   var _write = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(t$2) {
     var t = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(t$2);
-    return new $c_Lupickle_Js$Obj().init___sc_Seq($m_s_Predef$().wrapRefArray__AO__scm_WrappedArray($makeNativeArrayWrapper($d_T2.getArrayOf(), [new $c_T2().init___O__O("client_id", new $c_Lupickle_Js$Num().init___D(t.clientId$2)), new $c_T2().init___O__O("object_id", new $c_Lupickle_Js$Num().init___D(t.objectId$2)), new $c_T2().init___O__O("parent_client_id", new $c_Lupickle_Js$Num().init___D(t.parentClientId$2)), new $c_T2().init___O__O("parent_object_id", new $c_Lupickle_Js$Num().init___D(t.parentObjectId$2)), new $c_T2().init___O__O("level", new $c_Lupickle_Js$Str().init___T(t.level$2)), new $c_T2().init___O__O("published", (t.published$2 ? $m_Lupickle_Js$True$() : $m_Lupickle_Js$False$())), new $c_T2().init___O__O("field_client_id", new $c_Lupickle_Js$Num().init___D(t.fieldClientId$2)), new $c_T2().init___O__O("field_object_id", new $c_Lupickle_Js$Num().init___D(t.fieldObjectId$2)), new $c_T2().init___O__O("content", new $c_Lupickle_Js$Str().init___T(t.content$2)), new $c_T2().init___O__O("locale_id", new $c_Lupickle_Js$Num().init___D(t.localeId$2))])))
+    return new $c_Lupickle_Js$Obj().init___sc_Seq($m_s_Predef$().wrapRefArray__AO__scm_WrappedArray($makeNativeArrayWrapper($d_T2.getArrayOf(), [new $c_T2().init___O__O("client_id", new $c_Lupickle_Js$Num().init___D(t.clientId$2)), new $c_T2().init___O__O("object_id", new $c_Lupickle_Js$Num().init___D(t.objectId$2)), new $c_T2().init___O__O("parent_client_id", new $c_Lupickle_Js$Num().init___D(t.parentClientId$2)), new $c_T2().init___O__O("parent_object_id", new $c_Lupickle_Js$Num().init___D(t.parentObjectId$2)), new $c_T2().init___O__O("level", new $c_Lupickle_Js$Str().init___T(t.level$2)), new $c_T2().init___O__O("published", (t.published$2 ? $m_Lupickle_Js$True$() : $m_Lupickle_Js$False$())), new $c_T2().init___O__O("field_client_id", new $c_Lupickle_Js$Num().init___D(t.fieldClientId$2)), new $c_T2().init___O__O("field_object_id", new $c_Lupickle_Js$Num().init___D(t.fieldObjectId$2)), new $c_T2().init___O__O("content", new $c_Lupickle_Js$Str().init___T(t.content$2)), new $c_T2().init___O__O("locale_id", new $c_Lupickle_Js$Num().init___D(t.localeId$2)), new $c_T2().init___O__O("marked_for_deletion", (t.markedForDeletion$2 ? $m_Lupickle_Js$True$() : $m_Lupickle_Js$False$()))])))
   }));
   this.writer$1 = new $c_Lupickle_Types$Writer$$anon$2().init___Lupickle_Types$Writer$__F1(this$1, _write);
   var this$2 = $m_Lupickle_default$().Reader__Lupickle_Types$Reader$();
@@ -17946,17 +17960,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.logout__L
   var defer = this.$$q$1.defer();
   new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.get(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T("logout"))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$3) {
-    return (function(x0$33$2) {
-      var x0$33 = $as_s_util_Try(x0$33$2);
-      if ($is_s_util_Success(x0$33)) {
+    return (function(x0$34$2) {
+      var x0$34 = $as_s_util_Try(x0$34$2);
+      if ($is_s_util_Success(x0$34)) {
         defer$3.resolve((void 0))
-      } else if ($is_s_util_Failure(x0$33)) {
-        var x3 = $as_s_util_Failure(x0$33);
+      } else if ($is_s_util_Failure(x0$34)) {
+        var x3 = $as_s_util_Failure(x0$34);
         var e = x3.exception$2;
         var s = e.getMessage__T();
         defer$3.reject(s)
       } else {
-        throw new $c_s_MatchError().init___O(x0$33)
+        throw new $c_s_MatchError().init___O(x0$34)
       }
     })
   })(defer)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -17969,10 +17983,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.login__T_
     "password": password
   }));
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.post(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T("signin"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$2) {
-    return (function(x0$32$2) {
-      var x0$32 = $as_s_util_Try(x0$32$2);
-      if ($is_s_util_Success(x0$32)) {
-        var x2 = $as_s_util_Success(x0$32);
+    return (function(x0$33$2) {
+      var x0$33 = $as_s_util_Try(x0$33$2);
+      if ($is_s_util_Success(x0$33)) {
+        var x2 = $as_s_util_Success(x0$33);
         var response = x2.value$2;
         try {
           var clientId = $uI(response.client_id);
@@ -17986,13 +18000,13 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.login__T_
             throw e
           }
         }
-      } else if ($is_s_util_Failure(x0$32)) {
-        var x3 = $as_s_util_Failure(x0$32);
+      } else if ($is_s_util_Failure(x0$33)) {
+        var x3 = $as_s_util_Failure(x0$33);
         var e$4 = x3.exception$2;
         var s$1 = ("Failed to sign in: " + e$4.getMessage__T());
         defer$2.reject(s$1)
       } else {
-        throw new $c_s_MatchError().init___O(x0$32)
+        throw new $c_s_MatchError().init___O(x0$33)
       }
     })
   })(defer)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -18029,18 +18043,18 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.updateTra
     "content": s
   });
   var req = $as_T(jsx$4);
-  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.put(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$31) {
-    return (function(x0$38$2) {
-      var x0$38 = $as_s_util_Try(x0$38$2);
-      if ($is_s_util_Success(x0$38)) {
-        return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$31, (void 0))
-      } else if ($is_s_util_Failure(x0$38)) {
-        var x3 = $as_s_util_Failure(x0$38);
+  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.put(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$32) {
+    return (function(x0$39$2) {
+      var x0$39 = $as_s_util_Try(x0$39$2);
+      if ($is_s_util_Success(x0$39)) {
+        return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$32, (void 0))
+      } else if ($is_s_util_Failure(x0$39)) {
+        var x3 = $as_s_util_Failure(x0$39);
         var e = x3.exception$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to update translation atom", e);
-        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$31, cause)
+        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$32, cause)
       } else {
-        throw new $c_s_MatchError().init___O(x0$38)
+        throw new $c_s_MatchError().init___O(x0$39)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -18341,17 +18355,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.signup__T
     "year": year
   }));
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.post(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T("signup"), req)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(defer$4) {
-    return (function(x0$34$2) {
-      var x0$34 = $as_s_util_Try(x0$34$2);
-      if ($is_s_util_Success(x0$34)) {
+    return (function(x0$35$2) {
+      var x0$35 = $as_s_util_Try(x0$35$2);
+      if ($is_s_util_Success(x0$35)) {
         defer$4.resolve((void 0))
-      } else if ($is_s_util_Failure(x0$34)) {
-        var x3 = $as_s_util_Failure(x0$34);
+      } else if ($is_s_util_Failure(x0$35)) {
+        var x3 = $as_s_util_Failure(x0$35);
         var e = x3.exception$2;
         var s = ("Failed to sign up: " + e.getMessage__T());
         defer$4.reject(s)
       } else {
-        throw new $c_s_MatchError().init___O(x0$34)
+        throw new $c_s_MatchError().init___O(x0$35)
       }
     })
   })(defer)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
@@ -18413,6 +18427,49 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.allStatus
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T = (function(method) {
   return ($m_sjsr_RuntimeString$().endsWith__T__T__Z(this.baseUrl$1, "/") ? (("" + this.baseUrl$1) + method) : ((this.baseUrl$1 + "/") + method))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.removeEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future = (function(dictionaryId, perspectiveId, entryId, entityId) {
+  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
+  var this$2 = dictionaryId.clientId$2;
+  var jsx$15 = $g.encodeURIComponent(("" + this$2));
+  var jsx$14 = $as_T(jsx$15);
+  var this$4 = dictionaryId.objectId$2;
+  var jsx$13 = $g.encodeURIComponent(("" + this$4));
+  var jsx$12 = $as_T(jsx$13);
+  var this$6 = perspectiveId.clientId$2;
+  var jsx$11 = $g.encodeURIComponent(("" + this$6));
+  var jsx$10 = $as_T(jsx$11);
+  var this$8 = perspectiveId.objectId$2;
+  var jsx$9 = $g.encodeURIComponent(("" + this$8));
+  var jsx$8 = $as_T(jsx$9);
+  var this$10 = entryId.clientId$2;
+  var jsx$7 = $g.encodeURIComponent(("" + this$10));
+  var jsx$6 = $as_T(jsx$7);
+  var this$12 = entryId.objectId$2;
+  var jsx$5 = $g.encodeURIComponent(("" + this$12));
+  var jsx$4 = $as_T(jsx$5);
+  var this$14 = entityId.clientId$2;
+  var jsx$3 = $g.encodeURIComponent(("" + this$14));
+  var jsx$2 = $as_T(jsx$3);
+  var this$16 = entityId.objectId$2;
+  var jsx$1 = $g.encodeURIComponent(("" + this$16));
+  var url = ((((((((((((((("dictionary/" + jsx$14) + "/") + jsx$12) + "/perspective/") + jsx$10) + "/") + jsx$8) + "/lexical_entry/") + jsx$6) + "/") + jsx$4) + "/entity/") + jsx$2) + "/") + $as_T(jsx$1));
+  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f["delete"](this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$26) {
+    return (function(x0$30$2) {
+      var x0$30 = $as_s_util_Try(x0$30$2);
+      if ($is_s_util_Success(x0$30)) {
+        return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$26, (void 0))
+      } else if ($is_s_util_Failure(x0$30)) {
+        var x4 = $as_s_util_Failure(x0$30);
+        var e = x4.exception$2;
+        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to remove entity", e);
+        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$26, cause)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$30)
+      }
+    })
+  })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+  return p
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.createPerspectives__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__sc_Seq__s_concurrent_Future = (function(dictionaryId, req) {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
@@ -18571,11 +18628,6 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.translati
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.get(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$translationGist$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lcom_greencatsoft_angularjs_core_Defer(this, defer), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(defer.promise)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.createLanguage__sc_Seq__s_Option__s_concurrent_Future = (function(names, parentLanguage) {
-  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
-  this.createTranslationGist__T__s_concurrent_Future("Language").onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLanguage$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__sc_Seq__s_Option__s_concurrent_Promise(this, names, parentLanguage, p), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
-  return p
-});
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getLexicalEntriesCount__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future = (function(dictionaryId, perspectiveId) {
   var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
   var this$2 = dictionaryId.clientId$2;
@@ -18590,34 +18642,39 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getLexica
   var this$8 = perspectiveId.objectId$2;
   var jsx$1 = $g.encodeURIComponent(("" + this$8));
   var url = (((((((("dictionary/" + jsx$6) + "/") + jsx$4) + "/perspective/") + jsx$2) + "/") + $as_T(jsx$1)) + "/all_count");
-  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.get(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$26) {
-    return (function(x0$30$2) {
-      var x0$30 = $as_s_util_Try(x0$30$2);
-      if ($is_s_util_Success(x0$30)) {
-        var x2 = $as_s_util_Success(x0$30);
+  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.get(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(p$27) {
+    return (function(x0$31$2) {
+      var x0$31 = $as_s_util_Try(x0$31$2);
+      if ($is_s_util_Success(x0$31)) {
+        var x2 = $as_s_util_Success(x0$31);
         var response = x2.value$2;
         try {
           var value = $uI(response.count);
-          return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$26, value)
+          return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(p$27, value)
         } catch (e) {
           var e$2 = $m_sjsr_package$().wrapJavaScriptException__O__jl_Throwable(e);
           if ((e$2 !== null)) {
             var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Unknown exception:" + e$2.getMessage__T()));
-            return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$26, cause)
+            return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$27, cause)
           } else {
             throw e
           }
         }
-      } else if ($is_s_util_Failure(x0$30)) {
-        var x3 = $as_s_util_Failure(x0$30);
+      } else if ($is_s_util_Failure(x0$31)) {
+        var x3 = $as_s_util_Failure(x0$31);
         var e$4 = x3.exception$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get lexical entries count: " + e$4.getMessage__T()));
-        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$26, cause$1)
+        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(p$27, cause$1)
       } else {
-        throw new $c_s_MatchError().init___O(x0$30)
+        throw new $c_s_MatchError().init___O(x0$31)
       }
     })
   })(p)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+  return p
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.createLanguage__sc_Seq__s_Option__s_concurrent_Future = (function(names, parentLanguage) {
+  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
+  this.createTranslationGist__T__s_concurrent_Future("Language").onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLanguage$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__sc_Seq__s_Option__s_concurrent_Promise(this, names, parentLanguage, p), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return p
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.search__T__s_Option__Z__s_concurrent_Future = (function(query, perspectiveId, tagsOnly) {
@@ -18640,6 +18697,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.search__T
     }
   };
   $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.get(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise(this, p), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
+  return p
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService.prototype.getPerspective__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future = (function(perspectiveId) {
+  var p = new $c_s_concurrent_impl_Promise$DefaultPromise().init___();
+  var this$2 = perspectiveId.clientId$2;
+  var jsx$3 = $g.encodeURIComponent(("" + this$2));
+  var jsx$2 = $as_T(jsx$3);
+  var this$4 = perspectiveId.objectId$2;
+  var jsx$1 = $g.encodeURIComponent(("" + this$4));
+  var url = ((("perspective/" + jsx$2) + "/") + $as_T(jsx$1));
+  $m_Lcom_greencatsoft_angularjs_core_HttpPromise$().promise2future__Lcom_greencatsoft_angularjs_core_HttpPromise__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$$http$f.get(this.ru$ispras$lingvodoc$frontend$app$services$BackendService$$getMethodUrl__T__T(url))).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1().init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise(this, p), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
   return p
 });
 function $is_Lru_ispras_lingvodoc_frontend_app_services_BackendService(obj) {
@@ -25121,7 +25189,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$15.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$15.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController().init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3), a4);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalScope__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3), a4);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25164,7 +25232,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$16.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$16.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_DictionaryPropertiesController().init___Lru_ispras_lingvodoc_frontend_app_controllers_DictionaryPropertiesScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), a3);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesController().init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectivePropertiesScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3), a4);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25207,7 +25275,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$17.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$17.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryScope__Lcom_greencatsoft_angularjs_core_RouteParams__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_DictionaryPropertiesController().init___Lru_ispras_lingvodoc_frontend_app_controllers_DictionaryPropertiesScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), a3);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25250,7 +25318,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$18.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$18.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController().init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapScope__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryScope__Lcom_greencatsoft_angularjs_core_RouteParams__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25293,7 +25361,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$19.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$19.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryScope__Lcom_greencatsoft_angularjs_core_RouteParams__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapController().init___Lru_ispras_lingvodoc_frontend_app_controllers_PerspectiveMapScope__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25379,7 +25447,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$20.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$20.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupScope__Lcom_greencatsoft_angularjs_core_Timeout__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, a2, a3, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a4), a5);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryScope__Lcom_greencatsoft_angularjs_core_RouteParams__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService(a0, a1, a2, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a3));
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25422,7 +25490,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$21.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$21.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldControllerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary(a0, a1, a2);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController().init___Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupScope__Lcom_greencatsoft_angularjs_core_Timeout__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, a2, a3, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a4), a5);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25465,7 +25533,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$22.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$22.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerController().init___Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary(a0, a1, a2);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldController().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditTextFieldControllerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary(a0, a1, a2);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25508,7 +25576,7 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$23.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$23.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldController().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), a3);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerController().init___Lru_ispras_lingvodoc_frontend_app_controllers_ExceptionHandlerScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__sjs_js_Dictionary(a0, a1, a2);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
   var this$1 = $m_s_Option$().apply__O__s_Option(null);
@@ -25551,11 +25619,10 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$24.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_ConvertToNumberDirective().init___();
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldController().init___Lru_ispras_lingvodoc_frontend_app_controllers_CreateFieldScope__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary(a0, a1, $as_Lru_ispras_lingvodoc_frontend_app_services_BackendService(a2), a3);
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
-  var config = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
-  var result = $s_Lcom_greencatsoft_angularjs_Requires$class__buildConfig__Lcom_greencatsoft_angularjs_Requires__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
-  var this$1 = $m_s_Option$().apply__O__s_Option(result);
+  $s_Lcom_greencatsoft_angularjs_Controller$class__initialize__Lcom_greencatsoft_angularjs_Controller__V(target);
+  var this$1 = $m_s_Option$().apply__O__s_Option(null);
   if (this$1.isEmpty__Z()) {
     var opt = $m_s_None$()
   } else {
@@ -25595,10 +25662,10 @@ $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype.init
   return this
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
-  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_OnReadFileDirective().init___Lcom_greencatsoft_angularjs_core_Parse(a0);
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_ConvertToNumberDirective().init___();
   $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
   var config = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
-  var result = $s_Lcom_greencatsoft_angularjs_RestrictedDirective$class__buildConfig__Lcom_greencatsoft_angularjs_RestrictedDirective__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
+  var result = $s_Lcom_greencatsoft_angularjs_Requires$class__buildConfig__Lcom_greencatsoft_angularjs_Requires__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
   var this$1 = $m_s_Option$().apply__O__s_Option(result);
   if (this$1.isEmpty__Z()) {
     var opt = $m_s_None$()
@@ -25624,6 +25691,50 @@ var $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25 = new $Typ
   Ljava_io_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$25;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26() {
+  $c_sr_AbstractFunction21.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26.prototype = new $h_sr_AbstractFunction21();
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26.prototype = $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26.prototype;
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26.prototype.init___ = (function() {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26.prototype.apply__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_Any__sjs_js_UndefOr = (function(t, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19) {
+  var target = new $c_Lru_ispras_lingvodoc_frontend_app_directives_OnReadFileDirective().init___Lcom_greencatsoft_angularjs_core_Parse(a0);
+  $m_Lcom_greencatsoft_angularjs_internal_ServiceProxy$().bind__Lcom_greencatsoft_angularjs_ServiceWrapper__Lcom_greencatsoft_angularjs_Service__V(t, target);
+  var config = $m_sjs_js_Dictionary$().empty__sjs_js_Dictionary();
+  var result = $s_Lcom_greencatsoft_angularjs_RestrictedDirective$class__buildConfig__Lcom_greencatsoft_angularjs_RestrictedDirective__sjs_js_Dictionary__sjs_js_Dictionary(target, config);
+  var this$1 = $m_s_Option$().apply__O__s_Option(result);
+  if (this$1.isEmpty__Z()) {
+    var opt = $m_s_None$()
+  } else {
+    var arg1 = this$1.get__O();
+    var opt = new $c_s_Some().init___O(arg1)
+  };
+  if (opt.isEmpty__Z()) {
+    return (void 0)
+  } else {
+    var arg1$1 = opt.get__O();
+    return arg1$1
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26: 0
+}, false, "ru.ispras.lingvodoc.frontend.LingvodocApplication$$anonfun$26", {
+  Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26: 1,
+  sr_AbstractFunction21: 1,
+  O: 1,
+  F21: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$26;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_LingvodocApplication$$anonfun$3() {
   $c_sr_AbstractFunction21.call(this)
@@ -27232,7 +27343,11 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
           var entry = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(x2$1.value$2);
           var this$3 = arg$outer.$$outer$2;
           var jsx$3 = this$3.scope$1.dictionaryTable;
-          $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$3).addEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__V(entry)
+          $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$3).addEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__V(entry);
+          var jsx$5 = arg$outer.$$outer$2;
+          var jsx$4 = arg$outer.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$createdLexicalEntries$f;
+          var this$4 = $m_sc_Seq$();
+          jsx$5.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$createdLexicalEntries$f = $as_sc_Seq(jsx$4.$$colon$plus__O__scg_CanBuildFrom__O(entry, this$4.ReusableCBFInstance$2))
         } else if ((!$is_s_util_Failure(x0$7))) {
           throw new $c_s_MatchError().init___O(x0$7)
         }
@@ -27303,8 +27418,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
   while ((i < len)) {
     var index = i;
     var arg1 = array[index];
-    var x$6 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
-    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$6).link$2;
+    var x$9 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
+    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$9).link$2;
     array$1.push(elem);
     i = ((1 + i) | 0)
   };
@@ -27411,7 +27526,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
     var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2);
     $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
     var o$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspective$f;
-    jsx$2.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+    jsx$2.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
   } else if ($is_s_util_Failure(x0$1)) {
     var x3 = $as_s_util_Failure(x0$1);
     var e = x3.exception$2;
@@ -27434,21 +27549,21 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$a
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1 = (function($$outer) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1 = (function($$outer) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
   } else {
@@ -27456,7 +27571,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
   };
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype.apply__s_util_Try__V = (function(x0$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype.apply__s_util_Try__V = (function(x0$2) {
   if ($is_s_util_Success(x0$2)) {
     var x2 = $as_s_util_Success(x0$2);
     var f = $as_sc_Seq(x2.value$2);
@@ -27467,7 +27582,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
     var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2);
     $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
     var o$1 = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspective$f;
-    jsx$2.getLexicalEntriesCount__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+    jsx$2.getLexicalEntriesCount__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
   } else if ($is_s_util_Failure(x0$2)) {
     var x3 = $as_s_util_Failure(x0$2);
     var e = x3.exception$2;
@@ -27478,33 +27593,41 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
     throw new $c_s_MatchError().init___O(x0$2)
   }
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryController$$anonfun$load$1$$anonfun$apply$6", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryController$$anonfun$load$1$$anonfun$apply$8", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype.apply__s_util_Try__V = (function(x0$3) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype.apply__s_util_Try__V = (function(x0$3) {
   if ($is_s_util_Success(x0$3)) {
     var x2 = $as_s_util_Success(x0$3);
     var count = $uI(x2.value$2);
@@ -27556,25 +27679,17 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonf
     throw new $c_s_MatchError().init___O(x0$3)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6 = (function($$outer) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  return this
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$6$$anonfun$apply$7;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1$$anonfun$apply$8$$anonfun$apply$9;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$loadSearch$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -27830,6 +27945,77 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$a
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$saveTextValue$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$saveTextValue$2;
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype.apply__s_util_Try__V = (function(x0$12) {
+  if ($is_s_util_Success(x0$12)) {
+    var x2 = $as_s_util_Success(x0$12);
+    var entityId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(x2.value$2);
+    var jsx$3 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f;
+    var jsx$2 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f;
+    var jsx$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f;
+    $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+    var o = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f;
+    jsx$3.getEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$2, jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2), entityId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+      return (function(x0$13$2) {
+        var x0$13 = $as_s_util_Try(x0$13$2);
+        if ($is_s_util_Success(x0$13)) {
+          var x2$1 = $as_s_util_Success(x0$13);
+          var newEntity = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(x2$1.value$2);
+          arg$outer.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f.entities$2.push(newEntity);
+          var jsx$5 = arg$outer.$$outer$2;
+          var jsx$4 = arg$outer.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f;
+          var this$2 = $m_sc_Seq$();
+          jsx$5.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f = $as_sc_Seq(jsx$4.$$colon$plus__O__scg_CanBuildFrom__O(newEntity, this$2.ReusableCBFInstance$2))
+        } else if ($is_s_util_Failure(x0$13)) {
+          var x3 = $as_s_util_Failure(x0$13);
+          var ex = x3.exception$2;
+          throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T__jl_Throwable("Attempt to get link entity failed", ex)
+        } else {
+          throw new $c_s_MatchError().init___O(x0$13)
+        }
+      })
+    })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$12)) {
+    var x3$1 = $as_s_util_Failure(x0$12);
+    var ex$1 = x3$1.exception$2;
+    throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T__jl_Throwable("Attempt to create link entity failed", ex$1)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$12)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1;
+/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
@@ -27844,17 +28030,17 @@ $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1.prototype.apply__s_util_Try__V = (function(x0$5) {
-  if ($is_s_util_Success(x0$5)) {
-    var x2 = $as_s_util_Success(x0$5);
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1.prototype.apply__s_util_Try__V = (function(x0$7) {
+  if ($is_s_util_Success(x0$7)) {
+    var x2 = $as_s_util_Success(x0$7);
     var entryId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(x2.value$2);
-    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, entryId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, entryId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-  } else if ($is_s_util_Failure(x0$5)) {
-    var x3 = $as_s_util_Failure(x0$5);
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, entryId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$7)) {
+    var x3 = $as_s_util_Failure(x0$7);
     var e = x3.exception$2;
     throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T__jl_Throwable("Attempt to create linked lexical entry failed", e)
   } else {
-    throw new $c_s_MatchError().init___O(x0$5)
+    throw new $c_s_MatchError().init___O(x0$7)
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController = (function($$outer) {
@@ -27879,8 +28065,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.$$outer$2 = null;
-  this.entryId$1$f = null
+  this.$$outer$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1;
@@ -27892,18 +28077,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1__Lru_ispras_lingvodoc_frontend_app_model_CompositeId = (function($$outer, entryId$1) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  this.entryId$1$f = entryId$1;
-  return this
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1.prototype.apply__s_util_Try__V = (function(x0$6) {
-  if ($is_s_util_Success(x0$6)) {
-    var x2 = $as_s_util_Success(x0$6);
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1.prototype.apply__s_util_Try__V = (function(x0$8) {
+  if ($is_s_util_Success(x0$8)) {
+    var x2 = $as_s_util_Success(x0$8);
     var entry = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(x2.value$2);
     var this$1 = this.$$outer$2.$$outer$2;
     var jsx$1 = this$1.scope$1.dictionaryTable;
@@ -27917,13 +28093,21 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
     $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
     var o = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f;
     jsx$4.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(jsx$3, jsx$2, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2), entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1$$anonfun$apply$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-  } else if ($is_s_util_Failure(x0$6)) {
-    var x3 = $as_s_util_Failure(x0$6);
+  } else if ($is_s_util_Failure(x0$8)) {
+    var x3 = $as_s_util_Failure(x0$8);
     var e = x3.exception$2;
     throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T__jl_Throwable("Attempt to get linked lexical entry failed", e)
   } else {
-    throw new $c_s_MatchError().init___O(x0$6)
+    throw new $c_s_MatchError().init___O(x0$8)
   }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1 = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1: 0
@@ -27959,35 +28143,41 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1$$anonfun$apply$2.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1$$anonfun$apply$2.prototype.apply__s_util_Try__V = (function(x0$7) {
-  if ($is_s_util_Success(x0$7)) {
-    var x2 = $as_s_util_Success(x0$7);
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1$$anonfun$apply$2.prototype.apply__s_util_Try__V = (function(x0$9) {
+  if ($is_s_util_Success(x0$9)) {
+    var x2 = $as_s_util_Success(x0$9);
     var entityId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(x2.value$2);
-    this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f, this.$$outer$2.entryId$1$f, entityId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
-      return (function(x0$8$2) {
-        var x0$8 = $as_s_util_Try(x0$8$2);
-        if ($is_s_util_Success(x0$8)) {
-          var x2$1 = $as_s_util_Success(x0$8);
+    var jsx$3 = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f;
+    var jsx$2 = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f;
+    var jsx$1 = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f;
+    $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+    var o = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f;
+    jsx$3.getEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$2, jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2), entityId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+      return (function(x0$10$2) {
+        var x0$10 = $as_s_util_Try(x0$10$2);
+        if ($is_s_util_Success(x0$10)) {
+          var x2$1 = $as_s_util_Success(x0$10);
           var newEntity = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(x2$1.value$2);
-          var jsx$2 = arg$outer.$$outer$2.$$outer$2.$$outer$2;
-          var jsx$1 = arg$outer.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f;
-          var this$1 = $m_sc_Seq$();
-          jsx$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f = $as_sc_Seq(jsx$1.$$colon$plus__O__scg_CanBuildFrom__O(newEntity, this$1.ReusableCBFInstance$2))
-        } else if ($is_s_util_Failure(x0$8)) {
-          var x3 = $as_s_util_Failure(x0$8);
+          var jsx$5 = arg$outer.$$outer$2.$$outer$2.$$outer$2;
+          var jsx$4 = arg$outer.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f;
+          var this$2 = $m_sc_Seq$();
+          jsx$5.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f = $as_sc_Seq(jsx$4.$$colon$plus__O__scg_CanBuildFrom__O(newEntity, this$2.ReusableCBFInstance$2));
+          return $uI(arg$outer.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f.entities$2.push(newEntity))
+        } else if ($is_s_util_Failure(x0$10)) {
+          var x3 = $as_s_util_Failure(x0$10);
           var ex = x3.exception$2;
           throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T__jl_Throwable("Attempt to get link entity failed", ex)
         } else {
-          throw new $c_s_MatchError().init___O(x0$8)
+          throw new $c_s_MatchError().init___O(x0$10)
         }
       })
     })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-  } else if ($is_s_util_Failure(x0$7)) {
-    var x3$1 = $as_s_util_Failure(x0$7);
+  } else if ($is_s_util_Failure(x0$9)) {
+    var x3$1 = $as_s_util_Failure(x0$9);
     var ex$1 = x3$1.exception$2;
     throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T__jl_Throwable("Attempt to create link entity failed", ex$1)
   } else {
-    throw new $c_s_MatchError().init___O(x0$7)
+    throw new $c_s_MatchError().init___O(x0$9)
   }
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1$$anonfun$apply$2 = new $TypeData().initClass({
@@ -28002,6 +28192,289 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalControll
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1$$anonfun$apply$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1$$anonfun$apply$1$$anonfun$apply$2;
 /** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1() {
+  $c_sr_AbstractFunction0.call(this);
+  this.$$outer$2 = null;
+  this.entry$3$2 = null;
+  this.field$1$2 = null;
+  this.values$1$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array = (function($$outer, entry$3, field$1, values$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$3$2 = entry$3;
+  this.field$1$2 = field$1;
+  this.values$1$2 = values$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype.apply__O = (function() {
+  return this.apply__sjs_js_Object()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype.apply__sjs_js_Object = (function() {
+  var jsx$4 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryClientId$f;
+  var jsx$3 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryObjectId$f;
+  var value = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveClientId$f;
+  var value$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveObjectId$f;
+  var value$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$1$2.link$2.get__O()).clientId$2;
+  var value$3 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$1$2.link$2.get__O()).objectId$2;
+  var jsx$2 = this.entry$3$2;
+  var jsx$1 = this.field$1$2;
+  var array = this.values$1$2;
+  var array$1 = [];
+  $uI(array.length);
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var x$5 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
+    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$5).link$2;
+    array$1.push(elem);
+    i = ((1 + i) | 0)
+  };
+  return {
+    "dictionaryClientId": jsx$4,
+    "dictionaryObjectId": jsx$3,
+    "perspectiveClientId": value,
+    "perspectiveObjectId": value$1,
+    "linkPerspectiveClientId": value$2,
+    "linkPerspectiveObjectId": value$3,
+    "lexicalEntry": jsx$2,
+    "field": jsx$1,
+    "links": array$1
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$editLinkedPerspective$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1: 1,
+  sr_AbstractFunction0: 1,
+  O: 1,
+  F0: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.entry$3$f = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype.apply__O__O = (function(v1) {
+  this.apply__sc_Seq__V($as_sc_Seq(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry = (function($$outer, entry$3) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$3$f = entry$3;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype.apply__sc_Seq__V = (function(entities) {
+  entities.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(e$2) {
+      var e = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(e$2);
+      var this$1 = arg$outer.$$outer$2;
+      var jsx$1 = this$1.scope$1.dictionaryTable;
+      return $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(arg$outer.entry$3$f, e)
+    })
+  })(this)))
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$editLinkedPerspective$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1() {
+  $c_sr_AbstractFunction1.call(this)
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__Z($as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController = (function($$outer) {
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__Z = (function(d) {
+  var array = d.atoms$2;
+  var i = 0;
+  while (true) {
+    if ((i < $uI(array.length))) {
+      var index = i;
+      var arg1 = array[index];
+      var atom = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(arg1);
+      var jsx$1 = (((atom.localeId$2 === 2) && (atom.content$2 === "Link")) === false)
+    } else {
+      var jsx$1 = false
+    };
+    if (jsx$1) {
+      i = ((1 + i) | 0)
+    } else {
+      break
+    }
+  };
+  return (i !== $uI(array.length))
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.entry$5$f = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__Z($as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry = (function($$outer, entry$5) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$5$f = entry$5;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__Z = (function(linkDataType) {
+  var linkFields = $as_sc_Seq(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveFields$f.filter__F1__O(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(linkDataType$1) {
+    return (function(field$2) {
+      var field = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(field$2);
+      return ((field.dataTypeTranslationGistClientId$2 === linkDataType$1.clientId$2) && (field.dataTypeTranslationGistObjectId$2 === linkDataType$1.objectId$2))
+    })
+  })(linkDataType))));
+  var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2(this);
+  var this$1 = $m_sc_Seq$();
+  var linkEntities = $as_sc_Seq(linkFields.flatMap__F1__scg_CanBuildFrom__O(jsx$1, this$1.ReusableCBFInstance$2));
+  return linkEntities.exists__F1__Z(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(e$2) {
+      var e = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(e$2);
+      var x1 = e.link$2;
+      if ($is_s_Some(x1)) {
+        var x2 = $as_s_Some(x1);
+        var link = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(x2.x$2);
+        return ((link.clientId$2 === arg$outer.entry$5$f.clientId$2) && (link.objectId$2 === arg$outer.entry$5$f.objectId$2))
+      } else {
+        var x = $m_s_None$();
+        if ((x === x1)) {
+          return false
+        } else {
+          throw new $c_s_MatchError().init___O(x1)
+        }
+      }
+    })
+  })(this)))
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_ArrayOps($as_Lru_ispras_lingvodoc_frontend_app_model_Field(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_ArrayOps = (function(field) {
+  var array = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f.entities$2;
+  var array$1 = [];
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var e = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(arg1);
+    if ((((e.fieldClientId$2 === field.clientId$2) && (e.fieldObjectId$2 === field.objectId$2)) !== false)) {
+      array$1.push(arg1)
+    };
+    i = ((1 + i) | 0)
+  };
+  return new $c_sjs_js_ArrayOps().init___sjs_js_Array(array$1)
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2$$anonfun$7;
+/** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
@@ -28014,23 +28487,18 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalCon
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1.prototype;
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1.prototype.apply__O__O = (function(v1) {
-  this.apply__s_util_Try__V($as_s_util_Try(v1))
+  return this.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1.prototype.apply__s_util_Try__V = (function(x0$1) {
-  if ($is_s_util_Success(x0$1)) {
-    var x2 = $as_s_util_Success(x0$1);
-    var allDataTypes = $as_sc_Seq(x2.value$2);
-    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f = allDataTypes;
-    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-  } else if ($is_s_util_Failure(x0$1)) {
-    var x3 = $as_s_util_Failure(x0$1);
-    var e = x3.exception$2;
-    var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-    var s = e.getMessage__T();
-    jsx$1.log(s)
-  } else {
-    throw new $c_s_MatchError().init___O(x0$1)
-  }
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future = (function(p) {
+  var this$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.translationGist__I__I__s_concurrent_Future(p.translationGistClientId$2, p.translationGistObjectId$2);
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(gist$2) {
+      var gist = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(gist$2);
+      arg$outer.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveTranslation$f = new $c_s_Some().init___O(gist)
+    })
+  })(this));
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController = (function($$outer) {
   if (($$outer === null)) {
@@ -28052,18 +28520,37 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalControll
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1 = (function($$outer) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype.apply__s_util_Try__V = (function(x0$1) {
+  if ($is_s_util_Success(x0$1)) {
+    var x2 = $as_s_util_Success(x0$1);
+    var allDataTypes = $as_sc_Seq(x2.value$2);
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f = allDataTypes;
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$1)) {
+    var x3 = $as_s_util_Failure(x0$1);
+    var e = x3.exception$2;
+    var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s = e.getMessage__T();
+    jsx$1.log(s)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$1)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController = (function($$outer) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
   } else {
@@ -28071,15 +28558,38 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
   };
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype.apply__O__O = (function(v1) {
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$load$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype.apply__s_util_Try__V = (function(x0$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype.apply__s_util_Try__V = (function(x0$2) {
   if ($is_s_util_Success(x0$2)) {
     var x2 = $as_s_util_Success(x0$2);
     var fields = $as_sc_Seq(x2.value$2);
     this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveFields$f = fields;
-    this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+    this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
   } else if ($is_s_util_Failure(x0$2)) {
     var x3 = $as_s_util_Failure(x0$2);
     var e = x3.exception$2;
@@ -28090,36 +28600,53 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
     throw new $c_s_MatchError().init___O(x0$2)
   }
 });
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7: 1,
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype.apply__s_util_Try__V = (function(x0$3) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype.apply__s_util_Try__V = (function(x0$3) {
   if ($is_s_util_Success(x0$3)) {
     var x2 = $as_s_util_Success(x0$3);
     var linkedFields = $as_sc_Seq(x2.value$2);
+    this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getLexicalEntriesCount__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16__sc_Seq(this, linkedFields), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1);
     this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkedPerspectiveFields$f = linkedFields;
     var array = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$links$f;
     $m_sc_Seq$();
@@ -28180,21 +28707,21 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
     })(this$5));
     var executor$2 = $m_s_concurrent_Future$InternalCallbackExecutor$();
     $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$7, f$2, executor$2).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, linkedFields$1) {
-      return (function(x0$4$2) {
-        var x0$4 = $as_s_util_Try(x0$4$2);
-        if ($is_s_util_Success(x0$4)) {
-          var x2$1 = $as_s_util_Success(x0$4);
+      return (function(x0$6$2) {
+        var x0$6 = $as_s_util_Try(x0$6$2);
+        if ($is_s_util_Success(x0$6)) {
+          var x2$1 = $as_s_util_Success(x0$6);
           var lexicalEntries = $as_sc_Seq(x2$1.value$2);
           var this$8 = arg$outer.$$outer$2.$$outer$2.$$outer$2;
           this$8.scope$1.dictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(linkedFields$1, arg$outer.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f, lexicalEntries)
-        } else if ($is_s_util_Failure(x0$4)) {
-          var x3 = $as_s_util_Failure(x0$4);
+        } else if ($is_s_util_Failure(x0$6)) {
+          var x3 = $as_s_util_Failure(x0$6);
           var e = x3.exception$2;
           var jsx$2 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
           var s = e.getMessage__T();
           jsx$2.log(s)
         } else {
-          throw new $c_s_MatchError().init___O(x0$4)
+          throw new $c_s_MatchError().init___O(x0$6)
         }
       })
     })(this, linkedFields)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
@@ -28208,100 +28735,405 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$
     throw new $c_s_MatchError().init___O(x0$3)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7 = (function($$outer) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  return this
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1$$anonfun$apply$7$$anonfun$apply$8;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16;
 /** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1() {
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17() {
   $c_sr_AbstractFunction1.call(this);
   this.$$outer$2 = null;
-  this.entry$3$f = null;
-  this.field$3$f = null;
-  this.entryId$2$2 = null
+  this.linkedFields$1$f = null
 }
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17;
 /** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1() {
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17() {
   /*<skip>*/
 }
-$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype.apply__O__O = (function(v1) {
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype.apply__s_util_Try__V = (function(x0$9) {
-  if ($is_s_util_Success(x0$9)) {
-    var x2 = $as_s_util_Success(x0$9);
-    var entityId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(x2.value$2);
-    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, this.entryId$2$2, entityId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
-      return (function(x0$10$2) {
-        var x0$10 = $as_s_util_Try(x0$10$2);
-        if ($is_s_util_Success(x0$10)) {
-          var x2$1 = $as_s_util_Success(x0$10);
-          var newEntity = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(x2$1.value$2);
-          var this$1 = arg$outer.$$outer$2;
-          var jsx$1 = this$1.scope$1.dictionaryTable;
-          $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(arg$outer.entry$3$f, newEntity);
-          arg$outer.$$outer$2.disableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__V(arg$outer.entry$3$f, arg$outer.field$3$f)
-        } else if ($is_s_util_Failure(x0$10)) {
-          var x3 = $as_s_util_Failure(x0$10);
-          var ex = x3.exception$2;
-          var jsx$2 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-          var s = ex.getMessage__T();
-          jsx$2.log(s)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16__sc_Seq = (function($$outer, linkedFields$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.linkedFields$1$f = linkedFields$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype.apply__s_util_Try__V = (function(x0$4) {
+  if ($is_s_util_Success(x0$4)) {
+    var x2 = $as_s_util_Success(x0$4);
+    var count = $uI(x2.value$2);
+    var this$1 = this.$$outer$2.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$2 = this$1.scope$1;
+    var this$2 = this.$$outer$2.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$1 = this$2.scope$1.size;
+    var x = (count / $uI(jsx$1));
+    jsx$2.pageCount = $doubleToInt($uD($g.Math.ceil(x)));
+    var jsx$9 = this.$$outer$2.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f;
+    var jsx$8 = this.$$outer$2.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f;
+    var jsx$7 = this.$$outer$2.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f;
+    var jsx$6 = $m_Lru_ispras_lingvodoc_frontend_app_services_LexicalEntriesType$().All$2;
+    var this$5 = this.$$outer$2.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$5 = this$5.scope$1.offset;
+    var jsx$4 = $uI(jsx$5);
+    var this$6 = this.$$outer$2.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$3 = this$6.scope$1.size;
+    jsx$9.getLexicalEntries__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_Enumeration$Value__I__I__s_concurrent_Future(jsx$8, jsx$7, jsx$6, jsx$4, $uI(jsx$3)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+      return (function(x0$5$2) {
+        var x0$5 = $as_s_util_Try(x0$5$2);
+        if ($is_s_util_Success(x0$5)) {
+          var x2$1 = $as_s_util_Success(x0$5);
+          var entries = $as_sc_Seq(x2$1.value$2);
+          var this$7 = arg$outer.$$outer$2.$$outer$2.$$outer$2.$$outer$2;
+          this$7.scope$1.linkedDictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(arg$outer.linkedFields$1$f, arg$outer.$$outer$2.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f, entries)
+        } else if ($is_s_util_Failure(x0$5)) {
+          var x3 = $as_s_util_Failure(x0$5);
+          var e = x3.exception$2;
+          var jsx$10 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+          var s = e.getMessage__T();
+          jsx$10.log(s)
         } else {
-          throw new $c_s_MatchError().init___O(x0$10)
+          throw new $c_s_MatchError().init___O(x0$5)
         }
       })
     })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-  } else if ($is_s_util_Failure(x0$9)) {
-    var x3$1 = $as_s_util_Failure(x0$9);
-    var ex$1 = x3$1.exception$2;
-    var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-    var s$1 = ex$1.getMessage__T();
-    jsx$3.log(s$1)
+  } else if ($is_s_util_Failure(x0$4)) {
+    var x3$1 = $as_s_util_Failure(x0$4);
+    var e$1 = x3$1.exception$2;
+    var jsx$11 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s$1 = e$1.getMessage__T();
+    jsx$11.log(s$1)
   } else {
-    throw new $c_s_MatchError().init___O(x0$9)
+    throw new $c_s_MatchError().init___O(x0$4)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lru_ispras_lingvodoc_frontend_app_model_CompositeId = (function($$outer, entry$3, field$3, entryId$2) {
-  if (($$outer === null)) {
-    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
-  } else {
-    this.$$outer$2 = $$outer
-  };
-  this.entry$3$f = entry$3;
-  this.field$3$f = field$3;
-  this.entryId$2$2 = entryId$2;
-  return this
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$saveTextValue$1", {
-  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1: 1,
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17: 1,
   sr_AbstractFunction1: 1,
   O: 1,
   F1: 1,
   s_Serializable: 1,
   Ljava_io_Serializable: 1
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2$$anonfun$apply$15$$anonfun$apply$16$$anonfun$apply$17;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.inputId$2$f = null;
+  this.entry$2$f = null;
+  this.parent$2$f = null;
+  this.entryId$2$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__sjs_js_UndefOr__Lru_ispras_lingvodoc_frontend_app_model_CompositeId = (function($$outer, inputId$2, entry$2, parent$2, entryId$2) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.inputId$2$f = inputId$2;
+  this.entry$2$f = entry$2;
+  this.parent$2$f = parent$2;
+  this.entryId$2$2 = entryId$2;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype.apply__s_util_Try__V = (function(x0$16) {
+  if ($is_s_util_Success(x0$16)) {
+    var x2 = $as_s_util_Success(x0$16);
+    var entityId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(x2.value$2);
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, this.entryId$2$2, entityId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+      return (function(x0$17$2) {
+        var x0$17 = $as_s_util_Try(x0$17$2);
+        if ($is_s_util_Success(x0$17)) {
+          var x2$1 = $as_s_util_Success(x0$17);
+          var newEntity = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(x2$1.value$2);
+          var value = arg$outer.parent$2$f;
+          var x1$2 = ((value === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value));
+          if ($is_s_Some(x1$2)) {
+            var x2$2 = $as_s_Some(x1$2);
+            var x = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2$2.x$2);
+            var this$4 = arg$outer.$$outer$2;
+            var jsx$1 = this$4.scope$1.dictionaryTable;
+            $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value__Lru_ispras_lingvodoc_frontend_app_model_Entity__I(x, newEntity)
+          } else {
+            var x$2 = $m_s_None$();
+            if ((x$2 === x1$2)) {
+              var this$5 = arg$outer.$$outer$2;
+              var jsx$2 = this$5.scope$1.dictionaryTable;
+              $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$2).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(arg$outer.entry$2$f, newEntity)
+            } else {
+              throw new $c_s_MatchError().init___O(x1$2)
+            }
+          };
+          arg$outer.$$outer$2.disableInput__T__V(arg$outer.inputId$2$f)
+        } else if ($is_s_util_Failure(x0$17)) {
+          var x3 = $as_s_util_Failure(x0$17);
+          var ex = x3.exception$2;
+          var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+          var s = ex.getMessage__T();
+          jsx$3.log(s)
+        } else {
+          throw new $c_s_MatchError().init___O(x0$17)
+        }
+      })
+    })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$16)) {
+    var x3$1 = $as_s_util_Failure(x0$16);
+    var ex$1 = x3$1.exception$2;
+    var jsx$4 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s$1 = ex$1.getMessage__T();
+    jsx$4.log(s$1)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$16)
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$saveFileValue$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.inputId$1$f = null;
+  this.entry$1$f = null;
+  this.parent$1$f = null;
+  this.entryId$1$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__sjs_js_UndefOr__Lru_ispras_lingvodoc_frontend_app_model_CompositeId = (function($$outer, inputId$1, entry$1, parent$1, entryId$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.inputId$1$f = inputId$1;
+  this.entry$1$f = entry$1;
+  this.parent$1$f = parent$1;
+  this.entryId$1$2 = entryId$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype.apply__s_util_Try__V = (function(x0$14) {
+  if ($is_s_util_Success(x0$14)) {
+    var x2 = $as_s_util_Success(x0$14);
+    var entityId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(x2.value$2);
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, this.entryId$1$2, entityId).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+      return (function(x0$15$2) {
+        var x0$15 = $as_s_util_Try(x0$15$2);
+        if ($is_s_util_Success(x0$15)) {
+          var x2$1 = $as_s_util_Success(x0$15);
+          var newEntity = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(x2$1.value$2);
+          var value = arg$outer.parent$1$f;
+          var x1$2 = ((value === (void 0)) ? $m_s_None$() : new $c_s_Some().init___O(value));
+          if ($is_s_Some(x1$2)) {
+            var x2$2 = $as_s_Some(x1$2);
+            var x = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(x2$2.x$2);
+            var this$4 = arg$outer.$$outer$2;
+            var jsx$1 = this$4.scope$1.dictionaryTable;
+            $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_controllers_common_Value__Lru_ispras_lingvodoc_frontend_app_model_Entity__I(x, newEntity)
+          } else {
+            var x$2 = $m_s_None$();
+            if ((x$2 === x1$2)) {
+              var this$5 = arg$outer.$$outer$2;
+              var jsx$2 = this$5.scope$1.dictionaryTable;
+              $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$2).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(arg$outer.entry$1$f, newEntity)
+            } else {
+              throw new $c_s_MatchError().init___O(x1$2)
+            }
+          };
+          arg$outer.$$outer$2.disableInput__T__V(arg$outer.inputId$1$f)
+        } else if ($is_s_util_Failure(x0$15)) {
+          var x3 = $as_s_util_Failure(x0$15);
+          var ex = x3.exception$2;
+          var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+          var s = ex.getMessage__T();
+          jsx$3.log(s)
+        } else {
+          throw new $c_s_MatchError().init___O(x0$15)
+        }
+      })
+    })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$14)) {
+    var x3$1 = $as_s_util_Failure(x0$14);
+    var ex$1 = x3$1.exception$2;
+    var jsx$4 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s$1 = ex$1.getMessage__T();
+    jsx$4.log(s$1)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$14)
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$saveTextValue$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1() {
+  $c_sr_AbstractFunction0.call(this);
+  this.$$outer$2 = null;
+  this.entry$4$2 = null;
+  this.field$2$2 = null;
+  this.values$2$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array = (function($$outer, entry$4, field$2, values$2) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$4$2 = entry$4;
+  this.field$2$2 = field$2;
+  this.values$2$2 = values$2;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.apply__O = (function() {
+  return this.apply__sjs_js_Object()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.apply__sjs_js_Object = (function() {
+  var jsx$4 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryClientId$f;
+  var jsx$3 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryObjectId$f;
+  var value = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveClientId$f;
+  var value$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveObjectId$f;
+  var value$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$2$2.link$2.get__O()).clientId$2;
+  var value$3 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$2$2.link$2.get__O()).objectId$2;
+  var jsx$2 = this.entry$4$2;
+  var jsx$1 = this.field$2$2;
+  var array = this.values$2$2;
+  var array$1 = [];
+  $uI(array.length);
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var x$6 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
+    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$6).link$2;
+    array$1.push(elem);
+    i = ((1 + i) | 0)
+  };
+  return {
+    "dictionaryClientId": jsx$4,
+    "dictionaryObjectId": jsx$3,
+    "linkPerspectiveClientId": value,
+    "linkPerspectiveObjectId": value$1,
+    "perspectiveClientId": value$2,
+    "perspectiveObjectId": value$3,
+    "lexicalEntry": jsx$2,
+    "field": jsx$1,
+    "links": array$1
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$viewLinkedPerspective$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1: 1,
+  sr_AbstractFunction0: 1,
+  O: 1,
+  F0: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.entry$4$f = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.apply__O__O = (function(v1) {
+  this.apply__sc_Seq__V($as_sc_Seq(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry = (function($$outer, entry$4) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$4$f = entry$4;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.apply__sc_Seq__V = (function(entities) {
+  entities.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(e$2) {
+      var e = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(e$2);
+      var this$1 = arg$outer.$$outer$2;
+      var jsx$1 = this$1.scope$1.dictionaryTable;
+      return $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(arg$outer.entry$4$f, e)
+    })
+  })(this)))
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryModalController$$anonfun$viewLinkedPerspective$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$load$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -29324,9 +30156,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController$$anonfun$
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.$$outer$2 = null;
-  this.dictionary$1$2 = null;
-  this.perspective$1$2 = null
+  this.$$outer$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1;
@@ -29341,51 +30171,31 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonf
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1.prototype.apply__s_util_Try__V = (function(x0$1) {
   if ($is_s_util_Success(x0$1)) {
     var x2 = $as_s_util_Success(x0$1);
-    var dataTypes = $as_sc_Seq(x2.value$2);
+    var d = $as_sc_Seq(x2.value$2);
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dataTypes$f = d;
     var jsx$2 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f;
     $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
-    var o = this.dictionary$1$2;
+    var o = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionary$f;
     var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2);
     $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
-    var o$1 = this.perspective$1$2;
-    jsx$2.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, dataTypes$1) {
-      return (function(x0$2$2) {
-        var x0$2 = $as_s_util_Try(x0$2$2);
-        if ($is_s_util_Success(x0$2)) {
-          var x2$1 = $as_s_util_Success(x0$2);
-          var fields = $as_sc_Seq(x2$1.value$2);
-          var entries = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
-          var this$3 = arg$outer.$$outer$2;
-          this$3.scope$1.dictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(fields, dataTypes$1, entries)
-        } else if ($is_s_util_Failure(x0$2)) {
-          var x3 = $as_s_util_Failure(x0$2);
-          var e = x3.exception$2;
-          var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-          var s = e.getMessage__T();
-          jsx$3.log(s)
-        } else {
-          throw new $c_s_MatchError().init___O(x0$2)
-        }
-      })
-    })(this, dataTypes)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+    var o$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspective$f;
+    jsx$2.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
   } else if ($is_s_util_Failure(x0$1)) {
-    var x3$1 = $as_s_util_Failure(x0$1);
-    var e$1 = x3$1.exception$2;
-    var jsx$4 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-    var s$1 = e$1.getMessage__T();
-    jsx$4.log(s$1)
+    var x3 = $as_s_util_Failure(x0$1);
+    var e = x3.exception$2;
+    var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s = e.getMessage__T();
+    jsx$3.log(s)
   } else {
     throw new $c_s_MatchError().init___O(x0$1)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective = (function($$outer, dictionary$1, perspective$1) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController = (function($$outer) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
   } else {
     this.$$outer$2 = $$outer
   };
-  this.dictionary$1$2 = dictionary$1;
-  this.perspective$1$2 = perspective$1;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1 = new $TypeData().initClass({
@@ -29399,6 +30209,721 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$a
   Ljava_io_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype.apply__s_util_Try__V = (function(x0$2) {
+  if ($is_s_util_Success(x0$2)) {
+    var x2 = $as_s_util_Success(x0$2);
+    var f = $as_sc_Seq(x2.value$2);
+    this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$fields$f = f;
+    var jsx$2 = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f;
+    $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+    var o = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionary$f;
+    var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2);
+    $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+    var o$1 = this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspective$f;
+    jsx$2.getLexicalEntriesCount__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$2)) {
+    var x3 = $as_s_util_Failure(x0$2);
+    var e = x3.exception$2;
+    var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s = e.getMessage__T();
+    jsx$3.log(s)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$2)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype.apply__s_util_Try__V = (function(x0$3) {
+  if ($is_s_util_Success(x0$3)) {
+    var x2 = $as_s_util_Success(x0$3);
+    var count = $uI(x2.value$2);
+    var this$1 = this.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$2 = this$1.scope$1;
+    var this$2 = this.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$1 = this$2.scope$1.size;
+    var x = (count / $uI(jsx$1));
+    jsx$2.pageCount = $doubleToInt($uD($g.Math.ceil(x)));
+    var jsx$9 = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f;
+    $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+    var o = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionary$f;
+    var jsx$8 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2);
+    $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+    var o$1 = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspective$f;
+    var jsx$7 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2);
+    var jsx$6 = $m_Lru_ispras_lingvodoc_frontend_app_services_LexicalEntriesType$().All$2;
+    var this$7 = this.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$5 = this$7.scope$1.offset;
+    var jsx$4 = $uI(jsx$5);
+    var this$8 = this.$$outer$2.$$outer$2.$$outer$2;
+    var jsx$3 = this$8.scope$1.size;
+    jsx$9.getLexicalEntries__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_Enumeration$Value__I__I__s_concurrent_Future(jsx$8, jsx$7, jsx$6, jsx$4, $uI(jsx$3)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+      return (function(x0$4$2) {
+        var x0$4 = $as_s_util_Try(x0$4$2);
+        if ($is_s_util_Success(x0$4)) {
+          var x2$1 = $as_s_util_Success(x0$4);
+          var entries = $as_sc_Seq(x2$1.value$2);
+          var this$9 = arg$outer.$$outer$2.$$outer$2.$$outer$2;
+          this$9.scope$1.dictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(arg$outer.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$fields$f, arg$outer.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dataTypes$f, entries)
+        } else if ($is_s_util_Failure(x0$4)) {
+          var x3 = $as_s_util_Failure(x0$4);
+          var e = x3.exception$2;
+          var jsx$10 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+          var s = e.getMessage__T();
+          jsx$10.log(s)
+        } else {
+          throw new $c_s_MatchError().init___O(x0$4)
+        }
+      })
+    })(this)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$3)) {
+    var x3$1 = $as_s_util_Failure(x0$3);
+    var e$1 = x3$1.exception$2;
+    var jsx$11 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s$1 = e$1.getMessage__T();
+    jsx$11.log(s$1)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$3)
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1$$anonfun$apply$3$$anonfun$apply$4;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype.apply__O__O = (function(v1) {
+  this.apply__sc_Seq__V($as_sc_Seq(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype.apply__sc_Seq__V = (function(results) {
+  var jsx$2 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+  var this$3 = $m_sjsr_package$();
+  if ($is_sjs_js_ArrayOps(results)) {
+    var x2 = $as_sjs_js_ArrayOps(results);
+    var jsx$1 = x2.scala$scalajs$js$ArrayOps$$array$f
+  } else if ($is_sjs_js_WrappedArray(results)) {
+    var x3 = $as_sjs_js_WrappedArray(results);
+    var jsx$1 = x3.array$6
+  } else {
+    var result = [];
+    results.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, result$1) {
+      return (function(x$2) {
+        return $uI(result$1.push(x$2))
+      })
+    })(this$3, result)));
+    var jsx$1 = result
+  };
+  jsx$2.log(jsx$1);
+  var jsx$3 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(x$1$2) {
+    var x$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_SearchResult(x$1$2);
+    return x$1.lexicalEntry$2
+  }));
+  var this$4 = $m_sc_Seq$();
+  var entries = $as_sc_Seq(results.map__F1__scg_CanBuildFrom__O(jsx$3, this$4.ReusableCBFInstance$2));
+  var this$5 = this.$$outer$2;
+  this$5.scope$1.dictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$fields$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dataTypes$f, entries)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryController$$anonfun$loadSearch$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1() {
+  $c_sr_AbstractFunction0.call(this);
+  this.$$outer$2 = null;
+  this.entry$1$2 = null;
+  this.field$1$2 = null;
+  this.values$1$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array = (function($$outer, entry$1, field$1, values$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$1$2 = entry$1;
+  this.field$1$2 = field$1;
+  this.values$1$2 = values$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype.apply__O = (function() {
+  return this.apply__sjs_js_Object()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype.apply__sjs_js_Object = (function() {
+  var jsx$4 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryClientId$f;
+  var jsx$3 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryObjectId$f;
+  var value = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveClientId$f;
+  var value$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveObjectId$f;
+  var value$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$1$2.link$2.get__O()).clientId$2;
+  var value$3 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$1$2.link$2.get__O()).objectId$2;
+  var jsx$2 = this.entry$1$2;
+  var jsx$1 = this.field$1$2;
+  var array = this.values$1$2;
+  var array$1 = [];
+  $uI(array.length);
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var x$5 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
+    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$5).link$2;
+    array$1.push(elem);
+    i = ((1 + i) | 0)
+  };
+  return {
+    "dictionaryClientId": jsx$4,
+    "dictionaryObjectId": jsx$3,
+    "perspectiveClientId": value,
+    "perspectiveObjectId": value$1,
+    "linkPerspectiveClientId": value$2,
+    "linkPerspectiveObjectId": value$3,
+    "lexicalEntry": jsx$2,
+    "field": jsx$1,
+    "links": array$1
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryController$$anonfun$viewLinkedPerspective$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1: 1,
+  sr_AbstractFunction0: 1,
+  O: 1,
+  F0: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.entry$1$f = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype.apply__O__O = (function(v1) {
+  this.apply__sc_Seq__V($as_sc_Seq(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry = (function($$outer, entry$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$1$f = entry$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype.apply__sc_Seq__V = (function(entities) {
+  entities.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(e$2) {
+      var e = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(e$2);
+      var this$1 = arg$outer.$$outer$2;
+      var jsx$1 = this$1.scope$1.dictionaryTable;
+      return $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(arg$outer.entry$1$f, e)
+    })
+  })(this)))
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryController$$anonfun$viewLinkedPerspective$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype.apply__O__O = (function(v1) {
+  return this.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_model_Perspective(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype.apply__Lru_ispras_lingvodoc_frontend_app_model_Perspective__s_concurrent_Future = (function(p) {
+  var this$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f.translationGist__I__I__s_concurrent_Future(p.translationGistClientId$2, p.translationGistObjectId$2);
+  var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(gist$2) {
+      var gist = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(gist$2);
+      arg$outer.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveTranslation$f = new $c_s_Some().init___O(gist)
+    })
+  })(this));
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryModalController$$anonfun$load$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype.apply__s_util_Try__V = (function(x0$1) {
+  if ($is_s_util_Success(x0$1)) {
+    var x2 = $as_s_util_Success(x0$1);
+    var allDataTypes = $as_sc_Seq(x2.value$2);
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dataTypes$f = allDataTypes;
+    this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryId$f, this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$1)) {
+    var x3 = $as_s_util_Failure(x0$1);
+    var e = x3.exception$2;
+    var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s = e.getMessage__T();
+    jsx$1.log(s)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$1)
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryModalController$$anonfun$load$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype.apply__s_util_Try__V = (function(x0$2) {
+  if ($is_s_util_Success(x0$2)) {
+    var x2 = $as_s_util_Success(x0$2);
+    var fields = $as_sc_Seq(x2.value$2);
+    this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveFields$f = fields;
+    this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f.getFields__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryId$f, this.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$linkPerspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$2)) {
+    var x3 = $as_s_util_Failure(x0$2);
+    var e = x3.exception$2;
+    var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s = e.getMessage__T();
+    jsx$1.log(s)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$2)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype.apply__O__O = (function(v1) {
+  this.apply__s_util_Try__V($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype.apply__s_util_Try__V = (function(x0$3) {
+  if ($is_s_util_Success(x0$3)) {
+    var x2 = $as_s_util_Success(x0$3);
+    var linkedFields = $as_sc_Seq(x2.value$2);
+    this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$linkedPerspectiveFields$f = linkedFields;
+    var array = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$links$f;
+    $m_sc_Seq$();
+    $m_sjs_js_WrappedArray$();
+    var array$1 = [];
+    $uI(array.length);
+    var i = 0;
+    var len = $uI(array.length);
+    while ((i < len)) {
+      var index = i;
+      var arg1 = array[index];
+      var link = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(arg1);
+      var elem = this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f.getLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryId$f, this.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$linkPerspectiveId$f, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(link.clientId$2, link.objectId$2));
+      array$1.push(elem);
+      i = ((1 + i) | 0)
+    };
+    var this$5 = $m_s_concurrent_Future$();
+    $m_sc_Seq$();
+    var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+    var z = this$5.successful__O__s_concurrent_Future(($m_sjs_js_WrappedArray$(), new $c_sjs_js_WrappedArray().init___()));
+    var start = 0;
+    var end = $uI(array$1.length);
+    var z$1 = z;
+    var jsx$1;
+    _foldl: while (true) {
+      if ((start !== end)) {
+        var temp$start = ((1 + start) | 0);
+        var arg1$1 = z$1;
+        var index$1 = start;
+        var arg2 = array$1[index$1];
+        var fr = $as_s_concurrent_Future(arg1$1);
+        var fa = $as_s_concurrent_Future(arg2);
+        var f$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this, executor$1, fa$1) {
+          return (function(r$2) {
+            var r = $as_scm_Builder(r$2);
+            var f = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function($this$1, r$1) {
+              return (function(a$2) {
+                return r$1.$$plus$eq__O__scm_Builder(a$2)
+              })
+            })($this, r));
+            return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(fa$1, f, executor$1)
+          })
+        })(this$5, executor, fa));
+        var temp$z = $s_s_concurrent_Future$class__flatMap__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(fr, f$1, executor);
+        start = temp$start;
+        z$1 = temp$z;
+        continue _foldl
+      };
+      var jsx$1 = z$1;
+      break
+    };
+    var this$7 = $as_s_concurrent_Future(jsx$1);
+    var f$2 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(this$2$1) {
+      return (function(x$3$2) {
+        var x$3 = $as_scm_Builder(x$3$2);
+        return $as_sc_TraversableOnce(x$3.result__O())
+      })
+    })(this$5));
+    var executor$2 = $m_s_concurrent_Future$InternalCallbackExecutor$();
+    $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$7, f$2, executor$2).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, linkedFields$1) {
+      return (function(x0$4$2) {
+        var x0$4 = $as_s_util_Try(x0$4$2);
+        if ($is_s_util_Success(x0$4)) {
+          var x2$1 = $as_s_util_Success(x0$4);
+          var lexicalEntries = $as_sc_Seq(x2$1.value$2);
+          var this$8 = arg$outer.$$outer$2.$$outer$2.$$outer$2;
+          this$8.scope$1.dictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(linkedFields$1, arg$outer.$$outer$2.$$outer$2.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dataTypes$f, lexicalEntries)
+        } else if ($is_s_util_Failure(x0$4)) {
+          var x3 = $as_s_util_Failure(x0$4);
+          var e = x3.exception$2;
+          var jsx$2 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+          var s = e.getMessage__T();
+          jsx$2.log(s)
+        } else {
+          throw new $c_s_MatchError().init___O(x0$4)
+        }
+      })
+    })(this, linkedFields)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  } else if ($is_s_util_Failure(x0$3)) {
+    var x3$1 = $as_s_util_Failure(x0$3);
+    var e$1 = x3$1.exception$2;
+    var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+    var s$1 = e$1.getMessage__T();
+    jsx$3.log(s$1)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$3)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4 = (function($$outer) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2$$anonfun$apply$4$$anonfun$apply$5;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1() {
+  $c_sr_AbstractFunction0.call(this);
+  this.$$outer$2 = null;
+  this.entry$1$2 = null;
+  this.field$1$2 = null;
+  this.values$1$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype = new $h_sr_AbstractFunction0();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array = (function($$outer, entry$1, field$1, values$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$1$2 = entry$1;
+  this.field$1$2 = field$1;
+  this.values$1$2 = values$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.apply__O = (function() {
+  return this.apply__sjs_js_Object()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.apply__sjs_js_Object = (function() {
+  var jsx$4 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryClientId$f;
+  var jsx$3 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryObjectId$f;
+  var value = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveClientId$f;
+  var value$1 = this.$$outer$2.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveObjectId$f;
+  var value$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$1$2.link$2.get__O()).clientId$2;
+  var value$3 = $as_Lru_ispras_lingvodoc_frontend_app_model_Link(this.field$1$2.link$2.get__O()).objectId$2;
+  var jsx$2 = this.entry$1$2;
+  var jsx$1 = this.field$1$2;
+  var array = this.values$1$2;
+  var array$1 = [];
+  $uI(array.length);
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var x$4 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(arg1);
+    var elem = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_GroupValue(x$4).link$2;
+    array$1.push(elem);
+    i = ((1 + i) | 0)
+  };
+  return {
+    "dictionaryClientId": jsx$4,
+    "dictionaryObjectId": jsx$3,
+    "perspectiveClientId": value,
+    "perspectiveObjectId": value$1,
+    "linkPerspectiveClientId": value$2,
+    "linkPerspectiveObjectId": value$3,
+    "lexicalEntry": jsx$2,
+    "field": jsx$1,
+    "links": array$1
+  }
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1: 1,
+  sr_AbstractFunction0: 1,
+  O: 1,
+  F0: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2() {
+  $c_sr_AbstractFunction1.call(this);
+  this.$$outer$2 = null;
+  this.entry$1$f = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.apply__O__O = (function(v1) {
+  this.apply__sc_Seq__V($as_sc_Seq(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry = (function($$outer, entry$1) {
+  if (($$outer === null)) {
+    throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
+  } else {
+    this.$$outer$2 = $$outer
+  };
+  this.entry$1$f = entry$1;
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.apply__sc_Seq__V = (function(entities) {
+  entities.foreach__F1__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer) {
+    return (function(e$2) {
+      var e = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(e$2);
+      var this$1 = arg$outer.$$outer$2;
+      var jsx$1 = this$1.scope$1.dictionaryTable;
+      return $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(jsx$1).addEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(arg$outer.entry$1$f, e)
+    })
+  })(this)))
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$$anonfun$23() {
   $c_sr_AbstractFunction1.call(this);
@@ -31632,7 +33157,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anon$4$$anonfun$de
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$28$2 = null
+  this.p$29$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1;
@@ -31644,9 +33169,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuse
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$35) {
-  if ($is_s_util_Success(x0$35)) {
-    var x2 = $as_s_util_Success(x0$35);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$36) {
+  if ($is_s_util_Success(x0$36)) {
+    var x2 = $as_s_util_Success(x0$36);
     var response = x2.value$2;
     var this$4 = $m_Lupickle_default$();
     var expr = $as_T($g.JSON.stringify(response));
@@ -31658,20 +33183,20 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuse
     var r$1 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.TranslationGist", r);
     var evidence$3 = $s_Lupickle_Implicits$class__SeqishR__Lupickle_Implicits__scg_CanBuildFrom__Lupickle_Types$Reader__Lupickle_Types$Reader(this$3, cbf, r$1);
     var statuses = $as_sc_Seq($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$4, expr, evidence$3));
-    var this$5 = this.p$28$2;
+    var this$5 = this.p$29$2;
     return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$5, statuses)
-  } else if ($is_s_util_Failure(x0$35)) {
-    var x3 = $as_s_util_Failure(x0$35);
+  } else if ($is_s_util_Failure(x0$36)) {
+    var x3 = $as_s_util_Failure(x0$36);
     var e = x3.exception$2;
-    var this$6 = this.p$28$2;
+    var this$6 = this.p$29$2;
     var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed get list of status values.", e);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause)
   } else {
-    throw new $c_s_MatchError().init___O(x0$35)
+    throw new $c_s_MatchError().init___O(x0$36)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$28) {
-  this.p$28$2 = p$28;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$29) {
+  this.p$29$2 = p$29;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$allStatuses$1 = new $TypeData().initClass({
@@ -31968,7 +33493,7 @@ function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$c
   this.$$outer$2 = null;
   this.names$2$2 = null;
   this.language$2$f = null;
-  this.p$36$f = null
+  this.p$37$f = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1;
@@ -31997,7 +33522,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDict
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1.prototype.apply__O__O = (function(v1) {
   return this.apply__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future($as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Language__s_concurrent_Promise = (function($$outer, names$2, language$2, p$36) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Language__s_concurrent_Promise = (function($$outer, names$2, language$2, p$37) {
   if (($$outer === null)) {
     throw $m_sjsr_package$().unwrapJavaScriptException__jl_Throwable__O(null)
   } else {
@@ -32005,7 +33530,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDict
   };
   this.names$2$2 = names$2;
   this.language$2$f = language$2;
-  this.p$36$f = p$36;
+  this.p$37$f = p$37;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1 = new $TypeData().initClass({
@@ -32083,9 +33608,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDict
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1$$anonfun$apply$35$$anonfun$apply$36.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1$$anonfun$apply$35$$anonfun$apply$36.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$45) {
-  if ($is_s_util_Success(x0$45)) {
-    var x2 = $as_s_util_Success(x0$45);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1$$anonfun$apply$35$$anonfun$apply$36.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$46) {
+  if ($is_s_util_Success(x0$46)) {
+    var x2 = $as_s_util_Success(x0$46);
     var response = x2.value$2;
     try {
       var this$3 = $m_Lupickle_default$();
@@ -32097,31 +33622,31 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDict
       }));
       var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.CompositeId", r);
       var id = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3));
-      var this$4 = this.$$outer$2.$$outer$2.p$36$f;
+      var this$4 = this.$$outer$2.$$outer$2.p$37$f;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, id)
     } catch (e$1) {
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$5 = this.$$outer$2.$$outer$2.p$36$f;
+        var this$5 = this.$$outer$2.$$outer$2.p$37$f;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create dictionary.", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$6 = this.$$outer$2.$$outer$2.p$36$f;
+        var this$6 = this.$$outer$2.$$outer$2.p$37$f;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create dictionary.", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
       } else {
         throw e$1
       }
     }
-  } else if ($is_s_util_Failure(x0$45)) {
-    var x3 = $as_s_util_Failure(x0$45);
+  } else if ($is_s_util_Failure(x0$46)) {
+    var x3 = $as_s_util_Failure(x0$46);
     var e$4 = x3.exception$2;
-    var this$7 = this.$$outer$2.$$outer$2.p$36$f;
+    var this$7 = this.$$outer$2.$$outer$2.p$37$f;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create dictionary", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$45)
+    throw new $c_s_MatchError().init___O(x0$46)
   }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1$$anonfun$apply$35$$anonfun$apply$36.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createDictionary$1$$anonfun$apply$35 = (function($$outer) {
@@ -32201,7 +33726,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createEnti
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$33$2 = null
+  this.p$34$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1;
@@ -32213,9 +33738,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createFiel
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$42) {
-  if ($is_s_util_Success(x0$42)) {
-    var x2 = $as_s_util_Success(x0$42);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$43) {
+  if ($is_s_util_Success(x0$43)) {
+    var x2 = $as_s_util_Success(x0$43);
     var response = x2.value$2;
     try {
       var this$3 = $m_Lupickle_default$();
@@ -32227,35 +33752,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createFiel
       }));
       var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.CompositeId", r);
       var gistId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3));
-      var this$4 = this.p$33$2;
+      var this$4 = this.p$34$2;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, gistId)
     } catch (e$1) {
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$5 = this.p$33$2;
+        var this$5 = this.p$34$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Creation of field failed. Malformed json", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$6 = this.p$33$2;
+        var this$6 = this.p$34$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Creation of field failed. Malformed data", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
       } else {
         throw e$1
       }
     }
-  } else if ($is_s_util_Failure(x0$42)) {
-    var x3 = $as_s_util_Failure(x0$42);
+  } else if ($is_s_util_Failure(x0$43)) {
+    var x3 = $as_s_util_Failure(x0$43);
     var e$4 = x3.exception$2;
-    var this$7 = this.p$33$2;
+    var this$7 = this.p$34$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create field", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$42)
+    throw new $c_s_MatchError().init___O(x0$43)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$33) {
-  this.p$33$2 = p$33;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$34) {
+  this.p$34$2 = p$34;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createField$1 = new $TypeData().initClass({
@@ -32480,7 +34005,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLang
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$38$2 = null
+  this.p$39$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1;
@@ -32492,7 +34017,78 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexi
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$47) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$48) {
+  if ($is_s_util_Success(x0$48)) {
+    var x2 = $as_s_util_Success(x0$48);
+    var response = x2.value$2;
+    try {
+      var this$3 = $m_Lupickle_default$();
+      var expr = $as_T($g.JSON.stringify(response));
+      var this$2 = $m_Lupickle_default$().Internal__Lupickle_Implicits$Internal$();
+      var r = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function() {
+        var e = $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$().reader$1;
+        return e
+      }));
+      var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.CompositeId", r);
+      var id = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3));
+      var this$4 = this.p$39$2;
+      return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, id)
+    } catch (e$1) {
+      if ($is_Lupickle_Invalid$Json(e$1)) {
+        var e$3 = $as_Lupickle_Invalid$Json(e$1);
+        var this$5 = this.p$39$2;
+        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create lexical entry.", e$3);
+        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
+      } else if ($is_Lupickle_Invalid$Data(e$1)) {
+        var e$2 = $as_Lupickle_Invalid$Data(e$1);
+        var this$6 = this.p$39$2;
+        var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create lexical entry.", e$2);
+        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
+      } else {
+        throw e$1
+      }
+    }
+  } else if ($is_s_util_Failure(x0$48)) {
+    var x3 = $as_s_util_Failure(x0$48);
+    var e$4 = x3.exception$2;
+    var this$7 = this.p$39$2;
+    var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create lexical entry", e$4);
+    return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$48)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$39) {
+  this.p$39$2 = p$39;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$createLexicalEntry$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1() {
+  $c_sr_AbstractFunction1.call(this);
+  this.p$38$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.apply__O__O = (function(v1) {
+  return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$47) {
   if ($is_s_util_Success(x0$47)) {
     var x2 = $as_s_util_Success(x0$47);
     var response = x2.value$2;
@@ -32512,12 +34108,12 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexi
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
         var this$5 = this.p$38$2;
-        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create lexical entry.", e$3);
+        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create perspective.", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
         var this$6 = this.p$38$2;
-        var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create lexical entry.", e$2);
+        var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create perspective.", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
       } else {
         throw e$1
@@ -32527,85 +34123,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexi
     var x3 = $as_s_util_Failure(x0$47);
     var e$4 = x3.exception$2;
     var this$7 = this.p$38$2;
-    var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create lexical entry", e$4);
+    var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create perspective", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
   } else {
     throw new $c_s_MatchError().init___O(x0$47)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$38) {
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$38) {
   this.p$38$2 = p$38;
-  return this
-});
-var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1 = new $TypeData().initClass({
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1: 0
-}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$createLexicalEntry$1", {
-  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1: 1,
-  sr_AbstractFunction1: 1,
-  O: 1,
-  F1: 1,
-  s_Serializable: 1,
-  Ljava_io_Serializable: 1
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createLexicalEntry$1;
-/** @constructor */
-function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1() {
-  $c_sr_AbstractFunction1.call(this);
-  this.p$37$2 = null
-}
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype = new $h_sr_AbstractFunction1();
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1;
-/** @constructor */
-function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1() {
-  /*<skip>*/
-}
-$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.apply__O__O = (function(v1) {
-  return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$46) {
-  if ($is_s_util_Success(x0$46)) {
-    var x2 = $as_s_util_Success(x0$46);
-    var response = x2.value$2;
-    try {
-      var this$3 = $m_Lupickle_default$();
-      var expr = $as_T($g.JSON.stringify(response));
-      var this$2 = $m_Lupickle_default$().Internal__Lupickle_Implicits$Internal$();
-      var r = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function() {
-        var e = $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$().reader$1;
-        return e
-      }));
-      var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.CompositeId", r);
-      var id = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3));
-      var this$4 = this.p$37$2;
-      return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, id)
-    } catch (e$1) {
-      if ($is_Lupickle_Invalid$Json(e$1)) {
-        var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$5 = this.p$37$2;
-        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create perspective.", e$3);
-        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
-      } else if ($is_Lupickle_Invalid$Data(e$1)) {
-        var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$6 = this.p$37$2;
-        var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create perspective.", e$2);
-        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
-      } else {
-        throw e$1
-      }
-    }
-  } else if ($is_s_util_Failure(x0$46)) {
-    var x3 = $as_s_util_Failure(x0$46);
-    var e$4 = x3.exception$2;
-    var this$7 = this.p$37$2;
-    var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create perspective", e$4);
-    return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
-  } else {
-    throw new $c_s_MatchError().init___O(x0$46)
-  }
-});
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$37) {
-  this.p$37$2 = p$37;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPerspectives$1 = new $TypeData().initClass({
@@ -32622,7 +34147,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createPers
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$30$2 = null
+  this.p$31$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1;
@@ -32634,9 +34159,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTran
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$37) {
-  if ($is_s_util_Success(x0$37)) {
-    var x2 = $as_s_util_Success(x0$37);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$38) {
+  if ($is_s_util_Success(x0$38)) {
+    var x2 = $as_s_util_Success(x0$38);
     var response = x2.value$2;
     try {
       var this$3 = $m_Lupickle_default$();
@@ -32648,35 +34173,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTran
       }));
       var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.CompositeId", r);
       var gistId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3));
-      var this$4 = this.p$30$2;
+      var this$4 = this.p$31$2;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, gistId)
     } catch (e$1) {
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$5 = this.p$30$2;
+        var this$5 = this.p$31$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Creation of translation atom failed. Malformed json", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$6 = this.p$30$2;
+        var this$6 = this.p$31$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Creation of translation atom failed. Malformed data", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
       } else {
         throw e$1
       }
     }
-  } else if ($is_s_util_Failure(x0$37)) {
-    var x3 = $as_s_util_Failure(x0$37);
+  } else if ($is_s_util_Failure(x0$38)) {
+    var x3 = $as_s_util_Failure(x0$38);
     var e$4 = x3.exception$2;
-    var this$7 = this.p$30$2;
+    var this$7 = this.p$31$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create translation atom", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$37)
+    throw new $c_s_MatchError().init___O(x0$38)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$30) {
-  this.p$30$2 = p$30;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$31) {
+  this.p$31$2 = p$31;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationAtom$1 = new $TypeData().initClass({
@@ -32693,7 +34218,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTran
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$32$2 = null
+  this.p$33$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1;
@@ -32705,9 +34230,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTran
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$40) {
-  if ($is_s_util_Success(x0$40)) {
-    var x2 = $as_s_util_Success(x0$40);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$41) {
+  if ($is_s_util_Success(x0$41)) {
+    var x2 = $as_s_util_Success(x0$41);
     var response = x2.value$2;
     try {
       var this$3 = $m_Lupickle_default$();
@@ -32719,35 +34244,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTran
       }));
       var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.CompositeId", r);
       var gistId = $as_Lru_ispras_lingvodoc_frontend_app_model_CompositeId($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3));
-      var this$4 = this.p$32$2;
+      var this$4 = this.p$33$2;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, gistId)
     } catch (e$1) {
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$5 = this.p$32$2;
+        var this$5 = this.p$33$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Creation of translation gist failed. Malformed json", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$6 = this.p$32$2;
+        var this$6 = this.p$33$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Creation of translation gist failed. Malformed data", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
       } else {
         throw e$1
       }
     }
-  } else if ($is_s_util_Failure(x0$40)) {
-    var x3 = $as_s_util_Failure(x0$40);
+  } else if ($is_s_util_Failure(x0$41)) {
+    var x3 = $as_s_util_Failure(x0$41);
     var e$4 = x3.exception$2;
-    var this$7 = this.p$32$2;
+    var this$7 = this.p$33$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to create translation gist", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$40)
+    throw new $c_s_MatchError().init___O(x0$41)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$32) {
-  this.p$32$2 = p$32;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$33) {
+  this.p$33$2 = p$33;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTranslationGist$1 = new $TypeData().initClass({
@@ -32764,7 +34289,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$createTran
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$35$2 = null
+  this.p$36$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1;
@@ -32776,9 +34301,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$44) {
-  if ($is_s_util_Success(x0$44)) {
-    var x2 = $as_s_util_Success(x0$44);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$45) {
+  if ($is_s_util_Success(x0$45)) {
+    var x2 = $as_s_util_Success(x0$45);
     var response = x2.value$2;
     try {
       var this$4 = $m_Lupickle_default$();
@@ -32791,35 +34316,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$
       var r$1 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.TranslationGist", r);
       var evidence$3 = $s_Lupickle_Implicits$class__SeqishR__Lupickle_Implicits__scg_CanBuildFrom__Lupickle_Types$Reader__Lupickle_Types$Reader(this$3, cbf, r$1);
       var fields = $as_sc_Seq($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$4, expr, evidence$3));
-      var this$5 = this.p$35$2;
+      var this$5 = this.p$36$2;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$5, fields)
     } catch (e) {
       if ($is_Lupickle_Invalid$Json(e)) {
         var e$3 = $as_Lupickle_Invalid$Json(e);
-        var this$6 = this.p$35$2;
+        var this$6 = this.p$36$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Malformed data types json", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause)
       } else if ($is_Lupickle_Invalid$Data(e)) {
         var e$2 = $as_Lupickle_Invalid$Data(e);
-        var this$7 = this.p$35$2;
+        var this$7 = this.p$36$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Malformed data types data", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$1)
       } else {
         throw e
       }
     }
-  } else if ($is_s_util_Failure(x0$44)) {
-    var x3 = $as_s_util_Failure(x0$44);
+  } else if ($is_s_util_Failure(x0$45)) {
+    var x3 = $as_s_util_Failure(x0$45);
     var e$4 = x3.exception$2;
-    var this$8 = this.p$35$2;
+    var this$8 = this.p$36$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to get list of data types", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$8, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$44)
+    throw new $c_s_MatchError().init___O(x0$45)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$35) {
-  this.p$35$2 = p$35;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$36) {
+  this.p$36$2 = p$36;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$1 = new $TypeData().initClass({
@@ -33113,7 +34638,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$dataTypes$
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$34$2 = null
+  this.p$35$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1;
@@ -33125,9 +34650,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.p
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$43) {
-  if ($is_s_util_Success(x0$43)) {
-    var x2 = $as_s_util_Success(x0$43);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$44) {
+  if ($is_s_util_Success(x0$44)) {
+    var x2 = $as_s_util_Success(x0$44);
     var response = x2.value$2;
     try {
       var this$5 = $m_Lupickle_default$();
@@ -33143,35 +34668,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.p
       var r$1 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$3, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.Field", r);
       var evidence$3 = $s_Lupickle_Implicits$class__SeqishR__Lupickle_Implicits__scg_CanBuildFrom__Lupickle_Types$Reader__Lupickle_Types$Reader(this$4, cbf, r$1);
       var fields = $as_sc_Seq($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$5, expr, evidence$3));
-      var this$6 = this.p$34$2;
+      var this$6 = this.p$35$2;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$6, fields)
     } catch (e$1) {
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$7 = this.p$34$2;
+        var this$7 = this.p$35$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Malformed fields json", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$8 = this.p$34$2;
+        var this$8 = this.p$35$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Malformed fields data", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$8, cause$1)
       } else {
         throw e$1
       }
     }
-  } else if ($is_s_util_Failure(x0$43)) {
-    var x3 = $as_s_util_Failure(x0$43);
+  } else if ($is_s_util_Failure(x0$44)) {
+    var x3 = $as_s_util_Failure(x0$44);
     var e$4 = x3.exception$2;
-    var this$9 = this.p$34$2;
+    var this$9 = this.p$35$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to get list of fields", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$9, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$43)
+    throw new $c_s_MatchError().init___O(x0$44)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$34) {
-  this.p$34$2 = p$34;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$35) {
+  this.p$35$2 = p$35;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$fields$1 = new $TypeData().initClass({
@@ -34171,7 +35696,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexical
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$39$2 = null
+  this.p$40$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1;
@@ -34183,9 +35708,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexical
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$48) {
-  if ($is_s_util_Success(x0$48)) {
-    var x2 = $as_s_util_Success(x0$48);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$49) {
+  if ($is_s_util_Success(x0$49)) {
+    var x2 = $as_s_util_Success(x0$49);
     var response = x2.value$2;
     try {
       var this$3 = $m_Lupickle_default$();
@@ -34197,35 +35722,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexical
       }));
       var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.LexicalEntry", r);
       var entry = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3));
-      var this$4 = this.p$39$2;
+      var this$4 = this.p$40$2;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, entry)
     } catch (e$1) {
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$5 = this.p$39$2;
+        var this$5 = this.p$40$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to get lexical entry.", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$6 = this.p$39$2;
+        var this$6 = this.p$40$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to get lexical entry.", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
       } else {
         throw e$1
       }
     }
-  } else if ($is_s_util_Failure(x0$48)) {
-    var x3 = $as_s_util_Failure(x0$48);
+  } else if ($is_s_util_Failure(x0$49)) {
+    var x3 = $as_s_util_Failure(x0$49);
     var e$4 = x3.exception$2;
-    var this$7 = this.p$39$2;
+    var this$7 = this.p$40$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Failed to get lexical entry", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$48)
+    throw new $c_s_MatchError().init___O(x0$49)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$39) {
-  this.p$39$2 = p$39;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$40) {
+  this.p$40$2 = p$40;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1 = new $TypeData().initClass({
@@ -34239,6 +35764,77 @@ var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLex
   Ljava_io_Serializable: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getLexicalEntry$1;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1() {
+  $c_sr_AbstractFunction1.call(this);
+  this.p$11$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype = new $h_sr_AbstractFunction1();
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype.apply__O__O = (function(v1) {
+  return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$15) {
+  if ($is_s_util_Success(x0$15)) {
+    var x2 = $as_s_util_Success(x0$15);
+    var response = x2.value$2;
+    try {
+      var this$4 = this.p$11$2;
+      var this$3 = $m_Lupickle_default$();
+      var expr = $as_T($g.JSON.stringify(response));
+      var this$2 = $m_Lupickle_default$().Internal__Lupickle_Implicits$Internal$();
+      var r = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function() {
+        var e = $m_Lru_ispras_lingvodoc_frontend_app_model_Perspective$().reader$1;
+        return e
+      }));
+      var evidence$3 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$2, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.Perspective", r);
+      var value = $s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$3, expr, evidence$3);
+      return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$4, value)
+    } catch (e$1) {
+      if ($is_Lupickle_Invalid$Json(e$1)) {
+        var e$3 = $as_Lupickle_Invalid$Json(e$1);
+        var this$5 = this.p$11$2;
+        var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Malformed perspective json:" + e$3.s$1));
+        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$5, cause)
+      } else if ($is_Lupickle_Invalid$Data(e$1)) {
+        var e$2 = $as_Lupickle_Invalid$Data(e$1);
+        var this$6 = this.p$11$2;
+        var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Malformed perspective data. Missing some required fields: " + e$2.s$1));
+        return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$6, cause$1)
+      } else {
+        throw e$1
+      }
+    }
+  } else if ($is_s_util_Failure(x0$15)) {
+    var x3 = $as_s_util_Failure(x0$15);
+    var e$4 = x3.exception$2;
+    var this$7 = this.p$11$2;
+    var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T(("Failed to get perspective: " + e$4.getMessage__T()));
+    return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause$2)
+  } else {
+    throw new $c_s_MatchError().init___O(x0$15)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$11) {
+  this.p$11$2 = p$11;
+  return this
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1 = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.services.BackendService$$anonfun$getPerspective$1", {
+  Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1: 1,
+  sr_AbstractFunction1: 1,
+  O: 1,
+  F1: 1,
+  s_Serializable: 1,
+  Ljava_io_Serializable: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPerspective$1;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublishedDictionaries$1() {
   $c_sr_AbstractFunction1.call(this);
@@ -34316,7 +35912,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$getPublish
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1() {
   $c_sr_AbstractFunction1.call(this);
-  this.p$40$2 = null
+  this.p$41$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.prototype = new $h_sr_AbstractFunction1();
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1;
@@ -34328,9 +35924,9 @@ $h_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.p
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.prototype.apply__O__O = (function(v1) {
   return this.apply__s_util_Try__s_concurrent_Promise($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$49) {
-  if ($is_s_util_Success(x0$49)) {
-    var x2 = $as_s_util_Success(x0$49);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.prototype.apply__s_util_Try__s_concurrent_Promise = (function(x0$50) {
+  if ($is_s_util_Success(x0$50)) {
+    var x2 = $as_s_util_Success(x0$50);
     var response = x2.value$2;
     try {
       var this$5 = $m_Lupickle_default$();
@@ -34346,35 +35942,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.p
       var r$1 = new $c_Lupickle_Implicits$Internal$$anon$2().init___Lupickle_Implicits$Internal$__T__F0(this$3, "Tagged Object ru.ispras.lingvodoc.frontend.app.model.SearchResult", r);
       var evidence$3 = $s_Lupickle_Implicits$class__SeqishR__Lupickle_Implicits__scg_CanBuildFrom__Lupickle_Types$Reader__Lupickle_Types$Reader(this$4, cbf, r$1);
       var entries = $as_sc_Seq($s_Lupickle_Types$class__read__Lupickle_Types__T__Lupickle_Types$Reader__O(this$5, expr, evidence$3));
-      var this$6 = this.p$40$2;
+      var this$6 = this.p$41$2;
       return $s_s_concurrent_Promise$class__success__s_concurrent_Promise__O__s_concurrent_Promise(this$6, entries)
     } catch (e$1) {
       if ($is_Lupickle_Invalid$Json(e$1)) {
         var e$3 = $as_Lupickle_Invalid$Json(e$1);
-        var this$7 = this.p$40$2;
+        var this$7 = this.p$41$2;
         var cause = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Search failed.", e$3);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$7, cause)
       } else if ($is_Lupickle_Invalid$Data(e$1)) {
         var e$2 = $as_Lupickle_Invalid$Data(e$1);
-        var this$8 = this.p$40$2;
+        var this$8 = this.p$41$2;
         var cause$1 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Search failed.", e$2);
         return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$8, cause$1)
       } else {
         throw e$1
       }
     }
-  } else if ($is_s_util_Failure(x0$49)) {
-    var x3 = $as_s_util_Failure(x0$49);
+  } else if ($is_s_util_Failure(x0$50)) {
+    var x3 = $as_s_util_Failure(x0$50);
     var e$4 = x3.exception$2;
-    var this$9 = this.p$40$2;
+    var this$9 = this.p$41$2;
     var cause$2 = new $c_Lru_ispras_lingvodoc_frontend_api_exceptions_BackendException().init___T__jl_Throwable("Search failed", e$4);
     return $s_s_concurrent_Promise$class__failure__s_concurrent_Promise__jl_Throwable__s_concurrent_Promise(this$9, cause$2)
   } else {
-    throw new $c_s_MatchError().init___O(x0$49)
+    throw new $c_s_MatchError().init___O(x0$50)
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$40) {
-  this.p$40$2 = p$40;
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1.prototype.init___Lru_ispras_lingvodoc_frontend_app_services_BackendService__s_concurrent_Promise = (function($$outer, p$41) {
+  this.p$41$2 = p$41;
   return this
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$search$1 = new $TypeData().initClass({
@@ -34407,9 +36003,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$translatio
 $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$translationGist$1.prototype.apply__O__O = (function(v1) {
   this.apply__s_util_Try__V($as_s_util_Try(v1))
 });
-$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$translationGist$1.prototype.apply__s_util_Try__V = (function(x0$39) {
-  if ($is_s_util_Success(x0$39)) {
-    var x2 = $as_s_util_Success(x0$39);
+$c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$translationGist$1.prototype.apply__s_util_Try__V = (function(x0$40) {
+  if ($is_s_util_Success(x0$40)) {
+    var x2 = $as_s_util_Success(x0$40);
     var response = x2.value$2;
     try {
       var this$2 = $m_Lupickle_default$();
@@ -34439,14 +36035,14 @@ $c_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$translatio
         throw e
       }
     }
-  } else if ($is_s_util_Failure(x0$39)) {
-    var x3 = $as_s_util_Failure(x0$39);
+  } else if ($is_s_util_Failure(x0$40)) {
+    var x3 = $as_s_util_Failure(x0$40);
     var e$6 = x3.exception$2;
     var jsx$4 = this.defer$5$2;
     var s$3 = ("Failed to get translation gist: " + e$6.getMessage__T());
     jsx$4.reject(s$3)
   } else {
-    throw new $c_s_MatchError().init___O(x0$39)
+    throw new $c_s_MatchError().init___O(x0$40)
   }
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_services_BackendService$$anonfun$translationGist$1 = new $TypeData().initClass({
@@ -40964,6 +42560,7 @@ function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryControll
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dictionary$f = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspective$f = null;
   this.enabledInputs$2 = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$createdLexicalEntries$f = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dataTypes$f = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$fields$f = null;
   this.waveSurfer$2 = null;
@@ -41036,13 +42633,6 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   };
   return result
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.playPause__V = (function() {
-  var this$1 = this.waveSurfer$2;
-  if ((!this$1.isEmpty__Z())) {
-    var arg1 = this$1.get__O();
-    arg1.playPause()
-  }
-});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__V = (function(inputId, entry, field, fileName, fileType, fileContent, parent) {
   $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
   var o = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dictionary$f;
@@ -41066,8 +42656,24 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   };
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(dictionaryId, perspectiveId, entryId, entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$saveFileValue$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__sjs_js_UndefOr__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, inputId, entry, parent, dictionaryId, perspectiveId, entryId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.playPause__V = (function() {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.playPause()
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$removeEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O = (function(lexicalEntry, entity) {
+  return this.removeEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_concurrent_Future(lexicalEntry, entity)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$viewSoundMarkup__T__T__O = (function(soundAddress, markupAddress) {
   this.viewSoundMarkup__T__T__V(soundAddress, markupAddress)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$createdByUser__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O = (function(lexicalEntry) {
+  return this.createdByUser__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Z(lexicalEntry)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$removeEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O = (function(lexicalEntry) {
+  lexicalEntry.markedForDeletion$2 = true
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.viewSoundMarkup__T__T__V = (function(soundAddress, markupAddress) {
   var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
@@ -41090,11 +42696,49 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   };
   this.modal$2.open(options)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.load__p2__V = (function() {
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$zoomIn__O = (function() {
   this.zoomIn__V()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.load__p2__V = (function() {
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.toggleSelectedEntries__T__O = (function(id) {
+  var array = this.scope$1.selectedEntries;
+  var i = 0;
+  while (true) {
+    if ((i < $uI(array.length))) {
+      var index = i;
+      var arg1 = array[index];
+      var jsx$1 = ($m_sr_BoxesRunTime$().equals__O__O__Z(arg1, id) === false)
+    } else {
+      var jsx$1 = false
+    };
+    if (jsx$1) {
+      i = ((1 + i) | 0)
+    } else {
+      break
+    }
+  };
+  if ((i !== $uI(array.length))) {
+    var jsx$2 = this.scope$1;
+    var array$1 = this.scope$1.selectedEntries;
+    var array$2 = [];
+    var i$1 = 0;
+    var len = $uI(array$1.length);
+    while ((i$1 < len)) {
+      var index$1 = i$1;
+      var arg1$1 = array$1[index$1];
+      var x$5 = $as_T(arg1$1);
+      if (((x$5 === id) !== true)) {
+        array$2.push(arg1$1)
+      };
+      i$1 = ((1 + i$1) | 0)
+    };
+    jsx$2.selectedEntries = array$2;
+    return (void 0)
+  } else {
+    return $uI(this.scope$1.selectedEntries.push(id))
+  }
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.zoomIn__V = (function() {
   this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 + this.pxPerSecStep$2) | 0))
@@ -41102,10 +42746,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.disableInput__T__V = (function(id) {
   if (this.isInputEnabled__T__Z(id)) {
     var this$1 = this.enabledInputs$2;
-    var p = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(id$1) {
-      return (function(x$5$2) {
-        var x$5 = $as_T(x$5$2);
-        return (x$5 === id$1)
+    var p = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(id$2) {
+      return (function(x$8$2) {
+        var x$8 = $as_T(x$8$2);
+        return (x$8 === id$2)
       })
     })(id));
     this.enabledInputs$2 = $as_sc_Seq($s_sc_TraversableLike$class__filterImpl__p0__sc_TraversableLike__F1__Z__O(this$1, p, true))
@@ -41207,19 +42851,22 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__O = (function(inputId, entry, field, fileName, fileType, fileContent, parent) {
   this.saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__V(inputId, entry, field, fileName, fileType, fileContent, parent)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$mergeEntries__O = (function() {
+  this.mergeEntries__V()
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$range__I__I__I__O = (function(min, max, step) {
   return this.range__I__I__I__sjs_js_Array(min, max, step)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$isInputEnabled__T__O = (function(id) {
   return this.isInputEnabled__T__Z(id)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.createdByUser__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Z = (function(lexicalEntry) {
+  return this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$createdLexicalEntries$f.contains__O__Z(lexicalEntry)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__O = (function(inputId, entry, field, event, parent) {
   this.saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__V(inputId, entry, field, event, parent)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.play__T__V = (function(soundAddress) {
-  var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["playing ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([soundAddress]));
-  jsx$1.log(s);
   var _1 = this.waveSurfer$2;
   var _2 = new $c_s_Some().init___O(soundAddress);
   var _1$1 = _1.toList__sci_List();
@@ -41260,6 +42907,66 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
     return (void 0)
   }
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.mergeEntries__V = (function() {
+  var array = this.scope$1.selectedEntries;
+  var array$1 = [];
+  var i = 0;
+  var len = $uI(array.length);
+  while ((i < len)) {
+    var index = i;
+    var arg1 = array[index];
+    var id = $as_T(arg1);
+    var array$2 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(this.scope$1.dictionaryTable).rows$1;
+    var len$1 = $uI(array$2.length);
+    var i$1 = 0;
+    while (true) {
+      if ((i$1 < len$1)) {
+        var index$1 = i$1;
+        var arg1$1 = array$2[index$1];
+        var x$6 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Row(arg1$1);
+        var jsx$1 = (!(x$6.entry$1.getId__T() === id))
+      } else {
+        var jsx$1 = false
+      };
+      if (jsx$1) {
+        i$1 = ((1 + i$1) | 0)
+      } else {
+        break
+      }
+    };
+    var i$2 = i$1;
+    var this$4 = ((i$2 < $uI(array$2.length)) ? new $c_s_Some().init___O(array$2[i$2]) : $m_s_None$());
+    if (this$4.isEmpty__Z()) {
+      var xo = $m_s_None$()
+    } else {
+      var arg1$2 = this$4.get__O();
+      var x$7 = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Row(arg1$2);
+      var xo = new $c_s_Some().init___O(x$7.entry$1)
+    };
+    var this$6 = xo.toList__sci_List();
+    if ((this$6 !== null)) {
+      var xs = this$6;
+      _loop: while (true) {
+        var this$7 = xs;
+        if ($s_sc_TraversableOnce$class__nonEmpty__sc_TraversableOnce__Z(this$7)) {
+          var elem = xs.head__O();
+          array$1.push(elem);
+          xs = $as_sc_LinearSeq(xs.tail__O());
+          continue _loop
+        };
+        break
+      }
+    } else {
+      var these = this$6;
+      while ((!these.isEmpty__Z())) {
+        var arg1$3 = these.head__O();
+        array$1.push(arg1$3);
+        these = $as_sci_List(these.tail__O())
+      }
+    };
+    i = ((1 + i) | 0)
+  }
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$loadPage__I__O = (function(page) {
   this.loadPage__I__V(page)
 });
@@ -41293,6 +43000,18 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$loadSearch__T__O = (function(query) {
   return this.loadSearch__T__s_concurrent_Future(query)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.$$js$exported$meth$toggleSelectedEntries__T__O = (function(id) {
+  return this.toggleSelectedEntries__T__O(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.removeEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__s_concurrent_Future = (function(lexicalEntry, entity) {
+  var jsx$2 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$backend$f;
+  $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+  var o = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dictionary$f;
+  var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2);
+  $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+  var o$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspective$f;
+  return jsx$2.removeEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2), ($m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$(), new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(lexicalEntry.clientId$2, lexicalEntry.objectId$2)), ($m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$(), new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(entity.clientId$2, entity.objectId$2)))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryScope__Lcom_greencatsoft_angularjs_core_RouteParams__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function(scope, params, modal, backend) {
   this.modal$2 = modal;
@@ -41342,6 +43061,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   var objectId$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspectiveObjectId$f;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$perspective$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective().init___I__I__I__I__T__I__I__I__I__Z__Z(clientId$1, objectId$1, (-2147483648), (-2147483648), "", (-2147483648), (-2147483648), (-2147483648), (-2147483648), false, false);
   this.enabledInputs$2 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$createdLexicalEntries$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$dataTypes$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryController$$fields$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.waveSurfer$2 = $m_s_None$();
@@ -41354,6 +43074,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   this.scope$1.offset = 0;
   this.scope$1.size = 5;
   this.scope$1.pageCount = 0;
+  this.scope$1.selectedEntries = [];
   this.load__p2__V();
   return this
 });
@@ -41396,9 +43117,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.createWaveSurfer__V = (function() {
   if (this.waveSurfer$2.isEmpty__Z()) {
-    var x$13 = this.$$undpxPerSec$2;
-    var x$15 = this.wsHeight$2;
-    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple", 1, "red", false, x$13, true, x$15);
+    var x$16 = this.$$undpxPerSec$2;
+    var x$18 = this.wsHeight$2;
+    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple", 1, "red", false, x$16, true, x$18);
     this.waveSurfer$2 = new $c_s_Some().init___O($g.WaveSurfer.create(wso))
   }
 });
@@ -41464,8 +43185,28 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.protot
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(arg$1);
   return this.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O(prep0)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.removeEntity = (function(arg$1, arg$2) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
+  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(arg$2);
+  return this.$$js$exported$meth$removeEntity__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Entity__O(prep0, prep1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.removeEntry = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
+  return this.$$js$exported$meth$removeEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.createdByUser = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
+  return this.$$js$exported$meth$createdByUser__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O(prep0)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.addNewLexicalEntry = (function() {
   return this.$$js$exported$meth$addNewLexicalEntry__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.mergeEntries = (function() {
+  return this.$$js$exported$meth$mergeEntries__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.toggleSelectedEntries = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$toggleSelectedEntries__T__O(prep0)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryController.prototype.viewSoundMarkup = (function(arg$1, arg$2) {
   var prep0 = $as_T(arg$1);
@@ -41559,12 +43300,13 @@ $e.ru.ispras.lingvodoc.frontend.app.controllers.EditDictionaryController.prototy
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
+  this.modal$2 = null;
   this.instance$2 = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f = null;
-  this.dictionaryClientId$2 = 0;
-  this.dictionaryObjectId$2 = 0;
-  this.perspectiveClientId$2 = 0;
-  this.perspectiveObjectId$2 = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryClientId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryObjectId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveClientId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveObjectId$f = 0;
   this.linkPerspectiveClientId$2 = 0;
   this.linkPerspectiveObjectId$2 = 0;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f = null;
@@ -41573,11 +43315,19 @@ function $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalCon
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveTranslation$f = null;
   this.enabledInputs$2 = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f = null;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveFields$f = null;
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkedPerspectiveFields$f = null
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkedPerspectiveFields$f = null;
+  this.waveSurfer$2 = null;
+  this.$$undpxPerSec$2 = 0;
+  this.pxPerSecStep$2 = 0;
+  this.$$undduration$2 = 0.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 0;
+  this.soundMarkup$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController;
@@ -41586,18 +43336,194 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalCon
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype;
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$isInputEnabled__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__O = (function(entry, field) {
-  return this.isInputEnabled__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Z(entry, field)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.range__I__I__I__sjs_js_Array = (function(min, max, step) {
+  var isEmpty$4 = (min > max);
+  var isEmpty$4$1 = (((min > max) && (step > 0)) || ((min < max) && (step < 0)));
+  if ((step === 0)) {
+    throw new $c_jl_IllegalArgumentException().init___T("step cannot be 0.")
+  };
+  if (isEmpty$4$1) {
+    /*<skip>*/
+  } else {
+    var hi$4 = (max >> 31);
+    var hi$5 = (min >> 31);
+    var lo$2 = ((max - min) | 0);
+    var hi$6 = ((((-2147483648) ^ lo$2) > ((-2147483648) ^ max)) ? (((-1) + ((hi$4 - hi$5) | 0)) | 0) : ((hi$4 - hi$5) | 0));
+    var hi$7 = (step >> 31);
+    var this$7 = $m_sjsr_RuntimeLong$();
+    this$7.divideImpl__I__I__I__I__I(lo$2, hi$6, step, hi$7)
+  };
+  if (isEmpty$4$1) {
+    var lastElement$4$1 = ((min - step) | 0)
+  } else {
+    switch (step) {
+      case 1: {
+        var lastElement$4$1 = max;
+        break
+      }
+      case (-1): {
+        var lastElement$4$1 = max;
+        break
+      }
+      default: {
+        var hi$10 = (max >> 31);
+        var hi$11 = (min >> 31);
+        var lo$5 = ((max - min) | 0);
+        var hi$12 = ((((-2147483648) ^ lo$5) > ((-2147483648) ^ max)) ? (((-1) + ((hi$10 - hi$11) | 0)) | 0) : ((hi$10 - hi$11) | 0));
+        var hi$13 = (step >> 31);
+        var this$10 = $m_sjsr_RuntimeLong$();
+        var lo$6 = this$10.remainderImpl__I__I__I__I__I(lo$5, hi$12, step, hi$13);
+        var lastElement$4$1 = ((lo$6 !== 0) ? ((max - lo$6) | 0) : max)
+      }
+    }
+  };
+  var result = [];
+  if ((!isEmpty$4$1)) {
+    var i = min;
+    while (true) {
+      var arg1 = i;
+      $uI(result.push(arg1));
+      if ((i === lastElement$4$1)) {
+        break
+      };
+      i = ((i + step) | 0)
+    }
+  };
+  return result
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.enableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__V = (function(entry, field) {
-  if ((!this.isInputEnabled__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Z(entry, field))) {
-    var jsx$2 = this.enabledInputs$2;
-    var jsx$1 = new $c_T2().init___O__O(entry.getId__T(), field.getId__T());
-    var this$1 = $m_sc_Seq$();
-    this.enabledInputs$2 = $as_sc_Seq(jsx$2.$$colon$plus__O__scg_CanBuildFrom__O(jsx$1, this$1.ReusableCBFInstance$2))
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__V = (function(inputId, entry, field, fileName, fileType, fileContent, parent) {
+  $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+  var entryId = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(entry.clientId$2, entry.objectId$2);
+  var jsx$2 = field.clientId$2;
+  var jsx$1 = field.objectId$2;
+  var this$2 = $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$().getLocale__s_Option();
+  var entity = new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData().init___I__I__I(jsx$2, jsx$1, $uI((this$2.isEmpty__Z() ? 2 : this$2.get__O())));
+  $m_s_package$();
+  var b = new $c_Lru_ispras_lingvodoc_frontend_app_model_FileContent().init___T__T__T(fileName, fileType, fileContent);
+  entity.content$1 = new $c_s_Some().init___O(new $c_s_util_Right().init___O(b));
+  if ((parent !== (void 0))) {
+    var parentValue = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(parent);
+    entity.selfClientId$1 = new $c_s_Some().init___O(parentValue.entity$1.clientId$2);
+    entity.selfObjectId$1 = new $c_s_Some().init___O(parentValue.entity$1.objectId$2)
+  };
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, entryId, entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveFileValue$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__sjs_js_UndefOr__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, inputId, entry, parent, entryId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.playPause__V = (function() {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.playPause()
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.saveTextValue__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__V = (function(entry, field, event) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O = (function(entry, field, values) {
+  return this.viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future(entry, field, values)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$viewSoundMarkup__T__T__O = (function(soundAddress, markupAddress) {
+  this.viewSoundMarkup__T__T__V(soundAddress, markupAddress)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.viewSoundMarkup__T__T__V = (function(soundAddress, markupAddress) {
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/soundMarkup.html";
+  options.controller = "SoundMarkupController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "lg";
+  options.resolve = {
+    "params": (function(arg$outer, soundAddress$1, markupAddress$1) {
+      return (function() {
+        return {
+          "soundAddress": soundAddress$1,
+          "markupAddress": markupAddress$1,
+          "dictionaryClientId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryClientId$f,
+          "dictionaryObjectId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryObjectId$f
+        }
+      })
+    })(this, soundAddress, markupAddress)
+  };
+  this.modal$2.open(options)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.isLexicalEntryLinked__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Z = (function(entry) {
+  var this$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f.find__F1__s_Option(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController(this));
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$isLexicalEntryLinked$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(this, entry);
+  if (this$1.isEmpty__Z()) {
+    var jsx$1 = $m_s_None$()
+  } else {
+    var v1 = this$1.get__O();
+    var jsx$1 = new $c_s_Some().init___O(f.apply__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__Z($as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(v1)))
+  };
+  return $uZ(jsx$1.get__O())
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.load__p2__V = (function() {
+  var this$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getPerspective__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController(this);
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$zoomIn__O = (function() {
+  this.zoomIn__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.zoomIn__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 + this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.disableInput__T__V = (function(id) {
+  if (this.isInputEnabled__T__Z(id)) {
+    var this$1 = this.enabledInputs$2;
+    var p = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(id$1) {
+      return (function(x$4$2) {
+        var x$4 = $as_T(x$4$2);
+        return (x$4 === id$1)
+      })
+    })(id));
+    this.enabledInputs$2 = $as_sc_Seq($s_sc_TraversableLike$class__filterImpl__p0__sc_TraversableLike__F1__Z__O(this$1, p, true))
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$play__T__O = (function(soundAddress) {
+  this.play__T__V(soundAddress)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.isInputEnabled__T__Z = (function(id) {
+  return this.enabledInputs$2.contains__O__Z(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.addNewLexicalEntry__V = (function() {
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.createLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$createWaveSurfer__O = (function() {
+  this.createWaveSurfer__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.pxPerSec$und$eq__I__V = (function(mpps) {
+  this.$$undpxPerSec$2 = mpps;
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.zoom(mpps)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$enableInput__T__O = (function(id) {
+  this.enableInput__T__V(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$zoomOut__O = (function() {
+  this.zoomOut__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.play__I__I__V = (function(start, end) {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.play(start, end)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.addLinkToLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__V = (function(entry) {
+  $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(this.scope$1.dictionaryTable).addEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__V(entry);
+  var entity = new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData().init___I__I__I(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$field$f.clientId$2, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$field$f.objectId$2, 2);
+  entity.linkClientId$1 = new $c_s_Some().init___O(entry.clientId$2);
+  entity.linkObjectId$1 = new $c_s_Some().init___O(entry.objectId$2);
+  var jsx$3 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f;
+  var jsx$2 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f;
+  var jsx$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f;
+  $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+  var o = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$lexicalEntry$f;
+  jsx$3.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(jsx$2, jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2), entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addLinkToLexicalEntry$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__V = (function(inputId, entry, field, event, parent) {
   var textValue = $as_T(event.target.value);
   $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
   var entryId = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(entry.clientId$2, entry.objectId$2);
@@ -41606,57 +43532,156 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.p
   var this$2 = $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$().getLocale__s_Option();
   var entity = new $c_Lru_ispras_lingvodoc_frontend_app_model_EntityData().init___I__I__I(jsx$2, jsx$1, $uI((this$2.isEmpty__Z() ? 2 : this$2.get__O())));
   entity.content$1 = new $c_s_Some().init___O(($m_s_package$(), new $c_s_util_Left().init___O(textValue)));
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, entryId, entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, entry, field, entryId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+  if ((parent !== (void 0))) {
+    var parentValue = $as_Lru_ispras_lingvodoc_frontend_app_controllers_common_Value(parent);
+    entity.selfClientId$1 = new $c_s_Some().init___O(parentValue.entity$1.clientId$2);
+    entity.selfObjectId$1 = new $c_s_Some().init___O(parentValue.entity$1.objectId$2)
+  };
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.createEntity__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_EntityData__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, entryId, entity).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$saveTextValue$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__sjs_js_UndefOr__Lru_ispras_lingvodoc_frontend_app_model_CompositeId(this, inputId, entry, parent, entryId), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.load__p2__V = (function() {
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$playPause__O = (function() {
+  this.playPause__V()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$disableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__O = (function(entry, field) {
-  this.disableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__V(entry, field)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.addNewLexicalEntry__V = (function() {
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.createLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$addNewLexicalEntry$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.disableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__V = (function(entry, field) {
-  if (this.isInputEnabled__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Z(entry, field)) {
-    var this$1 = this.enabledInputs$2;
-    var p$1 = new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entry$2, field$2) {
-      return (function(p$2) {
-        var p = $as_T2(p$2);
-        var x = p.$$und1$f;
-        var x$2 = entry$2.getId__T();
-        if (((x === null) ? (x$2 === null) : $objectEquals(x, x$2))) {
-          var x$3 = p.$$und2$f;
-          var x$4 = field$2.getId__T();
-          return ((x$3 === null) ? (x$4 === null) : $objectEquals(x$3, x$4))
-        } else {
-          return false
-        }
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.editLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future = (function(entry, field, values) {
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/editLinkedDictionary.html";
+  options.controller = "EditDictionaryModalController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "lg";
+  options.resolve = {
+    "params": (function(f) {
+      return (function() {
+        return f.apply__O()
       })
-    })(entry, field));
-    this.enabledInputs$2 = $as_sc_Seq($s_sc_TraversableLike$class__filterImpl__p0__sc_TraversableLike__F1__Z__O(this$1, p$1, true))
+    })(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array(this, entry, field, values))
+  };
+  var instance = this.modal$2.open(options);
+  var this$1 = $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(instance.result);
+  var f$1 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$editLinkedPerspective$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(this, entry);
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f$1, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$isLexicalEntryLinked__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O = (function(entry) {
+  return this.isLexicalEntryLinked__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Z(entry)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.linkedPerspectiveName__T = (function() {
+  var x1 = this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveTranslation$f;
+  if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var gist = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(x2.x$2);
+    var this$1 = $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$().getLocale__s_Option();
+    var localeId = $uI((this$1.isEmpty__Z() ? 2 : this$1.get__O()));
+    var array = gist.atoms$2;
+    var len = $uI(array.length);
+    var i = 0;
+    while (true) {
+      if ((i < len)) {
+        var index = i;
+        var arg1 = array[index];
+        var x$7 = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(arg1);
+        var jsx$1 = (!(x$7.localeId$2 === localeId))
+      } else {
+        var jsx$1 = false
+      };
+      if (jsx$1) {
+        i = ((1 + i) | 0)
+      } else {
+        break
+      }
+    };
+    var i$1 = i;
+    var x1$2 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+    if ($is_s_Some(x1$2)) {
+      var x2$2 = $as_s_Some(x1$2);
+      var atom = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(x2$2.x$2);
+      return atom.content$2
+    } else {
+      var x = $m_s_None$();
+      if ((x === x1$2)) {
+        return ""
+      } else {
+        throw new $c_s_MatchError().init___O(x1$2)
+      }
+    }
+  } else {
+    var x$3 = $m_s_None$();
+    if ((x$3 === x1)) {
+      return ""
+    } else {
+      throw new $c_s_MatchError().init___O(x1)
+    }
   }
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__O = (function(inputId, entry, field, fileName, fileType, fileContent, parent) {
+  this.saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__V(inputId, entry, field, fileName, fileType, fileContent, parent)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$range__I__I__I__O = (function(min, max, step) {
+  return this.range__I__I__I__sjs_js_Array(min, max, step)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$addLinkToLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O = (function(entry) {
+  this.addLinkToLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__V(entry)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$isInputEnabled__T__O = (function(id) {
+  return this.isInputEnabled__T__Z(id)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.play__T__V = (function(soundAddress) {
+  var _1 = this.waveSurfer$2;
+  var _2 = new $c_s_Some().init___O(soundAddress);
+  var _1$1 = _1.toList__sci_List();
+  var _2$1 = _2.toList__sci_List();
+  var nonLocalReturnKey5 = new $c_O().init___();
+  try {
+    var elems2 = new $c_sc_LinearSeqLike$$anon$1().init___sc_LinearSeqLike(_2$1);
+    var these = _1$1;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      if (elems2.hasNext__Z()) {
+        var arg2 = elems2.next__O();
+        var sa = $as_T(arg2);
+        arg1.load(sa)
+      } else {
+        throw new $c_sr_NonLocalReturnControl$mcV$sp().init___O__sr_BoxedUnit(nonLocalReturnKey5, (void 0))
+      };
+      these = $as_sci_List(these.tail__O())
+    }
+  } catch (e) {
+    if ($is_sr_NonLocalReturnControl(e)) {
+      var ex = $as_sr_NonLocalReturnControl(e);
+      if ((ex.key$2 === nonLocalReturnKey5)) {
+        ex.value$mcV$sp__V()
+      } else {
+        throw ex
+      }
+    } else {
+      throw e
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__O = (function(inputId, entry, field, event, parent) {
+  this.saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__V(inputId, entry, field, event, parent)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalScope__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary = (function(scope, modal, instance, backend, params) {
+  this.modal$2 = modal;
   this.instance$2 = instance;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f = backend;
   $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
   if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryClientId")))) {
     throw new $c_ju_NoSuchElementException().init___T("key not found: dictionaryClientId")
   };
-  this.dictionaryClientId$2 = $uI(params.dictionaryClientId);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryClientId$f = $uI(params.dictionaryClientId);
   if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryObjectId")))) {
     throw new $c_ju_NoSuchElementException().init___T("key not found: dictionaryObjectId")
   };
-  this.dictionaryObjectId$2 = $uI(params.dictionaryObjectId);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryObjectId$f = $uI(params.dictionaryObjectId);
   if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "perspectiveClientId")))) {
     throw new $c_ju_NoSuchElementException().init___T("key not found: perspectiveClientId")
   };
-  this.perspectiveClientId$2 = $uI(params.perspectiveClientId);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveClientId$f = $uI(params.perspectiveClientId);
   if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "perspectiveObjectId")))) {
     throw new $c_ju_NoSuchElementException().init___T("key not found: perspectiveObjectId")
   };
-  this.perspectiveObjectId$2 = $uI(params.perspectiveObjectId);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveObjectId$f = $uI(params.perspectiveObjectId);
   if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "linkPerspectiveClientId")))) {
     throw new $c_ju_NoSuchElementException().init___T("key not found: linkPerspectiveClientId")
   };
@@ -41680,41 +43705,59 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.p
     throw new $c_ju_NoSuchElementException().init___T("key not found: links")
   };
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$links$f = jsx$1;
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.dictionaryClientId$2, this.dictionaryObjectId$2);
-  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.perspectiveClientId$2, this.perspectiveObjectId$2);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryClientId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryObjectId$f);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveClientId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveObjectId$f);
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.linkPerspectiveClientId$2, this.linkPerspectiveObjectId$2);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveTranslation$f = $m_s_None$();
   this.enabledInputs$2 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.scope$1.count = 0;
   this.scope$1.offset = 0;
-  this.scope$1.size = 20;
+  this.scope$1.size = 5;
+  this.scope$1.pageCount = 1;
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$perspectiveFields$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
   this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkedPerspectiveFields$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.waveSurfer$2 = $m_s_None$();
+  this.$$undpxPerSec$2 = 50;
+  this.pxPerSecStep$2 = 30;
+  this.$$undduration$2 = 42.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 128;
+  this.soundMarkup$2 = $m_s_None$();
   this.load__p2__V();
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.isInputEnabled__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Z = (function(entry, field) {
-  return this.enabledInputs$2.exists__F1__Z(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(entry$1, field$1) {
-    return (function(input$2) {
-      var input = $as_T2(input$2);
-      var x = input.$$und1$f;
-      var x$2 = entry$1.getId__T();
-      if (((x === null) ? (x$2 === null) : $objectEquals(x, x$2))) {
-        var x$3 = input.$$und2$f;
-        var x$4 = field$1.getId__T();
-        return ((x$3 === null) ? (x$4 === null) : $objectEquals(x$3, x$4))
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$loadPage__I__O = (function(page) {
+  this.loadPage__I__V(page)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.loadPage__I__V = (function(page) {
+  var offset = $imul((((-1) + page) | 0), $uI(this.scope$1.size));
+  this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$backend$f.getLexicalEntries__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_Enumeration$Value__I__I__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dictionaryId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkPerspectiveId$f, $m_Lru_ispras_lingvodoc_frontend_app_services_LexicalEntriesType$().All$2, offset, $uI(this.scope$1.size)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, offset$1) {
+    return (function(x0$11$2) {
+      var x0$11 = $as_s_util_Try(x0$11$2);
+      if ($is_s_util_Success(x0$11)) {
+        var x2 = $as_s_util_Success(x0$11);
+        var entries = $as_sc_Seq(x2.value$2);
+        arg$outer.scope$1.offset = offset$1;
+        arg$outer.scope$1.linkedDictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$linkedPerspectiveFields$f, arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$dataTypes$f, entries)
+      } else if ($is_s_util_Failure(x0$11)) {
+        var x3 = $as_s_util_Failure(x0$11);
+        var e = x3.exception$2;
+        var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+        var s = e.getMessage__T();
+        jsx$1.error(s)
       } else {
-        return false
+        throw new $c_s_MatchError().init___O(x0$11)
       }
     })
-  })(entry, field)))
+  })(this, offset)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$close__O = (function() {
   this.close__V()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$enableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__O = (function(entry, field) {
-  this.enableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__V(entry, field)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$linkedPerspectiveName__O = (function() {
+  return this.linkedPerspectiveName__T()
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__T = (function(dataType) {
   var array = dataType.atoms$2;
@@ -41750,8 +43793,16 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.p
     }
   }
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$saveTextValue__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__O = (function(entry, field, event) {
-  this.saveTextValue__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__V(entry, field, event)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.createWaveSurfer__V = (function() {
+  if (this.waveSurfer$2.isEmpty__Z()) {
+    var x$14 = this.$$undpxPerSec$2;
+    var x$16 = this.wsHeight$2;
+    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple", 1, "red", false, x$14, true, x$16);
+    this.waveSurfer$2 = new $c_s_Some().init___O($g.WaveSurfer.create(wso))
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$editLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O = (function(entry, field, values) {
+  return this.editLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future(entry, field, values)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.close__V = (function() {
   this.instance$2.close(this.ru$ispras$lingvodoc$frontend$app$controllers$EditDictionaryModalController$$createdEntities$f)
@@ -41762,36 +43813,156 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.p
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O = (function(dataType) {
   return this.dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__T(dataType)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$play__I__I__O = (function(start, end) {
+  this.play__I__I__V(start, end)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.zoomOut__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 - this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.enableInput__T__V = (function(id) {
+  if ((!this.isInputEnabled__T__Z(id))) {
+    var jsx$1 = this.enabledInputs$2;
+    var this$1 = $m_sc_Seq$();
+    this.enabledInputs$2 = $as_sc_Seq(jsx$1.$$colon$plus__O__scg_CanBuildFrom__O(id, this$1.ReusableCBFInstance$2))
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future = (function(entry, field, values) {
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html";
+  options.controller = "ViewDictionaryModalController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "lg";
+  options.resolve = {
+    "params": (function(f) {
+      return (function() {
+        return f.apply__O()
+      })
+    })(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array(this, entry, field, values))
+  };
+  var instance = this.modal$2.open(options);
+  var this$1 = $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(instance.result);
+  var f$1 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController$$anonfun$viewLinkedPerspective$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(this, entry);
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f$1, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.$$js$exported$meth$disableInput__T__O = (function(id) {
+  this.disableInput__T__V(id)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.close = (function() {
   return this.$$js$exported$meth$close__O()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.saveTextValue = (function(arg$1, arg$2, arg$3) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.isLexicalEntryLinked = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
+  return this.$$js$exported$meth$isLexicalEntryLinked__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.linkedPerspectiveName = (function() {
+  return this.$$js$exported$meth$linkedPerspectiveName__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.viewLinkedPerspective = (function(arg$1, arg$2, arg$3) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
   var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$2);
   var prep2 = arg$3;
-  return this.$$js$exported$meth$saveTextValue__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__O(prep0, prep1, prep2)
+  return this.$$js$exported$meth$viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O(prep0, prep1, prep2)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.isInputEnabled = (function(arg$1, arg$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.editLinkedPerspective = (function(arg$1, arg$2, arg$3) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
   var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$2);
-  return this.$$js$exported$meth$isInputEnabled__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__O(prep0, prep1)
+  var prep2 = arg$3;
+  return this.$$js$exported$meth$editLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O(prep0, prep1, prep2)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.disableInput = (function(arg$1, arg$2) {
-  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
-  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$2);
-  return this.$$js$exported$meth$disableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__O(prep0, prep1)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.saveFileValue = (function(arg$1, arg$2, arg$3, arg$4, arg$5, arg$6, arg$7) {
+  var prep0 = $as_T(arg$1);
+  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$2);
+  var prep2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$3);
+  var prep3 = $as_T(arg$4);
+  var prep4 = $as_T(arg$5);
+  var prep5 = $as_T(arg$6);
+  var prep6 = arg$7;
+  return this.$$js$exported$meth$saveFileValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__T__T__T__sjs_js_UndefOr__O(prep0, prep1, prep2, prep3, prep4, prep5, prep6)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.enableInput = (function(arg$1, arg$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.saveTextValue = (function(arg$1, arg$2, arg$3, arg$4, arg$5) {
+  var prep0 = $as_T(arg$1);
+  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$2);
+  var prep2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$3);
+  var prep3 = arg$4;
+  var prep4 = arg$5;
+  return this.$$js$exported$meth$saveTextValue__T__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__Lcom_greencatsoft_angularjs_core_Event__sjs_js_UndefOr__O(prep0, prep1, prep2, prep3, prep4)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.isInputEnabled = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$isInputEnabled__T__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.disableInput = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$disableInput__T__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.enableInput = (function(arg$1) {
+  var prep0 = $as_T(arg$1);
+  return this.$$js$exported$meth$enableInput__T__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.addLinkToLexicalEntry = (function(arg$1) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
-  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$2);
-  return this.$$js$exported$meth$enableInput__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__O(prep0, prep1)
+  return this.$$js$exported$meth$addLinkToLexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__O(prep0)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.dataTypeString = (function(arg$1) {
   var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(arg$1);
   return this.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O(prep0)
 });
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.range = (function(arg$1, arg$2, arg$3) {
+  var prep0 = $uI(arg$1);
+  var prep1 = $uI(arg$2);
+  var prep2 = $uI(arg$3);
+  return this.$$js$exported$meth$range__I__I__I__O(prep0, prep1, prep2)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.loadPage = (function(arg$1) {
+  var prep0 = $uI(arg$1);
+  return this.$$js$exported$meth$loadPage__I__O(prep0)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.addNewLexicalEntry = (function() {
   return this.$$js$exported$meth$addNewLexicalEntry__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.viewSoundMarkup = (function(arg$1, arg$2) {
+  var prep0 = $as_T(arg$1);
+  var prep1 = $as_T(arg$2);
+  return this.$$js$exported$meth$viewSoundMarkup__T__T__O(prep0, prep1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.zoomOut = (function() {
+  return this.$$js$exported$meth$zoomOut__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.zoomIn = (function() {
+  return this.$$js$exported$meth$zoomIn__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.play = (function(arg$1) {
+  var jsx$1 = (arguments.length | 0);
+  var jsx$2 = 1;
+  var arg$rest = [];
+  while ((jsx$2 < jsx$1)) {
+    arg$rest.push(arguments[jsx$2]);
+    jsx$2 = ((jsx$2 + 1) | 0)
+  };
+  switch ($uI(arg$rest.length)) {
+    case 0: {
+      var prep0 = $as_T(arg$1);
+      return this.$$js$exported$meth$play__T__O(prep0);
+      break
+    }
+    case 1: {
+      var prep0 = $uI(arg$1);
+      var prep1 = $uI(arg$rest[0]);
+      return this.$$js$exported$meth$play__I__I__O(prep0, prep1);
+      break
+    }
+    default: {
+      throw "No matching overload"
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.playPause = (function() {
+  return this.$$js$exported$meth$playPause__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController.prototype.createWaveSurfer = (function() {
+  return this.$$js$exported$meth$createWaveSurfer__O()
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_controllers_EditDictionaryModalController: 0
@@ -44570,7 +46741,24 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_SoundMarkupController.prototype
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController() {
   $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
   this.modal$2 = null;
-  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f = null
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryClientId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryObjectId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveClientId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveObjectId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionary$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspective$f = null;
+  this.enabledInputs$2 = null;
+  this.createdLexicalEntries$2 = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dataTypes$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$fields$f = null;
+  this.waveSurfer$2 = null;
+  this.$$undpxPerSec$2 = 0;
+  this.pxPerSecStep$2 = 0;
+  this.$$undduration$2 = 0.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 0;
+  this.soundMarkup$2 = null
 }
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController;
@@ -44579,11 +46767,75 @@ function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryControll
   /*<skip>*/
 }
 $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.range__I__I__I__sjs_js_Array = (function(min, max, step) {
+  var isEmpty$4 = (min > max);
+  var isEmpty$4$1 = (((min > max) && (step > 0)) || ((min < max) && (step < 0)));
+  if ((step === 0)) {
+    throw new $c_jl_IllegalArgumentException().init___T("step cannot be 0.")
+  };
+  if (isEmpty$4$1) {
+    /*<skip>*/
+  } else {
+    var hi$4 = (max >> 31);
+    var hi$5 = (min >> 31);
+    var lo$2 = ((max - min) | 0);
+    var hi$6 = ((((-2147483648) ^ lo$2) > ((-2147483648) ^ max)) ? (((-1) + ((hi$4 - hi$5) | 0)) | 0) : ((hi$4 - hi$5) | 0));
+    var hi$7 = (step >> 31);
+    var this$7 = $m_sjsr_RuntimeLong$();
+    this$7.divideImpl__I__I__I__I__I(lo$2, hi$6, step, hi$7)
+  };
+  if (isEmpty$4$1) {
+    var lastElement$4$1 = ((min - step) | 0)
+  } else {
+    switch (step) {
+      case 1: {
+        var lastElement$4$1 = max;
+        break
+      }
+      case (-1): {
+        var lastElement$4$1 = max;
+        break
+      }
+      default: {
+        var hi$10 = (max >> 31);
+        var hi$11 = (min >> 31);
+        var lo$5 = ((max - min) | 0);
+        var hi$12 = ((((-2147483648) ^ lo$5) > ((-2147483648) ^ max)) ? (((-1) + ((hi$10 - hi$11) | 0)) | 0) : ((hi$10 - hi$11) | 0));
+        var hi$13 = (step >> 31);
+        var this$10 = $m_sjsr_RuntimeLong$();
+        var lo$6 = this$10.remainderImpl__I__I__I__I__I(lo$5, hi$12, step, hi$13);
+        var lastElement$4$1 = ((lo$6 !== 0) ? ((max - lo$6) | 0) : max)
+      }
+    }
+  };
+  var result = [];
+  if ((!isEmpty$4$1)) {
+    var i = min;
+    while (true) {
+      var arg1 = i;
+      $uI(result.push(arg1));
+      if ((i === lastElement$4$1)) {
+        break
+      };
+      i = ((i + step) | 0)
+    }
+  };
+  return result
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.playPause__V = (function() {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.playPause()
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O = (function(entry, field, values) {
+  return this.viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future(entry, field, values)
+});
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryScope__Lcom_greencatsoft_angularjs_core_RouteParams__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_BackendService = (function(scope, params, modal, backend) {
   this.modal$2 = modal;
   this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f = backend;
   $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
-  var jsx$1 = this.scope$1;
   var value = params.dictionaryClientId;
   if ((value === (void 0))) {
     throw new $c_ju_NoSuchElementException().init___T("undefined.get")
@@ -44592,8 +46844,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.protot
   var this$6 = new $c_sci_StringOps().init___T(x);
   var this$8 = $m_jl_Integer$();
   var $$this = this$6.repr$1;
-  jsx$1.dictionaryClientId = this$8.parseInt__T__I__I($$this, 10);
-  var jsx$2 = this.scope$1;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryClientId$f = this$8.parseInt__T__I__I($$this, 10);
   var value$1 = params.dictionaryObjectId;
   if ((value$1 === (void 0))) {
     throw new $c_ju_NoSuchElementException().init___T("undefined.get")
@@ -44602,8 +46853,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.protot
   var this$13 = new $c_sci_StringOps().init___T(x$1);
   var this$15 = $m_jl_Integer$();
   var $$this$1 = this$13.repr$1;
-  jsx$2.dictionaryObjectId = this$15.parseInt__T__I__I($$this$1, 10);
-  var jsx$3 = this.scope$1;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryObjectId$f = this$15.parseInt__T__I__I($$this$1, 10);
   var value$2 = params.perspectiveClientId;
   if ((value$2 === (void 0))) {
     throw new $c_ju_NoSuchElementException().init___T("undefined.get")
@@ -44612,8 +46862,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.protot
   var this$20 = new $c_sci_StringOps().init___T(x$2);
   var this$22 = $m_jl_Integer$();
   var $$this$2 = this$20.repr$1;
-  jsx$3.perspectiveClientId = this$22.parseInt__T__I__I($$this$2, 10);
-  var jsx$4 = this.scope$1;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveClientId$f = this$22.parseInt__T__I__I($$this$2, 10);
   var value$3 = params.perspectiveObjectId;
   if ((value$3 === (void 0))) {
     throw new $c_ju_NoSuchElementException().init___T("undefined.get")
@@ -44622,20 +46871,35 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.protot
   var this$27 = new $c_sci_StringOps().init___T(x$3);
   var this$29 = $m_jl_Integer$();
   var $$this$3 = this$27.repr$1;
-  jsx$4.perspectiveObjectId = this$29.parseInt__T__I__I($$this$3, 10);
-  this.scope$1.count = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveObjectId$f = this$29.parseInt__T__I__I($$this$3, 10);
+  var clientId = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryClientId$f;
+  var objectId = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryObjectId$f;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionary$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_Dictionary().init___I__I__I__I__T__I__I__I__I(clientId, objectId, (-2147483648), (-2147483648), "", (-2147483648), (-2147483648), (-2147483648), (-2147483648));
+  $m_Lru_ispras_lingvodoc_frontend_app_model_Perspective$();
+  var clientId$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveClientId$f;
+  var objectId$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveObjectId$f;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspective$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective().init___I__I__I__I__T__I__I__I__I__Z__Z(clientId$1, objectId$1, (-2147483648), (-2147483648), "", (-2147483648), (-2147483648), (-2147483648), (-2147483648), false, false);
+  this.enabledInputs$2 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.createdLexicalEntries$2 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dataTypes$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$fields$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.waveSurfer$2 = $m_s_None$();
+  this.$$undpxPerSec$2 = 50;
+  this.pxPerSecStep$2 = 30;
+  this.$$undduration$2 = 42.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 128;
+  this.soundMarkup$2 = $m_s_None$();
   this.scope$1.offset = 0;
-  this.scope$1.size = 20;
+  this.scope$1.size = 5;
+  this.scope$1.pageCount = 0;
   this.load__p2__V();
   return this
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$viewSoundMarkup__T__T__O = (function(soundAddress, soundMarkupAddress) {
-  this.viewSoundMarkup__T__T__V(soundAddress, soundMarkupAddress)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$viewSoundMarkup__T__T__O = (function(soundAddress, markupAddress) {
+  this.viewSoundMarkup__T__T__V(soundAddress, markupAddress)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$play__T__T__O = (function(soundAddress, soundMarkupAddress) {
-  this.play__T__T__V(soundAddress, soundMarkupAddress)
-});
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.viewSoundMarkup__T__T__V = (function(soundAddress, soundMarkupAddress) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.viewSoundMarkup__T__T__V = (function(soundAddress, markupAddress) {
   var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
   options.templateUrl = "/static/templates/modal/soundMarkup.html";
   options.controller = "SoundMarkupController";
@@ -44643,42 +46907,282 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.protot
   options.keyboard = false;
   options.size = "lg";
   options.resolve = {
-    "params": (function(arg$outer, soundAddress$1) {
+    "params": (function(arg$outer, soundAddress$1, markupAddress$1) {
       return (function() {
         return {
           "soundAddress": soundAddress$1,
-          "dictionaryClientId": $uI(arg$outer.scope$1.dictionaryClientId),
-          "dictionaryObjectId": $uI(arg$outer.scope$1.dictionaryObjectId)
+          "markupAddress": markupAddress$1,
+          "dictionaryClientId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryClientId$f,
+          "dictionaryObjectId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionaryObjectId$f
         }
       })
-    })(this, soundAddress)
+    })(this, soundAddress, markupAddress)
   };
   this.modal$2.open(options)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.load__p2__V = (function() {
-  var clientId = $uI(this.scope$1.dictionaryClientId);
-  var objectId = $uI(this.scope$1.dictionaryObjectId);
-  var dictionary = new $c_Lru_ispras_lingvodoc_frontend_app_model_Dictionary().init___I__I__I__I__T__I__I__I__I(clientId, objectId, (-2147483648), (-2147483648), "", (-2147483648), (-2147483648), (-2147483648), (-2147483648));
-  $m_Lru_ispras_lingvodoc_frontend_app_model_Perspective$();
-  var clientId$1 = $uI(this.scope$1.perspectiveClientId);
-  var objectId$1 = $uI(this.scope$1.perspectiveObjectId);
-  var perspective = new $c_Lru_ispras_lingvodoc_frontend_app_model_Perspective().init___I__I__I__I__T__I__I__I__I__Z__Z(clientId$1, objectId$1, (-2147483648), (-2147483648), "", (-2147483648), (-2147483648), (-2147483648), (-2147483648), false, false);
-  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController__Lru_ispras_lingvodoc_frontend_app_model_Dictionary__Lru_ispras_lingvodoc_frontend_app_model_Perspective(this, dictionary, perspective), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$zoomIn__O = (function() {
+  this.zoomIn__V()
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.play__T__T__V = (function(soundAddress, soundMarkupAddress) {
-  var jsx$1 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
-  var s = new $c_s_StringContext().init___sc_Seq(new $c_sjs_js_WrappedArray().init___sjs_js_Array(["playing ", " with markup ", ""])).s__sc_Seq__T(new $c_sjs_js_WrappedArray().init___sjs_js_Array([soundAddress, soundMarkupAddress]));
-  jsx$1.log(s)
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.load__p2__V = (function() {
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.zoomIn__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 + this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$play__T__O = (function(soundAddress) {
+  this.play__T__V(soundAddress)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$filterKeypress__Lcom_greencatsoft_angularjs_core_Event__O = (function(event) {
+  return this.filterKeypress__Lcom_greencatsoft_angularjs_core_Event__O(event)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$createWaveSurfer__O = (function() {
+  this.createWaveSurfer__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.pxPerSec$und$eq__I__V = (function(mpps) {
+  this.$$undpxPerSec$2 = mpps;
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.zoom(mpps)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$zoomOut__O = (function() {
+  this.zoomOut__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.play__I__I__V = (function(start, end) {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.play(start, end)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.loadSearch__T__s_concurrent_Future = (function(query) {
+  var this$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f.search__T__s_Option__Z__s_concurrent_Future(query, new $c_s_Some().init___O(new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveClientId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspectiveObjectId$f)), false);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$loadSearch$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController(this);
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$playPause__O = (function() {
+  this.playPause__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$range__I__I__I__O = (function(min, max, step) {
+  return this.range__I__I__I__sjs_js_Array(min, max, step)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.play__T__V = (function(soundAddress) {
+  var _1 = this.waveSurfer$2;
+  var _2 = new $c_s_Some().init___O(soundAddress);
+  var _1$1 = _1.toList__sci_List();
+  var _2$1 = _2.toList__sci_List();
+  var nonLocalReturnKey5 = new $c_O().init___();
+  try {
+    var elems2 = new $c_sc_LinearSeqLike$$anon$1().init___sc_LinearSeqLike(_2$1);
+    var these = _1$1;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      if (elems2.hasNext__Z()) {
+        var arg2 = elems2.next__O();
+        var sa = $as_T(arg2);
+        arg1.load(sa)
+      } else {
+        throw new $c_sr_NonLocalReturnControl$mcV$sp().init___O__sr_BoxedUnit(nonLocalReturnKey5, (void 0))
+      };
+      these = $as_sci_List(these.tail__O())
+    }
+  } catch (e) {
+    if ($is_sr_NonLocalReturnControl(e)) {
+      var ex = $as_sr_NonLocalReturnControl(e);
+      if ((ex.key$2 === nonLocalReturnKey5)) {
+        ex.value$mcV$sp__V()
+      } else {
+        throw ex
+      }
+    } else {
+      throw e
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.filterKeypress__Lcom_greencatsoft_angularjs_core_Event__O = (function(event) {
+  if (($uI(event.keyCode) === 13)) {
+    var query = $as_T(event.target.value);
+    return this.loadSearch__T__s_concurrent_Future(query)
+  } else {
+    return (void 0)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$loadPage__I__O = (function(page) {
+  this.loadPage__I__V(page)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.loadPage__I__V = (function(page) {
+  var offset = $imul((((-1) + page) | 0), $uI(this.scope$1.size));
+  var jsx$2 = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$backend$f;
+  $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+  var o = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dictionary$f;
+  var jsx$1 = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o.clientId$2, o.objectId$2);
+  $m_Lru_ispras_lingvodoc_frontend_app_model_CompositeId$();
+  var o$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$perspective$f;
+  jsx$2.getLexicalEntries__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_Enumeration$Value__I__I__s_concurrent_Future(jsx$1, new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(o$1.clientId$2, o$1.objectId$2), $m_Lru_ispras_lingvodoc_frontend_app_services_LexicalEntriesType$().All$2, offset, $uI(this.scope$1.size)).onComplete__F1__s_concurrent_ExecutionContext__V(new $c_sjsr_AnonFunction1().init___sjs_js_Function1((function(arg$outer, offset$1) {
+    return (function(x0$5$2) {
+      var x0$5 = $as_s_util_Try(x0$5$2);
+      if ($is_s_util_Success(x0$5)) {
+        var x2 = $as_s_util_Success(x0$5);
+        var entries = $as_sc_Seq(x2.value$2);
+        arg$outer.scope$1.offset = offset$1;
+        arg$outer.scope$1.dictionaryTable = $m_Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable$().build__sc_Seq__sc_Seq__sc_Seq__Lru_ispras_lingvodoc_frontend_app_controllers_common_DictionaryTable(arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$fields$f, arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryController$$dataTypes$f, entries)
+      } else if ($is_s_util_Failure(x0$5)) {
+        var x3 = $as_s_util_Failure(x0$5);
+        var e = x3.exception$2;
+        var jsx$3 = $m_Lorg_scalajs_dom_package$().console__Lorg_scalajs_dom_raw_Console();
+        var s = e.getMessage__T();
+        jsx$3.log(s)
+      } else {
+        throw new $c_s_MatchError().init___O(x0$5)
+      }
+    })
+  })(this, offset)), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$loadSearch__T__O = (function(query) {
+  return this.loadSearch__T__s_concurrent_Future(query)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__T = (function(dataType) {
+  var array = dataType.atoms$2;
+  var len = $uI(array.length);
+  var i = 0;
+  while (true) {
+    if ((i < len)) {
+      var index = i;
+      var arg1 = array[index];
+      var a = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(arg1);
+      var jsx$1 = (!(a.localeId$2 === 2))
+    } else {
+      var jsx$1 = false
+    };
+    if (jsx$1) {
+      i = ((1 + i) | 0)
+    } else {
+      break
+    }
+  };
+  var i$1 = i;
+  var x1 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+  if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var atom = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(x2.x$2);
+    return atom.content$2
+  } else {
+    var x = $m_s_None$();
+    if ((x === x1)) {
+      throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T("")
+    } else {
+      throw new $c_s_MatchError().init___O(x1)
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.createWaveSurfer__V = (function() {
+  if (this.waveSurfer$2.isEmpty__Z()) {
+    var x$12 = this.$$undpxPerSec$2;
+    var x$14 = this.wsHeight$2;
+    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple", 1, "red", false, x$12, true, x$14);
+    this.waveSurfer$2 = new $c_s_Some().init___O($g.WaveSurfer.create(wso))
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O = (function(dataType) {
+  return this.dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__T(dataType)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$$js$exported$meth$play__I__I__O = (function(start, end) {
+  this.play__I__I__V(start, end)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.zoomOut__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 - this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future = (function(entry, field, values) {
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html";
+  options.controller = "ViewDictionaryModalController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "lg";
+  options.resolve = {
+    "params": (function(f) {
+      return (function() {
+        return f.apply__O()
+      })
+    })(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array(this, entry, field, values))
+  };
+  var instance = this.modal$2.open(options);
+  var this$1 = $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(instance.result);
+  var f$1 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController$$anonfun$viewLinkedPerspective$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(this, entry);
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f$1, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.viewLinkedPerspective = (function(arg$1, arg$2, arg$3) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
+  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$2);
+  var prep2 = arg$3;
+  return this.$$js$exported$meth$viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O(prep0, prep1, prep2)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.dataTypeString = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(arg$1);
+  return this.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O(prep0)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.viewSoundMarkup = (function(arg$1, arg$2) {
   var prep0 = $as_T(arg$1);
   var prep1 = $as_T(arg$2);
   return this.$$js$exported$meth$viewSoundMarkup__T__T__O(prep0, prep1)
 });
-$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.play = (function(arg$1, arg$2) {
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.zoomOut = (function() {
+  return this.$$js$exported$meth$zoomOut__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.zoomIn = (function() {
+  return this.$$js$exported$meth$zoomIn__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.play = (function(arg$1) {
+  var jsx$1 = (arguments.length | 0);
+  var jsx$2 = 1;
+  var arg$rest = [];
+  while ((jsx$2 < jsx$1)) {
+    arg$rest.push(arguments[jsx$2]);
+    jsx$2 = ((jsx$2 + 1) | 0)
+  };
+  switch ($uI(arg$rest.length)) {
+    case 1: {
+      var prep0 = $uI(arg$1);
+      var prep1 = $uI(arg$rest[0]);
+      return this.$$js$exported$meth$play__I__I__O(prep0, prep1);
+      break
+    }
+    case 0: {
+      var prep0 = $as_T(arg$1);
+      return this.$$js$exported$meth$play__T__O(prep0);
+      break
+    }
+    default: {
+      throw "No matching overload"
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.playPause = (function() {
+  return this.$$js$exported$meth$playPause__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.createWaveSurfer = (function() {
+  return this.$$js$exported$meth$createWaveSurfer__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.range = (function(arg$1, arg$2, arg$3) {
+  var prep0 = $uI(arg$1);
+  var prep1 = $uI(arg$2);
+  var prep2 = $uI(arg$3);
+  return this.$$js$exported$meth$range__I__I__I__O(prep0, prep1, prep2)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.loadSearch = (function(arg$1) {
   var prep0 = $as_T(arg$1);
-  var prep1 = $as_T(arg$2);
-  return this.$$js$exported$meth$play__T__T__O(prep0, prep1)
+  return this.$$js$exported$meth$loadSearch__T__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.loadPage = (function(arg$1) {
+  var prep0 = $uI(arg$1);
+  return this.$$js$exported$meth$loadPage__I__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.filterKeypress = (function(arg$1) {
+  var prep0 = arg$1;
+  return this.$$js$exported$meth$filterKeypress__Lcom_greencatsoft_angularjs_core_Event__O(prep0)
 });
 var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController = new $TypeData().initClass({
   Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController: 0
@@ -44692,6 +47196,414 @@ var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController = 
   Lcom_greencatsoft_angularjs_core_ScopeOps: 1
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryController;
+/** @constructor */
+function $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController() {
+  $c_Lcom_greencatsoft_angularjs_AbstractController.call(this);
+  this.modal$2 = null;
+  this.instance$2 = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryClientId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryObjectId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveClientId$f = 0;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveObjectId$f = 0;
+  this.linkPerspectiveClientId$2 = 0;
+  this.linkPerspectiveObjectId$2 = 0;
+  this.lexicalEntry$2 = null;
+  this.field$2 = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$links$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryId$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveId$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$linkPerspectiveId$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveTranslation$f = null;
+  this.createdEntities$2 = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dataTypes$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveFields$f = null;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$linkedPerspectiveFields$f = null;
+  this.waveSurfer$2 = null;
+  this.$$undpxPerSec$2 = 0;
+  this.pxPerSecStep$2 = 0;
+  this.$$undduration$2 = 0.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 0;
+  this.soundMarkup$2 = null
+}
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype = new $h_Lcom_greencatsoft_angularjs_AbstractController();
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.constructor = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController;
+/** @constructor */
+function $h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController() {
+  /*<skip>*/
+}
+$h_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype = $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype;
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.playPause__V = (function() {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.playPause()
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O = (function(entry, field, values) {
+  return this.viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future(entry, field, values)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$viewSoundMarkup__T__T__O = (function(soundAddress, markupAddress) {
+  this.viewSoundMarkup__T__T__V(soundAddress, markupAddress)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.viewSoundMarkup__T__T__V = (function(soundAddress, markupAddress) {
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/soundMarkup.html";
+  options.controller = "SoundMarkupController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "lg";
+  options.resolve = {
+    "params": (function(arg$outer, soundAddress$1, markupAddress$1) {
+      return (function() {
+        return {
+          "soundAddress": soundAddress$1,
+          "markupAddress": markupAddress$1,
+          "dictionaryClientId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryClientId$f,
+          "dictionaryObjectId": arg$outer.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryObjectId$f
+        }
+      })
+    })(this, soundAddress, markupAddress)
+  };
+  this.modal$2.open(options)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.load__p2__V = (function() {
+  var this$1 = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f.getPerspective__Lru_ispras_lingvodoc_frontend_app_model_CompositeId__s_concurrent_Future(this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveId$f);
+  var f = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController(this);
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f, executor);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f.dataTypes__s_concurrent_Future().onComplete__F1__s_concurrent_ExecutionContext__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$load$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController(this), $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$zoomIn__O = (function() {
+  this.zoomIn__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.zoomIn__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 + this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$play__T__O = (function(soundAddress) {
+  this.play__T__V(soundAddress)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.pxPerSec$und$eq__I__V = (function(mpps) {
+  this.$$undpxPerSec$2 = mpps;
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.zoom(mpps)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$createWaveSurfer__O = (function() {
+  this.createWaveSurfer__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$zoomOut__O = (function() {
+  this.zoomOut__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.play__I__I__V = (function(start, end) {
+  var this$1 = this.waveSurfer$2;
+  if ((!this$1.isEmpty__Z())) {
+    var arg1 = this$1.get__O();
+    arg1.play(start, end)
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalScope__Lru_ispras_lingvodoc_frontend_app_services_ModalService__Lru_ispras_lingvodoc_frontend_app_services_ModalInstance__Lru_ispras_lingvodoc_frontend_app_services_BackendService__sjs_js_Dictionary = (function(scope, modal, instance, backend, params) {
+  this.modal$2 = modal;
+  this.instance$2 = instance;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$backend$f = backend;
+  $c_Lcom_greencatsoft_angularjs_AbstractController.prototype.init___Lcom_greencatsoft_angularjs_core_Scope__s_Option.call(this, scope, $m_s_None$());
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryClientId")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: dictionaryClientId")
+  };
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryClientId$f = $uI(params.dictionaryClientId);
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "dictionaryObjectId")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: dictionaryObjectId")
+  };
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryObjectId$f = $uI(params.dictionaryObjectId);
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "perspectiveClientId")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: perspectiveClientId")
+  };
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveClientId$f = $uI(params.perspectiveClientId);
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "perspectiveObjectId")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: perspectiveObjectId")
+  };
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveObjectId$f = $uI(params.perspectiveObjectId);
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "linkPerspectiveClientId")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: linkPerspectiveClientId")
+  };
+  this.linkPerspectiveClientId$2 = $uI(params.linkPerspectiveClientId);
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "linkPerspectiveObjectId")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: linkPerspectiveObjectId")
+  };
+  this.linkPerspectiveObjectId$2 = $uI(params.linkPerspectiveObjectId);
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "lexicalEntry")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: lexicalEntry")
+  };
+  this.lexicalEntry$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(params.lexicalEntry);
+  if ((!$uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "field")))) {
+    throw new $c_ju_NoSuchElementException().init___T("key not found: field")
+  };
+  this.field$2 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(params.field);
+  if ($uZ($m_sjs_js_WrappedDictionary$Cache$().safeHasOwnProperty$1.call(params, "links"))) {
+    var jsx$1 = params.links
+  } else {
+    var jsx$1;
+    throw new $c_ju_NoSuchElementException().init___T("key not found: links")
+  };
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$links$f = jsx$1;
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryClientId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dictionaryObjectId$f);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveClientId$f, this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveObjectId$f);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$linkPerspectiveId$f = new $c_Lru_ispras_lingvodoc_frontend_app_model_CompositeId().init___I__I(this.linkPerspectiveClientId$2, this.linkPerspectiveObjectId$2);
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveTranslation$f = $m_s_None$();
+  this.scope$1.count = 0;
+  this.scope$1.offset = 0;
+  this.scope$1.size = 20;
+  this.createdEntities$2 = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$dataTypes$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveFields$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$linkedPerspectiveFields$f = $as_sc_Seq($m_sc_Seq$().apply__sc_Seq__sc_GenTraversable($m_sci_Nil$()));
+  this.waveSurfer$2 = $m_s_None$();
+  this.$$undpxPerSec$2 = 50;
+  this.pxPerSecStep$2 = 30;
+  this.$$undduration$2 = 42.0;
+  this.fullWSWidth$2 = 0.0;
+  this.wsHeight$2 = 128;
+  this.soundMarkup$2 = $m_s_None$();
+  this.load__p2__V();
+  return this
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$playPause__O = (function() {
+  this.playPause__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.linkedPerspectiveName__T = (function() {
+  var x1 = this.ru$ispras$lingvodoc$frontend$app$controllers$ViewDictionaryModalController$$perspectiveTranslation$f;
+  if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var gist = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(x2.x$2);
+    var this$1 = $m_Lru_ispras_lingvodoc_frontend_app_utils_Utils$().getLocale__s_Option();
+    var localeId = $uI((this$1.isEmpty__Z() ? 2 : this$1.get__O()));
+    var array = gist.atoms$2;
+    var len = $uI(array.length);
+    var i = 0;
+    while (true) {
+      if ((i < len)) {
+        var index = i;
+        var arg1 = array[index];
+        var x$5 = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(arg1);
+        var jsx$1 = (!(x$5.localeId$2 === localeId))
+      } else {
+        var jsx$1 = false
+      };
+      if (jsx$1) {
+        i = ((1 + i) | 0)
+      } else {
+        break
+      }
+    };
+    var i$1 = i;
+    var x1$2 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+    if ($is_s_Some(x1$2)) {
+      var x2$2 = $as_s_Some(x1$2);
+      var atom = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(x2$2.x$2);
+      return atom.content$2
+    } else {
+      var x = $m_s_None$();
+      if ((x === x1$2)) {
+        return ""
+      } else {
+        throw new $c_s_MatchError().init___O(x1$2)
+      }
+    }
+  } else {
+    var x$3 = $m_s_None$();
+    if ((x$3 === x1)) {
+      return ""
+    } else {
+      throw new $c_s_MatchError().init___O(x1)
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.play__T__V = (function(soundAddress) {
+  var _1 = this.waveSurfer$2;
+  var _2 = new $c_s_Some().init___O(soundAddress);
+  var _1$1 = _1.toList__sci_List();
+  var _2$1 = _2.toList__sci_List();
+  var nonLocalReturnKey5 = new $c_O().init___();
+  try {
+    var elems2 = new $c_sc_LinearSeqLike$$anon$1().init___sc_LinearSeqLike(_2$1);
+    var these = _1$1;
+    while ((!these.isEmpty__Z())) {
+      var arg1 = these.head__O();
+      if (elems2.hasNext__Z()) {
+        var arg2 = elems2.next__O();
+        var sa = $as_T(arg2);
+        arg1.load(sa)
+      } else {
+        throw new $c_sr_NonLocalReturnControl$mcV$sp().init___O__sr_BoxedUnit(nonLocalReturnKey5, (void 0))
+      };
+      these = $as_sci_List(these.tail__O())
+    }
+  } catch (e) {
+    if ($is_sr_NonLocalReturnControl(e)) {
+      var ex = $as_sr_NonLocalReturnControl(e);
+      if ((ex.key$2 === nonLocalReturnKey5)) {
+        ex.value$mcV$sp__V()
+      } else {
+        throw ex
+      }
+    } else {
+      throw e
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$close__O = (function() {
+  this.close__V()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$linkedPerspectiveName__O = (function() {
+  return this.linkedPerspectiveName__T()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__T = (function(dataType) {
+  var array = dataType.atoms$2;
+  var len = $uI(array.length);
+  var i = 0;
+  while (true) {
+    if ((i < len)) {
+      var index = i;
+      var arg1 = array[index];
+      var a = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(arg1);
+      var jsx$1 = (!(a.localeId$2 === 2))
+    } else {
+      var jsx$1 = false
+    };
+    if (jsx$1) {
+      i = ((1 + i) | 0)
+    } else {
+      break
+    }
+  };
+  var i$1 = i;
+  var x1 = ((i$1 < $uI(array.length)) ? new $c_s_Some().init___O(array[i$1]) : $m_s_None$());
+  if ($is_s_Some(x1)) {
+    var x2 = $as_s_Some(x1);
+    var atom = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationAtom(x2.x$2);
+    return atom.content$2
+  } else {
+    var x = $m_s_None$();
+    if ((x === x1)) {
+      throw new $c_Lru_ispras_lingvodoc_frontend_app_exceptions_ControllerException().init___T("")
+    } else {
+      throw new $c_s_MatchError().init___O(x1)
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.createWaveSurfer__V = (function() {
+  if (this.waveSurfer$2.isEmpty__Z()) {
+    var x$12 = this.$$undpxPerSec$2;
+    var x$14 = this.wsHeight$2;
+    var wso = $m_Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts$().apply__T__T__T__I__T__Z__I__Z__I__Lru_ispras_lingvodoc_frontend_extras_facades_WaveSurferOpts("#waveform", "violet", "purple", 1, "red", false, x$12, true, x$14);
+    this.waveSurfer$2 = new $c_s_Some().init___O($g.WaveSurfer.create(wso))
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.close__V = (function() {
+  this.instance$2.close(this.createdEntities$2)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O = (function(dataType) {
+  return this.dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__T(dataType)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$$js$exported$meth$play__I__I__O = (function(start, end) {
+  this.play__I__I__V(start, end)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.zoomOut__V = (function() {
+  this.pxPerSec$und$eq__I__V(((this.$$undpxPerSec$2 - this.pxPerSecStep$2) | 0))
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__s_concurrent_Future = (function(entry, field, values) {
+  var options = $m_Lru_ispras_lingvodoc_frontend_app_services_ModalOptions$().apply__Lru_ispras_lingvodoc_frontend_app_services_ModalOptions();
+  options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html";
+  options.controller = "ViewDictionaryModalController";
+  options.backdrop = false;
+  options.keyboard = false;
+  options.size = "lg";
+  options.resolve = {
+    "params": (function(f) {
+      return (function() {
+        return f.apply__O()
+      })
+    })(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array(this, entry, field, values))
+  };
+  var instance = this.modal$2.open(options);
+  var this$1 = $m_Lcom_greencatsoft_angularjs_core_Promise$().promise2future__Lcom_greencatsoft_angularjs_core_Promise__s_concurrent_Future(instance.result);
+  var f$1 = new $c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController$$anonfun$viewLinkedPerspective$2().init___Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(this, entry);
+  var executor = $m_Lru_ispras_lingvodoc_frontend_app_utils_LingvodocExecutionContext$Implicits$().executionContext$1;
+  return $s_s_concurrent_Future$class__map__s_concurrent_Future__F1__s_concurrent_ExecutionContext__s_concurrent_Future(this$1, f$1, executor)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.close = (function() {
+  return this.$$js$exported$meth$close__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.linkedPerspectiveName = (function() {
+  return this.$$js$exported$meth$linkedPerspectiveName__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.viewLinkedPerspective = (function(arg$1, arg$2, arg$3) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry(arg$1);
+  var prep1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Field(arg$2);
+  var prep2 = arg$3;
+  return this.$$js$exported$meth$viewLinkedPerspective__Lru_ispras_lingvodoc_frontend_app_model_LexicalEntry__Lru_ispras_lingvodoc_frontend_app_model_Field__sjs_js_Array__O(prep0, prep1, prep2)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.dataTypeString = (function(arg$1) {
+  var prep0 = $as_Lru_ispras_lingvodoc_frontend_app_model_TranslationGist(arg$1);
+  return this.$$js$exported$meth$dataTypeString__Lru_ispras_lingvodoc_frontend_app_model_TranslationGist__O(prep0)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.viewSoundMarkup = (function(arg$1, arg$2) {
+  var prep0 = $as_T(arg$1);
+  var prep1 = $as_T(arg$2);
+  return this.$$js$exported$meth$viewSoundMarkup__T__T__O(prep0, prep1)
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.zoomOut = (function() {
+  return this.$$js$exported$meth$zoomOut__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.zoomIn = (function() {
+  return this.$$js$exported$meth$zoomIn__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.play = (function(arg$1) {
+  var jsx$1 = (arguments.length | 0);
+  var jsx$2 = 1;
+  var arg$rest = [];
+  while ((jsx$2 < jsx$1)) {
+    arg$rest.push(arguments[jsx$2]);
+    jsx$2 = ((jsx$2 + 1) | 0)
+  };
+  switch ($uI(arg$rest.length)) {
+    case 0: {
+      var prep0 = $as_T(arg$1);
+      return this.$$js$exported$meth$play__T__O(prep0);
+      break
+    }
+    case 1: {
+      var prep0 = $uI(arg$1);
+      var prep1 = $uI(arg$rest[0]);
+      return this.$$js$exported$meth$play__I__I__O(prep0, prep1);
+      break
+    }
+    default: {
+      throw "No matching overload"
+    }
+  }
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.playPause = (function() {
+  return this.$$js$exported$meth$playPause__O()
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.createWaveSurfer = (function() {
+  return this.$$js$exported$meth$createWaveSurfer__O()
+});
+var $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController = new $TypeData().initClass({
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController: 0
+}, false, "ru.ispras.lingvodoc.frontend.app.controllers.ViewDictionaryModalController", {
+  Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController: 1,
+  Lcom_greencatsoft_angularjs_AbstractController: 1,
+  O: 1,
+  Lcom_greencatsoft_angularjs_Controller: 1,
+  Lcom_greencatsoft_angularjs_Service: 1,
+  Lcom_greencatsoft_angularjs_Initializable: 1,
+  Lcom_greencatsoft_angularjs_core_ScopeOps: 1
+});
+$c_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController.prototype.$classData = $d_Lru_ispras_lingvodoc_frontend_app_controllers_ViewDictionaryModalController;
 /** @constructor */
 function $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_Cell() {
   $c_Lru_ispras_lingvodoc_frontend_app_controllers_common_GenericCell.call(this);
@@ -46475,6 +49387,7 @@ function $c_Lru_ispras_lingvodoc_frontend_app_model_Entity() {
   this.fieldObjectId$2 = 0;
   this.content$2 = null;
   this.localeId$2 = 0;
+  this.markedForDeletion$2 = false;
   this.entities$2 = null;
   this.metadata$2 = null;
   this.link$2 = null
@@ -46496,7 +49409,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$e
   return this.entities$2
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.productArity__I = (function() {
-  return 10
+  return 11
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$metadata__O = (function() {
   return this.metadata$2
@@ -46512,7 +49425,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.equals__O__Z = (func
     return true
   } else if ($is_Lru_ispras_lingvodoc_frontend_app_model_Entity(x$1)) {
     var Entity$1 = $as_Lru_ispras_lingvodoc_frontend_app_model_Entity(x$1);
-    return ((((((((((this.clientId$2 === Entity$1.clientId$2) && (this.objectId$2 === Entity$1.objectId$2)) && (this.parentClientId$2 === Entity$1.parentClientId$2)) && (this.parentObjectId$2 === Entity$1.parentObjectId$2)) && (this.level$2 === Entity$1.level$2)) && (this.published$2 === Entity$1.published$2)) && (this.fieldClientId$2 === Entity$1.fieldClientId$2)) && (this.fieldObjectId$2 === Entity$1.fieldObjectId$2)) && (this.content$2 === Entity$1.content$2)) && (this.localeId$2 === Entity$1.localeId$2))
+    return (((((((((((this.clientId$2 === Entity$1.clientId$2) && (this.objectId$2 === Entity$1.objectId$2)) && (this.parentClientId$2 === Entity$1.parentClientId$2)) && (this.parentObjectId$2 === Entity$1.parentObjectId$2)) && (this.level$2 === Entity$1.level$2)) && (this.published$2 === Entity$1.published$2)) && (this.fieldClientId$2 === Entity$1.fieldClientId$2)) && (this.fieldObjectId$2 === Entity$1.fieldObjectId$2)) && (this.content$2 === Entity$1.content$2)) && (this.localeId$2 === Entity$1.localeId$2)) && (this.markedForDeletion$2 === Entity$1.markedForDeletion$2))
   } else {
     return false
   }
@@ -46565,6 +49478,10 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.productElement__I__O
       return this.localeId$2;
       break
     }
+    case 10: {
+      return this.markedForDeletion$2;
+      break
+    }
     default: {
       throw new $c_jl_IndexOutOfBoundsException().init___T(("" + x$1))
     }
@@ -46585,6 +49502,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$p
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$link__O = (function() {
   return this.link$2
 });
+$c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$markedForDeletion__O = (function() {
+  return this.markedForDeletion$2
+});
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.objectId__I = (function() {
   return this.objectId$2
 });
@@ -46600,6 +49520,9 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$l
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$localeId__I__O = (function(x$1) {
   this.localeId$2 = x$1
 });
+$c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$markedForDeletion__Z__O = (function(x$1) {
+  this.markedForDeletion$2 = x$1
+});
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.hashCode__I = (function() {
   var acc = (-889275714);
   acc = $m_sr_Statics$().mix__I__I__I(acc, this.clientId$2);
@@ -46612,7 +49535,8 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.hashCode__I = (funct
   acc = $m_sr_Statics$().mix__I__I__I(acc, this.fieldObjectId$2);
   acc = $m_sr_Statics$().mix__I__I__I(acc, $m_sr_Statics$().anyHash__O__I(this.content$2));
   acc = $m_sr_Statics$().mix__I__I__I(acc, this.localeId$2);
-  return $m_sr_Statics$().finalizeHash__I__I__I(acc, 10)
+  acc = $m_sr_Statics$().mix__I__I__I(acc, (this.markedForDeletion$2 ? 1231 : 1237));
+  return $m_sr_Statics$().finalizeHash__I__I__I(acc, 11)
 });
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$fieldObjectId__O = (function() {
   return this.fieldObjectId$2
@@ -46629,7 +49553,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.clientId__I = (funct
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.$$js$exported$prop$clientId__O = (function() {
   return this.clientId$2
 });
-$c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.init___I__I__I__I__T__Z__I__I__T__I = (function(clientId, objectId, parentClientId, parentObjectId, level, published, fieldClientId, fieldObjectId, content, localeId) {
+$c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.init___I__I__I__I__T__Z__I__I__T__I__Z = (function(clientId, objectId, parentClientId, parentObjectId, level, published, fieldClientId, fieldObjectId, content, localeId, markedForDeletion) {
   this.clientId$2 = clientId;
   this.objectId$2 = objectId;
   this.parentClientId$2 = parentClientId;
@@ -46640,6 +49564,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype.init___I__I__I__I__T
   this.fieldObjectId$2 = fieldObjectId;
   this.content$2 = content;
   this.localeId$2 = localeId;
+  this.markedForDeletion$2 = markedForDeletion;
   $c_Lru_ispras_lingvodoc_frontend_app_model_Object.prototype.init___I__I.call(this, clientId, objectId);
   this.entities$2 = [];
   this.metadata$2 = [];
@@ -46691,6 +49616,16 @@ Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototyp
   }),
   "get": (function() {
     return this.$$js$exported$prop$entities__O()
+  }),
+  "enumerable": true
+});
+Object.defineProperty($c_Lru_ispras_lingvodoc_frontend_app_model_Entity.prototype, "markedForDeletion", {
+  "set": (function(arg$1) {
+    var prep0 = $uZ(arg$1);
+    this.$$js$exported$prop$markedForDeletion__Z__O(prep0)
+  }),
+  "get": (function() {
+    return this.$$js$exported$prop$markedForDeletion__O()
   }),
   "enumerable": true
 });
@@ -46815,7 +49750,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1.prototype.init___ =
 $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1.prototype.applyOrElse__Lupickle_Js$Value__F1__O = (function(x1, $default) {
   if ($is_Lupickle_Js$Obj(x1)) {
     var x2 = ((x1 === null) ? null : $as_Lupickle_Js$Obj(x1).value$1);
-    return new $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1(this).apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity(x2)
+    return new $c_Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1$$anon$1().init___Lru_ispras_lingvodoc_frontend_app_model_Entity$$anonfun$1__sc_Seq(this, x2).apply__sc_Seq__Lru_ispras_lingvodoc_frontend_app_model_Entity(x2)
   } else {
     return $default.apply__O__O(x1)
   }
@@ -55404,6 +58339,15 @@ $c_sci_Stream$.prototype.init___ = (function() {
   $c_scg_GenTraversableFactory.prototype.init___.call(this);
   return this
 });
+$c_sci_Stream$.prototype.filteredTail__sci_Stream__F1__sci_Stream$Cons = (function(stream, p) {
+  var hd = stream.head__O();
+  var tl = new $c_sjsr_AnonFunction0().init___sjs_js_Function0((function($this, stream$1, p$1) {
+    return (function() {
+      return $as_sci_Stream(stream$1.tail__O()).filter__F1__sci_Stream(p$1)
+    })
+  })(this, stream, p));
+  return new $c_sci_Stream$Cons().init___O__F0(hd, tl)
+});
 $c_sci_Stream$.prototype.empty__sc_GenTraversable = (function() {
   return $m_sci_Stream$Empty$()
 });
@@ -56126,6 +59070,9 @@ $c_sc_AbstractTraversable.prototype.toVector__sci_Vector = (function() {
   $m_sci_Vector$();
   var cbf = $m_sc_IndexedSeq$().ReusableCBF$6;
   return $as_sci_Vector($s_sc_TraversableLike$class__to__sc_TraversableLike__scg_CanBuildFrom__O(this, cbf))
+});
+$c_sc_AbstractTraversable.prototype.filter__F1__O = (function(p) {
+  return $s_sc_TraversableLike$class__filterImpl__p0__sc_TraversableLike__F1__Z__O(this, p, false)
 });
 $c_sc_AbstractTraversable.prototype.toBuffer__scm_Buffer = (function() {
   var this$1 = $m_scm_ArrayBuffer$();
@@ -60392,6 +63339,21 @@ $c_sci_Stream.prototype.foldLeft__O__F2__O = (function(z, op) {
       continue _foldLeft
     }
   }
+});
+$c_sci_Stream.prototype.filter__F1__sci_Stream = (function(p) {
+  var rest = this;
+  while (((!rest.isEmpty__Z()) && (!$uZ(p.apply__O__O(rest.head__O()))))) {
+    rest = $as_sci_Stream(rest.tail__O())
+  };
+  var this$1 = rest;
+  if ($s_sc_TraversableOnce$class__nonEmpty__sc_TraversableOnce__Z(this$1)) {
+    return $m_sci_Stream$().filteredTail__sci_Stream__F1__sci_Stream$Cons(rest, p)
+  } else {
+    return $m_sci_Stream$Empty$()
+  }
+});
+$c_sci_Stream.prototype.filter__F1__O = (function(p) {
+  return this.filter__F1__sci_Stream(p)
 });
 $c_sci_Stream.prototype.reverse__O = (function() {
   return this.reverse__sci_Stream()
