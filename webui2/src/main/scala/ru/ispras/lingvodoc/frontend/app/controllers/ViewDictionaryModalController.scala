@@ -21,22 +21,20 @@ import scala.util.{Failure, Success}
 
 
 @js.native
-trait EditDictionaryModalScope extends Scope {
+trait ViewDictionaryModalScope extends Scope {
   var dictionaryTable: DictionaryTable = js.native
-  var linkedDictionaryTable: DictionaryTable = js.native
   var count: Int = js.native
   var offset: Int = js.native
   var size: Int = js.native
-  var pageCount: Int = js.native
 }
 
-@injectable("EditDictionaryModalController")
-class EditDictionaryModalController(scope: EditDictionaryModalScope,
+@injectable("ViewDictionaryModalController")
+class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
                                     modal: ModalService,
                                     instance: ModalInstance[Seq[Entity]],
                                     backend: BackendService,
                                     params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditDictionaryModalScope](scope) {
+  extends AbstractController[ViewDictionaryModalScope](scope) {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
@@ -54,12 +52,9 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
   private[this] var perspectiveTranslation: Option[TranslationGist] = None
 
-  private[this] var enabledInputs: Seq[String] = Seq[String]()
-
   scope.count = 0
   scope.offset = 0
-  scope.size = 5
-  scope.pageCount = 1
+  scope.size = 20
 
   private[this] var createdEntities = Seq[Entity]()
 
@@ -143,51 +138,6 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     val instance = modal.open[Unit](options)
   }
 
-
-  @JSExport
-  def addNewLexicalEntry() = {
-
-    backend.createLexicalEntry(dictionaryId, linkPerspectiveId) onComplete {
-      case Success(entryId) =>
-        backend.getLexicalEntry(dictionaryId, linkPerspectiveId, entryId) onComplete {
-          case Success(entry) =>
-            scope.dictionaryTable.addEntry(entry)
-            // create corresponding entity in main perspective
-            val entity = EntityData(field.clientId, field.objectId, 2)
-            entity.linkClientId = Some(entry.clientId)
-            entity.linkObjectId = Some(entry.objectId)
-            backend.createEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), entity) onComplete {
-              case Success(entityId) =>
-                backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
-                  case Success(newEntity) =>
-                    createdEntities = createdEntities :+ newEntity
-                  case Failure(ex) => throw ControllerException("Attempt to get link entity failed", ex)
-                }
-              case Failure(ex) => throw ControllerException("Attempt to create link entity failed", ex)
-            }
-
-          case Failure(e) => throw ControllerException("Attempt to get linked lexical entry failed", e)
-        }
-      case Failure(e) => throw ControllerException("Attempt to create linked lexical entry failed", e)
-    }
-  }
-
-  @JSExport
-  def loadPage(page: Int) = {
-    val offset = (page - 1) * scope.size
-    backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) onComplete {
-      case Success(entries) =>
-        scope.offset = offset
-        scope.linkedDictionaryTable = DictionaryTable.build(perspectiveFields, dataTypes, entries)
-      case Failure(e) => console.log(e.getMessage)
-    }
-  }
-
-  @JSExport
-  def range(min: Int, max: Int, step: Int) = {
-    (min to max by step).toSeq.toJSArray
-  }
-
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {
     dataType.atoms.find(a => a.localeId == 2) match {
@@ -197,118 +147,13 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
     }
   }
 
-  /**
-    * Returns true if perspectives are mutually linked.
-    * @return
-    */
-  def isPerspectivesBidirectional: Boolean = {
-    // find Link datatype
-    val linkDataType = dataTypes.find(dataType => dataType.gistType == "Service" && dataType.atoms.exists(atom => atom.localeId == 2 && atom.content == "Link")).ensuring(_.nonEmpty).get
-    // checks
-    (for (x <- perspectiveFields; y <- linkedPerspectiveFields) yield (x, y)).filter { f =>
-      (f._1.dataTypeTranslationGistClientId == linkDataType.clientId && f._1.dataTypeTranslationGistObjectId == linkDataType.objectId) &&
-        (f._2.dataTypeTranslationGistClientId == linkDataType.clientId && f._2.dataTypeTranslationGistObjectId == linkDataType.objectId)
-    }.exists { p => p._1.link.get.clientId == linkPerspectiveId.clientId && p._1.link.get.objectId == linkPerspectiveId.objectId &&
-      p._2.link.get.clientId == perspectiveId.clientId && p._2.link.get.objectId == perspectiveId.objectId }
-  }
-
 
   @JSExport
-  def enableInput(id: String) = {
-    if (!isInputEnabled(id)) {
-      enabledInputs = enabledInputs :+ id
-    }
-  }
-
-  @JSExport
-  def disableInput(id: String) = {
-    if (isInputEnabled(id)) {
-      enabledInputs = enabledInputs.filterNot(_.equals(id))
-    }
-  }
-
-  @JSExport
-  def isInputEnabled(id: String): Boolean = {
-    enabledInputs.contains(id)
-  }
-
-  @JSExport
-  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
-
-    val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
-    val textValue = e.target.asInstanceOf[HTMLInputElement].value
-
-    val entryId = CompositeId.fromObject(entry)
-
-    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(Left(textValue))
-
-    // self
-    parent map {
-      parentValue =>
-        entity.selfClientId = Some(parentValue.getEntity.clientId)
-        entity.selfObjectId = Some(parentValue.getEntity.objectId)
-    }
-
-    backend.createEntity(dictionaryId, linkPerspectiveId, entryId, entity) onComplete {
-      case Success(entityId) =>
-        backend.getEntity(dictionaryId, linkPerspectiveId, entryId, entityId) onComplete {
-          case Success(newEntity) =>
-
-            parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
-              case None => scope.dictionaryTable.addEntity(entry, newEntity)
-            }
-
-            disableInput(inputId)
-
-          case Failure(ex) => console.log(ex.getMessage)
-        }
-      case Failure(ex) => console.log(ex.getMessage)
-    }
-  }
-
-  @JSExport
-  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
-
-
-    val entryId = CompositeId.fromObject(entry)
-
-    val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
-    entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
-
-    // self
-    parent map {
-      parentValue =>
-        entity.selfClientId = Some(parentValue.getEntity.clientId)
-        entity.selfObjectId = Some(parentValue.getEntity.objectId)
-    }
-
-    backend.createEntity(dictionaryId, linkPerspectiveId, entryId, entity) onComplete {
-      case Success(entityId) =>
-        backend.getEntity(dictionaryId, linkPerspectiveId, entryId, entityId) onComplete {
-          case Success(newEntity) =>
-
-            parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
-              case None => scope.dictionaryTable.addEntity(entry, newEntity)
-            }
-
-            disableInput(inputId)
-
-          case Failure(ex) => console.log(ex.getMessage)
-        }
-      case Failure(ex) => console.log(ex.getMessage)
-    }
-
-  }
-
-  @JSExport
-  def editLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
 
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/editLinkedDictionary.html"
-    options.controller = "EditDictionaryModalController"
+    options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
+    options.controller = "ViewDictionaryModalController"
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
@@ -354,7 +199,6 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   }
 
 
-
   private[this] def load() = {
 
     backend.getPerspective(perspectiveId) map {
@@ -365,27 +209,13 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
         }
     }
 
-
     backend.dataTypes() onComplete {
       case Success(allDataTypes) =>
         dataTypes = allDataTypes
-
         // get fields of main perspective
         backend.getFields(dictionaryId, perspectiveId) onComplete {
           case Success(fields) =>
             perspectiveFields = fields
-
-            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
-              case Success(count) =>
-                scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, scope.offset, scope.size) onComplete {
-                  case Success(entries) =>
-                    scope.linkedDictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-                  case Failure(e) => console.log(e.getMessage)
-                }
-              case Failure(e) => console.log(e.getMessage)
-            }
-
             // get fields of this perspective
             backend.getFields(dictionaryId, linkPerspectiveId) onComplete {
               case Success(linkedFields) =>

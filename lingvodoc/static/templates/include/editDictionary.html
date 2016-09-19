@@ -313,6 +313,9 @@
                                 <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
 
 
+                                <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
+                                        ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+
                                 <!-- display values from sub columns -->
                                 <ul class="tree">
                                     <li ng-repeat="linkedValue in value.values">

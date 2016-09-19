@@ -30,10 +30,7 @@ trait EditDictionaryScope extends Scope {
   var size: Int = js.native
 
   var pageCount: Int = js.native
-
   var dictionaryTable: DictionaryTable = js.native
-
-  //var enabledInputs: js.Array[Any] = js.native
   var selectedEntries: js.Array[String] = js.native
 
 }
