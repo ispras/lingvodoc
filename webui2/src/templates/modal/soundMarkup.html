@@ -15,10 +15,15 @@
         <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
     </button>
 
+    <label>
+        <input type="checkbox" ng-model="spectrogramEnabled" ng-change="controller.toggleSpectrogramEnable()"/>
+        Draw a spectrogram. Warning: it may take a long time.
+    </label>
+
     <div>
         <!-- tier names -->
         <svg ng-attr-width="{{tiersNameWidth}}" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
-             style="float:left" ng-style="{'margin-top': wsHeight}">
+             style="float:left" ng-style="{'margin-top': fullWSHeight}">
             <svg x="0" ng-attr-y="{{tierData.index * tierWidth}}" ng-repeat="(tierID, tierData) in elanJS.tiers">
                 <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tiersNameWidth}}" y2="0">
                 </line>
@@ -33,7 +38,7 @@
 
         <div style="overflow-x: scroll" ng-style="{'margin-left': tiersNameWidth}">
             <div id="waveform" ng-style="{'width': fullWSWidth}">{{ controller.createWaveSurfer() }}</div>
-            <div id="wave-spectrogram" ></div>
+            <div id="wavespectrogram" ></div>
 
             <!-- section with tiers -->
             <svg id="soundSVG"
