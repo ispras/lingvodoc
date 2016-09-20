@@ -28,6 +28,7 @@ trait EditDictionaryModalScope extends Scope {
   var offset: Int = js.native
   var size: Int = js.native
   var pageCount: Int = js.native
+  var edit: Boolean = js.native
 }
 
 @injectable("EditDictionaryModalController")
@@ -60,6 +61,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   scope.offset = 0
   scope.size = 5
   scope.pageCount = 1
+  scope.edit = true
 
   private[this] var createdEntities = Seq[Entity]()
 
@@ -76,7 +78,6 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   var fullWSWidth = 0.0 // again, will be known after audio load
   var wsHeight = 128
   var soundMarkup: Option[String] = None
-
 
 
   load()

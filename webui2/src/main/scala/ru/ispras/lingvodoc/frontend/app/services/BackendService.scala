@@ -130,6 +130,28 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def getDictionaryRoles(dictionaryId: CompositeId): Future[DictionaryRoles] = {
+    val p = Promise[DictionaryRoles]()
+    val url = getMethodUrl("dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/roles")
+
+    $http.get[js.Dynamic](url) onComplete {
+      case Success(response) =>
+        try {
+          val roles = read[DictionaryRoles](js.JSON.stringify(response))
+          p.success(roles)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed dictionary roles json.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed dictionary roles data. Missing some required fields.", e))
+          case e: Throwable => p.failure(BackendException("Failed to get dictionary roles. Unexpected exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException("Failed to get dictionary roles", e))
+    }
+    p.future
+  }
+
+
+
   /**
     * Get language by id
     *
@@ -399,6 +421,27 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def getPerspectiveRoles(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[PerspectiveRoles] = {
+    val p = Promise[PerspectiveRoles]()
+    val url = getMethodUrl("dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/roles")
+
+    $http.get[js.Dynamic](url) onComplete {
+      case Success(response) =>
+        try {
+          val roles = read[PerspectiveRoles](js.JSON.stringify(response))
+          p.success(roles)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspective roles json.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspective roles data. Missing some required fields.", e))
+          case e: Throwable => p.failure(BackendException("Failed to get perspective roles. Unexpected exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException("Failed to get perspective roles", e))
+    }
+    p.future
+  }
+
+
   /**
     * Update perspective
     *
@@ -442,15 +485,52 @@ class BackendService($http: HttpService, $q: Q) extends Service {
           val user = read[User](JSON.stringify(js))
           p.success(user)
         } catch {
-          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed user json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed user data. Missing some " +
-            "required fields: " + e.getMessage))
-          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed user json:", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed user data. Missing some " +
+            "required fields", e))
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
         }
-      case Failure(e) => p.failure(new BackendException("Failed to get current user: " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to get current user", e))
     }
     p.future
   }
+
+  def getUser(userId: Int): Future[User] = {
+    val p = Promise[User]()
+    $http.get[js.Object](getMethodUrl("user/" + encodeURIComponent(userId.toString))) onComplete {
+      case Success(js) =>
+        try {
+          val user = read[User](JSON.stringify(js))
+          p.success(user)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed user json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed user data. Missing some " +
+            "required fields", e))
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get  user", e))
+    }
+    p.future
+  }
+
+  def getUsers: Future[Seq[UserListEntry]] = {
+    val p = Promise[Seq[UserListEntry]]()
+    $http.get[js.Dynamic](getMethodUrl("users")) onComplete {
+      case Success(js) =>
+        try {
+          val user = read[Seq[UserListEntry]](JSON.stringify(js.users))
+          p.success(user)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed users json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed users data. Missing some " +
+            "required fields", e))
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of users", e))
+    }
+    p.future
+  }
+
 
   def getField(id: CompositeId): Future[Field] = {
     val p = Promise[Field]()

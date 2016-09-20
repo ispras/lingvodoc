@@ -33,7 +33,7 @@ object LingvodocApplication {
       .config[RoutingConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
-      //.factory[ExceptionHandlerFactory]
+      .factory[ExceptionHandlerFactory]
       .controller[MainController]
       .controller[NavigationController]
       .controller[LoginController]
@@ -48,6 +48,7 @@ object LingvodocApplication {
       .controller[ViewDictionaryModalController]
       .controller[PerspectivePropertiesController]
       .controller[DictionaryPropertiesController]
+      .controller[CreatePerspectiveModalController]
       .controller[EditDictionaryController]
       .controller[PerspectiveMapController]
       .controller[ViewDictionaryController]
@@ -55,8 +56,9 @@ object LingvodocApplication {
       .controller[EditTextFieldController]
       .controller[ExceptionHandlerController]
       .controller[CreateFieldController]
+      .controller[EditDictionaryRolesModalController]
+      .controller[EditPerspectiveRolesModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
-    //      .directive[myDragDirective]
   }
 }
