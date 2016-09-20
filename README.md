@@ -57,11 +57,11 @@ pip install -r requirements.txt
 # cp production.ini development.ini 
 # set sqlalchemy.url to postgresql+psycopg2://postgres@/lingvodoc in development.ini
 # TODO [app:accounts] add section to development.int?
-# cp alembic_base.ini  alembic.ini # set sqlalchemy.url twice to postgresql+psycopg2://postgres@/lingvodoc
-# python setup.py develop
-# alembic upgrade head
-# initialize_lingvodoc_db development.ini
-# pserve development.ini
+cp alembic_base.ini  alembic.ini # set sqlalchemy.url twice to postgresql+psycopg2://postgres@/lingvodoc
+python setup.py develop
+alembic upgrade head
+initialize_lingvodoc_db development.ini
+pserve development.ini
 
 ```
 
