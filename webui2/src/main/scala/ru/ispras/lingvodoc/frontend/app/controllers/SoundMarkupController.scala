@@ -8,7 +8,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalInstance, M
 import com.greencatsoft.angularjs.core.{Timeout, Scope}
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
-import ru.ispras.lingvodoc.frontend.extras.facades.{MenuOption, BootstrapContextMenu, WaveSurfer, WaveSurferOpts}
+import ru.ispras.lingvodoc.frontend.extras.facades._
 import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
@@ -23,15 +23,19 @@ import scala.scalajs.js.annotation.JSExport
 
 @js.native
 trait SoundMarkupScope extends Scope {
-  var ruler: Double = js.native // coordinate of wavesurfer ruler
   var elan: ELANDocumentJquery = js.native // elan document itself
   var elanJS: js.Dynamic = js.native
-  var ws: WaveSurfer = js.native // for debugging, remove later
 
+  var ws: WaveSurfer = js.native // for debugging, remove later
+  var spectrogramEnabled: Boolean = js.native
+  var timelineEnabled: Boolean = js.native
+
+  var ruler: Double = js.native // coordinate of wavesurfer ruler
   var tierWidth: Int = js.native // displayed tier width in pixels
   var tiersNameWidth: Int = js.native // column with tier names width in pixels
   var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas
-  var wsHeight: Int = js.native // height of wavesurfer
+  var fullWSHeight: Int = js.native // height of wavesurfer, consists of heights of wavesurfer and its plugins
+
   var tierMenuOptions: js.Array[js.Any] = js.native
   var annotMenuOptions: js.Array[js.Any] = js.native
 }
@@ -52,14 +56,18 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var waveSurfer: Option[WaveSurfer] = None // WS object
   private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
   val pxPerSecStep = 30 // zooming step
-  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
+  // fake value to avoid division by zero; on ws load, it will be set correctly
   private var _duration: Double = 42.0
   scope.fullWSWidth = 0.0 // again, will be known after audio load
-  scope.wsHeight = 128
 
-  var soundMarkup: Option[String] = None
+  var wsHeight = 128
+  private var _wsSpectrogramHeight = 0
+  private var _wsTimelineHeight = 0
+  updateFullWSHeight()
+
   val soundAddress = params.get("soundAddress").map(_.toString)
   val markupAddress = params.get("markupAddress").map(_.toString)
+
 
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
@@ -120,6 +128,25 @@ class SoundMarkupController(scope: SoundMarkupScope,
     scope.fullWSWidth = pxPerSec * duration
   }
 
+  def wsSpectrogramHeight = _wsSpectrogramHeight
+
+  def wsSpectrogramHeight_=(newHeight: Int) = {
+    _wsSpectrogramHeight = newHeight
+    updateFullWSHeight()
+  }
+
+  def wsTimelineHeight = _wsTimelineHeight
+
+  def wsTimelineHeight_=(newHeight: Int) = {
+    _wsTimelineHeight = newHeight
+    updateFullWSHeight()
+  }
+
+  // recompute ws height
+  def updateFullWSHeight() = {
+    scope.fullWSHeight = wsHeight + wsSpectrogramHeight + wsTimelineHeight
+  }
+
   def setMenuOptions() = {
     val tierMenuOptions = new BootstrapContextMenu().addOpt(
       MenuOption("New Annotation Here",  newAnnotationHere _, Some({isNewAnnotationAllowedHere _}: js.Function1[js.Dynamic, Boolean]))
@@ -128,6 +155,42 @@ class SoundMarkupController(scope: SoundMarkupScope,
     scope.annotMenuOptions = tierMenuOptions.addOpt(
       MenuOption("Edit Annotation Value", editAnnotationValue _)
     ).toJS
+  }
+
+  def drawSpectrogram() = {
+    val spectrogram = js.Object.create(WaveSurferSpectrogramPlugin)
+    spectrogram.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
+      container = "#" + SoundMarkupController.spectrogramDivName))
+    wsSpectrogramHeight = js.Dynamic.global.document.getElementById(SoundMarkupController.spectrogramDivName).
+      scrollHeight.toString.toInt
+  }
+
+  def hideSpectrogram() = {
+    js.Dynamic.global.document.getElementById(SoundMarkupController.spectrogramDivName).innerHTML = ""
+    wsSpectrogramHeight = 0
+  }
+
+  @JSExport
+  def toggleSpectrogramEnable() = {
+    if (scope.spectrogramEnabled) drawSpectrogram() else hideSpectrogram()
+  }
+
+  def drawTimeline() = {
+    val timeline = js.Object.create(WaveSurferTimelinePlugin)
+    timeline.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
+      container = "#" + SoundMarkupController.timelineDivName))
+    wsTimelineHeight = js.Dynamic.global.document.getElementById(SoundMarkupController.timelineDivName).
+      scrollHeight.toString.toInt
+  }
+
+  def hideTimeline() = {
+    js.Dynamic.global.document.getElementById(SoundMarkupController.timelineDivName).innerHTML = ""
+    wsTimelineHeight = 0
+  }
+
+  @JSExport
+  def toggleTimelineEnable() = {
+    if (scope.timelineEnabled) drawTimeline() else hideTimeline()
   }
 
   /**
@@ -154,10 +217,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def createWaveSurfer(): Unit = {
     if (waveSurfer.isEmpty) {
       // params should be synchronized with sm-ruler css
-      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
+      val wso = WaveSurferOpts(SoundMarkupController.wsDivName, waveColor = "violet", progressColor = "purple",
         cursorWidth = 1, cursorColor = "red",
         fillParent = false, minPxPerSec = pxPerSec, scrollParent = false,
-        height = scope.wsHeight)
+        height = scope.fullWSHeight)
       waveSurfer = Some(WaveSurfer.create(wso))
       (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
         ws.load(sa)
@@ -176,6 +239,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     isWSReady = true
     duration = getDuration
     updateFullWSWidth()
+
     scope.$apply({})
   }
 
@@ -253,8 +317,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
   @JSExport
   def playPause() = waveSurfer.foreach(_.playPause())
 
+  def play(start: Double, end: Double) = { console.log("playing"); waveSurfer.foreach(_.play(start, end)) }
+
   @JSExport
-  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
+  def playAnnotation(annotID: String) = {
+    val annot = scope.elan.getAnnotationByIDChecked(annotID)
+    play(annot.startSec, annot.endSec)
+  }
 
   @JSExport
   def zoomIn(): Unit = { pxPerSec += pxPerSecStep; }
@@ -391,4 +460,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
       case newVal: String => console.log(s"new value for annotation ${annot.getID} is $newVal")
     }
   }
+}
+
+object SoundMarkupController {
+  val wsDivName = "#waveform"
+  val spectrogramDivName = "wavespectrogram"
+  val timelineDivName = "wavetimeline"
 }

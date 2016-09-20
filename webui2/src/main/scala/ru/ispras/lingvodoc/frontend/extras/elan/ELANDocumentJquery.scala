@@ -51,7 +51,7 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
     toJS
   }
 
-  def getTierByID(id: String) = try {
+  def getTierByIDChecked(id: String) = try {
     tiers.filter(_.getID == id).head
   } catch {
     case e: java.util.NoSuchElementException => throw ELANPArserException(s"Tier with id $id not found")
@@ -61,11 +61,19 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
     map(_.asInstanceOf[AlignableTier[AlignableAnnotation]])
   def getRefTiers = tiers.filter(_.isInstanceOf[RefTier]).map(_.asInstanceOf[RefTier])
 
+  // this method searches among all annotations. If you know (and you should) exact path to your annotations, it is
+  // inefficient to use it. When view data will contain full path to annotations, method should be removed.
+  def getAnnotationByIDChecked(id: String) = try {
+    tiers.flatMap(_.getAnnotationByID(id)).head
+  } catch {
+    case e: java.util.NoSuchElementException => throw ELANPArserException(s"Tier with id $id not found")
+  }
+
   // fails if time slot has no value or doesn't exists
   def getTimeSlotValue(id: String) = timeOrder.getTimeSlotValue(id)
 
   // get Linguistic Type by id
-  def getLinguisticType(ltRef: String) = {
+  def getLinguisticTypeChecked(ltRef: String) = {
     val errorMsg = s"Linguistic type $ltRef not found; loaded linguistic types are " +
       linguisticTypes.values.map(_.linguisticTypeID.value).mkString(", ")
     try {
