@@ -1,6 +1,6 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
+import com.greencatsoft.angularjs.core.{Location, Scope}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService, UserService}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
@@ -26,7 +26,7 @@ trait DashboardScope extends Scope {
 
 @JSExport
 @injectable("DashboardController")
-class DashboardController(scope: DashboardScope, modal: ModalService, userService: UserService, backend: BackendService) extends
+class DashboardController(scope: DashboardScope, modal: ModalService, location: Location, userService: UserService, backend: BackendService) extends
 AbstractController[DashboardScope](scope) {
 
   scope.dictionaries = js.Array[Dictionary]()
@@ -163,7 +163,30 @@ AbstractController[DashboardScope](scope) {
     }
   }
 
+  @JSExport
+  def loadMyDictionaries() = {
+    val user = userService.getUser()
+    val query = DictionaryQuery()
+    query.userCreated = Some(Seq[Int](user.id))
 
+    backend.getDictionariesWithPerspectives(query) onComplete {
+      case Success(dictionaries) =>
+        scope.dictionaries = dictionaries.toJSArray
+      case Failure(e) => console.error(e.getMessage)
+    }
+  }
+
+  @JSExport
+  def loadAvailableDictionaries() = {
+    val user = userService.getUser()
+    val query = DictionaryQuery()
+    query.author = Some(user.id)
+    backend.getDictionariesWithPerspectives(query) onComplete {
+      case Success(dictionaries) =>
+        scope.dictionaries = dictionaries.toJSArray
+      case Failure(e) => console.error(e.getMessage)
+    }
+  }
 
 
   @JSExport
@@ -239,6 +262,7 @@ AbstractController[DashboardScope](scope) {
 
 
 
+
   private[this] def load() = {
 
     backend.allStatuses() onComplete  {
@@ -248,15 +272,15 @@ AbstractController[DashboardScope](scope) {
           case Success(user) =>
             userService.setUser(user)
             // load dictionary list
-            val query = DictionaryQuery(user.id, Seq[Int]())
+            val query = DictionaryQuery()
+            query.author = Some(user.id)
             backend.getDictionariesWithPerspectives(query) onComplete {
               case Success(dictionaries) =>
                 scope.dictionaries = dictionaries.toJSArray
               case Failure(e) => console.error(e.getMessage)
             }
-          case Failure(e) => console.error(e.getMessage)
+          case Failure(e) => location.path("/login");
         }
-
 
       case Failure(e) =>
     }
