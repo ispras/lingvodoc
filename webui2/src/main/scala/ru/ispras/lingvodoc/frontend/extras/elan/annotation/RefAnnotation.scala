@@ -21,7 +21,7 @@ class RefAnnotation protected(rao: RefAnnotationOpts, ao: AnnotationOpts)
   protected def includedAnnotationToString = Utils.wrap(RefAnnotation.tagName, content, attrsToString)
 
   // will not work until all tiers are loaded
-  lazy val getParentAnnotation = owner.getParentTier.getAnnotationByID(annotationRef.value)
+  lazy val getParentAnnotation = owner.getParentTier.getAnnotationByIDChecked(annotationRef.value)
 }
 
 object RefAnnotation {

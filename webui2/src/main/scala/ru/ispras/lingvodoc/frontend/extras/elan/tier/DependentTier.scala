@@ -10,7 +10,7 @@ import ru.ispras.lingvodoc.frontend.extras.elan.XMLAttrConversions._
 trait DependentTier[+AnnotType <: IAnnotation] extends ITier[AnnotType] {
   val parentRef: RequiredXMLAttr[String]
 
-  def getParentTier = owner.getTierByID(parentRef)
+  def getParentTier = owner.getTierByIDChecked(parentRef)
 
   // TODO: implement it for II and TS tiers
   def findAnnotationParent(annot: IAnnotation): IAnnotation = ???

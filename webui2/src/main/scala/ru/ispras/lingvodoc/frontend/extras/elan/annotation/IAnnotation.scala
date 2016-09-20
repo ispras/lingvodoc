@@ -14,13 +14,14 @@ trait IAnnotation {
   @JSExport
   var text: String
 
-  // Long is opaque to scala.js, so we can give only these
+  // Format start, end and duration as a human-readable string for displaying.
+  // BTW Long is opaque to scala.js, so we can give only Strings anyway; however, don't use them as numbers.
   @JSExport
-  def startToString = start.toString
+  def startToString = f"$startSec%.2f"
   @JSExport
-  def endToString = end.toString
+  def endToString = f"$endSec%.2f"
   @JSExport
-  def durationToString = duration.toString
+  def durationToString = f"$durationSec%.2f"
   // convert start, end and duration in seconds to displayed pixels using pxPerSec
   @JSExport
   var startOffset: Double
@@ -45,6 +46,11 @@ trait IAnnotation {
   def end: Long
   def duration: Long = end - start
 
+  def startSec = Utils.millis2Sec(start)
+  def endSec = Utils.millis2Sec(end)
+  def durationSec = Utils.millis2Sec(duration)
+
+
   // xml representation of content inside <ANNOTATION></ANNOTATION>
   protected def includedAnnotationToString: String
 }
@@ -68,6 +74,9 @@ abstract class Annotation(ao: AnnotationOpts) extends IAnnotation {
     annotationJS("startOffset") = startOffset.asInstanceOf[js.Dynamic]
     annotationJS("endOffset") = endOffset.asInstanceOf[js.Dynamic]
     annotationJS("durationOffset") = durationOffset.asInstanceOf[js.Dynamic]
+    annotationJS("startToString") = startToString.asInstanceOf[js.Dynamic]
+    annotationJS("endToString") = endToString.asInstanceOf[js.Dynamic]
+    annotationJS("durationToString") = durationToString.asInstanceOf[js.Dynamic]
     annotationJS.toJSDictionary.asInstanceOf[js.Dynamic]
   }
 

@@ -110,10 +110,7 @@
     right border in millis is {{ controller.rightBorderMillis }}
 
     <uib-tabset justified="true">
-        <uib-tab ng-repeat="tier in elan.tiersToJSArray" heading="{{tier.getID}} ({{tier.stereotype}})">
-            <span ng-if="tier.isTimeAlignable == false">
-                This tier contains only reference annotations, you can't modify them directly.
-            </span>
+        <uib-tab ng-repeat="(tierID, tierData) in elanJS.tiers" heading="{{tierID}} ({{tierData.stereotype}})">
             <table class="table table-striped table-bordered">
                 <thead>
                 <tr>
@@ -124,12 +121,12 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr ng-repeat="annot in tier.annotationsToJSArray">
-                    <td>{{ annot.startToString }}</td>
-                    <td>{{ annot.endToString }}</td>
-                    <td>{{ annot.text }}</td>
+                <tr ng-repeat="(annotID, annotData) in tierData.annotations">
+                    <td>{{ annotData.startToString }}</td>
+                    <td>{{ annotData.endToString }}</td>
+                    <td>{{ annotData.text }}</td>
                     <td>
-                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.play(annot.start, annot.end)">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playAnnotation(annotID)">
                             <span class="glyphicon glyphicon-play"></span>
                         </button>
                     </td>

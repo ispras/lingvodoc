@@ -178,8 +178,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
     updateFullWSWidth()
 
     // draw spectrogram
-    val spectrogram = js.Object.create(WaveSurferSpectrogramPlugin)
-    spectrogram.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get, container = "#wave-spectrogram"))
+//    val spectrogram = js.Object.create(WaveSurferSpectrogramPlugin)
+//    spectrogram.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get, container = "#wave-spectrogram"))
 //    scope.wsHeight = js.Dynamic.global.document.getElementById("waveSurferWrapper").scrollHeight.toString.toInt
 
     scope.$apply({})
@@ -259,8 +259,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
   @JSExport
   def playPause() = waveSurfer.foreach(_.playPause())
 
+  def play(start: Double, end: Double) = { console.log("playing"); waveSurfer.foreach(_.play(start, end)) }
+
   @JSExport
-  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
+  def playAnnotation(annotID: String) = {
+    val annot = scope.elan.getAnnotationByIDChecked(annotID)
+    play(annot.startSec, annot.endSec)
+  }
 
   @JSExport
   def zoomIn(): Unit = { pxPerSec += pxPerSecStep; }

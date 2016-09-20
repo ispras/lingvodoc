@@ -39,7 +39,7 @@ trait WaveSurfer extends js.Object {
   def getDuration(): Double = js.native
   def load(url: String): js.Dynamic = js.native
   def playPause(): js.Any = js.native
-  def play(start: Int = 0, end: Int = Int.MaxValue): js.Any = js.native
+  def play(start: Double = 0, end: Double = Double.MaxValue): js.Any = js.native
   def on(event: String, callback: js.Function0[Unit]): js.Any = js.native
   def on[T](event: String, callback: js.Function1[T, Unit]): js.Any = js.native
   def seekTo(progress: Double): js.Any = js.native
