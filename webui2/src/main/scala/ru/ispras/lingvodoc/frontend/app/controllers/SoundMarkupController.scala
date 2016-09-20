@@ -28,6 +28,7 @@ trait SoundMarkupScope extends Scope {
 
   var ws: WaveSurfer = js.native // for debugging, remove later
   var spectrogramEnabled: Boolean = js.native
+  var timelineEnabled: Boolean = js.native
 
   var ruler: Double = js.native // coordinate of wavesurfer ruler
   var tierWidth: Int = js.native // displayed tier width in pixels
@@ -61,6 +62,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   var wsHeight = 128
   private var _wsSpectrogramHeight = 0
+  private var _wsTimelineHeight = 0
   updateFullWSHeight()
 
   val soundAddress = params.get("soundAddress").map(_.toString)
@@ -133,10 +135,16 @@ class SoundMarkupController(scope: SoundMarkupScope,
     updateFullWSHeight()
   }
 
+  def wsTimelineHeight = _wsTimelineHeight
+
+  def wsTimelineHeight_=(newHeight: Int) = {
+    _wsTimelineHeight = newHeight
+    updateFullWSHeight()
+  }
+
   // recompute ws height
   def updateFullWSHeight() = {
-    scope.fullWSHeight = wsHeight + wsSpectrogramHeight
-    console.log(s"full ws height now ${scope.fullWSHeight}")
+    scope.fullWSHeight = wsHeight + wsSpectrogramHeight + wsTimelineHeight
   }
 
   def setMenuOptions() = {
@@ -149,9 +157,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     ).toJS
   }
 
-  // draw spectrogram
   def drawSpectrogram() = {
-    console.log("drawing spectrogram")
     val spectrogram = js.Object.create(WaveSurferSpectrogramPlugin)
     spectrogram.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
       container = "#" + SoundMarkupController.spectrogramDivName))
@@ -160,7 +166,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def hideSpectrogram() = {
-    console.log("hiding spectrogram")
     js.Dynamic.global.document.getElementById(SoundMarkupController.spectrogramDivName).innerHTML = ""
     wsSpectrogramHeight = 0
   }
@@ -168,6 +173,24 @@ class SoundMarkupController(scope: SoundMarkupScope,
   @JSExport
   def toggleSpectrogramEnable() = {
     if (scope.spectrogramEnabled) drawSpectrogram() else hideSpectrogram()
+  }
+
+  def drawTimeline() = {
+    val timeline = js.Object.create(WaveSurferTimelinePlugin)
+    timeline.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
+      container = "#" + SoundMarkupController.timelineDivName))
+    wsTimelineHeight = js.Dynamic.global.document.getElementById(SoundMarkupController.timelineDivName).
+      scrollHeight.toString.toInt
+  }
+
+  def hideTimeline() = {
+    js.Dynamic.global.document.getElementById(SoundMarkupController.timelineDivName).innerHTML = ""
+    wsTimelineHeight = 0
+  }
+
+  @JSExport
+  def toggleTimelineEnable() = {
+    if (scope.timelineEnabled) drawTimeline() else hideTimeline()
   }
 
   /**
@@ -442,4 +465,5 @@ class SoundMarkupController(scope: SoundMarkupScope,
 object SoundMarkupController {
   val wsDivName = "#waveform"
   val spectrogramDivName = "wavespectrogram"
+  val timelineDivName = "wavetimeline"
 }

@@ -20,6 +20,11 @@
         Draw a spectrogram. Warning: it may take a long time.
     </label>
 
+    <label>
+        <input type="checkbox" ng-model="timelineEnabled" ng-change="controller.toggleTimelineEnable()"/>
+        Draw a timeline
+    </label>
+
     <div>
         <!-- tier names -->
         <svg ng-attr-width="{{tiersNameWidth}}" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
@@ -38,7 +43,8 @@
 
         <div style="overflow-x: scroll" ng-style="{'margin-left': tiersNameWidth}">
             <div id="waveform" ng-style="{'width': fullWSWidth}">{{ controller.createWaveSurfer() }}</div>
-            <div id="wavespectrogram" ></div>
+            <div id="wavespectrogram"></div>
+            <div id="wavetimeline"></div>
 
             <!-- section with tiers -->
             <svg id="soundSVG"
