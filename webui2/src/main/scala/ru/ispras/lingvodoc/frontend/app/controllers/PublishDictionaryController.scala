@@ -4,20 +4,16 @@ import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
-import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
-import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
+import ru.ispras.lingvodoc.frontend.app.model._
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
-import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.js
-import scala.scalajs.js.{Array, UndefOr}
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
 
@@ -204,6 +200,41 @@ class PublishDictionaryController(scope: PublishDictionaryScope, params: RoutePa
     }
   }
 
+  @JSExport
+  def approve(entry: LexicalEntry, value: Value) = {
+    val entity = value.getEntity()
+    if (!entity.published) {
+      backend.changedApproval(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId.fromObject(entry), CompositeId.fromObject(entity) :: Nil, approve = true) map {
+        _ =>
+          scope.$apply(() => {
+            entity.published = true
+          })
+      }
+    }
+  }
+
+  @JSExport
+  def disapprove(entry: LexicalEntry, value: Value) = {
+    val entity = value.getEntity()
+    if (entity.published) {
+      backend.changedApproval(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId.fromObject(entry), CompositeId.fromObject(entity) :: Nil, approve = false) map {
+        _ =>
+          scope.$apply(() => {
+            entity.published = false
+          })
+      }
+    }
+  }
+
+  @JSExport
+  def disapproveDisabled(value: Value): Boolean = {
+    !value.getEntity.published
+  }
+
+  @JSExport
+  def approveDisabled(value: Value): Boolean = {
+    value.getEntity.published
+  }
 
   private[this] def load() = {
 

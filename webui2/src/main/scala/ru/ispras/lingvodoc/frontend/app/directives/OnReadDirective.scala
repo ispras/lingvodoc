@@ -22,14 +22,9 @@ class OnReadDirective(parse: Parse) extends AttributeDirective {
 
     // this handler is invoked every time user selects a new file
     val onchangeHandler = (event: Event) => {
-
-      val file: File = input.files(0)
+      val file = input.files(0)
       val fn = parse(expr)
-
-      //scope.$apply(() => {
-        fn(scope, js.Dynamic.literal("$file" -> file))
-      //})
-
+      fn(scope, js.Dynamic.literal("$file1" -> file))
     }
     input.onchange = onchangeHandler
   }

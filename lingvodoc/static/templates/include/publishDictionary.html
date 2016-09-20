@@ -39,10 +39,10 @@
                             <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
                                 {{ value.getContent() }}
 
-                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(value)" ng-click="controller.approve(row.entry, value)">
                                     <span class="glyphicon glyphicon-ok-circle"></span>
                                 </button>
-                                <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(value)" ng-click="controller.disapprove(row.entry, value)">
                                     <span class="glyphicon glyphicon-ban-circle"></span>
                                 </button>
 
@@ -62,10 +62,10 @@
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }}
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
-                                                <span class="glyphicon glyphicon-ok-circle"></span>
-                                            </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <span class="glyphicon glyphicon-ok-circle"></span>
+                                        </button>
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -73,10 +73,10 @@
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
                                             <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -86,10 +86,10 @@
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -99,10 +99,10 @@
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -126,10 +126,10 @@
                                     <span class="glyphicon glyphicon-play">Play</span>
                                 </button>
 
-                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(value)" ng-click="controller.approve(row.entry, value)">
                                     <span class="glyphicon glyphicon-ok-circle"></span>
                                 </button>
-                                <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(value)" ng-click="controller.disapprove(row.entry, value)">
                                     <span class="glyphicon glyphicon-ban-circle"></span>
                                 </button>
                             </li>
@@ -145,10 +145,10 @@
                                     <span class="glyphicon glyphicon-play">Play</span>
                                 </button>
 
-                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(value)" ng-click="controller.approve(row.entry, value)">
                                     <span class="glyphicon glyphicon-ok-circle"></span>
                                 </button>
-                                <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(value)" ng-click="controller.disapprove(row.entry, value)">
                                     <span class="glyphicon glyphicon-ban-circle"></span>
                                 </button>
 
@@ -158,10 +158,10 @@
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }}
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -169,10 +169,10 @@
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
                                             <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -182,10 +182,10 @@
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -195,10 +195,10 @@
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -218,10 +218,10 @@
                             <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
                                 <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
 
-                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(value)" ng-click="controller.approve(row.entry, value)">
                                     <span class="glyphicon glyphicon-ok-circle"></span>
                                 </button>
-                                <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(value)" ng-click="controller.disapprove(row.entry, value)">
                                     <span class="glyphicon glyphicon-ban-circle"></span>
                                 </button>
                             </li>
@@ -235,6 +235,12 @@
                                 <!-- display value -->
                                 <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
 
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(value)" ng-click="controller.approve(row.entry, value)">
+                                    <span class="glyphicon glyphicon-ok-circle"></span>
+                                </button>
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(value)" ng-click="controller.disapprove(row.entry, value)">
+                                    <span class="glyphicon glyphicon-ban-circle"></span>
+                                </button>
 
                                 <!-- display values from sub columns -->
                                 <ul class="tree">
@@ -246,10 +252,10 @@
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
                                             <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -259,10 +265,10 @@
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -272,10 +278,10 @@
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -296,10 +302,10 @@
                             <li ng-repeat="value in cell.values" ng-class="{last: $index==cell.values.length-1}">
                                 <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
 
-                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(value)" ng-click="controller.approve(row.entry, value)">
                                     <span class="glyphicon glyphicon-ok-circle"></span>
                                 </button>
-                                <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, value)">
+                                <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(value)" ng-click="controller.disapprove(row.entry, value)">
                                     <span class="glyphicon glyphicon-ban-circle"></span>
                                 </button>
                             </li>
@@ -319,10 +325,10 @@
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }}
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -330,10 +336,10 @@
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
                                             <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>
@@ -343,10 +349,10 @@
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
 
@@ -357,10 +363,10 @@
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
 
-                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approved(row.entry, value)" ng-click="controller.approve(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.approveDisabled(linkedValue)" ng-click="controller.approve(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ok-circle"></span>
                                             </button>
-                                            <button type="button" class="btn btn-default btn-xs" ng-enabled="controller.approved(row.entry, value)" ng-click="controller.disapprove(row.entry, linkedValue)">
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="controller.disapproveDisabled(linkedValue)" ng-click="controller.disapprove(row.entry, linkedValue)">
                                                 <span class="glyphicon glyphicon-ban-circle"></span>
                                             </button>
                                         </div>

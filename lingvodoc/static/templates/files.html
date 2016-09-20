@@ -31,7 +31,7 @@
             </td>
 
             <td>
-                <a ng-href="{{ file.content }}"><span class="glyphicon glyphicon-download"></span></a>
+                <a ng-href="{{ file.url }}"><span class="glyphicon glyphicon-download"></span></a>
             </td>
 
         </tr>
@@ -40,14 +40,14 @@
 
     </table>
 
-
-    <span class="btn btn-default btn-file">Upload file <input type="file" ng-disabled="dataType.length == 0" on-read-file="controller.upload($fileName, $fileType, $fileContent)"></span>
-
-
-    <select ng-model="dataType">
-        <option value="dialeqt_dictionary">dialeqt_dictionary</option>
-        <option value="pdf">pdf</option>
-    </select>
+    <form action="/blob" method="POST" enctype="multipart/form-data">
+        <span class="btn btn-default btn-file">Upload file <input name="blob" on-read-data="controller.upload($file1)"
+                                                                  type="file" ng-disabled="dataType.length == 0"></span>
+        <select name="data_type" ng-model="dataType">
+            <option value="dialeqt_dictionary">dialeqt_dictionary</option>
+            <option value="pdf">pdf</option>
+        </select>
+    </form>
 
 
 </div>

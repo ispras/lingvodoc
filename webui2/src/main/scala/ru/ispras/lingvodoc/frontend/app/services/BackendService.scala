@@ -1,24 +1,25 @@
 package ru.ispras.lingvodoc.frontend.app.services
 
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
-import ru.ispras.lingvodoc.frontend.app.model._
-import upickle.default._
 
-import scala.concurrent.{Future, Promise}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
-
-import scala.scalajs.js
-import scala.scalajs.js.URIUtils._
-import scala.scalajs.js.{Date, JSON, UndefOr}
-import scala.scalajs.js.Any.fromString
-import scala.util.{Failure, Success, Try}
 import com.greencatsoft.angularjs._
 import com.greencatsoft.angularjs.core.HttpPromise.promise2future
 import com.greencatsoft.angularjs.core.{HttpConfig, HttpService, Q}
-
-import scala.scalajs.js.JSConverters._
+import org.scalajs.dom
+import org.scalajs.dom.ext.Ajax.InputData
 import org.scalajs.dom.{FormData, console}
+import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
+import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.LexicalEntriesType.LexicalEntriesType
+import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+import upickle.default._
+
+import scala.concurrent.{Future, Promise}
+import scala.scalajs.js
+import scala.scalajs.js.Any.fromString
+import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.{Dynamic, JSON}
+import scala.scalajs.js.URIUtils._
+import scala.util.{Failure, Success}
 
 
 object LexicalEntriesType extends Enumeration {
@@ -759,6 +760,35 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def changedApproval(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityIds: Seq[CompositeId], approve: Boolean): Future[Unit] = {
+
+    val p = Promise[Unit]()
+
+    val method = if (approve) "PATCH" else "DELETE"
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+          encodeURIComponent(dictionaryId.objectId.toString) +
+          "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+          encodeURIComponent(perspectiveId.objectId.toString) + "/approve"
+
+    val req = entityIds.map(id => js.Dynamic.literal("client_id" -> id.clientId, "object_id" -> id.objectId)).toJSArray
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open(method, getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(())
+      } else {
+        p.failure(new BackendException("Failed to changed approval status entities"))
+      }
+    }
+    xhr.send(JSON.stringify(req))
+
+    p.future
+  }
+
 
   /**
     * Gets count of all lexical entries
@@ -1111,11 +1141,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-  def updatePerspectiveFields(dictionaryId: CompositeId) = {
-    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/perspective/"
-
-    // dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/fields
-  }
 
   /**
     * Create a new lexical entry
@@ -1216,7 +1241,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   def userFiles: Future[Seq[File]] = {
     val p = Promise[Seq[File]]()
 
-    $http.get[js.Dynamic](getMethodUrl("blobs/")) onComplete {
+    $http.get[js.Dynamic](getMethodUrl("blobs")) onComplete {
       case Success(response) =>
         try {
           val blobs = read[Seq[File]](js.JSON.stringify(response))
@@ -1231,21 +1256,20 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-  def uploadFile(req: js.Dynamic) = {
+
+
+  def uploadFile(formData: FormData): Future[CompositeId] = {
     val p = Promise[CompositeId]()
-    $http.post(getMethodUrl("blob"), req) onComplete {
+    val inputData = InputData.formdata2ajax(formData)
+    dom.ext.Ajax.post(getMethodUrl("blob"), inputData) onComplete {
       case Success(response) =>
-        try {
-          val id = read[CompositeId](js.JSON.stringify(response))
-          p.success(id)
-        } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to upload user file.", e))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to upload user file.", e))
-        }
-      case Failure(e) => p.failure(BackendException("Failed to upload user file.", e))
+        val id = read[CompositeId](response.responseText)
+        p.success(id)
+      case Failure(e) => p.failure(BackendException("Failed to upload", e))
     }
     p.future
   }
+
 
   def convertDictionary(languageId: CompositeId, fileId: CompositeId): Future[CompositeId] = {
     val p = Promise[CompositeId]()
