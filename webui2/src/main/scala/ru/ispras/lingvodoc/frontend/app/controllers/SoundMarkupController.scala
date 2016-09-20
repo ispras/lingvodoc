@@ -8,7 +8,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalInstance, M
 import com.greencatsoft.angularjs.core.{Timeout, Scope}
 import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
-import ru.ispras.lingvodoc.frontend.extras.facades.{MenuOption, BootstrapContextMenu, WaveSurfer, WaveSurferOpts}
+import ru.ispras.lingvodoc.frontend.extras.facades._
 import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
@@ -52,7 +52,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var waveSurfer: Option[WaveSurfer] = None // WS object
   private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
   val pxPerSecStep = 30 // zooming step
-  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
+  // fake value to avoid division by zero; on ws load, it will be set correctly
   private var _duration: Double = 42.0
   scope.fullWSWidth = 0.0 // again, will be known after audio load
   scope.wsHeight = 128
@@ -60,7 +60,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var soundMarkup: Option[String] = None
   //  val soundAddress = params.get("soundAddress").map(_.toString)
   val soundAddress = Some("http://localhost/getting_closer.wav")
-  val dummyMarkupAddress = "http://localhost/test_live_big.eaf"
+  val dummyMarkupAddress = "http://localhost/test.eaf"
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
@@ -176,6 +176,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
     isWSReady = true
     duration = getDuration
     updateFullWSWidth()
+
+    // draw spectrogram
+    val spectrogram = js.Object.create(WaveSurferSpectrogramPlugin)
+    spectrogram.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get, container = "#wave-spectrogram"))
+//    scope.wsHeight = js.Dynamic.global.document.getElementById("waveSurferWrapper").scrollHeight.toString.toInt
+
     scope.$apply({})
   }
 
