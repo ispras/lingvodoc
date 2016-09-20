@@ -7,12 +7,14 @@ LingvoDoc is intended to provide natural language documentation service as Web-s
 ajax-based client application.
 
 
-Dependancies
+Dependencies
 ---------------
 
 - pyramid (framework)
 
 - sqlalchemy (ORM)
+
+- RDBMS compatible with sqlalchemy
 
 
 Running the project for development
@@ -26,9 +28,15 @@ Running the project for development
 
 - launch every command from this directory
 
-- create development.ini from production.ini (change sqlalchemy.url)
+- create database
 
-- create alembic.ini from alembic_base.ini (change sqlalchemy.url)
+- create development.ini from production.ini. You must set at least sqlalchemy.url pointing to
+  created database
+
+- create alembic.ini from alembic_base.ini. Again, you must set at least sqlalchemy.url pointing to
+  created database
+  
+- pip install -r requirements.txt
 
 - $VENV/bin/python setup.py develop
 
@@ -37,6 +45,25 @@ Running the project for development
 - $VENV/bin/initialize_lingvodoc_db development.ini
 
 - $VENV/bin/pserve development.ini
+
+Example for PostgreSQL:
+
+```
+# from psql:
+drop database lingvodoc; -- drop old database, if exists
+create database lingvodoc with owner postgres encoding 'UTF8' LC_COLLATE = 'ru_RU.UTF-8' LC_CTYPE = 'ru_RU.UTF-8' template template0;
+# from shell, with activated venv:
+pip install -r requirements.txt
+# cp production.ini development.ini 
+# set sqlalchemy.url to postgresql+psycopg2://postgres@/lingvodoc in development.ini
+# TODO [app:accounts] add section to development.int?
+# cp alembic_base.ini  alembic.ini # set sqlalchemy.url twice to postgresql+psycopg2://postgres@/lingvodoc
+# python setup.py develop
+# alembic upgrade head
+# initialize_lingvodoc_db development.ini
+# pserve development.ini
+
+```
 
 API documentation
 ---------------
