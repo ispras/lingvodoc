@@ -9,15 +9,15 @@ import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicit
 
 import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
-import scala.scalajs.js.{Date, JSON}
+import scala.scalajs.js.{Date, JSON, UndefOr}
 import scala.scalajs.js.Any.fromString
 import scala.util.{Failure, Success, Try}
 import com.greencatsoft.angularjs._
 import com.greencatsoft.angularjs.core.HttpPromise.promise2future
-import com.greencatsoft.angularjs.core.{HttpService, Q}
+import com.greencatsoft.angularjs.core.{HttpConfig, HttpService, Q}
 
 import scala.scalajs.js.JSConverters._
-import org.scalajs.dom.console
+import org.scalajs.dom.{FormData, console}
 import ru.ispras.lingvodoc.frontend.app.services.LexicalEntriesType.LexicalEntriesType
 
 
@@ -1205,12 +1205,72 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+
   def getLocales(): Future[Seq[Locale]] = {
     val defer = $q.defer[Seq[Locale]]()
     val locales = Locale(2, "En", "English", "") :: Locale(1, "Ru", "Russian", "") :: Locale(3, "De", "German", "") :: Locale(4, "Fr", "French", "") :: Nil
     defer.resolve(locales)
     defer.future
   }
+
+  def userFiles: Future[Seq[File]] = {
+    val p = Promise[Seq[File]]()
+
+    $http.get[js.Dynamic](getMethodUrl("blobs/")) onComplete {
+      case Success(response) =>
+        try {
+          val blobs = read[Seq[File]](js.JSON.stringify(response))
+          p.success(blobs)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to get list of user files.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to get list of user files.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of user files.", e))
+    }
+
+    p.future
+  }
+
+  def uploadFile(req: js.Dynamic) = {
+    val p = Promise[CompositeId]()
+    $http.post(getMethodUrl("blob"), req) onComplete {
+      case Success(response) =>
+        try {
+          val id = read[CompositeId](js.JSON.stringify(response))
+          p.success(id)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to upload user file.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to upload user file.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to upload user file.", e))
+    }
+    p.future
+  }
+
+  def convertDictionary(languageId: CompositeId, fileId: CompositeId): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    val req = js.Dynamic.literal("parent_client_id" -> languageId.clientId,
+      "parent_object_id" -> languageId.objectId,
+      "blob_client_id" -> fileId.clientId,
+      "blob_object_id" -> fileId.objectId)
+
+    $http.post(getMethodUrl("convert"), req) onComplete {
+      case Success(response) =>
+        try {
+          val id = read[CompositeId](js.JSON.stringify(response))
+          p.success(id)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to upload user file.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to upload user file.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to upload user file.", e))
+    }
+    p.future
+  }
+
+
+
 }
 
 @injectable("BackendService")

@@ -24,6 +24,8 @@ trait CreateDictionaryScope extends Scope {
   var languages: js.Array[Language] = js.native
   var language: Option[Language] = js.native
   var languageId: String = js.native
+  var files: js.Array[File] = js.native
+  var fileId: String = js.native
   var creationMode: String = js.native
   var names: js.Array[LocalizedString] = js.native
   var layers: js.Array[Layer] = js.native
@@ -42,6 +44,8 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   scope.names = js.Array[LocalizedString]()
   scope.language = None
   scope.languageId = ""
+  scope.files = js.Array[File]()
+  scope.fileId = ""
   scope.creationMode = "create"
   scope.layers = js.Array[Layer]()
   scope.fields = js.Array[Field]()
@@ -94,17 +98,39 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   @JSExport
   def createDictionary2() = {
 
-    scope.languages.find(language => language.getId == scope.languageId) match {
-      case Some(language) =>
+    if (scope.creationMode == "create") {
 
-        backend.createDictionary(scope.names, language) map {
-          dictionaryId =>
-            scope.dictionaryId = Some(dictionaryId)
-            scope.step = 2
-        }
 
-      case None =>
-      // TODO: Add user friendly error message
+      scope.languages.find(language => language.getId == scope.languageId) match {
+        case Some(language) =>
+
+          backend.createDictionary(scope.names, language) map {
+            dictionaryId =>
+              scope.dictionaryId = Some(dictionaryId)
+              scope.step = 2
+          }
+
+        case None =>
+        // TODO: Add user friendly error message
+      }
+    } else {
+
+      scope.languages.find(language => language.getId == scope.languageId) match {
+        case Some(language) =>
+
+          scope.files.find(_.getId == scope.fileId) match {
+            case Some(file) => backend.convertDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file)) map {
+              dictionaryId =>
+                scope.dictionaryId = Some(dictionaryId)
+                scope.step = 2
+            }
+            case None =>
+            // TODO: Add user friendly error message
+          }
+
+        case None =>
+        // TODO: Add user friendly error message
+      }
     }
   }
 
@@ -409,5 +435,11 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
         scope.languages = Utils.flattenLanguages(tree).toJSArray
       case Failure(e) =>
     }
+
+    backend.userFiles onComplete {
+      case Success(files) => scope.files = files.toJSArray
+      case Failure(e) =>
+    }
+
   }
 }

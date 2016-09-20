@@ -21,7 +21,7 @@
                     </li>
                 </ol>
 
-                <div ng-show="creationMode == 'create'">
+                <div class="ng-hide" ng-show="creationMode == 'create'">
 
                     <div ng-repeat="name in names">
                         <label for="localized-name-{{$index}}"
@@ -33,11 +33,11 @@
 
                 </div>
 
-                <div ng-show="creationMode == 'import'">
-                    <label for="selectFile">Select uploaded file</label> (<a href="#/upload">Upload dictionary</a>)
+                <div class="ng-hide" ng-show="creationMode == 'import'">
+                    <label for="selectFile">Select uploaded file</label> (<a href="#/files">Upload dictionary</a>)
 
-                    <select id="selectFile" class="form-control">
-                        <option></option>
+                    <select id="selectFile" ng-model="fileId" class="form-control">
+                        <option ng-repeat="file in files" value="{{ file.getId }}">{{ file.name }}</option>
                     </select>
 
                 </div>

@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
-import ru.ispras.lingvodoc.frontend.app.directives.{ConvertToNumberDirective, OnReadFileDirective}
+import ru.ispras.lingvodoc.frontend.app.directives.{ConvertToNumberDirective, OnReadDirective, OnReadFileDirective}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendServiceFactory, ExceptionHandlerFactory, UserService, UserServiceFactory}
 
 import scala.scalajs.js.annotation.JSExport
@@ -19,8 +19,10 @@ class RoutingConfig(routeProvider: RouteProvider) extends Config {
     .when("/languages", Route("/static/templates/language.html", "Languages", "LanguageController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit", Route("/static/templates/editDictionary.html", "EditDictionary", "EditDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish", Route("/static/templates/publishDictionary.html", "PublishDictionary", "PublishDictionaryController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
-    .otherwise(Route("/404"))
+    .when("/files", Route("/static/templates/files.html", "Files", "UserFilesController"))
+    .otherwise(Route("/static/templates/404.html"))
 }
 
 
@@ -52,13 +54,16 @@ object LingvodocApplication {
       .controller[EditDictionaryController]
       .controller[PerspectiveMapController]
       .controller[ViewDictionaryController]
+      .controller[PublishDictionaryController]
       .controller[SoundMarkupController]
       .controller[EditTextFieldController]
       .controller[ExceptionHandlerController]
       .controller[CreateFieldController]
       .controller[EditDictionaryRolesModalController]
       .controller[EditPerspectiveRolesModalController]
+      .controller[UserFilesController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
+      .directive[OnReadDirective]
   }
 }
