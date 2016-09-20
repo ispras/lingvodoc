@@ -48,13 +48,13 @@
                     <ul class="dropdown-menu">
                         <li><a href="#/dashboard">My dictionaries</a></li>
                         <li><a href="#/dictionary/create">Create dictionary</a></li>
-                        <li><a href="#/merge_master">Merge master</a></li>
+                        <!--?<li><a href="#/merge_master">Merge master</a></li>-->
                     </ul>
                 </li>
 
                 <li ng-if="controller.isAuthenticated()"><a href="#/languages">Languages</a></li>
                 <li ng-if="controller.isAuthenticated()"><a href="#/organizations">Organizations</a></li>
-                <li ng-if="controller.isAuthenticated()"><a href="#/maps">Maps search</a></li>
+                <!--?<li ng-if="controller.isAuthenticated()"><a href="#/maps">Maps search</a></li>-->
                 <li ng-if="controller.isAuthenticated()"><a href="#/blob_upload">My files</a></li>
             </ul>
 
@@ -64,7 +64,7 @@
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">{{ controller.getAuthenticatedUser().name }}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="#/blob_upload">My files</a></li>
+                        <li><a href="#/files">My files</a></li>
                         <li><a href="#/logout">Sign out</a></li>
                     </ul>
                 </li>

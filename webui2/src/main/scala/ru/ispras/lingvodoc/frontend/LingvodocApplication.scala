@@ -2,8 +2,7 @@ package ru.ispras.lingvodoc.frontend
 
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{Route, RouteProvider}
-import ru.ispras.lingvodoc.frontend.app.CreateLanguageController
-import ru.ispras.lingvodoc.frontend.app.controllers._
+import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
 import ru.ispras.lingvodoc.frontend.app.directives.{ConvertToNumberDirective, OnReadFileDirective}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendServiceFactory, ExceptionHandlerFactory, UserService, UserServiceFactory}
 
@@ -46,6 +45,7 @@ object LingvodocApplication {
       .controller[CreateLanguageController]
       .controller[CreateDictionaryController]
       .controller[EditDictionaryModalController]
+      .controller[ViewDictionaryModalController]
       .controller[PerspectivePropertiesController]
       .controller[DictionaryPropertiesController]
       .controller[EditDictionaryController]

@@ -22,7 +22,6 @@ trait CreatePerspectiveScope extends Scope {
   var dictionary: Dictionary = js.native
   var perspective: Perspective = js.native
   var authors: String = js.native
-  var fields: js.Array[FieldWrapper] = js.native
 }
 
 
@@ -33,16 +32,5 @@ class CreatePerspectiveController(scope: CreatePerspectiveScope,
                                   params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[CreatePerspectiveScope](scope) {
 
-  scope.fields = js.Array()
 
-
-  @JSExport
-  def addField() = {
-    //scope.fields.push(new FieldWrapper(new Field(-1, -1, "", "", "", "", "", 1, "", js.Array())))
-  }
-
-  @JSExport
-  def removeField(index: Int) = {
-    scope.fields = scope.fields.zipWithIndex.filter(_._2 != index).map(_._1)
-  }
 }

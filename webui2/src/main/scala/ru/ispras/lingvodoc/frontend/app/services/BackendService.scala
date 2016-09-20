@@ -27,7 +27,6 @@ object LexicalEntriesType extends Enumeration {
   val All = Value("all")
 }
 
-
 @injectable("BackendService")
 class BackendService($http: HttpService, $q: Q) extends Service {
 
@@ -48,7 +47,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     else
       url + "?" + param
   }
-
 
   /**
     * Get list of perspectives for specified dictionary
@@ -134,6 +132,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
   /**
     * Get language by id
+    *
     * @param compositeId
     * @return
     */
@@ -153,7 +152,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
     p.future
   }
-
 
   /**
     * Get language graph
@@ -178,6 +176,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
   /**
     * Create language
+    *
     * @param names
     * @param parentLanguage
     * @return
@@ -219,9 +218,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
     p.future
   }
-
-
-
 
   /**
     * Get dictionary
@@ -331,9 +327,20 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     * @param objectId
     * @return
     */
+  @deprecated("Deprecated in favor of getPerspective(perspectiveId: CompositeId)", "01-09-2016")
   def getPerspective(clientId: Int, objectId: Int): Future[Perspective] = {
+    getPerspective(CompositeId(clientId, objectId))
+  }
+
+  /**
+    * Get perspective by id
+    *
+    * @param perspectiveId
+    * @return
+    */
+  def getPerspective(perspectiveId: CompositeId): Future[Perspective] = {
     val p = Promise[Perspective]()
-    val url = "perspective/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    val url = "perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" + encodeURIComponent(perspectiveId.objectId.toString)
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
@@ -347,7 +354,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
-
 
   /**
     * Set perspective status
@@ -413,7 +419,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
   def setPerspectiveMeta(dictionary: Dictionary, perspective: Perspective, metadata: MetaData) = {
     val p = Promise[Unit]()
     val url = ""
@@ -447,8 +452,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
-
   def getField(id: CompositeId): Future[Field] = {
     val p = Promise[Field]()
     val url = "field/" + encodeURIComponent(id.clientId.toString) + "/" + encodeURIComponent(id.objectId.toString)
@@ -466,7 +469,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
-
 
   /**
     * GetPerspective fields
@@ -506,6 +508,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     * @param perspective
     * @return
     */
+  @deprecated("Use def updateFields(dictionaryId: CompositeId, perspectiveId: CompositeId, req: js.Dynamic): Future[Unit] instead", "01-09-2016")
   def updateFields(dictionary: Dictionary, perspective: Perspective): Future[Unit] = {
     val p = Promise[Unit]()
     val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary
@@ -519,6 +522,18 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def updateFields(dictionaryId: CompositeId, perspectiveId: CompositeId, req: Seq[js.Dynamic]): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId
+      .objectId.toString) + "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId
+        .objectId.toString) + "/fields"
+    $http.put(getMethodUrl(url), req.toJSArray) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(new BackendException("Failed to update perspective fields: " + e.getMessage))
+    }
+    p.future
+  }
 
   /**
     * Get perspective with fields
@@ -537,7 +552,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
-
 
   /**
     *
@@ -564,7 +578,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
-
 
   /**
     * Get lexical entries list
@@ -609,7 +622,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
   def getEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Entity] = {
 
     val p = Promise[Entity]()
@@ -630,7 +642,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
   def createEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entity: EntityData): Future[CompositeId] = {
 
     val p = Promise[CompositeId]()
@@ -649,9 +660,29 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def removeEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Unit] = {
+
+    val p = Promise[Unit]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) +
+      "/lexical_entry/" + encodeURIComponent(entryId.clientId.toString) + "/" +
+      encodeURIComponent(entryId.objectId.toString) + "/entity/" + encodeURIComponent(entityId.clientId.toString) + "/" +
+      encodeURIComponent(entityId.objectId.toString)
+
+    $http.delete(getMethodUrl(url)) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to remove entity", e))
+    }
+    p.future
+  }
+
 
   /**
     * Gets count of all lexical entries
+    *
     * @param dictionaryId
     * @param perspectiveId
     * @return
@@ -676,17 +707,11 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
-
-
-
-
   /**
     * Get list of dictionaries
     *
     * @param clientID client's id
     * @param objectID object's id
-    *
     * @return sound markup in ELAN format
     */
   def getSoundMarkup(clientID: Int, objectID: Int): Future[String] = {
@@ -748,6 +773,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
   /**
     * Sign up
+    *
     * @param login
     * @param name
     * @param password
@@ -769,6 +795,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
   /**
     * Get list of all statuses
+    *
     * @return
     */
   def allStatuses() = {
@@ -783,9 +810,9 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
   /**
     * Gets translation atom by id
+    *
     * @param clientId
     * @param objectId
     * @return
@@ -804,6 +831,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
   /**
     * Creates translation atom
+    *
     * @param gistId
     * @return
     */
@@ -829,6 +857,21 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def updateTranslationAtom(translationAtom: TranslationAtom): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val url = "translationatom/" + encodeURIComponent(translationAtom.clientId.toString) + "/" + encodeURIComponent(translationAtom.objectId.toString)
+
+    val req = JSON.stringify(js.Dynamic.literal(
+      "content" -> translationAtom.content
+    ))
+
+    $http.put[js.Dynamic](getMethodUrl(url), req) onComplete {
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update translation atom", e))
+    }
+    p.future
+  }
 
   def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
     val defer = $q.defer[TranslationGist]()
@@ -883,7 +926,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     defer.future
   }
 
-
   def createField(translationGist: CompositeId, dataTypeGist: CompositeId): Future[CompositeId] = {
     val p = Promise[CompositeId]()
 
@@ -907,7 +949,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
-
 
   def fields(): Future[Seq[Field]] = {
     val p = Promise[Seq[Field]]()
@@ -943,7 +984,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
   def createDictionary(names: Seq[LocalizedString], language: Language): Future[CompositeId] = {
     val p = Promise[CompositeId]()
 
@@ -974,7 +1014,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
   def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[CompositeId] = {
     val p = Promise[CompositeId]()
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/complex_create"
@@ -992,13 +1031,20 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def updatePerspectiveFields(dictionaryId: CompositeId) = {
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/perspective/"
+
+    // dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/fields
+  }
+
   /**
     * Create a new lexical entry
+    *
     * @param dictionaryId
     * @param perspectiveId
     * @return
     */
-  def createLexicalEntry(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[CompositeId]= {
+  def createLexicalEntry(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[CompositeId] = {
     val p = Promise[CompositeId]()
 
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
@@ -1023,6 +1069,7 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
   /**
     * Get lexical entry by id
+    *
     * @param dictionaryId
     * @param perspectiveId
     * @param entryId
@@ -1053,15 +1100,21 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def search(query: String, perspectiveId: Option[CompositeId], tagsOnly: Boolean): Future[Seq[SearchResult]] = {
+    val p = Promise[Seq[SearchResult]]()
 
-  def search(query: String, tagsOnly: Boolean): Future[Seq[LexicalEntry]] = {
-    val p = Promise[Seq[LexicalEntry]]()
-    val url = "basic_search?leveloneentity=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent(tagsOnly.toString)
+    var url = "basic_search?searchstring=" + encodeURIComponent(query) + "&can_add_tags=" + encodeURIComponent(tagsOnly.toString)
+
+    perspectiveId match {
+      case Some(id) => url = url + "&perspective_client_id=" + encodeURIComponent(id.clientId.toString) + "&perspective_object_id=" + encodeURIComponent(id.objectId.toString)
+      case None =>
+    }
+
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
-          val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response))
+          val entries = read[Seq[SearchResult]](js.JSON.stringify(response))
           p.success(entries)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Search failed.", e))
@@ -1072,9 +1125,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
-
-
-
   def getLocales(): Future[Seq[Locale]] = {
     val defer = $q.defer[Seq[Locale]]()
     val locales = Locale(2, "En", "English", "") :: Locale(1, "Ru", "Russian", "") :: Locale(3, "De", "German", "") :: Locale(4, "Fr", "French", "") :: Nil
@@ -1082,7 +1132,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     defer.future
   }
 }
-
 
 @injectable("BackendService")
 class BackendServiceFactory($http: HttpService, $q: Q) extends Factory[BackendService] {

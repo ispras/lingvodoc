@@ -5,6 +5,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
+import org.singlespaced.d3js.d3
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
@@ -15,6 +16,7 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.js.UndefOr
 
@@ -28,12 +30,8 @@ trait EditDictionaryScope extends Scope {
   var size: Int = js.native
 
   var pageCount: Int = js.native
-
   var dictionaryTable: DictionaryTable = js.native
-
-  var filter: String = js.native
-
-  var enabledInputs: js.Array[Any] = js.native
+  var selectedEntries: js.Array[String] = js.native
 
 }
 
@@ -50,15 +48,29 @@ AbstractController[EditDictionaryScope](scope) {
   private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
   private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
 
-  private[this] var enabledInputs: Seq[(String, String)] = Seq[(String, String)]()
+  private[this] var enabledInputs: Seq[String] = Seq[String]()
+
+  private[this] var createdLexicalEntries: Seq[LexicalEntry] = Seq[LexicalEntry]()
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
+
+  private [this] var waveSurfer: Option[WaveSurfer] = None
+  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
+  val pxPerSecStep = 30 // zooming step
+  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
+  private var _duration: Double = 42.0
+  var fullWSWidth = 0.0 // again, will be known after audio load
+  var wsHeight = 128
+  var soundMarkup: Option[String] = None
+
 
   //scope.count = 0
   scope.offset = 0
   scope.size = 5
   scope.pageCount = 0
+
+  scope.selectedEntries = js.Array[String]()
 
   load()
 
@@ -86,8 +98,11 @@ AbstractController[EditDictionaryScope](scope) {
 
   @JSExport
   def loadSearch(query: String) = {
-    backend.search(query, tagsOnly = false) map {
-      entries => scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
+    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
+      results =>
+        console.log(results.toJSArray)
+        val entries = results map(_.lexicalEntry)
+        scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
   }
 
@@ -96,13 +111,48 @@ AbstractController[EditDictionaryScope](scope) {
     (min to max by step).toSeq.toJSArray
   }
 
+
   @JSExport
-  def play(soundAddress: String, soundMarkupAddress: String) = {
-    console.log(s"playing $soundAddress with markup $soundMarkupAddress")
+  def createWaveSurfer(): Unit = {
+    if (waveSurfer.isEmpty) {
+      // params should be synchronized with sm-ruler css
+      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
+        cursorWidth = 1, cursorColor = "red",
+        fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
+        height = wsHeight)
+      waveSurfer = Some(WaveSurfer.create(wso))
+    }
+  }
+
+  def pxPerSec = _pxPerSec
+
+  def pxPerSec_=(mpps: Int) = {
+    _pxPerSec = mpps
+    waveSurfer.foreach(_.zoom(mpps))
   }
 
   @JSExport
-  def viewSoundMarkup(soundAddress: String, soundMarkupAddress: String) = {
+  def play(soundAddress: String) = {
+    (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
+      ws.load(sa)
+    })
+  }
+
+  @JSExport
+  def playPause() = waveSurfer.foreach(_.playPause())
+
+  @JSExport
+  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
+
+  @JSExport
+  def zoomIn() = { pxPerSec += pxPerSecStep; }
+
+  @JSExport
+  def zoomOut() = { pxPerSec -= pxPerSecStep; }
+
+
+  @JSExport
+  def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/soundMarkup.html"
     options.controller = "SoundMarkupController"
@@ -113,6 +163,7 @@ AbstractController[EditDictionaryScope](scope) {
       params = () => {
         js.Dynamic.literal(
           soundAddress = soundAddress.asInstanceOf[js.Object],
+          markupAddress = markupAddress.asInstanceOf[js.Object],
           dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
           dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
         )
@@ -123,17 +174,50 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
+  def toggleSelectedEntries(id: String) = {
+    if (scope.selectedEntries.contains(id)) {
+      scope.selectedEntries = scope.selectedEntries.filterNot(_ == id)
+    } else {
+      scope.selectedEntries.push(id)
+    }
+  }
+
+  @JSExport
+  def mergeEntries() = {
+    val entries = scope.selectedEntries.flatMap {
+      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map(_.entry)
+    }
+  }
+
+  @JSExport
   def addNewLexicalEntry() = {
     backend.createLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
       case Success(entryId) =>
         backend.getLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), entryId) onComplete {
           case Success(entry) =>
             scope.dictionaryTable.addEntry(entry)
+            createdLexicalEntries = createdLexicalEntries :+ entry
           case Failure(e) =>
         }
       case Failure(e) => throw ControllerException("Attempt to create a new lexical entry failed", e)
     }
   }
+
+  @JSExport
+  def createdByUser(lexicalEntry: LexicalEntry): Boolean = {
+    createdLexicalEntries.contains(lexicalEntry)
+  }
+
+  @JSExport
+  def removeEntry(lexicalEntry: LexicalEntry) = {
+    lexicalEntry.markedForDeletion = true
+  }
+
+  @JSExport
+  def removeEntity(lexicalEntry: LexicalEntry, entity: Entity) = {
+    backend.removeEntity(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity))
+  }
+
 
   @JSExport
   def dataTypeString(dataType: TranslationGist): String = {
@@ -145,24 +229,26 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def enableInput(entry: LexicalEntry, field: Field) = {
-    if (!isInputEnabled(entry, field))
-      enabledInputs = enabledInputs :+ (entry.getId, field.getId)
+  def enableInput(id: String) = {
+    if (!isInputEnabled(id)) {
+      enabledInputs = enabledInputs :+ id
+    }
   }
 
   @JSExport
-  def disableInput(entry: LexicalEntry, field: Field) = {
-    if (isInputEnabled(entry, field))
-      enabledInputs = enabledInputs.filterNot(p => p._1 == entry.getId && p._2 == field.getId)
+  def disableInput(id: String) = {
+    if (isInputEnabled(id)) {
+      enabledInputs = enabledInputs.filterNot(_.equals(id))
+    }
   }
 
   @JSExport
-  def isInputEnabled(entry: LexicalEntry, field: Field): Boolean = {
-    enabledInputs.exists(input => input._1 == entry.getId && input._2 == field.getId)
+  def isInputEnabled(id: String): Boolean = {
+    enabledInputs.contains(id)
   }
 
   @JSExport
-  def saveTextValue(entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+    def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
 
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
@@ -187,12 +273,12 @@ AbstractController[EditDictionaryScope](scope) {
           case Success(newEntity) =>
 
             parent.toOption match {
-              case Some(x) => scope.dictionaryTable.addEntity(entry, x.getEntity, newEntity)
+              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
               case None => scope.dictionaryTable.addEntity(entry, newEntity)
             }
 
+            disableInput(inputId)
 
-            disableInput(entry, field)
           case Failure(ex) => console.log(ex.getMessage)
         }
       case Failure(ex) => console.log(ex.getMessage)
@@ -200,19 +286,35 @@ AbstractController[EditDictionaryScope](scope) {
   }
 
   @JSExport
-  def saveFileValue(entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String) = {
+  def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
+
+
     val dictionaryId = CompositeId.fromObject(dictionary)
     val perspectiveId = CompositeId.fromObject(perspective)
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
     entity.content = Some(Right(FileContent(fileName, fileType, fileContent)))
+
+    // self
+    parent map {
+      parentValue =>
+        entity.selfClientId = Some(parentValue.getEntity.clientId)
+        entity.selfObjectId = Some(parentValue.getEntity.objectId)
+    }
+
     backend.createEntity(dictionaryId, perspectiveId, entryId, entity) onComplete {
       case Success(entityId) =>
         backend.getEntity(dictionaryId, perspectiveId, entryId, entityId) onComplete {
           case Success(newEntity) =>
-            scope.dictionaryTable.addEntity(entry, newEntity)
-            disableInput(entry, field)
+
+            parent.toOption match {
+              case Some(x) => scope.dictionaryTable.addEntity(x, newEntity)
+              case None => scope.dictionaryTable.addEntity(entry, newEntity)
+            }
+
+            disableInput(inputId)
+
           case Failure(ex) => console.log(ex.getMessage)
         }
       case Failure(ex) => console.log(ex.getMessage)
@@ -250,6 +352,7 @@ AbstractController[EditDictionaryScope](scope) {
       entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
     }
   }
+
 
   private[this] def load() = {
 

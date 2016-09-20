@@ -7,7 +7,9 @@ from lingvodoc.models import (
     DictionaryPerspective,
     Group,
     LexicalEntry,
-    User
+    User,
+    Entity,
+    TranslationAtom
 )
 
 from pyramid.httpexceptions import (
@@ -23,35 +25,36 @@ from sqlalchemy import (
     tuple_
 )
 from sqlalchemy.orm import joinedload, subqueryload
+from pyramid.request import Request
 
 
 # TODO: completely broken!
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
 def basic_search(request):
     can_add_tags = request.params.get('can_add_tags')
-    searchstring = request.params.get('leveloneentity')
+    searchstring = request.params.get('searchstring')
     perspective_client_id = request.params.get('perspective_client_id')
     perspective_object_id = request.params.get('perspective_object_id')
     if searchstring:
         if len(searchstring) >= 2:
-            searchstring = request.params.get('leveloneentity')
+            searchstring = request.params.get('searchstring')
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
                     .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
             if group:
-                # results_cursor = DBSession.query(LevelOneEntity).filter(LevelOneEntity.content.like('%'+searchstring+'%'))
-                results_cursor = list()
+                results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'))
+                # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.join(LexicalEntry)\
                         .join(DictionaryPerspective)\
                         .filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
             else:
-                # results_cursor = DBSession.query(LevelOneEntity)\
-                #     .join(LexicalEntry)\
-                #     .join(DictionaryPerspective)
-                results_cursor = list()
+                results_cursor = DBSession.query(Entity)\
+                    .join(Entity.parent)\
+                    .join(DictionaryPerspective)
+                # results_cursor = list()
                 if perspective_client_id and perspective_object_id:
                     results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
                                 DictionaryPerspective.object_id == perspective_object_id)
@@ -59,15 +62,15 @@ def basic_search(request):
                     .join(BaseGroup)\
                     .join(User, Group.users)\
                     .join(Client)\
-                    .filter(Client.id == request.authenticated_userid, LevelOneEntity.content.like('%'+searchstring+'%'))
+                    .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
             results = []
             entries = set()
             if can_add_tags:
-                # results_cursor = results_cursor\
-                #     .filter(BaseGroup.subject=='lexical_entries_and_entities',
-                #             or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
-                #     .group_by(LevelOneEntity).having(func.count('*') == 2)
-                results_cursor = list()
+                results_cursor = results_cursor\
+                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
+                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+                    .group_by(Entity).having(func.count('*') == 2)
+                # results_cursor = list()
             else:
                 results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
             for item in results_cursor:
@@ -75,20 +78,21 @@ def basic_search(request):
             for entry in entries:
                 if not entry.marked_for_deletion:
                     result = dict()
+                    print(entry.__class__)
+                    url = request.route_url('perspective',
+                                            dictionary_client_id=entry.parent.parent.client_id,
+                                            dictionary_object_id=entry.parent.parent.object_id,
+                                            perspective_client_id=entry.parent_client_id,
+                                            perspective_id=entry.parent_object_id)
+                    subreq = Request.blank(url)
+                    subreq.method = 'GET'
+                    headers = {'Cookie': request.headers['Cookie']}
+                    subreq.headers = headers
+                    resp = request.invoke_subrequest(subreq)
+                    result = resp.json
                     result['lexical_entry'] = entry.track(False)
-                    result['client_id'] = entry.parent_client_id
-                    result['object_id'] = entry.parent_object_id
-                    perspective_tr = entry.parent.get_translation(request)
-                    result['translation_string'] = perspective_tr['translation_string']
-                    result['translation'] = perspective_tr['translation']
-                    result['is_template'] = entry.parent.is_template
-                    result['status'] = entry.parent.state
-                    result['marked_for_deletion'] = entry.parent.marked_for_deletion
-                    result['parent_client_id'] = entry.parent.parent_client_id
-                    result['parent_object_id'] = entry.parent.parent_object_id
-                    dict_tr = entry.parent.parent.get_translation(request)
-                    result['parent_translation_string'] = dict_tr['translation_string']
-                    result['parent_translation'] = dict_tr['translation']
+                    dict_tr = entry.parent.parent.get_translation(request.cookies['locale_id'])
+                    result['parent_translation'] = dict_tr
                     results.append(result)
             request.response.status = HTTPOk.code
             return results
@@ -106,13 +110,13 @@ def advanced_search(request):
         if not searchstring['searchstring']:
             raise HTTPBadRequest
         search_parts = searchstring['searchstring'].split()
-        search_expression = LevelOneEntity.content.like('%' + search_parts[0] + '%')
+        search_expression = Entity.content.like('%' + search_parts[0] + '%')
         for part in search_parts[1:]:
-            # search_expression = or_(search_expression, LevelOneEntity.content.like('%' + part + '%'))
+            # search_expression = or_(search_expression, Entity.content.like('%' + part + '%'))
             search_expression = list()
         if 'entity_type' in searchstring:
             # print(searchstring['entity_type'])
-            # search_expression = and_(search_expression, LevelOneEntity.entity_type == searchstring['entity_type'])
+            # search_expression = and_(search_expression, Entity.entity_type == searchstring['entity_type'])
             search_expression = list()
         return search_expression, searchstring['search_by_or']
 
@@ -133,8 +137,8 @@ def advanced_search(request):
         tmp_expression, to_do_or = make_expression_component(search_string)
         search_expression = operator_func(search_expression, tmp_expression)
 
-    # results_cursor = DBSession.query(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
-    #     .distinct(LevelOneEntity.parent_client_id, LevelOneEntity.parent_object_id) \
+    # results_cursor = DBSession.query(LevelOneEntity.parent_client_id, Entity.parent_object_id) \
+    #     .distinct(Entity.parent_client_id, Entity.parent_object_id) \
     #     .filter(search_expression)
     results_cursor = list()
     tmp_list = list()
@@ -142,18 +146,14 @@ def advanced_search(request):
         tmp_list.append(item)
 
     results_cursor = DBSession.query(LexicalEntry) \
-        .options(joinedload('leveloneentity').joinedload('leveltwoentity').subqueryload('publishleveltwoentity')) \
-        .options(joinedload('leveloneentity').subqueryload('publishleveloneentity')) \
-        .options(joinedload('groupingentity').subqueryload('publishgroupingentity')) \
-        .options(subqueryload('publishleveloneentity')) \
-        .options(subqueryload('publishleveltwoentity')) \
-        .options(subqueryload('publishgroupingentity')) #\
+        .options(joinedload('entity').subqueryload('publishentity'))
         # .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(tmp_list))
     result_list = list()
 
     results = list()
     for item in results_cursor.all():
         if (item.client_id, item.object_id) in tmp_list:
+
             tmp_result = dict()
             tmp_result['lexical_entry'] = item.track(True)
             tmp_result['client_id'] = item.parent_client_id
