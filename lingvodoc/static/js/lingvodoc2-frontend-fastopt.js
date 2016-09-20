@@ -49448,7 +49448,7 @@ $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.ru$isp
   languages.foreach__F1__V(new $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController$$anonfun$ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$setPerspectives$1().init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeController(this))
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.$$js$exported$meth$getPerspectiveAuthors__Lru_ispras_lingvodoc_frontend_app_model_Perspective__O = (function(perspective) {
-  return "Metadata is not supported!"
+  return ""
 });
 $c_Lru_ispras_lingvodoc_frontend_app_controllers_HomeController.prototype.init___Lru_ispras_lingvodoc_frontend_app_controllers_HomeScope__Lcom_greencatsoft_angularjs_core_Injector__Lru_ispras_lingvodoc_frontend_app_services_BackendService__Lru_ispras_lingvodoc_frontend_app_services_ModalService = (function(scope, injector, backend, modal) {
   this.ru$ispras$lingvodoc$frontend$app$controllers$HomeController$$backend$f = backend;
