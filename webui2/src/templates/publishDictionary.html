@@ -1,0 +1,54 @@
+<div class="container-fluid" style="padding-top: 20px">
+
+    <div class="row">
+        <h4>
+            <span ng-repeat-start="e in path.slice().reverse()">
+                <span>{{ e.translation }}</span>
+            </span>
+            <span ng-repeat-end="" ng-if="$index < (path.length-1)">&gt;&gt;</span>
+        </h4>
+    </div>
+
+    <br>
+
+    <div class="row" style="margin: 30px 0">
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+            <span class="glyphicon glyphicon-play">Play/Pause full</span>
+        </button>
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
+            <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
+        </button>
+
+        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
+            <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
+        </button>
+
+        <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+
+    </div>
+
+
+    <div ng-include="'/static/templates/include/publishDictionary.html'"></div>
+
+    <div class="row">
+        <div class="col-lg-12">
+
+            <div class="text-center">
+
+                <nav>
+                    <ul class="pagination pagination-sm">
+                        <li ng-repeat="pageNumber in controller.range(1, pageCount, 1)"
+                            ng-class="{active: pageNumber == pageIndex}">
+                            <a href="" ng-click="controller.loadPage(pageNumber)">{{ pageNumber }}</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

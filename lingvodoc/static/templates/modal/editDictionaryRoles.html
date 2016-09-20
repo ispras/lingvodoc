@@ -1,0 +1,22 @@
+<div class="modal-header">
+    <h3 class="modal-title">{{ dictionary.translation }}</h3>
+</div>
+
+<div class="modal-body">
+    <div>
+        <h3>Users</h3>
+        <div ng-repeat="role in controller.getRoles()">
+            <h4>{{ role }} </h4>
+            <span class="badge" ng-repeat="user in controller.getUsers(role)">
+                {{ user.name }}
+            </span>
+
+        </div>
+
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="controller.ok()">OK</button>
+    <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+</div>

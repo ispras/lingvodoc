@@ -27,17 +27,10 @@
     <div ng-include="'/static/templates/include/viewDictionary.html'"></div>
 
 
-    <h3>{{ controller.linkedPerspectiveName() }}</h3>
-
-    <div ng-include="'/static/templates/include/viewLinkedDictionary.html'"></div>
-
-
-    <div>
-
-
-
+    <div ng-if="edit">
+        <h3>{{ controller.linkedPerspectiveName() }}</h3>
+        <div ng-include="'/static/templates/include/viewLinkedDictionary.html'"></div>
     </div>
-
 </div>
 
 <div class="modal-footer">
