@@ -1,0 +1,53 @@
+<div class="container">
+
+    <table class="table table-striped table-bordered">
+        <thead>
+        <tr>
+            <td>
+                File name
+            </td>
+
+            <td>
+                Type
+            </td>
+
+            <td>
+                Link
+            </td>
+        </tr>
+        </thead>
+
+
+        <tbody>
+
+
+        <tr ng-repeat="file in files">
+            <td>
+                {{ file.name }}
+            </td>
+
+            <td>
+                {{ file.dataType }}
+            </td>
+
+            <td>
+                <a ng-href="{{ file.url }}"><span class="glyphicon glyphicon-download"></span></a>
+            </td>
+
+        </tr>
+
+        </tbody>
+
+    </table>
+
+    <form action="/blob" method="POST" enctype="multipart/form-data">
+        <span class="btn btn-default btn-file">Upload file <input name="blob" on-read-data="controller.upload($file1)"
+                                                                  type="file" ng-disabled="dataType.length == 0"></span>
+        <select name="data_type" ng-model="dataType">
+            <option value="dialeqt_dictionary">dialeqt_dictionary</option>
+            <option value="pdf">pdf</option>
+        </select>
+    </form>
+
+
+</div>

@@ -219,7 +219,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
 
 
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, scope.offset, scope.size) onComplete {
+                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)

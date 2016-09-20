@@ -21,8 +21,8 @@
                             data-toggle="dropdown">{{ dictionary.translation }}
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)">Edit information</a></li>
-                        <li><a href="" ng-click="controller.editDictionaryRoles(dictionary)">Edit roles</a></li>
+                        <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)">Properties</a></li>
+                        <li><a href="" ng-click="controller.editDictionaryRoles(dictionary)">Roles</a></li>
                         <li><a href="" ng-click="controller.removeDictionary(dictionary)">Remove dictionary</a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="" ng-click="controller.createPerspective(dictionary)">Create new perspective</a></li>
@@ -64,8 +64,8 @@
                             <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}">Publish</a>
                             </li>
                             <li role="separator" class="divider"></li>
-                            <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)">Edit roles</a></li>
-                            <li><a href="" ng-click="controller.editPerspectiveProperties(dictionary, perspective)">Edit properties</a></li>
+                            <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)">Roles</a></li>
+                            <li><a href="" ng-click="controller.editPerspectiveProperties(dictionary, perspective)">Properties</a></li>
                             <li><a href="" ng-click="controller.removePerspective(dictionary, perspective)">Remove perspective</a></li>
 
                         </ul>

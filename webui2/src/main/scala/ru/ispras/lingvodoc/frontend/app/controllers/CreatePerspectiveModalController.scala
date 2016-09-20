@@ -1,58 +1,56 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.Scope
-import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.BackendService
-
-import scala.concurrent.{Future, Promise}
+import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
+import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
-import scala.scalajs.js.{Dynamic, Object}
-import scala.scalajs.js.annotation.{JSExport}
+import scala.scalajs.js.{Array, Dynamic, Object}
+import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
 import scala.util.{Failure, Success}
 
+
+
 @js.native
-trait PerspectivePropertiesScope extends Scope {
+trait CreatePerspectiveScope extends Scope {
   var dictionary: Dictionary = js.native
-  var perspective: Perspective = js.native
   var locales: js.Array[Locale] = js.native
   var layers: js.Array[Layer] = js.native
   var fields: js.Array[Field] = js.native
 }
 
 
-@injectable("PerspectivePropertiesController")
-class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
-                                      instance: ModalInstance[Perspective],
-                                      modal: ModalService,
-                                      backend: BackendService,
-                                      params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[PerspectivePropertiesScope](scope) {
+@injectable("CreatePerspectiveModalController")
+class CreatePerspectiveModalController(scope: CreatePerspectiveScope,
+                                       instance: ModalInstance[Unit],
+                                       modal: ModalService,
+                                       backend: BackendService,
+                                       params: js.Dictionary[js.Function0[js.Any]])
+  extends AbstractController[CreatePerspectiveScope](scope) {
 
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
-  private[this] val perspective = params("perspective").asInstanceOf[Perspective]
-  private[this] var perspectiveTranslationGist: Option[TranslationGist] = None
   private[this] var dataTypes = js.Array[TranslationGist]()
   private[this] var perspectives = Seq[Perspective]()
   private[this] var perspectiveTranslations = Map[Perspective, TranslationGist]()
 
   // Scope initialization
   scope.dictionary = dictionary.copy()
-  scope.perspective = perspective.copy()
   scope.locales = js.Array[Locale]()
   scope.layers = js.Array[Layer]()
   scope.fields = js.Array[Field]()
 
+  // create empty layer
+  scope.layers.push(Layer(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")), js.Array[FieldEntry]()))
 
   load()
-
 
   @JSExport
   def addFieldType(layer: Layer) = {
@@ -192,43 +190,17 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
   @JSExport
-  def availablePerspectives(layer: Layer): js.Array[Perspective] = {
-    perspectives.filterNot(_.getId == perspective.getId).toJSArray
+  def availableLayers(layer: Layer): js.Array[Layer] = {
+    scope.layers.filterNot(_.equals(layer)).toJSArray
   }
-
 
   @JSExport
   def ok() = {
-
-    var requests = Seq[Future[_]]()
-
-    // update translations
-    val layer = scope.layers.head
-    perspectiveTranslationGist foreach {
-      gist =>
-        val modifiedTranslations = gist.atoms.filter(atom => layer.names.exists(ls => ls.localeId == atom.localeId && ls.str != atom.content)) map { atom =>
-          layer.names.find(ls => ls.localeId == atom.localeId) foreach {
-            translation =>
-              atom.content = translation.str
-          }
-          atom
-        }
-
-        val addedTranslations = layer.names.filterNot(name => gist.atoms.exists(_.localeId == name.localeId))
-        val updatedTranslations = modifiedTranslations.filter(_.content.nonEmpty)
-
-        val addRequests = addedTranslations.map { str =>
-          backend.createTranslationAtom(CompositeId.fromObject(gist), str)
-        }.toSeq
-
-        val updatedRequests = updatedTranslations.map { atom =>
-          backend.updateTranslationAtom(atom)
-        }
+    compilePerspective(scope.layers.head) map { f =>
+      f map {
+        _ => instance.close(())
+      }
     }
-
-    updatePerspective(layer)
-
-    instance.close(scope.perspective)
   }
 
   @JSExport
@@ -237,19 +209,44 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
 
-
   private[this] def fieldToJS(field: Field): Object with Dynamic = {
     js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId)
   }
 
 
-  private[this] def updatePerspective(layer: Layer) = {
+  private[this] def createPerspectiveTranslationGist(layer: Layer): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+    backend.createTranslationGist("Perspective") onComplete {
+      case Success(gistId) =>
+        // create translation atoms
+        // TODO: add some error checks
+        val seqs = layer.names map {
+          name => backend.createTranslationAtom(gistId, name)
+        }
+        // make sure all translations created successfully
+        Future.sequence(seqs.toSeq) onComplete {
+          case Success(_) =>
+            p.success(gistId)
+          case Failure(e) =>
+            console.error(e.getMessage)
+            p.failure(e)
+        }
+      case Failure(e) =>
+        console.error(e.getMessage)
+        p.failure(e)
+
+    }
+    p.future
+  }
+
+  private[this] def compilePerspective(layer: Layer) = {
 
     val getField: (String) => Option[Field] = (fieldId: String) => {
       scope.fields.find(_.getId == fieldId)
     }
 
-    perspectiveTranslationGist foreach {
+    //
+    val req = createPerspectiveTranslationGist(layer).map {
       gist =>
         val fields = layer.fieldEntries.flatMap {
           entry =>
@@ -268,24 +265,24 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
                 if (!isLink) {
                   Some(js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId, "contains" -> contains))
                 } else {
-
-                  perspectives.find(_.getId == entry.linkedLayerId) match {
-                    case Some(linkedPerspective) =>
-                      Some(js.Dynamic.literal("client_id" -> field.clientId,
-                      "object_id" -> field.objectId,
-                      "contains" -> contains,
-                      "link" -> js.Dynamic.literal("client_id" -> linkedPerspective.clientId,
-                        "object_id" -> linkedPerspective.objectId)))
-                    case None => None
-
+                  scope.layers.exists(l => l.internalId == entry.linkedLayerId) match {
+                    case true => Some(js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId, "contains" -> contains, "link" -> js.Dynamic.literal("fake_id" -> entry.linkedLayerId)))
+                    case false => None
                   }
                 }
               case None => None
             }
         }
-        backend.updateFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), fields.toSeq)
+        js.Dynamic.literal("fake_id" -> layer.internalId,
+          "translation_gist_client_id" -> gist.clientId,
+          "translation_gist_object_id" -> gist.objectId,
+          "fields" -> fields)
     }
 
+    Future.sequence(req :: Nil).map {
+      ff => console.log(ff.toJSArray)
+        backend.createPerspectives(CompositeId.fromObject(dictionary), ff)
+    }
   }
 
 
@@ -327,63 +324,12 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
 
-
-  private[this] def parseField(field: Field): Future[FieldEntry] = {
-
-    val p = Promise[FieldEntry]
-
-    backend.translationGist(field.translationGistClientId, field.translationGistObjectId) onComplete {
-      case Success(gist) =>
-        val fieldNames = gist.atoms.map(atom => LocalizedString(atom.localeId, atom.content))
-        val fieldEntry = FieldEntry(fieldNames)
-
-        fieldEntry.fieldId = field.getId
-
-        if (field.fields.nonEmpty) {
-          fieldEntry.hasSubfield = true
-          fieldEntry.subfieldId = field.fields.head.getId
-        }
-
-        field.link.foreach { link =>
-          fieldEntry.linkedLayerId = CompositeId(link.clientId, link.objectId).getId
-        }
-
-        fieldEntry.dataType = dataTypes.find(d => d.clientId == field.dataTypeTranslationGistClientId && d.objectId == field.dataTypeTranslationGistObjectId)
-
-        p.success(fieldEntry)
-
-      case Failure(e) =>
-    }
-
-    p.future
-  }
-
-
-  private[this] def parseFields(fields: Seq[Field]): Future[Seq[FieldEntry]] = {
-    val fieldEntries = fields.map(field => parseField(field))
-    Future.sequence(fieldEntries)
-  }
-
-  private[this] def parsePerspective(perspective: Perspective, fields: Seq[Field]): Future[Layer] = {
-    val p = Promise[Layer]()
-    backend.translationGist(perspective.translationGistClientId, perspective.translationGistObjectId) map { gist =>
-      perspectiveTranslationGist = Some(gist)
-      val layerNames = gist.atoms.map(atom => LocalizedString(atom.localeId, atom.content))
-      parseFields(fields) map {
-        entries => Layer(layerNames, entries.toJSArray)
-      } map(layer => p.success(layer))
-    }
-    p.future
-  }
-
-
   private[this] def load() = {
 
     // load data types
     backend.dataTypes() map {
       d =>
         dataTypes = d.toJSArray
-
 
         backend.getDictionaryPerspectives(dictionary, onlyPublished = false) onComplete {
           case Success(ps) =>
@@ -396,21 +342,10 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
           case Failure(e) =>
         }
 
-
         // load all known fields
         backend.fields() onComplete {
           case Success(f) =>
             scope.fields = f.toJSArray
-          case Failure(e) =>
-        }
-
-        // load list of fields
-        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
-          case Success(fields) =>
-            parsePerspective(perspective, fields).foreach {
-              layer =>
-                scope.layers.push(layer)
-            }
           case Failure(e) =>
         }
     }
@@ -423,5 +358,4 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
       case Failure(e) =>
     }
   }
-
 }

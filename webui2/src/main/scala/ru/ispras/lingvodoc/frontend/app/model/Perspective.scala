@@ -20,7 +20,7 @@ case class Perspective(override val clientId: Int,
                        var markedForDeletion: Boolean) extends Object(clientId, objectId) {
 
   var fields: js.Array[Field] = js.Array()
-  var blobs: js.Array[Blob] = js.Array()
+  var blobs: js.Array[File] = js.Array()
 }
 
 object Perspective {

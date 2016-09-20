@@ -93,7 +93,7 @@ AbstractController[DashboardScope](scope) {
   def createPerspective(dictionary: Dictionary) = {
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/createPerspective.html"
-    options.controller = "CreatePerspectiveController"
+    options.controller = "CreatePerspectiveModalController"
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
@@ -105,12 +105,66 @@ AbstractController[DashboardScope](scope) {
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
 
+    val instance = modal.open[Unit](options)
+
+    instance.result map {
+      _ =>
+        backend.getDictionaryPerspectives(dictionary, onlyPublished = false) map {
+          perspectives => dictionary.perspectives = perspectives.toJSArray
+        }
+    }
+  }
+
+
+  @JSExport
+  def editDictionaryRoles(dictionary: Dictionary) = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/editDictionaryRoles.html"
+    options.controller = "EditDictionaryRolesModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionary = dictionary.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Dictionary](options)
+
+    instance.result map {
+      dictionary: Dictionary =>
+    }
+  }
+
+  @JSExport
+  def editPerspectiveRoles(dictionary: Dictionary, perspective: Perspective) = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/editPerspectiveRoles.html"
+    options.controller = "EditPerspectiveRolesModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionary = dictionary.asInstanceOf[js.Object],
+          perspective = perspective.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
     val instance = modal.open[Perspective](options)
 
     instance.result map {
-      p: Perspective => console.log(p.toString)
+      perspective: Perspective =>
     }
   }
+
+
+
 
   @JSExport
   def setDictionaryStatus(dictionary: Dictionary, status: TranslationAtom) = {
