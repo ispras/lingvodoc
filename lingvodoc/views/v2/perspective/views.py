@@ -621,6 +621,7 @@ def complex_create(request):
             headers = {'Cookie': request.headers['Cookie']}
             subreq.headers = headers
             resp = request.invoke_subrequest(subreq)
+            return result
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
