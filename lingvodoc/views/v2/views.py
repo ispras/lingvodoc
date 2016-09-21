@@ -4,7 +4,7 @@ from lingvodoc.views.v2.utils import (
 
 from pyramid.response import Response
 from pyramid.view import view_config
-from lingvodoc.models import DBSession, Dictionary
+from lingvodoc.models import DBSession, Dictionary, Locale
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk
@@ -53,6 +53,21 @@ def all_statuses(request):
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
         response.append(resp.json)
+    request.response.status = HTTPOk.code
+    return response
+
+
+@view_config(route_name='all_locales', renderer='json', request_method='GET')
+def all_locales(request):
+    response = list()
+    locales = DBSession.query(Locale).all()
+    for locale in locales:
+        locale_json = dict()
+        locale_json['shortcut'] = locale.shortcut
+        locale_json['intl_name'] = locale.intl_name
+        locale_json['created_at'] = str(locale.created_at)
+        locale_json['id'] = locale.id
+        response.append(locale_json)
     request.response.status = HTTPOk.code
     return response
 
