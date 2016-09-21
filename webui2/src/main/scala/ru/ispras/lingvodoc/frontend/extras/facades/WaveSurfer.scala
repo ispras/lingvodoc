@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.extras.facades
 
 import scala.scalajs.js
+import scala.scalajs.js.annotation.JSName
 
 @js.native
 trait WaveSurferOpts extends js.Object {
@@ -39,7 +40,7 @@ trait WaveSurfer extends js.Object {
   def getDuration(): Double = js.native
   def load(url: String): js.Dynamic = js.native
   def playPause(): js.Any = js.native
-  def play(start: Int = 0, end: Int = Int.MaxValue): js.Any = js.native
+  def play(start: Double = 0, end: Double = Double.MaxValue): js.Any = js.native
   def on(event: String, callback: js.Function0[Unit]): js.Any = js.native
   def on[T](event: String, callback: js.Function1[T, Unit]): js.Any = js.native
   def seekTo(progress: Double): js.Any = js.native
@@ -52,4 +53,16 @@ trait WaveSurfer extends js.Object {
 @js.native
 object WaveSurfer extends js.Object {
   def create(options: WaveSurferOpts): WaveSurfer = js.native
+}
+
+@JSName("WaveSurfer.Spectrogram")
+@js.native
+object WaveSurferSpectrogramPlugin extends js.Object {
+  def init(opts: js.Dynamic): js.Any = js.native
+}
+
+@JSName("WaveSurfer.Timeline")
+@js.native
+object WaveSurferTimelinePlugin extends js.Object {
+  def init(opts: js.Dynamic): js.Any = js.native
 }

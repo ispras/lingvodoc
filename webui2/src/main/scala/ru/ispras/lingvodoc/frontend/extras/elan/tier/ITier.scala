@@ -41,7 +41,9 @@ trait ITier[+AnnotType <: IAnnotation] {
   // get root document
   val owner: ELANDocumentJquery
   def getAnnotations: List[AnnotType]
-  def getAnnotationByID(id: String): AnnotType
+  def getAnnotationByID(id: String): Option[AnnotType]
+  // throws exception if annotation not found
+  def getAnnotationByIDChecked(id: String): AnnotType
 }
 
 abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[AnnotType] {
@@ -57,10 +59,12 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
   def getLT = linguisticTypeRef
   def getID = tierID
   def annotationsToJSArray = getAnnotations.toJSArray.asInstanceOf[js.Dynamic]
-  def getAnnotationByID(id: String) = try {
-    getAnnotations.filter(_.getID == id).head
+  def getAnnotationByID(id: String) = getAnnotations.find(_.getID == id)
+
+  def getAnnotationByIDChecked(id: String) = try {
+    getAnnotationByID(id).get
   } catch {
-    case e: java.util.NoSuchElementException => throw ELANPArserException(s"Annotation with id $id not found")
+    case e: java.util.NoSuchElementException => throw ELANPArserException(s"Annotation with id $id not found in tier $getID")
   }
 
   def toJS = {
@@ -68,6 +72,7 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
     tierJS("ID") = getID.asInstanceOf[js.Dynamic]
     tierJS("timeAlignable") = timeAlignable.asInstanceOf[js.Dynamic]
     tierJS("index") = index.asInstanceOf[js.Dynamic]
+    tierJS("stereotype") = stereotype.asInstanceOf[js.Dynamic]
 
     val annotationsJS: mutable.Map[String, js.Dynamic] =
       collection.mutable.Map() ++ getAnnotations.map(annot => annot.getID -> annot.toJS).toMap
@@ -85,7 +90,7 @@ object Tier {
   // factory method, chooses right tier type and creates it
   def fromXML(tierXML: JQuery, owner: ELANDocumentJquery): Tier[IAnnotation] = {
     val ltRef = RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName)
-    owner.getLinguisticType(ltRef).getStereotypeID match {
+    owner.getLinguisticTypeChecked(ltRef).getStereotypeID match {
       case None => new TopLevelTier(tierXML, owner)
       case Some(Constraint.timeSubdivID) => new TimeSubdivisionTier(tierXML, owner)
       case Some(Constraint.includedInID) => new IncludedInTier(tierXML, owner)
