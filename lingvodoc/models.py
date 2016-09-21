@@ -120,7 +120,12 @@ from collections import deque
 #     return vec
 
 
-def entity_content(xx, publish, root):
+def entity_content(xx, publish, root, delete_self=False):
+    if delete_self and xx.self_client_id and xx.self_object_id:
+        # from pdb import set_trace
+        # set_trace()
+
+        return None
     additional_metadata = None
     if hasattr(xx, "additional_metadata"):
         if xx.additional_metadata:
@@ -136,12 +141,26 @@ def entity_content(xx, publish, root):
         TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
         Field.client_id == xx.field_client_id, Field.object_id == xx.field_object_id,
         TranslationAtom.locale_id == 2).first()
-    if tr_atom.content == 'link' and root:
+    if tr_atom.content.lower() == 'link' and root:
         lex_entry = DBSession.query(LexicalEntry).join(Entity, and_(
             Entity.link_client_id == LexicalEntry.client_id,
             Entity.link_object_id == LexicalEntry.object_id)).filter(
             Entity.client_id == xx.client_id, Entity.object_id == xx.object_id).first()
         contains = recursive_content(lex_entry, publish, False)
+    # if 'ноготь_БИН.wav ' in xx.content:
+    #     from pdb import set_trace
+    #     set_trace()
+    #     print('sound')
+
+    # if tr_atom.content == 'sound':
+        # from pdb import set_trace
+        # set_trace()
+        # print('sound')
+    # if xx.entity:
+    #     from pdb import set_trace
+    #     set_trace()
+    #     print('sound')
+
     contains += recursive_content(xx, publish, True)  # todo: check nested entities handling
     published = False
     if xx.publishingentity.published:
@@ -166,7 +185,7 @@ def entity_content(xx, publish, root):
     return info
 
 
-def recursive_content(self, publish, root=True):  # TODO: completely redo
+def recursive_content(self, publish, root=True, delete_self=False):  # TODO: completely redo
     """
     :param publish:
     :param root: The value is True if we want to get underlying lexical entries.
@@ -180,7 +199,11 @@ def recursive_content(self, publish, root=True):  # TODO: completely redo
     #     entry_content = getattr(self, str(name))
     #     for xx in entry_content:
     for xx in self.entity:
-        info = entity_content(xx, publish, root)
+        info = entity_content(xx, publish, root, delete_self)
+        print(type(info))
+        print(info)
+        if not info:
+            continue
         if publish and not info['published']:
             continue
         # if info['contains']:
@@ -635,7 +658,7 @@ class LexicalEntry(CompositeIdMixin,
 
     def track(self, publish):
         vec = []
-        vec += recursive_content(self, publish)
+        vec += recursive_content(self, publish, True, True)
         published = False
         if vec:
             ents = list(vec)
