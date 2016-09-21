@@ -11,7 +11,7 @@ trait WaveSurferOpts extends js.Object {
   val cursorWidth: Int = js.native
   val cursorColor: String = js.native
   val scrollParent: Boolean = js.native
-  val minPxPerSec: Int = js.native
+  val minPxPerSec: Double = js.native
   val fillParent: Boolean = js.native
   val height: Int = js.native
 }
@@ -19,7 +19,7 @@ trait WaveSurferOpts extends js.Object {
 object WaveSurferOpts {
   def apply(container: String, waveColor: String = "#999", progressColor: String = " #555",
             cursorWidth: Int = 1, cursorColor: String = "#333", scrollParent: Boolean = false,
-            minPxPerSec: Int = 50, fillParent: Boolean = true, height: Int = 128): WaveSurferOpts = {
+            minPxPerSec: Double = 50, fillParent: Boolean = true, height: Int = 128): WaveSurferOpts = {
     js.Dynamic.literal(
       container = container,
       waveColor = waveColor,
@@ -46,7 +46,7 @@ trait WaveSurfer extends js.Object {
   def seekTo(progress: Double): js.Any = js.native
   def seekAndCenter(progress: Double): js.Any = js.native
   def drawer: js.Dynamic = js.native
-  def zoom(pxPerSec: Int): js.Any = js.native
+  def zoom(pxPerSec: Double): js.Any = js.native
 }
 
 

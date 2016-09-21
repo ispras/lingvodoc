@@ -54,11 +54,15 @@ class SoundMarkupController(scope: SoundMarkupScope,
   scope.tiersNameWidth = 140
 
   var waveSurfer: Option[WaveSurfer] = None // WS object
-  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
+  var spectrogram: Option[js.Dynamic] = None
+  var timeline: Option[js.Dynamic] = None
+  private var _pxPerSec = 50.0 // minimum pxls per second, all timing is bounded to it
   val pxPerSecStep = 30 // zooming step
   // fake value to avoid division by zero; on ws load, it will be set correctly
   private var _duration: Double = 42.0
   scope.fullWSWidth = 0.0 // again, will be known after audio load
+  // size of the window (div) with waveform and svg containing canvas. It is only needed to restrict maximal zoom out
+  private var WSAndTiersWidth = 0.0
 
   var wsHeight = 128
   private var _wsSpectrogramHeight = 0
@@ -107,8 +111,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   def pxPerSec = _pxPerSec
 
-  def pxPerSec_=(mpps: Int) = {
+  def pxPerSec_=(mpps: Double) = {
+    console.log(s"fullws width was ${scope.fullWSWidth}, window size is ${WSAndTiersWidth}")
     _pxPerSec = mpps
+    console.log(s"pxpersec now ${_pxPerSec}")
     val viewDataDiff = scope.elan.setPxPerSec(pxPerSec)
     updateVD(viewDataDiff)
     isWSNeedsToForceAngularRefresh = false
@@ -158,15 +164,16 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def drawSpectrogram() = {
-    val spectrogram = js.Object.create(WaveSurferSpectrogramPlugin)
-    spectrogram.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
-      container = "#" + SoundMarkupController.spectrogramDivName))
+    spectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
+    spectrogram.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
+      container = "#" + SoundMarkupController.spectrogramDivName)))
     wsSpectrogramHeight = js.Dynamic.global.document.getElementById(SoundMarkupController.spectrogramDivName).
       scrollHeight.toString.toInt
   }
 
   def hideSpectrogram() = {
-    js.Dynamic.global.document.getElementById(SoundMarkupController.spectrogramDivName).innerHTML = ""
+    spectrogram.foreach(_.destroy())
+    spectrogram = None
     wsSpectrogramHeight = 0
   }
 
@@ -176,15 +183,15 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def drawTimeline() = {
-    val timeline = js.Object.create(WaveSurferTimelinePlugin)
-    timeline.asInstanceOf[js.Dynamic].init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
-      container = "#" + SoundMarkupController.timelineDivName))
+    timeline = Some(js.Object.create(WaveSurferTimelinePlugin).asInstanceOf[js.Dynamic])
+    timeline.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer.get,
+      container = "#" + SoundMarkupController.timelineDivName, primaryColor = "red")))
     wsTimelineHeight = js.Dynamic.global.document.getElementById(SoundMarkupController.timelineDivName).
       scrollHeight.toString.toInt
   }
 
   def hideTimeline() = {
-    js.Dynamic.global.document.getElementById(SoundMarkupController.timelineDivName).innerHTML = ""
+    timeline.foreach(_.destroy())
     wsTimelineHeight = 0
   }
 
@@ -202,7 +209,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     * 4) In principle, we can start loading eaf file before or after view is loaded, however real scope.elan will not
     *   be available to view in either case, because eaf query is async, at least right now, with dummy jQuery get.
     * 5) So, loading goes like this:
-    *   a) Get EAF query is sent;
+    *   a) Controller's constructor executed, get EAF query is sent;
     *   b) View is loaded with dummy distances, WS width is not known at the moment, real scope.elan doesn't exists --
     *      a dummy stub is used instead.
     *   c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
@@ -228,7 +235,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
       waveSurfer.foreach(_.on("seek", onWSSeek _)) // bind seek event
       waveSurfer.foreach(_.on("audioprocess", onWSPlaying _)) // bind playing event
       waveSurfer.foreach(_.on("ready", wsReady _)) // bind playing event
-      scope.ws = waveSurfer.get
+
+      scope.ws = waveSurfer.get // for debug only, remove later
+
       selectionRectangle = Some(d3.select("#selectionRect"))
     } // do not write anything here, outside if!
   }
@@ -239,13 +248,17 @@ class SoundMarkupController(scope: SoundMarkupScope,
     isWSReady = true
     duration = getDuration
     updateFullWSWidth()
-
     scope.$apply({})
+
+    // learn visible ws window width to restrict useless zooming out
+    // TODO: update it on browser zooming (ctrl +/-)
+    WSAndTiersWidth = js.Dynamic.global.document.getElementById("WSAndTiers").clientWidth.toString.toDouble
   }
 
 
   def parseMarkup(markupAddress: String): Unit = {
-    scope.elan = ELANDocumentJquery.getDummy // to avoid errors while it is loading
+    scope.elan = ELANDocumentJquery.getDummy // to avoid errors while it is not yet loaded
+    scope.elanJS = scope.elan.toJS
     val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
       val test_markup = data.toString
       try {
@@ -326,10 +339,14 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   @JSExport
-  def zoomIn(): Unit = { pxPerSec += pxPerSecStep; }
+  def zoomIn(): Unit = { pxPerSec = pxPerSec / SoundMarkupController.zoomingStep; }
 
   @JSExport
-  def zoomOut(): Unit = { pxPerSec -= pxPerSecStep; }
+  def zoomOut(): Unit = {
+    // check if zooming out makes sense
+    if (scope.fullWSWidth * SoundMarkupController.zoomingStep >= WSAndTiersWidth)
+      pxPerSec = pxPerSec * SoundMarkupController.zoomingStep;
+  }
 
   @JSExport
   def save(): Unit = {
@@ -466,4 +483,5 @@ object SoundMarkupController {
   val wsDivName = "#waveform"
   val spectrogramDivName = "wavespectrogram"
   val timelineDivName = "wavetimeline"
+  val zoomingStep = 0.8
 }
