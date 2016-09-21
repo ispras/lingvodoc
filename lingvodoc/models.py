@@ -120,7 +120,9 @@ from collections import deque
 #     return vec
 
 
-def entity_content(xx, publish, root):
+def entity_content(xx, publish, root, delete_self=False):
+    if delete_self and xx.self_client_id and xx.self_object_id:
+        return None
     additional_metadata = None
     if hasattr(xx, "additional_metadata"):
         if xx.additional_metadata:
@@ -180,7 +182,7 @@ def recursive_content(self, publish, root=True):  # TODO: completely redo
     #     entry_content = getattr(self, str(name))
     #     for xx in entry_content:
     for xx in self.entity:
-        info = entity_content(xx, publish, root)
+        info = entity_content(xx, publish, root, True)
         if publish and not info['published']:
             continue
         # if info['contains']:
