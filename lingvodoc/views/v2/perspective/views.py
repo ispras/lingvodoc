@@ -35,6 +35,7 @@ from lingvodoc.models import (
     Dictionary,
     DictionaryPerspective,
     Entity,
+    PublishingEntity,
     Group,
     LexicalEntry,
     Organization,
@@ -659,6 +660,18 @@ def view_perspectives(request):
             published = (state_translation_gist_client_id, state_translation_gist_object_id)
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Limited access'}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            limited = (state_translation_gist_client_id, state_translation_gist_object_id)
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
 
     for perspective in parent.dictionaryperspective:
         path = request.route_url('perspective',
@@ -670,9 +683,13 @@ def view_perspectives(request):
         subreq.method = 'GET'
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
-        if published and not (
+        if published and not ((
                         published[0] == resp.json.get('state_translation_gist_client_id') and
-                        published[1] == resp.json.get('state_translation_gist_object_id')):
+                        published[1] == resp.json.get('state_translation_gist_object_id'))
+        or(
+                        limited[0] == resp.json.get('state_translation_gist_client_id') and
+                        limited[1] == resp.json.get('state_translation_gist_object_id'))
+        ):
             continue
         if 'error' not in resp.json:
             perspectives += [resp.json]
@@ -1290,13 +1307,19 @@ def lexical_entries_published(request):
             #                                       PublishLevelOneEntity.marked_for_deletion == False)) \
             #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
             #     .offset(start_from).limit(count)
-            lexes = list()
+            lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .join(LexicalEntry.entity).join(Entity.publishingentity) \
+                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True) \
+                .group_by(LexicalEntry) \
+                .offset(start_from).limit(count)
+
+            # lexes = list()
 
             result = deque()
 
             for entry in lexes.all():
                 result.append(entry.track(True))
-            response['lexical_entries'] = list(result)
+            response = list(result)
 
             request.response.status = HTTPOk.code
             return response
@@ -1305,7 +1328,6 @@ def lexical_entries_published(request):
         return {'error': str("No such perspective in the system")}
 
 
-# TODO: completely broken!
 @view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
 def lexical_entries_published_count(request):
     client_id = request.matchdict.get('perspective_client_id')
@@ -1314,11 +1336,11 @@ def lexical_entries_published_count(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(LexicalEntry)\
-                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .outerjoin(Entity)\
-                .filter(Entity.marked_for_deletion==False, Entity.publishingentity.published==True)\
-                .group_by(LexicalEntry).count()
+            lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .join(LexicalEntry.entity).join(Entity.publishingentity) \
+                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True) \
+                .group_by(LexicalEntry) \
+                .count()
             # lexical_entries_count = None
 
             return {"count": lexical_entries_count}
