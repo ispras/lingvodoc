@@ -43,7 +43,7 @@ def all_statuses(request):
     import json
 
     response = list()
-    for status in ['WiP', 'Published']:
+    for status in ['WiP', 'Published', 'Limited access', 'Hidden']:
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
