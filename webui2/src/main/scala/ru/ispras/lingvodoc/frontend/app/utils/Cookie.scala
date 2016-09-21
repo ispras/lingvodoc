@@ -28,6 +28,5 @@ object Cookie {
   def unset(name: String) = {
     val date = new js.Date(0)
     val cookie = name + "=;" + "path=/;" + "expires=" + date.toUTCString()
-    console.log(cookie)
   }
 }

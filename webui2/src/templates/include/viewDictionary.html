@@ -65,11 +65,11 @@
                                             </button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
-                                                <span class="glyphicon glyphicon-play">Markup</span>
-                                            </button>
-                                        </div>
+                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
+                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
+                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
+                                            <!--</button>-->
+                                        <!--</div>-->
                                     </li>
 
                                 </ul>
@@ -119,11 +119,18 @@
                                             </button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup')">
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
                                         </div>
+
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewPraatSoundMarkup(value, linkedValue)">
+                                                <span class="glyphicon glyphicon-play">Markup</span>
+                                            </button>
+                                        </div>
+
                                     </li>
 
                                 </ul>
@@ -169,11 +176,11 @@
                                             </button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
-                                                <span class="glyphicon glyphicon-play">Markup</span>
-                                            </button>
-                                        </div>
+                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
+                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
+                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
+                                            <!--</button>-->
+                                        <!--</div>-->
                                     </li>
 
                                 </ul>
@@ -218,11 +225,11 @@
                                             </button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
-                                                <span class="glyphicon glyphicon-play">Markup</span>
-                                            </button>
-                                        </div>
+                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
+                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
+                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
+                                            <!--</button>-->
+                                        <!--</div>-->
                                     </li>
 
                                 </ul>

@@ -101,14 +101,14 @@
                                                     ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
-                                                <span class="glyphicon glyphicon-play">Markup</span>
-                                            </button>
+                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
+                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
+                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
+                                            <!--</button>-->
 
-                                            <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
-                                        </div>
+                                            <!--<button type="button" class="btn btn-default btn-xs" aria-label="Remove"-->
+                                                    <!--ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>-->
+                                        <!--</div>-->
                                     </li>
 
                                     <li class="last">
@@ -225,7 +225,7 @@
                                                     ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup')">
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
@@ -233,6 +233,16 @@
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
                                                     ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
+
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewPraatSoundMarkup(value, linkedValue)">
+                                                <span class="glyphicon glyphicon-play">Markup</span>
+                                            </button>
+
+                                            <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
+                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                        </div>
+
                                     </li>
 
 
@@ -341,14 +351,14 @@
                                                     ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
-                                                <span class="glyphicon glyphicon-play">Markup</span>
-                                            </button>
+                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
+                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
+                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
+                                            <!--</button>-->
 
-                                            <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
-                                        </div>
+                                            <!--<button type="button" class="btn btn-default btn-xs" aria-label="Remove"-->
+                                                    <!--ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>-->
+                                        <!--</div>-->
                                     </li>
 
 
