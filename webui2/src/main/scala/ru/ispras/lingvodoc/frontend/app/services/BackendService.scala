@@ -634,6 +634,25 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def perspectiveSource(perspectiveId: CompositeId): Future[Seq[Source[_]]] = {
+    val p = Promise[Seq[Source[_]]]()
+
+    val url = "perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/tree"
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(read[Seq[Source[_]]](js.JSON.stringify(response)))
+        } catch {
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get perspective source", e))
+    }
+    p.future
+  }
+
+
   /**
     *
     * @param dictionary
