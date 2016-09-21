@@ -277,6 +277,9 @@ def configure_routes(config):
     config.add_route(name='all_statuses',
                      pattern='/all_statuses',
                      factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='all_locales',
+                     pattern='/all_locales',
+                     factory='lingvodoc.models.ApproveAllAcl')
     config.add_route(name='all_data_types',
                      pattern='/all_data_types',
                      factory='lingvodoc.models.ApproveAllAcl')
