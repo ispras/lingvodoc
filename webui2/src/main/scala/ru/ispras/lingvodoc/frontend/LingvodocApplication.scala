@@ -31,7 +31,7 @@ object LingvodocApplication {
 
   @JSExport
   def main() = {
-    Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu"))
+    Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu", "ngOrderObjectBy"))
       .config[RoutingConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]

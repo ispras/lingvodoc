@@ -23,8 +23,9 @@ import scala.scalajs.js.annotation.JSExport
 
 @js.native
 trait SoundMarkupScope extends Scope {
-  var elan: ELANDocumentJquery = js.native // elan document itself
   var elanJS: js.Dynamic = js.native
+  // oh shit
+//  var tiersJSForTabs: js.Array[js.Dynamic] = js.native
 
   var ws: WaveSurfer = js.native // for debugging, remove later
   var spectrogramEnabled: Boolean = js.native
@@ -48,7 +49,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             backend: BackendService,
                             params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[SoundMarkupScope](scope) {
-  scope.elanJS = js.Dynamic.global.elanDoc
+  var elan: Option[ELANDocumentJquery] = None
+  scope.elanJS = js.Dynamic.literal()
 
   scope.tierWidth = 50
   scope.tiersNameWidth = 140
@@ -107,6 +109,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // merge viewDataDiff into scope's elanJS
   def updateVD(viewDataDiff: js.Dynamic): Unit = {
     jQuery.extend(true, scope.elanJS, viewDataDiff)
+    // some mumbo jumbo
+//    val tierForTabs = mutable.Seq.empty[js.Dynamic]
+//    scope.elanJS
+//    scope.tiersJSForTabs = js.Array.
   }
 
   def pxPerSec = _pxPerSec
@@ -115,8 +121,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
     console.log(s"fullws width was ${scope.fullWSWidth}, window size is ${WSAndTiersWidth}")
     _pxPerSec = mpps
     console.log(s"pxpersec now ${_pxPerSec}")
-    val viewDataDiff = scope.elan.setPxPerSec(pxPerSec)
-    updateVD(viewDataDiff)
+    val viewDataDiff = elan.map(_.setPxPerSec(pxPerSec))
+    viewDataDiff.foreach(updateVD)
     isWSNeedsToForceAngularRefresh = false
     waveSurfer.foreach(_.zoom(mpps))
     updateFullWSWidth()
@@ -206,11 +212,11 @@ class SoundMarkupController(scope: SoundMarkupScope,
     * otherwise
     * 2) On the other hand, we can't fully render template without WS instance because we need sound's duration to
     * calculate right distances.
-    * 4) In principle, we can start loading eaf file before or after view is loaded, however real scope.elan will not
+    * 4) In principle, we can start loading eaf file before or after view is loaded, however real elan will not
     *   be available to view in either case, because eaf query is async, at least right now, with dummy jQuery get.
     * 5) So, loading goes like this:
     *   a) Controller's constructor executed, get EAF query is sent;
-    *   b) View is loaded with dummy distances, WS width is not known at the moment, real scope.elan doesn't exists --
+    *   b) View is loaded with dummy distances, WS width is not known at the moment, real elan doesn't exists --
     *      a dummy stub is used instead.
     *   c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
     *   d) After that, Angular reloads the view, showing WaveSurfer box and tiers/annotations;
@@ -257,13 +263,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
   def parseMarkup(markupAddress: String): Unit = {
-    scope.elan = ELANDocumentJquery.getDummy // to avoid errors while it is not yet loaded
-    scope.elanJS = scope.elan.toJS
+    updateVD(ELANDocumentJquery.getDummy.toJS) // to avoid errors while it is not yet loaded
     val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
       val test_markup = data.toString
       try {
-        scope.elan = ELANDocumentJquery(test_markup, pxPerSec)
-        scope.elanJS = scope.elan.toJS
+        elan = Some(ELANDocumentJquery(test_markup, pxPerSec))
+        elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD(e.toJS)})
         // TODO: apply() here? if markup will be loaded later than sound
 //        console.log(scope.elan.toString)
       } catch {
@@ -334,8 +339,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   @JSExport
   def playAnnotation(annotID: String) = {
-    val annot = scope.elan.getAnnotationByIDChecked(annotID)
-    play(annot.startSec, annot.endSec)
+    elan.foreach(e => {
+      val annot = e.getAnnotationByIDChecked(annotID)
+      play(annot.startSec, annot.endSec)
+    })
   }
 
   @JSExport
