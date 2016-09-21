@@ -67,6 +67,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   val soundAddress = params.get("soundAddress").map(_.toString)
   val markupAddress = params.get("markupAddress").map(_.toString)
+  val markupData = params.get("markupData").map(_.toString)
 
 
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
@@ -93,7 +94,14 @@ class SoundMarkupController(scope: SoundMarkupScope,
   //      case markup => parseMarkup(markup)
   //    }
   //  })
-  parseMarkup(markupAddress.get)
+
+  if (markupAddress.nonEmpty) {
+    parseMarkup(markupAddress.get)
+  } else {
+    if (markupData.nonEmpty) {
+      parseDataMarkup(markupData.get)
+    }
+  }
 
   setMenuOptions()
 
@@ -263,6 +271,20 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
     jQuery.get(markupAddress, success = action, dataType = "text")
   }
+
+  def parseDataMarkup(elanMarkup: String) = {
+    try {
+      scope.elan = ELANDocumentJquery(elanMarkup, pxPerSec)
+      scope.elanJS = scope.elan.toJS
+    } catch {
+      case e: Exception =>
+        console.error(e.getStackTrace.mkString("\n"))
+        throw e
+    }
+    scope.ruler = 0
+  }
+
+
 
   @JSExport // TODO removeme
   def getDuration = { if (isWSReady) waveSurfer.get.getDuration() else 42.0 }
