@@ -634,6 +634,25 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def perspectiveSource(perspectiveId: CompositeId): Future[Seq[Source[_]]] = {
+    val p = Promise[Seq[Source[_]]]()
+
+    val url = "perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/tree"
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(read[Seq[Source[_]]](js.JSON.stringify(response)))
+        } catch {
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get perspective source", e))
+    }
+    p.future
+  }
+
+
   /**
     *
     * @param dictionary
@@ -1215,7 +1234,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
       case None =>
     }
 
-
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
@@ -1232,10 +1250,19 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 
 
   def getLocales(): Future[Seq[Locale]] = {
-    val defer = $q.defer[Seq[Locale]]()
-    val locales = Locale(2, "En", "English", "") :: Locale(1, "Ru", "Russian", "") :: Locale(3, "De", "German", "") :: Locale(4, "Fr", "French", "") :: Nil
-    defer.resolve(locales)
-    defer.future
+    val p = Promise[Seq[Locale]]()
+    $http.get[js.Dynamic](getMethodUrl("all_locales")) onComplete {
+      case Success(response) =>
+        try {
+          val locales = read[Seq[Locale]](js.JSON.stringify(response))
+          p.success(locales)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to get list of locales", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to get list of locales", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of locales", e))
+    }
+    p.future
   }
 
   def userFiles: Future[Seq[File]] = {
@@ -1293,8 +1320,24 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def serviceTranslation(search: String): Future[TranslationGist] = {
+    val p = Promise[TranslationGist]()
 
+    val req = js.Dynamic.literal("searchstring" -> search)
 
+    $http.post[js.Dynamic](getMethodUrl("translation_service_search"), req) onComplete {
+      case Success(response) =>
+        try {
+          val gist = read[TranslationGist](js.JSON.stringify(response))
+          p.success(gist)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to get translation.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to get translation.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to upload user file.", e))
+    }
+    p.future
+  }
 }
 
 @injectable("BackendService")

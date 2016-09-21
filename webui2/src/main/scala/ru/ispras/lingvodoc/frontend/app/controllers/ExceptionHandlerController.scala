@@ -21,11 +21,27 @@ class ExceptionHandlerController(scope: ExceptionHandlerScope,
                                  instance: ModalInstance[Unit],
                                  params: js.Dictionary[js.Function0[js.Any]]) extends AbstractController[ExceptionHandlerScope](scope) {
 
-  private[this] val exception: Throwable = params("exception").asInstanceOf[Throwable]
+  params("exception") match {
+    case e: Throwable =>
+      scope.message = e.getMessage
 
-  scope.message = exception.getMessage
-  scope.causeMessage = exception.getCause.getMessage
-  scope.stackTrace = exception.getCause.getStackTrace.mkString("\n")
+
+
+      e.getCause match {
+        case cause: Throwable =>
+          scope.causeMessage = e.getCause.getMessage
+          scope.stackTrace = e.getCause.getStackTrace.mkString("\n")
+        case _ =>
+          scope.causeMessage = e.getMessage
+          scope.stackTrace = e.getStackTrace.mkString("\n")
+      }
+
+    case _ =>
+      scope.message = ""
+      scope.causeMessage = ""
+      scope.stackTrace = ""
+
+  }
 
   @JSExport
   def ok() = {

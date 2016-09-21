@@ -7,5 +7,5 @@ import scala.scalajs.js.annotation.JSExportAll
 @JSExportAll
 case class Locale(@key("id") id: Int,
                   @key("shortcut") shortcut: String,
-                  @key("name") name: String,
+                  @key("intl_name") name: String,
                   @key("created_at") createdAt: String)

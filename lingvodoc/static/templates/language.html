@@ -1,7 +1,7 @@
 <div class="container">
 
 
-    <h1>Languages <button type="button" aria-label="Add language" ng-click="controller.createRootLanguage()"><span
+    <h1><translatable str="Languages">Languages</translatable> <button type="button" aria-label="Add language" ng-click="controller.createRootLanguage()"><span
             aria-hidden="true">+</span></button></h1>
 
     <div ng-if="languages.length > 0">
@@ -12,7 +12,7 @@
 
 
     <div ng-if="languages.length == 0">
-        <span>No languages</span>
+        <span><translatable str="No languages">No languages</translatable></span>
     </div>
 
 

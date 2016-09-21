@@ -24,7 +24,8 @@ import scala.scalajs.js.UndefOr
 
 @js.native
 trait EditDictionaryScope extends Scope {
-
+  var filter: Boolean = js.native
+  var path: String = js.native
   var count: Int = js.native
   var offset: Int = js.native
   var size: Int = js.native
@@ -65,6 +66,7 @@ AbstractController[EditDictionaryScope](scope) {
   var soundMarkup: Option[String] = None
 
 
+  scope.filter = true
   //scope.count = 0
   scope.offset = 0
   scope.size = 5
@@ -355,6 +357,17 @@ AbstractController[EditDictionaryScope](scope) {
 
 
   private[this] def load() = {
+
+    backend.perspectiveSource(CompositeId.fromObject(perspective)) onComplete {
+      case Success(sources) =>
+        scope.path = sources.reverse.map { _.source match {
+          case language: Language => language.translation
+          case dictionary: Dictionary => dictionary.translation
+          case perspective: Perspective => perspective.translation
+        }}.mkString(" >> ")
+      case Failure(e) => console.error(e.getMessage)
+    }
+
 
     backend.dataTypes() onComplete {
       case Success(d) =>

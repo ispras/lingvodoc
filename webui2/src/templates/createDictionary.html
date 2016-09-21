@@ -6,7 +6,7 @@
             <!-- First step -->
             <div ng-show="step==1">
                 <!-- List of all languages -->
-                <label for="language">Language</label>
+                <label for="language"><translatable str="Language">Language</translatable></label>
                 <select id="language" class="form-control" ng-model="languageId"
                         ng-options="language.getId as language.translation for language in languages track by language.getId">
                 </select>
@@ -15,9 +15,8 @@
                 <hr>
 
                 <ol>
-                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="create"> Create new
-                        dictionary</label></li>
-                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="import"> Import dictionary</label>
+                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="create"> <translatable str="Create new dictionary">Create new dictionary</translatable></label></li>
+                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="import"> <translatable str="Import dictionary">Import dictionary</translatable></label>
                     </li>
                 </ol>
 
@@ -34,7 +33,7 @@
                 </div>
 
                 <div class="ng-hide" ng-show="creationMode == 'import'">
-                    <label for="selectFile">Select uploaded file</label> (<a href="#/files">Upload dictionary</a>)
+                    <label for="selectFile"><translatable str="Select uploaded file">Select uploaded file</translatable></label> (<a href="#/files"><translatable str="Upload dictionary">Upload dictionary</translatable></a>)
 
                     <select id="selectFile" ng-model="fileId" class="form-control">
                         <option ng-repeat="file in files" value="{{ file.getId }}">{{ file.name }}</option>
@@ -52,7 +51,7 @@
             <div ng-show="step==2">
 
                 <!-- Layers -->
-                <h1>Layers
+                <h1><transltable str="Layers">Layers</transltable>
                     <button type="button" aria-label="Add layer" ng-click="controller.addLayer()"><span
                             aria-hidden="true">+</span></button>
                 </h1>
@@ -78,7 +77,7 @@
                             </div>
 
                             <div class="col-lg-6">
-                                <div class="input-group"><span class="input-group-addon">Language</span>
+                                <div class="input-group"><span class="input-group-addon"><translatable str="Language">Language</translatable></span>
                                     <select id="layer-name-locale-{{$index}}" class="form-control"
                                             ng-model="name.localeId" convert-to-number>
                                         <option ng-repeat="locale in controller.getAvailableLocales(layer.names, name)"
@@ -94,7 +93,7 @@
                         <br/>
 
                         <button class="btn btn-info" ng-click="controller.addNameTranslation(layer)">
-                            <span class="glyphicon glyphicon-plus-sign">Add translation</span>
+                            <span class="glyphicon glyphicon-plus-sign"><translatable str="Add translation">Add translation</translatable></span>
                         </button>
 
                         <br/>
@@ -105,7 +104,7 @@
                         <div class="row">
                             <div class="col-lg-11 col-lg-offset-1">
 
-                                <h3>Fields
+                                <h3><translatable str="Fields">Fields</translatable>
                                     <button type="button" aria-label="Add layer"
                                             ng-click="controller.addFieldType(layer)"><span aria-hidden="true">+</span>
                                     </button>
@@ -139,14 +138,12 @@
                                                 <select ng-model="fieldEntry.fieldId"
                                                         ng-change="controller.selectField(fieldEntry)"
                                                         class="form-control">
-                                                    <option style="font-weight:bold; color:black;" disabled>Existing
-                                                        fields
-                                                    </option>
+                                                    <option style="font-weight:bold; color:black;" disabled><translatable str="Existing fields">Existing fields</translatable></option>
                                                     <option ng-repeat="field in fields" value="{{field.getId}}"> &nbsp;
                                                         {{ field.translation }}
                                                     </option>
                                                     <option disabled>&nbsp;</option>
-                                                    <option value="add_new_field">Add new field...</option>
+                                                    <option value="add_new_field"><translatable str="Add new field...">Add new field...</translatable></option>
                                                 </select>
 
                                             </div>
@@ -158,7 +155,7 @@
 
                                                     <div class="col-lg-5">
                                                         <input type="checkbox" ng-model="fieldEntry.hasSubfield"
-                                                               ng-checked="fieldEntry.hasSubfield"> Has linked field
+                                                               ng-checked="fieldEntry.hasSubfield"> <translatable str="Has linked field">Has linked field</translatable>
                                                     </div>
 
                                                     <div class="col-lg-7">
@@ -201,8 +198,7 @@
 
                                 <div class="row" ng-if="layer.fieldEntries.length == 0">
                                     <div class="col-lg-12">
-                                        <p class="lead">There are no fields yet. Click '+' button to create a new
-                                            one.</p>
+                                        <p class="lead"><translatable str="There are no fields yet. Click '+' button to create a new one.">There are no fields yet. Click '+' button to create a new one.</translatable></p>
                                     </div>
                                 </div>
 
@@ -219,7 +215,7 @@
                 <!-- Layers end -->
 
                 <div ng-show="layers.length == 0">
-                    <p class="lead">There are no layers yet. Click '+' button to create a new one.</p>
+                    <p class="lead"><translatable str="There are no layers yet. Click '+' button to create a new one.">There are no layers yet. Click '+' button to create a new one.</translatable></p>
                 </div>
 
                 <button class="btn btn-block btn-info" ng-click="controller.finish()"
@@ -231,7 +227,7 @@
             <div  ng-show="step==3">
                 <div class="row">
                     <div class="col-lg-12">
-                        <h1>Dictionary created</h1>
+                        <h1><translatable str="Dictionary created">Dictionary created</translatable></h1>
                     </div>
                 </div>
             </div>
