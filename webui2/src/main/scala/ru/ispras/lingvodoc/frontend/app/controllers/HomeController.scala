@@ -32,7 +32,7 @@ class HomeController(scope: HomeScope, injector: Injector, backend: BackendServi
 
   @JSExport
   def getPerspectiveAuthors(perspective: Perspective): String = {
-    "Metadata is not supported!"
+    ""
   }
 
   private[this] def setPerspectives(languages: Seq[Language]): Unit = {

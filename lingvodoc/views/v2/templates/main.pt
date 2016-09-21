@@ -43,19 +43,19 @@
                 <li class="dropdown" ng-if="controller.isAuthenticated()">
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">
-                        Dashboard<span class="caret"></span>
+                        <translatable str="Dashboard">Dashboard</translatable><span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu">
-                        <li><a href="#/dashboard">My dictionaries</a></li>
-                        <li><a href="#/dictionary/create">Create dictionary</a></li>
+                        <li><a href="#/dashboard"><translatable str="My dictionaries">My dictionaries</translatable></a></li>
+                        <li><a href="#/dictionary/create"><translatable str="Create dictionary">Create dictionary</translatable></a></li>
                         <!--?<li><a href="#/merge_master">Merge master</a></li>-->
                     </ul>
                 </li>
 
-                <li ng-if="controller.isAuthenticated()"><a href="#/languages">Languages</a></li>
+                <li ng-if="controller.isAuthenticated()"><a href="#/languages"><translatable str="Languages">Languages</translatable></a></li>
                 <!--?<li ng-if="controller.isAuthenticated()"><a href="#/organizations">Organizations</a></li>-->
                 <!--?<li ng-if="controller.isAuthenticated()"><a href="#/maps">Maps search</a></li>-->
-                <li ng-if="controller.isAuthenticated()"><a href="#/files">My files</a></li>
+                <li ng-if="controller.isAuthenticated()"><a href="#/files"><translatable str="My files">My files</translatable></a></li>
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
@@ -64,29 +64,27 @@
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                        aria-expanded="false">{{ controller.getAuthenticatedUser().name }}<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="#/files">My files</a></li>
-                        <li><a href="#/logout">Sign out</a></li>
+                        <li><a href="#/files"><translatable str="My files">My files</translatable></a></li>
+                        <li><a href="#/logout"><translatable str="Sign out">Sign out</translatable></a></li>
                     </ul>
                 </li>
 
                 <li class="dropdown" ng-if="!controller.isAuthenticated()">
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
-                       aria-expanded="false">Guest<span class="caret"></span></a>
+                       aria-expanded="false"><translatable str="Guest">Guest</translatable><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <li><a href="#/login">Sign in</a></li>
-                        <li><a href="#/signup">Sign up</a></li>
+                        <li><a href="#/login"><transltable str="Sign in">Sign in</transltable></a></li>
+                        <li><a href="#/signup"><translatable str="Sign up">Sign up</translatable></a></li>
                     </ul>
                 </li>
 
                 <li class="dropdown">
                     <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-                        Language (<span ng-if="controller.getLocale()===1">Russian</span><span ng-if="controller.getLocale()===2">English</span><span ng-if="controller.getLocale()===3">German</span>)
+                        Language (
+                        <span>{{ selectedLocale.name }}</span>)
                         <span class="caret"></span></a>
                     <ul class="dropdown-menu">
-
-                        <li><a ng-click="controller.setLocale(1)"><span ng-if="controller.getLocale()===1" class="glyphicon glyphicon-ok"></span> Russian</a></li>
-                        <li><a ng-click="controller.setLocale(2)"><span ng-if="controller.getLocale()===2" class="glyphicon glyphicon-ok"></span> English</a></li>
-                        <li><a ng-click="controller.setLocale(3)"><span ng-if="controller.getLocale()===3" class="glyphicon glyphicon-ok"></span> German</a></li>
+                        <li ng-repeat="locale in locales"><a ng-click="controller.setLocale(locale.id)"><span ng-if="controller.getLocale()===locale.id" class="glyphicon glyphicon-ok"></span> {{ locale.name }}</a></li>
                     </ul>
                 </li>
 

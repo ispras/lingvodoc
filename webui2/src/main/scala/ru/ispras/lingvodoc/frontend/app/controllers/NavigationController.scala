@@ -1,25 +1,23 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{RootScope, Scope}
-import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, injectable}
+import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
-import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
-import scala.scalajs.js.Array
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
-import scala.scalajs.js.Date
-import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 @js.native
 trait NavigationScope extends Scope {
   var locale: Int = js.native
+  var locales: js.Array[Locale] = js.native
+  var selectedLocale: Locale = js.native
 }
 
 @JSExport
@@ -62,6 +60,12 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, backend
         rootScope.$emit("user.changeLocale")
     }
     scope.locale = locale
+    scope.selectedLocale = scope.locales.find { locale =>
+      locale.id == scope.locale
+    } match {
+      case Some(x) => x
+      case None => scope.locales.head
+    }
   }
 
   // user logged in
@@ -79,6 +83,19 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, backend
   })
 
   // initial
+  backend.getLocales onComplete {
+    case Success(locales) =>
+      scope.locales = locales.toJSArray
+      scope.selectedLocale = locales.find { locale =>
+        locale.id == scope.locale
+      } match {
+        case Some(x) => x
+        case None => locales.head
+      }
+
+    case Failure(e) => console.log(e.getMessage)
+  }
+
   backend.getCurrentUser onComplete {
     case Success(user) =>
       userService.setUser(user)

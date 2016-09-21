@@ -1,12 +1,11 @@
 <div class="container-fluid" style="padding-top: 20px">
 
     <div class="row">
-        <h4>
-            <span ng-repeat-start="e in path.slice().reverse()">
-                <span>{{ e.translation }}</span>
-            </span>
-            <span ng-repeat-end="" ng-if="$index < (path.length-1)">&gt;&gt;</span>
-        </h4>
+        <div class="col-md-12">
+            <h4>
+                {{ path }}
+            </h4>
+        </div>
     </div>
 
     <br>

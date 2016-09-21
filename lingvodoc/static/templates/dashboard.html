@@ -1,9 +1,9 @@
-<div class="container" ng-cloak>
+<translatable class="container" ng-cloak>
 
 
     <div class="panel">
-        <button type="button" class="btn btn-primary" ng-click="controller.loadMyDictionaries()">My dictionaries</button>
-        <button type="button" class="btn btn-primary" ng-click="controller.loadAvailableDictionaries()">Avaliable dictionaries
+        <button type="button" class="btn btn-primary" ng-click="controller.loadMyDictionaries()"><translatable str="My dictionaries">My dictionaries</translatable></button>
+        <button type="button" class="btn btn-primary" ng-click="controller.loadAvailableDictionaries()"><translatable str="Available dictionaries">Available dictionaries</translatable>
         </button>
     </div>
     <br>
@@ -21,11 +21,11 @@
                             data-toggle="dropdown">{{ dictionary.translation }}
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)">Properties</a></li>
-                        <li><a href="" ng-click="controller.editDictionaryRoles(dictionary)">Roles</a></li>
-                        <li><a href="" ng-click="controller.removeDictionary(dictionary)">Remove dictionary</a></li>
+                        <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)"><translatable str="Edit information">Properties</translatable></a></li>
+                        <li><a href="" ng-click="controller.editDictionaryRoles(dictionary)"><translatable str="Edit roles">Edit roles</translatable></a></li>
+                        <li><a href="" ng-click="controller.removeDictionary(dictionary)"><translatable str="Remove dictionary">Remove dictionary</translatable></a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="" ng-click="controller.createPerspective(dictionary)">Create new perspective</a></li>
+                        <li><a href="" ng-click="controller.createPerspective(dictionary)"><translatable str="Create new perspective">Create a new perspective</translatable></a></li>
                     </ul>
                 </div>
                 <div class="btn-group col-md-4 col-sm-4 col-lg-4">
@@ -59,14 +59,14 @@
                                 data-toggle="dropdown">{{ perspective.translation }}
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'view') }}">View published</a></li>
-                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}">Edit</a></li>
-                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}">Publish</a>
+                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'view') }}"><translatable str="View published">View published</translatable></a></li>
+                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}"><translatable str="Edit">Edit</translatable></a></li>
+                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}"><translatable str="Publish">Publish</translatable></a>
                             </li>
                             <li role="separator" class="divider"></li>
-                            <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)">Roles</a></li>
-                            <li><a href="" ng-click="controller.editPerspectiveProperties(dictionary, perspective)">Properties</a></li>
-                            <li><a href="" ng-click="controller.removePerspective(dictionary, perspective)">Remove perspective</a></li>
+                            <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)"><translatable str="Edit roles">Roles</translatable></a></li>
+                            <li><a href="" ng-click="controller.editPerspectiveProperties(dictionary, perspective)"><translatable str="Edit properties">Properties</translatable></a></li>
+                            <li><a href="" ng-click="controller.removePerspective(dictionary, perspective)"><translatable str="Remove perspective">Remove perspective</translatable></a></li>
 
                         </ul>
                     </div>
@@ -97,5 +97,5 @@
 
     <hr>
 
-    <a href="#/dictionary/create" class="btn btn-primary">Create dictionary...</a>
+    <a href="#/dictionary/create" class="btn btn-primary"><translatable str="Create dictionary...">Create dictionary...</translatable></a>
 </div>

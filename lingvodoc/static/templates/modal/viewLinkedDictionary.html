@@ -4,25 +4,34 @@
 
 <div class="modal-body">
 
-    <div>
-        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
-            <span class="glyphicon glyphicon-play">Play/Pause full</span>
-        </button>
+    <div class="row">
+        <div class="col-md-12">
 
-        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
-            <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
-        </button>
+            <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+                <span class="glyphicon glyphicon-play">Play/Pause full</span>
+            </button>
 
-        <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
-            <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
-        </button>
+            <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
+                <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
+            </button>
 
-        <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+            <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
+                <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
+            </button>
 
+            <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+
+        </div>
     </div>
 
 
-    <h3></h3>
+    <div class="row">
+        <div class="col-md-12">
+            <h4>
+                {{ linkedPath }}
+            </h4>
+        </div>
+    </div>
 
     <div ng-include="'/static/templates/include/viewDictionary.html'"></div>
 

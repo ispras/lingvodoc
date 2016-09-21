@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
-import ru.ispras.lingvodoc.frontend.app.directives.{ConvertToNumberDirective, OnReadDirective, OnReadFileDirective}
+import ru.ispras.lingvodoc.frontend.app.directives.{ConvertToNumberDirective, OnReadDirective, OnReadFileDirective, TranslatableDirective}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendServiceFactory, ExceptionHandlerFactory, UserService, UserServiceFactory}
 
 import scala.scalajs.js.annotation.JSExport
@@ -65,5 +65,6 @@ object LingvodocApplication {
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
+      .directive[TranslatableDirective]
   }
 }
