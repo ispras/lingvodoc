@@ -97,6 +97,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // d3 selection rectangle element
   var selectionRectangle: Option[Selection[EventTarget]] = None
+  // div containing wavesurfer and drawn tiers
+  var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
 
   //  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
   //    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
@@ -256,6 +258,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       scope.ws = waveSurfer.get // for debug only, remove later
 
       selectionRectangle = Some(d3.select("#selectionRect"))
+      WSAndTiers = js.Dynamic.global.document.getElementById("WSAndTiers")
     } // do not write anything here, outside if!
   }
 
@@ -269,7 +272,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
     // learn visible ws window width to restrict useless zooming out
     // TODO: update it on browser zooming (ctrl +/-)
-    WSAndTiersWidth = js.Dynamic.global.document.getElementById("WSAndTiers").clientWidth.toString.toDouble
+    WSAndTiersWidth = WSAndTiers.clientWidth.toString.toDouble
   }
 
 
@@ -371,22 +374,35 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   @JSExport
-  def zoomIn(): Unit = { pxPerSec = pxPerSec / SoundMarkupController.zoomingStep; }
+  def zoomIn(): Unit = {
+    WSAndTiers.scrollLeft = WSAndTiers.scrollLeft.toString.toDouble / SoundMarkupController.zoomingStep
+    pxPerSec = pxPerSec / SoundMarkupController.zoomingStep
+  }
 
   @JSExport
   def zoomOut(): Unit = {
     // check if zooming out makes sense
-    if (scope.fullWSWidth * SoundMarkupController.zoomingStep >= WSAndTiersWidth)
-      pxPerSec = pxPerSec * SoundMarkupController.zoomingStep;
+    if (scope.fullWSWidth * SoundMarkupController.zoomingStep >= WSAndTiersWidth) {
+      WSAndTiers.scrollLeft = WSAndTiers.scrollLeft.toString.toDouble * SoundMarkupController.zoomingStep
+      pxPerSec = pxPerSec * SoundMarkupController.zoomingStep
+    }
+  }
+
+  def destroyAll() = {
+    spectrogram.foreach(_.destroy())
+    timeline.foreach(_.destroy())
+    waveSurfer.foreach(_.destroy())
   }
 
   @JSExport
   def save(): Unit = {
+    destroyAll()
     instance.close(())
   }
 
   @JSExport
   def cancel(): Unit = {
+    destroyAll()
     instance.close(())
   }
 

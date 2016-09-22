@@ -36,6 +36,7 @@ object WaveSurferOpts {
 
 @js.native
 trait WaveSurfer extends js.Object {
+  def destroy(): js.Any = js.native
   def getCurrentTime(): Double = js.native
   def getDuration(): Double = js.native
   def load(url: String): js.Dynamic = js.native
