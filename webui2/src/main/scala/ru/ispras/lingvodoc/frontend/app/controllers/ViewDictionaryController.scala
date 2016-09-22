@@ -168,6 +168,34 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   }
 
   @JSExport
+  def viewPraatSoundMarkup(soundValue: Value, markupValue: Value) = {
+
+    val soundAddress = soundValue.getContent()
+
+    backend.convertPraatMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+      case Success(elan) =>
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.controller = "SoundMarkupController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              soundAddress = soundAddress.asInstanceOf[js.Object],
+              markupData = elan.asInstanceOf[js.Object],
+              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[js.Any]]
+        val instance = modal.open[Unit](options)
+      case Failure(e) =>
+    }
+  }
+
+  @JSExport
   def dataTypeString(dataType: TranslationGist): String = {
     dataType.atoms.find(a => a.localeId == 2) match {
       case Some(atom) =>

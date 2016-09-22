@@ -260,9 +260,6 @@ AbstractController[DashboardScope](scope) {
   }
 
 
-
-
-
   private[this] def load() = {
 
     backend.allStatuses() onComplete  {
@@ -285,8 +282,5 @@ AbstractController[DashboardScope](scope) {
       case Failure(e) =>
     }
   }
-
-
-
 }
 

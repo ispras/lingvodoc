@@ -1320,22 +1320,40 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     p.future
   }
 
+  def convertPraatMarkup(entityId: CompositeId): Future[String] = {
+    val p = Promise[String]()
+
+    $http.post[String](getMethodUrl("convert/markup"), write(entityId)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(response)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to convert markup", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to convert markup", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to convert markup", e))
+    }
+    p.future
+  }
+
+
   def serviceTranslation(search: String): Future[TranslationGist] = {
     val p = Promise[TranslationGist]()
 
     val req = js.Dynamic.literal("searchstring" -> search)
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("POST", getMethodUrl("translation_service_search"))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
 
-    $http.post[js.Dynamic](getMethodUrl("translation_service_search"), req) onComplete {
-      case Success(response) =>
-        try {
-          val gist = read[TranslationGist](js.JSON.stringify(response))
-          p.success(gist)
-        } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to get translation.", e))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to get translation.", e))
-        }
-      case Failure(e) => p.failure(BackendException("Failed to upload user file.", e))
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        val gist = read[TranslationGist](xhr.responseText)
+        p.success(gist)
+      } else {
+        p.failure(new BackendException("Failed to changed approval status entities"))
+      }
     }
+    xhr.send(JSON.stringify(req))
     p.future
   }
 }
