@@ -86,8 +86,8 @@
                              ng-attr-width="{{annotData.durationOffset}}" ng-attr-height="{{tierWidth}}"
                              context-menu="annotMenuOptions"
                         >
-                            <rect x="0" y="0" ng-attr-width="{{annotData.durationOffset}}"
-                                  ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.2">
+                            <rect x="0" y="0" ng-attr-width="{{annotData.durationOffset + 1}}px"
+                                  ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.0">
                             </rect>
                             <!-- left vertical line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
@@ -100,8 +100,8 @@
                             </line>
                             <!-- right vertical line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                                  ng-attr-x1="{{annotData.durationOffset}}" y1="0"
-                                  ng-attr-x2="{{annotData.durationOffset}}" ng-attr-y2="{{tierWidth}}">
+                                  ng-attr-x1="{{annotData.durationOffset - 0.5}}" y1="0"
+                                  ng-attr-x2="{{annotData.durationOffset - 0.5}}" ng-attr-y2="{{tierWidth}}">
                             </line>
                             <text
                                   x="5"

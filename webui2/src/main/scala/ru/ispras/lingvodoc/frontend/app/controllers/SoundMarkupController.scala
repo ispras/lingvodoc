@@ -92,6 +92,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // set this flag to false in such situations.
   var isWSNeedsToForceAngularRefresh = true
 
+  // used to reduce number of digest cycles while playing
+  var onPlayingCounter = 0
+
   // d3 selection rectangle element
   var selectionRectangle: Option[Selection[EventTarget]] = None
 
@@ -248,6 +251,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       waveSurfer.foreach(_.on("seek", onWSSeek _)) // bind seek event
       waveSurfer.foreach(_.on("audioprocess", onWSPlaying _)) // bind playing event
       waveSurfer.foreach(_.on("ready", wsReady _)) // bind playing event
+      waveSurfer.foreach(_.on("finish", onWSPlayingStop _)) // bind stop playing event
 
       scope.ws = waveSurfer.get // for debug only, remove later
 
@@ -391,7 +395,17 @@ class SoundMarkupController(scope: SoundMarkupScope,
     isWSNeedsToForceAngularRefresh = true
   }
 
-  def onWSPlaying(): Unit = { syncRulersFromWS(applyTimeout = true) }
+  def onWSPlaying(): Unit = {
+    onPlayingCounter += 1
+    if (onPlayingCounter % SoundMarkupController.howFastViewIsReloadedWhilePlaying == 0) {
+      onPlayingCounter = 0
+      syncRulersFromWS(applyTimeout = true)
+    }
+  }
+
+  def onWSPlayingStop(): Unit = {
+    syncRulersFromWS()
+  }
 
   // called when user clicks on svg, sets ruler to this place
   @JSExport
@@ -506,4 +520,6 @@ object SoundMarkupController {
   val spectrogramDivName = "wavespectrogram"
   val timelineDivName = "wavetimeline"
   val zoomingStep = 0.8
+  // every $howFastViewIsReloadedWhilePlaying wavesurfer's audioprocess event view will be reloaded
+  val howFastViewIsReloadedWhilePlaying = 5
 }
