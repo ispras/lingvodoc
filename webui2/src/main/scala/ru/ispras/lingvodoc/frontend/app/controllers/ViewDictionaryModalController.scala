@@ -120,7 +120,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
   @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html"
+    options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
     options.controller = "SoundMarkupController"
     options.backdrop = false
     options.keyboard = false
@@ -147,7 +147,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
     backend.convertPraatMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
         val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
         options.controller = "SoundMarkupController"
         options.backdrop = false
         options.keyboard = false

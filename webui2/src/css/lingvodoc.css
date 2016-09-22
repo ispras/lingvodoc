@@ -81,6 +81,10 @@
     stroke: red;
     stroke-width: 1
 }
+
+.sm-modal-window .modal-dialog {
+    width: 90%;
+}
 /* eaf (sound markup) editing staff end*/
 
 button.control-button {
