@@ -64,12 +64,12 @@
 
 .sm-ta-annot-line {
     stroke: black;
-    stroke-width: 1
+    stroke-width: 0.5px
 }
 
 .sm-ref-annot-line {
     stroke: yellow;
-    stroke-width: 1
+    stroke-width: 0.5px
 }
 
 .sm-tier-names-sep-line {
