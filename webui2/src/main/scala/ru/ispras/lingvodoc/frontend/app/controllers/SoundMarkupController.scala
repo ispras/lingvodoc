@@ -536,6 +536,6 @@ object SoundMarkupController {
   val spectrogramDivName = "wavespectrogram"
   val timelineDivName = "wavetimeline"
   val zoomingStep = 0.8
-  // every $howFastViewIsReloadedWhilePlaying wavesurfer's audioprocess event view will be reloaded
+  // every $howFastViewIsReloadedWhilePlaying times wavesurfer's audioprocess event is fired, view will be reloaded
   val howFastViewIsReloadedWhilePlaying = 5
 }
