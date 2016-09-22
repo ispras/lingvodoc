@@ -1,19 +1,14 @@
-function watchTmp(scope) {
-    //console.log("Binding watchCollection on tmp dict from js...");
-    //scope.$watch("dictWatchedByMe", function (newTmp, oldTmp) {
-    //    console.log("watchCollection notified that collection has changed from" + JSON.stringify(oldTmp) + "to" + JSON.stringify(newTmp))
-    //}, true);
-    scope.dictWatchedByMe = {
-        z: {z: 0}
-    };
-    scope.dictWatchedByMe = {
-        z: {z: 10}, x: {}
+function tiersJSForTabsFromElanJS(elanJS) {
+    var tiersJSForTabs = [];
+    for (var tierID in elanJS.tiers) {
+        tiersJSForTabs[elanJS.tiers[tierID].index] = elanJS.tiers[tierID];
     }
+    return tiersJSForTabs;
 }
 
-function updateTmp(scope) {
-  scope.dictWatchedByMe['z']['z'] = 8
-}
+//function updateTmp(scope) {
+//  scope.dictWatchedByMe['z']['z'] = 8
+//}
 
 //{
 //    tiers1 = {'t1': new TierJS({'a1': new AnnotationJS('грузите', 0, 0, 0), 'a2': new AnnotationJS('парадом', 0, 0, 0)}),

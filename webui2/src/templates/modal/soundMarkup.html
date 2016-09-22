@@ -117,7 +117,7 @@
 
     <uib-tabset justified="true">
         <!--<uib-tab ng-repeat="tierData in elanJS.tiers | orderObjectBy: 'index': false" heading="{{tierData.ID}} ({{tierData.stereotype}})">-->
-        <uib-tab ng-repeat="(tierID, tierData) in elanJS.tiers" heading="{{tierData.ID}} ({{tierData.stereotype}})" >
+        <uib-tab ng-repeat="tierData in tiersJSForTabs" heading="{{tierData.ID}} ({{tierData.stereotype}})" >
             <table class="table table-striped table-bordered">
                 <thead>
                 <tr>

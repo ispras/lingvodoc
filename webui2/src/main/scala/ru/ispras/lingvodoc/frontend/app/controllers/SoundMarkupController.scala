@@ -25,7 +25,7 @@ import scala.scalajs.js.annotation.JSExport
 trait SoundMarkupScope extends Scope {
   var elanJS: js.Dynamic = js.native
   // oh shit
-//  var tiersJSForTabs: js.Array[js.Dynamic] = js.native
+  var tiersJSForTabs: js.Array[js.Dynamic] = js.native
 
   var ws: WaveSurfer = js.native // for debugging, remove later
   var spectrogramEnabled: Boolean = js.native
@@ -111,8 +111,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     jQuery.extend(true, scope.elanJS, viewDataDiff)
     // some mumbo jumbo
 //    val tierForTabs = mutable.Seq.empty[js.Dynamic]
-//    scope.elanJS
-//    scope.tiersJSForTabs = js.Array.
+    scope.tiersJSForTabs = js.Dynamic.global.tiersJSForTabsFromElanJS(scope.elanJS).asInstanceOf[js.Array[js.Dynamic]]
   }
 
   def pxPerSec = _pxPerSec
