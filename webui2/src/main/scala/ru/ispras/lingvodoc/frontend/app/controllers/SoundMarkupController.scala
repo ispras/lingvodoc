@@ -377,16 +377,24 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def zoomOut(): Unit = {
     // check if zooming out makes sense
     if (scope.fullWSWidth * SoundMarkupController.zoomingStep >= WSAndTiersWidth)
-      pxPerSec = pxPerSec * SoundMarkupController.zoomingStep;
+      pxPerSec = pxPerSec * SoundMarkupController.zoomingStep
+  }
+
+  def destroyAll() = {
+    spectrogram.foreach(_.destroy())
+    timeline.foreach(_.destroy())
+    waveSurfer.foreach(_.destroy())
   }
 
   @JSExport
   def save(): Unit = {
+    destroyAll()
     instance.close(())
   }
 
   @JSExport
   def cancel(): Unit = {
+    destroyAll()
     instance.close(())
   }
 
