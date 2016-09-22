@@ -70,6 +70,7 @@ abstract class Annotation(ao: AnnotationOpts) extends IAnnotation {
 
   def toJS = {
     val annotationJS = mutable.Map.empty[String, js.Dynamic]
+    annotationJS("ID") = getID.asInstanceOf[js.Dynamic]
     annotationJS("text") = text.asInstanceOf[js.Dynamic]
     annotationJS("startOffset") = startOffset.asInstanceOf[js.Dynamic]
     annotationJS("endOffset") = endOffset.asInstanceOf[js.Dynamic]

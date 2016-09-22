@@ -45,3 +45,6 @@ jsDependencies += ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.mi
 
 // library for context menus, https://github.com/Templarian/ui.bootstrap.contextMenu. WARN: we have modified it.
 jsDependencies += ProvidedJS / "contextMenu.js"
+
+// additional things in native JS
+jsDependencies += ProvidedJS / "utils.js"

@@ -3,6 +3,14 @@
 </div>
 
 <div class="modal-body">
+
+    <div align="right">
+        <button class="btn btn-primary" type="button" ng-click="controller.save()">Close</button>
+        <!--<button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>-->
+    </div>
+
+    <br>
+
     <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
         <span class="glyphicon glyphicon-play">Play/Pause full</span>
     </button>
@@ -41,7 +49,7 @@
             </svg>
         </svg>
 
-        <div style="overflow-x: scroll" ng-style="{'margin-left': tiersNameWidth}">
+        <div id="WSAndTiers" style="overflow-x: scroll" ng-style="{'margin-left': tiersNameWidth}">
             <div id="waveform" ng-style="{'width': fullWSWidth}">{{ controller.createWaveSurfer() }}</div>
             <div id="wavespectrogram"></div>
             <div id="wavetimeline"></div>
@@ -102,26 +110,14 @@
                             </text>
                         </svg>
                     </svg>
-
-
             </svg>
 
         </div>
     </div>
 
-    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
-        <span class="glyphicon glyphicon-play">Play/Pause full</span>
-    </button>
-
-    div height is {{ controller.getWaveSurferHeight }}
-    div width is {{ controller.getWaveSurferWidth }}
-    ruler is {{ ruler }}px, {{ controller.getCurrentTime }} seconds
-    duration is {{ controller.getDuration }}
-    left border in millis is {{ controller.leftBorderMillis }}
-    right border in millis is {{ controller.rightBorderMillis }}
-
     <uib-tabset justified="true">
-        <uib-tab ng-repeat="(tierID, tierData) in elanJS.tiers" heading="{{tierID}} ({{tierData.stereotype}})">
+        <!--<uib-tab ng-repeat="tierData in elanJS.tiers | orderObjectBy: 'index': false" heading="{{tierData.ID}} ({{tierData.stereotype}})">-->
+        <uib-tab ng-repeat="tierData in tiersJSForTabs" heading="{{tierData.ID}} ({{tierData.stereotype}})" >
             <table class="table table-striped table-bordered">
                 <thead>
                 <tr>
@@ -135,9 +131,9 @@
                 <tr ng-repeat="(annotID, annotData) in tierData.annotations">
                     <td>{{ annotData.startToString }}</td>
                     <td>{{ annotData.endToString }}</td>
-                    <td>{{ annotData.text }}</td>
+                    <td>{{tierData.index}} {{ annotData.text }}</td>
                     <td>
-                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playAnnotation(annotID)">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.playAnnotation(annotData.ID)">
                             <span class="glyphicon glyphicon-play"></span>
                         </button>
                     </td>
@@ -150,6 +146,4 @@
 
 
 <div class="modal-footer">
-    <button class="btn btn-primary" type="button" ng-click="controller.save()">Save</button>
-    <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
 </div>
