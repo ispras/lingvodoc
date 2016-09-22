@@ -66,7 +66,7 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
   def getAnnotationByIDChecked(id: String) = try {
     tiers.flatMap(_.getAnnotationByID(id)).head
   } catch {
-    case e: java.util.NoSuchElementException => throw ELANPArserException(s"Tier with id $id not found")
+    case e: java.util.NoSuchElementException => throw ELANPArserException(s"Annotation with id $id not found")
   }
 
   // fails if time slot has no value or doesn't exists

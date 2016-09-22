@@ -164,7 +164,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     )
     scope.tierMenuOptions = tierMenuOptions.toJS
     scope.annotMenuOptions = tierMenuOptions.addOpt(
-      MenuOption("Edit Annotation Value", editAnnotationValue _)
+      MenuOption("Edit Annotation Value", editAnnotationValue _, Some({_: js.Dynamic => false}: js.Function1[js.Dynamic, Boolean]))
     ).toJS
   }
 
@@ -441,13 +441,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   @JSExport // TODO removeme
   def leftBorderMillis = getSelectionRectangleLeftBorderMillis.toString
-  @JSExport // TODO removeme
+  @JSExport // TODO removemeedit
   def rightBorderMillis = getSelectionRectangleRightBorderMillis.toString
 
   // These functions used context menu options
   def isNewAnnotationAllowedHere(itemScope: js.Dynamic): Boolean = {
     console.log("isNewAnnotationAllowedHere called")
-    true
+    false
   }
 
   def newAnnotationHere(itemScope: js.Dynamic): Unit = {
@@ -456,13 +456,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
   def editAnnotationValue(itemScope: js.Dynamic): Unit = {
-    val annot = itemScope.annot.asInstanceOf[IAnnotation]
-    val isValid: String => (Boolean, Option[String]) = (newValue: String) => {
-      if (newValue == "грузите")
-        (true, None)
-      else
-        (false, Some("Invalid value!"))
-    }
+    val annotID = itemScope.annotID.toString
+    val annot = elan.get.getAnnotationByIDChecked(annotID)
     console.log(s"editing annotation value on annot ${annot.getID}")
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/editTextField.html"
@@ -473,8 +468,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(originalValue = annot.text.asInstanceOf[js.Object],
-                           invitation = "Enter Annotation Value".asInstanceOf[js.Object],
-                           isValid = isValid.asInstanceOf[js.Object])
+                           invitation = "Enter Annotation Value".asInstanceOf[js.Object])
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
 
