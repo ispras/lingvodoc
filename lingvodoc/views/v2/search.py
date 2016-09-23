@@ -42,7 +42,7 @@ def basic_search(request):
                     .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
-            print(group)
+            # print(group)
             # if not group:
             #     group = 1
             # if  group: # todo: change!!!!!
@@ -76,14 +76,14 @@ def basic_search(request):
             #     # results_cursor = list()
             # else:
             #     results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
-            print(results_cursor)
+            # print(results_cursor)
             for item in results_cursor:
                 entries.add(item.parent)
-            print(entries)
+            # print(entries)
             for entry in entries:
                 if not entry.marked_for_deletion:
                     result = dict()
-                    print(entry.__class__)
+                    # print(entry.__class__)
                     url = request.route_url('perspective',
                                             dictionary_client_id=entry.parent.parent.client_id,
                                             dictionary_object_id=entry.parent.parent.object_id,
