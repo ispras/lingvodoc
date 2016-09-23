@@ -42,43 +42,48 @@ def basic_search(request):
                     .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
                     .join(User, Group.users).join(Client)\
                     .filter(Client.id == request.authenticated_userid).first()
-            if group:
-                results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'))
-                # results_cursor = list()
-                if perspective_client_id and perspective_object_id:
-                    results_cursor = results_cursor.join(LexicalEntry)\
-                        .join(DictionaryPerspective)\
-                        .filter(DictionaryPerspective.client_id == perspective_client_id,
-                                DictionaryPerspective.object_id == perspective_object_id)
-            else:
-                results_cursor = DBSession.query(Entity)\
-                    .join(Entity.parent)\
-                    .join(DictionaryPerspective)
-                # results_cursor = list()
-                if perspective_client_id and perspective_object_id:
-                    results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
-                                DictionaryPerspective.object_id == perspective_object_id)
-                results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
-                    .join(BaseGroup)\
-                    .join(User, Group.users)\
-                    .join(Client)\
-                    .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
+            # print(group)
+            # if not group:
+            #     group = 1
+            # if  group: # todo: change!!!!!
+            results_cursor = DBSession.query(Entity).filter(Entity.content.like('%'+searchstring+'%'))
+            # results_cursor = list()
+            if perspective_client_id and perspective_object_id:
+                results_cursor = results_cursor.join(LexicalEntry)\
+                    .join(DictionaryPerspective)\
+                    .filter(DictionaryPerspective.client_id == perspective_client_id,
+                            DictionaryPerspective.object_id == perspective_object_id)
+            # else:
+            #     results_cursor = DBSession.query(Entity)\
+            #         .join(Entity.parent)\
+            #         .join(DictionaryPerspective)
+            #     # results_cursor = list()
+            #     if perspective_client_id and perspective_object_id:
+            #         results_cursor = results_cursor.filter(DictionaryPerspective.client_id == perspective_client_id,
+            #                     DictionaryPerspective.object_id == perspective_object_id)
+            #     results_cursor = results_cursor.join(Group, and_(DictionaryPerspective.client_id == Group.subject_client_id, DictionaryPerspective.object_id == Group.subject_object_id ))\
+            #         .join(BaseGroup)\
+            #         .join(User, Group.users)\
+            #         .join(Client)\
+            #         .filter(Client.id == request.authenticated_userid, Entity.content.like('%'+searchstring+'%'))
             results = []
             entries = set()
-            if can_add_tags:
-                results_cursor = results_cursor\
-                    .filter(BaseGroup.subject=='lexical_entries_and_entities',
-                            or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
-                    .group_by(Entity).having(func.count('*') == 2)
-                # results_cursor = list()
-            else:
-                results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
+            # if can_add_tags:
+            #     results_cursor = results_cursor\
+            #         .filter(BaseGroup.subject=='lexical_entries_and_entities',
+            #                 or_(BaseGroup.action=='create', BaseGroup.action=='view'))\
+            #         .group_by(Entity).having(func.count('*') == 2)
+            #     # results_cursor = list()
+            # else:
+            #     results_cursor = results_cursor.filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')
+            # print(results_cursor)
             for item in results_cursor:
                 entries.add(item.parent)
+            # print(entries)
             for entry in entries:
                 if not entry.marked_for_deletion:
                     result = dict()
-                    print(entry.__class__)
+                    # print(entry.__class__)
                     url = request.route_url('perspective',
                                             dictionary_client_id=entry.parent.parent.client_id,
                                             dictionary_object_id=entry.parent.parent.object_id,

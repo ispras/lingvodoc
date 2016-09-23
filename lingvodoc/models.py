@@ -200,8 +200,8 @@ def recursive_content(self, publish, root=True, delete_self=False):  # TODO: com
     #     for xx in entry_content:
     for xx in self.entity:
         info = entity_content(xx, publish, root, delete_self)
-        print(type(info))
-        print(info)
+        # print(type(info))
+        # print(info)
         if not info:
             continue
         if publish and not info['published']:

@@ -1361,6 +1361,12 @@
     "2": "Limited access",
     "3": "Limited access"
   },
+  "Hidden": {
+    "type": "Service",
+    "1": "Скрыт",
+    "2": "Hidden",
+    "3": "Hidden"
+  },
   "Grouping Tag": {
     "type": "Service",
     "1": "Группировочный тэг",
