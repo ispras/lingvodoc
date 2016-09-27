@@ -5,6 +5,7 @@ import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -39,7 +40,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
                                     instance: ModalInstance[Seq[Entity]],
                                     backend: BackendService,
                                     params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditDictionaryModalScope](scope) {
+  extends AbstractController[EditDictionaryModalScope](scope) with SimplePlay {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
@@ -71,58 +72,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
   private[this] var perspectiveFields = Seq[Field]()
   private[this] var linkedPerspectiveFields = Seq[Field]()
 
-  // wavesurfer
-  private [this] var waveSurfer: Option[WaveSurfer] = None
-  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
-  val pxPerSecStep = 30 // zooming step
-  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
-  private var _duration: Double = 42.0
-  var fullWSWidth = 0.0 // again, will be known after audio load
-  var wsHeight = 128
-  var soundMarkup: Option[String] = None
-
-
   load()
-
-
-  @JSExport
-  def createWaveSurfer(): Unit = {
-    if (waveSurfer.isEmpty) {
-      // params should be synchronized with sm-ruler css
-      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
-        cursorWidth = 1, cursorColor = "red",
-        fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
-        height = wsHeight)
-      waveSurfer = Some(WaveSurfer.create(wso))
-    }
-  }
-
-  def pxPerSec = _pxPerSec
-
-  def pxPerSec_=(mpps: Int) = {
-    _pxPerSec = mpps
-    waveSurfer.foreach(_.zoom(mpps))
-  }
-
-  @JSExport
-  def play(soundAddress: String) = {
-    (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
-      ws.load(sa)
-    })
-  }
-
-  @JSExport
-  def playPause() = waveSurfer.foreach(_.playPause())
-
-  @JSExport
-  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
-
-  @JSExport
-  def zoomIn() = { pxPerSec += pxPerSecStep; }
-
-  @JSExport
-  def zoomOut() = { pxPerSec -= pxPerSecStep; }
-
 
   @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
