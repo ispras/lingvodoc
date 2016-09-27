@@ -5,8 +5,8 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import org.singlespaced.d3js.d3
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
@@ -39,7 +39,7 @@ trait EditDictionaryScope extends Scope {
 @JSExport
 @injectable("EditDictionaryController")
 class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService) extends
-AbstractController[EditDictionaryScope](scope) {
+AbstractController[EditDictionaryScope](scope) with SimplePlay {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -55,15 +55,6 @@ AbstractController[EditDictionaryScope](scope) {
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
-
-  private [this] var waveSurfer: Option[WaveSurfer] = None
-  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
-  val pxPerSecStep = 30 // zooming step
-  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
-  private var _duration: Double = 42.0
-  var fullWSWidth = 0.0 // again, will be known after audio load
-  var wsHeight = 128
-  var soundMarkup: Option[String] = None
 
 
   scope.filter = true
@@ -112,46 +103,6 @@ AbstractController[EditDictionaryScope](scope) {
   def range(min: Int, max: Int, step: Int) = {
     (min to max by step).toSeq.toJSArray
   }
-
-
-  @JSExport
-  def createWaveSurfer(): Unit = {
-    if (waveSurfer.isEmpty) {
-      // params should be synchronized with sm-ruler css
-      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
-        cursorWidth = 1, cursorColor = "red",
-        fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
-        height = wsHeight)
-      waveSurfer = Some(WaveSurfer.create(wso))
-    }
-  }
-
-  def pxPerSec = _pxPerSec
-
-  def pxPerSec_=(mpps: Int) = {
-    _pxPerSec = mpps
-    waveSurfer.foreach(_.zoom(mpps))
-  }
-
-  @JSExport
-  def play(soundAddress: String) = {
-    (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
-      ws.load(sa)
-    })
-  }
-
-  @JSExport
-  def playPause() = waveSurfer.foreach(_.playPause())
-
-  @JSExport
-  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
-
-  @JSExport
-  def zoomIn() = { pxPerSec += pxPerSecStep; }
-
-  @JSExport
-  def zoomOut() = { pxPerSec -= pxPerSecStep; }
-
 
   @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
@@ -423,6 +374,4 @@ AbstractController[EditDictionaryScope](scope) {
       case Failure(e) => console.log(e.getMessage)
     }
   }
-
-
 }
