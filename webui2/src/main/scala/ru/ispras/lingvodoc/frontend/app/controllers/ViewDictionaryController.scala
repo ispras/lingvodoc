@@ -8,6 +8,7 @@ import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalOptions, ModalService}
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
@@ -33,7 +34,8 @@ trait ViewDictionaryScope extends Scope {
 }
 
 @injectable("ViewDictionaryController")
-class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService) extends AbstractController[ViewDictionaryScope](scope) {
+class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend:
+BackendService) extends AbstractController[ViewDictionaryScope](scope) with SimplePlay  with Pagination{
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -43,25 +45,10 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
   private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
 
-  private[this] var enabledInputs: Seq[String] = Seq[String]()
-
-  private[this] var createdLexicalEntries: Seq[LexicalEntry] = Seq[LexicalEntry]()
-
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
 
-  private [this] var waveSurfer: Option[WaveSurfer] = None
-  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
-  val pxPerSecStep = 30 // zooming step
-  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
-  private var _duration: Double = 42.0
-  var fullWSWidth = 0.0 // again, will be known after audio load
-  var wsHeight = 128
-  var soundMarkup: Option[String] = None
-
-
   scope.filter = true
-  //scope.count = 0
   scope.offset = 0
   scope.size = 5
   scope.pageCount = 0
@@ -82,7 +69,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   @JSExport
   def loadPage(page: Int) = {
     val offset = (page - 1) * scope.size
-    backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, offset, scope.size) onComplete {
+    backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
+      LexicalEntriesType.All, offset, scope.size) onComplete {
       case Success(entries) =>
         scope.offset = offset
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
@@ -95,60 +83,16 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
         console.log(results.toJSArray)
-        val entries = results map(_.lexicalEntry)
+        val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
   }
 
   @JSExport
-  def range(min: Int, max: Int, step: Int) = {
-    (min to max by step).toJSArray
-  }
-
-
-  @JSExport
-  def createWaveSurfer(): Unit = {
-    if (waveSurfer.isEmpty) {
-      // params should be synchronized with sm-ruler css
-      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
-        cursorWidth = 1, cursorColor = "red",
-        fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
-        height = wsHeight)
-      waveSurfer = Some(WaveSurfer.create(wso))
-    }
-  }
-
-  def pxPerSec = _pxPerSec
-
-  def pxPerSec_=(mpps: Int) = {
-    _pxPerSec = mpps
-    waveSurfer.foreach(_.zoom(mpps))
-  }
-
-  @JSExport
-  def play(soundAddress: String) = {
-    (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
-      ws.load(sa)
-    })
-  }
-
-  @JSExport
-  def playPause() = waveSurfer.foreach(_.playPause())
-
-  @JSExport
-  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
-
-  @JSExport
-  def zoomIn() = { pxPerSec += pxPerSecStep; }
-
-  @JSExport
-  def zoomOut() = { pxPerSec -= pxPerSecStep; }
-
-
-  @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
+    options.templateUrl = "/static/templates/modal/soundMarkup.html";
+    options.windowClass = "sm-modal-window"
     options.controller = "SoundMarkupController"
     options.backdrop = false
     options.keyboard = false
@@ -175,7 +119,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
     backend.convertPraatMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
         val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
+        options.templateUrl = "/static/templates/modal/soundMarkup.html";
+        options.windowClass = "sm-modal-window"
         options.controller = "SoundMarkupController"
         options.backdrop = false
         options.keyboard = false
@@ -240,11 +185,13 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
 
     backend.perspectiveSource(CompositeId.fromObject(perspective)) onComplete {
       case Success(sources) =>
-        scope.path = sources.reverse.map { _.source match {
-          case language: Language => language.translation
-          case dictionary: Dictionary => dictionary.translation
-          case perspective: Perspective => perspective.translation
-        }}.mkString(" >> ")
+        scope.path = sources.reverse.map {
+          _.source match {
+            case language: Language => language.translation
+            case dictionary: Dictionary => dictionary.translation
+            case perspective: Perspective => perspective.translation
+          }
+        }.mkString(" >> ")
       case Failure(e) => console.error(e.getMessage)
     }
 
@@ -256,11 +203,9 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
             fields = f
             backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
               case Success(count) =>
-                //scope.count = count
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-
-
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
+                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
+                  LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)
@@ -271,5 +216,10 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
         }
       case Failure(e) => console.log(e.getMessage)
     }
+  }
+
+  @JSExport
+  override def getPageLink(page: Int): String = {
+    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/view/$page"
   }
 }

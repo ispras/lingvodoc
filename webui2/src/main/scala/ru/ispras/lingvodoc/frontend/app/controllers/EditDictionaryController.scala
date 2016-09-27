@@ -5,8 +5,8 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import org.singlespaced.d3js.d3
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
@@ -16,7 +16,6 @@ import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
-import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.js.UndefOr
 
@@ -26,20 +25,18 @@ import scala.scalajs.js.UndefOr
 trait EditDictionaryScope extends Scope {
   var filter: Boolean = js.native
   var path: String = js.native
-  var count: Int = js.native
   var offset: Int = js.native
   var size: Int = js.native
-
-  var pageCount: Int = js.native
+  var pageNumber: Int = js.native // number of currently open page
+  var pageCount: Int = js.native  // total number of pages
   var dictionaryTable: DictionaryTable = js.native
   var selectedEntries: js.Array[String] = js.native
-
 }
 
 @JSExport
 @injectable("EditDictionaryController")
 class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService) extends
-AbstractController[EditDictionaryScope](scope) {
+AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -56,21 +53,13 @@ AbstractController[EditDictionaryScope](scope) {
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
 
-  private [this] var waveSurfer: Option[WaveSurfer] = None
-  private var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
-  val pxPerSecStep = 30 // zooming step
-  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
-  private var _duration: Double = 42.0
-  var fullWSWidth = 0.0 // again, will be known after audio load
-  var wsHeight = 128
-  var soundMarkup: Option[String] = None
-
 
   scope.filter = true
-  //scope.count = 0
-  scope.offset = 0
-  scope.size = 5
+
+  // Current page number. Defaults to 1
+  scope.pageNumber = params.get("page").toOption.getOrElse(1).toString.toInt
   scope.pageCount = 0
+  scope.size = 20
 
   scope.selectedEntries = js.Array[String]()
 
@@ -88,17 +77,6 @@ AbstractController[EditDictionaryScope](scope) {
 
 
   @JSExport
-  def loadPage(page: Int) = {
-    val offset = (page - 1) * scope.size
-    backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, offset, scope.size) onComplete {
-      case Success(entries) =>
-        scope.offset = offset
-        scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-      case Failure(e) => console.log(e.getMessage)
-    }
-  }
-
-  @JSExport
   def loadSearch(query: String) = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
@@ -107,51 +85,6 @@ AbstractController[EditDictionaryScope](scope) {
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
   }
-
-  @JSExport
-  def range(min: Int, max: Int, step: Int) = {
-    (min to max by step).toSeq.toJSArray
-  }
-
-
-  @JSExport
-  def createWaveSurfer(): Unit = {
-    if (waveSurfer.isEmpty) {
-      // params should be synchronized with sm-ruler css
-      val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
-        cursorWidth = 1, cursorColor = "red",
-        fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
-        height = wsHeight)
-      waveSurfer = Some(WaveSurfer.create(wso))
-    }
-  }
-
-  def pxPerSec = _pxPerSec
-
-  def pxPerSec_=(mpps: Int) = {
-    _pxPerSec = mpps
-    waveSurfer.foreach(_.zoom(mpps))
-  }
-
-  @JSExport
-  def play(soundAddress: String) = {
-    (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
-      ws.load(sa)
-    })
-  }
-
-  @JSExport
-  def playPause() = waveSurfer.foreach(_.playPause())
-
-  @JSExport
-  def play(start: Int, end: Int) = waveSurfer.foreach(_.play(start, end))
-
-  @JSExport
-  def zoomIn() = { pxPerSec += pxPerSecStep; }
-
-  @JSExport
-  def zoomOut() = { pxPerSec -= pxPerSecStep; }
-
 
   @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
@@ -407,11 +340,9 @@ AbstractController[EditDictionaryScope](scope) {
             fields = f
             backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
               case Success(count) =>
-                //scope.count = count
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-
-
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, scope.offset, scope.size) onComplete {
+                val offset = getOffset(scope.pageNumber, scope.size)
+                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)
@@ -424,5 +355,8 @@ AbstractController[EditDictionaryScope](scope) {
     }
   }
 
-
+  @JSExport
+  override def getPageLink(page: Int): String = {
+    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/edit/$page"
+  }
 }
