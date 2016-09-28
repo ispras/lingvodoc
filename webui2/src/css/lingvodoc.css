@@ -120,6 +120,25 @@ button.control-button {
     transition: all linear 500ms;
 }
 
+
+.animate-hide.ng-hide {
+    opacity: 0;
+}
+
+.animate-hide.ng-hide-remove, .ng-hide-add {
+    display: block !important;
+}
+
+.animate-hide.ng-hide-remove {
+    transition: all linear 1000ms;
+}
+
+.animate-hide.ng-hide-add {
+    transition: all linear 500ms;
+}
+
+
+
 .animate-repeat {
     line-height:30px;
     list-style:none;
