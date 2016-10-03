@@ -17,7 +17,7 @@ import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.Any.fromString
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.{Dynamic, JSON}
+import scala.scalajs.js.{Dynamic, JSON, UndefOr}
 import scala.scalajs.js.URIUtils._
 import scala.util.{Failure, Success}
 
@@ -1284,7 +1284,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
-
   def uploadFile(formData: FormData): Future[CompositeId] = {
     val p = Promise[CompositeId]()
     val inputData = InputData.formdata2ajax(formData)
@@ -1296,6 +1295,33 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
+
+  def uploadFile(formData: FormData, progressEventHandler: (Int, Int) => Unit): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("POST", getMethodUrl("blob"))
+
+    // executed once upload is complete
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        val id = read[CompositeId](xhr.responseText)
+        p.success(id)
+      } else {
+        p.failure(new BackendException("Failed to upload file: " + xhr.statusText))
+      }
+    }
+
+    // track upload progress
+    xhr.upload.onprogress = (e: dom.ProgressEvent) => {
+      progressEventHandler(e.loaded, e.total)
+    }
+
+    xhr.send(formData)
+    p.future
+  }
+
+
 
 
   def convertDictionary(languageId: CompositeId, fileId: CompositeId): Future[CompositeId] = {

@@ -42,8 +42,8 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
 
-  private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
+  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -65,19 +65,6 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
     }
   }
 
-
-  @JSExport
-  def loadPage(page: Int) = {
-    val offset = (page - 1) * scope.size
-    backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
-      LexicalEntriesType.All, offset, scope.size) onComplete {
-      case Success(entries) =>
-        scope.offset = offset
-        scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-      case Failure(e) => console.log(e.getMessage)
-    }
-  }
-
   @JSExport
   def loadSearch(query: String) = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
@@ -91,7 +78,7 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
   @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html";
+    options.templateUrl = "/static/templates/modal/soundMarkup.html"
     options.windowClass = "sm-modal-window"
     options.controller = "SoundMarkupController"
     options.backdrop = false
@@ -183,7 +170,7 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
 
   private[this] def load() = {
 
-    backend.perspectiveSource(CompositeId.fromObject(perspective)) onComplete {
+    backend.perspectiveSource(perspectiveId) onComplete {
       case Success(sources) =>
         scope.path = sources.reverse.map {
           _.source match {
@@ -198,14 +185,13 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
     backend.dataTypes() onComplete {
       case Success(d) =>
         dataTypes = d
-        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+        backend.getFields(dictionaryId, perspectiveId) onComplete {
           case Success(f) =>
             fields = f
-            backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
               case Success(count) =>
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
-                  LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
+                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)

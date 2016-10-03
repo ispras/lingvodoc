@@ -43,8 +43,8 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
 
-  private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
+  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var enabledInputs: Seq[String] = Seq[String]()
 
@@ -156,9 +156,9 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
 
   @JSExport
   def addNewLexicalEntry() = {
-    backend.createLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+    backend.createLexicalEntry(dictionaryId, perspectiveId) onComplete {
       case Success(entryId) =>
-        backend.getLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), entryId) onComplete {
+        backend.getLexicalEntry(dictionaryId, perspectiveId, entryId) onComplete {
           case Success(entry) =>
             scope.dictionaryTable.addEntry(entry)
             createdLexicalEntries = createdLexicalEntries :+ entry
@@ -180,7 +180,7 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
 
   @JSExport
   def removeEntity(lexicalEntry: LexicalEntry, entity: Entity) = {
-    backend.removeEntity(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity))
+    backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity))
   }
 
 
@@ -218,8 +218,6 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
 
-    val dictionaryId = CompositeId.fromObject(dictionary)
-    val perspectiveId = CompositeId.fromObject(perspective)
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
@@ -253,9 +251,6 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
   @JSExport
   def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
 
-
-    val dictionaryId = CompositeId.fromObject(dictionary)
-    val perspectiveId = CompositeId.fromObject(perspective)
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
@@ -321,7 +316,7 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
 
   private[this] def load() = {
 
-    backend.perspectiveSource(CompositeId.fromObject(perspective)) onComplete {
+    backend.perspectiveSource(perspectiveId) onComplete {
       case Success(sources) =>
         scope.path = sources.reverse.map { _.source match {
           case language: Language => language.translation
@@ -335,14 +330,14 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
     backend.dataTypes() onComplete {
       case Success(d) =>
         dataTypes = d
-        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+        backend.getFields(dictionaryId, perspectiveId) onComplete {
           case Success(f) =>
             fields = f
-            backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
               case Success(count) =>
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
                 val offset = getOffset(scope.pageNumber, scope.size)
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, offset, scope.size) onComplete {
+                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)

@@ -10,7 +10,6 @@ import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
-import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -38,8 +37,8 @@ BackendService) extends AbstractController[PublishDictionaryScope](scope) with S
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
 
-  private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
+  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -65,7 +64,7 @@ BackendService) extends AbstractController[PublishDictionaryScope](scope) with S
   @JSExport
   def loadPage(page: Int) = {
     val offset = (page - 1) * scope.size
-    backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
+    backend.getLexicalEntries(dictionaryId, perspectiveId,
       LexicalEntriesType.All, offset, scope.size) onComplete {
       case Success(entries) =>
         scope.offset = offset
@@ -180,7 +179,7 @@ BackendService) extends AbstractController[PublishDictionaryScope](scope) with S
   def approve(entry: LexicalEntry, value: Value) = {
     val entity = value.getEntity()
     if (!entity.published) {
-      backend.changedApproval(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId
+      backend.changedApproval(dictionaryId, perspectiveId, CompositeId
         .fromObject(entry), CompositeId.fromObject(entity) :: Nil, approve = true) map {
         _ =>
           scope.$apply(() => {
@@ -194,7 +193,7 @@ BackendService) extends AbstractController[PublishDictionaryScope](scope) with S
   def disapprove(entry: LexicalEntry, value: Value) = {
     val entity = value.getEntity()
     if (entity.published) {
-      backend.changedApproval(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId
+      backend.changedApproval(dictionaryId, perspectiveId, CompositeId
         .fromObject(entry), CompositeId.fromObject(entity) :: Nil, approve = false) map {
         _ =>
           scope.$apply(() => {
@@ -216,7 +215,7 @@ BackendService) extends AbstractController[PublishDictionaryScope](scope) with S
 
   private[this] def load() = {
 
-    backend.perspectiveSource(CompositeId.fromObject(perspective)) onComplete {
+    backend.perspectiveSource(perspectiveId) onComplete {
       case Success(sources) =>
         scope.path = sources.reverse.map {
           _.source match {
@@ -231,14 +230,14 @@ BackendService) extends AbstractController[PublishDictionaryScope](scope) with S
     backend.dataTypes() onComplete {
       case Success(d) =>
         dataTypes = d
-        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+        backend.getFields(dictionaryId, perspectiveId) onComplete {
           case Success(f) =>
             fields = f
-            backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
               case Success(count) =>
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
 
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
+                backend.getLexicalEntries(dictionaryId, perspectiveId,
                   LexicalEntriesType.All, scope.offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
