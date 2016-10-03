@@ -1,15 +1,13 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Location, Scope}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Location, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
-import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
+
 
 
 @js.native
@@ -25,7 +23,7 @@ trait SignupScope extends Scope {
 }
 
 @injectable("SignupController")
-class SignupController(scope: SignupScope, location: Location, backend: BackendService) extends AbstractController[SignupScope](scope) {
+class SignupController(scope: SignupScope, location: Location, backend: BackendService, val timeout: Timeout) extends AbstractController[SignupScope](scope) with AngularExecutionContextProvider {
 
   scope.login = ""
   scope.fullName = ""

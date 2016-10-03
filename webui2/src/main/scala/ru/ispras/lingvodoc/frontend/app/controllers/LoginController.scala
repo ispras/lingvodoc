@@ -1,9 +1,8 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Location, RootScope, Scope, Window}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Location, RootScope, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -21,7 +20,7 @@ trait LoginScope extends Scope {
 }
 
 @injectable("LoginController")
-class LoginController(scope: LoginScope, location: Location, rootScope: RootScope, backend: BackendService) extends AbstractController[LoginScope](scope) {
+class LoginController(scope: LoginScope, location: Location, rootScope: RootScope, backend: BackendService, val timeout: Timeout) extends AbstractController[LoginScope](scope) with AngularExecutionContextProvider {
 
   scope.username = ""
   scope.password = ""

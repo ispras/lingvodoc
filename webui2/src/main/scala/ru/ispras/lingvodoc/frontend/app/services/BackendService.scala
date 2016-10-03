@@ -3,14 +3,13 @@ package ru.ispras.lingvodoc.frontend.app.services
 
 import com.greencatsoft.angularjs._
 import com.greencatsoft.angularjs.core.HttpPromise.promise2future
-import com.greencatsoft.angularjs.core.{HttpConfig, HttpService, Q}
+import com.greencatsoft.angularjs.core.{HttpConfig, HttpService, Q, Timeout}
 import org.scalajs.dom
 import org.scalajs.dom.ext.Ajax.InputData
 import org.scalajs.dom.{FormData, console}
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.LexicalEntriesType.LexicalEntriesType
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
@@ -29,7 +28,7 @@ object LexicalEntriesType extends Enumeration {
 }
 
 @injectable("BackendService")
-class BackendService($http: HttpService, $q: Q) extends Service {
+class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Service with AngularExecutionContextProvider {
 
   // TODO: allow user to specify different baseUrl
   private val baseUrl = ""
@@ -1385,6 +1384,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 }
 
 @injectable("BackendService")
-class BackendServiceFactory($http: HttpService, $q: Q) extends Factory[BackendService] {
-  override def apply(): BackendService = new BackendService($http, $q)
+class BackendServiceFactory($http: HttpService, $q: Q, val timeout: Timeout) extends Factory[BackendService] {
+  override def apply(): BackendService = new BackendService($http, $q, timeout)
 }

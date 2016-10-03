@@ -3,7 +3,6 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core.Scope
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
-import org.scalajs.dom.console
 
 
 import scala.scalajs.js

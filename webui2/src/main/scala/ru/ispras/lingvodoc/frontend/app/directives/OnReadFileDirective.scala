@@ -1,13 +1,10 @@
 package ru.ispras.lingvodoc.frontend.app.directives
 
 import com.greencatsoft.angularjs._
-import com.greencatsoft.angularjs.core.ModelController
 import com.greencatsoft.angularjs.core.Parse
 import org.scalajs.dom
 import org.scalajs.dom.Element
 import org.scalajs.dom.raw._
-import org.scalajs.dom.console
-import scala.scalajs.js.JSConverters._
 
 import scala.scalajs.js
 import scala.scalajs.js.typedarray.{ArrayBuffer, Uint8Array}

@@ -1,10 +1,9 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{AnchorScroll, Location, Scope}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{AnchorScroll, Location, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js.JSConverters._
@@ -36,7 +35,7 @@ trait CreateDictionaryScope extends Scope {
 }
 
 @injectable("CreateDictionaryController")
-class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalService, backend: BackendService) extends AbstractController[CreateDictionaryScope](scope) {
+class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalService, backend: BackendService, val timeout: Timeout) extends AbstractController[CreateDictionaryScope](scope) with AngularExecutionContextProvider {
 
   // Scope initialization
   scope.locales = js.Array[Locale]()

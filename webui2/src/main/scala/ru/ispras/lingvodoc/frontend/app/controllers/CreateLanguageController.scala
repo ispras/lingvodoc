@@ -1,11 +1,10 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model.{Language, Locale, LocalizedString}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
@@ -25,7 +24,8 @@ trait CreateLanguageScope extends Scope {
 class CreateLanguageController(scope: CreateLanguageScope,
                                modalInstance: ModalInstance[Language],
                                backend: BackendService,
-                               params: js.Dictionary[js.Function0[js.Any]]) extends AbstractController[CreateLanguageScope](scope) {
+                               val timeout: Timeout,
+                               params: js.Dictionary[js.Function0[js.Any]]) extends AbstractController[CreateLanguageScope](scope) with AngularExecutionContextProvider {
 
   val parentlanguage = params.find(_._1 == "parentLanguage") match {
     case Some(_) => Some(params("parentLanguage").asInstanceOf[Language])

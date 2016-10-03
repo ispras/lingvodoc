@@ -1,20 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.utils
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
-import scala.scalajs.js.{Array, Dynamic, Object}
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSExport
+import scala.scalajs.js.{Dynamic, Object}
 import scala.util.{Failure, Success}
 
 
@@ -33,8 +31,9 @@ class CreatePerspectiveModalController(scope: CreatePerspectiveScope,
                                        instance: ModalInstance[Unit],
                                        modal: ModalService,
                                        backend: BackendService,
+                                       val timeout: Timeout,
                                        params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[CreatePerspectiveScope](scope) {
+  extends AbstractController[CreatePerspectiveScope](scope) with AngularExecutionContextProvider {
 
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
   private[this] var dataTypes = js.Array[TranslationGist]()

@@ -1,22 +1,21 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import org.scalajs.dom
-import ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.{TierJS, ELANDocumentJS}
+import ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.{ELANDocumentJS, TierJS}
 import ru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation
 import ru.ispras.lingvodoc.frontend.extras.elan.tier.ITier
-import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalInstance, ModalService, BackendService}
-import com.greencatsoft.angularjs.core.{Timeout, Scope}
-import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
-import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, Angular, AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.model.{Dictionary, Language, Perspective}
 import ru.ispras.lingvodoc.frontend.extras.facades._
-import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANPArserException, ELANDocumentJquery}
+import ru.ispras.lingvodoc.frontend.extras.elan.{ELANDocumentJquery, ELANPArserException, Utils}
 import org.scalajs.dom.{EventTarget, console}
 import org.singlespaced.d3js.{Selection, d3}
 import org.scalajs.jquery._
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+
 import scala.scalajs.js
 import js.JSConverters._
-
 import scala.collection.mutable
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -43,12 +42,12 @@ trait SoundMarkupScope extends Scope {
 
 @injectable("SoundMarkupController")
 class SoundMarkupController(scope: SoundMarkupScope,
-                            timeout: Timeout,
                             instance: ModalInstance[Unit],
                             modal: ModalService,
                             backend: BackendService,
+                            val timeout: Timeout,
                             params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[SoundMarkupScope](scope) {
+  extends AbstractController[SoundMarkupScope](scope) with AngularExecutionContextProvider {
   var elan: Option[ELANDocumentJquery] = None
   scope.elanJS = js.Dynamic.literal()
 

@@ -38,9 +38,9 @@
 
                 <nav>
                     <ul class="pagination pagination-sm">
-                        <li ng-repeat="pageNumber in controller.range(1, pageCount, 1)"
-                            ng-class="{active: pageNumber == pageIndex}">
-                            <a href="" ng-click="controller.loadPage(pageNumber)">{{ pageNumber }}</a>
+                        <li ng-repeat="p in controller.range(1, pageCount, 1)"
+                            ng-class="{active: pageNumber == p}">
+                            <a ng-href="{{controller.getPageLink(p)}}">{{ p }}</a>
                         </li>
                     </ul>
                 </nav>

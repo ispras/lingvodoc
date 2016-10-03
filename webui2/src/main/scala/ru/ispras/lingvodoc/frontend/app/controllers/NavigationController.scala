@@ -1,11 +1,10 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{RootScope, Scope}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{RootScope, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
@@ -22,7 +21,7 @@ trait NavigationScope extends Scope {
 
 @JSExport
 @injectable("NavigationController")
-class NavigationController(scope: NavigationScope, rootScope: RootScope, backend: BackendService, userService: UserService) extends AbstractController[NavigationScope](scope) {
+class NavigationController(scope: NavigationScope, rootScope: RootScope, backend: BackendService, userService: UserService, val timeout: Timeout) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
 
   // get locale. fallback to english if no locale received from backend
   scope.locale = Utils.getLocale() match {

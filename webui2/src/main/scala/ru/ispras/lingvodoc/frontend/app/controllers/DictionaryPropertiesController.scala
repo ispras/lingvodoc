@@ -1,14 +1,13 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -28,8 +27,9 @@ trait DictionaryPropertiesScope extends Scope {
 class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
                                      modalInstance: ModalInstance[Dictionary],
                                      backend: BackendService,
+                                     val timeout: Timeout,
                                      params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[DictionaryPropertiesScope](scope) {
+  extends AbstractController[DictionaryPropertiesScope](scope) with AngularExecutionContextProvider {
 
   // create a backup copy of dictionary
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]

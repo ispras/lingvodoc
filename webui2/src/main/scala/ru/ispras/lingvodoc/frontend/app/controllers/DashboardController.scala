@@ -1,13 +1,11 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Location, Scope}
+import com.greencatsoft.angularjs.core.{Location, Scope, Timeout}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService, UserService}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
@@ -26,8 +24,8 @@ trait DashboardScope extends Scope {
 
 @JSExport
 @injectable("DashboardController")
-class DashboardController(scope: DashboardScope, modal: ModalService, location: Location, userService: UserService, backend: BackendService) extends
-AbstractController[DashboardScope](scope) {
+class DashboardController(scope: DashboardScope, modal: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout) extends
+  AbstractController[DashboardScope](scope) with AngularExecutionContextProvider {
 
   scope.dictionaries = js.Array[Dictionary]()
   scope.statuses = js.Array[TranslationGist]()
@@ -262,7 +260,7 @@ AbstractController[DashboardScope](scope) {
 
   private[this] def load() = {
 
-    backend.allStatuses() onComplete  {
+    backend.allStatuses() onComplete {
       case Success(statuses) =>
         scope.statuses = statuses.toJSArray
         backend.getCurrentUser onComplete {

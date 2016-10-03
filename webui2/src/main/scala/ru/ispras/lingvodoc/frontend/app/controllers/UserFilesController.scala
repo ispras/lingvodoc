@@ -1,18 +1,14 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
-import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model.File
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
-//import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
-import scala.concurrent.ExecutionContext.Implicits.global
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
-import scala.scalajs.js.typedarray.ArrayBuffer
 import scala.util.{Failure, Success}
 
 
@@ -25,7 +21,7 @@ trait UserFilesScope extends Scope {
 
 
 @injectable("UserFilesController")
-class UserFilesController(scope: UserFilesScope, backend: BackendService) extends AbstractController[UserFilesScope](scope) {
+class UserFilesController(scope: UserFilesScope, backend: BackendService, val timeout: Timeout) extends AbstractController[UserFilesScope](scope) with AngularExecutionContextProvider {
 
   scope.files = js.Array[File]()
   scope.dataType = ""

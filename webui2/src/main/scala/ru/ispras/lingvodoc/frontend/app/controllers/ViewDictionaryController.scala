@@ -1,24 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
-import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
-import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
-import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.app.model._
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
 
 import scala.scalajs.js
-import scala.scalajs.js.{Array, UndefOr}
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
 
@@ -35,7 +29,7 @@ trait ViewDictionaryScope extends Scope {
 
 @injectable("ViewDictionaryController")
 class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend:
-BackendService) extends AbstractController[ViewDictionaryScope](scope) with SimplePlay  with Pagination{
+BackendService, val timeout: Timeout) extends AbstractController[ViewDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay  with Pagination{
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt

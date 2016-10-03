@@ -64,12 +64,12 @@
 
 .sm-ta-annot-line {
     stroke: black;
-    stroke-width: 1
+    stroke-width: 0.5px
 }
 
 .sm-ref-annot-line {
     stroke: yellow;
-    stroke-width: 1
+    stroke-width: 0.5px
 }
 
 .sm-tier-names-sep-line {
@@ -80,6 +80,10 @@
 .sm-ruler {
     stroke: red;
     stroke-width: 1
+}
+
+.sm-modal-window .modal-dialog {
+    width: 90%;
 }
 /* eaf (sound markup) editing staff end*/
 
@@ -115,6 +119,25 @@ button.control-button {
 .ng-hide-add {
     transition: all linear 500ms;
 }
+
+
+.animate-hide.ng-hide {
+    opacity: 0;
+}
+
+.animate-hide.ng-hide-remove, .ng-hide-add {
+    display: block !important;
+}
+
+.animate-hide.ng-hide-remove {
+    transition: all linear 1000ms;
+}
+
+.animate-hide.ng-hide-add {
+    transition: all linear 500ms;
+}
+
+
 
 .animate-repeat {
     line-height:30px;
