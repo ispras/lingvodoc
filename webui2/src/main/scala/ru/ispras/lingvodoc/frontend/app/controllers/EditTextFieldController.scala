@@ -2,12 +2,11 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.Scope
 import com.greencatsoft.angularjs.{AbstractController, injectable}
-import ru.ispras.lingvodoc.frontend.app.model.{Dictionary}
+import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
-import org.scalajs.dom.console
 
 @js.native
 trait EditTextFieldControllerScope extends Scope {

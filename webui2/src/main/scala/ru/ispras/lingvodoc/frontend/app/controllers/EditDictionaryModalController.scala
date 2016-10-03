@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Event, Scope}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Event, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
@@ -9,9 +9,7 @@ import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
-import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -39,8 +37,9 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
                                     modal: ModalService,
                                     instance: ModalInstance[Seq[Entity]],
                                     backend: BackendService,
+                                    val timeout: Timeout,
                                     params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditDictionaryModalScope](scope) with SimplePlay {
+  extends AbstractController[EditDictionaryModalScope](scope) with AngularExecutionContextProvider with SimplePlay {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]

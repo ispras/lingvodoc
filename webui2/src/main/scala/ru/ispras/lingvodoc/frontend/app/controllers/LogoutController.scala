@@ -1,17 +1,10 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Location, RootScope, Scope}
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, UserService}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
-import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.utils
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
+import com.greencatsoft.angularjs.core.{Location, RootScope, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.scalajs.js
-import scala.scalajs.js.Array
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
-import scala.scalajs.js.JSConverters._
 import scala.util.{Failure, Success}
 
 
@@ -21,7 +14,7 @@ trait LogoutScope extends Scope {
 }
 
 @injectable("LogoutController")
-class LogoutController(scope: LogoutScope, location: Location, rootScope: RootScope, backend: BackendService) extends AbstractController[LogoutScope](scope) {
+class LogoutController(scope: LogoutScope, location: Location, rootScope: RootScope, backend: BackendService, val timeout: Timeout) extends AbstractController[LogoutScope](scope) with AngularExecutionContextProvider {
 
 
 

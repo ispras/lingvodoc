@@ -1,53 +1,79 @@
 <div class="container">
 
-    <table class="table table-striped table-bordered">
-        <thead>
-        <tr>
-            <td>
-                File name
-            </td>
+    <div class="row">
 
-            <td>
-                Type
-            </td>
+        <div class="col-md-12">
 
-            <td>
-                Link
-            </td>
-        </tr>
-        </thead>
+            <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <td>
+                        File name
+                    </td>
+
+                    <td>
+                        Type
+                    </td>
+
+                    <td>
+                        Link
+                    </td>
+                </tr>
+                </thead>
 
 
-        <tbody>
+                <tbody>
 
 
-        <tr ng-repeat="file in files">
-            <td>
-                {{ file.name }}
-            </td>
+                <tr ng-repeat="file in files">
+                    <td>
+                        {{ file.name }}
+                    </td>
 
-            <td>
-                {{ file.dataType }}
-            </td>
+                    <td>
+                        {{ file.dataType }}
+                    </td>
 
-            <td>
-                <a ng-href="{{ file.url }}"><span class="glyphicon glyphicon-download"></span></a>
-            </td>
+                    <td>
+                        <a ng-href="{{ file.url }}"><span class="glyphicon glyphicon-download"></span></a>
+                    </td>
 
-        </tr>
+                </tr>
 
-        </tbody>
+                </tbody>
 
-    </table>
+            </table>
+        </div>
 
-    <form action="/blob" method="POST" enctype="multipart/form-data">
-        <span class="btn btn-default btn-file">Upload file <input name="blob" on-read-data="controller.upload($file1)"
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-6">
+
+
+        <span class="btn btn-default btn-file">Upload file <input name="blob" on-read-data="controller.upload($file)"
                                                                   type="file" ng-disabled="dataType.length == 0"></span>
-        <select name="data_type" ng-model="dataType">
-            <option value="dialeqt_dictionary">dialeqt_dictionary</option>
-            <option value="pdf">pdf</option>
-        </select>
-    </form>
+            <select name="data_type" ng-model="dataType">
+                <option value="dialeqt_dictionary">dialeqt_dictionary</option>
+                <option value="pdf">pdf</option>
+            </select>
+
+
+        </div>
+
+
+        <div class="col-md-6 animate-hide" ng-visible="progress > 0 && progress < 100">
+            <div class="progress" >
+                <div class="progress-bar" role="progressbar" ng-attr-aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100" ng-style="{width: progress + '%'}">
+                    {{ progress }}%
+                </div>
+            </div>
+
+        </div>
+
+
+    </div>
 
 
 </div>

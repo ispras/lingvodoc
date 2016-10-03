@@ -1,20 +1,13 @@
 package ru.ispras.lingvodoc.frontend.app.directives
 
 import com.greencatsoft.angularjs._
-import com.greencatsoft.angularjs.core.ModelController
-import com.greencatsoft.angularjs.core.Parse
-import org.scalajs.dom
-import org.scalajs.dom.Element
+import org.scalajs.dom.{Element, console}
 import org.scalajs.dom.raw._
-import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.model.TranslationGist
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
-import scala.scalajs.js.JSConverters._
 import scala.util.{Failure, Success}
 
 

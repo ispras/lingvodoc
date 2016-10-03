@@ -1,13 +1,11 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Injector, Scope}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
-import org.scalajs.dom.console
+import com.greencatsoft.angularjs.core.{Injector, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
-import ru.ispras.lingvodoc.frontend.app.services.{ModalService, ModalOptions, BackendService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
 import ru.ispras.lingvodoc.frontend.app.model.{Field, Language, Perspective}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ExceptionHandlerFactory}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.{Function2, Object}
@@ -22,7 +20,7 @@ trait HomeScope extends Scope {
 }
 
 @injectable("HomeController")
-class HomeController(scope: HomeScope, injector: Injector, backend: BackendService, modal: ModalService) extends AbstractController[HomeScope](scope) {
+class HomeController(scope: HomeScope, injector: Injector, backend: BackendService, modal: ModalService, val timeout: Timeout) extends AbstractController[HomeScope](scope)  with AngularExecutionContextProvider {
 
   private[this] val exceptionHandler = injector.get[Function2[Throwable, Object, Unit]]("$exceptionHandler")
 

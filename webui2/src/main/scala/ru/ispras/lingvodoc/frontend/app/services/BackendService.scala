@@ -3,21 +3,20 @@ package ru.ispras.lingvodoc.frontend.app.services
 
 import com.greencatsoft.angularjs._
 import com.greencatsoft.angularjs.core.HttpPromise.promise2future
-import com.greencatsoft.angularjs.core.{HttpConfig, HttpService, Q}
+import com.greencatsoft.angularjs.core.{HttpConfig, HttpService, Q, Timeout}
 import org.scalajs.dom
 import org.scalajs.dom.ext.Ajax.InputData
 import org.scalajs.dom.{FormData, console}
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.LexicalEntriesType.LexicalEntriesType
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.Any.fromString
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.{Dynamic, JSON}
+import scala.scalajs.js.{Dynamic, JSON, UndefOr}
 import scala.scalajs.js.URIUtils._
 import scala.util.{Failure, Success}
 
@@ -29,7 +28,7 @@ object LexicalEntriesType extends Enumeration {
 }
 
 @injectable("BackendService")
-class BackendService($http: HttpService, $q: Q) extends Service {
+class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Service with AngularExecutionContextProvider {
 
   // TODO: allow user to specify different baseUrl
   private val baseUrl = ""
@@ -1284,7 +1283,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
   }
 
 
-
   def uploadFile(formData: FormData): Future[CompositeId] = {
     val p = Promise[CompositeId]()
     val inputData = InputData.formdata2ajax(formData)
@@ -1296,6 +1294,33 @@ class BackendService($http: HttpService, $q: Q) extends Service {
     }
     p.future
   }
+
+  def uploadFile(formData: FormData, progressEventHandler: (Int, Int) => Unit): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("POST", getMethodUrl("blob"))
+
+    // executed once upload is complete
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        val id = read[CompositeId](xhr.responseText)
+        p.success(id)
+      } else {
+        p.failure(new BackendException("Failed to upload file: " + xhr.statusText))
+      }
+    }
+
+    // track upload progress
+    xhr.upload.onprogress = (e: dom.ProgressEvent) => {
+      progressEventHandler(e.loaded, e.total)
+    }
+
+    xhr.send(formData)
+    p.future
+  }
+
+
 
 
   def convertDictionary(languageId: CompositeId, fileId: CompositeId): Future[CompositeId] = {
@@ -1359,6 +1384,6 @@ class BackendService($http: HttpService, $q: Q) extends Service {
 }
 
 @injectable("BackendService")
-class BackendServiceFactory($http: HttpService, $q: Q) extends Factory[BackendService] {
-  override def apply(): BackendService = new BackendService($http, $q)
+class BackendServiceFactory($http: HttpService, $q: Q, val timeout: Timeout) extends Factory[BackendService] {
+  override def apply(): BackendService = new BackendService($http, $q, timeout)
 }

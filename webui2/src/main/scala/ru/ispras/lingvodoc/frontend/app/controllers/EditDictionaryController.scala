@@ -1,15 +1,14 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope}
+import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope, Timeout}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -20,31 +19,32 @@ import ru.ispras.lingvodoc.frontend.app.utils.Utils
 import scala.scalajs.js.UndefOr
 
 
-
 @js.native
 trait EditDictionaryScope extends Scope {
   var filter: Boolean = js.native
   var path: String = js.native
   var offset: Int = js.native
   var size: Int = js.native
-  var pageNumber: Int = js.native // number of currently open page
-  var pageCount: Int = js.native  // total number of pages
+  var pageNumber: Int = js.native
+  // number of currently open page
+  var pageCount: Int = js.native
+  // total number of pages
   var dictionaryTable: DictionaryTable = js.native
   var selectedEntries: js.Array[String] = js.native
 }
 
 @JSExport
 @injectable("EditDictionaryController")
-class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService) extends
-AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
+class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService, val timeout: Timeout) extends
+  AbstractController[EditDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay with Pagination {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
 
-  private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
+  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var enabledInputs: Seq[String] = Seq[String]()
 
@@ -81,7 +81,7 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
         console.log(results.toJSArray)
-        val entries = results map(_.lexicalEntry)
+        val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
   }
@@ -89,7 +89,8 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
   @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
+    options.templateUrl = "/static/templates/modal/soundMarkup.html";
+    options.windowClass = "sm-modal-window"
     options.controller = "SoundMarkupController"
     options.backdrop = false
     options.keyboard = false
@@ -116,7 +117,8 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
     backend.convertPraatMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
         val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
+        options.templateUrl = "/static/templates/modal/soundMarkup.html";
+        options.windowClass = "sm-modal-window"
         options.controller = "SoundMarkupController"
         options.backdrop = false
         options.keyboard = false
@@ -137,7 +139,6 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
   }
 
 
-
   @JSExport
   def toggleSelectedEntries(id: String) = {
     if (scope.selectedEntries.contains(id)) {
@@ -150,15 +151,15 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
   @JSExport
   def mergeEntries() = {
     val entries = scope.selectedEntries.flatMap {
-      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map(_.entry)
+      id => scope.dictionaryTable.rows.find(_.entry.getId == id) map (_.entry)
     }
   }
 
   @JSExport
   def addNewLexicalEntry() = {
-    backend.createLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+    backend.createLexicalEntry(dictionaryId, perspectiveId) onComplete {
       case Success(entryId) =>
-        backend.getLexicalEntry(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), entryId) onComplete {
+        backend.getLexicalEntry(dictionaryId, perspectiveId, entryId) onComplete {
           case Success(entry) =>
             scope.dictionaryTable.addEntry(entry)
             createdLexicalEntries = createdLexicalEntries :+ entry
@@ -180,7 +181,7 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
 
   @JSExport
   def removeEntity(lexicalEntry: LexicalEntry, entity: Entity) = {
-    backend.removeEntity(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity))
+    backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity))
   }
 
 
@@ -213,13 +214,11 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
   }
 
   @JSExport
-    def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
+  def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
 
     val e = event.asInstanceOf[org.scalajs.dom.raw.Event]
     val textValue = e.target.asInstanceOf[HTMLInputElement].value
 
-    val dictionaryId = CompositeId.fromObject(dictionary)
-    val perspectiveId = CompositeId.fromObject(perspective)
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
@@ -253,9 +252,6 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
   @JSExport
   def saveFileValue(inputId: String, entry: LexicalEntry, field: Field, fileName: String, fileType: String, fileContent: String, parent: UndefOr[Value]) = {
 
-
-    val dictionaryId = CompositeId.fromObject(dictionary)
-    val perspectiveId = CompositeId.fromObject(perspective)
     val entryId = CompositeId.fromObject(entry)
 
     val entity = EntityData(field.clientId, field.objectId, Utils.getLocale().getOrElse(2))
@@ -307,7 +303,9 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
           linkPerspectiveObjectId = field.link.get.objectId,
           lexicalEntry = entry.asInstanceOf[js.Object],
           field = field.asInstanceOf[js.Object],
-          links = values.map { _.asInstanceOf[GroupValue].link }
+          links = values.map {
+            _.asInstanceOf[GroupValue].link
+          }
         )
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
@@ -321,13 +319,15 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
 
   private[this] def load() = {
 
-    backend.perspectiveSource(CompositeId.fromObject(perspective)) onComplete {
+    backend.perspectiveSource(perspectiveId) onComplete {
       case Success(sources) =>
-        scope.path = sources.reverse.map { _.source match {
-          case language: Language => language.translation
-          case dictionary: Dictionary => dictionary.translation
-          case perspective: Perspective => perspective.translation
-        }}.mkString(" >> ")
+        scope.path = sources.reverse.map {
+          _.source match {
+            case language: Language => language.translation
+            case dictionary: Dictionary => dictionary.translation
+            case perspective: Perspective => perspective.translation
+          }
+        }.mkString(" >> ")
       case Failure(e) => console.error(e.getMessage)
     }
 
@@ -335,14 +335,14 @@ AbstractController[EditDictionaryScope](scope) with SimplePlay with Pagination {
     backend.dataTypes() onComplete {
       case Success(d) =>
         dataTypes = d
-        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+        backend.getFields(dictionaryId, perspectiveId) onComplete {
           case Success(f) =>
             fields = f
-            backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
               case Success(count) =>
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
                 val offset = getOffset(scope.pageNumber, scope.size)
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective), LexicalEntriesType.All, offset, scope.size) onComplete {
+                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)

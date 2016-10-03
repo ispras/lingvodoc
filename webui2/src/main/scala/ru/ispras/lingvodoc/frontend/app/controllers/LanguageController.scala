@@ -1,12 +1,11 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
-import ru.ispras.lingvodoc.frontend.app.model.{Language, Perspective}
+import ru.ispras.lingvodoc.frontend.app.model.Language
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -21,7 +20,7 @@ trait LanguageScope extends Scope {
 
 
 @injectable("LanguageController")
-class LanguageController(scope: LanguageScope, modal: ModalService, backend: BackendService) extends AbstractController[LanguageScope](scope) {
+class LanguageController(scope: LanguageScope, modal: ModalService, backend: BackendService, val timeout: Timeout) extends AbstractController[LanguageScope](scope) with AngularExecutionContextProvider {
 
   scope.languages = js.Array()
 

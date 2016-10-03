@@ -1,24 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
-import ru.ispras.lingvodoc.frontend.app.utils
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
-import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
-import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import ru.ispras.lingvodoc.frontend.app.model._
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
 
 import scala.scalajs.js
-import scala.scalajs.js.{Array, UndefOr}
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
 
@@ -35,15 +29,15 @@ trait ViewDictionaryScope extends Scope {
 
 @injectable("ViewDictionaryController")
 class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend:
-BackendService) extends AbstractController[ViewDictionaryScope](scope) with SimplePlay  with Pagination{
+BackendService, val timeout: Timeout) extends AbstractController[ViewDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay  with Pagination{
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
 
-  private[this] val dictionary = Dictionary.emptyDictionary(dictionaryClientId, dictionaryObjectId)
-  private[this] val perspective = Perspective.emptyPerspective(perspectiveClientId, perspectiveObjectId)
+  private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
+  private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
@@ -65,19 +59,6 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
     }
   }
 
-
-  @JSExport
-  def loadPage(page: Int) = {
-    val offset = (page - 1) * scope.size
-    backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
-      LexicalEntriesType.All, offset, scope.size) onComplete {
-      case Success(entries) =>
-        scope.offset = offset
-        scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-      case Failure(e) => console.log(e.getMessage)
-    }
-  }
-
   @JSExport
   def loadSearch(query: String) = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
@@ -91,7 +72,7 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
   @JSExport
   def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html";
+    options.templateUrl = "/static/templates/modal/soundMarkup.html"
     options.windowClass = "sm-modal-window"
     options.controller = "SoundMarkupController"
     options.backdrop = false
@@ -183,7 +164,7 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
 
   private[this] def load() = {
 
-    backend.perspectiveSource(CompositeId.fromObject(perspective)) onComplete {
+    backend.perspectiveSource(perspectiveId) onComplete {
       case Success(sources) =>
         scope.path = sources.reverse.map {
           _.source match {
@@ -198,14 +179,13 @@ BackendService) extends AbstractController[ViewDictionaryScope](scope) with Simp
     backend.dataTypes() onComplete {
       case Success(d) =>
         dataTypes = d
-        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+        backend.getFields(dictionaryId, perspectiveId) onComplete {
           case Success(f) =>
             fields = f
-            backend.getLexicalEntriesCount(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
               case Success(count) =>
                 scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-                backend.getLexicalEntries(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective),
-                  LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
+                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
                   case Success(entries) =>
                     scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
                   case Failure(e) => console.log(e.getMessage)

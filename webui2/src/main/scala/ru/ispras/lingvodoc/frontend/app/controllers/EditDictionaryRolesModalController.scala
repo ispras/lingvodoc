@@ -1,10 +1,9 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services._
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -22,8 +21,9 @@ class EditDictionaryRolesModalController(scope: EditDictionaryRolesModalScope,
                                          modal: ModalService,
                                          instance: ModalInstance[Dictionary],
                                          backend: BackendService,
+                                         val timeout: Timeout,
                                          params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[EditDictionaryRolesModalScope](scope) {
+  extends AbstractController[EditDictionaryRolesModalScope](scope) with AngularExecutionContextProvider {
 
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
   private[this] var permissions = Map[String, Seq[UserListEntry]]()

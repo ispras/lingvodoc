@@ -64857,14 +64857,14 @@ function tiersJSForTabsFromElanJS(elanJS) {
 //}
 
 //{
-//    tiers1 = {'t1': new TierJS({'a1': new AnnotationJS('РіСЂСѓР·РёС‚Рµ', 0, 0, 0), 'a2': new AnnotationJS('РїР°СЂР°РґРѕРј', 0, 0, 0)}),
-//        't2': new TierJS({'a10': new AnnotationJS('Р±РѕС‡РєР°', 0, 0, 0)})
+//    tiers1 = {'t1': new TierJS({'a1': new AnnotationJS('грузите', 0, 0, 0), 'a2': new AnnotationJS('парадом', 0, 0, 0)}),
+//        't2': new TierJS({'a10': new AnnotationJS('бочка', 0, 0, 0)})
 //    };
-//    tiers11 = {'t1': new TierJS({'a1': new AnnotationJS('РіСЂСѓР·РёС‚Рµ', 0, 0, 0), 'a2': new AnnotationJS('РїР°СЂР°РґРѕРј', 0, 0, 0)}),
-//        't2': new TierJS({'a10': new AnnotationJS('Р±РѕС‡РєР°', 0, 0, 0)})
+//    tiers11 = {'t1': new TierJS({'a1': new AnnotationJS('грузите', 0, 0, 0), 'a2': new AnnotationJS('парадом', 0, 0, 0)}),
+//        't2': new TierJS({'a10': new AnnotationJS('бочка', 0, 0, 0)})
 //    };
-//    tiers2 = {'t1': new TierJS({'a1': new AnnotationJS('РіСЂСѓР·РёС‚Рµ', 0, 0, 0), 'a2': new AnnotationJS('РїР°СЂР°РґРѕРј', 0, 0, 0)}),
-//        't2': new TierJS({'a10': new AnnotationJS('Р±РѕС‡РєР°', 0, 0, 0)})}
+//    tiers2 = {'t1': new TierJS({'a1': new AnnotationJS('грузите', 0, 0, 0), 'a2': new AnnotationJS('парадом', 0, 0, 0)}),
+//        't2': new TierJS({'a10': new AnnotationJS('бочка', 0, 0, 0)})}
 //}
 
 // example:
@@ -64877,13 +64877,13 @@ elanDoc = {
           'timeAlignable': true,
           'annotations': {
               'a1': {
-                  'text': 'РіСЂСѓР·РёС‚Рµ',
+                  'text': 'грузите',
                   'startOffset': 250.0,
                   'durationOffset': 50.0,
                   'endOffset': 300
               },
               'a2': {
-                  'text': 'Р±РѕС‡РєРё',
+                  'text': 'бочки',
                   'startOffset': 300.0,
                   'durationOffset': 50.0,
                   'endOffset': 350.0

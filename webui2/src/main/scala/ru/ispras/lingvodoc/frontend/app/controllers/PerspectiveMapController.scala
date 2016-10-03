@@ -1,20 +1,12 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 
-import com.greencatsoft.angularjs.{injectable, AbstractController}
 import com.greencatsoft.angularjs.core.Scope
-import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalService}
+import com.greencatsoft.angularjs.{AbstractController, injectable}
 import google.maps
 import google.maps.LatLng
-import google.maps.Data.Feature
-import google.maps.LatLng
 import org.scalajs.dom._
-
-import scala.scalajs.js
-import js.annotation.JSExport
-import scala.scalajs.js.JSConverters._
-import org.scalajs.dom
-import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalService}
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
@@ -47,21 +39,6 @@ class PerspectiveMapController(scope: PerspectiveMapScope,
   @JSExport
   def drawLocations() = {
 
-
-
-
-
-    console.log(scope.labels)
-
-//    scope.labels.toSeq.foreach {
-//      location =>
-//        val position = new LatLng(location.lat, location.lng)
-//        val marker = new google.maps.Marker(google.maps.MarkerOptions(
-//          position = position,
-//          map = scope.map,
-//          title = "Marker"
-//        ))
-//    }
   }
 
 
