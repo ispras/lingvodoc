@@ -719,6 +719,8 @@ def view_perspective_roles(request):  # TODO: test
                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                          subject_object_id=object_id,
                                                          subject_client_id=client_id).first()
+                if not group:
+                    continue
                 perm = base.name
                 users = []
                 for user in group.users:
