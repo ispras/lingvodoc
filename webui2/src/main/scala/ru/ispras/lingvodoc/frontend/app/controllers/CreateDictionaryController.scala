@@ -1,19 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{AnchorScroll, Location, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
-
-import scala.concurrent.{Future, Promise}
-import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
+import ru.ispras.lingvodoc.frontend.app.model._
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
+import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
+import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.{Dynamic, Object}
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.util.{Failure, Success}
 
 

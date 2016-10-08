@@ -35,7 +35,7 @@ object LingvodocApplication {
       .config[RoutingConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
-      .factory[ExceptionHandlerFactory]
+      //.factory[ExceptionHandlerFactory]
       .controller[MainController]
       .controller[NavigationController]
       .controller[LoginController]

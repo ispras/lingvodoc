@@ -151,6 +151,20 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
   }
 
 
+  def setDictionaryRoles(dictionaryId: CompositeId, roles: DictionaryRoles): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = getMethodUrl("dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/roles")
+
+    $http.post[js.Dynamic](url, write(roles)) onComplete {
+      case Success(response) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update dictionary roles", e))
+    }
+
+    p.future
+  }
+
+
 
   /**
     * Get language by id
@@ -423,7 +437,11 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
   def getPerspectiveRoles(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[PerspectiveRoles] = {
     val p = Promise[PerspectiveRoles]()
-    val url = getMethodUrl("dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/roles")
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) +
+      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/roles"
 
     $http.get[js.Dynamic](url) onComplete {
       case Success(response) =>
@@ -440,6 +458,22 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     }
     p.future
   }
+
+
+  def setDPerspectiveRoles(dictionaryId: CompositeId, perspectiveId: CompositeId, roles: PerspectiveRoles): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = getMethodUrl("dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/roles")
+
+    $http.post[js.Dynamic](url, write(roles)) onComplete {
+      case Success(response) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update perspective roles", e))
+    }
+
+    p.future
+  }
+
+
 
 
   /**
@@ -1381,6 +1415,14 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     xhr.send(JSON.stringify(req))
     p.future
   }
+
+
+
+
+
+
+
+
 }
 
 @injectable("BackendService")

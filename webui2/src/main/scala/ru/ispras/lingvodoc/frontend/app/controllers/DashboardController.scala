@@ -130,10 +130,10 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
 
-    val instance = modal.open[Dictionary](options)
+    val instance = modal.open[Unit](options)
 
     instance.result map {
-      dictionary: Dictionary =>
+      _ =>
     }
   }
 
@@ -154,10 +154,10 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
 
-    val instance = modal.open[Perspective](options)
+    val instance = modal.open[Unit](options)
 
     instance.result map {
-      perspective: Perspective =>
+      _ =>
     }
   }
 
