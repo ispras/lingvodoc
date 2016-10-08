@@ -3,6 +3,8 @@ package ru.ispras.lingvodoc.frontend.app.services
 import com.greencatsoft.angularjs
 import com.greencatsoft.angularjs.core._
 import com.greencatsoft.angularjs.{AngularExecutionContextProvider, injectable}
+import scala.scalajs.js.timers._
+
 
 @injectable("LoadingInterceptor")
 class LoadingInterceptor(val rootScope: RootScope, val q: Q, val timeout: Timeout) extends HttpInterceptor {
@@ -18,7 +20,11 @@ class LoadingInterceptor(val rootScope: RootScope, val q: Q, val timeout: Timeou
   override def response(response: HttpResult): HttpResult = {
     pendingRequestsCount -= 1
     if (pendingRequestsCount == 0) {
-      rootScope.$broadcast("loader.hide")
+      setTimeout(2000) {
+        if (pendingRequestsCount == 0) {
+          rootScope.$broadcast("loader.hide")
+        }
+      }
     }
     super.response(response)
   }
@@ -34,8 +40,10 @@ class LoadingInterceptor(val rootScope: RootScope, val q: Q, val timeout: Timeou
 
 object LoadingInterceptor {
   @injectable("LoadingInterceptor")
-  class Factory(val rootScope: RootScope, q: Q, timeout: Timeout) extends angularjs.Factory[LoadingInterceptor] {
-    override def apply(): LoadingInterceptor = new LoadingInterceptor(rootScope, q, timeout)
+  class Factory(val rootScope: RootScope, q: Q, timeout: Timeout) extends HttpInterceptorFactory {
+    override def apply(): HttpInterceptorFunctions = {
+      toInterceptorFunctions(new LoadingInterceptor(rootScope, q, timeout))
+    }
   }
 }
 
