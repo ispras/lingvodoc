@@ -161,16 +161,16 @@ def configure_routes(config):
     # Future note: PUT & DELETE should work on-server only.
     config.add_route(name='perspective',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspective/{perspective_client_id}/{perspective_id}',
+                             'perspective/{perspective_client_id}/{perspective_object_id}',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
     config.add_route(name='perspective_outside',
-                     pattern='perspective/{perspective_client_id}/{perspective_id}',
+                     pattern='perspective/{perspective_client_id}/{perspective_object_id}',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
     # API #POST
     # creates hash in metadata on objects
     config.add_route(name='perspective_hash',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspective/{perspective_client_id}/{perspective_id}/hash',
+                             'perspective/{perspective_client_id}/{perspective_object_id}/hash',
                      factory='lingvodoc.models.ApproveAllAcl')  # TODO: ?test? only was used one time
 
     config.add_route(name='dangerous_perspectives_hash',
@@ -189,22 +189,25 @@ def configure_routes(config):
     #          }
     config.add_route(name='perspective_meta',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspective/{perspective_client_id}/{perspective_id}/meta',
+                             'perspective/{perspective_client_id}/{perspective_object_id}/meta',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     config.add_route(name='perspective_tree',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspective/{perspective_client_id}/{perspective_id}/tree',
+                             'perspective/{perspective_client_id}/{perspective_object_id}/tree',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested (?)
     config.add_route(name='perspective_outside_tree',
-                     pattern='perspective/{perspective_client_id}/{perspective_id}/tree',
+                     pattern='perspective/{perspective_client_id}/{perspective_object_id}/tree',
                      factory='lingvodoc.models.ApproveAllAcl')   # tested (?)
 
     config.add_route(name='perspective_info',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}/'
-                             'perspective/{perspective_client_id}/{perspective_id}/info',
+                             'perspective/{perspective_client_id}/{perspective_object_id}/info',
                      factory='lingvodoc.models.ApproveAllAcl')
 
+    # config.add_route(name='test',
+    #                  pattern='/test',
+    #                  factory='lingvodoc.models.ApproveAllAcl')  # tested
     # API #POST
     # Creating perspective
     config.add_route(name='create_perspective',
@@ -229,14 +232,14 @@ def configure_routes(config):
     # roles and users that they are assigned.
     config.add_route(name='perspective_roles',
                      pattern='/dictionary/{client_id}/{object_id}/'
-                             'perspective/{perspective_client_id}/{perspective_id}/roles',
+                             'perspective/{perspective_client_id}/{perspective_object_id}/roles',
                      factory='lingvodoc.models.ApproveAllAcl')
 
     # API #GET && PUT
     # Get or change visibility state for perspective. States are: 'frozen', 'WiP', 'published'
     config.add_route(name='perspective_status',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                     '/perspective/{perspective_client_id}/{perspective_id}/state',
+                     '/perspective/{perspective_client_id}/{perspective_object_id}/state',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     # API #GET && POST && DELETE
@@ -262,7 +265,7 @@ def configure_routes(config):
     #             status: <enabled|disabled>}, contains: [{}], group: <grouping_button_localization_str>]
     config.add_route(name='perspective_fields',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                             '/perspective/{perspective_client_id}/{perspective_id}/fields',
+                             '/perspective/{perspective_client_id}/{perspective_object_id}/fields',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested (except delete, because it not used anywhere(?))
 
     config.add_route(name='create_field',
@@ -312,7 +315,7 @@ def configure_routes(config):
     config.add_route(name='get_entity_indict', pattern='/dictionary/'
                                                                  '{dictionary_client_id}/{dictionary_object_id}'
                                                                  '/perspective/'
-                                                                 '{perspective_client_id}/{perspective_id}/'
+                                                                 '{perspective_client_id}/{perspective_object_id}/'
                                                                  'lexical_entry/'
                                                                  '{lexical_entry_client_id}/{lexical_entry_object_id}/'
                                                                  'entity/'
@@ -332,7 +335,7 @@ def configure_routes(config):
     config.add_route(name='get_connected_words_indict', pattern='/dictionary/'
                                                                 '{dictionary_client_id}/{dictionary_object_id}'
                                                                 '/perspective/'
-                                                                '{perspective_client_id}/{perspective_id}/'
+                                                                '{perspective_client_id}/{perspective_object_id}/'
                                                                 'lexical_entry/'
                                                                 '{client_id}/{object_id}/'
                                                                 'connected',
@@ -345,7 +348,7 @@ def configure_routes(config):
     config.add_route(name='add_group_indict', pattern='/dictionary/'
                                                       '{dictionary_client_id}/{dictionary_object_id}'
                                                       '/perspective/'
-                                                      '{perspective_client_id}/{perspective_id}/'
+                                                      '{perspective_client_id}/{perspective_object_id}/'
                                                       'lexical_entry/'
                                                       'connect',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
@@ -375,12 +378,12 @@ def configure_routes(config):
     # no parameters needed.
     # ids are returned.
     config.add_route(name='create_lexical_entry', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                          '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                          '/perspective/{perspective_client_id}/{perspective_object_id}/'
                                                           'lexical_entry',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     config.add_route(name='create_lexical_entry_bulk', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                               '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                               '/perspective/{perspective_client_id}/{perspective_object_id}/'
                                                                'lexical_entries',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
 
@@ -388,31 +391,31 @@ def configure_routes(config):
     # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
     # ids are returned
     config.add_route(name='create_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                   '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                   '/perspective/{perspective_client_id}/{perspective_object_id}/'
                                                    'lexical_entry/{lexical_entry_client_id}/'
                                                    '{lexical_entry_object_id}/entity',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     config.add_route(name='create_entities_bulk', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                          '/perspective/{perspective_client_id}/{perspective_id}/entities',
+                                                          '/perspective/{perspective_client_id}/{perspective_object_id}/entities',
                      factory='lingvodoc.models.ApproveAllAcl')  # TODO: test
 
     # API #GET
     # params: start_from=M, count=N, sort_by=<entity_type>
     config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                         '/perspective/{perspective_client_id}/{perspective_id}/all',
+                                                         '/perspective/{perspective_client_id}/{perspective_object_id}/all',
                      factory='lingvodoc.models.ApproveAllAcl')
 
     config.add_route(name='lexical_entries_all_count', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                               '/perspective/{perspective_client_id}/{perspective_id}/all_count',
+                                                               '/perspective/{perspective_client_id}/{perspective_object_id}/all_count',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
 
     config.add_route(name='lexical_entries_published', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                               '/perspective/{perspective_client_id}/{perspective_id}/published',
+                                                               '/perspective/{perspective_client_id}/{perspective_object_id}/published',
                      factory='lingvodoc.models.ApproveAllAcl')
 
     config.add_route(name='lexical_entries_published_count', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                               '/perspective/{perspective_client_id}/{perspective_id}/published_count',
+                                                               '/perspective/{perspective_client_id}/{perspective_object_id}/published_count',
                      factory='lingvodoc.models.ApproveAllAcl')
     # made only return list of ids, because another route fol full info exist
 
@@ -421,7 +424,7 @@ def configure_routes(config):
     config.add_route(name='lexical_entry', pattern='/lexical_entry/{client_id}/{object_id}',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
     config.add_route(name='lexical_entry_in_perspective', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                                  '/perspective/{perspective_client_id}/{perspective_id}/'
+                                                                  '/perspective/{perspective_client_id}/{perspective_object_id}/'
                                                                   'lexical_entry/{client_id}/{object_id}',
                      factory='lingvodoc.models.ApproveAllAcl')  # tested
     # API #PATCH
@@ -429,26 +432,26 @@ def configure_routes(config):
     # "type": "leveloneentity", "leveltwoentity"
     # {"entity": [{"type": <object_type>, "client_id": <client_id>, "object_id": <object_id>}, ] }
     config.add_route(name='approve_entity', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                    '/perspective/{perspective_client_id}/{perspective_id}/approve',
+                                                    '/perspective/{perspective_client_id}/{perspective_object_id}/approve',
                      factory='lingvodoc.models.ApproveAllAcl')
     # todo: DANGEROUS! Anyone can approve, if the have their own dictionary and know ids of entity, they want to approve
     # todo: fix this
     config.add_route(name='approve_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                    '/perspective/{perspective_client_id}/{perspective_id}/approve_all',
+                                                    '/perspective/{perspective_client_id}/{perspective_object_id}/approve_all',
                      factory='lingvodoc.models.ApproveAllAcl')
     config.add_route(name='approve_all_outer', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                    '/perspective/{perspective_client_id}/{perspective_id}/approve_all_outer',
+                                                    '/perspective/{perspective_client_id}/{perspective_object_id}/approve_all_outer',
                      factory='lingvodoc.models.ApproveAllAcl')  # TODO: test
 
     # web-view
     config.add_route(name='edit_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                     '/perspective/{perspective_client_id}/{perspective_id}/edit')
+                                                     '/perspective/{perspective_client_id}/{perspective_object_id}/edit')
     # web-view
     config.add_route(name='view_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                     '/perspective/{perspective_client_id}/{perspective_id}/view')
+                                                     '/perspective/{perspective_client_id}/{perspective_object_id}/view')
     # web-view
     config.add_route(name='publish_dictionary', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                        '/perspective/{perspective_client_id}/{perspective_id}/publish')
+                                                        '/perspective/{perspective_client_id}/{perspective_object_id}/publish')
 
     # Merge can be two kinds:
     #   1. Dictionaries merge
@@ -550,7 +553,7 @@ def configure_routes(config):
     # [{"id": <userid>, "login": <login>, "name": <name>, "intl_name": <international_name>, "userpic": <url_to_userpic>}, ]
     config.add_route(name='dictionary_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}')  # TODO: do it
     config.add_route(name='perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
-                                                         '/perspective/{perspective_client_id}/{perspective_id}')  # TODO: just do it
+                                                         '/perspective/{perspective_client_id}/{perspective_object_id}')  # TODO: just do it
 
     # API #GET
     # This methods gets info about user by his client_id
