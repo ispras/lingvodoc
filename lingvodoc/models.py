@@ -23,6 +23,7 @@ from sqlalchemy.types import (
     BigInteger,
     Integer,
     DateTime,
+    TIMESTAMP,
     Boolean,
     Date
 )
@@ -49,7 +50,6 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.ext.compiler import compiles
 
 import logging
-
 ENGLISH_LOCALE = 2
 
 log = logging.getLogger(__name__)
@@ -318,7 +318,7 @@ class CreatedAtMixin(object):
     """
     It's used for automatically set created_at column.
     """
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow().timestamp(), nullable=False)
 
 
 class IdMixin(object):
@@ -751,7 +751,7 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     additional_metadata = Column(UnicodeText)
     default_locale_id = Column(ForeignKey("locale.id"), default=2, nullable=False)
     birthday = Column(Date)
-    signup_date = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    # signup_date = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean, default=True, nullable=False)
     password = relationship("Passhash", uselist=False)
@@ -814,7 +814,7 @@ class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
-    creation_time = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    # creation_time = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     is_browser_client = Column(Boolean, default=True, nullable=False)
     user = relationship("User", backref='clients')
     counter = Column(SLBigInteger(), default=1, nullable=False)
