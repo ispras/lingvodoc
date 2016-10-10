@@ -78,7 +78,7 @@ def signup_post(request):  # tested
             raise CommonException("The user with this login is already registered")
         if DBSession.query(Email).filter_by(email=email).first():
             raise CommonException("The user with this email is already registered")
-        new_user = User(login=login, name=name, signup_date=datetime.datetime.utcnow(), intl_name=login, birthday=birthday, is_active=True)
+        new_user = User(login=login, name=name, created_at=datetime.datetime.utcnow(), intl_name=login, birthday=birthday, is_active=True)
         pwd = Passhash(password=password)
         email = Email(email=email)
         new_user.password = pwd
@@ -284,7 +284,7 @@ def get_user_info(request):  # tested
     response['intl_name'] = user.intl_name
     response['default_locale_id'] = user.default_locale_id
     response['birthday'] = str(user.birthday)
-    response['signup_date'] = str(user.signup_date)
+    response['created_at'] = user.created_at.timestamp()
     response['is_active'] = user.is_active
     response['email'] = user.email.email
     meta = None
