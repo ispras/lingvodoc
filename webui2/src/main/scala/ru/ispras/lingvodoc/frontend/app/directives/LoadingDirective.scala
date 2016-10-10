@@ -12,11 +12,11 @@ class LoadingDirective() extends AttributeDirective {
     import org.scalajs.jquery.jQuery
 
     scope.$on("loader.show", () => {
-      jQuery(loaderElement).fadeIn(300)
+      jQuery(loaderElement).show()
     })
 
     scope.$on("loader.hide", () => {
-      jQuery(loaderElement).delay(800).fadeOut(400)
+      jQuery(loaderElement).hide()
     })
   }
 }

@@ -1,14 +1,25 @@
-<translatable class="container" ng-cloak>
+<div class="container" ng-cloak>
 
 
     <div class="panel">
-        <button type="button" class="btn btn-primary" ng-click="controller.loadMyDictionaries()"><translatable str="My dictionaries">My dictionaries</translatable></button>
-        <button type="button" class="btn btn-primary" ng-click="controller.loadAvailableDictionaries()"><translatable str="Available dictionaries">Available dictionaries</translatable>
+        <button type="button" class="btn btn-primary" ng-click="controller.loadMyDictionaries()">
+            <translatable str="My dictionaries">My dictionaries</translatable>
+        </button>
+        <button type="button" class="btn btn-primary" ng-click="controller.loadAvailableDictionaries()">
+            <translatable str="Available dictionaries">Available dictionaries</translatable>
         </button>
     </div>
     <br>
 
-    <div ng-if="dictionaries.length > 0">
+
+
+    <div id="loader-wrapper" ng-show="!status">
+        <div id="loader"></div>
+    </div>
+
+
+
+    <div ng-if="dictionaries.length > 0" ng-show="status">
         <div ng-repeat="dictionary in dictionaries">
             <div>
                 <div class="btn-group col-md-8 col-sm-8 col-lg-8 col-xs-8">
@@ -21,11 +32,19 @@
                             data-toggle="dropdown">{{ dictionary.translation }}
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)"><translatable str="Edit information">Properties</translatable></a></li>
-                        <li><a href="" ng-click="controller.editDictionaryRoles(dictionary)"><translatable str="Edit roles">Edit roles</translatable></a></li>
-                        <li><a href="" ng-click="controller.removeDictionary(dictionary)"><translatable str="Remove dictionary">Remove dictionary</translatable></a></li>
+                        <li><a href="" ng-click="controller.editDictionaryProperties(dictionary)">
+                            <translatable str="Edit information">Properties</translatable>
+                        </a></li>
+                        <li><a href="" ng-click="controller.editDictionaryRoles(dictionary)">
+                            <translatable str="Edit roles">Edit roles</translatable>
+                        </a></li>
+                        <li><a href="" ng-click="controller.removeDictionary(dictionary)">
+                            <translatable str="Remove dictionary">Remove dictionary</translatable>
+                        </a></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="" ng-click="controller.createPerspective(dictionary)"><translatable str="Create new perspective">Create a new perspective</translatable></a></li>
+                        <li><a href="" ng-click="controller.createPerspective(dictionary)">
+                            <translatable str="Create new perspective">Create a new perspective</translatable>
+                        </a></li>
                     </ul>
                 </div>
                 <div class="btn-group col-md-4 col-sm-4 col-lg-4">
@@ -38,7 +57,9 @@
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li ng-repeat="status in controller.getStatuses()"><a href="" ng-click="controller.setDictionaryStatus(dictionary, status)">{{status.content}}</a></li>
+                        <li ng-repeat="status in controller.getStatuses()"><a href=""
+                                                                              ng-click="controller.setDictionaryStatus(dictionary, status)">{{status.content}}</a>
+                        </li>
                     </ul>
                 </div>
 
@@ -59,14 +80,29 @@
                                 data-toggle="dropdown">{{ perspective.translation }}
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'view') }}"><translatable str="View published">View published</translatable></a></li>
-                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}"><translatable str="Edit">Edit</translatable></a></li>
-                            <li><a href="" ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}"><translatable str="Publish">Publish</translatable></a>
+                            <li><a href=""
+                                   ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'view') }}">
+                                <translatable str="View published">View published</translatable>
+                            </a></li>
+                            <li><a href=""
+                                   ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'edit') }}">
+                                <translatable str="Edit">Edit</translatable>
+                            </a></li>
+                            <li><a href=""
+                                   ng-attr-href="{{ controller.getActionLink(dictionary, perspective, 'publish') }}">
+                                <translatable str="Publish">Publish</translatable>
+                            </a>
                             </li>
                             <li role="separator" class="divider"></li>
-                            <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)"><translatable str="Edit roles">Roles</translatable></a></li>
-                            <li><a href="" ng-click="controller.editPerspectiveProperties(dictionary, perspective)"><translatable str="Edit properties">Properties</translatable></a></li>
-                            <li><a href="" ng-click="controller.removePerspective(dictionary, perspective)"><translatable str="Remove perspective">Remove perspective</translatable></a></li>
+                            <li><a href="" ng-click="controller.editPerspectiveRoles(dictionary, perspective)">
+                                <translatable str="Edit roles">Roles</translatable>
+                            </a></li>
+                            <li><a href="" ng-click="controller.editPerspectiveProperties(dictionary, perspective)">
+                                <translatable str="Edit properties">Properties</translatable>
+                            </a></li>
+                            <li><a href="" ng-click="controller.removePerspective(dictionary, perspective)">
+                                <translatable str="Remove perspective">Remove perspective</translatable>
+                            </a></li>
 
                         </ul>
                     </div>
@@ -81,7 +117,9 @@
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li ng-repeat="status in controller.getStatuses()"><a href="" ng-click="controller.setPerspectiveStatus(perspective, status)">{{status.content}}</a></li>
+                            <li ng-repeat="status in controller.getStatuses()"><a href=""
+                                                                                  ng-click="controller.setPerspectiveStatus(perspective, status)">{{status.content}}</a>
+                            </li>
                         </ul>
                     </div>
                     <br><br>
@@ -91,11 +129,13 @@
         </div>
     </div>
 
-    <div ng-if="dictionaries.length == 0">
+    <div ng-if="dictionaries.length == 0" ng-show="status">
         <span>No dictionaries</span>
     </div>
 
     <hr>
 
-    <a href="#/dictionary/create" class="btn btn-primary"><translatable str="Create dictionary...">Create dictionary...</translatable></a>
+    <a href="#/dictionary/create" class="btn btn-primary">
+        <translatable str="Create dictionary...">Create dictionary...</translatable>
+    </a>
 </div>
