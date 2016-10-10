@@ -177,6 +177,14 @@ def signin(request):
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
+# @view_config(route_name='test', renderer='json', request_method='GET')
+# def test(request):
+#     client = Client(user_id=1, counter = 2147483647123)
+#     DBSession.add(client)
+#     DBSession.flush()
+#     return {}
+
+
 @view_config(route_name='cheatlogin', request_method='POST', renderer='json')
 def login_cheat(request):  # TODO: test
     next = request.params.get('next') or request.route_url('dashboard')

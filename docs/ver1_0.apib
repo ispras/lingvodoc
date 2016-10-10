@@ -290,14 +290,14 @@ Edits language. Only admins and user, who created language, can edit it.
             "object_id":1
         }
 
-## Perspective views [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}]
+## Perspective views [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 
 ### view [GET]
@@ -357,7 +357,7 @@ Edits language. Only admins and user, who created language, can edit it.
 
 + Response 200
 
-## Perspective status [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/state]
+## Perspective status [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/state]
 
 
 + Parameters
@@ -365,7 +365,7 @@ Edits language. Only admins and user, who created language, can edit it.
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 ### view [GET]
 
@@ -385,7 +385,7 @@ Edits language. Only admins and user, who created language, can edit it.
 
 + Response 200
 
-## Perspective tree [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/tree]
+## Perspective tree [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/tree]
 
 
 + Parameters
@@ -393,7 +393,7 @@ Edits language. Only admins and user, who created language, can edit it.
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 ### view [GET]
 
@@ -493,7 +493,7 @@ Edits language. Only admins and user, who created language, can edit it.
             ]
         }
 
-## Perspective meta [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/meta]
+## Perspective meta [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/meta]
 
 
 + Parameters
@@ -501,7 +501,7 @@ Edits language. Only admins and user, who created language, can edit it.
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 ### view [GET]
 
@@ -688,7 +688,7 @@ Edits language. Only admins and user, who created language, can edit it.
 + Response 200
 
 
-## Perspective roles [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/roles]
+## Perspective roles [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/roles]
 
 
 + Parameters
@@ -696,7 +696,7 @@ Edits language. Only admins and user, who created language, can edit it.
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 ### view [GET]
 
@@ -802,7 +802,7 @@ Edits language. Only admins and user, who created language, can edit it.
 
 + Response 200
 
-## Perspective fields [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/fields]
+## Perspective fields [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/fields]
 
 
 + Parameters
@@ -810,7 +810,7 @@ Edits language. Only admins and user, who created language, can edit it.
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 ### view [GET]
 
@@ -1470,7 +1470,7 @@ Statistic on users, who contributed to this dictionary: how much of each entity 
         }
 
 
-## Perspective info [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/info]
+## Perspective info [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/info]
 
 Statistic on users, who contributed to this perspective: how much of each entity type, created by them, were approved
 
@@ -1664,13 +1664,13 @@ List of perspectives of this dictionary
         {
         }
 
-## Create lexical entry [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry]
+## Create lexical entry [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
 
 ### create [POST]
 
@@ -1681,13 +1681,13 @@ List of perspectives of this dictionary
             "object_id":1234
         }
 
-## Create lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entries]
+## Create lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entries]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
 
 ### create [POST]
 
@@ -1714,13 +1714,13 @@ List of perspectives of this dictionary
             }
         ]
         
-## Create level one entity [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity]
+## Create level one entity [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
     + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
     + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
 
@@ -1742,13 +1742,13 @@ List of perspectives of this dictionary
             "object_id":1
         }
         
-## Create level two entity [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{level_one_client_id}/{level_one_object_id}/leveltwoentity]
+## Create level two entity [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{level_one_client_id}/{level_one_object_id}/leveltwoentity]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
     + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
     + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
     + level_one_client_id: 1  (number) - ID of the client in the form of an integer
@@ -1772,13 +1772,13 @@ List of perspectives of this dictionary
             "object_id":1
         }
 
-## Create entities bulk [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/entities]
+## Create entities bulk [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/entities]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
 
 ### create [POST]
 
@@ -2032,12 +2032,12 @@ List of perspectives of this dictionary
         }
 
 
-## View lexical entry alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{client_id}/{object_id}]
+## View lexical entry alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry/{client_id}/{object_id}]
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
     + client_id: 1  (number) - ID of the client in the form of an integer
     + object_id: 1  (number) - ID of the lexical entry in the form of an integer
 
@@ -2235,13 +2235,13 @@ List of perspectives of this dictionary
         }
 
 
-## Level one entity methods alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{client_id}/{object_id}]
+## Level one entity methods alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{client_id}/{object_id}]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
     + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
     + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
     + client_id: 1  (number) - ID of the client in the form of an integer
@@ -2347,13 +2347,13 @@ List of perspectives of this dictionary
         {
         }
         
-## Level two entity methods alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{leveloneentity_client_id}/{leveloneentity_object_id}/leveltwoentity/{client_id}/{object_id}]
+## Level two entity methods alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry/{lexical_entry_client_id}/{lexical_entry_object_id}/leveloneentity/{leveloneentity_client_id}/{leveloneentity_object_id}/leveltwoentity/{client_id}/{object_id}]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
     + lexical_entry_client_id: 1  (number) - ID of the client in the form of an integer
     + lexical_entry_object_id: 1  (number) - ID of the lexical entry in the form of an integer
     + leveloneentity_client_id: 1  (number) - ID of the client in the form of an integer
@@ -2422,12 +2422,12 @@ List of perspectives of this dictionary
             ]
         }
         
-## Words connected by grouping entity alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{client_id}/{object_id}/connected]
+## Words connected by grouping entity alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry/{client_id}/{object_id}/connected]
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
     + client_id: 1  (number) - ID of the client in the form of an integer
     + object_id: 1  (number) - ID of the lexical entry in the form of an integer
 
@@ -2510,12 +2510,12 @@ List of perspectives of this dictionary
         {
         }
         
-## Add word connection alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/lexical_entry/{client_id}/{object_id}/connect]
+## Add word connection alternative [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/lexical_entry/{client_id}/{object_id}/connect]
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
     + client_id: 1  (number) - ID of the client in the form of an integer
     + object_id: 1  (number) - ID of the lexical entry in the form of an integer
 
@@ -2561,12 +2561,12 @@ List of perspectives of this dictionary
         {
         }
         
-## Approve entities [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/approve]
+## Approve entities [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/approve]
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
 
 
 ### Approve entities [PATCH]
@@ -2625,12 +2625,12 @@ Disapproves bunch of entities, given their ids and types
         {
         }
 
-## Approve all outer [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/approve_all_outer]
+## Approve all outer [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/approve_all_outer]
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
 
 
 ### Approve all outer [PATCH]
@@ -2639,12 +2639,12 @@ Approves all entities of perspective
 
         {
         }
-## Approve all [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/approve_all]
+## Approve all [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/approve_all]
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the dictionary in the form of an integer
     + perspective_client_id: 1  (number) - ID of the client in the form of an integer
-    + perspective_id: 1  (number) - ID of the perspective in the form of an integer
+    + perspective_object_id: 1  (number) - ID of the perspective in the form of an integer
 
 
 ### Approve all [PATCH]
@@ -3539,13 +3539,13 @@ for every field in fields if new_type_name is specified, then all entities of ol
         ]
         
 
-## All lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/all{?sort_by,start_from,count}]
+## All lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/all{?sort_by,start_from,count}]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
     + sort_by: "Word" (text)(optional) -  by what column should be sorted
     + start_from: 0 (number) -  where to start
     + count:200 (number) -  how many to return
@@ -4019,13 +4019,13 @@ for every field in fields if new_type_name is specified, then all entities of ol
             }]
         }
 
-## All lexical entries count [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/all_count]
+## All lexical entries count [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/all_count]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 
 ### view[GET]
@@ -4037,13 +4037,13 @@ for every field in fields if new_type_name is specified, then all entities of ol
         }
 
 
-## Published lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/published{?sort_by,start_from,count}]
+## Published lexical entries [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/published{?sort_by,start_from,count}]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
     + sort_by: "Word" (text)(optional) -  by what column should be sorted
     + start_from: 0 (number) -  where to start
     + count:200 (number) -  how many to return
@@ -4319,13 +4319,13 @@ for every field in fields if new_type_name is specified, then all entities of ol
         }
 
 
-## Published lexical entries count [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_id}/published_count]
+## Published lexical entries count [/dictionary/{dictionary_client_id}/{dictionary_object_id}/perspective/{perspective_client_id}/{perspective_object_id}/published_count]
 
 + Parameters
     + dictionary_client_id: 1  (number) - ID of the client, who created dictionary in the form of an integer
     + dictionary_object_id: 1  (number) - ID of the object in the form of an integer(dictionary)
     + perspective_client_id: 1  (number) - ID of the client, who created perspective in the form of an integer
-    + perspective_id: 1  (number) - ID of the object in the form of an integer(perspective)
+    + perspective_object_id: 1  (number) - ID of the object in the form of an integer(perspective)
 
 
 ### view[GET]

@@ -187,7 +187,7 @@ def create_lexical_entry(request):  # tested
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
         perspective_client_id = request.matchdict.get('perspective_client_id')
-        perspective_id = request.matchdict.get('perspective_id')
+        perspective_object_id = request.matchdict.get('perspective_object_id')
 
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -198,13 +198,13 @@ def create_lexical_entry(request):  # tested
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         perspective = DBSession.query(DictionaryPerspective).\
-            filter_by(client_id=perspective_client_id, object_id = perspective_id).first()
+            filter_by(client_id=perspective_client_id, object_id = perspective_object_id).first()
         if not perspective:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such perspective in the system")}
 
         lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=variables['auth'],
-                               parent_object_id=perspective_id, parent=perspective)
+                               parent_object_id=perspective_object_id, parent=perspective)
         DBSession.add(lexentr)
         DBSession.flush()
 
@@ -230,7 +230,7 @@ def create_lexical_entry_bulk(request):  # TODO: test
         dictionary_client_id = request.matchdict.get('dictionary_client_id')
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
         perspective_client_id = request.matchdict.get('perspective_client_id')
-        perspective_id = request.matchdict.get('perspective_id')
+        perspective_object_id = request.matchdict.get('perspective_object_id')
 
         count = request.json_body.get('count') or 0
 
@@ -244,7 +244,7 @@ def create_lexical_entry_bulk(request):  # TODO: test
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         perspective = DBSession.query(DictionaryPerspective). \
-            filter_by(client_id=perspective_client_id, object_id = perspective_id).first()
+            filter_by(client_id=perspective_client_id, object_id = perspective_object_id).first()
         if not perspective:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such perspective in the system")}
@@ -252,7 +252,7 @@ def create_lexical_entry_bulk(request):  # TODO: test
         lexes_list = []
         for i in range(0, count):
             lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=variables['auth'],
-                                   parent_object_id=perspective_id, parent=perspective)
+                                   parent_object_id=perspective_object_id, parent=perspective)
             DBSession.add(lexentr)
             lexes_list.append(lexentr)
         DBSession.flush()

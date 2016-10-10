@@ -98,7 +98,7 @@ def perspectives_list(request):  # tested
 @view_config(route_name='perspective_outside', renderer='json', request_method='GET')
 def view_perspective(request): # tested & in docs
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     parent = None
@@ -124,7 +124,7 @@ def edit_perspective_hash(request):
     try:
         response = dict()
         client_id = request.matchdict.get('perspective_client_id')
-        object_id = request.matchdict.get('perspective_id')
+        object_id = request.matchdict.get('perspective_object_id')
         client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -213,7 +213,7 @@ def dangerous_perspectives_hash(request):  # TODO: test?
                                  dictionary_client_id=perspective.parent_client_id,
                                  dictionary_object_id=perspective.parent_object_id,
                                  perspective_client_id=perspective.client_id,
-                                 perspective_id=perspective.object_id)
+                                 perspective_object_id=perspective.object_id)
         subreq = Request.blank(path)
         subreq.method = 'PUT'
         subreq.headers = request.headers
@@ -227,7 +227,7 @@ def dangerous_perspectives_hash(request):  # TODO: test?
 def edit_perspective_meta(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -266,7 +266,7 @@ def edit_perspective_meta(request):  # tested & in docs
 def delete_perspective_meta(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -304,7 +304,7 @@ def delete_perspective_meta(request):  # tested & in docs
 def view_perspective_meta(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
@@ -356,7 +356,7 @@ def view_perspective_meta(request):  # tested & in docs
 def view_perspective_tree(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     parent = None
@@ -413,7 +413,7 @@ def view_perspective_tree(request):  # tested & in docs
 def perspective_info(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     starting_date = request.GET.get('starting_date')
@@ -443,7 +443,7 @@ def perspective_info(request):  # TODO: test
                                      dictionary_client_id=perspective.parent_client_id,
                                      dictionary_object_id=perspective.parent_object_id,
                                      perspective_client_id=perspective.client_id,
-                                     perspective_id=perspective.object_id
+                                     perspective_object_id=perspective.object_id
                                      )
             subreq = Request.blank(path)
             subreq.method = 'GET'
@@ -611,7 +611,7 @@ def complex_create(request):
                                      dictionary_client_id=parent_client_id,
                                      dictionary_object_id=parent_object_id,
                                      perspective_client_id=perspective_json['client_id'],
-                                     perspective_id=perspective_json['object_id'])
+                                     perspective_object_id=perspective_json['object_id'])
             subreq = Request.blank(path)
             subreq.method = 'PUT'
             subreq.headers = request.headers
@@ -678,7 +678,7 @@ def view_perspectives(request):
                                  dictionary_client_id=parent_client_id,
                                  dictionary_object_id=parent_object_id,
                                  perspective_client_id=perspective.client_id,
-                                 perspective_id=perspective.object_id)
+                                 perspective_object_id=perspective.object_id)
         subreq = Request.blank(path)
         subreq.method = 'GET'
         subreq.headers = request.headers
@@ -701,7 +701,7 @@ def view_perspectives(request):
 def view_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
@@ -743,7 +743,7 @@ def view_perspective_roles(request):  # TODO: test
 def edit_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
 
@@ -845,7 +845,7 @@ def edit_perspective_roles(request):
 def delete_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('client_id')
     parent_object_id = request.matchdict.get('object_id')
     req = request.json_body
@@ -946,7 +946,7 @@ def delete_perspective_roles(request):  # TODO: test
 def view_perspective_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
@@ -975,7 +975,7 @@ def view_perspective_status(request):  # tested & in docs
 def edit_perspective_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
@@ -1129,7 +1129,7 @@ def view_nested_field(request, field, link_ids):
 def view_perspective_fields(request):
     response = list()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective and not perspective.marked_for_deletion:
         fields = DBSession.query(DictionaryPerspectiveToField)\
@@ -1159,7 +1159,7 @@ def view_perspective_fields(request):
 def update_perspective_fields(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     variables = {'auth': authenticated_userid(request)}
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -1214,7 +1214,7 @@ def update_perspective_fields(request):
 def lexical_entries_all(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
@@ -1257,7 +1257,7 @@ def lexical_entries_all(request):
 def lexical_entries_all_count(request): # tested
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
@@ -1281,7 +1281,7 @@ def lexical_entries_all_count(request): # tested
 def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
@@ -1333,7 +1333,7 @@ def lexical_entries_published(request):
 @view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
 def lexical_entries_published_count(request):
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
@@ -1431,7 +1431,7 @@ def disapprove_entity(request):
 def approve_all(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
@@ -1444,7 +1444,7 @@ def approve_all(request):
                                     dictionary_client_id=dictionary_client_id,
                                     dictionary_object_id=dictionary_object_id,
                                     perspective_client_id=client_id,
-                                    perspective_id=object_id)
+                                    perspective_object_id=object_id)
             subreq = Request.blank(url)
             jsn = entities
             subreq.json = jsn
@@ -1463,7 +1463,7 @@ def approve_all(request):
 def approve_outer(request):  # TODO: create test.
     from lingvodoc.scripts.approve import approve_all_outer
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     cli_id = request.matchdict.get('dictionary_client_id')
     obj_id = request.matchdict.get('dictionary_object_id')
 
@@ -1500,11 +1500,11 @@ def edit_dictionary_get(request):
     dictionary_client_id = request.matchdict.get('dictionary_client_id')
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_id = request.matchdict.get('perspective_id')
+    perspective_object_id = request.matchdict.get('perspective_object_id')
 
     variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
-                 'perspective_id': perspective_id}
+                 'perspective_object_id': perspective_object_id}
 
     return render_to_response('../templates/edit_dictionary.pt', variables, request=request)
 
@@ -1517,11 +1517,11 @@ def view_dictionary_get(request):
     dictionary_client_id = request.matchdict.get('dictionary_client_id')
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_id = request.matchdict.get('perspective_id')
+    perspective_object_id = request.matchdict.get('perspective_object_id')
 
     variables = {'user': user, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
-                 'perspective_id': perspective_id}
+                 'perspective_object_id': perspective_object_id}
 
     return render_to_response('../templates/view_dictionary.pt', variables, request=request)
 
@@ -1537,11 +1537,11 @@ def publish_dictionary_get(request):
     dictionary_client_id = request.matchdict.get('dictionary_client_id')
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_id = request.matchdict.get('perspective_id')
+    perspective_object_id = request.matchdict.get('perspective_object_id')
 
     variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
-                 'perspective_id': perspective_id}
+                 'perspective_object_id': perspective_object_id}
 
     return render_to_response('../templates/publish_dictionary.pt', variables, request=request)
 
@@ -1641,7 +1641,7 @@ def edit_perspective(request):  # tested & in docs
     try:
         response = dict()
         client_id = request.matchdict.get('perspective_client_id')
-        object_id = request.matchdict.get('perspective_id')
+        object_id = request.matchdict.get('perspective_object_id')
         client = DBSession.query(Client).filter_by(id=request.authenticated_userid).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
@@ -1687,7 +1687,7 @@ def edit_perspective(request):  # tested & in docs
 def delete_perspective(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
-    object_id = request.matchdict.get('perspective_id')
+    object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
     parent_object_id = request.matchdict.get('dictionary_object_id')
     parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()

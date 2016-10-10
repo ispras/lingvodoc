@@ -283,7 +283,7 @@ def participated_clients_list(dictionary, request):
                                      dictionary_client_id = dictionary.client_id,
                                      dictionary_object_id = dictionary.object_id,
                                      perspective_client_id = persp.client_id,
-                                     perspective_id = persp.object_id)
+                                     perspective_object_id = persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'GET'
             subreq.headers = request.headers

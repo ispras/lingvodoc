@@ -88,7 +88,7 @@ def basic_search(request):
                                             dictionary_client_id=entry.parent.parent.client_id,
                                             dictionary_object_id=entry.parent.parent.object_id,
                                             perspective_client_id=entry.parent_client_id,
-                                            perspective_id=entry.parent_object_id)
+                                            perspective_object_id=entry.parent_object_id)
                     subreq = Request.blank(url)
                     subreq.method = 'GET'
                     headers = {'Cookie': request.headers['Cookie']}
