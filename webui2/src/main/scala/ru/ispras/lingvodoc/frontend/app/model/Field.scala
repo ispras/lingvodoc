@@ -5,8 +5,8 @@ import upickle.Js
 import upickle.default._
 import org.scalajs.dom.console
 
-
 import scala.scalajs.js
+import scala.scalajs.js.Date
 import scala.scalajs.js.annotation.JSExportAll
 import scala.scalajs.js.JSConverters._
 
@@ -20,7 +20,7 @@ case class Field(override val clientId: Int,
                  var dataTypeTranslationGistClientId: Int,
                  var dataTypeTranslationGistObjectId: Int,
                  var isTranslatable: Boolean,
-                 var createdAt: String) extends Object(clientId, objectId) {
+                 var created: Date) extends Object(clientId, objectId) {
 
   var fields: js.Array[Field] = js.Array[Field]()
   var link: Option[Link] = None
@@ -41,7 +41,7 @@ object Field {
             ("data_type_translation_gist_client_id", Js.Num(f.dataTypeTranslationGistClientId)),
             ("data_type_translation_gist_object_id", Js.Num(f.dataTypeTranslationGistObjectId)),
             ("is_translatable", if (f.isTranslatable) Js.True else Js.False),
-            ("created_at", Js.Str(f.createdAt)),
+            ("created_at", Js.Num(f.created.getTime())),
             ("contains", Js.Arr(contains: _*)))
 
           field.link match {
@@ -62,14 +62,14 @@ object Field {
         def apply(js: Js.Obj): Field = {
 
 
-          val clientId = js("client_id").asInstanceOf[Js.Num].value.toInt
-          val objectId = js("object_id").asInstanceOf[Js.Num].value.toInt
-          val translation = js("translation").asInstanceOf[Js.Str].value
-          val translationGistClientId = js("translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
-          val translationGistObjectId = js("translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
-          val dataTypeTranslationGistClientId = js("data_type_translation_gist_client_id").asInstanceOf[Js.Num].value.toInt
-          val dataTypeTranslationGistObjectId = js("data_type_translation_gist_object_id").asInstanceOf[Js.Num].value.toInt
-          val createdAt = js("created_at").asInstanceOf[Js.Str].value
+          val clientId = js("client_id").num.toInt
+          val objectId = js("object_id").num.toInt
+          val translation = js("translation").str
+          val translationGistClientId = js("translation_gist_client_id").num.toInt
+          val translationGistObjectId = js("translation_gist_object_id").num.toInt
+          val dataTypeTranslationGistClientId = js("data_type_translation_gist_client_id").num.toInt
+          val dataTypeTranslationGistObjectId = js("data_type_translation_gist_object_id").num.toInt
+          val createdAt = new Date(js("created_at").num)
           val isTranslatable = js("is_translatable") match {
             case Js.True => true
             case Js.False => false
