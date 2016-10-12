@@ -1,14 +1,14 @@
 package ru.ispras.lingvodoc.frontend
 
 import com.greencatsoft.angularjs.{Angular, Config}
-import com.greencatsoft.angularjs.core.{Route, RouteProvider}
+import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
-import ru.ispras.lingvodoc.frontend.app.directives.{ConvertToNumberDirective, OnReadDirective, OnReadFileDirective, TranslatableDirective}
-import ru.ispras.lingvodoc.frontend.app.services.{BackendServiceFactory, ExceptionHandlerFactory, UserService, UserServiceFactory}
+import ru.ispras.lingvodoc.frontend.app.directives._
+import ru.ispras.lingvodoc.frontend.app.services._
 
 import scala.scalajs.js.annotation.JSExport
 
-class RoutingConfig(routeProvider: RouteProvider) extends Config {
+class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) extends Config {
 
   routeProvider
     .when("/", Route("/static/templates/home.html", "Home", "HomeController"))
@@ -32,10 +32,10 @@ object LingvodocApplication {
   @JSExport
   def main() = {
     Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu"))
-      .config[RoutingConfig]
+      .config[LingvodocConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
-      .factory[ExceptionHandlerFactory]
+      //.factory[ExceptionHandlerFactory]
       .controller[MainController]
       .controller[NavigationController]
       .controller[LoginController]

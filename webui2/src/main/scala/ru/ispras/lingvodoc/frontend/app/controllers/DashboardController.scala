@@ -4,33 +4,40 @@ import com.greencatsoft.angularjs.core.{Location, Scope, Timeout}
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService, UserService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
+import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.Array
+import scala.scalajs.js.{Any, Array}
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils.encodeURIComponent
-import scala.scalajs.js.annotation.JSExport
+import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.util.{Failure, Success}
+
+
+@JSExportAll
+case class PageStatus(var loaded: Boolean = false)
 
 
 @js.native
 trait DashboardScope extends Scope {
   var dictionaries: js.Array[Dictionary] = js.native
   var statuses: js.Array[TranslationGist] = js.native
+  var status: Boolean = js.native
 }
+
 
 @JSExport
 @injectable("DashboardController")
 class DashboardController(scope: DashboardScope, modal: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout) extends
-  AbstractController[DashboardScope](scope) with AngularExecutionContextProvider {
+  AbstractController[DashboardScope](scope) with AngularExecutionContextProvider with LoadingPlaceholder {
 
   scope.dictionaries = js.Array[Dictionary]()
   scope.statuses = js.Array[TranslationGist]()
-
-  load()
+  scope.status = false
 
 
   @JSExport
@@ -130,10 +137,10 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
 
-    val instance = modal.open[Dictionary](options)
+    val instance = modal.open[Unit](options)
 
     instance.result map {
-      dictionary: Dictionary =>
+      _ =>
     }
   }
 
@@ -154,36 +161,47 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
       }
     ).asInstanceOf[js.Dictionary[js.Any]]
 
-    val instance = modal.open[Perspective](options)
+    val instance = modal.open[Unit](options)
 
     instance.result map {
-      perspective: Perspective =>
+      _ =>
     }
   }
 
   @JSExport
   def loadMyDictionaries() = {
-    val user = userService.getUser()
-    val query = DictionaryQuery()
-    query.userCreated = Some(Seq[Int](user.id))
-
-    backend.getDictionariesWithPerspectives(query) onComplete {
-      case Success(dictionaries) =>
-        scope.dictionaries = dictionaries.toJSArray
-      case Failure(e) => console.error(e.getMessage)
+    val load = () => {
+      val user = userService.getUser()
+      val query = DictionaryQuery()
+      query.userCreated = Some(Seq[Int](user.id))
+      backend.getDictionariesWithPerspectives(query) map {
+        dictionaries =>
+          scope.dictionaries = dictionaries.toJSArray
+          dictionaries
+      } recover {
+        case e: Throwable => Future.failed(e)
+      }
     }
+    doAjax(load)
   }
 
   @JSExport
   def loadAvailableDictionaries() = {
-    val user = userService.getUser()
-    val query = DictionaryQuery()
-    query.author = Some(user.id)
-    backend.getDictionariesWithPerspectives(query) onComplete {
-      case Success(dictionaries) =>
-        scope.dictionaries = dictionaries.toJSArray
-      case Failure(e) => console.error(e.getMessage)
+
+
+    val load = () => {
+      val user = userService.getUser()
+      val query = DictionaryQuery()
+      query.author = Some(user.id)
+      backend.getDictionariesWithPerspectives(query) map {
+        dictionaries =>
+          scope.dictionaries = dictionaries.toJSArray
+          dictionaries
+      } recover {
+        case e: Throwable => Future.failed(e)
+      }
     }
+    doAjax(load)
   }
 
 
@@ -258,27 +276,42 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
   }
 
 
-  private[this] def load() = {
+  override protected def onLoaded[T](result: T): Unit = {
+  }
 
-    backend.allStatuses() onComplete {
-      case Success(statuses) =>
-        scope.statuses = statuses.toJSArray
-        backend.getCurrentUser onComplete {
-          case Success(user) =>
-            userService.setUser(user)
-            // load dictionary list
-            val query = DictionaryQuery()
-            query.author = Some(user.id)
-            backend.getDictionariesWithPerspectives(query) onComplete {
-              case Success(dictionaries) =>
-                scope.dictionaries = dictionaries.toJSArray
-              case Failure(e) => console.error(e.getMessage)
-            }
-          case Failure(e) => location.path("/login");
-        }
+  override protected def onError(reason: Throwable): Unit = {
 
-      case Failure(e) =>
+  }
+
+  override protected def bootstrap(): Future[_] = {
+
+    backend.allStatuses().flatMap(statuses => {
+      scope.statuses = statuses.toJSArray
+      backend.getCurrentUser flatMap { user =>
+          userService.setUser(user)
+          // load dictionary list
+          val query = DictionaryQuery()
+          query.author = Some(user.id)
+          backend.getDictionariesWithPerspectives(query) map {
+              dictionaries => scope.dictionaries = dictionaries.toJSArray
+              dictionaries
+          } recover {
+            case e: Throwable => Future.failed[Any](e)
+          }
+      } recover {
+        case e: Throwable => Future.failed[Any](e)
+      }
+    }).recover {
+      case e: Throwable => Future.failed[Any](e)
     }
+  }
+
+  override protected def preRequestHook(): Unit = {
+    scope.status = false
+  }
+
+  override protected def postRequestHook(): Unit = {
+    scope.status = true
   }
 }
 
