@@ -23,9 +23,6 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
     .when("/files", Route("/static/templates/files.html", "Files", "UserFilesController"))
     .otherwise(Route("/static/templates/404.html"))
-
-
-  httpProvider.interceptors.push("LoadingInterceptor")
 }
 
 
@@ -39,7 +36,6 @@ object LingvodocApplication {
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
       //.factory[ExceptionHandlerFactory]
-      .factory[LoadingInterceptor.Factory]
       .controller[MainController]
       .controller[NavigationController]
       .controller[LoginController]
@@ -70,6 +66,5 @@ object LingvodocApplication {
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
       .directive[TranslatableDirective]
-      .directive[LoadingDirective]
   }
 }

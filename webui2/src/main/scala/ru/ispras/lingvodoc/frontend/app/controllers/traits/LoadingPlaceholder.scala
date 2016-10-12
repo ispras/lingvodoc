@@ -1,18 +1,15 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.traits
 
-import com.greencatsoft.angularjs.Controller
-import com.greencatsoft.angularjs.core.Scope
+import com.greencatsoft.angularjs.{AngularExecutionContextProvider, Controller}
 
-import scala.concurrent.{ExecutionContext, Future, OnCompleteRunnable}
-import scala.scalajs.js.Any
+import scala.concurrent.{ExecutionContext, Future}
+import scala.scalajs.js
 import scala.util.{Failure, Success}
 
 
-trait LoadingPlaceholder {
+trait LoadingPlaceholder extends AngularExecutionContextProvider {
   this: Controller[_] =>
 
-
-  protected implicit def executionContext: ExecutionContext
 
   protected def onLoaded[T](result: T)
   protected def onError(reason: Throwable)
@@ -41,5 +38,5 @@ trait LoadingPlaceholder {
     case Failure(e) =>
       postRequestHook()
       onError(e)
-  }
+    }
 }

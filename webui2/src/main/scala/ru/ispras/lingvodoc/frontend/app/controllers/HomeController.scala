@@ -1,17 +1,18 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{Injector, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.app.model.{Field, Language, Perspective}
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ExceptionHandlerFactory}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
+import ru.ispras.lingvodoc.frontend.app.model.{DictionaryQuery, Language, Perspective}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
+import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.{Function2, Object}
-import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.Any
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
+import scala.scalajs.js.JSConverters._
+
 
 
 @js.native
@@ -19,14 +20,14 @@ trait HomeScope extends Scope {
   var languages: js.Array[Language] = js.native
 }
 
+@JSExport
 @injectable("HomeController")
-class HomeController(scope: HomeScope, injector: Injector, backend: BackendService, modal: ModalService, val timeout: Timeout) extends AbstractController[HomeScope](scope)  with AngularExecutionContextProvider {
+class HomeController(scope: HomeScope, backend: BackendService, val timeout: Timeout)
+  extends AbstractController[HomeScope](scope)
+    with LoadingPlaceholder
+    with AngularExecutionContextProvider {
 
-  private[this] val exceptionHandler = injector.get[Function2[Throwable, Object, Unit]]("$exceptionHandler")
-
-  scope.languages = Seq[Language]().toJSArray
-
-  load()
+  scope.languages = js.Array[Language]()
 
   @JSExport
   def getPerspectiveAuthors(perspective: Perspective): String = {
@@ -39,23 +40,33 @@ class HomeController(scope: HomeScope, injector: Injector, backend: BackendServi
         backend.getDictionaryPerspectives(dictionary, onlyPublished = true) onComplete {
           case Success(perspectives) =>
             dictionary.perspectives = perspectives.toJSArray
-          case Failure(e) => exceptionHandler(BackendException("Failed to get published perspectives list", e), null)
+          case Failure(e) =>
         }
       }
       setPerspectives(language.languages.toSeq)
     }
   }
 
+  override protected def onLoaded[T](result: T): Unit = {}
 
-  private[this] def load() = {
+  override protected def onError(reason: Throwable): Unit = {}
+
+  override protected def bootstrap(): Future[_] = {
 
     backend.allStatuses() map { _ =>
       backend.getPublishedDictionaries onComplete {
         case Success(languages) =>
           setPerspectives(languages)
           scope.languages = languages.toJSArray
-        case Failure(e) => exceptionHandler(BackendException("Failed to get published dictionaries list", e), null)
+          languages
+        case Failure(e) =>
       }
     }
+  }
+
+  override protected def preRequestHook(): Unit = {
+  }
+
+  override protected def postRequestHook(): Unit = {
   }
 }

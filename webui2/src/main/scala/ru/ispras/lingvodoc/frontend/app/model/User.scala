@@ -12,9 +12,9 @@ case class User(id: Int,
                 var email: String,
                 var name: String,
                 var intlName: String,
-                var birthday: Date,
+                var birthday: String,
                 var isActive: Boolean,
-                var signupDate: Date) {
+                var createdAt: Double) {
 
   var defaultLocale: Option[Int] = None
   var organizations: Seq[Unit] = Seq()
@@ -28,9 +28,9 @@ object User {
       ("email", Js.Str(user.email)),
       ("name", Js.Str(user.name)),
       ("intl_name", Js.Str(user.intlName)),
-      ("birthday", Js.Str(user.birthday.toDateString())),
+      ("birthday", Js.Str(user.birthday)),
       ("is_active", if (user.isActive) Js.True else Js.False),
-      ("signup_date", Js.Str(user.signupDate.toDateString()))
+      ("created_at", Js.Num(user.createdAt))
     )
   }
 
@@ -48,12 +48,12 @@ object User {
         case _ => false
       }
 
-      val birthdayTimestamp = Date.parse(js("birthday").asInstanceOf[Js.Str].value)
-      val birthday = new Date()
-      birthday.setTime(birthdayTimestamp)
-      val signupTimestamp = Date.parse(js("signup_date").asInstanceOf[Js.Str].value)
-      val signupDate = new Date()
-      signupDate.setTime(signupTimestamp)
-      User(id, login, email, name, intlName, birthday, isActive, signupDate)
+      val birthday = js("birthday").str
+      val createdAtTimestamp = js("created_at").num
+
+      org.scalajs.dom.console.log(birthday)
+      org.scalajs.dom.console.log(createdAtTimestamp)
+
+      User(id, login, email, name, intlName, birthday, isActive, createdAtTimestamp)
   }
 }

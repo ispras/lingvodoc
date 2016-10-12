@@ -325,7 +325,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary.objectId.toString) + "/state"
     $http.put(getMethodUrl(url), req) onComplete {
       case Success(_) => p.success(())
-      case Failure(e) => p.failure(new BackendException("Failed to update dictionary status: " + e.getMessage))
+      case Failure(e) => p.failure(BackendException("Failed to update dictionary status", e))
     }
     p.future
   }
@@ -336,22 +336,22 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     *
     * @return
     */
-  def getPublishedDictionaries: core.Promise[Seq[Language]] = {
-    val defer = $q.defer[Seq[Language]]()
+  def getPublishedDictionaries: Future[Seq[Language]] = {
+
+    val p = Promise[Seq[Language]]()
     val req = JSON.stringify(js.Dynamic.literal(group_by_lang = true, group_by_org = false))
     $http.post[js.Dynamic](getMethodUrl("published_dictionaries"), req) onComplete {
       case Success(response) =>
         try {
           val languages = read[Seq[Language]](js.JSON.stringify(response))
-          defer.resolve(languages)
+          p.success(languages)
         } catch {
-          case e: upickle.Invalid.Json => defer.reject("Malformed dictionary json:" + e.getMessage)
-          case e: upickle.Invalid.Data => defer.reject("Malformed dictionary data. Missing some required fields: " +
-            e.getMessage)
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed dictionary json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed dictionary data. Missing some required fields", e))
         }
-      case Failure(e) => defer.reject("Failed to get list of dictionaries: " + e.getMessage)
+      case Failure(e) => p.failure(BackendException("Failed to get list of dictionaries: ", e))
     }
-    defer.promise
+    p.future
   }
 
   // Perspectives
@@ -520,8 +520,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
           p.success(user)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Malformed user json:", e))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed user data. Missing some " +
-            "required fields", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed user data. Missing some required fields", e))
           case e: Throwable => p.failure(BackendException("Unknown exception", e))
         }
       case Failure(e) => p.failure(BackendException("Failed to get current user", e))

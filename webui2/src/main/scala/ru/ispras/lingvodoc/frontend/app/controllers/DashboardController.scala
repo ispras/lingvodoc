@@ -30,8 +30,6 @@ trait DashboardScope extends Scope {
 }
 
 
-
-
 @JSExport
 @injectable("DashboardController")
 class DashboardController(scope: DashboardScope, modal: ModalService, location: Location, userService: UserService, backend: BackendService, val timeout: Timeout) extends
@@ -40,8 +38,6 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
   scope.dictionaries = js.Array[Dictionary]()
   scope.statuses = js.Array[TranslationGist]()
   scope.status = false
-
-  //load()
 
 
   @JSExport
