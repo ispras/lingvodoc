@@ -6,7 +6,7 @@ import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextPr
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 
@@ -16,6 +16,7 @@ import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
+import scala.concurrent.Future
 import scala.scalajs.js.UndefOr
 
 
@@ -31,12 +32,13 @@ trait EditDictionaryScope extends Scope {
   // total number of pages
   var dictionaryTable: DictionaryTable = js.native
   var selectedEntries: js.Array[String] = js.native
+  var pageLoaded: Boolean = js.native
 }
 
 @JSExport
 @injectable("EditDictionaryController")
 class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService, val timeout: Timeout) extends
-  AbstractController[EditDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay with Pagination {
+  AbstractController[EditDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay with Pagination with LoadingPlaceholder {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -62,9 +64,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
   scope.size = 20
 
   scope.selectedEntries = js.Array[String]()
-
-  load()
-
+  scope.pageLoaded = false
 
   @JSExport
   def filterKeypress(event: Event) = {
@@ -316,11 +316,27 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
     }
   }
 
+  @JSExport
+  override def getPageLink(page: Int): String = {
+    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/edit/$page"
+  }
 
-  private[this] def load() = {
+  override protected def onLoaded[T](result: T): Unit = {}
 
-    backend.perspectiveSource(perspectiveId) onComplete {
-      case Success(sources) =>
+  override protected def onError(reason: Throwable): Unit = {}
+
+  override protected def preRequestHook(): Unit = {
+    scope.pageLoaded = false
+  }
+
+  override protected def postRequestHook(): Unit = {
+    scope.pageLoaded = true
+  }
+
+
+  doAjax(() => {
+    backend.perspectiveSource(perspectiveId) flatMap {
+      sources =>
         scope.path = sources.reverse.map {
           _.source match {
             case language: Language => language.translation
@@ -328,35 +344,31 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
             case perspective: Perspective => perspective.translation
           }
         }.mkString(" >> ")
-      case Failure(e) => console.error(e.getMessage)
-    }
 
-
-    backend.dataTypes() onComplete {
-      case Success(d) =>
-        dataTypes = d
-        backend.getFields(dictionaryId, perspectiveId) onComplete {
-          case Success(f) =>
+        backend.dataTypes() flatMap { d =>
+          dataTypes = d
+          backend.getFields(dictionaryId, perspectiveId) flatMap { f =>
             fields = f
-            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
-              case Success(count) =>
-                scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-                val offset = getOffset(scope.pageNumber, scope.size)
-                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) onComplete {
-                  case Success(entries) =>
-                    scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-                  case Failure(e) => console.log(e.getMessage)
-                }
-              case Failure(e) => console.log(e.getMessage)
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
+              scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
+              val offset = getOffset(scope.pageNumber, scope.size)
+              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) map { entries =>
+                scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
+                scope.dictionaryTable
+              } recover {
+                case e: Throwable => Future.failed(e)
+              }
+            } recover {
+              case e: Throwable => Future.failed(e)
             }
-          case Failure(e) => console.log(e.getMessage)
+          } recover {
+            case e: Throwable => Future.failed(e)
+          }
+        } recover {
+          case e: Throwable => Future.failed(e)
         }
-      case Failure(e) => console.log(e.getMessage)
+    } recover {
+      case e: Throwable => Future.failed(e)
     }
-  }
-
-  @JSExport
-  override def getPageLink(page: Int): String = {
-    s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/edit/$page"
-  }
+  })
 }

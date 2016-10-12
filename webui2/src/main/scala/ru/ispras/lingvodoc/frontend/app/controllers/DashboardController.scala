@@ -283,29 +283,6 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
 
   }
 
-  override protected def bootstrap(): Future[_] = {
-
-    backend.allStatuses().flatMap(statuses => {
-      scope.statuses = statuses.toJSArray
-      backend.getCurrentUser flatMap { user =>
-          userService.setUser(user)
-          // load dictionary list
-          val query = DictionaryQuery()
-          query.author = Some(user.id)
-          backend.getDictionariesWithPerspectives(query) map {
-              dictionaries => scope.dictionaries = dictionaries.toJSArray
-              dictionaries
-          } recover {
-            case e: Throwable => Future.failed[Any](e)
-          }
-      } recover {
-        case e: Throwable => Future.failed[Any](e)
-      }
-    }).recover {
-      case e: Throwable => Future.failed[Any](e)
-    }
-  }
-
   override protected def preRequestHook(): Unit = {
     scope.status = false
   }
@@ -313,5 +290,28 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
   override protected def postRequestHook(): Unit = {
     scope.status = true
   }
+
+
+  doAjax(() => {
+    backend.allStatuses().flatMap(statuses => {
+      scope.statuses = statuses.toJSArray
+      backend.getCurrentUser flatMap { user =>
+        userService.setUser(user)
+        // load dictionary list
+        val query = DictionaryQuery()
+        query.author = Some(user.id)
+        backend.getDictionariesWithPerspectives(query) map {
+          dictionaries => scope.dictionaries = dictionaries.toJSArray
+            dictionaries
+        } recover {
+          case e: Throwable => Future.failed[Any](e)
+        }
+      } recover {
+        case e: Throwable => Future.failed[Any](e)
+      }
+    }).recover {
+      case e: Throwable => Future.failed[Any](e)
+    }
+  })
 }
 

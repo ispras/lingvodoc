@@ -51,8 +51,13 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
 
   override protected def onError(reason: Throwable): Unit = {}
 
-  override protected def bootstrap(): Future[_] = {
+  override protected def preRequestHook(): Unit = {
+  }
 
+  override protected def postRequestHook(): Unit = {
+  }
+
+  doAjax(() => {
     backend.allStatuses() map { _ =>
       backend.getPublishedDictionaries onComplete {
         case Success(languages) =>
@@ -62,11 +67,5 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
         case Failure(e) =>
       }
     }
-  }
-
-  override protected def preRequestHook(): Unit = {
-  }
-
-  override protected def postRequestHook(): Unit = {
-  }
+  })
 }

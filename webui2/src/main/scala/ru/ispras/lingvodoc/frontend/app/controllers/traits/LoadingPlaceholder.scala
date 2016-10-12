@@ -13,7 +13,6 @@ trait LoadingPlaceholder extends AngularExecutionContextProvider {
 
   protected def onLoaded[T](result: T)
   protected def onError(reason: Throwable)
-  protected def bootstrap(): Future[_]
 
   protected def preRequestHook()
   protected def postRequestHook()
@@ -29,14 +28,4 @@ trait LoadingPlaceholder extends AngularExecutionContextProvider {
         onError(e)
     }
   }
-
-  preRequestHook()
-  bootstrap() onComplete {
-    case Success(result) =>
-      postRequestHook()
-      onLoaded(result)
-    case Failure(e) =>
-      postRequestHook()
-      onError(e)
-    }
 }

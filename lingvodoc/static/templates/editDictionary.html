@@ -28,10 +28,14 @@
 
     </div>
 
+    <div id="loader-wrapper" ng-show="!pageLoaded">
+        <div id="loader"></div>
+    </div>
 
-    <div ng-include="'/static/templates/include/editDictionary.html'"></div>
 
-    <div class="row">
+    <div ng-include="'/static/templates/include/editDictionary.html'" ng-show="pageLoaded"></div>
+
+    <div class="row" ng-show="pageLoaded">
         <div class="col-lg-12">
 
             <div class="text-center">
