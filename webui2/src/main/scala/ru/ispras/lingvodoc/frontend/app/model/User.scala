@@ -12,9 +12,9 @@ case class User(id: Int,
                 var email: String,
                 var name: String,
                 var intlName: String,
-                var birthday: String,
+                var birthday: Date,
                 var isActive: Boolean,
-                var createdAt: Double) {
+                var created: Date) {
 
   var defaultLocale: Option[Int] = None
   var organizations: Seq[Unit] = Seq()
@@ -28,9 +28,9 @@ object User {
       ("email", Js.Str(user.email)),
       ("name", Js.Str(user.name)),
       ("intl_name", Js.Str(user.intlName)),
-      ("birthday", Js.Str(user.birthday)),
+      ("birthday", Js.Str(s"${user.birthday.getFullYear()}-${user.birthday.getMonth()}-${user.birthday.getDay()}")),
       ("is_active", if (user.isActive) Js.True else Js.False),
-      ("created_at", Js.Num(user.createdAt))
+      ("created_at", Js.Num(user.created.getTime()))
     )
   }
 
@@ -48,12 +48,9 @@ object User {
         case _ => false
       }
 
-      val birthday = js("birthday").str
-      val createdAtTimestamp = js("created_at").num
+      val birthday = new Date(js("birthday").str)
+      val created = new Date(js("created_at").num * 1000)
 
-      org.scalajs.dom.console.log(birthday)
-      org.scalajs.dom.console.log(createdAtTimestamp)
-
-      User(id, login, email, name, intlName, birthday, isActive, createdAtTimestamp)
+      User(id, login, email, name, intlName, birthday, isActive, created)
   }
 }
