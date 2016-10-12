@@ -283,7 +283,7 @@ def participated_clients_list(dictionary, request):
                                      dictionary_client_id = dictionary.client_id,
                                      dictionary_object_id = dictionary.object_id,
                                      perspective_client_id = persp.client_id,
-                                     perspective_id = persp.object_id)
+                                     perspective_object_id = persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'GET'
             subreq.headers = request.headers
@@ -421,7 +421,7 @@ def view_field_from_object(request, field):
     if field and not field.marked_for_deletion:
         response['client_id'] = field.client_id
         response['object_id'] = field.object_id
-        response['created_at'] = str(field.created_at)
+        response['created_at'] = field.created_at.timestamp()
         response['data_type_translation_gist_client_id'] = field.data_type_translation_gist_client_id
         response['data_type_translation_gist_object_id'] = field.data_type_translation_gist_object_id
         response['translation'] = field.get_translation(request.cookies['locale_id'])

@@ -67,7 +67,7 @@ def convert_dictionary_check(request):  # TODO: test
                                  dictionary_client_id=perspective.parent_client_id,
                                  dictionary_object_id=perspective.parent_object_id,
                                  perspective_client_id=perspective.client_id,
-                                 perspective_id=perspective.object_id)
+                                 perspective_object_id=perspective.object_id)
         subreq = Request.blank(path)
         subreq.method = 'GET'
         subreq.headers = request.headers

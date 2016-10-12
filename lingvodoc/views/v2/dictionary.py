@@ -291,7 +291,7 @@ def copy_dictionary(request):
                                      dictionary_client_id=parent.client_id,
                                      dictionary_object_id=parent.object_id,
                                      perspective_client_id=perspective.client_id,
-                                     perspective_id=perspective.object_id)
+                                     perspective_object_id=perspective.object_id)
             subreq = Request.blank(path)
             subreq.method = 'GET'
             headers = {'Cookie': request.headers['Cookie']}
@@ -302,7 +302,7 @@ def copy_dictionary(request):
                                      dictionary_client_id=new_dict.client_id,
                                      dictionary_object_id=new_dict.object_id,
                                      perspective_client_id=new_persp.client_id,
-                                     perspective_id=new_persp.object_id)
+                                     perspective_object_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
             subreq.json = resp.json
@@ -314,7 +314,7 @@ def copy_dictionary(request):
                                      dictionary_client_id=parent.client_id,
                                      dictionary_object_id=parent.object_id,
                                      perspective_client_id=perspective.client_id,
-                                     perspective_id=perspective.object_id)
+                                     perspective_object_id=perspective.object_id)
             subreq = Request.blank(path)
             subreq.method = 'GET'
             headers = {'Cookie': request.headers['Cookie']}
@@ -325,7 +325,7 @@ def copy_dictionary(request):
                                      dictionary_client_id=new_dict.client_id,
                                      dictionary_object_id=new_dict.object_id,
                                      perspective_client_id=new_persp.client_id,
-                                     perspective_id=new_persp.object_id)
+                                     perspective_object_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'PUT'
             subreq.json = resp.json
@@ -337,7 +337,7 @@ def copy_dictionary(request):
                                      client_id=parent.client_id,
                                      object_id=parent.object_id,
                                      perspective_client_id=perspective.client_id,
-                                     perspective_id=perspective.object_id)
+                                     perspective_object_id=perspective.object_id)
             subreq = Request.blank(path)
             subreq.method = 'GET'
             headers = {'Cookie': request.headers['Cookie']}
@@ -348,7 +348,7 @@ def copy_dictionary(request):
                                      client_id=new_dict.client_id,
                                      object_id=new_dict.object_id,
                                      perspective_client_id=new_persp.client_id,
-                                     perspective_id=new_persp.object_id)
+                                     perspective_object_id=new_persp.object_id)
             subreq = Request.blank(path)
             subreq.method = 'POST'
             subreq.json = resp.json
@@ -491,7 +491,7 @@ def dictionary_info(request):  # TODO: test
                                          dictionary_client_id=perspective.parent_client_id,
                                          dictionary_object_id=perspective.parent_object_id,
                                          perspective_client_id=perspective.client_id,
-                                         perspective_id=perspective.object_id
+                                         perspective_object_id=perspective.object_id
                                          )
                 subreq = Request.blank(path)
                 subreq.method = 'GET'

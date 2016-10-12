@@ -179,10 +179,10 @@ def blob_upload_get(request):
     dictionary_client_id = request.matchdict.get('dictionary_client_id')
     dictionary_object_id = request.matchdict.get('dictionary_object_id')
     perspective_client_id = request.matchdict.get('perspective_client_id')
-    perspective_id = request.matchdict.get('perspective_id')
+    perspective_object_id = request.matchdict.get('perspective_object_id')
 
     variables = {'client_id': client_id, 'user': user, 'dictionary_client_id': dictionary_client_id,
                  'dictionary_object_id': dictionary_object_id, 'perspective_client_id': perspective_client_id,
-                 'perspective_id': perspective_id}
+                 'perspective_object_id': perspective_object_id}
 
     return render_to_response('templates/user_upload.pt', variables, request=request)

@@ -55,7 +55,7 @@ def translationgist_contents(translationgist):
     result['client_id'] = translationgist.client_id
     result['object_id'] = translationgist.object_id
     result['type'] = translationgist.type
-    result['created_at'] = str(translationgist.created_at)
+    result['created_at'] = translationgist.created_at.timestamp()
     contains = []
     for translationatom in translationgist.translationatom:
         contains.append(translationatom_contents(translationatom))
@@ -71,7 +71,7 @@ def translationatom_contents(translationatom):
     result['object_id'] = translationatom.object_id
     result['parent_client_id'] = translationatom.parent_client_id
     result['parent_object_id'] = translationatom.parent_object_id
-    result['created_at'] = str(translationatom.created_at)
+    result['created_at'] = translationatom.created_at.timestamp()
     return result
 
 
