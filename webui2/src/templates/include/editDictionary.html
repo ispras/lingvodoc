@@ -55,7 +55,7 @@
                         <ul class="tree" ng-if="column.getType()=='Simple'">
                             <li ng-repeat="value in cell.values" ng-class="{removed: value.entity.markedForDeletion}">
                                 {{ value.getContent() }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                                 ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                                 ng-if="controller.isRemovable(row.entry, value.entity)" ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
                             </li>
 
                             <li class="last">
@@ -77,14 +77,14 @@
                             <li ng-repeat="value in cell.values">
                                 <!-- display value -->
                                 {{ value.getContent() }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                                 ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                                 ng-if="controller.isRemovable(row.entry, value.entity)" ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
 
                                 <!-- display values from sub columns -->
                                 <ul>
                                     <li ng-repeat="linkedValue in value.values" ng-class="{removed: value.entity.markedForDeletion}">
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                                                   ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                                                   ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
@@ -98,17 +98,9 @@
                                             </button>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
-                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
-                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
-                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
-                                            <!--</button>-->
-
-                                            <!--<button type="button" class="btn btn-default btn-xs" aria-label="Remove"-->
-                                                    <!--ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>-->
-                                        <!--</div>-->
                                     </li>
 
                                     <li class="last">
@@ -172,7 +164,7 @@
                                 </button>
 
                                 <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                        ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                        ng-if="controller.isRemovable(row.entry, value.entity)" ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
 
                             </li>
 
@@ -199,21 +191,21 @@
                                 </button>
 
                                 <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                        ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                        ng-if="controller.isRemovable(row.entry, value.entity)" ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
 
                                 <!-- display values from sub columns -->
                                 <ul class="tree">
                                     <li ng-repeat="linkedValue in value.values" ng-class="{removed: value.entity.markedForDeletion}">
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                                                   ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                                                   ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
                                             <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
@@ -222,7 +214,7 @@
                                             </button>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup')">
@@ -231,7 +223,7 @@
                                             </button>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Praat markup')">
@@ -240,7 +232,7 @@
                                             </button>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                     </li>
@@ -299,7 +291,7 @@
                                 <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
 
                                 <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                        ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                        ng-if="controller.isRemovable(row.entry, value.entity)" ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
                             </li>
 
                             <li class="last">
@@ -324,21 +316,21 @@
 
 
                                 <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                        ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                        ng-if="controller.isRemovable(row.entry, value.entity)" ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
 
                                 <!-- display values from sub columns -->
                                 <ul class="tree">
                                     <li ng-repeat="linkedValue in value.values">
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                                                   ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                                                   ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
                                             <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
 
                                         </div>
 
@@ -348,17 +340,9 @@
                                             </button>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
-                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
-                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
-                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
-                                            <!--</button>-->
-
-                                            <!--<button type="button" class="btn btn-default btn-xs" aria-label="Remove"-->
-                                                    <!--ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>-->
-                                        <!--</div>-->
                                     </li>
 
 
@@ -416,7 +400,7 @@
                                 <a class="btn btn-default btn-xs" ng-href="{{ value.getContent() }}" target="_blank">View</a>
 
                                 <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                        ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                        ng-if="controller.isRemovable(row.entry, value.entity)" ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
                             </li>
 
                             <li class="last">
@@ -445,14 +429,14 @@
                                     <li ng-repeat="linkedValue in value.values">
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Text')">
                                             {{ linkedValue.getContent() }} <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                                                   ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                                                   ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Image')">
                                             <a class="btn btn-default btn-xs" ng-href="{{ linkedValue.getContent() }}" target="_blank">View</a>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
@@ -461,7 +445,7 @@
                                             </button>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
@@ -470,7 +454,7 @@
                                             </button>
 
                                             <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-click="controller.removeEntity(row.entry, value.entity)"><span aria-hidden="true">×</span></button>
+                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
                                     </li>
 

@@ -19,7 +19,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/languages", Route("/static/templates/language.html", "Languages", "LanguageController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view/:page?", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit/:page?", Route("/static/templates/editDictionary.html", "EditDictionary", "EditDictionaryController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish:/:page?", Route("/static/templates/publishDictionary.html", "PublishDictionary", "PublishDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish/:page?", Route("/static/templates/publishDictionary.html", "PublishDictionary", "PublishDictionaryController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
     .when("/files", Route("/static/templates/files.html", "Files", "UserFilesController"))
     .otherwise(Route("/static/templates/404.html"))
@@ -31,7 +31,7 @@ object LingvodocApplication {
 
   @JSExport
   def main() = {
-    Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap", "ui.bootstrap.contextMenu"))
+    Angular.module("LingvodocModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap", "ui.bootstrap.contextMenu"))
       .config[LingvodocConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
@@ -66,5 +66,6 @@ object LingvodocApplication {
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
       .directive[TranslatableDirective]
+      .directive[WaveSurferDirective]
   }
 }
