@@ -5,13 +5,16 @@ import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextPr
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{Pagination, SimplePlay}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.extras.facades.WaveSurfer
 
+import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
@@ -20,16 +23,23 @@ import scala.util.{Failure, Success}
 trait ViewDictionaryScope extends Scope {
   var filter: Boolean = js.native
   var path: String = js.native
-  var count: Int = js.native
-  var offset: Int = js.native
   var size: Int = js.native
+  var pageNumber: Int = js.native
+  // number of currently open page
   var pageCount: Int = js.native
+  // total number of pages
   var dictionaryTable: DictionaryTable = js.native
+  var selectedEntries: js.Array[String] = js.native
+  var pageLoaded: Boolean = js.native
 }
 
 @injectable("ViewDictionaryController")
-class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend:
-BackendService, val timeout: Timeout) extends AbstractController[ViewDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay  with Pagination{
+class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService, val timeout: Timeout)
+  extends AbstractController[ViewDictionaryScope](scope)
+    with AngularExecutionContextProvider
+    with SimplePlay
+    with Pagination
+    with LoadingPlaceholder {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
@@ -41,14 +51,20 @@ BackendService, val timeout: Timeout) extends AbstractController[ViewDictionaryS
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
+  private[this] var perspectiveRoles: Option[PerspectiveRoles] = Option.empty[PerspectiveRoles]
+
 
   scope.filter = true
-  scope.offset = 0
-  scope.size = 5
+
+  // Current page number. Defaults to 1
+  scope.pageNumber = params.get("page").toOption.getOrElse(1).toString.toInt
   scope.pageCount = 0
+  scope.size = 20
+  scope.pageLoaded = false
 
 
-  load()
+
+
 
   @JSExport
   def filterKeypress(event: Event) = {
@@ -67,6 +83,17 @@ BackendService, val timeout: Timeout) extends AbstractController[ViewDictionaryS
         val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
+  }
+
+
+  @JSExport
+  def getActionLink(action: String) = {
+    "#/dictionary/" +
+      encodeURIComponent(dictionaryClientId.toString) + '/' +
+      encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
+      encodeURIComponent(perspectiveClientId.toString) + "/" +
+      encodeURIComponent(perspectiveObjectId.toString) + "/" +
+      action
   }
 
   @JSExport
@@ -161,11 +188,22 @@ BackendService, val timeout: Timeout) extends AbstractController[ViewDictionaryS
     }
   }
 
+  override protected def onLoaded[T](result: T): Unit = {}
 
-  private[this] def load() = {
+  override protected def onError(reason: Throwable): Unit = {}
 
-    backend.perspectiveSource(perspectiveId) onComplete {
-      case Success(sources) =>
+  override protected def preRequestHook(): Unit = {
+    scope.pageLoaded = false
+  }
+
+  override protected def postRequestHook(): Unit = {
+    scope.pageLoaded = true
+  }
+
+
+  doAjax(() => {
+    backend.perspectiveSource(perspectiveId) flatMap {
+      sources =>
         scope.path = sources.reverse.map {
           _.source match {
             case language: Language => language.translation
@@ -173,30 +211,39 @@ BackendService, val timeout: Timeout) extends AbstractController[ViewDictionaryS
             case perspective: Perspective => perspective.translation
           }
         }.mkString(" >> ")
-      case Failure(e) => console.error(e.getMessage)
-    }
 
-    backend.dataTypes() onComplete {
-      case Success(d) =>
-        dataTypes = d
-        backend.getFields(dictionaryId, perspectiveId) onComplete {
-          case Success(f) =>
+        backend.dataTypes() flatMap { d =>
+          dataTypes = d
+          backend.getFields(dictionaryId, perspectiveId) flatMap { f =>
             fields = f
-            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) onComplete {
-              case Success(count) =>
-                scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
-                backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, scope.offset, scope.size) onComplete {
-                  case Success(entries) =>
-                    scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-                  case Failure(e) => console.log(e.getMessage)
+            backend.getPublishedLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
+              scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
+              val offset = getOffset(scope.pageNumber, scope.size)
+              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, offset, scope.size) flatMap { entries =>
+                scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
+
+                backend.getPerspectiveRoles(dictionaryId, perspectiveId) map { roles =>
+                  perspectiveRoles = Some(roles)
+                  roles
+                } recover {
+                  case e: Throwable => Future.failed(e)
                 }
-              case Failure(e) => console.log(e.getMessage)
+              } recover {
+                case e: Throwable => Future.failed(e)
+              }
+            } recover {
+              case e: Throwable => Future.failed(e)
             }
-          case Failure(e) => console.log(e.getMessage)
+          } recover {
+            case e: Throwable => Future.failed(e)
+          }
+        } recover {
+          case e: Throwable => Future.failed(e)
         }
-      case Failure(e) => console.log(e.getMessage)
+    } recover {
+      case e: Throwable => Future.failed(e)
     }
-  }
+  })
 
   @JSExport
   override def getPageLink(page: Int): String = {

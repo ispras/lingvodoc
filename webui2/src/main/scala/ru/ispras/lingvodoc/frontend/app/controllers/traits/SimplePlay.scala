@@ -1,8 +1,10 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.traits
 
+import com.greencatsoft.angularjs.Controller
 import ru.ispras.lingvodoc.frontend.extras.facades.{WaveSurfer, WaveSurferOpts}
 
 import scala.scalajs.js.annotation.JSExport
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
 
 
 trait SimplePlay {
@@ -15,15 +17,22 @@ trait SimplePlay {
   protected var wsHeight = 128
   protected var soundMarkup: Option[String] = None
 
+  import org.scalajs.dom.console
+
   @JSExport
   def createWaveSurfer(): Unit = {
     if (waveSurfer.isEmpty) {
+
+      console.log("wave surfer created")
+
       // params should be synchronized with sm-ruler css
       val wso = WaveSurferOpts("#waveform", waveColor = "violet", progressColor = "purple",
         cursorWidth = 1, cursorColor = "red",
         fillParent = true, minPxPerSec = pxPerSec, scrollParent = false,
         height = wsHeight)
       waveSurfer = Some(WaveSurfer.create(wso))
+    } else {
+      console.log("alread created")
     }
   }
 
@@ -52,4 +61,9 @@ trait SimplePlay {
 
   @JSExport
   def zoomOut() = { pxPerSec -= pxPerSecStep; }
+
+  @JSExport
+  def onReady(w: WaveSurfer) = {
+    waveSurfer = Some(w)
+  }
 }

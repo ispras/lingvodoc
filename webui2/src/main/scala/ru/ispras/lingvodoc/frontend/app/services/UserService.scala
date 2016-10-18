@@ -34,6 +34,8 @@ class UserService(backendService: BackendService) extends Service {
   def hasUser(): Boolean = {
     user.nonEmpty
   }
+
+  def get(): Option[User] = user
 }
 
 @injectable("UserService")

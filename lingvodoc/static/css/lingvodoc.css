@@ -102,38 +102,20 @@ button.control-button {
     opacity: .2;
 }
 
+
 /* animations */
-.ng-hide {
+.animate-show {
+    opacity: 1;
+}
+
+.animate-show.ng-hide-add, .animate-show.ng-hide-remove {
+    transition: all linear 300ms;
+}
+
+.animate-show.ng-hide {
     opacity: 0;
 }
 
-.ng-hide-remove, .ng-hide-add {
-    display: block !important;
-}
-
-.ng-hide-remove {
-    transition: all linear 1000ms;
-}
-
-.ng-hide-add {
-    transition: all linear 500ms;
-}
-
-.animate-hide.ng-hide {
-    opacity: 0;
-}
-
-.animate-hide.ng-hide-remove, .ng-hide-add {
-    display: block !important;
-}
-
-.animate-hide.ng-hide-remove {
-    transition: all linear 1000ms;
-}
-
-.animate-hide.ng-hide-add {
-    transition: all linear 500ms;
-}
 
 /* ngRepeat animation */
 .animate-repeat {
@@ -231,17 +213,22 @@ span.remove-sign {
     right: 0;
     left: 0;
     position: fixed;
-    /*display: none;*/
 }
 
 #loader-wrapper {
-    /*position: fixed;*/
-    /*top: 0;*/
-    /*left: 0;*/
     width: 100%;
     height: 400px;
-    /*z-index: 1000;*/
 }
+
+#loader-wrapper-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+}
+
 
 #loader {
     display: block;

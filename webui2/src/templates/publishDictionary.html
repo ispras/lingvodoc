@@ -1,4 +1,11 @@
-<div class="container-fluid" style="padding-top: 20px">
+<div id="shader" class="animate-show" ng-show="!pageLoaded">
+    <div id="loader-wrapper-fullscreen">
+        <div id="loader"></div>
+    </div>
+</div>
+
+
+<div class="container-fluid animate-show" style="padding-top: 20px" ng-show="pageLoaded">
 
     <div class="row">
         <div class="col-md-12">
@@ -24,10 +31,23 @@
             <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
         </button>
 
-        <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+        <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
 
     </div>
 
+    <div class="row" style="margin: 30px 0">
+
+        <div class="col-md-12">
+
+            <div class="btn-group" role="group" aria-label="...">
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("edit")}}'>Edit</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("publish")}}' disabled>Publish</a>
+                <a class="btn btn-default" ng-href='{{controller.getActionLink("view")}}'>View published</a>
+            </div>
+
+        </div>
+
+    </div>
 
     <div ng-include="'/static/templates/include/publishDictionary.html'"></div>
 
@@ -38,9 +58,9 @@
 
                 <nav>
                     <ul class="pagination pagination-sm">
-                        <li ng-repeat="pageNumber in controller.range(1, pageCount, 1)"
-                            ng-class="{active: pageNumber == pageIndex}">
-                            <a href="" ng-click="controller.loadPage(pageNumber)">{{ pageNumber }}</a>
+                        <li ng-repeat="p in controller.range(1, pageCount, 1)"
+                            ng-class="{active: pageNumber == p}">
+                            <a ng-href="{{controller.getPageLink(p)}}">{{ p }}</a>
                         </li>
                     </ul>
                 </nav>

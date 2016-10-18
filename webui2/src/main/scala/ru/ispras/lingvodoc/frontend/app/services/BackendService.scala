@@ -687,17 +687,17 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
   /**
     *
-    * @param dictionary
-    * @param perspective
+    * @param dictionaryId
+    * @param perspectiveId
     * @return
     */
-  def getPublishedLexicalEntriesCount(dictionary: Dictionary, perspective: Perspective): Future[Int] = {
+  def getPublishedLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Int] = {
     val p = Promise[Int]()
 
-    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) +
-      "/" + encodeURIComponent(dictionary.objectId.toString) +
-      "/perspective/" + encodeURIComponent(perspective.clientId.toString) +
-      "/" + encodeURIComponent(perspective.objectId.toString) + "/published_count"
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) +
+      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/published_count"
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>

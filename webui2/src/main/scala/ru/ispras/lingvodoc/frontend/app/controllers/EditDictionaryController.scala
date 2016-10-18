@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{Event, RouteParams, Scope, Timeout}
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services._
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
@@ -17,6 +17,7 @@ import scala.util.{Failure, Success}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
+import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.UndefOr
 
 
@@ -24,7 +25,6 @@ import scala.scalajs.js.UndefOr
 trait EditDictionaryScope extends Scope {
   var filter: Boolean = js.native
   var path: String = js.native
-  var offset: Int = js.native
   var size: Int = js.native
   var pageNumber: Int = js.native
   // number of currently open page
@@ -37,7 +37,7 @@ trait EditDictionaryScope extends Scope {
 
 @JSExport
 @injectable("EditDictionaryController")
-class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, backend: BackendService, val timeout: Timeout) extends
+class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, modal: ModalService, userService: UserService, backend: BackendService, val timeout: Timeout) extends
   AbstractController[EditDictionaryScope](scope) with AngularExecutionContextProvider with SimplePlay with Pagination with LoadingPlaceholder {
 
   private[this] val dictionaryClientId = params.get("dictionaryClientId").get.toString.toInt
@@ -54,6 +54,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
 
   private[this] var dataTypes: Seq[TranslationGist] = Seq[TranslationGist]()
   private[this] var fields: Seq[Field] = Seq[Field]()
+  private[this] var perspectiveRoles: Option[PerspectiveRoles] = Option.empty[PerspectiveRoles]
 
 
   scope.filter = true
@@ -108,6 +109,17 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
 
     val instance = modal.open[Unit](options)
   }
+
+  @JSExport
+  def getActionLink(action: String) = {
+    "#/dictionary/" +
+      encodeURIComponent(dictionaryClientId.toString) + '/' +
+      encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
+      encodeURIComponent(perspectiveClientId.toString) + "/" +
+      encodeURIComponent(perspectiveObjectId.toString) + "/" +
+      action
+  }
+
 
   @JSExport
   def viewPraatSoundMarkup(soundValue: Value, markupValue: Value) = {
@@ -212,6 +224,21 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
   def isInputEnabled(id: String): Boolean = {
     enabledInputs.contains(id)
   }
+
+
+  @JSExport
+  def isRemovable(entry: LexicalEntry, entity: Entity): Boolean = {
+    perspectiveRoles match {
+      case Some(roles) =>
+        userService.get() match {
+          case Some(user) =>
+            roles.users.getOrElse("Can delete lexical entries", Seq[Int]()).contains(user.id)
+          case None => false
+        }
+      case None => false
+    }
+  }
+
 
   @JSExport
   def saveTextValue(inputId: String, entry: LexicalEntry, field: Field, event: Event, parent: UndefOr[Value]) = {
@@ -352,9 +379,15 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
             backend.getLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
-              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) map { entries =>
+              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) flatMap { entries =>
                 scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
-                scope.dictionaryTable
+
+                backend.getPerspectiveRoles(dictionaryId, perspectiveId) map { roles =>
+                  perspectiveRoles = Some(roles)
+                  roles
+                } recover {
+                  case e: Throwable => Future.failed(e)
+                }
               } recover {
                 case e: Throwable => Future.failed(e)
               }
