@@ -391,10 +391,10 @@ def view_perspective_from_object(request, perspective):
             response['is_template'] = perspective.is_template
             # response['additional_metadata'] = perspective.additional_metadata
             if perspective.additional_metadata:
-                response['additional_metadata'] = [key for key in json.loads(perspective.additional_metadata)]
+                response['additional_metadata'] = [key for key in perspective.additional_metadata]
             response['translation'] = perspective.get_translation(request.cookies['locale_id'])
             if perspective.additional_metadata:
-                meta = json.loads(perspective.additional_metadata)
+                meta = perspective.additional_metadata
                 if 'location' in meta:
                     response['location'] = meta['location']
                 if 'info' in meta:

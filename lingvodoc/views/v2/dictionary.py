@@ -78,8 +78,6 @@ def create_dictionary(request):  # tested & in docs
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         additional_metadata = req.get('additional_metadata')
-        if additional_metadata:
-            additional_metadata = json.dumps(additional_metadata)
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
@@ -181,12 +179,10 @@ def edit_dictionary(request):  # tested & in docs
 
                 additional_metadata = req.get('additional_metadata')
                 if additional_metadata:
-                    # additional_metadata = json.dumps(additional_metadata)
 
-                    old_meta = json.loads(dictionary.additional_metadata)
+                    old_meta = dictionary.additional_metadata
                     old_meta.update(additional_metadata)
-                    new_meta = json.dumps(old_meta)
-                    dictionary.additional_metadata = new_meta
+                    dictionary.additional_metadata = old_meta
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code

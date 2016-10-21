@@ -134,18 +134,16 @@ def create_entity(request):  # tested
             old_meta = entity.additional_metadata
             need_hash = True
             if old_meta:
-                new_meta = json.loads(old_meta)
-                if new_meta.get('hash'):
+                if old_meta.get('hash'):
                     need_hash = False
             if need_hash:
                 hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
                 hash_dict = {'hash': hash}
                 if old_meta:
-                    new_meta = json.loads(old_meta)
-                    new_meta.update(hash_dict)
+                    old_meta.update(hash_dict)
                 else:
-                    new_meta = hash_dict
-                entity.additional_metadata = json.dumps(new_meta)
+                    old_meta = hash_dict
+                entity.additional_metadata = old_meta
         elif data_type == 'link':
             try:
                 entity.link_client_id = req['link_client_id']
