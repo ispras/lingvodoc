@@ -105,7 +105,8 @@ def upgrade():
     sa.Column('state_translation_gist_object_id',SLBigInteger(), nullable=False),
     sa.Column('marked_for_deletion', sa.Boolean(), nullable=False),
     sa.Column('additional_metadata', sa.UnicodeText(), nullable=True),
-    sa.Column('category', sa.UnicodeText(), nullable=True),
+    sa.Column('category', SLBigInteger(), nullable=False),
+    sa.Column('domain', SLBigInteger(), nullable=False),
     sa.ForeignKeyConstraint(['parent_object_id', 'parent_client_id'], ['language.object_id', 'language.client_id'], ),
     sa.ForeignKeyConstraint(['state_translation_gist_client_id', 'state_translation_gist_object_id'], ['translationgist.client_id', 'translationgist.object_id'], ),
     sa.ForeignKeyConstraint(['translation_gist_object_id', 'translation_gist_client_id'], ['translationgist.object_id', 'translationgist.client_id'], ),
@@ -271,6 +272,7 @@ def upgrade():
     sa.Column('object_id',SLBigInteger(), nullable=False),
     sa.Column('client_id',SLBigInteger(), nullable=False),
     sa.Column('published', sa.Boolean(), nullable=False),
+    sa.Column('accepted', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['client_id', 'object_id'], ['entity.client_id', 'entity.object_id'], ),
     sa.PrimaryKeyConstraint('object_id', 'client_id')
     )

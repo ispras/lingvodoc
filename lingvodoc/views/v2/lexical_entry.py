@@ -8,7 +8,16 @@ from lingvodoc.models import (
     DictionaryPerspective,
     Group,
     LexicalEntry,
-    User
+    User,
+    Entity,
+    Field,
+    PublishingEntity
+)
+from sqlalchemy import (
+    func,
+    or_,
+    and_,
+    tuple_
 )
 
 from pyramid.httpexceptions import (
@@ -16,7 +25,8 @@ from pyramid.httpexceptions import (
     HTTPConflict,
     HTTPInternalServerError,
     HTTPNotFound,
-    HTTPOk
+    HTTPOk,
+    HTTPForbidden
 )
 from pyramid.request import Request
 from pyramid.security import authenticated_userid
@@ -33,84 +43,32 @@ import time
 log = logging.getLogger(__name__)
 
 
-# TODO: completely broken!
 @view_config(route_name='get_connected_words', renderer='json', request_method='GET')
 @view_config(route_name='get_connected_words_indict', renderer='json', request_method='GET')
-def view_connected_words(request):  # tested, found some shit(tags here are not the same, as in view_group_entity) # TODO: fix
-    response = dict()
+def view_connected_words(request):
+    response = list()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
+    field_client_id=request.params.get('field_client_id')
+    field_object_id=request.params.get('field_object_id')
     lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
     if lexical_entry:
         if not lexical_entry.marked_for_deletion:
-            pre_tags = DBSession.query(GroupingEntity.content).filter_by(parent = lexical_entry).all()
-            tags = list()
-            # TODO: rewrite this. This is bad
-            for tag in pre_tags:
-                tags.append(tag[0])
-            equal = False
-            while not equal:
-                new_tags = []
-                lexes = []
-                for tag in tags:
-                    # entity = DBSession.query(GroupingEntity).filter(GroupingEntity.content==tag).first()
-                    entity = None
-                    path = request.route_url('get_group_entity',
-                                         client_id = entity.client_id,
-                                         object_id = entity.object_id)
-                    subreq = Request.blank(path)
-                    subreq.method = 'GET'
-                    subreq.headers = request.headers
-                    resp = request.invoke_subrequest(subreq)
-                    for lex in resp.json['connections']:
-                        if lex not in lexes:
-                            lexes.append((lex['client_id'], lex['object_id']))
-                for lex in lexes:
-                    # pre_tags = DBSession.query(GroupingEntity.content)\
-                    #            .filter_by(parent_client_id=lex[0],
-                    #                       parent_object_id=lex[1]).all()
-                    pre_tags = None
-                    tags = list()
-                    for tag in pre_tags:
-                        tags.append(tag[0])
-
-                    for tag in tags:
-                        if tag not in new_tags:
-                            new_tags.append(tag)
-
-                old_tags = list(tags)
-                tags = list(new_tags)
-                if set(old_tags) == set(tags):
-                    equal = True
-            lexes = list()
-            for tag in tags:
-                # entity = DBSession.query(GroupingEntity).filter_by(content = tag).first()
-                entity = None
-                path = request.route_url('get_group_entity',
-                                         client_id = entity.client_id,
-                                         object_id = entity.object_id)
-                subreq = Request.blank(path)
-                subreq.method = 'GET'
-                subreq.headers = request.headers
-                resp = request.invoke_subrequest(subreq)
-                for lex in resp.json['connections']:
-                    if lex not in lexes:
-                        lexes.append((lex['client_id'], lex['object_id']))
-            words = []
+            tags = find_all_tags(lexical_entry, field_client_id, field_object_id)
+            lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
             for lex in lexes:
-                path = request.route_url('lexical_entry',
-                                         client_id=lex[0],
-                                         object_id=lex[1])
+                path = request.route_url('lexical_entry',  # todo: method in utils (or just use track)
+                                         client_id=lex.client_id,
+                                         object_id=lex.object_id)
                 subreq = Request.blank(path)
                 subreq.method = 'GET'
                 subreq.headers = request.headers
                 try:
                     resp = request.invoke_subrequest(subreq)
-                    if resp.json not in words:
-                        words += [resp.json]
-                except:
+                    if resp.json not in response:
+                        response.append(resp.json)
+                except HTTPForbidden:
                     pass
-            response['words'] = words
             request.response.status = HTTPOk.code
             return response
 
@@ -118,8 +76,48 @@ def view_connected_words(request):  # tested, found some shit(tags here are not 
     return {'error': str("No such lexical entry in the system")}
 
 
+def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
+    return DBSession.query(LexicalEntry) \
+        .join(LexicalEntry.entity) \
+        .join(Entity.publishingentity) \
+        .join(Entity.field) \
+        .filter(Entity.content.in_(tags),
+                PublishingEntity.accepted == True,
+                Field.client_id == field_client_id,
+                Field.object_id == field_object_id).all()
+
+
+def find_all_tags(lexical_entry, field_client_id, field_object_id):
+    tag = None
+    for entity in lexical_entry.entity:
+        if entity.field.data_type == 'Grouping Tag':
+            tag = entity.content
+            break
+    if not tag:
+        return []
+    else:
+        tags = [tag]
+        new_tags = [tag]
+        while new_tags:
+            lexical_entries = find_lexical_entries_by_tags(new_tags, field_client_id, field_object_id)
+            new_tags = list()
+            for lex in lexical_entries:
+                entities = DBSession.query(Entity) \
+                    .join(Entity.field) \
+                    .join(Entity.publishingentity) \
+                    .filter(Entity.parent == lex,
+                            PublishingEntity.accepted == True,
+                            Field.client_id == field_client_id,
+                            Field.object_id == field_object_id).all()
+                for entity in entities:
+                    if entity.content not in tags:
+                        tags.append(entity.content)
+                        new_tags.append(entity.content)
+        return tags
+
+
 # TODO: completely broken!
-@view_config(route_name='add_group_indict', renderer='json', request_method='POST')  # TODO: check for permission
+@view_config(route_name='add_group_indict', renderer='json', request_method='POST')
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')
 def create_group_entity(request):  # tested
     try:
@@ -132,42 +130,61 @@ def create_group_entity(request):  # tested
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-
-        tags = []
+        tags = list()
         if 'tag' in req:
-            tags += [req['tag']]
+            tags.append(req['tag'])
+        field_client_id=req['field_client_id']
+        field_object_id=req['field_object_id']
+        field = DBSession.query(Field).\
+            filter_by(client_id=field_client_id, object_id=field_object_id).first()
+
+        if not field:
+            request.response.status = HTTPNotFound.code
+            return {'error': str("No such field in the system")}
+
         for par in req['connections']:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
             if not parent:
                 request.response.status = HTTPNotFound.code
                 return {'error': str("No such lexical entry in the system")}
-            # par_tags = DBSession.query(GroupingEntity).\
-            #     filter_by(entity_type=req['entity_type'], parent=parent).all()
-            par_tags = None
-            tags += [o.content for o in par_tags]
+            par_tags = find_all_tags(parent, field_client_id, field_object_id)
+            for tag in par_tags:
+                if tag not in tags:
+                    tags.append(tag)
         if not tags:
             n = 10  # better read from settings
             tag = time.ctime() + ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits)
                                          for c in range(n))
-            tags += [tag]
-        parents = req['connections']
-        for par in parents:
+            tags.append(tag)
+        lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+        for par in req['connections']:
             parent = DBSession.query(LexicalEntry).\
                 filter_by(client_id=par['client_id'], object_id=par['object_id']).first()
+            if parent not in lexical_entries:
+                lexical_entries.append(parent)
+
+        for lex in lexical_entries:
             for tag in tags:
-                # ent = DBSession.query(GroupingEntity).\
-                #     filter_by(entity_type=req['entity_type'], content=tag, parent=parent).first()
-                ent = None
-                if not ent:
-                    # entity = GroupingEntity(client_id=client.id, object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
-                    #                         entity_type=req['entity_type'], content=tag, parent=parent)
-                    entity = None
-                    DBSession.add(entity)
-                    DBSession.flush()
-        log.debug('TAGS: %s', tags)
+                tag_entity = DBSession.query(Entity) \
+                    .join(Entity.field) \
+                    .filter(Entity.parent == lex,
+                            Field.client_id == field_client_id,
+                            Field.object_id == field_object_id,
+                            Entity.content == tag).first()
+                if not tag_entity:
+                    tag_entity = Entity(client_id=client.id,
+                                        field=field, content=tag, parent=lex)
+
+                    group = DBSession.query(Group).join(BaseGroup).filter(
+                        BaseGroup.subject == 'lexical_entries_and_entities',
+                        Group.subject_client_id == tag_entity.parent.parent.client_id,
+                        Group.subject_object_id == tag_entity.parent.parent.object_id,
+                        BaseGroup.action == 'create').one()
+                    if user in group.users:
+                        tag_entity.publishingentity.accepted = True
         request.response.status = HTTPOk.code
-        return {}
+        return response
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
         return {'error': str(e)}
@@ -181,7 +198,7 @@ def create_group_entity(request):  # tested
         return {'error': str(e)}
 
 
-@view_config(route_name='create_lexical_entry', renderer='json', request_method='POST', permission='create')
+@view_config(route_name='create_lexical_entry', renderer='json', request_method='POST')
 def create_lexical_entry(request):  # tested
     try:
         dictionary_client_id = request.matchdict.get('dictionary_client_id')

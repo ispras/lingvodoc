@@ -101,6 +101,8 @@ def create_dictionary(request):  # tested & in docs
                                 translation_gist_client_id=translation_gist_client_id,
                                 translation_gist_object_id=translation_gist_object_id,
                                 additional_metadata=additional_metadata)
+        if req.get('category'):
+            dictionary.category = req['category']  # todo: simulate enum
         DBSession.add(dictionary)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -128,6 +130,7 @@ def create_dictionary(request):  # tested & in docs
 
 @view_config(route_name='dictionary', renderer='json', request_method='GET')  # Authors -- names of users, who can edit?
 def view_dictionary(request):  # tested & in docs
+    from lingvodoc.models import categories
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -142,6 +145,7 @@ def view_dictionary(request):  # tested & in docs
         response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
         response['additional_metadata'] = dictionary.additional_metadata
+        response['category'] = categories.get(dictionary.category)
         if request.cookies.get('locale_id'):
             locale_id = request.cookies['locale_id']
         else:

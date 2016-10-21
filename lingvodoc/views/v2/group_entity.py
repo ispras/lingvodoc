@@ -1,7 +1,9 @@
 __author__ = 'alexander'
 
 from lingvodoc.models import (
-    DBSession
+    DBSession,
+Entity,
+Field
 )
 
 from pyramid.httpexceptions import (
@@ -25,8 +27,9 @@ def view_group_entity(request):
             ent = dict()
             ent['entity_type'] = entity.entity_type
             ent['tag'] = entity.content
-            # entities2 = DBSession.query(GroupingEntity).filter_by(content=entity.content)
-            entities2 = list()
+            entities2 = DBSession.query(Entity).join(Entity.field).filter(Entity.content == entity.content,
+                                                                         Field.field.data_type == 'Grouping Tag').all()
+            # entities2 = list()
             objs = []
             for entry in entities2:
                 obj = {'client_id': entry.parent_client_id, 'object_id': entry.parent_object_id}
