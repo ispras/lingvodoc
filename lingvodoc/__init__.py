@@ -100,6 +100,7 @@ def configure_routes(config):
     #    a) template (param is_template=true/false)
     #    b) state  (param state=<state>)
     config.add_route('all_perspectives', '/perspectives')
+    config.add_route('all_perspectives_meta', '/perspectives_meta')
 
     # API #GET
     config.add_route('users', '/users')  # tested

@@ -94,6 +94,45 @@ def perspectives_list(request):  # tested
     return response
 
 
+@view_config(route_name='all_perspectives_meta', renderer = 'json', request_method='GET')
+def perspectives_meta_list(request):  # tested
+    response = list()
+    is_template = None
+    try:
+        is_template = request.GET.get('is_template')
+    except:
+        pass
+    state_translation_gist_client_id = request.params.get('state_translation_gist_client_id', None)
+    state_translation_gist_object_id = request.params.get('state_translation_gist_object_id', None)
+    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion==False, DictionaryPerspective.additional_metadata!={})
+    if is_template is not None:
+        if type(is_template) == str:
+            if is_template.lower() == 'true':
+                is_template = True
+            elif is_template.lower() == 'false':
+                is_template = False
+            else:
+                request.response.status = HTTPBadRequest.code
+                # TODO: write normal return
+                return
+
+        persps = persps.filter(DictionaryPerspective.is_template == is_template)
+    if state_translation_gist_client_id and state_translation_gist_object_id:
+        persps = persps.filter(DictionaryPerspective.state_translation_gist_client_id==state_translation_gist_client_id,
+                               DictionaryPerspective.state_translation_gist_object_id==state_translation_gist_object_id)
+    perspectives = []
+    for perspective in persps:
+        # resp = view_perspective_from_object(request, perspective)
+        resp = perspective.additional_metadata
+        resp.update({'client_id': perspective.client_id,'object_id': perspective.object_id})
+        if 'error' not in resp:
+            perspectives.append(resp)
+    response = perspectives
+    request.response.status = HTTPOk.code
+
+    return response
+
+
 @view_config(route_name='perspective', renderer='json', request_method='GET')
 @view_config(route_name='perspective_outside', renderer='json', request_method='GET')
 def view_perspective(request): # tested & in docs
