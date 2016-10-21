@@ -297,7 +297,7 @@ def get_user_info(request):  # tested
     response['email'] = user.email.email
     meta = None
     if user.additional_metadata:
-        meta = json.loads(user.additional_metadata)
+        meta = user.additional_metadata
     if meta and meta.get('about'):
         response['about'] = meta['about']
     organizations = []
@@ -377,11 +377,11 @@ def edit_user_info(request):  # TODO: test
             DBSession.flush()
     about = req.get('about')
     if about:
-        meta = None
+        meta = dict()
         if user.additional_metadata:
-            meta = json.loads(user.additional_metadata)
-        if meta and meta.get('about'):
-            response['about'] = meta['about']
+            meta = user.additional_metadata
+        meta['about'] = about
+        user.additional_metadata = meta
     # response['is_active']=str(user.is_active)
     request.response.status = HTTPOk.code
     return response

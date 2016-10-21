@@ -259,9 +259,9 @@ def merge_perspectives_api(request):  # TODO: test
             for lex in lexes:
                 metadata = dict()
                 if lex.additional_metadata:
-                    metadata = json.loads(lex.additional_metadata)
+                    metadata = lex.additional_metadata
                 metadata['came_from'] = {'client_id': lex.parent_client_id, 'object_id': lex.parent_object_id}
-                lex.additional_metadata = json.dumps(metadata)
+                lex.additional_metadata = metadata
                 lex.parent = new_persp
                 DBSession.flush()
                 for ent in lex.leveloneentity:

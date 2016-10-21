@@ -29,6 +29,7 @@ from sqlalchemy.types import (
     Boolean,
     Date
 )
+from sqlalchemy.dialects.postgresql import JSONB
 
 from sqlalchemy.ext.declarative import (
     declarative_base,
@@ -524,7 +525,7 @@ class Dictionary(CompositeIdMixin,
     """
     __parentname__ = 'Language'
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
-    additional_metadata = Column(UnicodeText)
+    additional_metadata = Column(JSONB)
     category = Column(SLBigInteger, default=0)
     domain = Column(SLBigInteger, default=0)
 
@@ -544,7 +545,7 @@ class Dictionary(CompositeIdMixin,
 #     """
 #     __parentname__ = 'Language'
 #     marked_for_deletion = Column(Boolean, default=False, nullable=False)
-#     additional_metadata = Column(UnicodeText)
+#     additional_metadata = Column(JSONB)
 #     category = Column(UnicodeText)
 
 
@@ -563,7 +564,7 @@ class Dictionary(CompositeIdMixin,
 #     """
 #     __parentname__ = 'Corpora'
 #     marked_for_deletion = Column(Boolean, default=False, nullable=False)
-#     additional_metadata = Column(UnicodeText)
+#     additional_metadata = Column(JSONB)
 #     category = Column(UnicodeText)
 
 
@@ -587,7 +588,7 @@ class DictionaryPerspective(CompositeIdMixin,
     is_template = Column(Boolean, default=False, nullable=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
-    additional_metadata = Column(UnicodeText)
+    additional_metadata = Column(JSONB)
 
 
 class SelfMixin(PrimeTableArgs):
@@ -716,7 +717,7 @@ class LexicalEntry(CompositeIdMixin,
     __parentname__ = 'DictionaryPerspective'
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    additional_metadata = Column(UnicodeText)
+    additional_metadata = Column(JSONB)
 
     def track(self, publish):
         vec = []
@@ -762,7 +763,7 @@ class Entity(CompositeIdMixin,
     __parentname__ = "LexicalEntry"
 
     content = Column(UnicodeText)
-    additional_metadata = Column(UnicodeText)
+    additional_metadata = Column(JSONB)
     locale_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
@@ -811,7 +812,7 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     name = Column(UnicodeText)
     # this stands for name in English
     intl_name = Column(UnicodeText, nullable=False)
-    additional_metadata = Column(UnicodeText)
+    additional_metadata = Column(JSONB)
     default_locale_id = Column(ForeignKey("locale.id"), default=2, nullable=False)
     birthday = Column(Date)
     # it's responsible for "deleted user state". True for active, False for deactivated.
@@ -888,7 +889,7 @@ class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):  # TODO
     content = Column(UnicodeText, nullable=False)
     real_storage_path = Column(UnicodeText, nullable=False)
     data_type = Column(UnicodeText, nullable=False)
-    additional_metadata = Column(UnicodeText)
+    additional_metadata = Column(JSONB)
     marked_for_deletion = Column(Boolean, default=False)
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(SLBigInteger(), ForeignKey('user.id'))

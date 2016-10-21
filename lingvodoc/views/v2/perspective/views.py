@@ -157,11 +157,10 @@ def edit_perspective_hash(request):
                         old_meta = l1e.additional_metadata
                         hash_dict = {'hash': hash}
                         if old_meta:
-                            new_meta = json.loads(old_meta)
-                            new_meta.update(hash_dict)
+                            old_meta.update(hash_dict)
                         else:
-                            new_meta = hash_dict
-                        l1e.additional_metadata = json.dumps(new_meta)
+                            old_meta = hash_dict
+                        l1e.additional_metadata = old_meta
                     except:
                         print('fail with sound', l1e.client_id, l1e.object_id)
                 # l2es = DBSession.query(LevelTwoEntity)\
@@ -185,11 +184,10 @@ def edit_perspective_hash(request):
                         old_meta = l2e.additional_metadata
                         hash_dict = {'hash': hash}
                         if old_meta:
-                            new_meta = json.loads(old_meta)
-                            new_meta.update(hash_dict)
+                            old_meta.update(hash_dict)
                         else:
-                            new_meta = hash_dict
-                        l2e.additional_metadata = json.dumps(new_meta)
+                            old_meta = hash_dict
+                        l2e.additional_metadata = old_meta
                     except:
                         print('fail with markup', l2e.client_id, l2e.object_id)
                 response['count_l1e'] = count_l1e
@@ -250,12 +248,12 @@ def edit_perspective_meta(request):  # tested & in docs
                 request.response.status = HTTPBadRequest.code
                 return {'error': 'body is invalid json or empty'}
             if perspective.additional_metadata:
-                old_meta = json.loads(perspective.additional_metadata)
+                old_meta = perspective.additional_metadata
                 new_meta = req
                 old_meta.update(new_meta)
-                perspective.additional_metadata = json.dumps(old_meta)
+                perspective.additional_metadata = old_meta
             else:
-                perspective.additional_metadata = json.dumps(req)
+                perspective.additional_metadata = req
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -288,12 +286,12 @@ def delete_perspective_meta(request):  # tested & in docs
             except ValueError:
                 request.response.status = HTTPBadRequest.code
                 return {'error': 'body is invalid json or empty'}
-            old_meta = json.loads(perspective.additional_metadata)
+            old_meta = perspective.additional_metadata
             new_meta = req
             for entry in new_meta:
                 if entry in old_meta:
                     del old_meta[entry]
-            perspective.additional_metadata = json.dumps(old_meta)
+            perspective.additional_metadata = old_meta
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -318,7 +316,7 @@ def view_perspective_meta(request):  # tested & in docs
             request.response.status = HTTPNotFound.code
             return {'error': str("No such pair of dictionary/perspective in the system")}
 
-        old_meta = json.loads(perspective.additional_metadata)
+        old_meta = perspective.additional_metadata
         # import pdb
         # pdb.set_trace()
         try:
@@ -331,7 +329,6 @@ def view_perspective_meta(request):  # tested & in docs
             return {'error': "invalid json"}
 
         if req:
-            print(request.json_body)
             new_meta = dict()
             for key in req:
                 if old_meta.get(key):
@@ -515,7 +512,6 @@ def create_perspective(request):  # tested & in docs
             additional_metadata.update(coord)
         else:
             additional_metadata = coord
-        additional_metadata = json.dumps(additional_metadata)
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
@@ -1754,19 +1750,16 @@ def create_entities_bulk(request):
                 old_meta = entity.additional_metadata
 
                 need_hash = True
-                if old_meta:
-                    new_meta=json.loads(old_meta)
-                    if new_meta.get('hash'):
-                        need_hash = False
+                if old_meta and old_meta.get('hash'):
+                    need_hash = False
                 if need_hash:
                     hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
                     hash_dict = {'hash': hash}
                     if old_meta:
-                        new_meta = json.loads(old_meta)
-                        new_meta.update(hash_dict)
+                        old_meta.update(hash_dict)
                     else:
-                        new_meta = hash_dict
-                    entity.additional_metadata = json.dumps(new_meta)
+                        old_meta = hash_dict
+                    entity.additional_metadata = old_meta
             else:
                 entity.content = item['content']
             DBSession.add(entity)
