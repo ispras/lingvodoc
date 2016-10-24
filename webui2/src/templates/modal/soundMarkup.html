@@ -73,7 +73,6 @@
                     <!-- tiers -->
                     <svg x="0" ng-attr-y="{{tierData.index * tierWidth}}" ng-repeat="(tierID, tierData) in elanJS.tiers"
                          ng-click="controller.onTierClickWellItIsNotWorkingForNow($event, tier)"
-                         context-menu="tierMenuOptions"
                     >
                         <rect class="sm-tier" id="{{tierID + 'Rectangle'}}" x="0" y="0" width="100%"
                               ng-attr-height="{{tierWidth}}"
@@ -81,7 +80,6 @@
                         <!-- annotations -->
                         <svg ng-attr-x="{{annotData.startOffset}}" y="0" ng-repeat="(annotID, annotData) in tierData.annotations"
                              ng-attr-width="{{annotData.durationOffset}}" ng-attr-height="{{tierWidth}}"
-                             context-menu="annotMenuOptions"
                         >
                             <rect x="0" y="0" ng-attr-width="{{annotData.durationOffset + 1}}px"
                                   ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.0">

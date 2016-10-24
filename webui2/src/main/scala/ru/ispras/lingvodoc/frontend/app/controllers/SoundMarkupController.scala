@@ -36,9 +36,6 @@ trait SoundMarkupScope extends Scope {
   var tiersNameWidth: Int = js.native // column with tier names width in pixels
   var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas
   var fullWSHeight: Int = js.native // height of wavesurfer, consists of heights of wavesurfer and its plugins
-
-  var tierMenuOptions: js.Array[js.Any] = js.native
-  var annotMenuOptions: js.Array[js.Any] = js.native
 }
 
 @injectable("SoundMarkupController")
@@ -114,8 +111,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
     }
   }
 
-  setMenuOptions()
-
   // add scope to window for debugging
   dom.window.asInstanceOf[js.Dynamic].myScope = scope
 
@@ -169,16 +164,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // recompute ws height
   def updateFullWSHeight() = {
     scope.fullWSHeight = wsHeight + wsSpectrogramHeight + wsTimelineHeight
-  }
-
-  def setMenuOptions() = {
-    val tierMenuOptions = new BootstrapContextMenu().addOpt(
-      MenuOption("New Annotation Here",  newAnnotationHere _, Some({isNewAnnotationAllowedHere _}: js.Function1[js.Dynamic, Boolean]))
-    )
-    scope.tierMenuOptions = tierMenuOptions.toJS
-    scope.annotMenuOptions = tierMenuOptions.addOpt(
-      MenuOption("Edit Annotation Value", editAnnotationValue _, Some({_: js.Dynamic => false}: js.Function1[js.Dynamic, Boolean]))
-    ).toJS
   }
 
   def drawSpectrogram() = {
@@ -495,40 +480,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def leftBorderMillis = getSelectionRectangleLeftBorderMillis.toString
   @JSExport // TODO removemeedit
   def rightBorderMillis = getSelectionRectangleRightBorderMillis.toString
-
-  // These functions used context menu options
-  def isNewAnnotationAllowedHere(itemScope: js.Dynamic): Boolean = {
-    console.log("isNewAnnotationAllowedHere called")
-    false
-  }
-
-  def newAnnotationHere(itemScope: js.Dynamic): Unit = {
-    console.log(s"creating new annotation on tier ${itemScope.tier.asInstanceOf[ITier[IAnnotation]].getID}")
-    console.log("CALLLED")
-  }
-
-  def editAnnotationValue(itemScope: js.Dynamic): Unit = {
-    val annotID = itemScope.annotID.toString
-    val annot = elan.get.getAnnotationByIDChecked(annotID)
-    console.log(s"editing annotation value on annot ${annot.getID}")
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/editTextField.html"
-    options.controller = "EditTextFieldController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "sm"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(originalValue = annot.text.asInstanceOf[js.Object],
-                           invitation = "Enter Annotation Value".asInstanceOf[js.Object])
-      }
-    ).asInstanceOf[js.Dictionary[js.Any]]
-
-    val instance = modal.open[String](options)
-    instance.result map {
-      case newVal: String => console.log(s"new value for annotation ${annot.getID} is $newVal")
-    }
-  }
 }
 
 object SoundMarkupController {
