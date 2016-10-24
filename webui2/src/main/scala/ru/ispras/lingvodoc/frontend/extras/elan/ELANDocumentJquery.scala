@@ -45,6 +45,7 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
   reindex()
   setPxPerSec(pxPerSec)
 
+  // update all offsets
   def setPxPerSec(newPxPerSec: Double): js.Dynamic = {
     pxPerSec = newPxPerSec
     tiers.flatMap(_.getAnnotations).foreach(_.setPxPerSec(pxPerSec))
@@ -226,7 +227,6 @@ object TimeOrder {
 
 
 // Represents LINGUISTIC_TYPE element
-// TODO: check constraints value on manual creation
 @JSExportAll
 class LinguisticType(val linguisticTypeID: RequiredXMLAttr[String], val timeAlignable: OptionalXMLAttr[Boolean],
                      val constraints: OptionalXMLAttr[String], val graphicReferences: OptionalXMLAttr[Boolean],

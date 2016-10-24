@@ -310,18 +310,18 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
 
-  @JSExport // TODO removeme
+  @JSExport
   def getDuration = { if (isWSReady) waveSurfer.get.getDuration() else 42.0 }
 
-  @JSExport // TODO removeme
+  @JSExport
   def getCurrentTime = { if (isWSReady) waveSurfer.get.getCurrentTime() else 42.0 }
 
   /**
     * We have several metrics fully characterizing point in time:
-    * 1) Offset in pxs from svg left border
-    * 2) Progress in [0..1] of full sound duration
-    * 3) Time in seconds, double
-    * 4) Time in milliseconds, Long or String, if called from JS
+    * 1) Offset in pxs from svg left border, we need them for rendering
+    * 2) Progress in [0..1] of full sound duration, we get if from ws object instance
+    * 3) Time in seconds, double, converted milliseconds from EAF
+    * 4) Time in milliseconds, Long or String (the latter if called from JS), used in EAF
     */
 
   def offsetToProgress(offset: Double) = offset / scope.fullWSWidth
