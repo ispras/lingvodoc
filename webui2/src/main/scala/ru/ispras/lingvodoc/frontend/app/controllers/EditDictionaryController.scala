@@ -5,7 +5,6 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
-import org.singlespaced.d3js.d3
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._

@@ -11,7 +11,6 @@ import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary
 import ru.ispras.lingvodoc.frontend.extras.facades._
 import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANPArserException, ELANDocumentJquery}
 import org.scalajs.dom.{EventTarget, console}
-import org.singlespaced.d3js.{Selection, d3}
 import org.scalajs.jquery._
 import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
 import scala.scalajs.js
@@ -92,8 +91,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // used to reduce number of digest cycles while playing
   var onPlayingCounter = 0
 
-  // d3 selection rectangle element
-  var selectionRectangle: Option[Selection[EventTarget]] = None
   // div containing wavesurfer and drawn tiers
   var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
 
@@ -242,7 +239,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
       scope.ws = waveSurfer.get // for debug only, remove later
 
-      selectionRectangle = Some(d3.select("#selectionRect"))
       WSAndTiers = js.Dynamic.global.document.getElementById("WSAndTiers")
     } // do not write anything here, outside if!
   }
@@ -414,72 +410,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
     console.log("svg seeking")
     svgSeek(event.offsetX.asInstanceOf[Double])
   }
-
-  // called on svg mouse down, prepares for dragging
-  @JSExport
-  def onSVGMouseDown(event: js.Dynamic): Unit = {
-    if (event.which.asInstanceOf[Int] == 1) {
-      console.log("svg mouse down")
-      svgIsMouseDown = true
-      isDragging = false
-    }
-  }
-
-  @JSExport
-  // called on svg mouse up, finished dragging
-  def onSVGMouseUp(event: js.Dynamic): Unit = {
-    console.log("svg mouse up")
-    svgIsMouseDown = false
-  }
-
-  @JSExport
-  // called on svg mouse moving and extends/shrinks the selection rectangle if mouse down event happened earlier
-  def onSVGMouseMove(event: js.Dynamic): Unit = {
-    if (!svgIsMouseDown)
-      return
-
-//    console.log(s"mouse moving at offset ${event.offsetX}")
-    val cursorX = Math.min(scope.fullWSWidth, Math.max(0, event.offsetX.toString.toDouble))
-    if (!isDragging) { // executed on first mouse move event
-      selectionRectangle.foreach(_.attr("x", cursorX).attr("width", 0))
-      isDragging = true
-    }
-    else { // executed on every subsequent mouse move event
-      val oldX = getSelectionRectangleLeftBorderOffset
-      val oldWidth = getSelectionRectangleWidthOffset
-
-      if ((rightBorderIsMoving && cursorX > oldX) ||
-          (!rightBorderIsMoving && cursorX >= oldX + oldWidth)) {
-        if (!rightBorderIsMoving) // first event with right border moving, just after changing left to right
-          selectionRectangle.foreach(_.attr("x", oldX + oldWidth).attr("width", cursorX - oldX - oldWidth))
-        else // right border is still moving
-          selectionRectangle.foreach(_.attr("width", cursorX - oldX))
-        rightBorderIsMoving = true
-      }
-      else {
-        if (rightBorderIsMoving) // first event after right -> left border moving
-          selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX - cursorX))
-        else // left border is still moving
-          selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX + oldWidth - cursorX))
-        rightBorderIsMoving = false
-      }
-
-      svgSeek(cursorX)
-    }
-  }
-
-  def getSelectionRectangleLeftBorderOffset = selectionRectangle.map(_.attr("x").toString.toDouble).getOrElse(0.0)
-  def getSelectionRectangleWidthOffset = selectionRectangle.map(_.attr("width").toString.toDouble).getOrElse(0.0)
-
-  def getSelectionRectangleLeftBorderMillis = Utils.sec2Millis(offsetToSec(getSelectionRectangleLeftBorderOffset))
-  def getSelectionRectangleRightBorderMillis = Utils.sec2Millis(offsetToSec(
-    getSelectionRectangleLeftBorderOffset + getSelectionRectangleWidthOffset)
-  )
-
-  @JSExport // TODO removeme
-  def leftBorderMillis = getSelectionRectangleLeftBorderMillis.toString
-  @JSExport // TODO removemeedit
-  def rightBorderMillis = getSelectionRectangleRightBorderMillis.toString
 }
 
 object SoundMarkupController {

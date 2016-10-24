@@ -59,11 +59,6 @@
                  ng-mousemove="controller.onSVGMouseMove($event)"
 
             >
-                <!-- rect to select new annotation duration -->
-                <rect id="selectionRect" x="0" y="0" width="0" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
-                      class="sm-selection-rectangle">
-                </rect>
-
                 <!-- ruler shows current position -->
                 <line class="sm-ruler"
                       ng-attr-x1="{{ruler}}" ng-attr-y1="0"
