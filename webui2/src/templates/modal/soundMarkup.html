@@ -35,25 +35,25 @@
 
     <div>
         <!-- tier names -->
-        <svg ng-attr-width="{{tiersNameWidth}}" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
+        <svg ng-attr-width="{{tierNameHeight}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
              style="float:left" ng-style="{'margin-top': fullWSHeight}">
-            <svg x="0" ng-attr-y="{{tierData.index * tierWidth}}" ng-repeat="(tierID, tierData) in elanJS.tiers">
-                <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tiersNameWidth}}" y2="0">
+            <svg x="0" ng-attr-y="{{tierData.index * tierHeight}}" ng-repeat="(tierID, tierData) in elanJS.tiers">
+                <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tierNameHeight}}" y2="0">
                 </line>
-                <text text-anchor="middle" alignment-baseline="central" ng-attr-x="{{tiersNameWidth / 2}}" ng-attr-y="{{tierWidth / 2}}" >
+                <text text-anchor="middle" alignment-baseline="central" ng-attr-x="{{tierNameHeight / 2}}" ng-attr-y="{{tierHeight / 2}}" >
                     {{ tierID }}
                 </text>
             </svg>
         </svg>
 
-        <div id="WSAndTiers" style="overflow-x: scroll" ng-style="{'margin-left': tiersNameWidth}">
+        <div id="WSAndTiers" style="overflow-x: scroll" ng-style="{'margin-left': tierNameHeight}">
             <div id="waveform" ng-style="{'width': fullWSWidth}">{{ controller.createWaveSurfer() }}</div>
             <div id="wavespectrogram"></div>
             <div id="wavetimeline"></div>
 
             <!-- section with tiers -->
             <svg id="soundSVG"
-                 ng-attr-width="{{fullWSWidth}}" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
+                 ng-attr-width="{{fullWSWidth}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
                  ng-click="controller.onSVGSeek($event)"
                  ng-mouseup="controller.onSVGMouseUp($event)" ng-mousedown="controller.onSVGMouseDown($event)"
                  ng-mousemove="controller.onSVGMouseMove($event)"
@@ -62,40 +62,40 @@
                 <!-- ruler shows current position -->
                 <line class="sm-ruler"
                       ng-attr-x1="{{ruler}}" ng-attr-y1="0"
-                      ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierWidth * elanJS.numberOfTiers}}">
+                      ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierHeight * elanJS.numberOfTiers}}">
                 </line>
 
                     <!-- tiers -->
-                    <svg x="0" ng-attr-y="{{tierData.index * tierWidth}}" ng-repeat="(tierID, tierData) in elanJS.tiers"
+                    <svg x="0" ng-attr-y="{{tierData.index * tierHeight}}" ng-repeat="(tierID, tierData) in elanJS.tiers"
                          ng-click="controller.onTierClickWellItIsNotWorkingForNow($event, tier)"
                     >
                         <rect class="sm-tier" id="{{tierID + 'Rectangle'}}" x="0" y="0" width="100%"
-                              ng-attr-height="{{tierWidth}}"
+                              ng-attr-height="{{tierHeight}}"
                               fill="{{tierData.index % 2 == 0 ? 'grey' : 'white'}}"></rect>
                         <!-- annotations -->
                         <svg ng-attr-x="{{annotData.startOffset}}" y="0" ng-repeat="(annotID, annotData) in tierData.annotations"
-                             ng-attr-width="{{annotData.durationOffset}}" ng-attr-height="{{tierWidth}}"
+                             ng-attr-width="{{annotData.durationOffset}}" ng-attr-height="{{tierHeight}}"
                         >
                             <rect x="0" y="0" ng-attr-width="{{annotData.durationOffset + 1}}px"
-                                  ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.0">
+                                  ng-attr-height="{{tierHeight}}" fill="green" fill-opacity="0.0">
                             </rect>
                             <!-- left vertical line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                                  x1="1" y1="0" x2="1" ng-attr-y2="{{tierWidth}}">
+                                  x1="1" y1="0" x2="1" ng-attr-y2="{{tierHeight}}">
                             </line>
                             <!-- middle horizontal line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                                  x1="0" ng-attr-y1="{{tierWidth / 2}}"
-                                  ng-attr-x2="{{annotData.durationOffset}}" ng-attr-y2="{{tierWidth / 2}}">
+                                  x1="0" ng-attr-y1="{{tierHeight / 2}}"
+                                  ng-attr-x2="{{annotData.durationOffset}}" ng-attr-y2="{{tierHeight / 2}}">
                             </line>
                             <!-- right vertical line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
                                   ng-attr-x1="{{annotData.durationOffset - 0.5}}" y1="0"
-                                  ng-attr-x2="{{annotData.durationOffset - 0.5}}" ng-attr-y2="{{tierWidth}}">
+                                  ng-attr-x2="{{annotData.durationOffset - 0.5}}" ng-attr-y2="{{tierHeight}}">
                             </line>
                             <text
                                   x="5"
-                                  ng-attr-y="{{tierWidth / 2 - tierWidth * 0.2}}" >
+                                  ng-attr-y="{{tierHeight / 2 - tierHeight * 0.2}}" >
                                  {{ annotData.text }}
                             </text>
                         </svg>

@@ -1,22 +1,14 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, injectable}
 import org.scalajs.dom
-import ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.{TierJS, ELANDocumentJS}
-import ru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation
-import ru.ispras.lingvodoc.frontend.extras.elan.tier.ITier
-import ru.ispras.lingvodoc.frontend.app.services.{ModalOptions, ModalInstance, ModalService, BackendService}
-import com.greencatsoft.angularjs.core.{Timeout, Scope}
-import com.greencatsoft.angularjs.{Angular, AbstractController, injectable}
-import ru.ispras.lingvodoc.frontend.app.model.{Perspective, Language, Dictionary}
-import ru.ispras.lingvodoc.frontend.extras.facades._
-import ru.ispras.lingvodoc.frontend.extras.elan.{Utils, ELANPArserException, ELANDocumentJquery}
-import org.scalajs.dom.{EventTarget, console}
+import org.scalajs.dom.console
 import org.scalajs.jquery._
-import ru.ispras.lingvodoc.frontend.app.utils.LingvodocExecutionContext.Implicits.executionContext
-import scala.scalajs.js
-import js.JSConverters._
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.extras.elan.ELANDocumentJquery
+import ru.ispras.lingvodoc.frontend.extras.facades._
 
-import scala.collection.mutable
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
@@ -31,9 +23,9 @@ trait SoundMarkupScope extends Scope {
   var timelineEnabled: Boolean = js.native
 
   var ruler: Double = js.native // coordinate of wavesurfer ruler
-  var tierWidth: Int = js.native // displayed tier width in pixels
-  var tiersNameWidth: Int = js.native // column with tier names width in pixels
-  var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas
+  var tierHeight: Int = js.native // displayed tier height in pixels
+  var tierNameHeight: Int = js.native // field with tier name height in pixels
+  var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas, including hidden part
   var fullWSHeight: Int = js.native // height of wavesurfer, consists of heights of wavesurfer and its plugins
 }
 
@@ -48,8 +40,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var elan: Option[ELANDocumentJquery] = None
   scope.elanJS = js.Dynamic.literal()
 
-  scope.tierWidth = 50
-  scope.tiersNameWidth = 140
+  scope.tierHeight = 50
+  scope.tierNameHeight = 140
 
   var waveSurfer: Option[WaveSurfer] = None // WS object
   var spectrogram: Option[js.Dynamic] = None
@@ -59,10 +51,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // fake value to avoid division by zero; on ws load, it will be set correctly
   private var _duration: Double = 42.0
   scope.fullWSWidth = 0.0 // again, will be known after audio load
+  // div containing wavesurfer and drawn tiers, used to retrieve attributes
+  var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
   // size of the window (div) with waveform and svg containing canvas. It is only needed to restrict maximal zoom out
   private var WSAndTiersWidth = 0.0
 
-  var wsHeight = 128
+  var wsHeight = 128 // height of wavesurfer without plugins, a parameter for creating WaveSurfer object
   private var _wsSpectrogramHeight = 0
   private var _wsTimelineHeight = 0
   updateFullWSHeight()
@@ -71,16 +65,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
   val markupAddress = params.get("markupAddress").map(_.toString)
   val markupData = params.get("markupData").map(_.toString)
 
-
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
-  // listen to svg mouseover while true, ignore it when false
-  var svgIsMouseDown = false
-  // true after first drag event, false after dragend
-  var isDragging = false
-  // true when we move right border of selection rectangle, false when left
-  var rightBorderIsMoving = true
   // true when ws finished loading
   var isWSReady = false
   // When wsSeek is called because user clicked on it, we must manually call apply, because it is not ng-click.
@@ -90,9 +77,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // used to reduce number of digest cycles while playing
   var onPlayingCounter = 0
-
-  // div containing wavesurfer and drawn tiers
-  var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
 
   //  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
   //    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
