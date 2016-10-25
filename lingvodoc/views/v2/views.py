@@ -40,30 +40,32 @@ log = logging.getLogger(__name__)
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    # translation_gists = DBSession.query(TranslationGist).all()
-    gist_base = DBSession.query(BaseGroup).filter_by(action="delete",
-                                                     subject="translations").one()
-    # for tr_gist in translation_gists:
-    #     client = DBSession.query(Client).filter_by(id=tr_gist.client_id).one()
-    #     user = DBSession.query(User).filter_by(id=client.user_id).one()
-    #     new_group = Group(parent=gist_base, subject_client_id=tr_gist.client_id,
-    #                       subject_object_id=tr_gist.object_id)
-    #     user.groups.append(new_group)
-
-    # translation_atoms = DBSession.query(TranslationAtom).all()
-    atom_base = DBSession.query(BaseGroup).filter_by(action="edit",
-                                                     subject="translations").one()
-    # for tr_atom in translation_atoms:
-    #     client = DBSession.query(Client).filter_by(id=tr_atom.client_id).one()
-    #     user = DBSession.query(User).filter_by(id=client.user_id).one()
-    #     new_group = Group(parent=atom_base, subject_client_id=tr_atom.client_id,
-    #                       subject_object_id=tr_atom.object_id)
-    #     user.groups.append(new_group)
-    admin = DBSession.query(User).filter_by(id=1).one()
-    # gist_group = Group(parent=gist_base, subject_override=True)
-    # admin.groups.append(gist_group)
-    # atom_group = Group(parent=atom_base, subject_override=True)
-    # admin.groups.append(atom_group)
+    authors = request.params.getall('authors')
+    return authors
+    # # translation_gists = DBSession.query(TranslationGist).all()
+    # gist_base = DBSession.query(BaseGroup).filter_by(action="delete",
+    #                                                  subject="translations").one()
+    # # for tr_gist in translation_gists:
+    # #     client = DBSession.query(Client).filter_by(id=tr_gist.client_id).one()
+    # #     user = DBSession.query(User).filter_by(id=client.user_id).one()
+    # #     new_group = Group(parent=gist_base, subject_client_id=tr_gist.client_id,
+    # #                       subject_object_id=tr_gist.object_id)
+    # #     user.groups.append(new_group)
+    #
+    # # translation_atoms = DBSession.query(TranslationAtom).all()
+    # atom_base = DBSession.query(BaseGroup).filter_by(action="edit",
+    #                                                  subject="translations").one()
+    # # for tr_atom in translation_atoms:
+    # #     client = DBSession.query(Client).filter_by(id=tr_atom.client_id).one()
+    # #     user = DBSession.query(User).filter_by(id=client.user_id).one()
+    # #     new_group = Group(parent=atom_base, subject_client_id=tr_atom.client_id,
+    # #                       subject_object_id=tr_atom.object_id)
+    # #     user.groups.append(new_group)
+    # admin = DBSession.query(User).filter_by(id=1).one()
+    # # gist_group = Group(parent=gist_base, subject_override=True)
+    # # admin.groups.append(gist_group)
+    # # atom_group = Group(parent=atom_base, subject_override=True)
+    # # admin.groups.append(atom_group)
 
     return {}
 
@@ -127,7 +129,7 @@ def corpora_fields(request):
     sound_field = data_type_query.filter(TranslationAtom.locale_id == 2,
                                          TranslationAtom.content == 'Sound').one() # todo: a way to find this fields if wwe cannot use one
     markup_field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                          TranslationAtom.content == 'Praat markup').one()
+                                          TranslationAtom.content == 'Markup').one()
     response.append(dict_ids(sound_field))
     response[0]['contains'] = [dict_ids(markup_field)]
     response.append(dict_ids(markup_field))
