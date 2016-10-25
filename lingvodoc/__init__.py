@@ -588,6 +588,7 @@ def configure_routes(config):
 
     # web-view #GET
     config.add_route(name='blob_upload', pattern='/blob_upload')
+    config.add_route(name='corpora_fields', pattern='/corpora_fields')
 
     # API #POST
     # params:
