@@ -12,7 +12,9 @@ from lingvodoc.models import (
     LexicalEntry,
     TranslationAtom,
     TranslationGist,
-    User
+    User,
+    Group,
+    BaseGroup
 )
 
 from pyramid.httpexceptions import (
@@ -64,7 +66,7 @@ def delete_entity(request):
     return {'error': str("No such entity in the system")}
 
 
-@view_config(route_name='create_entity', renderer='json', request_method='POST', permission='create')
+@view_config(route_name='create_entity', renderer='json', request_method='POST')
 def create_entity(request):  # tested
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -115,6 +117,12 @@ def create_entity(request):  # tested
                         locale_id=req.get('locale_id'),
                         additional_metadata=additional_metadata,
                         parent=parent)
+        group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'lexical_entries_and_entities',
+                                                              Group.subject_client_id == entity.parent.parent.client_id,
+                                                              Group.subject_object_id == entity.parent.parent.object_id,
+                                                              BaseGroup.action == 'create').one()
+        if user in group.users:
+            entity.publishingentity.accepted = True
         if upper_level:
             entity.upper_level = upper_level
         filename = req.get('filename')
@@ -126,18 +134,16 @@ def create_entity(request):  # tested
             old_meta = entity.additional_metadata
             need_hash = True
             if old_meta:
-                new_meta = json.loads(old_meta)
-                if new_meta.get('hash'):
+                if old_meta.get('hash'):
                     need_hash = False
             if need_hash:
                 hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
                 hash_dict = {'hash': hash}
                 if old_meta:
-                    new_meta = json.loads(old_meta)
-                    new_meta.update(hash_dict)
+                    old_meta.update(hash_dict)
                 else:
-                    new_meta = hash_dict
-                entity.additional_metadata = json.dumps(new_meta)
+                    old_meta = hash_dict
+                entity.additional_metadata = old_meta
         elif data_type == 'link':
             try:
                 entity.link_client_id = req['link_client_id']

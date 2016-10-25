@@ -94,6 +94,45 @@ def perspectives_list(request):  # tested
     return response
 
 
+@view_config(route_name='all_perspectives_meta', renderer = 'json', request_method='GET')
+def perspectives_meta_list(request):  # tested
+    response = list()
+    is_template = None
+    try:
+        is_template = request.GET.get('is_template')
+    except:
+        pass
+    state_translation_gist_client_id = request.params.get('state_translation_gist_client_id', None)
+    state_translation_gist_object_id = request.params.get('state_translation_gist_object_id', None)
+    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion==False, DictionaryPerspective.additional_metadata!={})
+    if is_template is not None:
+        if type(is_template) == str:
+            if is_template.lower() == 'true':
+                is_template = True
+            elif is_template.lower() == 'false':
+                is_template = False
+            else:
+                request.response.status = HTTPBadRequest.code
+                # TODO: write normal return
+                return
+
+        persps = persps.filter(DictionaryPerspective.is_template == is_template)
+    if state_translation_gist_client_id and state_translation_gist_object_id:
+        persps = persps.filter(DictionaryPerspective.state_translation_gist_client_id==state_translation_gist_client_id,
+                               DictionaryPerspective.state_translation_gist_object_id==state_translation_gist_object_id)
+    perspectives = []
+    for perspective in persps:
+        # resp = view_perspective_from_object(request, perspective)
+        resp = perspective.additional_metadata
+        resp.update({'client_id': perspective.client_id,'object_id': perspective.object_id})
+        if 'error' not in resp:
+            perspectives.append(resp)
+    response = perspectives
+    request.response.status = HTTPOk.code
+
+    return response
+
+
 @view_config(route_name='perspective', renderer='json', request_method='GET')
 @view_config(route_name='perspective_outside', renderer='json', request_method='GET')
 def view_perspective(request): # tested & in docs
@@ -157,11 +196,10 @@ def edit_perspective_hash(request):
                         old_meta = l1e.additional_metadata
                         hash_dict = {'hash': hash}
                         if old_meta:
-                            new_meta = json.loads(old_meta)
-                            new_meta.update(hash_dict)
+                            old_meta.update(hash_dict)
                         else:
-                            new_meta = hash_dict
-                        l1e.additional_metadata = json.dumps(new_meta)
+                            old_meta = hash_dict
+                        l1e.additional_metadata = old_meta
                     except:
                         print('fail with sound', l1e.client_id, l1e.object_id)
                 # l2es = DBSession.query(LevelTwoEntity)\
@@ -185,11 +223,10 @@ def edit_perspective_hash(request):
                         old_meta = l2e.additional_metadata
                         hash_dict = {'hash': hash}
                         if old_meta:
-                            new_meta = json.loads(old_meta)
-                            new_meta.update(hash_dict)
+                            old_meta.update(hash_dict)
                         else:
-                            new_meta = hash_dict
-                        l2e.additional_metadata = json.dumps(new_meta)
+                            old_meta = hash_dict
+                        l2e.additional_metadata = old_meta
                     except:
                         print('fail with markup', l2e.client_id, l2e.object_id)
                 response['count_l1e'] = count_l1e
@@ -250,12 +287,12 @@ def edit_perspective_meta(request):  # tested & in docs
                 request.response.status = HTTPBadRequest.code
                 return {'error': 'body is invalid json or empty'}
             if perspective.additional_metadata:
-                old_meta = json.loads(perspective.additional_metadata)
+                old_meta = perspective.additional_metadata
                 new_meta = req
                 old_meta.update(new_meta)
-                perspective.additional_metadata = json.dumps(old_meta)
+                perspective.additional_metadata = old_meta
             else:
-                perspective.additional_metadata = json.dumps(req)
+                perspective.additional_metadata = req
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -288,12 +325,12 @@ def delete_perspective_meta(request):  # tested & in docs
             except ValueError:
                 request.response.status = HTTPBadRequest.code
                 return {'error': 'body is invalid json or empty'}
-            old_meta = json.loads(perspective.additional_metadata)
+            old_meta = perspective.additional_metadata
             new_meta = req
             for entry in new_meta:
                 if entry in old_meta:
                     del old_meta[entry]
-            perspective.additional_metadata = json.dumps(old_meta)
+            perspective.additional_metadata = old_meta
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -318,7 +355,7 @@ def view_perspective_meta(request):  # tested & in docs
             request.response.status = HTTPNotFound.code
             return {'error': str("No such pair of dictionary/perspective in the system")}
 
-        old_meta = json.loads(perspective.additional_metadata)
+        old_meta = perspective.additional_metadata
         # import pdb
         # pdb.set_trace()
         try:
@@ -331,7 +368,6 @@ def view_perspective_meta(request):  # tested & in docs
             return {'error': "invalid json"}
 
         if req:
-            print(request.json_body)
             new_meta = dict()
             for key in req:
                 if old_meta.get(key):
@@ -515,7 +551,6 @@ def create_perspective(request):  # tested & in docs
             additional_metadata.update(coord)
         else:
             additional_metadata = coord
-        additional_metadata = json.dumps(additional_metadata)
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
@@ -697,7 +732,7 @@ def view_perspectives(request):
     return perspectives
 
 
-@view_config(route_name='perspective_roles', renderer='json', request_method='GET', permission='view')
+@view_config(route_name='perspective_roles', renderer='json', request_method='GET')
 def view_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1330,6 +1365,38 @@ def lexical_entries_published(request):
         return {'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='lexical_entries_not_accepted', renderer='json', request_method='GET')
+@MEMOIZE
+def lexical_entries_not_accepted(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+
+    sort_criterion = request.params.get('sort_by') or 'Translation'
+    start_from = request.params.get('start_from') or 0
+    count = request.params.get('count') or 20
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .join(LexicalEntry.entity).join(Entity.publishingentity) \
+                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False) \
+                .group_by(LexicalEntry) \
+                .offset(start_from).limit(count)
+            result = deque()
+
+            for entry in lexes.all():
+                result.append(entry.track(False))
+            response = list(result)
+
+            request.response.status = HTTPOk.code
+            return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+
+
 @view_config(route_name='lexical_entries_published_count', renderer='json', request_method='GET', permission='view')
 def lexical_entries_published_count(request):
     client_id = request.matchdict.get('perspective_client_id')
@@ -1341,6 +1408,27 @@ def lexical_entries_published_count(request):
             lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
                 .filter(LexicalEntry.parent == parent, PublishingEntity.published == True) \
+                .group_by(LexicalEntry) \
+                .count()
+            # lexical_entries_count = None
+
+            return {"count": lexical_entries_count}
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='lexical_entries_not_accepted_count', renderer='json', request_method='GET')
+def lexical_entries_not_accepted_count(request):
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+                .join(LexicalEntry.entity).join(Entity.publishingentity) \
+                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False) \
                 .group_by(LexicalEntry) \
                 .count()
             # lexical_entries_count = None
@@ -1369,10 +1457,66 @@ def approve_entity(request):
         for entry in req:
             entity = DBSession.query(Entity).\
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-            if entity:
-                entity.publishingentity.published = True
+
+            group = DBSession.query(Group).join(BaseGroup).filter(
+                BaseGroup.subject == 'approve_entities',
+                Group.subject_client_id == entity.parent.parent.client_id,
+                Group.subject_object_id == entity.parent.parent.object_id,
+                BaseGroup.action == 'create').one()
+            if user in group.users:
+                if entity:
+                    entity.publishingentity.published = True
+                else:
+                    raise CommonException("no such entity in system")
             else:
-                raise CommonException("no such entity in system")
+                raise CommonException("Forbidden")
+
+        request.response.status = HTTPOk.code
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
+@view_config(route_name='accept_entity', renderer='json', request_method='PATCH', permission='create')
+def accept_entity(request):
+    try:
+        if type(request.json_body) == str:
+            req = json.loads(request.json_body)
+        else:
+            req = request.json_body
+        variables = {'auth': request.authenticated_userid}
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        for entry in req:
+            entity = DBSession.query(Entity).\
+                filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
+
+            group = DBSession.query(Group).join(BaseGroup).filter(
+                BaseGroup.subject == 'lexical_entries_and_entities',
+                Group.subject_client_id == entity.parent.parent.client_id,
+                Group.subject_object_id == entity.parent.parent.object_id,
+                BaseGroup.action == 'create').one()
+            if user in group.users:
+                if entity:
+                    entity.publishingentity.accepted = True
+                else:
+                    raise CommonException("no such entity in system")
+            else:
+                raise CommonException("Forbidden")
 
         request.response.status = HTTPOk.code
         return {}
@@ -1407,10 +1551,19 @@ def disapprove_entity(request):
         for entry in req:
             entity = DBSession.query(Entity).\
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-            if entity:
-                entity.publishingentity.published = False
+
+            group = DBSession.query(Group).join(BaseGroup).filter(
+                BaseGroup.subject == 'approve_entities',
+                Group.subject_client_id == entity.parent.parent.client_id,
+                Group.subject_object_id == entity.parent.parent.object_id,
+                BaseGroup.action == 'delete').one()
+            if user in group.users:
+                if entity:
+                    entity.publishingentity.published = True
+                else:
+                    raise CommonException("no such entity in system")
             else:
-                raise CommonException("no such entity in system")
+                raise CommonException("Forbidden")
 
         request.response.status = HTTPOk.code
         return {}
@@ -1447,6 +1600,38 @@ def approve_all(request):
                                     perspective_object_id=object_id)
             subreq = Request.blank(url)
             jsn = entities
+            subreq.json = jsn
+            subreq.method = 'PATCH'
+            headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = headers
+            request.invoke_subrequest(subreq)
+
+            request.response.status = HTTPOk.code
+            return response
+    request.response.status = HTTPNotFound.code
+    return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='accept_all', renderer='json', request_method='PATCH', permission='create')
+def accept_all(request):
+    response = dict()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent:
+        if not parent.marked_for_deletion:
+            dictionary_client_id = parent.parent_client_id
+            dictionary_object_id = parent.parent_object_id
+            entities = DBSession.query(Entity).join(Entity.parent).filter(LexicalEntry.parent==parent).all()
+
+            url = request.route_url('accept_entity',
+                                    dictionary_client_id=dictionary_client_id,
+                                    dictionary_object_id=dictionary_object_id,
+                                    perspective_client_id=client_id,
+                                    perspective_object_id=object_id)
+            subreq = Request.blank(url)
+            jsn = [{'client_id': o.client_id, 'object_id': o.object_id} for o in entities]
             subreq.json = jsn
             subreq.method = 'PATCH'
             headers = {'Cookie': request.headers['Cookie']}
@@ -1604,19 +1789,16 @@ def create_entities_bulk(request):
                 old_meta = entity.additional_metadata
 
                 need_hash = True
-                if old_meta:
-                    new_meta=json.loads(old_meta)
-                    if new_meta.get('hash'):
-                        need_hash = False
+                if old_meta and old_meta.get('hash'):
+                    need_hash = False
                 if need_hash:
                     hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
                     hash_dict = {'hash': hash}
                     if old_meta:
-                        new_meta = json.loads(old_meta)
-                        new_meta.update(hash_dict)
+                        old_meta.update(hash_dict)
                     else:
-                        new_meta = hash_dict
-                    entity.additional_metadata = json.dumps(new_meta)
+                        old_meta = hash_dict
+                    entity.additional_metadata = old_meta
             else:
                 entity.content = item['content']
             DBSession.add(entity)

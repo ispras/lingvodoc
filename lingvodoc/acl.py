@@ -62,4 +62,5 @@ def groupfinder(client_id, request):
                              + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
             grouplist.append(group_name)
     log.debug("GROUPLIST: %d, %s", len(grouplist), grouplist)
-    return grouplist
+    # log.error("GROUPLIST: %d, %s", len(grouplist), grouplist)
+    return grouplist  # todo: caching

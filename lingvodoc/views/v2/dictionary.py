@@ -78,8 +78,6 @@ def create_dictionary(request):  # tested & in docs
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         additional_metadata = req.get('additional_metadata')
-        if additional_metadata:
-            additional_metadata = json.dumps(additional_metadata)
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
@@ -101,6 +99,8 @@ def create_dictionary(request):  # tested & in docs
                                 translation_gist_client_id=translation_gist_client_id,
                                 translation_gist_object_id=translation_gist_object_id,
                                 additional_metadata=additional_metadata)
+        if req.get('category'):
+            dictionary.category = req['category']  # todo: simulate enum
         DBSession.add(dictionary)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -128,6 +128,7 @@ def create_dictionary(request):  # tested & in docs
 
 @view_config(route_name='dictionary', renderer='json', request_method='GET')  # Authors -- names of users, who can edit?
 def view_dictionary(request):  # tested & in docs
+    from lingvodoc.models import categories
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
@@ -142,6 +143,7 @@ def view_dictionary(request):  # tested & in docs
         response['state_translation_gist_client_id'] = dictionary.state_translation_gist_client_id
         response['state_translation_gist_object_id'] = dictionary.state_translation_gist_object_id
         response['additional_metadata'] = dictionary.additional_metadata
+        response['category'] = categories.get(dictionary.category)
         if request.cookies.get('locale_id'):
             locale_id = request.cookies['locale_id']
         else:
@@ -177,12 +179,10 @@ def edit_dictionary(request):  # tested & in docs
 
                 additional_metadata = req.get('additional_metadata')
                 if additional_metadata:
-                    # additional_metadata = json.dumps(additional_metadata)
 
-                    old_meta = json.loads(dictionary.additional_metadata)
+                    old_meta = dictionary.additional_metadata
                     old_meta.update(additional_metadata)
-                    new_meta = json.dumps(old_meta)
-                    dictionary.additional_metadata = new_meta
+                    dictionary.additional_metadata = old_meta
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code
