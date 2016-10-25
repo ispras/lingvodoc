@@ -6,11 +6,20 @@ import org.scalajs.dom
 import org.scalajs.dom.console
 import org.scalajs.jquery._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalService}
-import ru.ispras.lingvodoc.frontend.extras.elan.ELANDocumentJquery
+import ru.ispras.lingvodoc.frontend.extras.elan.ELANDocument
 import ru.ispras.lingvodoc.frontend.extras.facades._
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
+
+/**
+  * About EAF document representation. To make Angular quickly update the view, We should have 2 representations:
+  * on Scala side and on JS side. On Scala side, original XML is parsed using Scala data structures and methods.
+  * However, for faster rendering we convert it to plain JS data structure consisting of arrays and objects.
+  * See method ELANDocument.toJS for example of JS representation.
+  * Here in code, scope.elanJS is JS representation, and SoundMarkupController.elan is Scala representation.
+  * Method updateVD is used to update JS representation.
+  */
 
 @js.native
 trait SoundMarkupScope extends Scope {
@@ -34,7 +43,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             backend: BackendService,
                             params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[SoundMarkupScope](scope) {
-  var elan: Option[ELANDocumentJquery] = None
+  var elan: Option[ELANDocument] = None
   scope.elanJS = js.Dynamic.literal()
 
   scope.tierHeight = 50
@@ -229,30 +238,23 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
   def parseMarkup(markupAddress: String): Unit = {
-    elan = Some(ELANDocumentJquery.getDummy) // to avoid errors while it is not yet loaded
+    elan = Some(ELANDocument.getDummy) // to avoid errors while it is not yet loaded
     updateVD()
     val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
-      val test_markup = data.toString
-      try {
-        elan = Some(ELANDocumentJquery(test_markup, pxPerSec))
-        elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD()})
-        // TODO: apply() here? if markup will be loaded later than sound
-//        console.log(scope.elan.toString)
-      } catch {
-        case e: Exception =>
-          console.error(e.getStackTrace.mkString("\n"))
-          throw e
-      }
-      scope.ruler = 0
+      parseDataMarkup(data.toString)
     }
-
+    // TODO: replace with API call?
     jQuery.get(markupAddress, success = action, dataType = "text")
   }
 
+
   def parseDataMarkup(elanMarkup: String) = {
     try {
-      elan = Some(ELANDocumentJquery(elanMarkup, pxPerSec))
-      elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD()})
+      elan = Some(ELANDocument(elanMarkup, pxPerSec))
+      updateVD()
+      // in case if markup will be loaded later than sound -- hardly possible, of course
+      scope.$apply()
+      //        console.log(scope.elan.toString)
     } catch {
       case e: Exception =>
         console.error(e.getStackTrace.mkString("\n"))

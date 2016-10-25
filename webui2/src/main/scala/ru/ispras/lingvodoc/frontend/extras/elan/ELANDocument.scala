@@ -22,11 +22,11 @@ case class ELANPArserException(message: String) extends Exception(message)
 // Represents ELAN (EAF) document
 // @pxPerSec param is needed to calculate annotation lengths in pixels
 @JSExportAll
-class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Double) {
-  val date = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.dateAttrName)
-  val author = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.authorAttrName)
-  val version = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.versionAttrName)
-  val format = RequiredXMLAttr(annotDocXML, ELANDocumentJquery.formatAttrName, Some("2.7"))
+class ELANDocument private(annotDocXML: JQuery, private var pxPerSec: Double) {
+  val date = RequiredXMLAttr(annotDocXML, ELANDocument.dateAttrName)
+  val author = RequiredXMLAttr(annotDocXML, ELANDocument.authorAttrName)
+  val version = RequiredXMLAttr(annotDocXML, ELANDocument.versionAttrName)
+  val format = RequiredXMLAttr(annotDocXML, ELANDocument.formatAttrName, Some("2.7"))
 
   val header = new Header(annotDocXML.find(Header.tagName))
 
@@ -36,9 +36,9 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
   var tiers: List[ITier[IAnnotation]] = Tier.fromXMLs(annotDocXML.find(Tier.tagName), this)
   val locales = Locale.fromXMLs(annotDocXML.find(Locale.tagName))
   // the following 3 elements are not supported yet; we will just save them unchanged as a String
-  val controlledVocabulary = Utils.jQuery2XML(annotDocXML.find(ELANDocumentJquery.controlledVocTagName))
-  val lexiconRef = Utils.jQuery2XML(annotDocXML.find(ELANDocumentJquery.lexRefTagName))
-  val externalRef = Utils.jQuery2XML(annotDocXML.find(ELANDocumentJquery.extRefTagName))
+  val controlledVocabulary = Utils.jQuery2XML(annotDocXML.find(ELANDocument.controlledVocTagName))
+  val lexiconRef = Utils.jQuery2XML(annotDocXML.find(ELANDocument.lexRefTagName))
+  val externalRef = Utils.jQuery2XML(annotDocXML.find(ELANDocument.extRefTagName))
 
   private var lastUsedTimeSlotID: Long = 0
   private var lastUsedAnnotationID: Long = 0
@@ -186,15 +186,15 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
   private def content = s"$header $timeOrder ${tiers.mkString("\n")} ${linguisticTypes.values.mkString("\n")} " +
                 s"${locales.mkString("\n")} ${constraints.values.mkString("\n")}" +
                 s"$controlledVocabulary $lexiconRef  $externalRef"
-  private def attrsToString = s"$date $author $version $format ${ELANDocumentJquery.xmlnsXsi} ${ELANDocumentJquery.schemaLoc}"
+  private def attrsToString = s"$date $author $version $format ${ELANDocument.xmlnsXsi} ${ELANDocument.schemaLoc}"
 
   override def toString =
     s"""|<?xml version="1.0" encoding="UTF-8"?>
-        |${Utils.wrap(ELANDocumentJquery.annotDocTagName, content, attrsToString)}
+        |${Utils.wrap(ELANDocument.annotDocTagName, content, attrsToString)}
     """.stripMargin
 }
 
-object ELANDocumentJquery {
+object ELANDocument {
   val annotDocTagName = "ANNOTATION_DOCUMENT"
   val (dateAttrName, authorAttrName, versionAttrName, formatAttrName) = ("DATE", "AUTHOR", "VERSION", "FORMAT")
   val (controlledVocTagName, lexRefTagName, extRefTagName) = ("CONTROLLED_VOCABULARY", "LEXICON_REF", "EXTERNAL_REF")
@@ -206,12 +206,12 @@ object ELANDocumentJquery {
   // constrain maximum allowed time slot.
   // WARNING: it is assumed that the xmlString is a valid ELAN document matching xsd scheme.
   // Otherwise the result is undefined.
-  def apply(xmlString: String, pxPerSec: Double = 0.0) = new ELANDocumentJquery(
+  def apply(xmlString: String, pxPerSec: Double = 0.0) = new ELANDocument(
     jQuery(jQuery.parseXML(xmlString)).find(annotDocTagName),
     pxPerSec
   )
   // stub document, used to avoid errors while real document is not yet loaded
-  def getDummy = ELANDocumentJquery(
+  def getDummy = ELANDocument(
     """<?xml version="1.0" encoding="UTF-8"?>
       <ANNOTATION_DOCUMENT AUTHOR="" DATE="2016-08-05T17:18:49+03:00" VERSION="2.8"
                            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -255,8 +255,8 @@ object TimeOrder {
 class LinguisticType(val linguisticTypeID: RequiredXMLAttr[String], val timeAlignable: OptionalXMLAttr[Boolean],
                      val constraints: OptionalXMLAttr[String], val graphicReferences: OptionalXMLAttr[Boolean],
                      val controlledVocabularyRef: OptionalXMLAttr[String], val extRef: OptionalXMLAttr[String],
-                     val lexiconRef: OptionalXMLAttr[String], owner: ELANDocumentJquery) {
-  def this(linguisticTypeXML: JQuery, owner: ELANDocumentJquery) = this(
+                     val lexiconRef: OptionalXMLAttr[String], owner: ELANDocument) {
+  def this(linguisticTypeXML: JQuery, owner: ELANDocument) = this(
     RequiredXMLAttr(linguisticTypeXML, LinguisticType.ltIDAttrName),
     OptionalXMLAttr(linguisticTypeXML, LinguisticType.timeAlignAttrName, _.toBoolean),
     OptionalXMLAttr(linguisticTypeXML, LinguisticType.constraintsAttrName),
@@ -305,7 +305,7 @@ class LinguisticType(val linguisticTypeID: RequiredXMLAttr[String], val timeAlig
 
 object LinguisticType {
   // read sequence of XML linguisticTypeXML elements and return map of them with ID as a key
-  def fromXMLs(linguisticTypeXMLs: JQuery, owner: ELANDocumentJquery) = Utils.jQuery2List(linguisticTypeXMLs).map(ltXML => {
+  def fromXMLs(linguisticTypeXMLs: JQuery, owner: ELANDocument) = Utils.jQuery2List(linguisticTypeXMLs).map(ltXML => {
     val lt = new LinguisticType(ltXML, owner)
     lt.linguisticTypeID.value -> lt
   }).toMap
