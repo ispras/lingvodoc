@@ -17,6 +17,12 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+from sqlalchemy import (
+    func,
+    or_,
+    and_,
+    tuple_
+)
 from pyramid.renderers import render_to_response
 from pyramid.request import Request
 from pyramid.response import Response
@@ -1244,12 +1250,58 @@ def update_perspective_fields(request):
         return {'error': str("No such perspective in the system")}
 
 
+@view_config(route_name='all_perspective_authors', renderer='json', request_method='GET')
+def all_perspective_authors(request):
+    response = list()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent and not parent.marked_for_deletion:
+            authors = DBSession.query(User).join(User.clients).join(Entity, Entity.client_id==Client.id) \
+                .join(Entity.parent) \
+                .filter(LexicalEntry.parent == parent)
+            response = [o.id for o in authors.all()]
+            request.response.status = HTTPOk.code
+            return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+
+
+@view_config(route_name='all_perspective_clients', renderer='json', request_method='GET')
+def all_perspective_clients(request):
+    response = list()
+    client_id = request.matchdict.get('perspective_client_id')
+    object_id = request.matchdict.get('perspective_object_id')
+
+    parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
+    if parent and not parent.marked_for_deletion:
+            clients = DBSession.query(Client).join(Entity, Entity.client_id==Client.id) \
+                .join(Entity.parent) \
+                .filter(LexicalEntry.parent == parent)
+            response = [o.id for o in clients.all()]
+            request.response.status = HTTPOk.code
+            return response
+    else:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such perspective in the system")}
+
+
 # TODO: completely broken!
 @view_config(route_name='lexical_entries_all', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
+    authors = request.params.getall('authors')
+    clients = request.params.getall('clients')
+    start_date = request.params.get('start_date',)
+    if start_date:
+        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = request.params.get('end_date')
+    if end_date:
+        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
@@ -1270,11 +1322,25 @@ def lexical_entries_all(request):
             #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
             #     .offset(start_from).limit(count)
             lexes = DBSession.query(LexicalEntry) \
-                .filter(LexicalEntry.parent == parent) \
+                .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion==False)
+            if authors or clients or start_date or end_date:
+                lexes = lexes.join(LexicalEntry.entity)
+            if authors or clients:
+                lexes = lexes.join(Client, Entity.client_id == Client.id)
+            if authors:
+                lexes = lexes.join(Client.user).filter(User.id.in_(authors))
+            if clients:
+                lexes = lexes.filter(Client.id.in_(clients))
+            if start_date:
+                lexes = lexes.filter(Entity.created_at >= start_date)
+            if end_date:
+                lexes = lexes.filter(Entity.created_at <= end_date)
+            lexes = lexes \
                 .group_by(LexicalEntry) \
                 .offset(start_from).limit(count)
 
             result = deque()
+            print([o.client_id for o in lexes.all()])
             for entry in lexes.all():
                 result.append(entry.track(False))
                 # result.append({'client_id': entry.client_id, 'object_id': entry.object_id})
@@ -1293,6 +1359,14 @@ def lexical_entries_all_count(request): # tested
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
+    authors = request.params.getall('authors')
+    clients = request.params.getall('clients')
+    start_date = request.params.get('start_date',)
+    if start_date:
+        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = request.params.get('end_date')
+    if end_date:
+        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
@@ -1303,7 +1377,20 @@ def lexical_entries_all_count(request): # tested
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(LexicalEntry)\
                 .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
-                           parent_object_id=parent.object_id).count()
+                           parent_object_id=parent.object_id)
+            if authors or clients or start_date or end_date:
+                lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
+            if authors or clients:
+                lexical_entries_count = lexical_entries_count.join(Client, Entity.client_id == Client.id)
+            if authors:
+                lexical_entries_count = lexical_entries_count.join(Client.user).filter(User.id.in_(authors))
+            if clients:
+                lexical_entries_count = lexical_entries_count.filter(Client.id.in_(clients))
+            if start_date:
+                lexical_entries_count = lexical_entries_count.filter(Entity.created_at >= start_date)
+            if end_date:
+                lexical_entries_count = lexical_entries_count.filter(Entity.created_at <= end_date)
+            lexical_entries_count=lexical_entries_count.group_by(LexicalEntry).count()
             return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
@@ -1317,6 +1404,15 @@ def lexical_entries_published(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
+    authors = request.params.getall('authors')
+    clients = request.params.getall('clients')
+    start_date = request.params.get('start_date',)
+    if start_date:
+        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = request.params.get('end_date')
+    if end_date:
+        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
+
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
@@ -1346,8 +1442,18 @@ def lexical_entries_published(request):
             #     .offset(start_from).limit(count)
             lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True) \
-                .group_by(LexicalEntry) \
+                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True)
+            if authors or clients:
+                lexes = lexes.join(Client, Entity.client_id == Client.id)
+            if authors:
+                lexes = lexes.join(Client.user).filter(User.id.in_(authors))
+            if clients:
+                lexes = lexes.filter(Client.id.in_(clients))
+            if start_date:
+                lexes = lexes.filter(Entity.created_at >= start_date)
+            if end_date:
+                lexes = lexes.filter(Entity.created_at <= end_date)
+            lexes = lexes.group_by(LexicalEntry) \
                 .offset(start_from).limit(count)
 
             # lexes = list()
@@ -1371,6 +1477,14 @@ def lexical_entries_not_accepted(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
+    authors = request.params.getall('authors')
+    clients = request.params.getall('clients')
+    start_date = request.params.get('start_date',)
+    if start_date:
+        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = request.params.get('end_date')
+    if end_date:
+        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
@@ -1381,8 +1495,18 @@ def lexical_entries_not_accepted(request):
         if not parent.marked_for_deletion:
             lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False) \
-                .group_by(LexicalEntry) \
+                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
+            if authors or clients:
+                lexes = lexes.join(Client, Entity.client_id == Client.id)
+            if authors:
+                lexes = lexes.join(Client.user).filter(User.id.in_(authors))
+            if clients:
+                lexes = lexes.filter(Client.id.in_(clients))
+            if start_date:
+                lexes = lexes.filter(Entity.created_at >= start_date)
+            if end_date:
+                lexes = lexes.filter(Entity.created_at <= end_date)
+            lexes = lexes.group_by(LexicalEntry) \
                 .offset(start_from).limit(count)
             result = deque()
 
@@ -1401,15 +1525,34 @@ def lexical_entries_not_accepted(request):
 def lexical_entries_published_count(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
+    authors = request.params.getall('authors')
+    clients = request.params.getall('clients')
+    start_date = request.params.get('start_date',)
+    if start_date:
+        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = request.params.get('end_date')
+    if end_date:
+        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True) \
-                .group_by(LexicalEntry) \
-                .count()
+                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True)
+            if authors or clients or start_date or end_date:
+                lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
+            if authors or clients:
+                lexical_entries_count = lexical_entries_count.join(Client, Entity.client_id == Client.id)
+            if authors:
+                lexical_entries_count = lexical_entries_count.join(Client.user).filter(User.id.in_(authors))
+            if clients:
+                lexical_entries_count = lexical_entries_count.filter(Client.id.in_(clients))
+            if start_date:
+                lexical_entries_count = lexical_entries_count.filter(Entity.created_at >= start_date)
+            if end_date:
+                lexical_entries_count = lexical_entries_count.filter(Entity.created_at <= end_date)
+            lexical_entries_count=lexical_entries_count.group_by(LexicalEntry).count()
             # lexical_entries_count = None
 
             return {"count": lexical_entries_count}
@@ -1422,15 +1565,34 @@ def lexical_entries_published_count(request):
 def lexical_entries_not_accepted_count(request):
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
+    authors = request.params.getall('authors')
+    clients = request.params.getall('clients')
+    start_date = request.params.get('start_date',)
+    if start_date:
+        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = request.params.get('end_date')
+    if end_date:
+        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
             lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False) \
-                .group_by(LexicalEntry) \
-                .count()
+                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
+            if authors or clients or start_date or end_date:
+                lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
+            if authors or clients:
+                lexical_entries_count = lexical_entries_count.join(Client, Entity.client_id == Client.id)
+            if authors:
+                lexical_entries_count = lexical_entries_count.join(Client.user).filter(User.id.in_(authors))
+            if clients:
+                lexical_entries_count = lexical_entries_count.filter(Client.id.in_(clients))
+            if start_date:
+                lexical_entries_count = lexical_entries_count.filter(Entity.created_at >= start_date)
+            if end_date:
+                lexical_entries_count = lexical_entries_count.filter(Entity.created_at <= end_date)
+            lexical_entries_count=lexical_entries_count.group_by(LexicalEntry).count()
             # lexical_entries_count = None
 
             return {"count": lexical_entries_count}

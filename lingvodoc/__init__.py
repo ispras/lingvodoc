@@ -405,6 +405,10 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_object_id}/all',
                      factory='lingvodoc.models.PerspectiveLexicalViewAcl')
+    config.add_route(name='all_perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                         '/perspective/{perspective_client_id}/{perspective_object_id}/authors')
+    config.add_route(name='all_perspective_clients', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
+                                                         '/perspective/{perspective_client_id}/{perspective_object_id}/clients')
 
     config.add_route(name='lexical_entries_all_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
