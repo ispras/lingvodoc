@@ -4,7 +4,24 @@ from lingvodoc.views.v2.utils import (
 
 from pyramid.response import Response
 from pyramid.view import view_config
-from lingvodoc.models import DBSession, Dictionary, Locale
+from lingvodoc.models import (
+    DBSession,
+    Dictionary,
+    Locale,
+    TranslationAtom,
+    TranslationGist,
+    BaseGroup,
+    Group,
+    Client,
+    User
+)
+
+from sqlalchemy import (
+    func,
+    or_,
+    and_,
+    tuple_
+)
 from pyramid.httpexceptions import (
     HTTPFound,
     HTTPOk
@@ -25,9 +42,33 @@ log = logging.getLogger(__name__)
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    # lang = DBSession.query(Language).filter_by(client_id=31, object_id=7).first()
-    # return{'words': [{'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 2, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 2, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 0', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 2, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 2, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 1, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 3, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 1', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 3, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 6, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 3, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 2, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 6, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 4', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 6, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:21 2016L5F93WF9UT', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 7, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 6, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 5, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 4, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 4, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 2', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 4, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 4, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 3, 'client_id': 13, 'contains': None}]}}, {'lexical_entry': {'marked_for_deletion': False, 'published': False, 'came_from': None, 'parent_client_id': 5, 'parent_object_id': 1, 'object_id': 5, 'level': 'lexicalentry', 'client_id': 13, 'contains': [{'locale_id': 1, 'parent_client_id': 13, 'parent_object_id': 5, 'level': 'leveloneentity', 'additional_metadata': None, 'content': 'grouping word 3', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Word', 'object_id': 5, 'client_id': 13, 'contains': None}, {'locale_id': None, 'parent_client_id': 13, 'parent_object_id': 5, 'level': 'groupingentity', 'additional_metadata': None, 'content': 'Mon Feb 15 16:42:22 2016FBTCGRTPV8', 'marked_for_deletion': False, 'published': False, 'entity_type': 'Etymology', 'object_id': 4, 'client_id': 13, 'contains': None}]}}]}
-    return DBSession.query(Dictionary.__tablename__).all()
+    # translation_gists = DBSession.query(TranslationGist).all()
+    gist_base = DBSession.query(BaseGroup).filter_by(action="delete",
+                                                     subject="translations").one()
+    # for tr_gist in translation_gists:
+    #     client = DBSession.query(Client).filter_by(id=tr_gist.client_id).one()
+    #     user = DBSession.query(User).filter_by(id=client.user_id).one()
+    #     new_group = Group(parent=gist_base, subject_client_id=tr_gist.client_id,
+    #                       subject_object_id=tr_gist.object_id)
+    #     user.groups.append(new_group)
+
+    # translation_atoms = DBSession.query(TranslationAtom).all()
+    atom_base = DBSession.query(BaseGroup).filter_by(action="edit",
+                                                     subject="translations").one()
+    # for tr_atom in translation_atoms:
+    #     client = DBSession.query(Client).filter_by(id=tr_atom.client_id).one()
+    #     user = DBSession.query(User).filter_by(id=client.user_id).one()
+    #     new_group = Group(parent=atom_base, subject_client_id=tr_atom.client_id,
+    #                       subject_object_id=tr_atom.object_id)
+    #     user.groups.append(new_group)
+    admin = DBSession.query(User).filter_by(id=1).one()
+    # gist_group = Group(parent=gist_base, subject_override=True)
+    # admin.groups.append(gist_group)
+    # atom_group = Group(parent=atom_base, subject_override=True)
+    # admin.groups.append(atom_group)
+
+    return {}
+
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
 def main_get(request):
