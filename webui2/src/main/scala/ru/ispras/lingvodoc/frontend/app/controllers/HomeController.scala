@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
-import ru.ispras.lingvodoc.frontend.app.model.{DictionaryQuery, Language, Perspective}
+import ru.ispras.lingvodoc.frontend.app.model.{CompositeId, DictionaryQuery, Language, Perspective}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.concurrent.Future
@@ -40,6 +40,15 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
         backend.getDictionaryPerspectives(dictionary, onlyPublished = true) onComplete {
           case Success(perspectives) =>
             dictionary.perspectives = perspectives.toJSArray
+
+            perspectives.foreach(p => {
+              if (p.metadata.contains("location") && p.metadata.contains("authors")) {
+                backend.getPerspectiveMeta(CompositeId.fromObject(dictionary), CompositeId.fromObject(p), Seq("location", "authors"))
+              }
+            })
+
+
+
           case Failure(e) =>
         }
       }
