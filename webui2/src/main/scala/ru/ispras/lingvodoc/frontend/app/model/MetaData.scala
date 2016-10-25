@@ -2,7 +2,10 @@ package ru.ispras.lingvodoc.frontend.app.model
 
 import upickle.Js
 
-case class MetaData(name: String, value: String) {}
+case class MetaData(name: String, value: String) {
+
+
+}
 
 object MetaData {
 
@@ -15,9 +18,18 @@ object MetaData {
 
   implicit val reader = upickle.default.Reader[MetaData] {
     case js: Js.Obj =>
-      val name = js("name").asInstanceOf[Js.Str].value
-      val value = js("login").asInstanceOf[Js.Str].value
-      MetaData(name, value)
+      val metaType = js("type").str
+
+
+      metaType match {
+        case "authors" =>
+        case "location" =>
+        case _ =>
+      }
+
+
+
+      MetaData("", "")
   }
 }
 

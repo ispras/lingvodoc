@@ -496,6 +496,25 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
+
+  def getPerspectiveMeta(dictionaryId: CompositeId, perspectiveId: CompositeId, metadata: Seq[String]): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/meta"
+
+    $http.post[js.Dictionary[js.Any]](getMethodUrl(url), write(metadata)) onComplete {
+      case Success(response) =>
+
+        response.foreach {case (key, value) => console.log(key) }
+
+
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to get perspective metadata", e))
+    }
+    p.future
+  }
+
+
   def setPerspectiveMeta(dictionary: Dictionary, perspective: Perspective, metadata: MetaData) = {
     val p = Promise[Unit]()
     val url = ""
@@ -1150,7 +1169,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
     createTranslationGist("Dictionary") map {
       gistId =>
-        Future.sequence(names.map(name => createTranslationAtom(gistId, name))) map {
+        Future.sequence(names.filter(_.str.nonEmpty).map(name => createTranslationAtom(gistId, name))) map {
           _ =>
             val req = js.Dynamic.literal("translation_gist_client_id" -> gistId.clientId,
               "translation_gist_object_id" -> gistId.objectId,
@@ -1175,13 +1194,13 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
-  def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[CompositeId] = {
-    val p = Promise[CompositeId]()
+  def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[Seq[CompositeId]] = {
+    val p = Promise[Seq[CompositeId]]()
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/complex_create"
     $http.post[js.Dynamic](getMethodUrl(url), req.toJSArray) onComplete {
       case Success(response) =>
         try {
-          val id = read[CompositeId](js.JSON.stringify(response))
+          val id = read[Seq[CompositeId]](js.JSON.stringify(response))
           p.success(id)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Failed to create perspective.", e))

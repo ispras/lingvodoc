@@ -3,6 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
@@ -243,10 +244,8 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
 
   @JSExport
   def finish() = {
-    compilePerspective(scope.layers) map { f =>
-      f map {
-        _ => scope.step = 3
-      }
+    compilePerspective(scope.layers) foreach { _ =>
+      scope.step = 3
     }
   }
 
@@ -318,7 +317,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     p.future
   }
 
-  private[this] def compilePerspective(layers: Seq[Layer]) = {
+  private[this] def compilePerspective(layers: Seq[Layer]): Future[Seq[CompositeId]] = {
 
     val getField: (String) => Option[Field] = (fieldId: String) => {
       scope.fields.find(_.getId == fieldId)
@@ -360,10 +359,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
       }
     }
 
-    Future.sequence(con) map {
-      ff => console.log(ff.toJSArray)
-        backend.createPerspectives(scope.dictionaryId.get, ff)
-    }
+    Future.sequence(con) flatMap { backend.createPerspectives(scope.dictionaryId.get, _) }
   }
 
   private[this] def createField(fieldType: FieldEntry): Future[Field] = {
