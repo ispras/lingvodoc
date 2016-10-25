@@ -6,14 +6,12 @@ from pyramid.response import Response
 from pyramid.view import view_config
 from lingvodoc.models import (
     DBSession,
-    Dictionary,
     Locale,
     TranslationAtom,
     TranslationGist,
     BaseGroup,
-    Group,
-    Client,
-    User
+    User,
+    Field
 )
 
 from sqlalchemy import (
@@ -109,6 +107,30 @@ def all_locales(request):
         locale_json['created_at'] = locale.created_at.timestamp()
         locale_json['id'] = locale.id
         response.append(locale_json)
+    request.response.status = HTTPOk.code
+    return response
+
+
+def dict_ids(obj):
+    return {"client_id": obj.client_id,
+            "object_id": obj.object_id}
+
+
+@view_config(route_name='corpora_fields', renderer='json', request_method='GET')
+def corpora_fields(request):
+    response = list()
+    data_type_query = DBSession.query(Field) \
+        .join(TranslationGist,
+              and_(Field.translation_gist_object_id == TranslationGist.object_id,
+                   Field.translation_gist_client_id == TranslationGist.client_id))\
+        .join(TranslationGist.translationatom)
+    sound_field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                         TranslationAtom.content == 'Sound').one() # todo: a way to find this fields if wwe cannot use one
+    markup_field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                          TranslationAtom.content == 'Praat markup').one()
+    response.append(dict_ids(sound_field))
+    response[0]['contains'] = [dict_ids(markup_field)]
+    response.append(dict_ids(markup_field))
     request.response.status = HTTPOk.code
     return response
 
