@@ -127,19 +127,21 @@ from collections import deque
 
 
 def entity_content(xx, publish, root, delete_self=False):
+    publishing_entity= xx.publishingentity
+    published = publishing_entity.published
+    accepted = publishing_entity.accepted
+    if publish and not published:
+        return None
+
     if delete_self and xx.self_client_id and xx.self_object_id:
         # from pdb import set_trace
         # set_trace()
 
         return None
-    additional_metadata = None
-    if hasattr(xx, "additional_metadata"):
-        if xx.additional_metadata:
-            additional_metadata = xx.additional_metadata
-    locale_id = None
-    if hasattr(xx, "locale_id"):
-        locale_id = xx.locale_id
+    additional_metadata = xx.additional_metadata
+    locale_id = xx.locale_id
     contains = list()
+
     tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
         TranslationAtom.parent_client_id == TranslationGist.client_id,
         TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
@@ -153,27 +155,7 @@ def entity_content(xx, publish, root, delete_self=False):
             Entity.link_object_id == LexicalEntry.object_id)).filter(
             Entity.client_id == xx.client_id, Entity.object_id == xx.object_id).first()
         contains = recursive_content(lex_entry, publish, False)
-    # if 'ноготь_БИН.wav ' in xx.content:
-    #     from pdb import set_trace
-    #     set_trace()
-    #     print('sound')
-
-    # if tr_atom.content == 'sound':
-        # from pdb import set_trace
-        # set_trace()
-        # print('sound')
-    # if xx.entity:
-    #     from pdb import set_trace
-    #     set_trace()
-    #     print('sound')
-
     contains += recursive_content(xx, publish, True)  # todo: check nested entities handling
-    published = False
-    if xx.publishingentity.published:
-        published = True
-    accepted = False
-    if xx.publishingentity.accepted:
-        accepted = True
     info = {'level': xx.__tablename__,
             'object_id': xx.object_id,
             'client_id': xx.client_id,
@@ -203,24 +185,12 @@ def recursive_content(self, publish, root=True, delete_self=False):  # TODO: com
     :return:
     """
     vec = list()
-    # This code may IS much faster.
-    # m = filter(lambda x: x[1].direction.name == "ONETOMANY" and hasattr(self, str(x[0])),
-    #            inspect(type(self)).relationships.items())
-    # for (name, relationship) in m:
-    #     entry_content = getattr(self, str(name))
-    #     for xx in entry_content:
     for xx in self.entity:
         info = entity_content(xx, publish, root, delete_self)
-        # print(type(info))
-        # print(info)
         if not info:
             continue
-        if publish and not info['published']:
-            continue
-        # if info['contains']:
-        #     log.debug(info['contains'])
-        #     ents = list(info['contains'])
-        #     # TODO: check published handling
+        # if publish and not info['published']:
+        #     continue
         vec.append(info)
     return vec
 
