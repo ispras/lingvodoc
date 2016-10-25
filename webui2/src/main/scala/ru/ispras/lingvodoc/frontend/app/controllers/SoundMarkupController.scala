@@ -14,11 +14,8 @@ import scala.scalajs.js.annotation.JSExport
 
 @js.native
 trait SoundMarkupScope extends Scope {
-  var elanJS: js.Dynamic = js.native
-  // oh shit
-  var tiersJSForTabs: js.Array[js.Dynamic] = js.native
+  var elanJS: js.Dynamic = js.native // view representation of the document
 
-  var ws: WaveSurfer = js.native // for debugging, remove later
   var spectrogramEnabled: Boolean = js.native
   var timelineEnabled: Boolean = js.native
 
@@ -78,29 +75,21 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // used to reduce number of digest cycles while playing
   var onPlayingCounter = 0
 
-  //  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
-  //    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
-  //      case markup => parseMarkup(markup)
-  //    }
-  //  })
-
   if (markupAddress.nonEmpty) {
     parseMarkup(markupAddress.get)
-  } else {
-    if (markupData.nonEmpty) {
+  } else if (markupData.nonEmpty) {
       parseDataMarkup(markupData.get)
-    }
+  }
+  else {
+    console.warn("Neither markup address nor the markup itself were passed")
   }
 
-  // add scope to window for debugging
-  dom.window.asInstanceOf[js.Dynamic].myScope = scope
+  // add scope to window for debugging, very useful
+   dom.window.asInstanceOf[js.Dynamic].myScope = scope
 
-  // merge viewDataDiff into scope's elanJS
-  def updateVD(viewDataDiff: js.Dynamic): Unit = {
-    jQuery.extend(true, scope.elanJS, viewDataDiff)
-    // some mumbo jumbo
-//    val tierForTabs = mutable.Seq.empty[js.Dynamic]
-    scope.tiersJSForTabs = js.Dynamic.global.tiersJSForTabsFromElanJS(scope.elanJS).asInstanceOf[js.Array[js.Dynamic]]
+  // Update view data
+  def updateVD(): Unit = {
+    elan.foreach(e => scope.elanJS = e.toJS)
   }
 
   def pxPerSec = _pxPerSec
@@ -109,8 +98,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
     console.log(s"fullws width was ${scope.fullWSWidth}, window size is ${WSAndTiersWidth}")
     _pxPerSec = mpps
     console.log(s"pxpersec now ${_pxPerSec}")
-    val viewDataDiff = elan.map(_.setPxPerSec(pxPerSec))
-    viewDataDiff.foreach(updateVD)
+    elan.map(_.setPxPerSec(pxPerSec))
+    updateVD()
     isWSNeedsToForceAngularRefresh = false
     waveSurfer.foreach(_.zoom(mpps))
     updateFullWSWidth()
@@ -190,10 +179,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
     * otherwise
     * 2) On the other hand, we can't fully render template without WS instance because we need sound's duration to
     * calculate right distances.
-    * 4) In principle, we can start loading eaf file before or after view is loaded, however real elan will not
+    * 3) In principle, we can start loading eaf file before or after view is loaded, however real elan will not
     *   be available to view in either case, because eaf query is async, at least right now, with dummy jQuery get.
-    * 5) So, loading goes like this:
-    *   a) Controller's constructor executed, get EAF query is sent;
+    * 4) So, loading goes like this:
+    *   a) Controller's constructor is executed, get EAF query is sent;
     *   b) View is loaded with dummy distances, WS width is not known at the moment, real elan doesn't exists --
     *      a dummy stub is used instead.
     *   c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
@@ -221,8 +210,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
       waveSurfer.foreach(_.on("ready", wsReady _)) // bind playing event
       waveSurfer.foreach(_.on("finish", onWSPlayingStop _)) // bind stop playing event
 
-      scope.ws = waveSurfer.get // for debug only, remove later
-
       WSAndTiers = js.Dynamic.global.document.getElementById("WSAndTiers")
     } // do not write anything here, outside if!
   }
@@ -242,12 +229,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
   def parseMarkup(markupAddress: String): Unit = {
-    updateVD(ELANDocumentJquery.getDummy.toJS) // to avoid errors while it is not yet loaded
+    elan = Some(ELANDocumentJquery.getDummy) // to avoid errors while it is not yet loaded
+    updateVD()
     val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
       val test_markup = data.toString
       try {
         elan = Some(ELANDocumentJquery(test_markup, pxPerSec))
-        elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD(e.toJS)})
+        elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD()})
         // TODO: apply() here? if markup will be loaded later than sound
 //        console.log(scope.elan.toString)
       } catch {
@@ -264,7 +252,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def parseDataMarkup(elanMarkup: String) = {
     try {
       elan = Some(ELANDocumentJquery(elanMarkup, pxPerSec))
-      elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD(e.toJS)})
+      elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD()})
     } catch {
       case e: Exception =>
         console.error(e.getStackTrace.mkString("\n"))

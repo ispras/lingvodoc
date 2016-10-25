@@ -84,19 +84,43 @@ class ELANDocumentJquery private(annotDocXML: JQuery, private var pxPerSec: Doub
     }
   }
 
-  // assign to tiers their real indexes
-  def fixOrder(): Unit = {
-    tiers.zipWithIndex.foreach{case (tier, index) => tier.index = index}
-  }
-
   // convert documnt to JS, i.e. to view representation
+  /**
+    * Convert document to JS, i.e. to view representation. An example showing it's structure:
+    *  elanDoc = {
+    *      'numberOfTiers': 1,
+    *      'tiers': [
+    *        {
+    *            'ID': 't1',
+    *            'timeAlignable': true,
+    *            'stereotype': 'Top level',
+    *            'annotations': [
+    *                {
+    *                    'text': 'грузите',
+    *                    'startOffset': 250.0,
+    *                    'durationOffset': 50.0,
+    *                    'endOffset': 300
+    *                },
+    *                {
+    *                    'text': 'бочки',
+    *                    'startOffset': 300.0,
+    *                    'durationOffset': 50.0,
+    *                    'endOffset': 350.0
+    *                }
+    *            ]
+    *        },
+    *        {
+    *            'ID': 't2',
+    *            ...
+    *        }
+    *      ]
+    *  };
+    *
+    */
   def toJS = {
     val document = mutable.Map.empty[String, js.Dynamic]
     document("numberOfTiers") = tiers.length.asInstanceOf[js.Dynamic]
-    fixOrder()
-    val tiersJS: mutable.Map[String, js.Dynamic] =
-      collection.mutable.Map() ++ tiers.map(tier => tier.getID -> tier.toJS).toMap
-    document("tiers") = tiersJS.toJSDictionary.asInstanceOf[js.Dynamic]
+    document("tiers") = tiers.map(_.toJS).toJSArray.asInstanceOf[js.Dynamic]
     document.toJSDictionary.asInstanceOf[js.Dynamic]
   }
 

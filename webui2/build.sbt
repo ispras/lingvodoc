@@ -39,6 +39,3 @@ jsDependencies += "org.webjars.bower" % "bootstrap-validator" % "0.10.2"  / "0.1
 jsDependencies += ProvidedJS / "wavesurfer.min.js"
 jsDependencies += ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js"
 jsDependencies += ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js"
-
-// additional things in native JS
-jsDependencies += ProvidedJS / "utils.js"

@@ -33,9 +33,6 @@ trait ITier[+AnnotType <: IAnnotation] {
   @JSExport
   def annotationsToJSArray: js.Dynamic
 
-  // index which is used in the view
-  var index: Int
-
   def toJS: js.Dynamic
 
   // get root document
@@ -54,8 +51,6 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
   val defaultLocale = to.defaultLocale
   val owner = to.owner
 
-  var index: Int = _
-
   def getLT = linguisticTypeRef
   def getID = tierID
   def annotationsToJSArray = getAnnotations.toJSArray.asInstanceOf[js.Dynamic]
@@ -71,12 +66,8 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
     val tierJS = mutable.Map.empty[String, js.Dynamic]
     tierJS("ID") = getID.asInstanceOf[js.Dynamic]
     tierJS("timeAlignable") = timeAlignable.asInstanceOf[js.Dynamic]
-    tierJS("index") = index.asInstanceOf[js.Dynamic]
     tierJS("stereotype") = stereotype.asInstanceOf[js.Dynamic]
-
-    val annotationsJS: mutable.Map[String, js.Dynamic] =
-      collection.mutable.Map() ++ getAnnotations.map(annot => annot.getID -> annot.toJS).toMap
-    tierJS("annotations") = annotationsJS.toJSDictionary.asInstanceOf[js.Dynamic]
+    tierJS("annotations") = getAnnotations.map(_.toJS).toJSArray.asInstanceOf[js.Dynamic]
     tierJS.toJSDictionary.asInstanceOf[js.Dynamic]
   }
 
