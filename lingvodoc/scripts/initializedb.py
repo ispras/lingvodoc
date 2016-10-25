@@ -390,8 +390,6 @@ def data_init(manager, accounts):
                     admin_account.groups.append(adm_group)
         DBSession.flush()
 
-
-
         if test_init:
             try:
                 test_account = User(login="Test",

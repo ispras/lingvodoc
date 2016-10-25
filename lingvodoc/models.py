@@ -135,7 +135,7 @@ def entity_content(xx, publish, root, delete_self=False):
     additional_metadata = None
     if hasattr(xx, "additional_metadata"):
         if xx.additional_metadata:
-            additional_metadata = json.loads(xx.additional_metadata)  # TODO: check if json.loads json.dumps is excessive
+            additional_metadata = xx.additional_metadata
     locale_id = None
     if hasattr(xx, "locale_id"):
         locale_id = xx.locale_id
@@ -238,7 +238,7 @@ def recursive_content(self, publish, root=True, delete_self=False):  # TODO: com
 #                 additional_metadata = None
 #                 if hasattr(xx, "additional_metadata"):
 #                     if xx.additional_metadata:
-#                         additional_metadata = json.loads(xx.additional_metadata)
+#                         additional_metadata = xx.additional_metadata
 #                 locale_id = None
 #                 if hasattr(xx, "locale_id"):
 #                     locale_id = xx.locale_id
@@ -739,7 +739,7 @@ class LexicalEntry(CompositeIdMixin,
         came_from = None
         meta = None
         if self.additional_metadata:
-            meta = json.loads(self.additional_metadata)
+            meta = self.additional_metadata
         if meta:
             if 'came_from' in meta:
                 came_from = meta['came_from']
