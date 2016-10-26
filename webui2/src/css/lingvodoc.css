@@ -52,11 +52,6 @@
 }
 
 /* eaf (sound markup) editing staff */
-.sm-selection-rectangle {
-    fill: blue;
-    opacity: 0.2;
-}
-
 .sm-tier {
     opacity: 0.2;
 }

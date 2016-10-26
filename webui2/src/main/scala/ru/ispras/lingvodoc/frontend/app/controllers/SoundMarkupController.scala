@@ -1,43 +1,37 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import org.scalajs.dom
-import ru.ispras.lingvodoc.frontend.app.controllers.soundmarkupviewdata.{ELANDocumentJS, TierJS}
-import ru.ispras.lingvodoc.frontend.extras.elan.annotation.IAnnotation
-import ru.ispras.lingvodoc.frontend.extras.elan.tier.ITier
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.core.{Scope, Timeout}
-import com.greencatsoft.angularjs.{AbstractController, Angular, AngularExecutionContextProvider, injectable}
-import ru.ispras.lingvodoc.frontend.app.model.{Dictionary, Language, Perspective}
-import ru.ispras.lingvodoc.frontend.extras.facades._
-import ru.ispras.lingvodoc.frontend.extras.elan.{ELANDocumentJquery, ELANPArserException, Utils}
-import org.scalajs.dom.{EventTarget, console}
-import org.singlespaced.d3js.{Selection, d3}
+import com.greencatsoft.angularjs.{AbstractController, injectable}
+import org.scalajs.dom
+import org.scalajs.dom.console
 import org.scalajs.jquery._
-
-import scala.scalajs.js
-import js.JSConverters._
-import scala.collection.mutable
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.extras.elan.ELANDocument
+import ru.ispras.lingvodoc.frontend.extras.facades._
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
+/**
+  * About EAF document representation. To make Angular quickly update the view, We should have 2 representations:
+  * on Scala side and on JS side. On Scala side, original XML is parsed using Scala data structures and methods.
+  * However, for faster rendering we convert it to plain JS data structure consisting of arrays and objects.
+  * See method ELANDocument.toJS for example of JS representation.
+  * Here in code, scope.elanJS is JS representation, and SoundMarkupController.elan is Scala representation.
+  * Method updateVD is used to update JS representation.
+  */
+
 @js.native
 trait SoundMarkupScope extends Scope {
-  var elanJS: js.Dynamic = js.native
-  // oh shit
-  var tiersJSForTabs: js.Array[js.Dynamic] = js.native
+  var elanJS: js.Dynamic = js.native // view representation of the document
 
-  var ws: WaveSurfer = js.native // for debugging, remove later
   var spectrogramEnabled: Boolean = js.native
   var timelineEnabled: Boolean = js.native
 
   var ruler: Double = js.native // coordinate of wavesurfer ruler
-  var tierWidth: Int = js.native // displayed tier width in pixels
-  var tiersNameWidth: Int = js.native // column with tier names width in pixels
-  var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas
+  var tierHeight: Int = js.native // displayed tier height in pixels
+  var tierNameHeight: Int = js.native // field with tier name height in pixels
+  var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas, including hidden part
   var fullWSHeight: Int = js.native // height of wavesurfer, consists of heights of wavesurfer and its plugins
-
-  var tierMenuOptions: js.Array[js.Any] = js.native
-  var annotMenuOptions: js.Array[js.Any] = js.native
 }
 
 @injectable("SoundMarkupController")
@@ -47,13 +41,15 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             backend: BackendService,
                             val timeout: Timeout,
                             params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[SoundMarkupScope](scope) with AngularExecutionContextProvider {
-  var elan: Option[ELANDocumentJquery] = None
+  extends AbstractController[SoundMarkupScope](scope) {
+  var elan: Option[ELANDocument] = None
   scope.elanJS = js.Dynamic.literal()
 
-  scope.tierWidth = 50
-  scope.tiersNameWidth = 140
+  scope.tierHeight = 50
+  scope.tierNameHeight = 140
 
+  // see comment to createWaveSurfer
+  private var createWaveSurferTriggered = false
   var waveSurfer: Option[WaveSurfer] = None // WS object
   var spectrogram: Option[js.Dynamic] = None
   var timeline: Option[js.Dynamic] = None
@@ -62,10 +58,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // fake value to avoid division by zero; on ws load, it will be set correctly
   private var _duration: Double = 42.0
   scope.fullWSWidth = 0.0 // again, will be known after audio load
+  // div containing wavesurfer and drawn tiers, used to retrieve attributes
+  var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
   // size of the window (div) with waveform and svg containing canvas. It is only needed to restrict maximal zoom out
   private var WSAndTiersWidth = 0.0
 
-  var wsHeight = 128
+  private var _wsHeight = 0 // height of wavesurfer without plugins, a parameter for creating WaveSurfer object
   private var _wsSpectrogramHeight = 0
   private var _wsTimelineHeight = 0
   updateFullWSHeight()
@@ -74,18 +72,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
   val markupAddress = params.get("markupAddress").map(_.toString)
   val markupData = params.get("markupData").map(_.toString)
 
-
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
-  // listen to svg mouseover while true, ignore it when false
-  var svgIsMouseDown = false
-  // true after first drag event, false after dragend
-  var isDragging = false
-  // true when we move right border of selection rectangle, false when left
-  var rightBorderIsMoving = true
-  // true when ws finished loading
-  var isWSReady = false
   // When wsSeek is called because user clicked on it, we must manually call apply, because it is not ng-click.
   // However, in ome other cases, e.g. when user clicks on svg and then we update WS ruler, apply must not be called --
   // set this flag to false in such situations.
@@ -94,36 +83,21 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // used to reduce number of digest cycles while playing
   var onPlayingCounter = 0
 
-  // d3 selection rectangle element
-  var selectionRectangle: Option[Selection[EventTarget]] = None
-  // div containing wavesurfer and drawn tiers
-  var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
-
-  //  (dictionaryClientId, dictionaryObjectId).zipped.foreach((dictionaryClientId, dictionaryObjectId) => {
-  //    backend.getSoundMarkup(dictionaryClientId, dictionaryObjectId) onSuccess {
-  //      case markup => parseMarkup(markup)
-  //    }
-  //  })
-
   if (markupAddress.nonEmpty) {
     parseMarkup(markupAddress.get)
-  } else {
-    if (markupData.nonEmpty) {
+  } else if (markupData.nonEmpty) {
       parseDataMarkup(markupData.get)
-    }
+  }
+  else {
+    console.warn("Neither markup address nor the markup itself were passed")
   }
 
-  setMenuOptions()
+  // add scope to window for debugging, very useful
+   dom.window.asInstanceOf[js.Dynamic].myScope = scope
 
-  // add scope to window for debugging
-  dom.window.asInstanceOf[js.Dynamic].myScope = scope
-
-  // merge viewDataDiff into scope's elanJS
-  def updateVD(viewDataDiff: js.Dynamic): Unit = {
-    jQuery.extend(true, scope.elanJS, viewDataDiff)
-    // some mumbo jumbo
-//    val tierForTabs = mutable.Seq.empty[js.Dynamic]
-    scope.tiersJSForTabs = js.Dynamic.global.tiersJSForTabsFromElanJS(scope.elanJS).asInstanceOf[js.Array[js.Dynamic]]
+  // Update view data
+  def updateVD(): Unit = {
+    elan.foreach(e => scope.elanJS = e.toJS)
   }
 
   def pxPerSec = _pxPerSec
@@ -132,8 +106,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
     console.log(s"fullws width was ${scope.fullWSWidth}, window size is ${WSAndTiersWidth}")
     _pxPerSec = mpps
     console.log(s"pxpersec now ${_pxPerSec}")
-    val viewDataDiff = elan.map(_.setPxPerSec(pxPerSec))
-    viewDataDiff.foreach(updateVD)
+    elan.map(_.setPxPerSec(pxPerSec))
+    updateVD()
     isWSNeedsToForceAngularRefresh = false
     waveSurfer.foreach(_.zoom(mpps))
     updateFullWSWidth()
@@ -149,6 +123,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   def updateFullWSWidth() = {
     scope.fullWSWidth = pxPerSec * duration
+  }
+
+  def wsHeight = _wsHeight
+
+  def wsHeight_=(newHeight: Int) = {
+    _wsHeight = newHeight
+    updateFullWSHeight()
   }
 
   def wsSpectrogramHeight = _wsSpectrogramHeight
@@ -170,15 +151,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
     scope.fullWSHeight = wsHeight + wsSpectrogramHeight + wsTimelineHeight
   }
 
-  def setMenuOptions() = {
-    val tierMenuOptions = new BootstrapContextMenu().addOpt(
-      MenuOption("New Annotation Here",  newAnnotationHere _, Some({isNewAnnotationAllowedHere _}: js.Function1[js.Dynamic, Boolean]))
-    )
-    scope.tierMenuOptions = tierMenuOptions.toJS
-    scope.annotMenuOptions = tierMenuOptions.addOpt(
-      MenuOption("Edit Annotation Value", editAnnotationValue _, Some({_: js.Dynamic => false}: js.Function1[js.Dynamic, Boolean]))
-    ).toJS
-  }
+  // EAF document is loaded?
+  @JSExport
+  def isDocumentLoaded = elan.isDefined
+  // wavesurfer is loaded?
+  @JSExport
+  def isWSReady = waveSurfer.isDefined
 
   def drawSpectrogram() = {
     spectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
@@ -223,10 +201,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
     * otherwise
     * 2) On the other hand, we can't fully render template without WS instance because we need sound's duration to
     * calculate right distances.
-    * 4) In principle, we can start loading eaf file before or after view is loaded, however real elan will not
+    * 3) In principle, we can start loading eaf file before or after view is loaded, however real elan will not
     *   be available to view in either case, because eaf query is async, at least right now, with dummy jQuery get.
-    * 5) So, loading goes like this:
-    *   a) Controller's constructor executed, get EAF query is sent;
+    * 4) So, loading goes like this:
+    *   a) Controller's constructor is executed, get EAF query is sent;
     *   b) View is loaded with dummy distances, WS width is not known at the moment, real elan doesn't exists --
     *      a dummy stub is used instead.
     *   c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
@@ -235,38 +213,37 @@ class SoundMarkupController(scope: SoundMarkupScope,
     *   e) When sound is fully loaded, wsReady is triggered and executed. Angular is forced to update the view, and final
     */
 
-  // hack to initialize controller after loading the view
+  // hack to initialize controller after loading the view, otherwise wavesurfer will not find it's div
   // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
+  // createWaveSurferTriggered is needed to call this only once
   @JSExport
   def createWaveSurfer(): Unit = {
-    if (waveSurfer.isEmpty) {
-      // params should be synchronized with sm-ruler css
-      val wso = WaveSurferOpts(SoundMarkupController.wsDivName, waveColor = "violet", progressColor = "purple",
-        cursorWidth = 1, cursorColor = "red",
-        fillParent = false, minPxPerSec = pxPerSec, scrollParent = false,
-        height = scope.fullWSHeight)
-      waveSurfer = Some(WaveSurfer.create(wso))
-      (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
+    if (!createWaveSurferTriggered) {
+      createWaveSurferTriggered = true
+      soundAddress.foreach(sa => {
+        // params should be synchronized with sm-ruler css
+        val wso = WaveSurferOpts(SoundMarkupController.wsDivName, waveColor = "violet", progressColor = "purple",
+          cursorWidth = 1, cursorColor = "red",
+          fillParent = false, minPxPerSec = pxPerSec, scrollParent = false,
+          height = 128)
+        val ws = WaveSurfer.create(wso)
         ws.load(sa)
+        ws.on("seek", onWSSeek _) // bind seek event
+        ws.on("audioprocess", onWSPlaying _) // bind playing event
+        ws.on("ready", wsReady(wso, ws)(_: js.Dynamic)) // bind playing event
+        ws.on("finish", onWSPlayingStop _) // bind stop playing event
       })
-      waveSurfer.foreach(_.on("seek", onWSSeek _)) // bind seek event
-      waveSurfer.foreach(_.on("audioprocess", onWSPlaying _)) // bind playing event
-      waveSurfer.foreach(_.on("ready", wsReady _)) // bind playing event
-      waveSurfer.foreach(_.on("finish", onWSPlayingStop _)) // bind stop playing event
 
-      scope.ws = waveSurfer.get // for debug only, remove later
-
-      selectionRectangle = Some(d3.select("#selectionRect"))
       WSAndTiers = js.Dynamic.global.document.getElementById("WSAndTiers")
     } // do not write anything here, outside if!
   }
 
   // called when audio is loaded and WS object is ready
-  def wsReady(event: js.Dynamic): Unit = {
+  def wsReady(wso: WaveSurferOpts, ws: WaveSurfer)(event: js.Dynamic): Unit = {
     console.log("ws ready!")
-    isWSReady = true
-    duration = getDuration
-    updateFullWSWidth()
+    duration = ws.getDuration()
+    wsHeight = wso.height
+    waveSurfer = Some(ws)
     scope.$apply({})
 
     // learn visible ws window width to restrict useless zooming out
@@ -276,29 +253,27 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
   def parseMarkup(markupAddress: String): Unit = {
-    updateVD(ELANDocumentJquery.getDummy.toJS) // to avoid errors while it is not yet loaded
     val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
-      val test_markup = data.toString
-      try {
-        elan = Some(ELANDocumentJquery(test_markup, pxPerSec))
-        elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD(e.toJS)})
-        // TODO: apply() here? if markup will be loaded later than sound
-//        console.log(scope.elan.toString)
-      } catch {
-        case e: Exception =>
-          console.error(e.getStackTrace.mkString("\n"))
-          throw e
-      }
-      scope.ruler = 0
+      parseDataMarkup(data.toString)
     }
-
+    // TODO: replace with API call?
     jQuery.get(markupAddress, success = action, dataType = "text")
   }
 
+
   def parseDataMarkup(elanMarkup: String) = {
     try {
-      elan = Some(ELANDocumentJquery(elanMarkup, pxPerSec))
-      elan.foreach(e => {scope.elanJS = js.Dynamic.literal(); updateVD(e.toJS)})
+      val e = ELANDocument(elanMarkup, pxPerSec)
+      // To render offsets correctly, we need to know sound's duration. If wavesurfer is not yet loaded, the only
+      // way to approximately learn it is just take the last timeslot time
+      if (!isWSReady) {
+        duration = e.getLastTimeSlotValueSec
+      }
+      elan = Some(e)
+      updateVD()
+      // in case if markup will be loaded later than sound -- hardly possible, of course
+      scope.$apply()
+      // console.log(elan.toString)
     } catch {
       case e: Exception =>
         console.error(e.getStackTrace.mkString("\n"))
@@ -308,19 +283,12 @@ class SoundMarkupController(scope: SoundMarkupScope,
   }
 
 
-
-  @JSExport // TODO removeme
-  def getDuration = { if (isWSReady) waveSurfer.get.getDuration() else 42.0 }
-
-  @JSExport // TODO removeme
-  def getCurrentTime = { if (isWSReady) waveSurfer.get.getCurrentTime() else 42.0 }
-
   /**
     * We have several metrics fully characterizing point in time:
-    * 1) Offset in pxs from svg left border
-    * 2) Progress in [0..1] of full sound duration
-    * 3) Time in seconds, double
-    * 4) Time in milliseconds, Long or String, if called from JS
+    * 1) Offset in pxs from svg left border, we need them for rendering
+    * 2) Progress in [0..1] of full sound duration, we get if from ws object instance
+    * 3) Time in seconds, double, converted milliseconds from EAF
+    * 4) Time in milliseconds, Long or String (the latter if called from JS), used in EAF
     */
 
   def offsetToProgress(offset: Double) = offset / scope.fullWSWidth
@@ -427,106 +395,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def onSVGSeek(event: js.Dynamic): Unit = {
     console.log("svg seeking")
     svgSeek(event.offsetX.asInstanceOf[Double])
-  }
-
-  // called on svg mouse down, prepares for dragging
-  @JSExport
-  def onSVGMouseDown(event: js.Dynamic): Unit = {
-    if (event.which.asInstanceOf[Int] == 1) {
-      console.log("svg mouse down")
-      svgIsMouseDown = true
-      isDragging = false
-    }
-  }
-
-  @JSExport
-  // called on svg mouse up, finished dragging
-  def onSVGMouseUp(event: js.Dynamic): Unit = {
-    console.log("svg mouse up")
-    svgIsMouseDown = false
-  }
-
-  @JSExport
-  // called on svg mouse moving and extends/shrinks the selection rectangle if mouse down event happened earlier
-  def onSVGMouseMove(event: js.Dynamic): Unit = {
-    if (!svgIsMouseDown)
-      return
-
-//    console.log(s"mouse moving at offset ${event.offsetX}")
-    val cursorX = Math.min(scope.fullWSWidth, Math.max(0, event.offsetX.toString.toDouble))
-    if (!isDragging) { // executed on first mouse move event
-      selectionRectangle.foreach(_.attr("x", cursorX).attr("width", 0))
-      isDragging = true
-    }
-    else { // executed on every subsequent mouse move event
-      val oldX = getSelectionRectangleLeftBorderOffset
-      val oldWidth = getSelectionRectangleWidthOffset
-
-      if ((rightBorderIsMoving && cursorX > oldX) ||
-          (!rightBorderIsMoving && cursorX >= oldX + oldWidth)) {
-        if (!rightBorderIsMoving) // first event with right border moving, just after changing left to right
-          selectionRectangle.foreach(_.attr("x", oldX + oldWidth).attr("width", cursorX - oldX - oldWidth))
-        else // right border is still moving
-          selectionRectangle.foreach(_.attr("width", cursorX - oldX))
-        rightBorderIsMoving = true
-      }
-      else {
-        if (rightBorderIsMoving) // first event after right -> left border moving
-          selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX - cursorX))
-        else // left border is still moving
-          selectionRectangle.foreach(_.attr("x", cursorX).attr("width", oldX + oldWidth - cursorX))
-        rightBorderIsMoving = false
-      }
-
-      svgSeek(cursorX)
-    }
-  }
-
-  def getSelectionRectangleLeftBorderOffset = selectionRectangle.map(_.attr("x").toString.toDouble).getOrElse(0.0)
-  def getSelectionRectangleWidthOffset = selectionRectangle.map(_.attr("width").toString.toDouble).getOrElse(0.0)
-
-  def getSelectionRectangleLeftBorderMillis = Utils.sec2Millis(offsetToSec(getSelectionRectangleLeftBorderOffset))
-  def getSelectionRectangleRightBorderMillis = Utils.sec2Millis(offsetToSec(
-    getSelectionRectangleLeftBorderOffset + getSelectionRectangleWidthOffset)
-  )
-
-  @JSExport // TODO removeme
-  def leftBorderMillis = getSelectionRectangleLeftBorderMillis.toString
-  @JSExport // TODO removemeedit
-  def rightBorderMillis = getSelectionRectangleRightBorderMillis.toString
-
-  // These functions used context menu options
-  def isNewAnnotationAllowedHere(itemScope: js.Dynamic): Boolean = {
-    console.log("isNewAnnotationAllowedHere called")
-    false
-  }
-
-  def newAnnotationHere(itemScope: js.Dynamic): Unit = {
-    console.log(s"creating new annotation on tier ${itemScope.tier.asInstanceOf[ITier[IAnnotation]].getID}")
-    console.log("CALLLED")
-  }
-
-  def editAnnotationValue(itemScope: js.Dynamic): Unit = {
-    val annotID = itemScope.annotID.toString
-    val annot = elan.get.getAnnotationByIDChecked(annotID)
-    console.log(s"editing annotation value on annot ${annot.getID}")
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/editTextField.html"
-    options.controller = "EditTextFieldController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "sm"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(originalValue = annot.text.asInstanceOf[js.Object],
-                           invitation = "Enter Annotation Value".asInstanceOf[js.Object])
-      }
-    ).asInstanceOf[js.Dictionary[js.Any]]
-
-    val instance = modal.open[String](options)
-    instance.result map {
-      case newVal: String => console.log(s"new value for annotation ${annot.getID} is $newVal")
-    }
   }
 }
 
