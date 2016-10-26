@@ -49,6 +49,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   scope.tierHeight = 50
   scope.tierNameHeight = 140
 
+  // see comment to createWaveSurfer
+  private var createWaveSurferTriggered = false
   var waveSurfer: Option[WaveSurfer] = None // WS object
   var spectrogram: Option[js.Dynamic] = None
   var timeline: Option[js.Dynamic] = None
@@ -62,20 +64,20 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // size of the window (div) with waveform and svg containing canvas. It is only needed to restrict maximal zoom out
   private var WSAndTiersWidth = 0.0
 
-  var wsHeight = 128 // height of wavesurfer without plugins, a parameter for creating WaveSurfer object
+  private var _wsHeight = 0 // height of wavesurfer without plugins, a parameter for creating WaveSurfer object
   private var _wsSpectrogramHeight = 0
   private var _wsTimelineHeight = 0
   updateFullWSHeight()
 
-  val soundAddress = params.get("soundAddress").map(_.toString)
+  //  val soundAddress = params.get("soundAddress").map(_.toString)
+  val soundAddress: Option[String] = None
   val markupAddress = params.get("markupAddress").map(_.toString)
+//  val markupAddress = None
   val markupData = params.get("markupData").map(_.toString)
 
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
 
-  // true when ws finished loading
-  var isWSReady = false
   // When wsSeek is called because user clicked on it, we must manually call apply, because it is not ng-click.
   // However, in ome other cases, e.g. when user clicks on svg and then we update WS ruler, apply must not be called --
   // set this flag to false in such situations.
@@ -126,6 +128,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
     scope.fullWSWidth = pxPerSec * duration
   }
 
+  def wsHeight = _wsHeight
+
+  def wsHeight_=(newHeight: Int) = {
+    _wsHeight = newHeight
+    updateFullWSHeight()
+  }
+
   def wsSpectrogramHeight = _wsSpectrogramHeight
 
   def wsSpectrogramHeight_=(newHeight: Int) = {
@@ -144,6 +153,13 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def updateFullWSHeight() = {
     scope.fullWSHeight = wsHeight + wsSpectrogramHeight + wsTimelineHeight
   }
+
+  // EAF document is loaded?
+  @JSExport
+  def isDocumentLoaded = elan.isDefined
+  // wavesurfer is loaded?
+  @JSExport
+  def isWSReady = waveSurfer.isDefined
 
   def drawSpectrogram() = {
     spectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
@@ -200,35 +216,37 @@ class SoundMarkupController(scope: SoundMarkupScope,
     *   e) When sound is fully loaded, wsReady is triggered and executed. Angular is forced to update the view, and final
     */
 
-  // hack to initialize controller after loading the view
+  // hack to initialize controller after loading the view, otherwise wavesurfer will not find it's div
   // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
+  // createWaveSurferTriggered is needed to call this only once
   @JSExport
   def createWaveSurfer(): Unit = {
-    if (waveSurfer.isEmpty) {
-      // params should be synchronized with sm-ruler css
-      val wso = WaveSurferOpts(SoundMarkupController.wsDivName, waveColor = "violet", progressColor = "purple",
-        cursorWidth = 1, cursorColor = "red",
-        fillParent = false, minPxPerSec = pxPerSec, scrollParent = false,
-        height = scope.fullWSHeight)
-      waveSurfer = Some(WaveSurfer.create(wso))
-      (waveSurfer, soundAddress).zipped.foreach((ws, sa) => {
+    if (!createWaveSurferTriggered) {
+      createWaveSurferTriggered = true
+      soundAddress.foreach(sa => {
+        // params should be synchronized with sm-ruler css
+        val wso = WaveSurferOpts(SoundMarkupController.wsDivName, waveColor = "violet", progressColor = "purple",
+          cursorWidth = 1, cursorColor = "red",
+          fillParent = false, minPxPerSec = pxPerSec, scrollParent = false,
+          height = 128)
+        val ws = WaveSurfer.create(wso)
         ws.load(sa)
+        ws.on("seek", onWSSeek _) // bind seek event
+        ws.on("audioprocess", onWSPlaying _) // bind playing event
+        ws.on("ready", wsReady(wso, ws)(_: js.Dynamic)) // bind playing event
+        ws.on("finish", onWSPlayingStop _) // bind stop playing event
       })
-      waveSurfer.foreach(_.on("seek", onWSSeek _)) // bind seek event
-      waveSurfer.foreach(_.on("audioprocess", onWSPlaying _)) // bind playing event
-      waveSurfer.foreach(_.on("ready", wsReady _)) // bind playing event
-      waveSurfer.foreach(_.on("finish", onWSPlayingStop _)) // bind stop playing event
 
       WSAndTiers = js.Dynamic.global.document.getElementById("WSAndTiers")
     } // do not write anything here, outside if!
   }
 
   // called when audio is loaded and WS object is ready
-  def wsReady(event: js.Dynamic): Unit = {
+  def wsReady(wso: WaveSurferOpts, ws: WaveSurfer)(event: js.Dynamic): Unit = {
     console.log("ws ready!")
-    isWSReady = true
-    duration = getDuration
-    updateFullWSWidth()
+    duration = ws.getDuration()
+    wsHeight = wso.height
+    waveSurfer = Some(ws)
     scope.$apply({})
 
     // learn visible ws window width to restrict useless zooming out
@@ -238,8 +256,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
 
   def parseMarkup(markupAddress: String): Unit = {
-    elan = Some(ELANDocument.getDummy) // to avoid errors while it is not yet loaded
-    updateVD()
     val action = (data: js.Dynamic, textStatus: String, jqXHR: js.Dynamic) => {
       parseDataMarkup(data.toString)
     }
@@ -250,11 +266,17 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   def parseDataMarkup(elanMarkup: String) = {
     try {
-      elan = Some(ELANDocument(elanMarkup, pxPerSec))
+      val e = ELANDocument(elanMarkup, pxPerSec)
+      // To render offsets correctly, we need to know sound's duration. If wavesurfer is not yet loaded, the only
+      // way to approximately learn it is just take the last timeslot time
+      if (!isWSReady) {
+        duration = e.getLastTimeSlotValueSec
+      }
+      elan = Some(e)
       updateVD()
       // in case if markup will be loaded later than sound -- hardly possible, of course
       scope.$apply()
-      //        console.log(scope.elan.toString)
+      // console.log(elan.toString)
     } catch {
       case e: Exception =>
         console.error(e.getStackTrace.mkString("\n"))
@@ -263,13 +285,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
     scope.ruler = 0
   }
 
-
-
-  @JSExport
-  def getDuration = { if (isWSReady) waveSurfer.get.getDuration() else 42.0 }
-
-  @JSExport
-  def getCurrentTime = { if (isWSReady) waveSurfer.get.getCurrentTime() else 42.0 }
 
   /**
     * We have several metrics fully characterizing point in time:

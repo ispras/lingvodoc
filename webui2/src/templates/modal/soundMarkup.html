@@ -11,7 +11,7 @@
 
     <br>
 
-    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()" ng-if="controller.isWSReady">
         <span class="glyphicon glyphicon-play">Play/Pause full</span>
     </button>
 
@@ -23,19 +23,20 @@
         <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
     </button>
 
-    <label>
+    <label ng-if="controller.isWSReady">
         <input type="checkbox" ng-model="spectrogramEnabled" ng-change="controller.toggleSpectrogramEnable()"/>
         Draw a spectrogram. Warning: it may take a long time.
     </label>
 
-    <label>
+    <label  ng-if="controller.isWSReady">
         <input type="checkbox" ng-model="timelineEnabled" ng-change="controller.toggleTimelineEnable()"/>
         Draw a timeline
     </label>
 
     <div>
         <!-- tier names -->
-        <svg ng-attr-width="{{tierNameHeight}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
+        <svg ng-if="controller.isDocumentLoaded"
+             ng-attr-width="{{tierNameHeight}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
              style="float:left" ng-style="{'margin-top': fullWSHeight}">
             <svg x="0" ng-attr-y="{{$index * tierHeight}}" ng-repeat="tierData in elanJS.tiers">
                 <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tierNameHeight}}" y2="0">
@@ -47,12 +48,12 @@
         </svg>
 
         <div id="WSAndTiers" style="overflow-x: scroll" ng-style="{'margin-left': tierNameHeight}">
-            <div id="waveform" ng-style="{'width': fullWSWidth}">{{ controller.createWaveSurfer() }}</div>
+            <div id="waveform" >{{ controller.createWaveSurfer() }}</div>
             <div id="wavespectrogram"></div>
             <div id="wavetimeline"></div>
 
             <!-- section with tiers -->
-            <svg id="soundSVG"
+            <svg id="soundSVG" ng-if="controller.isDocumentLoaded"
                  ng-attr-width="{{fullWSWidth}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
                  ng-click="controller.onSVGSeek($event)"
                  ng-mouseup="controller.onSVGMouseUp($event)" ng-mousedown="controller.onSVGMouseDown($event)"

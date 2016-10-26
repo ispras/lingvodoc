@@ -84,7 +84,11 @@ class ELANDocument private(annotDocXML: JQuery, private var pxPerSec: Double) {
     }
   }
 
-  // convert documnt to JS, i.e. to view representation
+  // get time of the last timeslot in milliseconds
+  def getLastTimeSlotValue: Long = timeOrder.timeSlots.values.max.getOrElse(0)
+  // and in seconds
+  def getLastTimeSlotValueSec: Double = Utils.millis2Sec(getLastTimeSlotValue)
+
   /**
     * Convert document to JS, i.e. to view representation. An example showing it's structure:
     *  elanDoc = {
@@ -225,7 +229,6 @@ object ELANDocument {
 // Represents TIME_ORDER element
 @JSExportAll
 class TimeOrder(timeOrderXML: JQuery) {
-  // Scala.js doesn't support Long, we are forced to use Int instead
   var timeSlots = Utils.jQuery2List(timeOrderXML.find(TimeOrder.tsTagName)).map(tsJquery => {
     tsJquery.attr(TimeOrder.tsIdAttrName).get -> tsJquery.attr(TimeOrder.tvAttrName).toOption.map(_.toLong)
   }).toMap // timeslots without values are allowed by the specification
