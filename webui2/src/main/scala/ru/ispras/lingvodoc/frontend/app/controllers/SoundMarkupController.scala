@@ -69,10 +69,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   private var _wsTimelineHeight = 0
   updateFullWSHeight()
 
-  //  val soundAddress = params.get("soundAddress").map(_.toString)
-  val soundAddress: Option[String] = None
+  val soundAddress = params.get("soundAddress").map(_.toString)
   val markupAddress = params.get("markupAddress").map(_.toString)
-//  val markupAddress = None
   val markupData = params.get("markupData").map(_.toString)
 
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
