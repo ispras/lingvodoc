@@ -182,7 +182,7 @@ def edit_dictionary(request):  # tested & in docs
 
                     old_meta = dictionary.additional_metadata
                     old_meta.update(additional_metadata)
-                    dictionary.additional_metadata = old_
+                    dictionary.additional_metadata = old_meta
                 request.response.status = HTTPOk.code
                 return response
         request.response.status = HTTPNotFound.code
