@@ -1269,8 +1269,11 @@ def all_perspective_authors(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
         authors = DBSession.query(User).join(User.clients).join(Entity, Entity.client_id == Client.id) \
-            .join(Entity.parent) \
-            .filter(LexicalEntry.parent == parent)
+            .join(Entity.parent).join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent_client_id == parent.client_id,
+                    LexicalEntry.parent_object_id == parent.object_id,
+                    LexicalEntry.marked_for_deletion == False,
+                    Entity.marked_for_deletion == False)
         response = [o.id for o in authors.all()]
         request.response.status = HTTPOk.code
         return response
@@ -1288,8 +1291,11 @@ def all_perspective_clients(request):
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
         clients = DBSession.query(Client).join(Entity, Entity.client_id == Client.id) \
-            .join(Entity.parent) \
-            .filter(LexicalEntry.parent == parent)
+            .join(Entity.parent).join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent_client_id == parent.client_id,
+                    LexicalEntry.parent_object_id == parent.object_id,
+                    LexicalEntry.marked_for_deletion == False,
+                    Entity.marked_for_deletion == False)
         response = [o.id for o in clients.all()]
         request.response.status = HTTPOk.code
         return response
@@ -1339,8 +1345,7 @@ def lexical_entries_all(request):
         #     .offset(start_from).limit(count)
         lexes = DBSession.query(LexicalEntry).join(LexicalEntry.entity).join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion == False,
-                    Entity.marked_for_deletion == False,
-                    PublishingEntity.accepted == True)
+                    Entity.marked_for_deletion == False)
         if authors or clients:
             lexes = lexes.join(Client, Entity.client_id == Client.id)
         if authors:
@@ -1398,8 +1403,7 @@ def lexical_entries_all_count(request):  # tested
         lexical_entries_count = DBSession.query(LexicalEntry).join(LexicalEntry.entity) \
             .join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion == False,
-                    Entity.marked_for_deletion == False,
-                    PublishingEntity.accepted == True)
+                    Entity.marked_for_deletion == False)
         if authors or clients or start_date or end_date:
             lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
         if authors or clients:
@@ -1468,7 +1472,6 @@ def lexical_entries_published(request):
         lexes = DBSession.query(LexicalEntry) \
             .join(LexicalEntry.entity).join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, PublishingEntity.published == True,
-                    PublishingEntity.accepted == True,
                     Entity.marked_for_deletion == False, LexicalEntry.marked_for_deletion == False)
         if authors or clients:
             lexes = lexes.join(Client, Entity.client_id == Client.id)
@@ -1584,7 +1587,6 @@ def lexical_entries_published_count(request):
             lexical_entries_count = DBSession.query(LexicalEntry) \
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
                 .filter(LexicalEntry.parent == parent, PublishingEntity.published == True,
-                        PublishingEntity.accepted == True,
                         Entity.marked_for_deletion == False, LexicalEntry.marked_for_deletion == False)
             if authors or clients or start_date or end_date:
                 lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)

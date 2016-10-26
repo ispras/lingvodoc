@@ -498,8 +498,8 @@ class Dictionary(CompositeIdMixin,
     __parentname__ = 'Language'
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     additional_metadata = Column(JSONB)
-    category = Column(SLBigInteger, default=0)
-    domain = Column(SLBigInteger, default=0)
+    category = Column(Integer, default=0)
+    domain = Column(Integer, default=0)
 
 
 # class Corpora(CompositeIdMixin,
