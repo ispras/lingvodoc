@@ -497,23 +497,30 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
   }
 
 
-  def getPerspectiveMeta(dictionaryId: CompositeId, perspectiveId: CompositeId, metadata: Seq[String]): Future[Unit] = {
-    val p = Promise[Unit]()
+  def getPerspectiveMeta(dictionaryId: CompositeId, perspectiveId: CompositeId, metadata: Seq[String]): Future[MetaData] = {
+    val p = Promise[MetaData]()
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) +
       "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/meta"
 
     $http.post[js.Dictionary[js.Any]](getMethodUrl(url), write(metadata)) onComplete {
       case Success(response) =>
-
-        response.foreach {case (key, value) => console.log(key) }
-
-
-        p.success(())
+        val meta = read[MetaData](JSON.stringify(response))
+        p.success(meta)
       case Failure(e) => p.failure(BackendException("Failed to get perspective metadata", e))
     }
     p.future
+
   }
 
+  def getPerspectiveMeta(perspective: Perspective): Future[MetaData] = {
+    val dictionaryId = CompositeId(perspective.parentClientId, perspective.parentObjectId)
+    val perspectiveId = CompositeId.fromObject(perspective)
+    if (perspective.metadata.nonEmpty) {
+      getPerspectiveMeta(dictionaryId, perspectiveId, perspective.metadata)
+    } else {
+      Future.successful(MetaData())
+    }
+  }
 
   def setPerspectiveMeta(dictionary: Dictionary, perspective: Perspective, metadata: MetaData) = {
     val p = Promise[Unit]()
