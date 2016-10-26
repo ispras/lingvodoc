@@ -170,7 +170,8 @@ def entity_content(xx, publish, root, delete_self=False):
             'published': published,
             'accepted': accepted,
             'marked_for_deletion': xx.marked_for_deletion,
-            'created_at': str(xx.created_at)}
+            'created_at': str(xx.created_at),
+            'entity_type':xx.field.get_translation(2)}
     if xx.link_client_id and xx.link_object_id:
         info['link_client_id'] = xx.link_client_id
         info['link_object_id'] = xx.link_object_id
