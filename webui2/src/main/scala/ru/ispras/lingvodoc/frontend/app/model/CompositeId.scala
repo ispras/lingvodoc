@@ -2,6 +2,9 @@ package ru.ispras.lingvodoc.frontend.app.model
 
 import upickle.Js
 
+import scala.scalajs.js.annotation.JSExportAll
+
+@JSExportAll
 case class CompositeId(override val clientId: Int, override val objectId: Int) extends Object(clientId, objectId)
 
 

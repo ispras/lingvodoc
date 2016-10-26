@@ -6,20 +6,18 @@ import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
-import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.{Any, UndefOr}
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import scala.scalajs.js.JSConverters._
-
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 
 
 @js.native
 trait HomeScope extends Scope {
   var languages: js.Array[Language] = js.native
-  var authors: js.Array[js.Dynamic] = js.native
 }
 
 @JSExport
@@ -29,19 +27,14 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
     with LoadingPlaceholder
     with AngularExecutionContextProvider {
 
+
+  private[this] var perspectiveMeta = Seq[PerspectiveMeta]()
+
   scope.languages = js.Array[Language]()
-  scope.authors = js.Array[js.Dynamic]()
 
   @JSExport
   def getPerspectiveAuthors(perspective: Perspective): UndefOr[String] = {
-
-    console.log(scope.authors.length)
-    console.log(perspective.getId)
-
-    scope.authors.find(_.id.asInstanceOf[String] == perspective.getId) match {
-      case Some(x) => x.authors.asInstanceOf[String]
-      case None => ""
-    }
+    perspectiveMeta.find(_.getId == perspective.getId).flatMap(_.metaData.authors.map(_.authors)).orUndefined
   }
 
   private[this] def setPerspectives(languages: Seq[Language]): Unit = {
@@ -50,16 +43,6 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
         backend.getDictionaryPerspectives(dictionary, onlyPublished = true) onComplete {
           case Success(perspectives) =>
             dictionary.perspectives = perspectives.toJSArray
-
-            perspectives.filter(_.metadata.nonEmpty).foreach(p => {
-              backend.getPerspectiveMeta(p) map { meta =>
-                meta.authors.foreach { authors =>
-                  if (authors.authors.nonEmpty) {
-                    scope.authors.push(js.Dynamic.literal("id" -> p.getId, "authors" -> authors.authors))
-                  }
-                }
-              }
-            })
           case Failure(e) =>
         }
       }
@@ -82,11 +65,14 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
   }
 
   doAjax(() => {
-    backend.allStatuses() map { _ =>
-      backend.getPublishedDictionaries map { languages =>
+    backend.allPerspectivesMeta flatMap { p =>
+      perspectiveMeta = p
+      backend.allStatuses() flatMap { _ =>
+        backend.getPublishedDictionaries map { languages =>
           setPerspectives(languages)
           scope.languages = languages.toJSArray
           languages
+        }
       }
     }
   })

@@ -368,6 +368,25 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     getPerspective(CompositeId(clientId, objectId))
   }
 
+
+
+  def perspectives(): Future[Seq[Perspective]] = {
+    val p = Promise[Seq[Perspective]]()
+    $http.get[js.Dynamic](getMethodUrl("perspectives")) onComplete {
+      case Success(response) =>
+        try {
+          p.success(read[Seq[Perspective]](js.JSON.stringify(response)))
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspectives json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspectives data. Missing some " +
+            "required fields: ", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get perspective: ", e))
+    }
+    p.future
+  }
+
+
   /**
     * Get perspective by id
     *
@@ -531,6 +550,29 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     }
     p.future
   }
+
+
+  def allPerspectivesMeta: Future[Seq[PerspectiveMeta]] = {
+    val p = Promise[Seq[PerspectiveMeta]]()
+    val url = "perspectives_meta"
+    $http.get[js.Any](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+
+        try {
+          val metaDataList = read[Seq[PerspectiveMeta]](JSON.stringify(response))
+          p.success(metaDataList)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspectives metadata json.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspectives metadata. Missing some required fields.", e))
+          case e: Throwable => p.failure(BackendException("Failed to get metadata list. Unexpected exception", e))
+        }
+
+      case Failure(e) => p.failure(BackendException("Failed to get metadata list", e))
+    }
+    p.future
+  }
+
+
 
   /**
     * Get information about current user
@@ -1379,6 +1421,24 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
+
+  def blob(blobId: CompositeId): Future[File] = {
+    val p = Promise[File]()
+
+    val url = "blobs/" + encodeURIComponent(blobId.clientId.toString) +
+      "/" + encodeURIComponent(blobId.objectId.toString)
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(read[File](js.JSON.stringify(response)))
+        } catch {
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get blob", e))
+    }
+    p.future
+  }
 
 
 

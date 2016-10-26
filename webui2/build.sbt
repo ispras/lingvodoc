@@ -51,3 +51,6 @@ jsDependencies += ProvidedJS / "contextMenu.js"
 jsDependencies += ProvidedJS / "utils.js"
 
 jsDependencies += ProvidedJS / "leaflet.js"
+jsDependencies += ProvidedJS / "oms.min.js" dependsOn "leaflet.js"
+
+

@@ -4,10 +4,19 @@ import upickle.Js
 import upickle.default._
 import derive.key
 
+import scala.scalajs.js.annotation.JSExportAll
+
+@JSExportAll
 case class Authors(@key("type") `type`: String, @key("content") authors: String)
+
+@JSExportAll
 case class Location(@key("type") `type`: String, @key("content") location: LatLng)
 
-case class MetaData(authors: Option[Authors] = Option.empty[Authors], location: Option[Location] = Option.empty[Location]) {}
+case class Blob(@key("type") `type`: String, @key("content") blob: CompositeId)
+
+
+@JSExportAll
+case class MetaData(authors: Option[Authors] = Option.empty[Authors], location: Option[Location] = Option.empty[Location], info: Seq[Blob] = Seq[Blob]()) {}
 
 object MetaData {
 
@@ -42,6 +51,16 @@ object MetaData {
         case None => None
       }
 
-      MetaData(authors, location)
+      import org.scalajs.dom.console
+      try {
+        val blobs = js.value.find(_._1 == "info").map(_._2.obj("content").arr.map { e => readJs[Blob](e("info")) }).toSeq.flatten
+        MetaData(authors, location, blobs)
+      } catch {
+        case e: Throwable =>
+          console.log(e.getMessage)
+          MetaData(authors, location, Seq.empty[Blob])
+      }
+
+
   }
 }
