@@ -1442,9 +1442,15 @@ def lexical_entries_published(request):
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
+    preview_mode = False
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
+
+        if (parent.state == 'Limited access' or parent.parent.state == 'Limited access') and "view:lexical_entries_and_entities:" + client_id + ":" + object_id not in request.effective_principals:
+            log.debug("PREVIEW MODE")
+            preview_mode = True
+
         field = DBSession.query(Field) \
             .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
                                         Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
@@ -1499,6 +1505,13 @@ def lexical_entries_published(request):
         for entry in lexes.all():
             result.append(entry.track(True))
         response = list(result)
+        if preview_mode:
+            if int(start_from) > 0 or int(count) > 20:
+                for i in response:
+                    for j in i['contains']:
+                        j['content'] = 'Entity hidden: you \nhave only demo access'
+                        j['contains'] = 'Entity hidden: you \nhave only demo access'
+
 
         request.response.status = HTTPOk.code
         return response
