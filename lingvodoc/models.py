@@ -16,7 +16,8 @@ from sqlalchemy import (
     ForeignKey,
     Table,
     UniqueConstraint,
-    and_
+    and_,
+    tuple_
 )
 
 from sqlalchemy.types import (
@@ -722,6 +723,27 @@ class LexicalEntry(CompositeIdMixin,
                     "marked_for_deletion": self.marked_for_deletion,
                     "came_from": came_from}
         return response
+
+    @classmethod
+    def track1(cls, publish, lexs):
+        log.debug(lexs)
+        a = DBSession.query(Entity)\
+            .join(LexicalEntry.entity)\
+            .join(Entity.publishingentity)\
+            .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(lexs))
+        # join TranslationGist, join TranslationAtom
+        # .join(TranslationGist,
+        #       and_(Entity.field_client_id == TranslationGist.client_id, Entity.field_object_id == TranslationGist.object_id)) \
+        #     .join(TranslationAtom) \
+        #     # map Lexical entries on ents
+        a.all()
+        for i in a.all():
+            log.debug(i.client_id)
+        ents_tuples = [(ent.client_id, ent.object_id) for ent in a]
+
+
+        log.debug("Works a")
+        return []
 
 
 class Entity(CompositeIdMixin,

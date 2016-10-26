@@ -1501,9 +1501,12 @@ def lexical_entries_published(request):
         # lexes = list()
 
         result = deque()
+        # for entry in lexes.all():
+        #     result.append(entry.track(True))
 
-        for entry in lexes.all():
-            result.append(entry.track(True))
+        lexes_composite_list = [(lex.client_id, lex.object_id) for lex in lexes.all()]
+        result = LexicalEntry.track1(True, lexes_composite_list)
+
         response = list(result)
         if preview_mode:
             if int(start_from) > 0 or int(count) > 20:
