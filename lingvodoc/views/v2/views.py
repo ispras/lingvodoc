@@ -143,7 +143,7 @@ def all_data_types(request):
     import json
 
     response = list()
-    for data_type in ['Text', 'Image', 'Sound', 'Praat markup', 'ELAN markup', 'Link']:
+    for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link']:
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
