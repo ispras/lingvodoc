@@ -11,6 +11,7 @@ libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.1"
 libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.3.9"
 libraryDependencies += "com.greencatsoft" %%% "scalajs-angular" % "0.8-SNAPSHOT"
 libraryDependencies += "io.surfkit" %%% "scalajs-google-maps" % "0.1-SNAPSHOT"
+libraryDependencies += "io.plasmap" %%% "pamphlet" % "0.9-SNAPSHOT"
 libraryDependencies += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
 libraryDependencies += "be.doeraene" %%% "scalajs-jquery" % "0.9.0" // jquery facade, used for xml parsing
 libraryDependencies += "org.singlespaced" %%% "scalajs-d3" % "0.3.3" // d3 facade, used for eaf editing
@@ -48,3 +49,5 @@ jsDependencies += ProvidedJS / "contextMenu.js"
 
 // additional things in native JS
 jsDependencies += ProvidedJS / "utils.js"
+
+jsDependencies += ProvidedJS / "leaflet.js"

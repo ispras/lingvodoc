@@ -1176,7 +1176,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
     createTranslationGist("Dictionary") map {
       gistId =>
-        Future.sequence(names.map(name => createTranslationAtom(gistId, name))) map {
+        Future.sequence(names.filter(_.str.nonEmpty).map(name => createTranslationAtom(gistId, name))) map {
           _ =>
             val req = js.Dynamic.literal("translation_gist_client_id" -> gistId.clientId,
               "translation_gist_object_id" -> gistId.objectId,
@@ -1201,13 +1201,13 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
-  def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[CompositeId] = {
-    val p = Promise[CompositeId]()
+  def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[Seq[CompositeId]] = {
+    val p = Promise[Seq[CompositeId]]()
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/complex_create"
     $http.post[js.Dynamic](getMethodUrl(url), req.toJSArray) onComplete {
       case Success(response) =>
         try {
-          val id = read[CompositeId](js.JSON.stringify(response))
+          val id = read[Seq[CompositeId]](js.JSON.stringify(response))
           p.success(id)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Failed to create perspective.", e))
