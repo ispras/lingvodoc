@@ -5,7 +5,8 @@ from sqlalchemy.orm import (
     sessionmaker,
     relationship,
     backref,
-    query
+    query,
+    aliased
 )
 
 from sqlalchemy import (
@@ -727,23 +728,32 @@ class LexicalEntry(CompositeIdMixin,
     @classmethod
     def track1(cls, publish, lexs):
         log.debug(lexs)
-        a = DBSession.query(Entity)\
+        included_parts = DBSession.query(Entity)\
             .join(LexicalEntry.entity)\
             .join(Entity.publishingentity)\
-            .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(lexs))
+            .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(lexs))\
+            .cte(name='included_parts', recursive=True)
+
+        incl_alias = aliased(included_parts, name='pr')
+        parts_alias = aliased(Entity, name='p')
+
+        included_parts = included_parts.union_all(
+            DBSession.query(parts_alias).filter(and_(Entity.client_id == incl_alias.c.link_client_id, Entity.object_id == incl_alias.c.link_object_id))
+        )
+        #http://10.10.17.214:6543/dictionary/57/2/perspective/57/3/all?start_from=0&count=20
         # join TranslationGist, join TranslationAtom
         # .join(TranslationGist,
         #       and_(Entity.field_client_id == TranslationGist.client_id, Entity.field_object_id == TranslationGist.object_id)) \
         #     .join(TranslationAtom) \
         #     # map Lexical entries on ents
-        a.all()
-        for i in a.all():
-            log.debug(i.client_id)
-        ents_tuples = [(ent.client_id, ent.object_id) for ent in a]
+        a = DBSession.query(included_parts).all()
+        for i in a:
+            log.debug(i.parent_object_id)
+        #ents_tuples = [(ent.client_id, ent.object_id) for ent in a]
 
 
         log.debug("Works a")
-        return []
+        return ['a', 'b']
 
 
 class Entity(CompositeIdMixin,
