@@ -599,7 +599,8 @@ def configure_routes(config):
     # {"blob_client_id": <id>, "blob_object_id": <id>, "parent_client_id": <language_client_id>, "parent_object_id": <language_object_id>}
     config.add_route(name='convert_dictionary', pattern='/convert')  # tested
     config.add_route(name='convert_dictionary_check', pattern='/convert_check')  # tested
-
+    config.add_route(name='convert_dictionary_dialeqt', pattern='/convert_dictionary_dialeqt')  # TODO: dododo
+    config.add_route(name='convert_dictionary_dialeqt_get_info', pattern='/convert_dictionary_dialeqt_get_info/{blob_client_id}/{blob_object_id}')  # TODO: dododo
     # Check the documentation in celery_test.view.py
     # config.add_route(name='test_queue_set', pattern='/test_queue_set')
     # config.add_route(name='test_queue_get', pattern='/test_queue_get')
