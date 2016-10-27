@@ -311,7 +311,7 @@ def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     return storage_path, filename
 
 
-def create_object(content, obj, data_type, filename, folder_name, json_input=True):
+def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
     import errno
     # here will be object storage write as an option. Fallback (default) is filesystem write
     #settings = request.registry.settings
@@ -327,7 +327,7 @@ def create_object(content, obj, data_type, filename, folder_name, json_input=Tru
     filename = str(data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
     real_location = openstack_upload(content,obj, filename, data_type, 'test')
     """
-    storage_path, filename = object_file_path(obj, "/home/igor/objects/", folder_name, filename, True)
+    storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
     directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
     try:
         os.makedirs(directory)
@@ -342,8 +342,8 @@ def create_object(content, obj, data_type, filename, folder_name, json_input=Tru
 
     real_location = storage_path
 
-    url = "".join(("http://localhost:6543/",
-                  "objects/",
+    url = "".join((storage["prefix"],
+                  storage["static_route"],
                   obj.__tablename__,
                   '/',
                   folder_name,
@@ -353,12 +353,10 @@ def create_object(content, obj, data_type, filename, folder_name, json_input=Tru
                   filename))
     return real_location, url
 
-audio_hash_id = {}
-
 
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content= None, filename=None,
-                  link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2):  # tested
+                  link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2, storage=None):  # tested
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
@@ -394,7 +392,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
         pass
         ##entity.data_type = data_type
-        real_location, url = create_object(content, entity, data_type, filename, folder_name)
+        real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
         entity.content = url
         old_meta = entity.additional_metadata
         need_hash = True
@@ -430,7 +428,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
 
 
 def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                        user_id, is_a_regular_form, client):
+                        user_id, is_a_regular_form, client, storage):
     log = logging.getLogger(__name__)
     sound_field = "Sound"
     markup_field = "Markup"
@@ -471,7 +469,7 @@ def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audi
             audio_sequence.append((ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
                                     None, client, filename, audio))
             lvl = create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
-                    None, client, filename=filename, content=base64.urlsafe_b64encode(audio).decode(), folder_name=folder_name)
+                    None, client, filename=filename, content=base64.urlsafe_b64encode(audio).decode(), folder_name=folder_name, storage=storage)
             markup_hashes.add(markup_hash)
         if markup and markup_hash not in markup_hashes:
             if lvl:
@@ -480,7 +478,7 @@ def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audi
                     filename = "%s.TextGrid" % filename
                 markup_hashes.add(markup_hash)
                 create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[markup_field][0], fields_dict[markup_field][1],
-                        None, client, filename=filename, content=base64.urlsafe_b64encode(markup).decode(), folder_name=folder_name, up_lvl=lvl) #audio_hash_id[audio_hash])
+                        None, client, filename=filename, content=base64.urlsafe_b64encode(markup).decode(), folder_name=folder_name, up_lvl=lvl, storage=storage)
                 markup__without_audio_sequence.append((audio_hash, markup_hash))
 
             if len(markup__without_audio_sequence) > 50:
@@ -526,7 +524,7 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
     return translation.content
 
 
-def convert_db_new(manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id,
+def convert_db_new(manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
                    locale_id=2):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
@@ -552,21 +550,20 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                 pass
         dict_attributes = get_dict_attributes(sqconn)
 
-        ######################
+        """
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
         DBSession.add(translationgist)
         DBSession.flush()
         gist_client_id = translationgist.client_id
         gist_object_id = translationgist.object_id
-        ######################
+        """
         parent_client_id = gist_client_id
         parent_object_id = gist_object_id
 
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        log.debug("point 5")
         if not parent.marked_for_deletion:
 
-            ####################
+            """
             translationatom = TranslationAtom(client_id=client.id,
                                               parent=parent,
                                               locale_id=locale_id,
@@ -579,7 +576,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
             log.debug(dict_attributes["dictionary_name"])
             language_client_id = atom_client_id
             language_object_id = atom_object_id
-            ####################
+            """
             lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
 
             resp = translation_service_search("WiP")
@@ -855,7 +852,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                 if column == "translation":
                     name = "Translation"
                 create_entity(ids_dict[fp_le_id_dict[row_id]][0], ids_dict[fp_le_id_dict[row_id]][1], fp_fields_dict[name][0], fp_fields_dict[name][1],
-                    None, client, content, filename=None)
+                    None, client, content, filename=None, storage=storage)
         # Second Perspective entity
         sqcursor = sqconn.cursor()
         for column in columns:
@@ -871,7 +868,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                 if column == "translation":
                     name = "Translation of Paradigmatic forms"
                 create_entity(ids_dict2[sp_le_id_dict[row_id]][0], ids_dict2[sp_le_id_dict[row_id]][1], sp_fields_dict[name][0], sp_fields_dict[name][1],
-                    None, client, content, filename=None)
+                    None, client, content, filename=None, storage=storage)
         sqcursor = sqconn.cursor()
         sqcursor.execute("select id,regular_form from dictionary where is_a_regular_form=0")
         for le_cursor in sqcursor:
@@ -879,15 +876,15 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
             sp_id = int(le_cursor[0])
             if fp_id in ids_mapping:
                 create_entity(ids_dict[fp_le_id_dict[fp_id]][0], ids_dict[fp_le_id_dict[fp_id]][1], fp_fields_dict["Backref"][0], fp_fields_dict["Backref"][1],
-                    None, client, filename=None, link_client_id=ids_dict2[sp_le_id_dict[sp_id]][0], link_object_id=ids_dict2[sp_le_id_dict[sp_id]][1])
+                    None, client, filename=None, link_client_id=ids_dict2[sp_le_id_dict[sp_id]][0], link_object_id=ids_dict2[sp_le_id_dict[sp_id]][1], storage=storage)
                 create_entity(ids_dict2[sp_le_id_dict[sp_id]][0], ids_dict2[sp_le_id_dict[sp_id]][1], sp_fields_dict["Backref"][0], sp_fields_dict["Backref"][1],
-                    None, client, filename=None, link_client_id=ids_dict[fp_le_id_dict[fp_id]][0], link_object_id=ids_dict[fp_le_id_dict[fp_id]][1])
+                    None, client, filename=None, link_client_id=ids_dict[fp_le_id_dict[fp_id]][0], link_object_id=ids_dict[fp_le_id_dict[fp_id]][1], storage=storage)
         #DBSession.flush()
         # if req.get('is_translatable', None):
         #         field.is_translatable = bool(req['is_translatable'])
         audio_hashes = set()
         markup_hashes = set()
-        DBSession.flush() #####
+        DBSession.flush()
         """
         perspective_search = server_url + 'dictionary/%s/%s/perspective/%s/%s/all' % (dictionary['client_id'],
                                                                                             dictionary['object_id'],
@@ -935,7 +932,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
 
         folder_name = "praat_markup"
         upload_audio_with_markup(ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
-                            user_id, True, client)
+                            user_id, True, client, storage)
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
                                                     blobs.secblob,
@@ -949,7 +946,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                                                     and dictionary.is_a_regular_form=0;""")
         folder_name = "paradigm_praat_markup"
         upload_audio_with_markup(ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
-                            user_id, True, client)
+                            user_id, True, client, storage)
         """
         Etimology_tag
         """
@@ -1001,7 +998,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
         return dictionary
 
 
-def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, sqlalchemy_url):
+def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, sqlalchemy_url, storage):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     engine = create_engine(sqlalchemy_url)
@@ -1015,7 +1012,7 @@ def convert_all(blob_client_id, blob_object_id, language_client_id, language_obj
     sqconn = sqlite3.connect(filename)
     log.debug("Connected to sqlite3 database")
     try:
-        status = convert_db_new(transaction.manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id)
+        status = convert_db_new(transaction.manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)
