@@ -130,9 +130,10 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   val MapId = "lingvodoc_ispras_ru"
   val Attribution = "Map data &copy; <a href=\"http://openstreetmap.org\">OpenStreetMap</a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"http://mapbox.com\">Mapbox</a>"
 
-  val x = 51.198f
-  val y = 6.78f
-  val z = 14
+  // 61.5240° N, 105.3188° E
+  val x = 61.5240f
+  val y = 105.3188f
+  val z = 3
 
   val uri = s"http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
   val tileLayerOptions = TileLayerOptions

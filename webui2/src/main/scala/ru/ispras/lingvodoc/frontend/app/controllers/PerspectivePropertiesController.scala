@@ -5,6 +5,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{ModalInstance, ModalOptions, M
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
@@ -24,6 +25,8 @@ trait PerspectivePropertiesScope extends Scope {
   var locales: js.Array[Locale] = js.native
   var layers: js.Array[Layer] = js.native
   var fields: js.Array[Field] = js.native
+  var pageLoaded: Boolean = js.native
+
 }
 
 
@@ -34,7 +37,9 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
                                       backend: BackendService,
                                       val timeout: Timeout,
                                       params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[PerspectivePropertiesScope](scope) with AngularExecutionContextProvider {
+  extends AbstractController[PerspectivePropertiesScope](scope)
+    with AngularExecutionContextProvider
+    with LoadingPlaceholder {
 
   private[this] val dictionary = params("dictionary").asInstanceOf[Dictionary]
   private[this] val perspective = params("perspective").asInstanceOf[Perspective]
@@ -49,9 +54,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   scope.locales = js.Array[Locale]()
   scope.layers = js.Array[Layer]()
   scope.fields = js.Array[Field]()
-
-
-  load()
+  scope.pageLoaded = false
 
 
   @JSExport
@@ -194,6 +197,26 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   @JSExport
   def availablePerspectives(layer: Layer): js.Array[Perspective] = {
     perspectives.filterNot(_.getId == perspective.getId).toJSArray
+  }
+
+
+  @JSExport
+  def editLocation() = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/perspectiveMap.html"
+    options.controller = "PerspectiveMapController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(perspective = perspective.asInstanceOf[js.Object])
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[FieldEntry](options)
+
+    instance.result map { _ => }
   }
 
 
@@ -377,51 +400,52 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
 
-  private[this] def load() = {
 
+  doAjax(() => {
     // load data types
-    backend.dataTypes() map {
-      d =>
-        dataTypes = d.toJSArray
+    backend.dataTypes() flatMap { d =>
+      dataTypes = d.toJSArray
 
+      backend.getDictionaryPerspectives(dictionary, onlyPublished = false) flatMap { ps =>
+        perspectives = ps
+        val reqs = ps.map { p =>
+          backend.translationGist(p.translationGistClientId, p.translationGistObjectId) map {
+            gist => perspectiveTranslations = perspectiveTranslations + (p -> gist)
+          }
+        }
 
-        backend.getDictionaryPerspectives(dictionary, onlyPublished = false) onComplete {
-          case Success(ps) =>
-            perspectives = ps
-            ps.foreach { p =>
-              backend.translationGist(p.translationGistClientId, p.translationGistObjectId) map {
-                gist => perspectiveTranslations = perspectiveTranslations + (p -> gist)
+        Future.sequence(reqs) flatMap { _ =>
+          // load all known fields
+          backend.fields() flatMap { f =>
+            scope.fields = f.toJSArray
+
+            // load list of fields
+            backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) flatMap { fields =>
+              parsePerspective(perspective, fields).map { layer =>
+                scope.layers.push(layer)
+
+                // load list of locales
+                backend.getLocales map { locales =>
+                    // generate localized names
+                    scope.locales = locales.toJSArray
+                }
               }
             }
-          case Failure(e) =>
+          }
         }
-
-
-        // load all known fields
-        backend.fields() onComplete {
-          case Success(f) =>
-            scope.fields = f.toJSArray
-          case Failure(e) =>
-        }
-
-        // load list of fields
-        backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) onComplete {
-          case Success(fields) =>
-            parsePerspective(perspective, fields).foreach {
-              layer =>
-                scope.layers.push(layer)
-            }
-          case Failure(e) =>
-        }
+      }
     }
+  })
 
-    // load list of locales
-    backend.getLocales onComplete {
-      case Success(locales) =>
-        // generate localized names
-        scope.locales = locales.toJSArray
-      case Failure(e) =>
-    }
+  override protected def onLoaded[T](result: T): Unit = {}
+
+  override protected def onError(reason: Throwable): Unit = {}
+
+  override protected def preRequestHook(): Unit = {
+    scope.pageLoaded = false
   }
 
+  override protected def postRequestHook(): Unit = {
+    scope.pageLoaded = true
+  }
 }

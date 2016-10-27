@@ -541,9 +541,10 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     }
   }
 
-  def setPerspectiveMeta(dictionary: Dictionary, perspective: Perspective, metadata: MetaData) = {
+  def setPerspectiveMeta(dictionaryId: CompositeId, perspectiveId: CompositeId, metadata: MetaData) = {
     val p = Promise[Unit]()
-    val url = ""
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/meta"
     $http.put(getMethodUrl(url), write(metadata)) onComplete {
       case Success(_) => p.success(())
       case Failure(e) => p.failure(new BackendException("Failed to update perspective: " + e.getMessage))

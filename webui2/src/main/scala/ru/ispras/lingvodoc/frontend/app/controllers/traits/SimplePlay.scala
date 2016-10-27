@@ -26,7 +26,6 @@ trait SimplePlay {
   def play(soundAddress: String) = {
     (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
       import org.scalajs.dom.console
-      console.log("loading....")
       ws.load(sa)
     })
   }

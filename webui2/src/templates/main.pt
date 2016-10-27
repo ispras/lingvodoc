@@ -55,7 +55,7 @@
 
                 <li ng-if="controller.isAuthenticated()"><a href="#/languages"><translatable str="Languages">Languages</translatable></a></li>
                 <!--?<li ng-if="controller.isAuthenticated()"><a href="#/organizations">Organizations</a></li>-->
-                <!--?<li ng-if="controller.isAuthenticated()"><a href="#/maps">Maps search</a></li>-->
+                <li ng-if="controller.isAuthenticated()"><a href="#/map_search">Maps search</a></li>
                 <li ng-if="controller.isAuthenticated()"><a href="#/files"><translatable str="My files">My files</translatable></a></li>
             </ul>
 
