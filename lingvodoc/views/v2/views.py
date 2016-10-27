@@ -153,8 +153,8 @@ def all_data_types(request):
         subreq.method = 'POST'
         subreq.headers = request.headers
         subreq.json = {'searchstring': data_type}
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
+        # headers = {'Cookie': request.headers['Cookie']}
+        # subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
         response.append(resp.json)
     request.response.status = HTTPOk.code

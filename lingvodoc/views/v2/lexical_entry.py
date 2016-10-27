@@ -55,7 +55,9 @@ def view_connected_words(request):
     if lexical_entry:
         if not lexical_entry.marked_for_deletion:
             tags = find_all_tags(lexical_entry, field_client_id, field_object_id)
+            print('tags', tags)
             lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+            print('lexes', lexes)
             for lex in lexes:
                 path = request.route_url('lexical_entry',  # todo: method in utils (or just use track)
                                          client_id=lex.client_id,
