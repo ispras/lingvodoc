@@ -1,6 +1,5 @@
 import re
-import difflib
-from nltk.metrics import edit_distance
+from pylev import levenshtein as edit_distance
 
 
 braces = re.compile(r"\([^()]*\)")

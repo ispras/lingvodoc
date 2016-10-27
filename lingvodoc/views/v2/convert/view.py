@@ -13,7 +13,8 @@ from lingvodoc.models import (
     DBSession,
     DictionaryPerspective,
     User,
-    UserBlobs
+    UserBlobs,
+    Entity
 )
 
 from lingvodoc.scripts.lingvodoc_converter import convert_one, get_dict_attributes
@@ -104,7 +105,6 @@ def convert_dictionary(request):  # TODO: test
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
 
 
-# TODO: completely broken!
 @view_config(route_name='convert_markup', renderer='json', request_method='POST')
 def convert_markup(request):
     import requests
@@ -122,8 +122,8 @@ def convert_markup(request):
         client_id = req['client_id']
         object_id = req['object_id']
 
-        #l2e = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
-        l2e = None
+        l2e = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
+        # l2e = None
         if not l2e:
             raise KeyError("No such file")
         r = requests.get(l2e.content)
@@ -143,22 +143,25 @@ def convert_markup(request):
             f.write(content)
             f.close()
             if os.path.getsize(filename) / 1024 / 1024.0 < 1:
-                if 'praat' in l2e.entity_type.lower():
-                    content = praat_to_elan(filename)
-                    if sys.getsizeof(content) / 1024 / 1024.0 < 1:
-                        # filename2 = 'abc.xml'
-                        # f2 = open(filename2, 'w')
-                        # try:
-                        #     f2.write(content)
-                        #     f2.close()
-                        #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
-                        #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
-                        # except:
-                        #     print('fail with xmllint')
-                        # finally:
-                        #     pass
-                        #     os.remove(filename2)
-                        return {'content': content}
+                if 'markup_type' in l2e.additional_metadata :
+                    if 'praat' in l2e.additional_metadata['markup_type']:
+                        content = praat_to_elan(filename)
+                        if sys.getsizeof(content) / 1024 / 1024.0 < 1:
+                            # filename2 = 'abc.xml'
+                            # f2 = open(filename2, 'w')
+                            # try:
+                            #     f2.write(content)
+                            #     f2.close()
+                            #     # os.system('xmllint --noout --dtdvalid ' + filename2 + '> xmloutput 2>&1')
+                            #     os.system('xmllint --dvalid ' + filename2 + '> xmloutput 2>&1')
+                            # except:
+                            #     print('fail with xmllint')
+                            # finally:
+                            #     pass
+                            #     os.remove(filename2)
+                            return {'content': content}
+                    elif 'elan' in l2e.additional_metadata['markup_type']:
+                        return content
                     raise KeyError('File too big')
                 raise KeyError("Not allowed convert option")
             raise KeyError('File too big')

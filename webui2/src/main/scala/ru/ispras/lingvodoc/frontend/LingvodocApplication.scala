@@ -32,7 +32,7 @@ object LingvodocApplication {
 
   @JSExport
   def main() = {
-    Angular.module("LingvodocModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap", "ui.bootstrap.contextMenu"))
+  Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap"))
       .config[LingvodocConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
@@ -57,7 +57,6 @@ object LingvodocApplication {
       .controller[ViewDictionaryController]
       .controller[PublishDictionaryController]
       .controller[SoundMarkupController]
-      .controller[EditTextFieldController]
       .controller[ExceptionHandlerController]
       .controller[CreateFieldController]
       .controller[EditDictionaryRolesModalController]

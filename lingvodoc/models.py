@@ -170,7 +170,8 @@ def entity_content(xx, publish, root, delete_self=False):
             'published': published,
             'accepted': accepted,
             'marked_for_deletion': xx.marked_for_deletion,
-            'created_at': str(xx.created_at)}
+            'created_at': str(xx.created_at),
+            'entity_type':xx.field.get_translation(2)}
     if xx.link_client_id and xx.link_object_id:
         info['link_client_id'] = xx.link_client_id
         info['link_object_id'] = xx.link_object_id
@@ -497,8 +498,8 @@ class Dictionary(CompositeIdMixin,
     __parentname__ = 'Language'
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
     additional_metadata = Column(JSONB)
-    category = Column(SLBigInteger, default=0)
-    domain = Column(SLBigInteger, default=0)
+    category = Column(Integer, default=0)
+    domain = Column(Integer, default=0)
 
 
 # class Corpora(CompositeIdMixin,
@@ -876,12 +877,12 @@ def acl_by_groups(object_id, client_id, subject):
             persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
                 if persp.state == 'Published' or persp.state == 'Limited access':
-                    acls += [(Allow, Everyone, 'view')]
+                    acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
         elif subject in ['dictionary', 'other dictionary subjects']:
             dicty = DBSession.query(Dictionary).filter_by(client_id=client_id, object_id=object_id).first()
             if dicty:
                 if dicty.state == 'Published' or dicty.state == 'Limited access':
-                    acls += [(Allow, Everyone, 'view')]
+                    acls += [(Allow, Everyone, 'view'), (Allow, Everyone, 'preview')]
     groups += DBSession.query(Group).filter_by(subject_client_id=client_id, subject_object_id=object_id). \
         join(BaseGroup).filter_by(subject=subject).all()
     for group in groups:

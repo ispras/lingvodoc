@@ -11,7 +11,7 @@
 
     <br>
 
-    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+    <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()" ng-if="controller.isWSReady">
         <span class="glyphicon glyphicon-play">Play/Pause full</span>
     </button>
 
@@ -23,86 +23,80 @@
         <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
     </button>
 
-    <label>
+    <label ng-if="controller.isWSReady">
         <input type="checkbox" ng-model="spectrogramEnabled" ng-change="controller.toggleSpectrogramEnable()"/>
         Draw a spectrogram. Warning: it may take a long time.
     </label>
 
-    <label>
+    <label  ng-if="controller.isWSReady">
         <input type="checkbox" ng-model="timelineEnabled" ng-change="controller.toggleTimelineEnable()"/>
         Draw a timeline
     </label>
 
     <div>
         <!-- tier names -->
-        <svg ng-attr-width="{{tiersNameWidth}}" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
+        <svg ng-if="controller.isDocumentLoaded"
+             ng-attr-width="{{tierNameHeight}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
              style="float:left" ng-style="{'margin-top': fullWSHeight}">
-            <svg x="0" ng-attr-y="{{tierData.index * tierWidth}}" ng-repeat="(tierID, tierData) in elanJS.tiers">
-                <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tiersNameWidth}}" y2="0">
+            <svg x="0" ng-attr-y="{{$index * tierHeight}}" ng-repeat="tierData in elanJS.tiers">
+                <line class="sm-tier-names-sep-line" x1="0" y1="0" ng-attr-x2="{{tierNameHeight}}" y2="0">
                 </line>
-                <text text-anchor="middle" alignment-baseline="central" ng-attr-x="{{tiersNameWidth / 2}}" ng-attr-y="{{tierWidth / 2}}" >
-                    {{ tierID }}
+                <text text-anchor="middle" alignment-baseline="central" ng-attr-x="{{tierNameHeight / 2}}" ng-attr-y="{{tierHeight / 2}}" >
+                    {{ tierData.ID }}
                 </text>
             </svg>
         </svg>
 
-        <div id="WSAndTiers" style="overflow-x: scroll" ng-style="{'margin-left': tiersNameWidth}">
-            <div id="waveform" ng-style="{'width': fullWSWidth}">{{ controller.createWaveSurfer() }}</div>
+        <div id="WSAndTiers" style="overflow-x: scroll" ng-style="{'margin-left': tierNameHeight}">
+            <div id="waveform" >{{ controller.createWaveSurfer() }}</div>
             <div id="wavespectrogram"></div>
             <div id="wavetimeline"></div>
 
             <!-- section with tiers -->
-            <svg id="soundSVG"
-                 ng-attr-width="{{fullWSWidth}}" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
+            <svg id="soundSVG" ng-if="controller.isDocumentLoaded"
+                 ng-attr-width="{{fullWSWidth}}" ng-attr-height="{{tierHeight * elanJS.numberOfTiers}}"
                  ng-click="controller.onSVGSeek($event)"
                  ng-mouseup="controller.onSVGMouseUp($event)" ng-mousedown="controller.onSVGMouseDown($event)"
                  ng-mousemove="controller.onSVGMouseMove($event)"
 
             >
-                <!-- rect to select new annotation duration -->
-                <rect id="selectionRect" x="0" y="0" width="0" ng-attr-height="{{tierWidth * elanJS.numberOfTiers}}"
-                      class="sm-selection-rectangle">
-                </rect>
-
                 <!-- ruler shows current position -->
                 <line class="sm-ruler"
                       ng-attr-x1="{{ruler}}" ng-attr-y1="0"
-                      ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierWidth * elanJS.numberOfTiers}}">
+                      ng-attr-x2="{{ruler}}" ng-attr-y2="{{tierHeight * elanJS.numberOfTiers}}">
                 </line>
 
                     <!-- tiers -->
-                    <svg x="0" ng-attr-y="{{tierData.index * tierWidth}}" ng-repeat="(tierID, tierData) in elanJS.tiers"
+                    <svg x="0" ng-attr-y="{{$index * tierHeight}}" ng-repeat="tierData in elanJS.tiers"
                          ng-click="controller.onTierClickWellItIsNotWorkingForNow($event, tier)"
-                         context-menu="tierMenuOptions"
                     >
-                        <rect class="sm-tier" id="{{tierID + 'Rectangle'}}" x="0" y="0" width="100%"
-                              ng-attr-height="{{tierWidth}}"
-                              fill="{{tierData.index % 2 == 0 ? 'grey' : 'white'}}"></rect>
+                        <rect class="sm-tier" id="{{tierData.ID + 'Rectangle'}}" x="0" y="0" width="100%"
+                              ng-attr-height="{{tierHeight}}"
+                              fill="{{$index % 2 == 0 ? 'grey' : 'white'}}"></rect>
                         <!-- annotations -->
-                        <svg ng-attr-x="{{annotData.startOffset}}" y="0" ng-repeat="(annotID, annotData) in tierData.annotations"
-                             ng-attr-width="{{annotData.durationOffset}}" ng-attr-height="{{tierWidth}}"
-                             context-menu="annotMenuOptions"
+                        <svg ng-attr-x="{{annotData.startOffset}}" y="0" ng-repeat="annotData in tierData.annotations"
+                             ng-attr-width="{{annotData.durationOffset}}" ng-attr-height="{{tierHeight}}"
                         >
                             <rect x="0" y="0" ng-attr-width="{{annotData.durationOffset + 1}}px"
-                                  ng-attr-height="{{tierWidth}}" fill="green" fill-opacity="0.0">
+                                  ng-attr-height="{{tierHeight}}" fill="green" fill-opacity="0.0">
                             </rect>
                             <!-- left vertical line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                                  x1="1" y1="0" x2="1" ng-attr-y2="{{tierWidth}}">
+                                  x1="1" y1="0" x2="1" ng-attr-y2="{{tierHeight}}">
                             </line>
                             <!-- middle horizontal line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
-                                  x1="0" ng-attr-y1="{{tierWidth / 2}}"
-                                  ng-attr-x2="{{annotData.durationOffset}}" ng-attr-y2="{{tierWidth / 2}}">
+                                  x1="0" ng-attr-y1="{{tierHeight / 2}}"
+                                  ng-attr-x2="{{annotData.durationOffset}}" ng-attr-y2="{{tierHeight / 2}}">
                             </line>
                             <!-- right vertical line -->
                             <line ng-class="tierData.timeAlignable ? 'sm-ta-annot-line' : 'sm-ref-annot-line'"
                                   ng-attr-x1="{{annotData.durationOffset - 0.5}}" y1="0"
-                                  ng-attr-x2="{{annotData.durationOffset - 0.5}}" ng-attr-y2="{{tierWidth}}">
+                                  ng-attr-x2="{{annotData.durationOffset - 0.5}}" ng-attr-y2="{{tierHeight}}">
                             </line>
                             <text
                                   x="5"
-                                  ng-attr-y="{{tierWidth / 2 - tierWidth * 0.2}}" >
+                                  ng-attr-y="{{tierHeight / 2 - tierHeight * 0.2}}" >
                                  {{ annotData.text }}
                             </text>
                         </svg>
@@ -112,9 +106,8 @@
         </div>
     </div>
 
-    <uib-tabset justified="true">
-        <!--<uib-tab ng-repeat="tierData in elanJS.tiers | orderObjectBy: 'index': false" heading="{{tierData.ID}} ({{tierData.stereotype}})">-->
-        <uib-tab ng-repeat="tierData in tiersJSForTabs" heading="{{tierData.ID}} ({{tierData.stereotype}})" >
+    <uib-tabset justified="true" active="-1">
+        <uib-tab ng-repeat="tierData in elanJS.tiers" heading="{{tierData.ID}} ({{tierData.stereotype}})" >
             <table class="table table-striped table-bordered">
                 <thead>
                 <tr>
@@ -125,10 +118,10 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr ng-repeat="(annotID, annotData) in tierData.annotations">
+                <tr ng-repeat="annotData in tierData.annotations">
                     <td>{{ annotData.startToString }}</td>
                     <td>{{ annotData.endToString }}</td>
-                    <td>{{tierData.index}} {{ annotData.text }}</td>
+                    <td>{{ annotData.text }}</td>
                     <td>
                         <button type="button" class="btn btn-default btn-sm" ng-click="controller.playAnnotation(annotData.ID)">
                             <span class="glyphicon glyphicon-play"></span>

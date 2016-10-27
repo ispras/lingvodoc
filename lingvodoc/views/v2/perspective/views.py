@@ -17,6 +17,8 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+from sqlalchemy.sql.expression import case, true, false
+
 from sqlalchemy import (
     func,
     or_,
@@ -63,7 +65,7 @@ from lingvodoc.views.v2.utils import (
 log = logging.getLogger(__name__)
 
 
-@view_config(route_name='all_perspectives', renderer = 'json', request_method='GET')
+@view_config(route_name='all_perspectives', renderer='json', request_method='GET')
 def perspectives_list(request):  # tested
     response = list()
     is_template = None
@@ -73,7 +75,7 @@ def perspectives_list(request):  # tested
         pass
     state_translation_gist_client_id = request.params.get('state_translation_gist_client_id', None)
     state_translation_gist_object_id = request.params.get('state_translation_gist_object_id', None)
-    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion==False)
+    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion == False)
     if is_template is not None:
         if type(is_template) == str:
             if is_template.lower() == 'true':
@@ -87,8 +89,9 @@ def perspectives_list(request):  # tested
 
         persps = persps.filter(DictionaryPerspective.is_template == is_template)
     if state_translation_gist_client_id and state_translation_gist_object_id:
-        persps = persps.filter(DictionaryPerspective.state_translation_gist_client_id==state_translation_gist_client_id,
-                               DictionaryPerspective.state_translation_gist_object_id==state_translation_gist_object_id)
+        persps = persps.filter(
+            DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
+            DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id)
     perspectives = []
     for perspective in persps:
         resp = view_perspective_from_object(request, perspective)
@@ -100,7 +103,7 @@ def perspectives_list(request):  # tested
     return response
 
 
-@view_config(route_name='all_perspectives_meta', renderer = 'json', request_method='GET')
+@view_config(route_name='all_perspectives_meta', renderer='json', request_method='GET')
 def perspectives_meta_list(request):  # tested
     response = list()
     is_template = None
@@ -110,7 +113,8 @@ def perspectives_meta_list(request):  # tested
         pass
     state_translation_gist_client_id = request.params.get('state_translation_gist_client_id', None)
     state_translation_gist_object_id = request.params.get('state_translation_gist_object_id', None)
-    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion==False, DictionaryPerspective.additional_metadata!={})
+    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion == False,
+                                                           DictionaryPerspective.additional_metadata != {})
     if is_template is not None:
         if type(is_template) == str:
             if is_template.lower() == 'true':
@@ -124,13 +128,14 @@ def perspectives_meta_list(request):  # tested
 
         persps = persps.filter(DictionaryPerspective.is_template == is_template)
     if state_translation_gist_client_id and state_translation_gist_object_id:
-        persps = persps.filter(DictionaryPerspective.state_translation_gist_client_id==state_translation_gist_client_id,
-                               DictionaryPerspective.state_translation_gist_object_id==state_translation_gist_object_id)
+        persps = persps.filter(
+            DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
+            DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id)
     perspectives = []
     for perspective in persps:
         # resp = view_perspective_from_object(request, perspective)
         resp = perspective.additional_metadata
-        resp.update({'client_id': perspective.client_id,'object_id': perspective.object_id})
+        resp.update({'client_id': perspective.client_id, 'object_id': perspective.object_id})
         if 'error' not in resp:
             perspectives.append(resp)
     response = perspectives
@@ -141,7 +146,7 @@ def perspectives_meta_list(request):  # tested
 
 @view_config(route_name='perspective', renderer='json', request_method='GET')
 @view_config(route_name='perspective_outside', renderer='json', request_method='GET')
-def view_perspective(request): # tested & in docs
+def view_perspective(request):  # tested & in docs
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     parent_client_id = request.matchdict.get('dictionary_client_id')
@@ -151,7 +156,8 @@ def view_perspective(request): # tested & in docs
         parent = DBSession.query(Dictionary).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent:
             request.response.status = HTTPNotFound.code
-            return {'error': str("No such dictionary in the system %s %s %s %s") % (client_id, object_id, parent_client_id, parent_object_id)}
+            return {'error': str("No such dictionary in the system %s %s %s %s") % (
+            client_id, object_id, parent_client_id, parent_object_id)}
 
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     response = view_perspective_from_object(request, perspective)
@@ -417,8 +423,8 @@ def view_perspective_tree(request):  # tested & in docs
             tree.append(resp)
             dictionary = perspective.parent
             path = request.route_url('dictionary',
-                                 client_id=dictionary.client_id,
-                                 object_id=dictionary.object_id)
+                                     client_id=dictionary.client_id,
+                                     object_id=dictionary.object_id)
             subreq = Request.blank(path)
             subreq.method = 'GET'
             subreq.headers = request.headers
@@ -430,8 +436,8 @@ def view_perspective_tree(request):  # tested & in docs
             parent = dictionary.parent
             while parent:
                 path = request.route_url('language',
-                                     client_id=parent.client_id,
-                                     object_id=parent.object_id)
+                                         client_id=parent.client_id,
+                                         object_id=parent.object_id)
                 subreq = Request.blank(path)
                 subreq.method = 'GET'
                 subreq.headers = request.headers
@@ -470,7 +476,8 @@ def perspective_info(request):  # TODO: test
         return {'error': str("No such dictionary in the system")}
 
     perspective = DBSession.query(DictionaryPerspective) \
-        .options(joinedload('lexicalentry').joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
+        .options(joinedload('lexicalentry').joinedload('leveloneentity').joinedload('leveltwoentity').joinedload(
+        'publishleveltwoentity')) \
         .options(joinedload('lexicalentry').joinedload('leveloneentity').joinedload('publishleveloneentity')) \
         .options(joinedload('lexicalentry').joinedload('groupingentity').joinedload('publishgroupingentity')) \
         .options(joinedload('lexicalentry').joinedload('publishleveloneentity')) \
@@ -516,7 +523,7 @@ def perspective_info(request):  # TODO: test
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'create_perspective', renderer = 'json', request_method = 'POST', permission='create')
+@view_config(route_name='create_perspective', renderer='json', request_method='POST', permission='create')
 def create_perspective(request):  # tested & in docs
     try:
         variables = {'auth': authenticated_userid(request)}
@@ -567,7 +574,8 @@ def create_perspective(request):  # tested & in docs
         resp = request.invoke_subrequest(subreq)
 
         if 'error' not in resp.json:
-            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+                'client_id']
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
 
@@ -612,7 +620,7 @@ def create_perspective(request):  # tested & in docs
         return {'error': str(e)}
 
 
-@view_config(route_name = 'complex_create', renderer = 'json', request_method = 'POST', permission='create')
+@view_config(route_name='complex_create', renderer='json', request_method='POST', permission='create')
 def complex_create(request):
     try:
         from pdb import set_trace
@@ -697,7 +705,8 @@ def view_perspectives(request):
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
         if 'error' not in resp.json:
-            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+                'client_id']
             published = (state_translation_gist_client_id, state_translation_gist_object_id)
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
@@ -709,7 +718,8 @@ def view_perspectives(request):
         subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
         if 'error' not in resp.json:
-            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+                'client_id']
             limited = (state_translation_gist_client_id, state_translation_gist_object_id)
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
@@ -725,12 +735,12 @@ def view_perspectives(request):
         subreq.headers = request.headers
         resp = request.invoke_subrequest(subreq)
         if published and not ((
-                        published[0] == resp.json.get('state_translation_gist_client_id') and
-                        published[1] == resp.json.get('state_translation_gist_object_id'))
-        or(
-                        limited[0] == resp.json.get('state_translation_gist_client_id') and
-                        limited[1] == resp.json.get('state_translation_gist_object_id'))
-        ):
+                                              published[0] == resp.json.get('state_translation_gist_client_id') and
+                                              published[1] == resp.json.get('state_translation_gist_object_id'))
+                              or (
+                            limited[0] == resp.json.get('state_translation_gist_client_id') and
+                            limited[1] == resp.json.get('state_translation_gist_object_id'))
+                              ):
             continue
         if 'error' not in resp.json:
             perspectives += [resp.json]
@@ -780,7 +790,7 @@ def view_perspective_roles(request):  # TODO: test
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'POST', permission='create')
+@view_config(route_name='perspective_roles', renderer='json', request_method='POST', permission='create')
 def edit_perspective_roles(request):
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -882,7 +892,7 @@ def edit_perspective_roles(request):
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'perspective_roles', renderer = 'json', request_method = 'DELETE', permission='delete')
+@view_config(route_name='perspective_roles', renderer='json', request_method='DELETE', permission='delete')
 def delete_perspective_roles(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -983,7 +993,7 @@ def delete_perspective_roles(request):  # TODO: test
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'GET')
+@view_config(route_name='perspective_status', renderer='json', request_method='GET')
 def view_perspective_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1012,7 +1022,7 @@ def view_perspective_status(request):  # tested & in docs
     return {'error': str("No such perspective in the system")}
 
 
-@view_config(route_name = 'perspective_status', renderer = 'json', request_method = 'PUT', permission='edit')
+@view_config(route_name='perspective_status', renderer='json', request_method='PUT', permission='edit')
 def edit_perspective_status(request):  # tested & in docs
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
@@ -1093,11 +1103,11 @@ def create_field(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         field = Field(client_id=variables['auth'],
-                                            data_type_translation_gist_client_id=data_type_translation_gist_client_id,
-                                            data_type_translation_gist_object_id=data_type_translation_gist_object_id,
-                                            translation_gist_client_id=translation_gist_client_id,
-                                            translation_gist_object_id=translation_gist_object_id
-                                            )
+                      data_type_translation_gist_client_id=data_type_translation_gist_client_id,
+                      data_type_translation_gist_object_id=data_type_translation_gist_object_id,
+                      translation_gist_client_id=translation_gist_client_id,
+                      translation_gist_object_id=translation_gist_object_id
+                      )
 
         if req.get('is_translatable', None):
             field.is_translatable = bool(req['is_translatable'])
@@ -1153,7 +1163,7 @@ def view_nested_field(request, field, link_ids):
     if 'error' in field_json:
         return field_json
     contains = list()
-    for subfield in field.dictionaryperspectivetofield: #todo: order subfields
+    for subfield in field.dictionaryperspectivetofield:  # todo: order subfields
         subfield_json = view_nested_field(request, subfield, link_ids)
         if 'error' in subfield_json:
             return subfield_json
@@ -1173,17 +1183,17 @@ def view_perspective_fields(request):
     object_id = request.matchdict.get('perspective_object_id')
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective and not perspective.marked_for_deletion:
-        fields = DBSession.query(DictionaryPerspectiveToField)\
-            .filter_by(parent=perspective, upper_level=None)\
-            .order_by(DictionaryPerspectiveToField.position)\
+        fields = DBSession.query(DictionaryPerspectiveToField) \
+            .filter_by(parent=perspective, upper_level=None) \
+            .order_by(DictionaryPerspectiveToField.position) \
             .all()
         try:
-            link_gist = DBSession.query(TranslationGist)\
-                .join(TranslationAtom)\
+            link_gist = DBSession.query(TranslationGist) \
+                .join(TranslationAtom) \
                 .filter(TranslationGist.type == 'Service',
                         TranslationAtom.content == 'Link',
                         TranslationAtom.locale_id == 2).one()
-            link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
+            link_ids = {'client_id': link_gist.client_id, 'object_id': link_gist.object_id}
         except NoResultFound:
             request.response.status = HTTPNotFound.code
             return {'error': str("Something wrong with the base")}
@@ -1220,17 +1230,17 @@ def update_perspective_fields(request):
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
         try:
-            link_gist = DBSession.query(TranslationGist)\
-                .join(TranslationAtom)\
+            link_gist = DBSession.query(TranslationGist) \
+                .join(TranslationAtom) \
                 .filter(TranslationGist.type == 'Service',
                         TranslationAtom.content == 'Link',
                         TranslationAtom.locale_id == 2).one()
-            link_ids = {'client_id':link_gist.client_id, 'object_id': link_gist.object_id}
+            link_ids = {'client_id': link_gist.client_id, 'object_id': link_gist.object_id}
         except NoResultFound:
             request.response.status = HTTPNotFound.code
             return {'error': str("Something wrong with the base")}
-        fields = DBSession.query(DictionaryPerspectiveToField)\
-            .filter_by(parent=perspective)\
+        fields = DBSession.query(DictionaryPerspectiveToField) \
+            .filter_by(parent=perspective) \
             .all()
         DBSession.flush()
         for field in fields:
@@ -1258,12 +1268,15 @@ def all_perspective_authors(request):
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
-            authors = DBSession.query(User).join(User.clients).join(Entity, Entity.client_id==Client.id) \
-                .join(Entity.parent) \
-                .filter(LexicalEntry.parent == parent)
-            response = [o.id for o in authors.all()]
-            request.response.status = HTTPOk.code
-            return response
+        authors = DBSession.query(User).join(User.clients).join(Entity, Entity.client_id == Client.id) \
+            .join(Entity.parent).join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent_client_id == parent.client_id,
+                    LexicalEntry.parent_object_id == parent.object_id,
+                    LexicalEntry.marked_for_deletion == False,
+                    Entity.marked_for_deletion == False)
+        response = [o.id for o in authors.all()]
+        request.response.status = HTTPOk.code
+        return response
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
@@ -1277,12 +1290,15 @@ def all_perspective_clients(request):
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
-            clients = DBSession.query(Client).join(Entity, Entity.client_id==Client.id) \
-                .join(Entity.parent) \
-                .filter(LexicalEntry.parent == parent)
-            response = [o.id for o in clients.all()]
-            request.response.status = HTTPOk.code
-            return response
+        clients = DBSession.query(Client).join(Entity, Entity.client_id == Client.id) \
+            .join(Entity.parent).join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent_client_id == parent.client_id,
+                    LexicalEntry.parent_object_id == parent.object_id,
+                    LexicalEntry.marked_for_deletion == False,
+                    Entity.marked_for_deletion == False)
+        response = [o.id for o in clients.all()]
+        request.response.status = HTTPOk.code
+        return response
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
@@ -1296,102 +1312,112 @@ def lexical_entries_all(request):
     object_id = request.matchdict.get('perspective_object_id')
     authors = request.params.getall('authors')
     clients = request.params.getall('clients')
-    start_date = request.params.get('start_date',)
+    start_date = request.params.get('start_date', )
     if start_date:
-        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_date = request.params.get('end_date')
     if end_date:
-        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    sort_criterion = request.params.get('sort_by') or 'Translation'
+    sort_criterion = request.params.get('sort_by') or 'Translation'  # TODO: make it work
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 200
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
-            # lexes = DBSession.query(LexicalEntry) \
-            #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-            #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-            #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-            #     .options(joinedload('publishleveloneentity')) \
-            #     .options(joinedload('publishleveltwoentity')) \
-            #     .options(joinedload('publishgroupingentity')) \
-            #     .filter(LexicalEntry.parent == parent) \
-            #     .group_by(LexicalEntry) \
-            #     .join(LevelOneEntity) \
-            #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
-            #     .offset(start_from).limit(count)
-            lexes = DBSession.query(LexicalEntry) \
-                .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion==False)
-            if authors or clients or start_date or end_date:
-                lexes = lexes.join(LexicalEntry.entity)
-            if authors or clients:
-                lexes = lexes.join(Client, Entity.client_id == Client.id)
-            if authors:
-                lexes = lexes.join(Client.user).filter(User.id.in_(authors))
-            if clients:
-                lexes = lexes.filter(Client.id.in_(clients))
-            if start_date:
-                lexes = lexes.filter(Entity.created_at >= start_date)
-            if end_date:
-                lexes = lexes.filter(Entity.created_at <= end_date)
-            lexes = lexes \
-                .group_by(LexicalEntry) \
-                .offset(start_from).limit(count)
+        field = DBSession.query(Field) \
+            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+            .filter(TranslationAtom.content == sort_criterion,
+                    TranslationAtom.locale_id == 2).one()  # TODO: make it harder better faster stronger
+        # print(field.get_translation(2))
+        # lexes = DBSession.query(LexicalEntry) \
+        #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
+        #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
+        #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
+        #     .options(joinedload('publishleveloneentity')) \
+        #     .options(joinedload('publishleveltwoentity')) \
+        #     .options(joinedload('publishgroupingentity')) \
+        #     .filter(LexicalEntry.parent == parent) \
+        #     .group_by(LexicalEntry) \
+        #     .join(LevelOneEntity) \
+        #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
+        #     .offset(start_from).limit(count)
+        lexes = DBSession.query(LexicalEntry).join(LexicalEntry.entity).join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion == False,
+                    Entity.marked_for_deletion == False)
+        if authors or clients:
+            lexes = lexes.join(Client, Entity.client_id == Client.id)
+        if authors:
+            lexes = lexes.join(Client.user).filter(User.id.in_(authors))
+        if clients:
+            lexes = lexes.filter(Client.id.in_(clients))
+        if start_date:
+            lexes = lexes.filter(Entity.created_at >= start_date)
+        if end_date:
+            lexes = lexes.filter(Entity.created_at <= end_date)  # todo: check if field=field ever works
+        lexes = lexes \
+            .order_by(func.min(case(
+            [(or_(Entity.field_client_id != field.client_id,
+                  Entity.field_object_id != field.object_id),
+              'яяяяяя')],
+            else_=Entity.content))) \
+            .group_by(LexicalEntry) \
+            .offset(start_from).limit(count)
 
-            result = deque()
-            print([o.client_id for o in lexes.all()])
-            for entry in lexes.all():
-                result.append(entry.track(False))
-                # result.append({'client_id': entry.client_id, 'object_id': entry.object_id})
+        result = deque()
+        # print([o.client_id for o in lexes.all()])
+        for entry in lexes.all():
+            result.append(entry.track(False))
+            # result.append({'client_id': entry.client_id, 'object_id': entry.object_id})
 
-            response = list(result)
+        response = list(result)
 
-            request.response.status = HTTPOk.code
-            return response
+        request.response.status = HTTPOk.code
+        return response
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
 
 
 @view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET', permission='view')
-def lexical_entries_all_count(request): # tested
+def lexical_entries_all_count(request):  # tested
     response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     authors = request.params.getall('authors')
     clients = request.params.getall('clients')
-    start_date = request.params.get('start_date',)
+    start_date = request.params.get('start_date', )
     if start_date:
-        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_date = request.params.get('end_date')
     if end_date:
-        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if parent:
-        if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(LexicalEntry)\
-                .filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
-                           parent_object_id=parent.object_id)
-            if authors or clients or start_date or end_date:
-                lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
-            if authors or clients:
-                lexical_entries_count = lexical_entries_count.join(Client, Entity.client_id == Client.id)
-            if authors:
-                lexical_entries_count = lexical_entries_count.join(Client.user).filter(User.id.in_(authors))
-            if clients:
-                lexical_entries_count = lexical_entries_count.filter(Client.id.in_(clients))
-            if start_date:
-                lexical_entries_count = lexical_entries_count.filter(Entity.created_at >= start_date)
-            if end_date:
-                lexical_entries_count = lexical_entries_count.filter(Entity.created_at <= end_date)
-            lexical_entries_count=lexical_entries_count.group_by(LexicalEntry).count()
-            return {"count": lexical_entries_count}
+    if parent and not parent.marked_for_deletion:
+        lexical_entries_count = DBSession.query(LexicalEntry).join(LexicalEntry.entity) \
+            .join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion == False,
+                    Entity.marked_for_deletion == False)
+        if authors or clients or start_date or end_date:
+            lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
+        if authors or clients:
+            lexical_entries_count = lexical_entries_count.join(Client, Entity.client_id == Client.id)
+        if authors:
+            lexical_entries_count = lexical_entries_count.join(Client.user).filter(User.id.in_(authors))
+        if clients:
+            lexical_entries_count = lexical_entries_count.filter(Client.id.in_(clients))
+        if start_date:
+            lexical_entries_count = lexical_entries_count.filter(Entity.created_at >= start_date)
+        if end_date:
+            lexical_entries_count = lexical_entries_count.filter(Entity.created_at <= end_date)
+        lexical_entries_count = lexical_entries_count.group_by(LexicalEntry).count()
+        return {"count": lexical_entries_count}
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
@@ -1406,66 +1432,89 @@ def lexical_entries_published(request):
     object_id = request.matchdict.get('perspective_object_id')
     authors = request.params.getall('authors')
     clients = request.params.getall('clients')
-    start_date = request.params.get('start_date',)
+    start_date = request.params.get('start_date', )
     if start_date:
-        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_date = request.params.get('end_date')
     if end_date:
-        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
-
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
+    preview_mode = False
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if parent:
-        if not parent.marked_for_deletion:
-            # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
-            # NOTE: IMPORTANT: 'яяяяя' is a hack - something wrong with postgres collation if we use \uffff
-            # lexes = DBSession.query(LexicalEntry) \
-            #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-            #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-            #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-            #     .options(joinedload('publishleveloneentity')) \
-            #     .options(joinedload('publishleveltwoentity')) \
-            #     .options(joinedload('publishgroupingentity')) \
-            #     .filter(LexicalEntry.parent == parent) \
-            #     .group_by(LexicalEntry, LevelOneEntity.content) \
-            #     .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
-            #                                LevelOneEntity.parent_object_id == LexicalEntry.object_id,
-            #                                LevelOneEntity.marked_for_deletion == False)) \
-            #     .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
-            #                                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id,
-            #                                       PublishLevelOneEntity.marked_for_deletion == False)) \
-            #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
-            #     .offset(start_from).limit(count)
-            lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True)
-            if authors or clients:
-                lexes = lexes.join(Client, Entity.client_id == Client.id)
-            if authors:
-                lexes = lexes.join(Client.user).filter(User.id.in_(authors))
-            if clients:
-                lexes = lexes.filter(Client.id.in_(clients))
-            if start_date:
-                lexes = lexes.filter(Entity.created_at >= start_date)
-            if end_date:
-                lexes = lexes.filter(Entity.created_at <= end_date)
-            lexes = lexes.group_by(LexicalEntry) \
-                .offset(start_from).limit(count)
+    if parent and not parent.marked_for_deletion:
 
-            # lexes = list()
+        if (parent.state == 'Limited access' or parent.parent.state == 'Limited access') and "view:lexical_entries_and_entities:" + client_id + ":" + object_id not in request.effective_principals:
+            log.debug("PREVIEW MODE")
+            preview_mode = True
 
-            result = deque()
+        field = DBSession.query(Field) \
+            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+            .filter(TranslationAtom.content == sort_criterion,
+                    TranslationAtom.locale_id == 2).one()
+        # NOTE: if lexical entry doesn't contain l1e it will not be shown here. But it seems to be ok.
+        # NOTE: IMPORTANT: 'яяяяя' is a hack - something wrong with postgres collation if we use \uffff
+        # lexes = DBSession.query(LexicalEntry) \
+        #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
+        #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
+        #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
+        #     .options(joinedload('publishleveloneentity')) \
+        #     .options(joinedload('publishleveltwoentity')) \
+        #     .options(joinedload('publishgroupingentity')) \
+        #     .filter(LexicalEntry.parent == parent) \
+        #     .group_by(LexicalEntry, LevelOneEntity.content) \
+        #     .join(LevelOneEntity, and_(LevelOneEntity.parent_client_id == LexicalEntry.client_id,
+        #                                LevelOneEntity.parent_object_id == LexicalEntry.object_id,
+        #                                LevelOneEntity.marked_for_deletion == False)) \
+        #     .join(PublishLevelOneEntity, and_(PublishLevelOneEntity.entity_client_id == LevelOneEntity.client_id,
+        #                                       PublishLevelOneEntity.entity_object_id == LevelOneEntity.object_id,
+        #                                       PublishLevelOneEntity.marked_for_deletion == False)) \
+        #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
+        #     .offset(start_from).limit(count)
+        lexes = DBSession.query(LexicalEntry) \
+            .join(LexicalEntry.entity).join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent == parent, PublishingEntity.published == True,
+                    Entity.marked_for_deletion == False, LexicalEntry.marked_for_deletion == False)
+        if authors or clients:
+            lexes = lexes.join(Client, Entity.client_id == Client.id)
+        if authors:
+            lexes = lexes.join(Client.user).filter(User.id.in_(authors))
+        if clients:
+            lexes = lexes.filter(Client.id.in_(clients))
+        if start_date:
+            lexes = lexes.filter(Entity.created_at >= start_date)
+        if end_date:
+            lexes = lexes.filter(Entity.created_at <= end_date)
+        lexes = lexes.group_by(LexicalEntry) \
+            .order_by(func.min(case(
+            [(or_(Entity.field_client_id != field.client_id,
+                  Entity.field_object_id != field.object_id),
+              'яяяяяя')],
+            else_=Entity.content))) \
+            .group_by(LexicalEntry) \
+            .offset(start_from).limit(count)
 
-            for entry in lexes.all():
-                result.append(entry.track(True))
-            response = list(result)
+        # lexes = list()
 
-            request.response.status = HTTPOk.code
-            return response
+        result = deque()
+
+        for entry in lexes.all():
+            result.append(entry.track(True))
+        response = list(result)
+        if preview_mode:
+            if int(start_from) > 0 or int(count) > 20:
+                for i in response:
+                    for j in i['contains']:
+                        j['content'] = 'Entity hidden: you \nhave only demo access'
+                        j['contains'] = 'Entity hidden: you \nhave only demo access'
+
+
+        request.response.status = HTTPOk.code
+        return response
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
@@ -1479,43 +1528,54 @@ def lexical_entries_not_accepted(request):
     object_id = request.matchdict.get('perspective_object_id')
     authors = request.params.getall('authors')
     clients = request.params.getall('clients')
-    start_date = request.params.get('start_date',)
+    start_date = request.params.get('start_date', )
     if start_date:
-        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_date = request.params.get('end_date')
     if end_date:
-        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     sort_criterion = request.params.get('sort_by') or 'Translation'
     start_from = request.params.get('start_from') or 0
     count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
-    if parent:
-        if not parent.marked_for_deletion:
-            lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
-                .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
-            if authors or clients:
-                lexes = lexes.join(Client, Entity.client_id == Client.id)
-            if authors:
-                lexes = lexes.join(Client.user).filter(User.id.in_(authors))
-            if clients:
-                lexes = lexes.filter(Client.id.in_(clients))
-            if start_date:
-                lexes = lexes.filter(Entity.created_at >= start_date)
-            if end_date:
-                lexes = lexes.filter(Entity.created_at <= end_date)
-            lexes = lexes.group_by(LexicalEntry) \
-                .offset(start_from).limit(count)
-            result = deque()
+    if parent and not parent.marked_for_deletion:
+        field = DBSession.query(Field) \
+            .join(TranslationAtom, and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
+                                        Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+            .filter(TranslationAtom.content == sort_criterion,
+                    TranslationAtom.locale_id == 2).one()
+        lexes = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id,
+                                                        parent_object_id=parent.object_id) \
+            .join(LexicalEntry.entity).join(Entity.publishingentity) \
+            .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
+        if authors or clients:
+            lexes = lexes.join(Client, Entity.client_id == Client.id)
+        if authors:
+            lexes = lexes.join(Client.user).filter(User.id.in_(authors))
+        if clients:
+            lexes = lexes.filter(Client.id.in_(clients))
+        if start_date:
+            lexes = lexes.filter(Entity.created_at >= start_date)
+        if end_date:
+            lexes = lexes.filter(Entity.created_at <= end_date)
+        lexes = lexes.group_by(LexicalEntry) \
+            .order_by(func.min(case(
+            [(or_(Entity.field_client_id != field.client_id,
+                  Entity.field_object_id != field.object_id),
+              'яяяяяя')],
+            else_=Entity.content))) \
+            .group_by(LexicalEntry) \
+            .offset(start_from).limit(count)
+        result = deque()
 
-            for entry in lexes.all():
-                result.append(entry.track(False))
-            response = list(result)
+        for entry in lexes.all():
+            result.append(entry.track(False))
+        response = list(result)
 
-            request.response.status = HTTPOk.code
-            return response
+        request.response.status = HTTPOk.code
+        return response
     else:
         request.response.status = HTTPNotFound.code
         return {'error': str("No such perspective in the system")}
@@ -1527,19 +1587,20 @@ def lexical_entries_published_count(request):
     object_id = request.matchdict.get('perspective_object_id')
     authors = request.params.getall('authors')
     clients = request.params.getall('clients')
-    start_date = request.params.get('start_date',)
+    start_date = request.params.get('start_date', )
     if start_date:
-        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_date = request.params.get('end_date')
     if end_date:
-        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            lexical_entries_count = DBSession.query(LexicalEntry) \
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
-                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True)
+                .filter(LexicalEntry.parent == parent, PublishingEntity.published == True,
+                        Entity.marked_for_deletion == False, LexicalEntry.marked_for_deletion == False)
             if authors or clients or start_date or end_date:
                 lexical_entries_count = lexical_entries_count.join(LexicalEntry.entity)
             if authors or clients:
@@ -1552,7 +1613,7 @@ def lexical_entries_published_count(request):
                 lexical_entries_count = lexical_entries_count.filter(Entity.created_at >= start_date)
             if end_date:
                 lexical_entries_count = lexical_entries_count.filter(Entity.created_at <= end_date)
-            lexical_entries_count=lexical_entries_count.group_by(LexicalEntry).count()
+            lexical_entries_count = lexical_entries_count.group_by(LexicalEntry).count()
             # lexical_entries_count = None
 
             return {"count": lexical_entries_count}
@@ -1567,17 +1628,19 @@ def lexical_entries_not_accepted_count(request):
     object_id = request.matchdict.get('perspective_object_id')
     authors = request.params.getall('authors')
     clients = request.params.getall('clients')
-    start_date = request.params.get('start_date',)
+    start_date = request.params.get('start_date', )
     if start_date:
-        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d')
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     end_date = request.params.get('end_date')
     if end_date:
-        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d')
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent:
         if not parent.marked_for_deletion:
-            lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False, parent_client_id=parent.client_id, parent_object_id=parent.object_id)\
+            lexical_entries_count = DBSession.query(LexicalEntry).filter_by(marked_for_deletion=False,
+                                                                            parent_client_id=parent.client_id,
+                                                                            parent_object_id=parent.object_id) \
                 .join(LexicalEntry.entity).join(Entity.publishingentity) \
                 .filter(LexicalEntry.parent == parent, PublishingEntity.accepted == False)
             if authors or clients or start_date or end_date:
@@ -1592,7 +1655,7 @@ def lexical_entries_not_accepted_count(request):
                 lexical_entries_count = lexical_entries_count.filter(Entity.created_at >= start_date)
             if end_date:
                 lexical_entries_count = lexical_entries_count.filter(Entity.created_at <= end_date)
-            lexical_entries_count=lexical_entries_count.group_by(LexicalEntry).count()
+            lexical_entries_count = lexical_entries_count.group_by(LexicalEntry).count()
             # lexical_entries_count = None
 
             return {"count": lexical_entries_count}
@@ -1617,7 +1680,7 @@ def approve_entity(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
-            entity = DBSession.query(Entity).\
+            entity = DBSession.query(Entity). \
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
 
             group = DBSession.query(Group).join(BaseGroup).filter(
@@ -1664,7 +1727,7 @@ def accept_entity(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
-            entity = DBSession.query(Entity).\
+            entity = DBSession.query(Entity). \
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
 
             group = DBSession.query(Group).join(BaseGroup).filter(
@@ -1711,7 +1774,7 @@ def disapprove_entity(request):
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
         for entry in req:
-            entity = DBSession.query(Entity).\
+            entity = DBSession.query(Entity). \
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
 
             group = DBSession.query(Group).join(BaseGroup).filter(
@@ -1753,7 +1816,7 @@ def approve_all(request):
         if not parent.marked_for_deletion:
             dictionary_client_id = parent.parent_client_id
             dictionary_object_id = parent.parent_object_id
-            entities = DBSession.query(Entity).join(LexicalEntry).filter(LexicalEntry.parent==parent).all()
+            entities = DBSession.query(Entity).join(LexicalEntry).filter(LexicalEntry.parent == parent).all()
 
             url = request.route_url('approve_entity',
                                     dictionary_client_id=dictionary_client_id,
@@ -1785,7 +1848,7 @@ def accept_all(request):
         if not parent.marked_for_deletion:
             dictionary_client_id = parent.parent_client_id
             dictionary_object_id = parent.parent_object_id
-            entities = DBSession.query(Entity).join(Entity.parent).filter(LexicalEntry.parent==parent).all()
+            entities = DBSession.query(Entity).join(Entity.parent).filter(LexicalEntry.parent == parent).all()
 
             url = request.route_url('accept_entity',
                                     dictionary_client_id=dictionary_client_id,
@@ -1824,11 +1887,11 @@ def approve_outer(request):  # TODO: create test.
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     user = client.user
     p = multiprocessing.Process(target=approve_all_outer, args=(user.login,
-                                                          user.password.hash,
-                                                          cli_id,
-                                                          obj_id,
-                                                          client_id,
-                                                          object_id))
+                                                                user.password.hash,
+                                                                cli_id,
+                                                                obj_id,
+                                                                client_id,
+                                                                object_id))
     log.debug("Conversion started")
     p.start()
     request.response.status = HTTPOk.code
@@ -1911,7 +1974,8 @@ def create_entities_bulk(request):
         inserted_items = []
         for item in req:
             if item['level'] == 'leveloneentity':
-                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
+                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'],
+                                                                 object_id=item['parent_object_id']).first()
                 # entity = LevelOneEntity(client_id=client.id,
                 #                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
                 #                         entity_type=item['entity_type'],
@@ -1920,7 +1984,8 @@ def create_entities_bulk(request):
                 #                         parent=parent)
                 entity = None
             elif item['level'] == 'groupingentity':
-                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
+                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'],
+                                                                 object_id=item['parent_object_id']).first()
                 # entity = GroupingEntity(client_id=client.id,
                 #                         object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
                 #                         entity_type=item['entity_type'],
@@ -1929,7 +1994,8 @@ def create_entities_bulk(request):
                 #                         parent=parent)
                 entity = None
             elif item['level'] == 'leveltwoentity':
-                parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'], object_id=item['parent_object_id']).first()
+                parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'],
+                                                                   object_id=item['parent_object_id']).first()
                 # entity = LevelTwoEntity(client_id=client.id,
                 #                         object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
                 #                         entity_type=item['entity_type'],
@@ -1967,7 +2033,7 @@ def create_entities_bulk(request):
             inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
         request.response.status = HTTPOk.code
         return inserted_items
-    #    except KeyError as e:
+    # except KeyError as e:
     #        request.response.status = HTTPBadRequest.code
     #        return {'error': str(e)}
 

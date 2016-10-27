@@ -33,13 +33,10 @@ trait ITier[+AnnotType <: IAnnotation] {
   @JSExport
   def annotationsToJSArray: js.Dynamic
 
-  // index which is used in the view
-  var index: Int
-
   def toJS: js.Dynamic
 
   // get root document
-  val owner: ELANDocumentJquery
+  val owner: ELANDocument
   def getAnnotations: List[AnnotType]
   def getAnnotationByID(id: String): Option[AnnotType]
   // throws exception if annotation not found
@@ -53,8 +50,6 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
   val annotator = to.annotator
   val defaultLocale = to.defaultLocale
   val owner = to.owner
-
-  var index: Int = _
 
   def getLT = linguisticTypeRef
   def getID = tierID
@@ -71,12 +66,8 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
     val tierJS = mutable.Map.empty[String, js.Dynamic]
     tierJS("ID") = getID.asInstanceOf[js.Dynamic]
     tierJS("timeAlignable") = timeAlignable.asInstanceOf[js.Dynamic]
-    tierJS("index") = index.asInstanceOf[js.Dynamic]
     tierJS("stereotype") = stereotype.asInstanceOf[js.Dynamic]
-
-    val annotationsJS: mutable.Map[String, js.Dynamic] =
-      collection.mutable.Map() ++ getAnnotations.map(annot => annot.getID -> annot.toJS).toMap
-    tierJS("annotations") = annotationsJS.toJSDictionary.asInstanceOf[js.Dynamic]
+    tierJS("annotations") = getAnnotations.map(_.toJS).toJSArray.asInstanceOf[js.Dynamic]
     tierJS.toJSDictionary.asInstanceOf[js.Dynamic]
   }
 
@@ -86,9 +77,9 @@ abstract class Tier[+AnnotType <: IAnnotation] (to: TierOpts) extends ITier[Anno
 
 object Tier {
   // read sequence of XML Tier elements and return list of them
-  def fromXMLs(tierXMLs: JQuery, owner: ELANDocumentJquery) = Utils.jQuery2List(tierXMLs).map(fromXML(_, owner))
+  def fromXMLs(tierXMLs: JQuery, owner: ELANDocument) = Utils.jQuery2List(tierXMLs).map(fromXML(_, owner))
   // factory method, chooses right tier type and creates it
-  def fromXML(tierXML: JQuery, owner: ELANDocumentJquery): Tier[IAnnotation] = {
+  def fromXML(tierXML: JQuery, owner: ELANDocument): Tier[IAnnotation] = {
     val ltRef = RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName)
     owner.getLinguisticTypeChecked(ltRef).getStereotypeID match {
       case None => new TopLevelTier(tierXML, owner)
@@ -107,8 +98,8 @@ object Tier {
 
 private[tier] class TierOpts(val tierID: RequiredXMLAttr[String], val linguisticTypeRef: RequiredXMLAttr[String],
                val participant: OptionalXMLAttr[String], val annotator: OptionalXMLAttr[String],
-               val defaultLocale: OptionalXMLAttr[String], val owner: ELANDocumentJquery) {
-  def this(tierXML: JQuery, owner: ELANDocumentJquery) = this(
+               val defaultLocale: OptionalXMLAttr[String], val owner: ELANDocument) {
+  def this(tierXML: JQuery, owner: ELANDocument) = this(
     RequiredXMLAttr(tierXML, Tier.tIDAttrName),
     RequiredXMLAttr(tierXML, Tier.lTypeRefAttrName),
     OptionalXMLAttr(tierXML, Tier.partAttrName),
@@ -117,7 +108,7 @@ private[tier] class TierOpts(val tierID: RequiredXMLAttr[String], val linguistic
     owner
   )
   def this(tierID: String, linguisticTypeRef: String, participant: Option[String], annotator: Option[String],
-           defaultLocale: Option[String], owner: ELANDocumentJquery) = this(
+           defaultLocale: Option[String], owner: ELANDocument) = this(
     RequiredXMLAttr(Tier.tIDAttrName, tierID),
     RequiredXMLAttr(Tier.lTypeRefAttrName, linguisticTypeRef),
     OptionalXMLAttr(Tier.partAttrName, participant),
