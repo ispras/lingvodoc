@@ -143,8 +143,8 @@ def convert_markup(request):
             f.write(content)
             f.close()
             if os.path.getsize(filename) / 1024 / 1024.0 < 1:
-                if 'markup_type' in l2e.additional_metadata :
-                    if 'praat' in l2e.additional_metadata['markup_type']:
+                if 'data_type' in l2e.additional_metadata :
+                    if 'praat' in l2e.additional_metadata['data_type']:
                         content = praat_to_elan(filename)
                         if sys.getsizeof(content) / 1024 / 1024.0 < 1:
                             # filename2 = 'abc.xml'
@@ -160,8 +160,10 @@ def convert_markup(request):
                             #     pass
                             #     os.remove(filename2)
                             return {'content': content}
-                    elif 'elan' in l2e.additional_metadata['markup_type']:
+                    elif 'elan' in l2e.additional_metadata['data_type']:
                         return content
+                    else:
+                        raise KeyError("Not allowed convert option")
                     raise KeyError('File too big')
                 raise KeyError("Not allowed convert option")
             raise KeyError('File too big')
