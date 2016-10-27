@@ -1,0 +1,57 @@
+
+<div class="container">
+
+    <div class="row">
+        <div class="col-md-6">
+
+            Adoptions <input type="checkbox" ng-model='adoptedSearch' indeterminate />
+            Etymology <input type="checkbox" ng-model='etymologySearch' indeterminate />
+
+            <div ng-repeat="searchField in search">
+                <input type="text" placeholder="" ng-model="searchField.query">
+                <select ng-model="searchField.field" ng-options="field.getId as field.translation for field in controller.getSearchFields() track by field.getId">
+                    <option></option>
+                </select>
+                /OR <input type="checkbox" ng-checked="searchField.orFlag" ng-model="searchField.orFlag">
+                <span class="glyphicon glyphicon-plus-sign" ng-if="$index == (search.length - 1)" ng-click="controller.addSearchField()"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <br>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <button type="button" class="btn btn-primary" ng-click="controller.doSearch()">Search</button>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="col-md-12">
+            <hr/>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="col-md-12">
+
+            <div id="map-holder">
+                <div class="container fill">
+                    <div id="map"></div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+
+

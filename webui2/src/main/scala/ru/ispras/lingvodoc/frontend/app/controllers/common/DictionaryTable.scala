@@ -223,6 +223,7 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
             case "ELAN markup" => TextValue(entity, dataType, entities)
             case "Image" => TextValue(entity, dataType, entities)
             case "Link" => GroupValue(entity, dataType, entity.link.get)
+            case "Grouping Tag" => TextValue(entity, dataType, entities)
           }
         case None => throw new ModelException("Entity refers to the unknown data type!")
       }

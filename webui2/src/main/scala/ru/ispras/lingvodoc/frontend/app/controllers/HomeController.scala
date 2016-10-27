@@ -3,16 +3,16 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
-import ru.ispras.lingvodoc.frontend.app.model.{CompositeId, DictionaryQuery, Language, Perspective}
+import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
-import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.Any
+import scala.scalajs.js.{Any, UndefOr}
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 import scala.scalajs.js.JSConverters._
-
+import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 
 
 @js.native
@@ -27,11 +27,14 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
     with LoadingPlaceholder
     with AngularExecutionContextProvider {
 
+
+  private[this] var perspectiveMeta = Seq[PerspectiveMeta]()
+
   scope.languages = js.Array[Language]()
 
   @JSExport
-  def getPerspectiveAuthors(perspective: Perspective): String = {
-    ""
+  def getPerspectiveAuthors(perspective: Perspective): UndefOr[String] = {
+    perspectiveMeta.find(_.getId == perspective.getId).flatMap(_.metaData.authors.map(_.authors)).orUndefined
   }
 
   private[this] def setPerspectives(languages: Seq[Language]): Unit = {
@@ -40,15 +43,6 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
         backend.getDictionaryPerspectives(dictionary, onlyPublished = true) onComplete {
           case Success(perspectives) =>
             dictionary.perspectives = perspectives.toJSArray
-
-            perspectives.foreach(p => {
-              if (p.metadata.contains("location") && p.metadata.contains("authors")) {
-                backend.getPerspectiveMeta(CompositeId.fromObject(dictionary), CompositeId.fromObject(p), Seq("location", "authors"))
-              }
-            })
-
-
-
           case Failure(e) =>
         }
       }
@@ -56,7 +50,10 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
     }
   }
 
-  override protected def onLoaded[T](result: T): Unit = {}
+  override protected def onLoaded[T](result: T): Unit = {
+
+
+  }
 
   override protected def onError(reason: Throwable): Unit = {}
 
@@ -64,16 +61,18 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
   }
 
   override protected def postRequestHook(): Unit = {
+    scope.$digest()
   }
 
   doAjax(() => {
-    backend.allStatuses() map { _ =>
-      backend.getPublishedDictionaries onComplete {
-        case Success(languages) =>
+    backend.allPerspectivesMeta flatMap { p =>
+      perspectiveMeta = p
+      backend.allStatuses() flatMap { _ =>
+        backend.getPublishedDictionaries map { languages =>
           setPerspectives(languages)
           scope.languages = languages.toJSArray
           languages
-        case Failure(e) =>
+        }
       }
     }
   })

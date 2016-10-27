@@ -13,6 +13,7 @@
     <title>Lingvodoc</title>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/bootstrap.min.css')}"/>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
+    <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/leaflet.css')}"/>
 
     <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-jsdeps.js')}"></script>
     <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-fastopt.js')}"></script>

@@ -42,4 +42,6 @@ jsDependencies += ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer
 jsDependencies += ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js"
 
 jsDependencies += ProvidedJS / "leaflet.js"
+jsDependencies += ProvidedJS / "oms.min.js" dependsOn "leaflet.js"
+
 

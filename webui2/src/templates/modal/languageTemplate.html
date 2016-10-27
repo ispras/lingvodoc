@@ -3,7 +3,7 @@
 <ul>
     <li ng-repeat="dictionary in language.dictionaries">
         {{ dictionary.translation }} <span ng-repeat="perspective in dictionary.perspectives" ng-init="authors=controller.getPerspectiveAuthors(perspective)">
-                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}">{{perspective.translation}} <small ng-if="authors">({{ authors }})</small></a>
+                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/view">{{perspective.translation}} <small ng-if="authors">({{ authors }})</small></a>
         </span>
 
     </li>
