@@ -65,6 +65,7 @@ object LingvodocApplication {
       .controller[UserFilesController]
       .controller[MapSearchController]
       .controller[ViewInfoBlobsController]
+      .controller[EditGroupingTagModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

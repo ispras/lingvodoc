@@ -513,6 +513,14 @@
                         </button>
                     </div>
 
+
+                    <!-- Grouping tag values  -->
+                    <div ng-if="column.checkDataTypeName('Grouping Tag')">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.editGroupingTag(row.entry, column.field, cell.values)">
+                            <span class="glyphicon glyphicon-list">Edit ({{cell.values.length }})</span>
+                        </button>
+                    </div>
+
                 </td>
 
                 <td>
