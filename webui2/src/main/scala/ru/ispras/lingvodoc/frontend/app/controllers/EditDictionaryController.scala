@@ -88,48 +88,14 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
   }
 
   @JSExport
-  def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html";
-    options.windowClass = "sm-modal-window"
-    options.controller = "SoundMarkupController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          soundAddress = soundAddress.asInstanceOf[js.Object],
-          markupAddress = markupAddress.asInstanceOf[js.Object],
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-        )
-      }
-    ).asInstanceOf[js.Dictionary[js.Any]]
-
-    val instance = modal.open[Unit](options)
-  }
-
-  @JSExport
-  def getActionLink(action: String) = {
-    "#/dictionary/" +
-      encodeURIComponent(dictionaryClientId.toString) + '/' +
-      encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
-      encodeURIComponent(perspectiveClientId.toString) + "/" +
-      encodeURIComponent(perspectiveObjectId.toString) + "/" +
-      action
-  }
-
-
-  @JSExport
-  def viewPraatSoundMarkup(soundValue: Value, markupValue: Value) = {
+  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
 
     val soundAddress = soundValue.getContent()
 
-    backend.convertPraatMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
         val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html";
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
         options.windowClass = "sm-modal-window"
         options.controller = "SoundMarkupController"
         options.backdrop = false
@@ -150,6 +116,15 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
     }
   }
 
+  @JSExport
+  def getActionLink(action: String) = {
+    "#/dictionary/" +
+      encodeURIComponent(dictionaryClientId.toString) + '/' +
+      encodeURIComponent(dictionaryObjectId.toString) + "/perspective/" +
+      encodeURIComponent(perspectiveClientId.toString) + "/" +
+      encodeURIComponent(perspectiveObjectId.toString) + "/" +
+      action
+  }
 
   @JSExport
   def toggleSelectedEntries(id: String) = {
@@ -346,6 +321,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
 
   @JSExport
   def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/editGroupingTag.html"
     options.controller = "EditGroupingTagModalController"

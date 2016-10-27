@@ -63,36 +63,15 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
   load()
 
   @JSExport
-  def viewSoundMarkup(soundAddress: String, markupAddress: String) = {
-    val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
-    options.controller = "SoundMarkupController"
-    options.backdrop = false
-    options.keyboard = false
-    options.size = "lg"
-    options.resolve = js.Dynamic.literal(
-      params = () => {
-        js.Dynamic.literal(
-          soundAddress = soundAddress.asInstanceOf[js.Object],
-          markupAddress = markupAddress.asInstanceOf[js.Object],
-          dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
-          dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
-        )
-      }
-    ).asInstanceOf[js.Dictionary[js.Any]]
-
-    val instance = modal.open[Unit](options)
-  }
-
-  @JSExport
-  def viewPraatSoundMarkup(soundValue: Value, markupValue: Value) = {
+  def viewSoundMarkup(soundValue: Value, markupValue: Value) = {
 
     val soundAddress = soundValue.getContent()
 
-    backend.convertPraatMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
       case Success(elan) =>
         val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/soundMarkup.html"; options.windowClass ="sm-modal-window"
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.windowClass = "sm-modal-window"
         options.controller = "SoundMarkupController"
         options.backdrop = false
         options.keyboard = false
@@ -120,7 +99,6 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
       case None => throw new ControllerException("")
     }
   }
-
 
   @JSExport
   def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
