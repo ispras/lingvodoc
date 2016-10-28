@@ -1,78 +1,150 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 
-import com.greencatsoft.angularjs.core.Scope
-import com.greencatsoft.angularjs.{AbstractController, injectable}
-import google.maps
-import google.maps.LatLng
+import com.greencatsoft.angularjs.core.{Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import io.plasmap.pamphlet._
 import org.scalajs.dom._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
+import ru.ispras.lingvodoc.frontend.app.model._
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance}
 
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
 
 @js.native
 trait PerspectiveMapScope extends Scope {
-  var labels: js.Array[Location] = js.native
-  var map: maps.Map = js.native
+  var pageLoaded: Boolean = js.native
 }
 
 @injectable("PerspectiveMapController")
 class PerspectiveMapController(scope: PerspectiveMapScope,
-                               modal: ModalService,
                                instance: ModalInstance[Unit],
-                               backend: BackendService) extends AbstractController[PerspectiveMapScope](scope) {
+                               backend: BackendService,
+                               val timeout: Timeout,
+                               params: js.Dictionary[js.Function0[js.Any]])
+  extends AbstractController[PerspectiveMapScope](scope)
+  with AngularExecutionContextProvider
+  with LoadingPlaceholder {
 
-  private[this] val mapElementId: String = "map-canvas"
-  private[this] var displayedLabels: Seq[LatLng] = Seq[LatLng]()
+  private[this] val perspective = params("perspective").asInstanceOf[Perspective]
+  private[this] var metaData: Option[MetaData] = Option.empty[MetaData]
+  private[this] var locations: Seq[LatLng] = Seq[LatLng]()
 
-  scope.labels = js.Array()
 
+  private[this] def createMarker(latLng: LatLng): Marker = {
+    val iconOptions = IconOptions.iconUrl("static/images/marker-icon.png").build
+    val icon = Leaflet.icon(iconOptions)
+    val markerOptions = js.Dynamic.literal("icon" -> icon).asInstanceOf[MarkerOptions]
+    Leaflet.marker(Leaflet.latLng(latLng.lat, latLng.lng), markerOptions).asInstanceOf[Marker]
+  }
+
+
+  private[this] def initializeMap() = {
+    val cssId = "map"
+    val conf = LeafletMapOptions.zoomControl(true).scrollWheelZoom(true).build
+    val leafletMap = Leaflet.map(cssId, conf).setView(Leaflet.latLng(51.505f, -0.09f), 13)
+    val MapId = "lingvodoc_ispras_ru"
+    val Attribution = "Map data &copy; <a href=\"http://openstreetmap.org\">OpenStreetMap</a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"http://mapbox.com\">Mapbox</a>"
+
+    // 61.5240° N, 105.3188° E
+    val x = 61.5240f
+    val y = 105.3188f
+    val z = 3
+
+    val uri = s"http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    val tileLayerOptions = TileLayerOptions
+      .attribution(Attribution)
+      .subdomains(scalajs.js.Array("a", "b", "c"))
+      .mapId(MapId)
+      .detectRetina(true).build
+
+    val tileLayer = Leaflet.tileLayer(uri, tileLayerOptions)
+    tileLayer.addTo(leafletMap)
+    leafletMap.setView(Leaflet.latLng(x, y), z)
+
+    leafletMap.onClick(e => {
+      if (locations.isEmpty) {
+
+        val latLng = LatLng(e.latlng.lat, e.latlng.lng)
+        val marker = createMarker(latLng)
+
+        marker.onClick(e => {
+          locations = locations.filterNot{location =>
+            Math.abs(latLng.lat - e.latlng.lat) <= 0.001 && Math.abs(latLng.lng - e.latlng.lng) <= 0.001
+          }
+          leafletMap.removeLayer(marker)
+        })
+
+        locations = locations :+ latLng
+
+        marker.addTo(leafletMap)
+      }
+    })
+
+    metaData.foreach { meta =>
+      meta.location foreach { location =>
+
+        val latLng = location.location
+        val iconOptions = IconOptions.iconUrl("static/images/marker-icon.png").build
+        val icon = Leaflet.icon(iconOptions)
+        val markerOptions = js.Dynamic.literal("icon" -> icon).asInstanceOf[MarkerOptions]
+        val marker = Leaflet.marker(Leaflet.latLng(latLng.lat, latLng.lng), markerOptions)
+
+        marker.onClick(e => {
+          locations = locations.filterNot{location =>
+            Math.abs(latLng.lat - e.latlng.lat) <= 0.001 && Math.abs(latLng.lng - e.latlng.lng) <= 0.001
+          }
+
+          leafletMap.removeLayer(marker)
+        })
+
+        locations = locations :+ latLng
+
+        marker.addTo(leafletMap)
+      }
+    }
+
+
+
+  }
 
   @JSExport
-  def ok() = {
+  def save() = {
+    locations.headOption foreach { location =>
+      metaData.foreach { meta =>
+        val updatedMetaData = meta.copy(location = Some(Location("location", location)))
+        backend.setPerspectiveMeta(CompositeId(perspective.parentClientId, perspective.parentObjectId), CompositeId(perspective.clientId, perspective.objectId), updatedMetaData) map { _ =>
+          instance.dismiss(())
+        }
+      }
+    }
+  }
+
+  @JSExport
+  def cancel() = {
     instance.dismiss(())
   }
 
-  // display markers
-  @JSExport
-  def drawLocations() = {
 
+  override protected def onLoaded[T](result: T): Unit = {}
+
+  override protected def onError(reason: Throwable): Unit = {}
+
+  override protected def preRequestHook(): Unit = {}
+
+  override protected def postRequestHook(): Unit = {
+    initializeMap()
   }
 
-
-  @JSExport
-  def initializeMap() = {
-
-    // Initialize Google Maps
-    val opts = google.maps.MapOptions(
-      center = new LatLng(51.201203, -1.724370),
-      zoom = 8,
-      panControl = false,
-      streetViewControl = false,
-      mapTypeControl = false)
-
-    scope.map = new google.maps.Map(document.getElementById(mapElementId), opts)
-
-    // Google maps event handlers
-    google.maps.event.addListener(scope.map, "click", () => {
-
-    })
-
-    // FIXME: An extremely ugly workaround to prevent incorrect initialization of google maps object
-    // Better way: somehow hook bs.modal.shown event
-    // Even better: do not re-create google maps object and re-use an old one as google documentation suggests
-    // setTimeout(() => {
-    //   google.maps.event.trigger(scope.map, "resize")
-    //   drawLocations()
-    // }, 2000)
-
-    // there is no saveTimeout in 0.6.10 version of scalajs plugin, here is a workaround
-    scala.scalajs.js.timers.setTimeout(2000)
-    {
-      google.maps.event.trigger(scope.map, "resize")
-      drawLocations()
+  doAjax(() => {
+    backend.getPerspectiveMeta(perspective) map { meta =>
+      metaData = Some(meta)
+    } recover {
+      case e: Throwable => console.log("2321321")
     }
-  }
+  })
+
 }

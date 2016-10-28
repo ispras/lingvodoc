@@ -17,7 +17,8 @@ import scala.util.{Failure, Success}
 
 @js.native
 trait EditGroupingTagScope extends Scope {
-
+  var pageLoaded: Boolean = js.native
+  var dictionaryTable: DictionaryTable = js.native
 }
 
 @injectable("EditGroupingTagModalController")
@@ -31,7 +32,6 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
     with SimplePlay
     with LoadingPlaceholder {
 
-
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
   private[this] val perspectiveClientId = params("perspectiveClientId").asInstanceOf[Int]
@@ -44,9 +44,10 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
   private[this] val fieldId = CompositeId.fromObject(field)
 
-
   private[this] var dataTypes = Seq[TranslationGist]()
   private[this] var perspectiveFields = Seq[Field]()
+
+  scope.pageLoaded = false
 
 
 
@@ -71,9 +72,13 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
 
   override protected def onError(reason: Throwable): Unit = {}
 
-  override protected def preRequestHook(): Unit = {}
+  override protected def preRequestHook(): Unit = {
+    scope.pageLoaded = false
+  }
 
-  override protected def postRequestHook(): Unit = {}
+  override protected def postRequestHook(): Unit = {
+    scope.pageLoaded = true
+  }
 
 
   doAjax(() => {
@@ -83,7 +88,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
       backend.getFields(dictionaryId, perspectiveId) flatMap { fields =>
         perspectiveFields = fields
         backend.connectedLexicalEntries(lexicalEntryId, fieldId) map { connectedEntries =>
-          DictionaryTable.build(perspectiveFields, dataTypes, connectedEntries)
+          scope.dictionaryTable = DictionaryTable.build(perspectiveFields, dataTypes, connectedEntries)
         }
       }
     }
