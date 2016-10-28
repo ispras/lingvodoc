@@ -70,7 +70,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   val soundAddress = params.get("soundAddress").map(_.toString)
   val markupAddress = params.get("markupAddress").map(_.toString)
-  val markupData = params.get("markupData").map(_.toString)
+  val markupData = params.get("markupData").map(_.asInstanceOf[String])
 
   val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
   val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
@@ -85,12 +85,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   if (markupAddress.nonEmpty) {
     parseMarkup(markupAddress.get)
-  } else if (markupData.nonEmpty) {
-      parseDataMarkup(markupData.get)
+  } else {
+    parseDataMarkup(markupData.get)
   }
-  else {
-    console.warn("Neither markup address nor the markup itself were passed")
-  }
+
 
   // add scope to window for debugging, very useful
    dom.window.asInstanceOf[js.Dynamic].myScope = scope
@@ -272,7 +270,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       elan = Some(e)
       updateVD()
       // in case if markup will be loaded later than sound -- hardly possible, of course
-      scope.$apply()
+      //scope.$apply()
       // console.log(elan.toString)
     } catch {
       case e: Exception =>
