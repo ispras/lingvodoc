@@ -1511,21 +1511,38 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
-  def convertMarkup(entityId: CompositeId): Future[String] = {
+  @deprecated("Temporary disable due to digest-related problems", "27-10-2016")
+  def convertMarkup_old(entityId: CompositeId): Future[String] = {
     val p = Promise[String]()
-
-    $http.post[String](getMethodUrl("convert/markup"), write(entityId)) onComplete {
+    $http.post[js.Dynamic](getMethodUrl("convert/markup"), write(entityId)) onComplete {
       case Success(response) =>
-        try {
-          p.success(response)
-        } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to convert markup", e))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to convert markup", e))
-        }
-      case Failure(e) => p.failure(BackendException("Failed to convert markup", e))
+        p.success(response.content.asInstanceOf[String])
+      case Failure(e) =>
+        p.failure(BackendException("Failed to convert markup", e))
     }
     p.future
   }
+
+  def convertMarkup(entityId: CompositeId): Future[String] = {
+    val p = Promise[String]()
+
+    val req = js.Dynamic.literal("client_id" -> entityId.clientId, "object_id" -> entityId.objectId)
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("POST", getMethodUrl("convert/markup"))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        val responseJSON = JSON.parse(xhr.responseText)
+        p.success(responseJSON.content.asInstanceOf[String])
+      } else {
+        p.failure(new BackendException("Failed to convert markup"))
+      }
+    }
+    xhr.send(JSON.stringify(req))
+    p.future
+  }
+
 
 
   def serviceTranslation(search: String): Future[TranslationGist] = {
@@ -1547,14 +1564,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     xhr.send(JSON.stringify(req))
     p.future
   }
-
-
-
-
-
-
-
-
 }
 
 @injectable("BackendService")
