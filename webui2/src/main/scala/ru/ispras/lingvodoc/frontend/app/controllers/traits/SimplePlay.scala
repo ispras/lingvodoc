@@ -25,8 +25,10 @@ trait SimplePlay {
   @JSExport
   def play(soundAddress: String) = {
     (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
-      import org.scalajs.dom.console
       ws.load(sa)
+      ws.once("ready", () => {
+        ws.playPause()
+      }: Unit)
     })
   }
 
