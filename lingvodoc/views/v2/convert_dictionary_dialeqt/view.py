@@ -28,6 +28,7 @@ def convert_dictionary(request):  # TODO: test
     args["gist_client_id"] = req["gist_client_id"]
     args["gist_object_id"] = req["gist_object_id"]
     args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
+    args["storage"] = request.registry.settings["storage"]
     res = async_convert_dictionary_new.delay(**args)
     log.debug("Conversion started")
     request.response.status = HTTPOk.code
