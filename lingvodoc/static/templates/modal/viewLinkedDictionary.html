@@ -19,7 +19,7 @@
                 <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
             </button>
 
-            <div id="waveform">{{ controller.createWaveSurfer() }}</div>
+            <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
 
         </div>
     </div>
