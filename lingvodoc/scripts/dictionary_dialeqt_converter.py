@@ -10,7 +10,7 @@ import time
 import logging
 import shutil
 import transaction
-from werkzeug.utils import secure_filename
+from pathvalidate import sanitize_filename
 from sqlalchemy import create_engine
 from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
@@ -302,8 +302,9 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
     return str(obje)
 """
 
+
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
-    #filename = secure_filename(u"%s" % filename)
+    filename = sanitize_filename(filename)
     storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
     if create_dir:
         os.makedirs(storage_dir, exist_ok=True)
@@ -397,19 +398,27 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         old_meta = entity.additional_metadata
         need_hash = True
         if old_meta:
-            new_meta = json.loads(old_meta)
+            new_meta = old_meta #json.loads(old_meta)
             if new_meta.get('hash'):
                 need_hash = False
         if need_hash:
             hash = hashlib.sha224(base64.urlsafe_b64decode(content)).hexdigest()
             hash_dict = {'hash': hash}
             if old_meta:
-                new_meta = json.loads(old_meta)
+                new_meta = old_meta #json.loads(old_meta)
                 new_meta.update(hash_dict)
             else:
                 new_meta = hash_dict
-            entity.additional_metadata = json.dumps(new_meta)
-
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+        old_meta = entity.additional_metadata
+        if data_type == "markup":
+            data_type_dict = {"data_type": "praat markup"}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(data_type_dict)
+            else:
+                new_meta = data_type_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
     elif data_type == 'link':
         try:
             pass
@@ -456,9 +465,12 @@ def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audi
         markup_hash = hashlib.sha224(markup).hexdigest()
         if audio_hash not in audio_hashes:
             ###filename = common_name + ".wav"
-            filename = common_name or 'noname.noext'
-            if not filename.count("."):
-                filename = "%s.wav" % filename
+            if common_name:
+                fname = os.path.splitext(common_name)[0]
+                fname = fname.replace(".", "_")
+                filename = "%s.wav" % fname
+            else:
+                filename = 'noname.noext'
             audio_hashes.add(audio_hash)
             '''
             if not is_a_regular_form:
@@ -473,9 +485,13 @@ def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audi
             markup_hashes.add(markup_hash)
         if markup and markup_hash not in markup_hashes:
             if lvl:
-                filename = common_name or 'noname.noext'
-                if len(filename.split(".")) or filename.split(".")[-1] != "TextGrid":
-                    filename = "%s.TextGrid" % filename
+                if common_name:
+                    fname = os.path.splitext(common_name)[0]
+                    fname = fname.replace(".", "_")
+                    filename = "%s.TextGrid" % fname
+                else:
+                    filename = 'noname.noext'
+
                 markup_hashes.add(markup_hash)
                 create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[markup_field][0], fields_dict[markup_field][1],
                         None, client, filename=filename, content=base64.urlsafe_b64encode(markup).decode(), folder_name=folder_name, up_lvl=lvl, storage=storage)
@@ -963,10 +979,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
             item = {"entity_type": "Etymology", "tag": cursor[1],
                     "field_client_id": field_ids["Etymology"][0],
                     "field_object_id": field_ids["Etymology"][1],
-                    # "client_id": ids_dict[fp_le_id_dict[id]][0],
-                    # "object_id": ids_dict[fp_le_id_dict[id]][1],
                     "connections": [{"client_id": client_id, "object_id": object_id}]}
-            # print(item)
             create_group_entity(item, client, user)
             # status = session.post(connect_url, json=item)
             # log.debug(status.text)
