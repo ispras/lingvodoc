@@ -29,6 +29,7 @@ import base64
 import json
 import os
 import shutil
+from pathvalidate import sanitize_filename
 
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -246,8 +247,7 @@ def language_with_dicts(lang, dicts, request):
 
 
 def object_file_path(obj, settings, data_type, filename, create_dir=False):
-    from werkzeug.utils import secure_filename
-    filename = secure_filename(filename)
+    filename = sanitize_filename(filename)
     base_path = settings['storage']['path']
     storage_dir = os.path.join(base_path, obj.__tablename__, data_type, str(obj.client_id), str(obj.object_id))
     if create_dir:
