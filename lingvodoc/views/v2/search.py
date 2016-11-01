@@ -117,64 +117,72 @@ def advanced_search(request):
             raise HTTPBadRequest
         search_parts = searchstring['searchstring'].split()
         search_expression = Entity.content.like('%' + search_parts[0] + '%')
+        to_do_or = searchstring['search_by_or']
+        if to_do_or:
+            operator_func = or_
+        else:
+            operator_func = and_
         for part in search_parts[1:]:
-            # search_expression = or_(search_expression, Entity.content.like('%' + part + '%'))
-            search_expression = list()
+            search_expression = operator_func(search_expression, Entity.content.like('%' + part + '%'))
+            # search_expression = list()
         if 'entity_type' in searchstring:
             # print(searchstring['entity_type'])
-            # search_expression = and_(search_expression, Entity.entity_type == searchstring['entity_type'])
-            search_expression = list()
-        return search_expression, searchstring['search_by_or']
+            search_expression = and_(search_expression, Entity.entity_type == searchstring['entity_type'])
+            # search_expression = list()
+        return search_expression
 
     if not searchstrings:
         request.response.status = HTTPBadRequest.code
         return {'error': 'The query string couldn\'t be empty'}
 
     try:
-        search_expression, to_do_or = make_expression_component(searchstrings[0])
+        search_expression = make_expression_component(searchstrings[0])
     except HTTPBadRequest:
         request.response.status = HTTPBadRequest.code
         return {'error': 'The query string couldn\'t be empty'}
+    to_do_or = req.get('search_by_or', True)
+    if to_do_or:
+        operator_func = or_
+    else:
+        operator_func = and_
     for search_string in searchstrings[1:]:
-        if to_do_or:
-            operator_func = or_
-        else:
-            operator_func = and_
-        tmp_expression, to_do_or = make_expression_component(search_string)
+        tmp_expression = make_expression_component(search_string)
         search_expression = operator_func(search_expression, tmp_expression)
 
-    # results_cursor = DBSession.query(LevelOneEntity.parent_client_id, Entity.parent_object_id) \
-    #     .distinct(Entity.parent_client_id, Entity.parent_object_id) \
-    #     .filter(search_expression)
-    results_cursor = list()
-    tmp_list = list()
-    for item in results_cursor.all():
-        tmp_list.append(item)
+    results_cursor = DBSession.query(Entity.parent_client_id, Entity.parent_object_id) \
+        .distinct(Entity.parent_client_id, Entity.parent_object_id) \
+        .filter(search_expression)
+    # results_cursor = list()
+    # tmp_list = list()
+    # for item in results_cursor.all():
+    #     tmp_list.append(item)
+    results = list()
 
     results_cursor = DBSession.query(LexicalEntry) \
-        .options(joinedload('entity').subqueryload('publishentity'))
-        # .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(tmp_list))
-    result_list = list()
+        .options(joinedload('entity').subqueryload('publishingentity')) \
+        .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(results_cursor))
+    # result_list = list()
 
-    results = list()
     for item in results_cursor.all():
-        if (item.client_id, item.object_id) in tmp_list:
+        # if (item.client_id, item.object_id) in tmp_list:
 
             tmp_result = dict()
-            tmp_result['lexical_entry'] = item.track(True)
+            # tmp_result['lexical_entry'] = item.track(True)
+            tmp_result['lex_client_id'] = item.client_id
+            tmp_result['lex_object_id'] = item.object_id
             tmp_result['client_id'] = item.parent_client_id
             tmp_result['object_id'] = item.parent_object_id
-            perspective_tr = item.parent.get_translation(request)
-            tmp_result['translation_string'] = perspective_tr['translation_string']
-            tmp_result['translation'] = perspective_tr['translation']
+            perspective_tr = item.parent.get_translation(2)
+            # tmp_result['translation_string'] = perspective_tr['translation_string']
+            tmp_result['translation'] = perspective_tr
             tmp_result['is_template'] = item.parent.is_template
             tmp_result['status'] = item.parent.state
             tmp_result['marked_for_deletion'] = item.parent.marked_for_deletion
             tmp_result['parent_client_id'] = item.parent.parent_client_id
             tmp_result['parent_object_id'] = item.parent.parent_object_id
-            dict_tr = item.parent.parent.get_translation(request)
-            tmp_result['parent_translation_string'] = dict_tr['translation_string']
-            tmp_result['parent_translation'] = dict_tr['translation']
+            dict_tr = item.parent.parent.get_translation(2)
+            # tmp_result['parent_translation_string'] = dict_tr['translation_string']
+            tmp_result['parent_translation'] = dict_tr
             results.append(tmp_result)
     request.response.status = HTTPOk.code
     return results
