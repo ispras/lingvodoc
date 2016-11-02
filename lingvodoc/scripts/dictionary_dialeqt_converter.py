@@ -624,20 +624,20 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                 pass
         dict_attributes = get_dict_attributes(sqconn)
 
-        # """
+        """
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
         DBSession.add(translationgist)
         DBSession.flush()
         gist_client_id = translationgist.client_id
         gist_object_id = translationgist.object_id
-        # """
+        """
         parent_client_id = gist_client_id
         parent_object_id = gist_object_id
 
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent.marked_for_deletion:
 
-            # """
+            """
             translationatom = TranslationAtom(client_id=client.id,
                                               parent=parent,
                                               locale_id=locale_id,
@@ -650,7 +650,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
             log.debug(dict_attributes["dictionary_name"])
             language_client_id = atom_client_id
             language_object_id = atom_object_id
-            # """
+            """
             lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
 
             resp = translation_service_search("WiP")
