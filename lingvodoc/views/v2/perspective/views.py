@@ -1505,7 +1505,7 @@ def lexical_entries_published(request):
         #     result.append(entry.track(True))
 
 #        lexes_composite_list = [(lex.client_id, lex.object_id) for lex in lexes.all()]
-        lexes_composite_list = [(57, 20)]
+        lexes_composite_list = [(57, i) for i in range(20, 40)]
 
         result = LexicalEntry.track1(True, lexes_composite_list)
 
