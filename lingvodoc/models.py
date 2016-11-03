@@ -9,6 +9,8 @@ from sqlalchemy.orm import (
     aliased
 )
 
+from sqlalchemy.sql import text
+
 from sqlalchemy import (
     Column,
     Index,
@@ -83,53 +85,8 @@ categories = {0: 'lingvodoc.ispras.ru/dictionary',
 from collections import deque
 
 
-# NOT DONE
-# def new_recursive_content(self, publish):
-#     vec = []
-#     # This code may be much faster.
-#     first_stack = deque()
-#     second_stack = deque()
-#     root = self
-#     first_stack.append(root)
-#     while len(first_stack) > 0:
-#         current = first_stack.pop()
-#         second_stack.append(current)
-#         relationships = inspect(type(current)).relationships
-#         for (name, relation) in relationships.items():
-#             if relation.direction.name == "ONETOMANY" and hasattr(current, str(name)):
-#                 child_list = getattr(current, str(name))
-#                 for x in child_list:
-#                     first_stack.append(x)
-#
-#     while len(second_stack) > 0:
-#         node = second_stack.pop()
-#         locale_id = None
-#         additional_metadata = None
-#         if hasattr(node, "additional_metadata"):
-#             if node.additional_metadata:
-#                 additional_metadata = json.loads(node.additional_metadata)
-#         if hasattr(node, "locale_id"):
-#             locale_id = node.locale_id
-#         if hasattr(node, "content"):
-#             content = node.content
-#         if hasattr(node, "entity_type"):
-#             entity_type = node.entity_type
-#
-#         vec.append({'level': node.__tablename__,
-#                     'content': content,
-#                     'object_id': node.object_id,
-#                     'client_id': node.client_id,
-#                     'parent_object_id': node.parent_object_id,
-#                     'parent_client_id': node.parent_client_id,
-#                     'entity_type': entity_type,
-#                     'marked_for_deletion': node.marked_for_deletion,
-#                     'locale_id': locale_id,
-#                     'additional_metadata': additional_metadata})
-#     return vec
-
-
 def entity_content(xx, publish, root, delete_self=False):
-    publishing_entity= xx.publishingentity
+    publishing_entity = xx.publishingentity
     published = publishing_entity.published
     accepted = publishing_entity.accepted
     if publish and not published:
@@ -198,65 +155,6 @@ def recursive_content(self, publish, root=True, delete_self=False):  # TODO: com
         vec.append(info)
     return vec
 
-
-# def recursive_content(self, publish):  # TODO: completely redo
-#     import pdb
-#     pdb.set_trace()
-#     vec = []
-#     # This code may IS much faster.
-#     m = inspect(type(self)).relationships
-#     for (name, relationship) in m.items():
-#         if relationship.direction.name == "ONETOMANY" and hasattr(self, str(name)):
-#             x = getattr(self, str(name))
-#             for xx in x:
-#                 additional_metadata = None
-#                 if hasattr(xx, "additional_metadata"):
-#                     if xx.additional_metadata:
-#                         additional_metadata = xx.additional_metadata
-#                 locale_id = None
-#                 if hasattr(xx, "locale_id"):
-#                     locale_id = xx.locale_id
-#                 info = {'level': xx.__tablename__,
-#                         'content': xx.content,
-#                         'object_id': xx.object_id,
-#                         'client_id': xx.client_id,
-#                         'parent_object_id': xx.parent_object_id,
-#                         'parent_client_id': xx.parent_client_id,
-#                         # 'entity_type': xx.entity_type,
-#                         # 'marked_for_deletion': xx.marked_for_deletion,
-#                         'locale_id': locale_id,
-#                         'additional_metadata': additional_metadata,
-#                         'contains': recursive_content(xx, publish) or None}
-#                 published = False
-#                 if info['contains']:
-#                     log.debug(info['contains'])
-#                     ents = []
-#                     for ent in info['contains']:
-#                         ents += [ent]
-#                         # log.debug('CONTAINS', ent)
-#                     for ent in ents:
-#                         try:
-#                             if 'publish' in ent['level']:
-#                                 if not ent['marked_for_deletion']:
-#                                     published = True
-#                                     if not publish:
-#                                         break
-#                                 if publish:
-#                                     info['contains'].remove(ent)
-#                         except TypeError:
-#                             log.debug('IDK: %s' % str(ent))
-#                 if publish:
-#                     if not published:
-#                         if 'publish' in info['level']:
-#                             res = dict()
-#                             res['level'] = info['level']
-#                             res['marked_for_deletion'] = info['marked_for_deletion']
-#                             info = res
-#                         else:
-#                             continue
-#                 info['published'] = published
-#                 vec += [info]
-#     return vec
 
 
 # TODO: make this part detecting the engine automatically or from config (need to get after engine_from_config)
@@ -693,46 +591,21 @@ class LexicalEntry(CompositeIdMixin,
     marked_for_deletion = Column(Boolean, default=False)
     additional_metadata = Column(JSONB)
 
-    def track(self, publish):
-        vec = []
-        vec += recursive_content(self, publish, True, False)
-        published = False
-        if vec:
-            ents = list(vec)
-            for ent in ents:
-                try:
-                    if 'publish' in ent['level']:
-                        if not ent['marked_for_deletion']:
-                            published = True
-                            if not publish:
-                                break
-                        if publish:
-                            vec.remove(ent)
-                except:
-                    log.debug('IDK: %s' % ent)
-        came_from = None
-        meta = None
-        if self.additional_metadata:
-            meta = self.additional_metadata
-        if meta:
-            if 'came_from' in meta:
-                came_from = meta['came_from']
-        response = {"level": self.__tablename__,
-                    "client_id": self.client_id, "object_id": self.object_id, "contains": vec, "published": published,
-                    "parent_client_id": self.parent_client_id,
-                    "parent_object_id": self.parent_object_id,
-                    "marked_for_deletion": self.marked_for_deletion,
-                    "came_from": came_from}
-        return response
+    def track(self, publish, locale_id):
+        metadata = self.additional_metadata if self.additional_metadata else None
+        came_from = metadata.get('came_from') if metadata and 'came_from' in metadata else None
+
+        lexes_composite_list = [(self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
+                                 self.marked_for_deletion, metadata, came_from)]
+
+        return self.track_multiple(publish, lexes_composite_list, locale_id)
 
     @classmethod
-    def track1(cls, publish, lexs):
-        from sqlalchemy.sql import text
+    def track_multiple(cls, publish, lexs, locale_id):
         log.debug(lexs)
         ls = []
         for i, x in enumerate(lexs):
             ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
-
 
         DBSession.execute('''create TEMPORARY TABLE lexical_entries_temp_table (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''')
 
@@ -765,8 +638,8 @@ class LexicalEntry(CompositeIdMixin,
 
         SELECT
           cte_expr.*,
-          field_datatype.content as data_type,
-          field_atom.content as entity_type,
+          data_type_atom.content as data_type,
+          entity_type_atom.content as entity_type,
           publishingentity.accepted,
           publishingentity.published
         FROM cte_expr
@@ -780,16 +653,16 @@ class LexicalEntry(CompositeIdMixin,
           JOIN translationgist AS data_type_translation_gist
             ON (field.data_type_translation_gist_client_id = data_type_translation_gist.client_id AND
                 field.data_type_translation_gist_object_id = data_type_translation_gist.object_id)
-          JOIN translationatom AS field_atom
-            ON field_translation_gist.client_id = field_atom.parent_client_id AND
-               field_translation_gist.object_id = field_atom.parent_object_id
-          JOIN translationatom AS field_datatype
-            ON data_type_translation_gist.client_id = field_datatype.parent_client_id AND
-               data_type_translation_gist.object_id = field_datatype.parent_object_id
-        WHERE (field_atom.locale_id = 2 AND field_datatype.locale_id = 2)
+          JOIN translationatom AS entity_type_atom
+            ON field_translation_gist.client_id = entity_type_atom.parent_client_id AND
+               field_translation_gist.object_id = entity_type_atom.parent_object_id
+          JOIN translationatom AS data_type_atom
+            ON data_type_translation_gist.client_id = data_type_atom.parent_client_id AND
+               data_type_translation_gist.object_id = data_type_atom.parent_object_id
+        WHERE (entity_type_atom.locale_id = :locale AND data_type_atom.locale_id = :locale)
 
         ORDER BY traversal_lexical_order, tree_numbering_scheme, tree_level;
-        '''))
+        '''), {'locale': locale_id})
 
         entries = result.fetchall()
 
@@ -808,19 +681,20 @@ class LexicalEntry(CompositeIdMixin,
         lexical_list = []
         for k in lexs:
             a = []
-            entry = {'client_id': k[0],
-                     'object_id': k[1],
-                     'parent_client_id': k[2],
-                     'parent_object_id': k[3],
-                     'contains': a,
-                     'marked_for_deletion': k[4]}
-            entry['level'] = 'lexicalentry'
-            entry['published'] = False
-            entry['came_from'] = None
-
+            entry = {
+                'client_id': k[0],
+                'object_id': k[1],
+                'parent_client_id': k[2],
+                'parent_object_id': k[3],
+                'contains': a,
+                'marked_for_deletion': k[4],
+                'additional_metadata': k[5],
+                'came_from': k[6],
+                'level': 'lexicalentry',
+                'published': False
+            }
 
             prev_nodegroup = -1
-            dictionary_form = dict()
             for i in entries:
                 if i['parent_client_id'] != k[0] or i['parent_object_id'] != k[1]:
                     continue
@@ -828,7 +702,9 @@ class LexicalEntry(CompositeIdMixin,
                 dictionary_form = dict(i)
                 dictionary_form['created_at'] = str(i['created_at'])
                 dictionary_form['level'] = 'entity'
-                dictionary_form['contains'] = [] #warning, now only one
+                dictionary_form['contains'] = []
+                if not dictionary_form.get('locale_id'):
+                    dictionary_form['locale_id'] = 0
                 if cur_nodegroup != prev_nodegroup:
                     prev_dictionary_form = dictionary_form
                 else:
@@ -836,12 +712,11 @@ class LexicalEntry(CompositeIdMixin,
                     continue
                 a.append(dictionary_form)
                 prev_nodegroup = cur_nodegroup
-
+            # TODO: published filtering
+            # TODO: locale fallback
             lexical_list.append(entry)
         lexical_list = remove_keys(lexical_list, ['traversal_lexical_order', 'tree_level', 'tree_numbering_scheme'])
-        log.warn(lexical_list)
-
-
+        log.debug(lexical_list)
         return lexical_list
 
     # @classmethod
