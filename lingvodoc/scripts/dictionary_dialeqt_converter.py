@@ -627,17 +627,15 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                           "Sounds of Paradigmatic forms"
                          )
         for name in all_fieldnames:
-            try:
-                data_type_query = DBSession.query(Field) \
-                    .join(TranslationGist,
-                          and_(Field.translation_gist_object_id == TranslationGist.object_id,
-                               Field.translation_gist_client_id == TranslationGist.client_id))\
-                    .join(TranslationGist.translationatom)
-                field = data_type_query.filter(TranslationAtom.locale_id == 2,
-                                                     TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
-                field_ids[name] = (field.client_id, field.object_id)
-            except:
-                print(name)
+            data_type_query = DBSession.query(Field) \
+                .join(TranslationGist,
+                      and_(Field.translation_gist_object_id == TranslationGist.object_id,
+                           Field.translation_gist_client_id == TranslationGist.client_id))\
+                .join(TranslationGist.translationatom)
+            field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                                 TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
+            field_ids[name] = (field.client_id, field.object_id)
+
         DBSession.flush()
         dict_attributes = get_dict_attributes(sqconn)
 
