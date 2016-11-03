@@ -612,16 +612,33 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
         if not user:
             log.debug("ERROR")
 
-        fields = DBSession.query(Field).filter_by().all()
-        DBSession.flush()
-        for field_obj in fields:
+
+        all_fieldnames = ("Markup",
+                          "Paradigm markup",
+                          "Word",
+                          "Transcription",
+                          "Translation",
+                          "Sound",
+                          "Etymology",
+                          "Backref",
+                          "Word of Paradigmatic forms",
+                          "Transcription of Paradigmatic forms",
+                          "Translation of Paradigmatic forms",
+                          "Sounds of Paradigmatic forms"
+                         )
+        for name in all_fieldnames:
             try:
-                field_client_id = int(field_obj.client_id)
-                field_object_id = int(field_obj.object_id)
-                name = get_translation(field_obj.translation_gist_client_id, field_obj.translation_gist_object_id, locale_id)
-                field_ids[name] = (field_client_id, field_object_id)
+                data_type_query = DBSession.query(Field) \
+                    .join(TranslationGist,
+                          and_(Field.translation_gist_object_id == TranslationGist.object_id,
+                               Field.translation_gist_client_id == TranslationGist.client_id))\
+                    .join(TranslationGist.translationatom)
+                field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                                     TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
+                field_ids[name] = (field.client_id, field.object_id)
             except:
-                pass
+                print(name)
+        DBSession.flush()
         dict_attributes = get_dict_attributes(sqconn)
 
         """
