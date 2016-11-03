@@ -695,7 +695,7 @@ class LexicalEntry(CompositeIdMixin,
 
     def track(self, publish):
         vec = []
-        vec += recursive_content(self, publish, True, True)
+        vec += recursive_content(self, publish, True, False)
         published = False
         if vec:
             ents = list(vec)
@@ -732,8 +732,8 @@ class LexicalEntry(CompositeIdMixin,
         ls = []
         for i, x in enumerate(lexs):
             ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
-            #ls.append("(%d, %d, %d)" % (i, x[0], x[1]))
-        # lexlist = ','.join(ls)
+
+
         DBSession.execute('''create TEMPORARY TABLE lexical_entries_temp_table (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''')
 
         DBSession.execute('''insert into lexical_entries_temp_table (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''', ls)
@@ -786,12 +786,24 @@ class LexicalEntry(CompositeIdMixin,
           JOIN translationatom AS field_datatype
             ON data_type_translation_gist.client_id = field_datatype.parent_client_id AND
                data_type_translation_gist.object_id = field_datatype.parent_object_id
-        WHERE (field_atom.locale_id = 1 AND field_datatype.locale_id = 1)
+        WHERE (field_atom.locale_id = 2 AND field_datatype.locale_id = 2)
 
         ORDER BY traversal_lexical_order, tree_numbering_scheme, tree_level;
         '''))
 
         entries = result.fetchall()
+
+        def remove_keys(obj, rubbish):
+            if isinstance(obj, dict):
+                obj = {
+                    key: remove_keys(value, rubbish)
+                    for key, value in obj.items()
+                    if key not in rubbish and value}
+            elif isinstance(obj, list):
+                obj = [remove_keys(item, rubbish)
+                       for item in obj
+                       if item not in rubbish and item]
+            return obj
 
         lexical_list = []
         for k in lexs:
@@ -803,7 +815,9 @@ class LexicalEntry(CompositeIdMixin,
                      'contains': a,
                      'marked_for_deletion': k[4]}
             entry['level'] = 'lexicalentry'
-            entry['published'] = True
+            entry['published'] = False
+            entry['came_from'] = None
+
 
             prev_nodegroup = -1
             dictionary_form = dict()
@@ -813,14 +827,18 @@ class LexicalEntry(CompositeIdMixin,
                 cur_nodegroup = i['tree_numbering_scheme'] if prev_nodegroup != i['tree_numbering_scheme'] else prev_nodegroup
                 dictionary_form = dict(i)
                 dictionary_form['created_at'] = str(i['created_at'])
-                dictionary_form['level'] = 'entry'
+                dictionary_form['level'] = 'entity'
                 dictionary_form['contains'] = [] #warning, now only one
                 if cur_nodegroup != prev_nodegroup:
                     prev_dictionary_form = dictionary_form
                 else:
                     prev_dictionary_form['contains'].append(dictionary_form)
+                    continue
                 a.append(dictionary_form)
+                prev_nodegroup = cur_nodegroup
+
             lexical_list.append(entry)
+        lexical_list = remove_keys(lexical_list, ['traversal_lexical_order', 'tree_level', 'tree_numbering_scheme', 'self_client_id', 'self_object_id', 'link_client_id', 'link_object_id'])
         log.warn(lexical_list)
 
 
