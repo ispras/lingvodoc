@@ -798,11 +798,11 @@ class LexicalEntry(CompositeIdMixin,
                 obj = {
                     key: remove_keys(value, rubbish)
                     for key, value in obj.items()
-                    if key not in rubbish and value}
+                    if key not in rubbish and value is not None}
             elif isinstance(obj, list):
                 obj = [remove_keys(item, rubbish)
                        for item in obj
-                       if item not in rubbish and item]
+                       if item not in rubbish]
             return obj
 
         lexical_list = []
