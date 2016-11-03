@@ -727,33 +727,134 @@ class LexicalEntry(CompositeIdMixin,
 
     @classmethod
     def track1(cls, publish, lexs):
+        from sqlalchemy.sql import text
         log.debug(lexs)
-        included_parts = DBSession.query(Entity)\
-            .join(LexicalEntry.entity)\
-            .join(Entity.publishingentity)\
-            .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(lexs))\
-            .cte(name='included_parts', recursive=True)
+        ls = []
+        for i, x in enumerate(lexs):
+            ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
+            #ls.append("(%d, %d, %d)" % (i, x[0], x[1]))
+        # lexlist = ','.join(ls)
+        DBSession.execute('''create TEMPORARY TABLE lexical_entries_temp_table (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''')
 
-        incl_alias = aliased(included_parts, name='pr')
-        parts_alias = aliased(Entity, name='p')
+        DBSession.execute('''insert into lexical_entries_temp_table (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''', ls)
 
-        included_parts = included_parts.union_all(
-            DBSession.query(parts_alias).filter(and_(Entity.client_id == incl_alias.c.link_client_id, Entity.object_id == incl_alias.c.link_object_id))
+        result = DBSession.execute(text('''
+        WITH RECURSIVE cte_expr AS
+        (SELECT
+           entity.*,
+           lexical_entries_temp_table.traversal_lexical_order                                  AS traversal_lexical_order,
+           1                                                                                   AS tree_level,
+            row_number() over(partition by traversal_lexical_order order by Entity.created_at) as tree_numbering_scheme
+         FROM entity
+           INNER JOIN lexical_entries_temp_table
+             ON
+               entity.parent_client_id = lexical_entries_temp_table.client_id
+               AND entity.parent_object_id = lexical_entries_temp_table.object_id
+
+         UNION ALL
+         SELECT
+           entity.*,
+           cte_expr.traversal_lexical_order,
+           tree_level + 1,
+           cte_expr.tree_numbering_scheme
+         FROM entity
+           INNER JOIN cte_expr
+             ON (cte_expr.client_id = entity.self_client_id AND cte_expr.object_id = entity.self_object_id)
+         WHERE tree_level <= 10
         )
-        #http://10.10.17.214:6543/dictionary/57/2/perspective/57/3/all?start_from=0&count=20
-        # join TranslationGist, join TranslationAtom
-        # .join(TranslationGist,
-        #       and_(Entity.field_client_id == TranslationGist.client_id, Entity.field_object_id == TranslationGist.object_id)) \
-        #     .join(TranslationAtom) \
-        #     # map Lexical entries on ents
-        a = DBSession.query(included_parts).all()
-        for i in a:
-            log.debug(i.parent_object_id)
-        #ents_tuples = [(ent.client_id, ent.object_id) for ent in a]
+
+        SELECT
+          cte_expr.*,
+          field_datatype.content as data_type,
+          field_atom.content as entity_type,
+          publishingentity.accepted,
+          publishingentity.published
+        FROM cte_expr
+          JOIN publishingentity
+            ON publishingentity.client_id = cte_expr.client_id AND publishingentity.object_id = cte_expr.object_id
+          JOIN field
+            ON cte_expr.field_client_id = field.client_id AND cte_expr.field_object_id = field.object_id
+          JOIN translationgist AS field_translation_gist
+            ON (field.translation_gist_client_id = field_translation_gist.client_id AND
+                field.translation_gist_object_id = field_translation_gist.object_id)
+          JOIN translationgist AS data_type_translation_gist
+            ON (field.data_type_translation_gist_client_id = data_type_translation_gist.client_id AND
+                field.data_type_translation_gist_object_id = data_type_translation_gist.object_id)
+          JOIN translationatom AS field_atom
+            ON field_translation_gist.client_id = field_atom.parent_client_id AND
+               field_translation_gist.object_id = field_atom.parent_object_id
+          JOIN translationatom AS field_datatype
+            ON data_type_translation_gist.client_id = field_datatype.parent_client_id AND
+               data_type_translation_gist.object_id = field_datatype.parent_object_id
+        WHERE (field_atom.locale_id = 1 AND field_datatype.locale_id = 1)
+
+        ORDER BY traversal_lexical_order, tree_numbering_scheme, tree_level;
+        '''))
+
+        entries = result.fetchall()
+
+        lexical_list = []
+        for k in lexs:
+            a = []
+            entry = {'client_id': k[0],
+                     'object_id': k[1],
+                     'parent_client_id': k[2],
+                     'parent_object_id': k[3],
+                     'contains': a,
+                     'marked_for_deletion': k[4]}
+            entry['level'] = 'lexicalentry'
+            entry['published'] = True
+
+            prev_nodegroup = -1
+            dictionary_form = dict()
+            for i in entries:
+                if i['parent_client_id'] != k[0] or i['parent_object_id'] != k[1]:
+                    continue
+                cur_nodegroup = i['tree_numbering_scheme'] if prev_nodegroup != i['tree_numbering_scheme'] else prev_nodegroup
+                dictionary_form = dict(i)
+                dictionary_form['created_at'] = str(i['created_at'])
+                dictionary_form['level'] = 'entry'
+                dictionary_form['contains'] = [] #warning, now only one
+                if cur_nodegroup != prev_nodegroup:
+                    prev_dictionary_form = dictionary_form
+                else:
+                    prev_dictionary_form['contains'].append(dictionary_form)
+                a.append(dictionary_form)
+            lexical_list.append(entry)
+        log.warn(lexical_list)
 
 
-        log.debug("Works a")
-        return ['a', 'b']
+        return lexical_list
+
+    # @classmethod
+    # def track2(cls, publish, lexs):
+    #     log.debug(lexs)
+    #     included_parts = DBSession.query(Entity)\
+    #         .join(LexicalEntry.entity)\
+    #         .join(Entity.publishingentity)\
+    #         .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(lexs))\
+    #         .cte(name='included_parts', recursive=True)
+    #
+    #     incl_alias = aliased(included_parts, name='pr')
+    #     parts_alias = aliased(Entity, name='p')
+    #
+    #     included_parts = included_parts.union_all(
+    #         DBSession.query(parts_alias).filter(and_(Entity.client_id == incl_alias.c.link_client_id, Entity.object_id == incl_alias.c.link_object_id))
+    #     )
+    #     #http://10.10.17.214:6543/dictionary/57/2/perspective/57/3/all?start_from=0&count=20
+    #     # join TranslationGist, join TranslationAtom
+    #     # .join(TranslationGist,
+    #     #       and_(Entity.field_client_id == TranslationGist.client_id, Entity.field_object_id == TranslationGist.object_id)) \
+    #     #     .join(TranslationAtom) \
+    #     #     # map Lexical entries on ents
+    #     a = DBSession.query(included_parts).all()
+    #     for i in a:
+    #         log.debug(i.parent_object_id)
+    #     #ents_tuples = [(ent.client_id, ent.object_id) for ent in a]
+    #
+    #
+    #     log.debug("Works a")
+    #     return ['a', 'b']
 
 
 class Entity(CompositeIdMixin,
