@@ -10,7 +10,6 @@ resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repos
 libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.1"
 libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.3.9"
 libraryDependencies += "com.greencatsoft" %%% "scalajs-angular" % "0.8-SNAPSHOT"
-libraryDependencies += "io.surfkit" %%% "scalajs-google-maps" % "0.1-SNAPSHOT"
 libraryDependencies += "io.plasmap" %%% "pamphlet" % "0.9-SNAPSHOT"
 libraryDependencies += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
 libraryDependencies += "be.doeraene" %%% "scalajs-jquery" % "0.9.0" // jquery facade, used for xml parsing
@@ -42,4 +41,6 @@ jsDependencies += ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer
 jsDependencies += ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js"
 
 jsDependencies += ProvidedJS / "leaflet.js"
+jsDependencies += ProvidedJS / "oms.min.js" dependsOn "leaflet.js"
+
 

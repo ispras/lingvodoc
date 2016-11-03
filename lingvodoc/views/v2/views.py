@@ -11,6 +11,7 @@ from lingvodoc.models import (
     TranslationGist,
     BaseGroup,
     User,
+    DictionaryPerspective,
     Field
 )
 
@@ -40,8 +41,11 @@ log = logging.getLogger(__name__)
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    authors = request.params.getall('authors')
-    return authors
+    response = list()
+    for persp in DBSession.query(DictionaryPerspective).all():
+        if persp.additional_metadata:
+            response.append(str(type(persp.additional_metadata)))
+    return response
     # # translation_gists = DBSession.query(TranslationGist).all()
     # gist_base = DBSession.query(BaseGroup).filter_by(action="delete",
     #                                                  subject="translations").one()
@@ -143,14 +147,14 @@ def all_data_types(request):
     import json
 
     response = list()
-    for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link']:
+    for data_type in ['Text', 'Image', 'Sound', 'Markup', 'Link', 'Grouping Tag']:
 
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
         subreq.headers = request.headers
         subreq.json = {'searchstring': data_type}
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
+        # headers = {'Cookie': request.headers['Cookie']}
+        # subreq.headers = headers
         resp = request.invoke_subrequest(subreq)
         response.append(resp.json)
     request.response.status = HTTPOk.code
