@@ -13,7 +13,8 @@ from lingvodoc.models import (
     Organization,
     User,
     TranslationAtom,
-    TranslationGist
+    TranslationGist,
+    categories
 )
 
 from lingvodoc.views.v2.utils import (
@@ -100,7 +101,8 @@ def create_dictionary(request):  # tested & in docs
                                 translation_gist_object_id=translation_gist_object_id,
                                 additional_metadata=additional_metadata)
         if req.get('category'):
-            dictionary.category = req['category']  # todo: simulate enum
+            if req['category'] == 'lingvodoc.ispras.ru/corpora':
+                dictionary.category = categories[req['category']]
         DBSession.add(dictionary)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
