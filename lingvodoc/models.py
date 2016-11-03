@@ -838,7 +838,7 @@ class LexicalEntry(CompositeIdMixin,
                 prev_nodegroup = cur_nodegroup
 
             lexical_list.append(entry)
-        lexical_list = remove_keys(lexical_list, ['traversal_lexical_order', 'tree_level', 'tree_numbering_scheme', 'self_client_id', 'self_object_id', 'link_client_id', 'link_object_id'])
+        lexical_list = remove_keys(lexical_list, ['traversal_lexical_order', 'tree_level', 'tree_numbering_scheme'])
         log.warn(lexical_list)
 
 
