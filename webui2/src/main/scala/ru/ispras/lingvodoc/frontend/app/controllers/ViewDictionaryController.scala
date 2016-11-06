@@ -77,9 +77,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
 
   @JSExport
   def loadSearch(query: String) = {
-    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
-      results =>
-        console.log(results.toJSArray)
+    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map { results =>
         val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
@@ -197,6 +195,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
               backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, offset, scope.size) flatMap { entries =>
+
                 scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
 
                 backend.getPerspectiveRoles(dictionaryId, perspectiveId) map { roles =>

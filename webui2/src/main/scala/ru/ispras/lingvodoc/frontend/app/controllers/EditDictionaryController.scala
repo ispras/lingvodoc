@@ -207,7 +207,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
       case Some(roles) =>
         userService.get() match {
           case Some(user) =>
-            roles.users.getOrElse("Can delete lexical entries", Seq[Int]()).contains(user.id)
+            roles.users.getOrElse("Can deactivate lexical entries", Seq[Int]()).contains(user.id)
           case None => false
         }
       case None => false
