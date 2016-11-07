@@ -262,6 +262,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     * @param objectId
     * @return
     */
+  @deprecated("Deprecated in favor of getDictionary(dictionaryId: CompositeId)", "01-09-2016")
   def getDictionary(clientId: Int, objectId: Int): Future[Dictionary] = {
     val p = Promise[Dictionary]()
     val url = "dictionary/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
@@ -278,6 +279,24 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     }
     p.future
   }
+
+  def getDictionary(dictionaryId: CompositeId): Future[Dictionary] = {
+    val p = Promise[Dictionary]()
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(read[Dictionary](js.JSON.stringify(response)))
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed dictionary json:" + e.getMessage))
+          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed dictionary data. Missing some " +
+            "required fields: " + e.getMessage))
+        }
+      case Failure(e) => p.failure(new BackendException("Failed to get dictionary: " + e.getMessage))
+    }
+    p.future
+  }
+
 
   /**
     * Update dictionary properties
