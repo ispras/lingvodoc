@@ -5,7 +5,7 @@ import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextPr
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
 
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
@@ -100,8 +100,10 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   }
 
   @JSExport
-  def connect() = {
-
+  def connect(entry: LexicalEntry) = {
+    backend.connectLexicalEntry(dictionaryId, perspectiveId, CompositeId.fromObject(field), lexicalEntry, entry).foreach { _ =>
+      scope.dictionaryTable.addEntry(entry)
+    }
   }
 
   @JSExport
@@ -112,6 +114,79 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   @JSExport
   def close() = {
     instance.dismiss(())
+  }
+
+  @JSExport
+  def editGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
+      dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
+
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/editGroupingTag.html"
+        options.controller = "EditGroupingTagModalController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              dictionaryClientId = dictionary.clientId,
+              dictionaryObjectId = dictionary.objectId,
+              perspectiveClientId = perspective.clientId,
+              perspectiveObjectId = perspective.objectId,
+              lexicalEntry = entry.asInstanceOf[js.Object],
+              field = field.asInstanceOf[js.Object],
+              values = values.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[js.Any]]
+
+        val instance = modal.open[Unit](options)
+        instance.result map { _ =>
+
+        }
+      }
+    }
+  }
+
+  @JSExport
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
+      dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
+
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
+        options.controller = "EditGroupingTagModalController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              dictionaryClientId = dictionary.clientId,
+              dictionaryObjectId = dictionary.objectId,
+              perspectiveClientId = perspective.clientId,
+              perspectiveObjectId = perspective.objectId,
+              lexicalEntry = entry.asInstanceOf[js.Object],
+              field = field.asInstanceOf[js.Object],
+              values = values.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[js.Any]]
+
+        val instance = modal.open[Unit](options)
+        instance.result map { _ =>
+
+        }
+
+      }
+    }
+
+
+
+
   }
 
   override protected def onLoaded[T](result: T): Unit = {}

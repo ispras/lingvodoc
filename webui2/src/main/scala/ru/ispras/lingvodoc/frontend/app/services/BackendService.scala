@@ -863,6 +863,24 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
+  def connectLexicalEntry(dictionaryId:CompositeId, perspectiveId: CompositeId, fieldId: CompositeId, targetEntry: LexicalEntry, sourceEntry: LexicalEntry): Future[Unit] = {
+    val p = Promise[Unit]()
+    val url = s"dictionary/${dictionaryId.clientId}/${dictionaryId.objectId}/perspective/${perspectiveId.clientId}/${perspectiveId.objectId}/lexical_entry/${encodeURIComponent(sourceEntry.clientId.toString)}/${encodeURIComponent(sourceEntry.objectId.toString)}/connect"
+    val req = js.Dynamic.literal("field_client_id" -> fieldId.clientId,
+      "field_object_id" -> fieldId.objectId,
+      "tag" -> "",
+      "connections" -> js.Array(
+        js.Dynamic.literal("client_id" -> targetEntry.clientId, "object_id" -> targetEntry.objectId)
+      )
+    )
+    $http.post(getMethodUrl(url), req) onComplete {
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to connect lexical entries", e))
+    }
+    p.future
+  }
+
+
 
 
 

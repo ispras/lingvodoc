@@ -163,6 +163,36 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
     }
   }
 
+  @JSExport
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
+    options.controller = "EditGroupingTagModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionaryClientId = dictionaryClientId,
+          dictionaryObjectId = dictionaryObjectId,
+          perspectiveClientId = perspectiveClientId,
+          perspectiveObjectId = perspectiveObjectId,
+          lexicalEntry = entry.asInstanceOf[js.Object],
+          field = field.asInstanceOf[js.Object],
+          values = values.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Unit](options)
+    instance.result map { _ =>
+
+    }
+  }
+
+
   override protected def onLoaded[T](result: T): Unit = {}
 
   override protected def onError(reason: Throwable): Unit = {}

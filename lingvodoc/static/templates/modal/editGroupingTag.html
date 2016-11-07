@@ -240,6 +240,13 @@
                                 </button>
                             </div>
 
+                            <!-- Grouping tag values  -->
+                            <div ng-if="column.checkDataTypeName('Grouping Tag')">
+                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.editGroupingTag(row.entry, column.field, cell.values)">
+                                    <span class="glyphicon glyphicon-list">Edit ({{cell.values.length }})</span>
+                                </button>
+                            </div>
+
                         </td>
 
                     </tr>
@@ -254,27 +261,39 @@
 
         </div>
 
-
         <div class="row">
             <div class="col-md-12">
                 <h2>Add connected words</h2>
-                <input type="text" class="form-control" ng-model="searchQuery">
             </div>
         </div>
 
 
         <div class="row">
+            <div class="col-md-10">
+                <input type="text" class="form-control" ng-model="searchQuery">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-default" ng-click="controller.search()" ng-disabled="searchQuery.length < 3">Search</button>
+            </div>
+        </div>
+
+
+        <div class="row" ng-repeat="searchTable in searchResults">
             <div class="col-md-12">
+                <h4>{{ controller.getSearchSource(searchTable.rows[0].entry) }}</h4>
                 <table class="table table-striped table-bordered">
                     <thead>
                     <tr>
-                        <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
+                        <td></td>
+                        <td ng-repeat="column in searchTable.header">{{ column.getName() }}</td>
                     </tr>
                     </thead>
 
                     <tbody>
 
-                    <tr ng-repeat="row in dictionaryTable2.rows">
+                    <tr ng-repeat="row in searchTable.rows">
+
+                        <td><button type="button" class="btn btn-default" ng-click="controller.connect(row.entry)">Connect</button></td>
 
                         <td ng-repeat="cell in row.cells" ng-init="rowIndex=$parent.$index; cellIndex=$index; column=dictionaryTable.header[$index]">
 
@@ -465,6 +484,13 @@
                             <div ng-if="column.checkDataTypeName('Link')">
                                 <button type="button" class="btn btn-default btn-sm" ng-click="controller.viewLinkedPerspective(row.entry, column.field, cell.values)">
                                     <span class="glyphicon glyphicon-list">View ({{cell.values.length}})</span>
+                                </button>
+                            </div>
+
+                            <!-- Grouping tag values  -->
+                            <div ng-if="column.checkDataTypeName('Grouping Tag')">
+                                <button type="button" class="btn btn-default btn-sm" ng-click="controller.editGroupingTag(row.entry, column.field, cell.values)">
+                                    <span class="glyphicon glyphicon-list">Edit ({{cell.values.length }})</span>
                                 </button>
                             </div>
 
