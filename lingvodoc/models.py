@@ -643,20 +643,20 @@ class LexicalEntry(CompositeIdMixin,
           publishingentity.accepted,
           publishingentity.published
         FROM cte_expr
-          JOIN publishingentity
+          LEFT JOIN publishingentity
             ON publishingentity.client_id = cte_expr.client_id AND publishingentity.object_id = cte_expr.object_id
-          JOIN field
+          LEFT JOIN field
             ON cte_expr.field_client_id = field.client_id AND cte_expr.field_object_id = field.object_id
-          JOIN translationgist AS field_translation_gist
+          LEFT JOIN translationgist AS field_translation_gist
             ON (field.translation_gist_client_id = field_translation_gist.client_id AND
                 field.translation_gist_object_id = field_translation_gist.object_id)
-          JOIN translationgist AS data_type_translation_gist
+          LEFT JOIN translationgist AS data_type_translation_gist
             ON (field.data_type_translation_gist_client_id = data_type_translation_gist.client_id AND
                 field.data_type_translation_gist_object_id = data_type_translation_gist.object_id)
-          JOIN translationatom AS entity_type_atom
+          LEFT JOIN translationatom AS entity_type_atom
             ON field_translation_gist.client_id = entity_type_atom.parent_client_id AND
                field_translation_gist.object_id = entity_type_atom.parent_object_id
-          JOIN translationatom AS data_type_atom
+          LEFT JOIN translationatom AS data_type_atom
             ON data_type_translation_gist.client_id = data_type_atom.parent_client_id AND
                data_type_translation_gist.object_id = data_type_atom.parent_object_id
         WHERE (entity_type_atom.locale_id = :locale AND data_type_atom.locale_id = :locale)
@@ -717,6 +717,8 @@ class LexicalEntry(CompositeIdMixin,
             lexical_list.append(entry)
         lexical_list = remove_keys(lexical_list, ['traversal_lexical_order', 'tree_level', 'tree_numbering_scheme'])
         log.debug(lexical_list)
+        DBSession.execute('''drop TABLE lexical_entries_temp_table''')
+
         return lexical_list
 
     # @classmethod

@@ -98,7 +98,7 @@ def basic_search(request):
                     subreq.headers = headers
                     resp = request.invoke_subrequest(subreq)
                     result = resp.json
-                    result['lexical_entry'] = entry.track(False)
+                    result['lexical_entry'] = entry.track(False, request.cookies['locale_id'])
                     dict_tr = entry.parent.parent.get_translation(request.cookies['locale_id'])
                     result['parent_translation'] = dict_tr
                     results.append(result)
