@@ -45,6 +45,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
+  private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
@@ -77,9 +78,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
 
   @JSExport
   def loadSearch(query: String) = {
-    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
-      results =>
-        console.log(results.toJSArray)
+    backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map { results =>
         val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
@@ -165,6 +164,36 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
     }
   }
 
+  @JSExport
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
+    options.controller = "EditGroupingTagModalController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          dictionaryClientId = dictionaryClientId,
+          dictionaryObjectId = dictionaryObjectId,
+          perspectiveClientId = perspectiveClientId,
+          perspectiveObjectId = perspectiveObjectId,
+          lexicalEntry = entry.asInstanceOf[js.Object],
+          field = field.asInstanceOf[js.Object],
+          values = values.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Unit](options)
+    instance.result map { _ =>
+
+    }
+  }
+
+
   override protected def onLoaded[T](result: T): Unit = {}
 
   override protected def onError(reason: Throwable): Unit = {}
@@ -196,7 +225,8 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
             backend.getPublishedLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
-              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, offset, scope.size) flatMap { entries =>
+              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, offset, scope.size, sortBy) flatMap { entries =>
+
                 scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
 
                 backend.getPerspectiveRoles(dictionaryId, perspectiveId) map { roles =>
@@ -221,6 +251,20 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
       case e: Throwable => Future.failed(e)
     }
   })
+
+
+
+  @JSExport
+  def getFullPageLink(page: Int): String = {
+    var url = getPageLink(page)
+    sortBy foreach(s => url = url + "/" + s)
+    url
+  }
+
+  @JSExport
+  def getSortByPageLink(sort: String): String = {
+    getPageLink(scope.pageNumber) + "/" + sort
+  }
 
   @JSExport
   override def getPageLink(page: Int): String = {

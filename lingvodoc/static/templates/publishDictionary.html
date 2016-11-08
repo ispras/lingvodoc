@@ -60,7 +60,7 @@
                     <ul class="pagination pagination-sm">
                         <li ng-repeat="p in controller.range(1, pageCount, 1)"
                             ng-class="{active: pageNumber == p}">
-                            <a ng-href="{{controller.getPageLink(p)}}">{{ p }}</a>
+                            <a ng-href="{{controller.getFullPageLink(p)}}">{{ p }}</a>
                         </li>
                     </ul>
                 </nav>

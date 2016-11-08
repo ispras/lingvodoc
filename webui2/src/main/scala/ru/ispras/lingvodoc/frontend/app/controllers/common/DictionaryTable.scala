@@ -121,7 +121,6 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
 
 
   protected def getContent(entities: Seq[Entity], column: SimpleColumn): GenericCell = {
-
     val values: js.Array[Value] = entities.toJSArray.filter(entity => entity.fieldClientId == column.field.clientId && entity.fieldObjectId == column.field.objectId).map(entity => {
       TextValue(entity, column.dataType, js.Array())
     })
@@ -247,10 +246,6 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
             case Some(value) =>
               value match {
                 case v: TextValue =>
-
-                  console.log((v :: Nil).toJSArray)
-                  console.log((entity :: Nil).toJSArray)
-
                   if (v.entity.clientId == entity.parentClientId && v.entity.clientId == entity.parentClientId) {
                     v.values.push(entityToValue(entity))
                   }
