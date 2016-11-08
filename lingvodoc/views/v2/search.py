@@ -117,7 +117,9 @@ def advanced_search(request):
     perspectives = req.get('perspectives', list())
     if perspectives:
         perspectives = [(o['client_id'], o['object_id']) for o in perspectives]
-
+    adopted = req.get('adopted')
+    adopted_type = req.get('adopted_type')
+    with_etimology = req.get('with_etimology')
 
     def make_query(searchstring, perspectives):
 
@@ -153,6 +155,24 @@ def advanced_search(request):
         request.response.status = HTTPBadRequest.code
         return {'error': 'The query string couldn\'t be empty'}
     pre_results = set(results_cursor.all())
+    if adopted:
+        results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).filter(Entity.content.like('%заим.%'))
+        if adopted_type:
+            results_cursor = results_cursor.join(Entity.field) \
+                .join(TranslationAtom,
+                      and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
+                           Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                .filter(TranslationAtom.content == adopted_type,
+                        TranslationAtom.locale_id == 2)
+        pre_results = pre_results and set(results_cursor.all())
+    if with_etimology:
+        results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).join(Entity.field) \
+                .join(TranslationAtom,
+                      and_(Field.data_type_translation_gist_client_id == TranslationAtom.parent_client_id,
+                           Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                .filter(TranslationAtom.content == 'Grouping Tag',
+                        TranslationAtom.locale_id == 2)
+        pre_results = pre_results and set(results_cursor.all())
     for search_string in searchstrings[1:]:
         results_cursor, to_do_or_new = make_query(search_string, perspectives)
         if to_do_or:
@@ -160,6 +180,8 @@ def advanced_search(request):
         else:
             pre_results = pre_results and set(results_cursor.all())
         to_do_or = to_do_or_new
+
+
     # s = select([LexicalEntry.__table__])\
     #     .select_from(LexicalEntry.__table__.join(Entity.__table__,
     #                  and_(
