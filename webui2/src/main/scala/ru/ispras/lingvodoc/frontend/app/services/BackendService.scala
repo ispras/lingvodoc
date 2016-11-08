@@ -25,6 +25,7 @@ object LexicalEntriesType extends Enumeration {
   type LexicalEntriesType = Value
   val Published = Value("published")
   val All = Value("all")
+  val NotAccepted = Value("not_accepted")
 }
 
 @injectable("BackendService")
@@ -779,6 +780,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     * @param perspectiveId
     * @return
     */
+  @deprecated("Use getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId, action: LexicalEntriesType): Future[Int] instead", "01-11-2016")
   def getPublishedLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Int] = {
     val p = Promise[Int]()
 
@@ -809,13 +811,14 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     * @param count
     * @return
     */
-  def getLexicalEntries(dictionary: CompositeId, perspective: CompositeId, action: LexicalEntriesType, offset: Int, count: Int): Future[Seq[LexicalEntry]] = {
+  def getLexicalEntries(dictionary: CompositeId, perspective: CompositeId, action: LexicalEntriesType, offset: Int, count: Int, sortBy: Option[String] = None): Future[Seq[LexicalEntry]] = {
     val p = Promise[Seq[LexicalEntry]]()
 
     import LexicalEntriesType._
     val a = action match {
       case All => "all"
       case Published => "published"
+      case NotAccepted => "not_accepted"
     }
 
     var url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) +
@@ -825,6 +828,10 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
     url = addUrlParameter(url, "start_from", offset.toString)
     url = addUrlParameter(url, "count", count.toString)
+
+    sortBy.foreach { s =>
+      url = addUrlParameter(url, "sort_by", s)
+    }
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
@@ -841,6 +848,36 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     }
     p.future
   }
+
+
+  def getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId, action: LexicalEntriesType): Future[Int] = {
+    val p = Promise[Int]()
+
+    import LexicalEntriesType._
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) +
+      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
+      "/" + encodeURIComponent(perspectiveId.objectId.toString) +
+      "/" + action match {
+        case All => "all_count"
+        case Published => "published_count"
+        case NotAccepted => "not_accepted_count"
+      }
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(response.count.asInstanceOf[Int])
+        } catch {
+          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
+        }
+      case Failure(e) => p.failure(new BackendException("Failed to get published lexical entries count: " + e.getMessage))
+    }
+    p.future
+  }
+
+
 
   def connectedLexicalEntries(entryId: CompositeId, fieldId: CompositeId) = {
     val p = Promise[Seq[LexicalEntry]]()
@@ -865,12 +902,12 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
   def connectLexicalEntry(dictionaryId:CompositeId, perspectiveId: CompositeId, fieldId: CompositeId, targetEntry: LexicalEntry, sourceEntry: LexicalEntry): Future[Unit] = {
     val p = Promise[Unit]()
-    val url = s"dictionary/${dictionaryId.clientId}/${dictionaryId.objectId}/perspective/${perspectiveId.clientId}/${perspectiveId.objectId}/lexical_entry/${encodeURIComponent(sourceEntry.clientId.toString)}/${encodeURIComponent(sourceEntry.objectId.toString)}/connect"
+    val url = s"dictionary/${dictionaryId.clientId}/${dictionaryId.objectId}/perspective/${perspectiveId.clientId}/${perspectiveId.objectId}/lexical_entry/connect"
     val req = js.Dynamic.literal("field_client_id" -> fieldId.clientId,
       "field_object_id" -> fieldId.objectId,
-      "tag" -> "",
       "connections" -> js.Array(
-        js.Dynamic.literal("client_id" -> targetEntry.clientId, "object_id" -> targetEntry.objectId)
+        js.Dynamic.literal("client_id" -> targetEntry.clientId, "object_id" -> targetEntry.objectId),
+        js.Dynamic.literal("client_id" -> sourceEntry.clientId, "object_id" -> sourceEntry.objectId)
       )
     )
     $http.post(getMethodUrl(url), req) onComplete {
@@ -879,12 +916,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     }
     p.future
   }
-
-
-
-
-
-
 
   def getEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entityId: CompositeId): Future[Entity] = {
 
@@ -980,6 +1011,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     * @param perspectiveId
     * @return
     */
+  @deprecated("Use getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId, action: LexicalEntriesType): Future[Int] instead", "01-11-2016")
   def getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Int] = {
     val p = Promise[Int]()
 

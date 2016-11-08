@@ -44,6 +44,8 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
+  private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
+
 
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
@@ -353,6 +355,19 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
     s"#/dictionary/$dictionaryClientId/$dictionaryObjectId/perspective/$perspectiveClientId/$perspectiveObjectId/edit/$page"
   }
 
+  @JSExport
+  def getFullPageLink(page: Int): String = {
+    var url = getPageLink(page)
+    sortBy foreach(s => url = url + "/" + s)
+    url
+  }
+
+  @JSExport
+  def getSortByPageLink(sort: String): String = {
+    getPageLink(scope.pageNumber) + "/" + sort
+  }
+
+
   override protected def onLoaded[T](result: T): Unit = {}
 
   override protected def onError(reason: Throwable): Unit = {}
@@ -384,7 +399,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
             backend.getLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
-              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size) flatMap { entries =>
+              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size, sortBy) flatMap { entries =>
                 scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
 
                 backend.getPerspectiveRoles(dictionaryId, perspectiveId) map { roles =>

@@ -17,9 +17,10 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/signup", Route("/static/templates/signup.html", "Logout", "SignupController"))
     .when("/dashboard", Route("/static/templates/dashboard.html", "Dashboard", "DashboardController"))
     .when("/languages", Route("/static/templates/language.html", "Languages", "LanguageController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view/:page?", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit/:page?", Route("/static/templates/editDictionary.html", "EditDictionary", "EditDictionaryController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish/:page?", Route("/static/templates/publishDictionary.html", "PublishDictionary", "PublishDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view/:page?/:sortBy?", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit/:page?/:sortBy?", Route("/static/templates/editDictionary.html", "EditDictionary", "EditDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish/:page?/:sortBy?", Route("/static/templates/publishDictionary.html", "PublishDictionary", "PublishDictionaryController"))
+    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/contributions/:page?/:sortBy?", Route("/static/templates/contributions.html", "Contributions", "ContributionsController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
     .when("/files", Route("/static/templates/files.html", "Files", "UserFilesController"))
     .when("/map_search", Route("/static/templates/mapSearch.html", "Map", "MapSearchController"))
@@ -65,6 +66,7 @@ object LingvodocApplication {
       .controller[MapSearchController]
       .controller[ViewInfoBlobsController]
       .controller[EditGroupingTagModalController]
+      .controller[ContributionsController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

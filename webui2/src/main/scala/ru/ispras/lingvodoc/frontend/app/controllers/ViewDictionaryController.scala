@@ -45,6 +45,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
+  private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
@@ -224,7 +225,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
             backend.getPublishedLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
-              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, offset, scope.size) flatMap { entries =>
+              backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, offset, scope.size, sortBy) flatMap { entries =>
 
                 scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
 
@@ -250,6 +251,20 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
       case e: Throwable => Future.failed(e)
     }
   })
+
+
+
+  @JSExport
+  def getFullPageLink(page: Int): String = {
+    var url = getPageLink(page)
+    sortBy foreach(s => url = url + "/" + s)
+    url
+  }
+
+  @JSExport
+  def getSortByPageLink(sort: String): String = {
+    getPageLink(scope.pageNumber) + "/" + sort
+  }
 
   @JSExport
   override def getPageLink(page: Int): String = {
