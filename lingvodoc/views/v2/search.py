@@ -117,7 +117,7 @@ def advanced_search(request):
 
     def make_query(searchstring):
 
-        results_cursor = DBSession.query(Entity.parent_client_id, Entity.parent_object_id) \
+        results_cursor = DBSession.query(LexicalEntry).join(Entity.parent) \
             .join(Entity.field).join(TranslationAtom,
                                      and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
                                           Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
@@ -145,13 +145,13 @@ def advanced_search(request):
     except HTTPBadRequest:
         request.response.status = HTTPBadRequest.code
         return {'error': 'The query string couldn\'t be empty'}
-    results = set(results_cursor.all())
+    pre_results = set(results_cursor.all())
     for search_string in searchstrings[1:]:
         results_cursor, to_do_or_new = make_query(search_string)
         if to_do_or:
-            results = results or set(results_cursor.all())
+            pre_results = pre_results or set(results_cursor.all())
         else:
-            results = results and set(results_cursor.all())
+            pre_results = pre_results and set(results_cursor.all())
         to_do_or = to_do_or_new
 
     # s = select([LexicalEntry.__table__])\
@@ -174,24 +174,34 @@ def advanced_search(request):
     # # results_cursor = DBSession.query(LexicalEntry) \
     # #     .options(joinedload('entity').subqueryload('publishingentity')) \
     # #     .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(results))
+    results = list()
 
-    for item in results:
-        tmp_result = dict()
-        # tmp_result['lexical_entry'] = item.track(True)
-        tmp_result['lex_client_id'] = item.client_id
-        tmp_result['lex_object_id'] = item.object_id
-        tmp_result['client_id'] = item.parent_client_id
-        tmp_result['object_id'] = item.parent_object_id
-        perspective_tr = item.parent.get_translation(2)
-        tmp_result['translation'] = perspective_tr
-        tmp_result['is_template'] = item.parent.is_template
-        tmp_result['status'] = item.parent.state
-        tmp_result['marked_for_deletion'] = item.parent.marked_for_deletion
-        tmp_result['parent_client_id'] = item.parent.parent_client_id
-        tmp_result['parent_object_id'] = item.parent.parent_object_id
-        dict_tr = item.parent.parent.get_translation(2)
-        tmp_result['parent_translation'] = dict_tr
-        results.append(tmp_result)
+    lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                             lex.marked_for_deletion, lex.additional_metadata,
+                             lex.additional_metadata.get('came_from')
+                             if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                            for lex in pre_results]
+
+    results = LexicalEntry.track_multiple(True, lexes_composite_list, int(request.cookies.get('locale_id') or 2))
+
+    # for entry in pre_results:
+    #     results.append(entry.track(False, int(request.cookies.get('locale_id') or 2)))
+        # tmp_result = dict()
+        # # tmp_result['lexical_entry'] = item.track(True)
+        # tmp_result['lex_client_id'] = item.client_id
+        # tmp_result['lex_object_id'] = item.object_id
+        # tmp_result['client_id'] = item.parent_client_id
+        # tmp_result['object_id'] = item.parent_object_id
+        # perspective_tr = item.parent.get_translation(2)
+        # tmp_result['translation'] = perspective_tr
+        # tmp_result['is_template'] = item.parent.is_template
+        # tmp_result['status'] = item.parent.state
+        # tmp_result['marked_for_deletion'] = item.parent.marked_for_deletion
+        # tmp_result['parent_client_id'] = item.parent.parent_client_id
+        # tmp_result['parent_object_id'] = item.parent.parent_object_id
+        # dict_tr = item.parent.parent.get_translation(2)
+        # tmp_result['parent_translation'] = dict_tr
+        # results.append(tmp_result)
     request.response.status = HTTPOk.code
     return results
 
