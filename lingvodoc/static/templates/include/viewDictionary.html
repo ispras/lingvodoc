@@ -20,7 +20,9 @@
         <table class="table table-striped table-bordered">
             <thead>
             <tr>
-                <td ng-repeat="column in dictionaryTable.header">{{ column.getName() }}</td>
+                <td ng-repeat="column in dictionaryTable.header">
+                    <a ng-href="{{controller.getSortByPageLink(column.getName())}}">{{ column.getName() }}</a>
+                </td>
             </tr>
             </thead>
 
@@ -219,6 +221,13 @@
                     <div ng-if="column.checkDataTypeName('Link')">
                         <button type="button" class="btn btn-default btn-sm" ng-click="controller.viewLinkedPerspective(row.entry, column.field, cell.values)">
                             <span class="glyphicon glyphicon-list">View ({{cell.values.length}})</span>
+                        </button>
+                    </div>
+
+                    <!-- Grouping tag values  -->
+                    <div ng-if="column.checkDataTypeName('Grouping Tag')">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.viewGroupingTag(row.entry, column.field, cell.values)" ng-enabled="cell.values.length > 0">
+                            <span class="glyphicon glyphicon-list">View</span>
                         </button>
                     </div>
 

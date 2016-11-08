@@ -74,10 +74,17 @@ object Entity {
             case None => ""
           }
 
-
-          val localeId = jsVal("locale_id") match {
-            case e: Js.Num => jsVal("locale_id").num.toInt
-            case _ => 2
+          val localeId = jsVal.value.find(_._1 == "locale_id") match {
+            case Some(x) => x._2 match {
+              case Str(value) => 2
+              case Obj(value) => 2
+              case Arr(value) => 2
+              case Num(value) => value.toInt
+              case False => 2
+              case True => 2
+              case Null => 2
+            }
+            case None => 2
           }
 
           val isPublished = jsVal("published") match {
@@ -94,6 +101,7 @@ object Entity {
             }
             case None => None
           }
+
 
           val isMarkedForDeletion = jsobj("marked_for_deletion") match {
             case Js.True => true
