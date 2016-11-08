@@ -118,7 +118,7 @@
                                         </div>
 
                                         <!-- controls to add linked sound/image/markup value -->
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('Markup')">
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.enableInput(value.internalId)">
                                                 <span class="glyphicon glyphicon-plus"></span>
@@ -217,17 +217,8 @@
                                                     ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
-                                                <span class="glyphicon glyphicon-play">Markup</span>
-                                            </button>
-
-                                            <button type="button" class="btn btn-default btn-xs" aria-label="Remove"
-                                                    ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
-                                        </div>
-
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewPraatSoundMarkup(value, linkedValue)">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Markup')">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value, linkedValue)">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
 
@@ -252,7 +243,7 @@
                                         </div>
 
                                         <!-- controls to add linked sound/image/markup value -->
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('Markup')">
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.enableInput(value.internalId)">
                                                 <span class="glyphicon glyphicon-plus"></span>
@@ -360,7 +351,7 @@
                                         </div>
 
                                         <!-- controls to add linked sound/image/markup value -->
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('Markup')">
 
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.enableInput(value.internalId)">
@@ -392,7 +383,7 @@
 
 
                     <!-- Markup values -->
-                    <div ng-if="column.checkDataTypeName('ELAN markup') || column.checkDataTypeName('Praat markup')">
+                    <div ng-if="column.checkDataTypeName('Markup')">
 
                         <!-- simple column -->
                         <ul class="tree" ng-if="column.getType()=='Simple'">
@@ -448,8 +439,8 @@
                                                     ng-if="controller.isRemovable(row.entry, linkedValue.entity)" ng-click="controller.removeEntity(row.entry, linkedValue.entity)"><span aria-hidden="true">×</span></button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Markup')">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value, linkedValue)">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
 
@@ -473,7 +464,7 @@
                                         </div>
 
                                         <!-- controls to add linked sound/image/markup value -->
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Image') || column.linkedColumns[0].checkDataTypeName('Sound') || column.linkedColumns[0].checkDataTypeName('Markup')">
 
 
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.enableInput(value.internalId)">
@@ -510,6 +501,14 @@
                     <div ng-if="column.checkDataTypeName('Link')">
                         <button type="button" class="btn btn-default btn-sm" ng-click="controller.editLinkedPerspective(row.entry, column.field, cell.values)">
                             <span class="glyphicon glyphicon-list">Edit ({{cell.values.length}})</span>
+                        </button>
+                    </div>
+
+
+                    <!-- Grouping tag values  -->
+                    <div ng-if="column.checkDataTypeName('Grouping Tag')">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.editGroupingTag(row.entry, column.field, cell.values)">
+                            <span class="glyphicon glyphicon-list">Edit ({{cell.values.length }})</span>
                         </button>
                     </div>
 

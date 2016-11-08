@@ -22,6 +22,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish/:page?", Route("/static/templates/publishDictionary.html", "PublishDictionary", "PublishDictionaryController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
     .when("/files", Route("/static/templates/files.html", "Files", "UserFilesController"))
+    .when("/map_search", Route("/static/templates/mapSearch.html", "Map", "MapSearchController"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
@@ -31,7 +32,7 @@ object LingvodocApplication {
 
   @JSExport
   def main() = {
-  Angular.module("LingvodocModule", Seq("ngRoute", "ui.bootstrap"))
+  Angular.module("LingvodocModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap"))
       .config[LingvodocConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
@@ -61,10 +62,14 @@ object LingvodocApplication {
       .controller[EditDictionaryRolesModalController]
       .controller[EditPerspectiveRolesModalController]
       .controller[UserFilesController]
+      .controller[MapSearchController]
+      .controller[ViewInfoBlobsController]
+      .controller[EditGroupingTagModalController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]
       .directive[TranslatableDirective]
       .directive[WaveSurferDirective]
+      .directive[IndeterminateCheckboxDirective]
   }
 }

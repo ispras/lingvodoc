@@ -26,6 +26,9 @@ trait SimplePlay {
   def play(soundAddress: String) = {
     (waveSurfer, Some(soundAddress)).zipped.foreach((ws, sa) => {
       ws.load(sa)
+      ws.once("ready", () => {
+        ws.playPause()
+      }: Unit)
     })
   }
 

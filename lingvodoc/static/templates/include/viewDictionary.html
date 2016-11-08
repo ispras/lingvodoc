@@ -65,11 +65,6 @@
                                             </button>
                                         </div>
 
-                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
-                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
-                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
-                                            <!--</button>-->
-                                        <!--</div>-->
                                     </li>
 
                                 </ul>
@@ -119,18 +114,11 @@
                                             </button>
                                         </div>
 
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">
+                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Markup')">
+                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value, linkedValue)">
                                                 <span class="glyphicon glyphicon-play">Markup</span>
                                             </button>
                                         </div>
-
-                                        <div ng-if="column.linkedColumns[0].checkDataTypeName('Praat markup')">
-                                            <button type="button" class="btn btn-default btn-xs" ng-click="controller.viewPraatSoundMarkup(value, linkedValue)">
-                                                <span class="glyphicon glyphicon-play">Markup</span>
-                                            </button>
-                                        </div>
-
                                     </li>
 
                                 </ul>
@@ -176,11 +164,6 @@
                                             </button>
                                         </div>
 
-                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
-                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
-                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
-                                            <!--</button>-->
-                                        <!--</div>-->
                                     </li>
 
                                 </ul>
@@ -191,7 +174,7 @@
 
 
                     <!-- Markup values -->
-                    <div ng-if="column.checkDataTypeName('ELAN markup') || column.checkDataTypeName('Praat markup')">
+                    <div ng-if="column.checkDataTypeName('Markup')">
 
                         <!-- simple column -->
                         <ul class="tree" ng-if="column.getType()=='Simple'">
@@ -225,11 +208,6 @@
                                             </button>
                                         </div>
 
-                                        <!--<div ng-if="column.linkedColumns[0].checkDataTypeName('ELAN markup') || column.linkedColumns[0].checkDataTypeName('Praat markup')">-->
-                                            <!--<button type="button" class="btn btn-default btn-xs" ng-click="controller.viewSoundMarkup(value.getContent(), linkedValue.getContent())">-->
-                                                <!--<span class="glyphicon glyphicon-play">Markup</span>-->
-                                            <!--</button>-->
-                                        <!--</div>-->
                                     </li>
 
                                 </ul>

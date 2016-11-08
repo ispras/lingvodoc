@@ -219,10 +219,10 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
           Utils.getDataTypeName(dataType) match {
             case "Text" => TextValue(entity, dataType, entities)
             case "Sound" => TextValue(entity, dataType, entities)
-            case "Praat markup" => TextValue(entity, dataType, entities)
-            case "ELAN markup" => TextValue(entity, dataType, entities)
+            case "Markup" => TextValue(entity, dataType, entities)
             case "Image" => TextValue(entity, dataType, entities)
             case "Link" => GroupValue(entity, dataType, entity.link.get)
+            case "Grouping Tag" => TextValue(entity, dataType, entities)
           }
         case None => throw new ModelException("Entity refers to the unknown data type!")
       }

@@ -22,7 +22,7 @@ from pyramid.request import Request
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import joinedload
 
-import swiftclient.client as swiftclient
+#import swiftclient.client as swiftclient
 
 import datetime
 import base64
