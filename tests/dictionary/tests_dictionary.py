@@ -203,9 +203,9 @@ class ConvertedDictionaryTest(MyTestCase):
         from time import sleep
         import json
         import os
-        from werkzeug.utils import secure_filename
+        from pathvalidate import sanitize_filename
         real_filename = 'dictionary/test_dict_convert.sqlite'
-        filename = secure_filename(real_filename)
+        filename = sanitize_filename(real_filename)
         user_id = self.signup_common()
         self.login_common()
         root_ids = self.create_language('Корень')

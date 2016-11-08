@@ -10,7 +10,7 @@ import time
 import logging
 import shutil
 import transaction
-from werkzeug.utils import secure_filename
+from pathvalidate import sanitize_filename
 from sqlalchemy import create_engine
 from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
@@ -302,8 +302,9 @@ def openstack_upload(settings, file, file_name, content_type,  container_name):
     return str(obje)
 """
 
+
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
-    #filename = secure_filename(u"%s" % filename)
+    filename = sanitize_filename(filename)
     storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
     if create_dir:
         os.makedirs(storage_dir, exist_ok=True)
@@ -397,19 +398,27 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         old_meta = entity.additional_metadata
         need_hash = True
         if old_meta:
-            new_meta = json.loads(old_meta)
+            new_meta = old_meta #json.loads(old_meta)
             if new_meta.get('hash'):
                 need_hash = False
         if need_hash:
             hash = hashlib.sha224(base64.urlsafe_b64decode(content)).hexdigest()
             hash_dict = {'hash': hash}
             if old_meta:
-                new_meta = json.loads(old_meta)
+                new_meta = old_meta #json.loads(old_meta)
                 new_meta.update(hash_dict)
             else:
                 new_meta = hash_dict
-            entity.additional_metadata = json.dumps(new_meta)
-
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
+        old_meta = entity.additional_metadata
+        if data_type == "markup":
+            data_type_dict = {"data_type": "praat markup"}
+            if old_meta:
+                new_meta = old_meta #json.loads(old_meta)
+                new_meta.update(data_type_dict)
+            else:
+                new_meta = data_type_dict
+            entity.additional_metadata = new_meta #json.dumps(new_meta)
     elif data_type == 'link':
         try:
             pass
@@ -427,7 +436,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
 
 
 
-def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
+def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
                         user_id, is_a_regular_form, client, storage):
     log = logging.getLogger(__name__)
     sound_field = "Sound"
@@ -444,21 +453,97 @@ def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audi
         description_type = int(cursor[5])
         if description_type == 1:
             audio = cursor[2]
-            markup = cursor[2]
-        elif description_type == 2:
+            markup = cursor[1]
+        if description_type == 2:
             audio = cursor[1]
             markup = cursor[2]
         common_name = str(cursor[3])
         word_id = cursor[4]
         if not audio or not markup:
             continue
+        sound_ids.add(word_id)
         audio_hash = hashlib.sha224(audio).hexdigest()
         markup_hash = hashlib.sha224(markup).hexdigest()
         if audio_hash not in audio_hashes:
             ###filename = common_name + ".wav"
-            filename = common_name or 'noname.noext'
-            if not filename.count("."):
-                filename = "%s.wav" % filename
+            if common_name:
+                fname = os.path.splitext(common_name)[0]
+                fname = fname.replace(".", "_")
+                filename = "%s.wav" % fname
+            else:
+                filename = 'noname.noext'
+            audio_hashes.add(audio_hash)
+
+            '''
+            if not is_a_regular_form:
+                audio_element['additional_metadata'] = json.dumps({"hash": audio_hash,
+                                                                   "client_id": client_id,
+                                                                   "row_id": cursor[4]})
+            '''
+            audio_sequence.append((ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
+                                    None, client, filename, audio))
+            lvl = create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
+                    None, client, filename=filename, content=base64.urlsafe_b64encode(audio).decode(), folder_name=folder_name, storage=storage)
+            #markup_hashes.add(markup_hash)
+        if markup and markup_hash not in markup_hashes:
+            if lvl:
+                if common_name:
+                    fname = os.path.splitext(common_name)[0]
+                    fname = fname.replace(".", "_")
+                    filename = "%s.TextGrid" % fname
+                else:
+                    filename = 'noname.noext'
+
+                markup_hashes.add(markup_hash)
+                create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[markup_field][0], fields_dict[markup_field][1],
+                        None, client, filename=filename, content=base64.urlsafe_b64encode(markup).decode(), folder_name=folder_name, up_lvl=lvl, storage=storage)
+                markup__without_audio_sequence.append((audio_hash, markup_hash))
+
+            if len(markup__without_audio_sequence) > 50:
+                DBSession.flush()
+        if len(audio_sequence) > 50:
+            DBSession.flush()
+            audio_sequence = []
+            if len(markup__without_audio_sequence) > 50:
+                DBSession.flush()
+    if len(audio_sequence) != 0:
+        DBSession.flush()
+        audio_sequence = []
+    if len(markup__without_audio_sequence) != 0:
+        DBSession.flush()
+
+def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
+                        user_id, is_a_regular_form, client, storage):
+    log = logging.getLogger(__name__)
+    sound_field = "Sound"
+    markup_field = "Markup"
+    if "Sounds of Paradigmatic forms" in fields_dict:
+        sound_field = "Sounds of Paradigmatic forms"
+    if "Paradigm markup" in fields_dict:
+        markup_field = "Paradigm markup"
+
+    markup__without_audio_sequence = []
+    audio_sequence = []
+    for cursor in sound_and_markup_cursor:
+        blob_id = cursor[0]
+        description_type = int(cursor[5])
+        if description_type == 1:
+            audio = cursor[2]
+            markup = cursor[1]
+        common_name = str(cursor[3])
+        word_id = cursor[4]
+        if word_id in sound_ids:
+            continue
+        sound_ids.add(word_id)
+        audio_hash = hashlib.sha224(audio).hexdigest()
+        if audio_hash not in audio_hashes:
+            ###filename = common_name + ".wav"
+            if common_name:
+                fname = os.path.splitext(common_name)[0]
+                fname = fname.replace(".", "_")
+                filename = "%s.wav" % fname
+            else:
+                filename = 'noname.noext'
             audio_hashes.add(audio_hash)
             '''
             if not is_a_regular_form:
@@ -470,17 +555,6 @@ def upload_audio_with_markup(ids_map, fields_dict, sound_and_markup_cursor, audi
                                     None, client, filename, audio))
             lvl = create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
                     None, client, filename=filename, content=base64.urlsafe_b64encode(audio).decode(), folder_name=folder_name, storage=storage)
-            markup_hashes.add(markup_hash)
-        if markup and markup_hash not in markup_hashes:
-            if lvl:
-                filename = common_name or 'noname.noext'
-                if len(filename.split(".")) or filename.split(".")[-1] != "TextGrid":
-                    filename = "%s.TextGrid" % filename
-                markup_hashes.add(markup_hash)
-                create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[markup_field][0], fields_dict[markup_field][1],
-                        None, client, filename=filename, content=base64.urlsafe_b64encode(markup).decode(), folder_name=folder_name, up_lvl=lvl, storage=storage)
-                markup__without_audio_sequence.append((audio_hash, markup_hash))
-
             if len(markup__without_audio_sequence) > 50:
                 DBSession.flush()
         if len(audio_sequence) > 50:
@@ -538,16 +612,31 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
         if not user:
             log.debug("ERROR")
 
-        fields = DBSession.query(Field).filter_by().all()
+
+        all_fieldnames = ("Markup",
+                          "Paradigm markup",
+                          "Word",
+                          "Transcription",
+                          "Translation",
+                          "Sound",
+                          "Etymology",
+                          "Backref",
+                          "Word of Paradigmatic forms",
+                          "Transcription of Paradigmatic forms",
+                          "Translation of Paradigmatic forms",
+                          "Sounds of Paradigmatic forms"
+                         )
+        for name in all_fieldnames:
+            data_type_query = DBSession.query(Field) \
+                .join(TranslationGist,
+                      and_(Field.translation_gist_object_id == TranslationGist.object_id,
+                           Field.translation_gist_client_id == TranslationGist.client_id))\
+                .join(TranslationGist.translationatom)
+            field = data_type_query.filter(TranslationAtom.locale_id == 2,
+                                                 TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
+            field_ids[name] = (field.client_id, field.object_id)
+
         DBSession.flush()
-        for field_obj in fields:
-            try:
-                field_client_id = int(field_obj.client_id)
-                field_object_id = int(field_obj.object_id)
-                name = get_translation(field_obj.translation_gist_client_id, field_obj.translation_gist_object_id, locale_id)
-                field_ids[name] = (field_client_id, field_object_id)
-            except:
-                pass
         dict_attributes = get_dict_attributes(sqconn)
 
         """
@@ -918,6 +1007,8 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
         """
         Sound and Markup
         """
+        audio_ids = set()
+        paradigm_audio_ids = set()
         sound_and_markup_word_cursor = sqconn.cursor()
         sound_and_markup_word_cursor.execute("""select blobs.id,
                                                 blobs.secblob,
@@ -931,7 +1022,9 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                                                 and dictionary.is_a_regular_form=1;""")
 
         folder_name = "praat_markup"
-        upload_audio_with_markup(ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
+        upload_audio_with_markup(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
+                            user_id, True, client, storage)
+        upload_audio(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
                             user_id, True, client, storage)
         paradigm_sound_and_markup_cursor = sqconn.cursor()
         paradigm_sound_and_markup_cursor.execute("""select blobs.id,
@@ -944,8 +1037,12 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                                                     where dict_blobs_description.blobid=blobs.id
                                                     and dict_blobs_description.wordid=dictionary.id
                                                     and dictionary.is_a_regular_form=0;""")
+
+
         folder_name = "paradigm_praat_markup"
-        upload_audio_with_markup(ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
+        upload_audio_with_markup(paradigm_audio_ids, ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
+                            user_id, True, client, storage)
+        upload_audio(paradigm_audio_ids, ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
                             user_id, True, client, storage)
         """
         Etimology_tag
@@ -963,10 +1060,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
             item = {"entity_type": "Etymology", "tag": cursor[1],
                     "field_client_id": field_ids["Etymology"][0],
                     "field_object_id": field_ids["Etymology"][1],
-                    # "client_id": ids_dict[fp_le_id_dict[id]][0],
-                    # "object_id": ids_dict[fp_le_id_dict[id]][1],
                     "connections": [{"client_id": client_id, "object_id": object_id}]}
-            # print(item)
             create_group_entity(item, client, user)
             # status = session.post(connect_url, json=item)
             # log.debug(status.text)
