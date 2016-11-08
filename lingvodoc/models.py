@@ -598,7 +598,7 @@ class LexicalEntry(CompositeIdMixin,
         lexes_composite_list = [(self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
                                  self.marked_for_deletion, metadata, came_from)]
 
-        return self.track_multiple(publish, lexes_composite_list, locale_id)
+        return self.track_multiple(publish, lexes_composite_list, locale_id)[0]
 
     @classmethod
     def track_multiple(cls, publish, lexs, locale_id):
