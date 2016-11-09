@@ -528,6 +528,10 @@
 
             </tr>
 
+            <tr ng-if="dictionaryTable.rows.length == 0">
+                <td class="text-center" colspan="{{dictionaryTable.header.length}}">No lexical entries</td>
+            </tr>
+
             </tbody>
 
         </table>

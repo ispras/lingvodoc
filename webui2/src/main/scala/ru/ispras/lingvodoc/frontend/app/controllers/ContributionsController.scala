@@ -168,43 +168,22 @@ class ContributionsController(scope: ContributionsScope,
       entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
     }
   }
-
+  
   @JSExport
-  def approve(entry: LexicalEntry, value: Value) = {
-    val entity = value.getEntity()
-    if (!entity.published) {
-      backend.changedApproval(dictionaryId, perspectiveId, CompositeId
-        .fromObject(entry), CompositeId.fromObject(entity) :: Nil, approve = true) map {
-        _ =>
-          scope.$apply(() => {
-            entity.published = true
-          })
-      }
-    }
-  }
-
-  @JSExport
-  def disapprove(entry: LexicalEntry, value: Value) = {
+  def accept(entry: LexicalEntry, value: Value) = {
     val entity = value.getEntity()
     if (entity.published) {
-      backend.changedApproval(dictionaryId, perspectiveId, CompositeId
-        .fromObject(entry), CompositeId.fromObject(entity) :: Nil, approve = false) map {
-        _ =>
+      backend.acceptEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry)) map { _ =>
           scope.$apply(() => {
-            entity.published = false
+            entity.accepted = true
           })
       }
     }
   }
 
   @JSExport
-  def disapproveDisabled(value: Value): Boolean = {
-    !value.getEntity.published
-  }
-
-  @JSExport
-  def approveDisabled(value: Value): Boolean = {
-    value.getEntity.published
+  def acceptDisabled(value: Value): Boolean = {
+    value.getEntity.accepted
   }
 
   @JSExport
