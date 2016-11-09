@@ -2,7 +2,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import io.plasmap.pamphlet._
+import io.plasmap.pamphlet.{Marker, _}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
@@ -26,6 +26,7 @@ trait MapSearchScope extends Scope {
   var adoptedSearch: String = js.native
   var etymologySearch: String = js.native
   var search: js.Array[SearchQuery] = js.native
+  var selectedPerspectives: js.Array[Perspective] = js.native
 }
 
 @injectable("MapSearchController")
@@ -35,7 +36,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   with LoadingPlaceholder{
 
   private[this] var dictionaries = Seq[Dictionary]()
-  private[this] var perspetives = Seq[Perspective]()
+  private[this] var perspectives = Seq[Perspective]()
   private[this] var perspectivesMeta = Seq[PerspectiveMeta]()
   private[this] var dataTypes = Seq[TranslationGist]()
   private[this] var fields = Seq[Field]()
@@ -43,14 +44,15 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   scope.adoptedSearch = "unchecked"
   scope.etymologySearch = "unchecked"
   scope.search = js.Array(SearchQuery())
+  scope.selectedPerspectives = js.Array[Perspective]()
 
 
   private[this] def getPerspective(perspectiveId: CompositeId): Option[Perspective] = {
-    perspetives.find(_.getId == perspectiveId.getId)
+    perspectives.find(_.getId == perspectiveId.getId)
   }
 
   private[this] def getDictionary(perspectiveId: CompositeId): Option[Dictionary] = {
-    perspetives.find(_.getId == perspectiveId.getId).flatMap { perspective =>
+    perspectives.find(_.getId == perspectiveId.getId).flatMap { perspective =>
       dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId)
     }
   }
@@ -89,6 +91,28 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   @JSExport
   def doSearch() = {
 
+    val adopted = scope.adoptedSearch match {
+      case "checked" => true
+      case "unchecked" => false
+      case "clear" => false
+    }
+
+    val etymology = scope.etymologySearch match {
+      case "checked" => true
+      case "unchecked" => false
+      case "clear" => false
+    }
+
+
+    console.log(scope.search.toJSArray)
+
+
+    val searchStrings = scope.search.toSeq.filter(_.fieldId.nonEmpty).map{s =>
+      val field = fields.find(_.getId == s.fieldId)
+      SearchString(s.query, s.orFlag, field.get.translation)
+    }
+
+    backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_))))
   }
 
 
@@ -106,17 +130,40 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
       val dictionary = getDictionary(perspectiveId)
       val perspective = getPerspective(perspectiveId)
 
-      val latLng = meta.metaData.location.get.location
-      val iconOptions = IconOptions.iconUrl("static/images/marker-icon.png").build
-      val icon = Leaflet.icon(iconOptions)
-      val markerOptions = js.Dynamic.literal("icon" -> icon).asInstanceOf[MarkerOptions]
-      val marker = Leaflet.marker(Leaflet.latLng(latLng.lat, latLng.lng), markerOptions)
+      val defaultIconOptions = IconOptions.iconUrl("static/images/marker-icon-default.png").iconSize(Leaflet.point(50, 42)).iconAnchor(Leaflet.point(-12, -42)).build
+      val defaultIcon = Leaflet.icon(defaultIconOptions)
 
-      marker.onClick(e => {
-        dictionary.foreach { d =>
-          perspective.foreach { p =>
-            showInfo(d, p, meta.metaData)
-          }
+      val selectedIconOptions = IconOptions.iconUrl("static/images/marker-icon-selected.png").iconSize(Leaflet.point(50, 42)).iconAnchor(Leaflet.point(-12, -42)).build
+      val selectedIcon = Leaflet.icon(selectedIconOptions)
+
+      val latLng = meta.metaData.location.get.location
+
+      val markerOptions = js.Dynamic.literal("icon" -> defaultIcon).asInstanceOf[MarkerOptions]
+
+      val marker: Marker = Leaflet.marker(Leaflet.latLng(latLng.lat, latLng.lng), markerOptions).asInstanceOf[Marker]
+
+
+      marker.onMouseDown(e => {
+        e.originalEvent.button match {
+          case 0 =>
+            perspective.foreach { p =>
+
+              if (!scope.selectedPerspectives.exists(_.getId == p.getId)) {
+                scope.selectedPerspectives.push(p)
+                marker.setIcon(selectedIcon)
+
+              } else {
+                scope.selectedPerspectives = scope.selectedPerspectives.filterNot(_.getId == p.getId)
+                marker.setIcon(defaultIcon)
+              }
+            }
+
+          case 2 =>
+            dictionary.foreach { d =>
+              perspective.foreach { p =>
+                showInfo(d, p, meta.metaData)
+              }
+            }
         }
       })
 
@@ -159,7 +206,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
         backend.getDictionaries(DictionaryQuery()) flatMap { d =>
           dictionaries = d
           backend.perspectives() flatMap { p =>
-            perspetives = p
+            perspectives = p
             backend.allPerspectivesMeta map { pm =>
               perspectivesMeta = pm
             }

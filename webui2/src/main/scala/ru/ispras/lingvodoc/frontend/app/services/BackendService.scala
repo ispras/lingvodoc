@@ -1006,7 +1006,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
-  def acceptEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entityId: CompositeId): Future[Unit] = {
+  def acceptEntities(dictionaryId: CompositeId, perspectiveId: CompositeId, ids: Seq[CompositeId]): Future[Unit] = {
     val p = Promise[Unit]()
 
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
@@ -1026,7 +1026,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
         p.failure(new BackendException("Failed to changed approval status entities"))
       }
     }
-    xhr.send(write[CompositeId](entityId))
+    xhr.send(write(ids))
 
     p.future
   }

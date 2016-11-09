@@ -9,7 +9,7 @@
 
             <div ng-repeat="searchField in search">
                 <input type="text" placeholder="" ng-model="searchField.query">
-                <select ng-model="searchField.field" ng-options="field.getId as field.translation for field in controller.getSearchFields() track by field.getId">
+                <select ng-model="searchField.fieldId" ng-options="field.getId as field.translation for field in controller.getSearchFields() track by field.getId">
                     <option></option>
                 </select>
                 /OR <input type="checkbox" ng-checked="searchField.orFlag" ng-model="searchField.orFlag">

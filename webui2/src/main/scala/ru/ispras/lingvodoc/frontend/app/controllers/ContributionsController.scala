@@ -168,12 +168,12 @@ class ContributionsController(scope: ContributionsScope,
       entities.foreach(e => scope.dictionaryTable.addEntity(entry, e))
     }
   }
-  
+
   @JSExport
   def accept(entry: LexicalEntry, value: Value) = {
     val entity = value.getEntity()
-    if (entity.published) {
-      backend.acceptEntity(dictionaryId, perspectiveId, CompositeId.fromObject(entry)) map { _ =>
+    if (!entity.accepted) {
+      backend.acceptEntities(dictionaryId, perspectiveId, CompositeId.fromObject(entity) :: Nil) map { _ =>
           scope.$apply(() => {
             entity.accepted = true
           })
