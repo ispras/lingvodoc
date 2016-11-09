@@ -98,7 +98,7 @@ def basic_search(request):
                     subreq.headers = headers
                     resp = request.invoke_subrequest(subreq)
                     result = resp.json
-                    result['lexical_entry'] = entry.track(False)
+                    result['lexical_entry'] = entry.track(False, request.cookies['locale_id'])
                     dict_tr = entry.parent.parent.get_translation(request.cookies['locale_id'])
                     result['parent_translation'] = dict_tr
                     results.append(result)
@@ -114,14 +114,23 @@ def advanced_search(request):
     from sqlalchemy import bindparam
     req = request.json
     searchstrings = req.get('searchstrings') or []
+    perspectives = req.get('perspectives', list())
+    if perspectives:
+        perspectives = [(o['client_id'], o['object_id']) for o in perspectives]
+    adopted = req.get('adopted')
+    adopted_type = req.get('adopted_type')
+    with_etimology = req.get('with_etimology')
 
-    def make_query(searchstring):
+    def make_query(searchstring, perspectives):
 
         results_cursor = DBSession.query(LexicalEntry).join(Entity.parent) \
             .join(Entity.field).join(TranslationAtom,
                                      and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
                                           Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
             .distinct(Entity.parent_client_id, Entity.parent_object_id)
+        if perspectives:
+            results_cursor = results_cursor.filter(
+                tuple_(LexicalEntry.parent_client_id, LexicalEntry.parent_object_id).in_(perspectives))
         if not searchstring['searchstring']:
             raise HTTPBadRequest
         search_parts = searchstring['searchstring'].split()
@@ -141,18 +150,37 @@ def advanced_search(request):
         return {'error': 'The query string couldn\'t be empty'}
 
     try:
-        results_cursor, to_do_or = make_query(searchstrings[0])
+        results_cursor, to_do_or = make_query(searchstrings[0], perspectives)
     except HTTPBadRequest:
         request.response.status = HTTPBadRequest.code
         return {'error': 'The query string couldn\'t be empty'}
     pre_results = set(results_cursor.all())
+    if adopted:
+        results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).filter(Entity.content.like('%заим.%'))
+        if adopted_type:
+            results_cursor = results_cursor.join(Entity.field) \
+                .join(TranslationAtom,
+                      and_(Field.translation_gist_client_id == TranslationAtom.parent_client_id,
+                           Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                .filter(TranslationAtom.content == adopted_type,
+                        TranslationAtom.locale_id == 2)
+        pre_results = pre_results and set(results_cursor.all())
+    if with_etimology:
+        results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).join(Entity.field) \
+                .join(TranslationAtom,
+                      and_(Field.data_type_translation_gist_client_id == TranslationAtom.parent_client_id,
+                           Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id)) \
+                .filter(TranslationAtom.content == 'Grouping Tag',
+                        TranslationAtom.locale_id == 2)
+        pre_results = pre_results and set(results_cursor.all())
     for search_string in searchstrings[1:]:
-        results_cursor, to_do_or_new = make_query(search_string)
+        results_cursor, to_do_or_new = make_query(search_string, perspectives)
         if to_do_or:
             pre_results = pre_results or set(results_cursor.all())
         else:
             pre_results = pre_results and set(results_cursor.all())
         to_do_or = to_do_or_new
+
 
     # s = select([LexicalEntry.__table__])\
     #     .select_from(LexicalEntry.__table__.join(Entity.__table__,

@@ -1321,7 +1321,7 @@ def lexical_entries_all(request):
 
     sort_criterion = request.params.get('sort_by') or 'Translation'  # TODO: make it work
     start_from = request.params.get('start_from') or 0
-    count = request.params.get('count') or 200
+    count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:
@@ -1330,19 +1330,7 @@ def lexical_entries_all(request):
                                         Field.translation_gist_object_id == TranslationAtom.parent_object_id)) \
             .filter(TranslationAtom.content == sort_criterion,
                     TranslationAtom.locale_id == 2).one()  # TODO: make it harder better faster stronger
-        # print(field.get_translation(2))
-        # lexes = DBSession.query(LexicalEntry) \
-        #     .options(joinedload('leveloneentity').joinedload('leveltwoentity').joinedload('publishleveltwoentity')) \
-        #     .options(joinedload('leveloneentity').joinedload('publishleveloneentity')) \
-        #     .options(joinedload('groupingentity').joinedload('publishgroupingentity')) \
-        #     .options(joinedload('publishleveloneentity')) \
-        #     .options(joinedload('publishleveltwoentity')) \
-        #     .options(joinedload('publishgroupingentity')) \
-        #     .filter(LexicalEntry.parent == parent) \
-        #     .group_by(LexicalEntry) \
-        #     .join(LevelOneEntity) \
-        #     .order_by(func.min(case([(LevelOneEntity.entity_type != sort_criterion, 'яяяяяя')], else_=LevelOneEntity.content))) \
-        #     .offset(start_from).limit(count)
+
         lexes = DBSession.query(LexicalEntry).join(LexicalEntry.entity).join(Entity.publishingentity) \
             .filter(LexicalEntry.parent == parent, LexicalEntry.marked_for_deletion == False,
                     Entity.marked_for_deletion == False)
@@ -1386,7 +1374,6 @@ def lexical_entries_all(request):
 
 @view_config(route_name='lexical_entries_all_count', renderer='json', request_method='GET', permission='view')
 def lexical_entries_all_count(request):  # tested
-    response = dict()
     client_id = request.matchdict.get('perspective_client_id')
     object_id = request.matchdict.get('perspective_object_id')
     authors = request.params.getall('authors')
@@ -1397,10 +1384,6 @@ def lexical_entries_all_count(request):  # tested
     end_date = request.params.get('end_date')
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
-
-    sort_criterion = request.params.get('sort_by') or 'Translation'
-    start_from = request.params.get('start_from') or 0
-    count = request.params.get('count') or 20
 
     parent = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if parent and not parent.marked_for_deletion:

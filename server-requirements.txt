@@ -37,3 +37,4 @@ WebOb==1.6.2
 zope.deprecation==4.1.2
 zope.interface==4.3.2
 zope.sqlalchemy==0.7.7
+pathvalidate==0.8.3
