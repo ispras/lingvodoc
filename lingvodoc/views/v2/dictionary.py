@@ -102,7 +102,7 @@ def create_dictionary(request):  # tested & in docs
                                 additional_metadata=additional_metadata)
         if req.get('category'):
             if req['category'] == 'lingvodoc.ispras.ru/corpora':
-                dictionary.category = categories[req['category']]
+                dictionary.category = 1  # this is really wrong
         DBSession.add(dictionary)
         DBSession.flush()
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
@@ -862,6 +862,9 @@ def dictionaries_list(request):  # TODO: test
     user_created = None
     if 'user_created' in req:
         user_created = req['user_created']
+    corpora = None
+    if 'corpora' in req:
+        corpora = req['corpora']
     author = None
     if 'author' in req:
         author = req['author']
@@ -878,6 +881,11 @@ def dictionaries_list(request):  # TODO: test
     if 'languages' in req:
         languages = req['languages']
     dicts = DBSession.query(Dictionary).filter(Dictionary.marked_for_deletion == False)
+    if corpora is not None:
+        if corpora:
+            dicts = dicts.filter(Dictionary.category == 1)
+        else:
+            dicts = dicts.filter(Dictionary.category == 0)
     if published:
         if published:
             subreq = Request.blank('/translation_service_search')
