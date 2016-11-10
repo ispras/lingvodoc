@@ -598,7 +598,9 @@ class LexicalEntry(CompositeIdMixin,
         lexes_composite_list = [(self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
                                  self.marked_for_deletion, metadata, came_from)]
 
-        return self.track_multiple(publish, lexes_composite_list, locale_id)[0]
+        res_list = self.track_multiple(publish, lexes_composite_list, locale_id)
+
+        return res_list[0] if res_list else {}
 
     @classmethod
     def track_multiple(cls, publish, lexs, locale_id):
@@ -606,6 +608,9 @@ class LexicalEntry(CompositeIdMixin,
         ls = []
         for i, x in enumerate(lexs):
             ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
+
+        if not ls:
+            return []
 
         DBSession.execute('''create TEMPORARY TABLE lexical_entries_temp_table (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''')
 
