@@ -226,13 +226,17 @@
 
                     <!-- Grouping tag values  -->
                     <div ng-if="column.checkDataTypeName('Grouping Tag')">
-                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.viewGroupingTag(row.entry, column.field, cell.values)" ng-enabled="cell.values.length > 0">
+                        <button type="button" class="btn btn-default btn-sm" ng-click="controller.viewGroupingTag(row.entry, column.field, cell.values)" ng-if="cell.values.length > 0">
                             <span class="glyphicon glyphicon-list">View</span>
                         </button>
                     </div>
 
                 </td>
 
+            </tr>
+
+            <tr ng-if="dictionaryTable.rows.length == 0">
+                <td class="text-center" colspan="{{dictionaryTable.header.length}}">No lexical entries</td>
             </tr>
 
             </tbody>
