@@ -1475,15 +1475,15 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
   }
 
 
-  def advanced_search(query: AdvancedSearchQuery): Future[Seq[SearchResult]] = {
-    val p = Promise[Seq[SearchResult]]()
+  def advanced_search(query: AdvancedSearchQuery): Future[Seq[LexicalEntry]] = {
+    val p = Promise[Seq[LexicalEntry]]()
 
     var url = "advanced_search"
 
     $http.post[js.Dynamic](getMethodUrl(url), write(query)) onComplete {
       case Success(response) =>
         try {
-          val entries = read[Seq[SearchResult]](js.JSON.stringify(response))
+          val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response))
           p.success(entries)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Search failed.", e))

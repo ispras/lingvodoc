@@ -183,10 +183,6 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
 
       }
     }
-
-
-
-
   }
 
   override protected def onLoaded[T](result: T): Unit = {}

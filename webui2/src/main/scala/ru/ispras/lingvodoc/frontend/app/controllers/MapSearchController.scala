@@ -3,7 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 import com.greencatsoft.angularjs.core.{Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import io.plasmap.pamphlet.{Marker, _}
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
 
@@ -11,6 +11,12 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import org.scalajs.dom.console
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
+
+import scala.concurrent.Future
+import scala.scalajs.js.UndefOr
+import scala.util.Random
+
 
 
 
@@ -27,12 +33,14 @@ trait MapSearchScope extends Scope {
   var etymologySearch: String = js.native
   var search: js.Array[SearchQuery] = js.native
   var selectedPerspectives: js.Array[Perspective] = js.native
+  var searchResults: js.Array[DictionaryTable] = js.native
 }
 
 @injectable("MapSearchController")
 class MapSearchController(scope: MapSearchScope, val backend: BackendService, modal: ModalService, val timeout: Timeout)
   extends AbstractController[MapSearchScope](scope)
     with AngularExecutionContextProvider
+    with SimplePlay
   with LoadingPlaceholder{
 
   private[this] var dictionaries = Seq[Dictionary]()
@@ -40,6 +48,8 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   private[this] var perspectivesMeta = Seq[PerspectiveMeta]()
   private[this] var dataTypes = Seq[TranslationGist]()
   private[this] var fields = Seq[Field]()
+  private[this] var searchDictionaries = Seq[Dictionary]()
+  private[this] var searchPerspectives = Seq[Perspective]()
 
   scope.adoptedSearch = "unchecked"
   scope.etymologySearch = "unchecked"
@@ -104,15 +114,75 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
     }
 
 
-    console.log(scope.search.toJSArray)
-
-
-    val searchStrings = scope.search.toSeq.filter(_.fieldId.nonEmpty).map{s =>
+    val searchStrings = scope.search.toSeq.filter(_.fieldId.nonEmpty).filter(_.query.nonEmpty).map{s =>
       val field = fields.find(_.getId == s.fieldId)
       SearchString(s.query, s.orFlag, field.get.translation)
     }
 
-    backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_))))
+    if (searchStrings.nonEmpty) {
+      backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_)))) map { entries =>
+
+        Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId))}) map { perspectives =>
+          searchPerspectives = perspectives
+
+          Future.sequence(perspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId))}) map { dictionaries =>
+            searchDictionaries = dictionaries
+          }
+
+          Future.sequence(perspectives.map{p =>
+            backend.getFields(CompositeId(p.parentClientId, p.parentObjectId), CompositeId.fromObject(p)).map{ fields =>
+              DictionaryTable.build(fields, dataTypes, entries.filter(e => e.parentClientId == p.clientId && e.parentObjectId == p.objectId))
+            }
+          }).foreach{tables =>
+            scope.searchResults = tables.toJSArray
+          }
+        }
+      }
+    }
+  }
+
+  @JSExport
+  def getSearchSource(entry: LexicalEntry): UndefOr[String]= {
+    searchPerspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
+      searchDictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
+        s"${dictionary.translation} / ${perspective.translation}"
+      }
+    }.orUndefined
+  }
+
+  @JSExport
+  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+    perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
+      dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
+
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
+        options.controller = "EditGroupingTagModalController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              dictionaryClientId = dictionary.clientId,
+              dictionaryObjectId = dictionary.objectId,
+              perspectiveClientId = perspective.clientId,
+              perspectiveObjectId = perspective.objectId,
+              lexicalEntry = entry.asInstanceOf[js.Object],
+              field = field.asInstanceOf[js.Object],
+              values = values.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[js.Any]]
+
+        val instance = modal.open[Unit](options)
+        instance.result map { _ =>
+
+        }
+
+      }
+    }
   }
 
 
@@ -123,6 +193,10 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   override protected def preRequestHook(): Unit = {}
 
   override protected def postRequestHook(): Unit = {
+
+    val rng = Random
+
+    var c = Seq[(Double, Double)]()
 
     perspectivesMeta.filter(_.metaData.location.nonEmpty).foreach { meta =>
 
@@ -140,11 +214,27 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
 
       val markerOptions = js.Dynamic.literal("icon" -> defaultIcon).asInstanceOf[MarkerOptions]
 
-      val marker: Marker = Leaflet.marker(Leaflet.latLng(latLng.lat, latLng.lng), markerOptions).asInstanceOf[Marker]
+      // TODO: Add support for marker cluster
+      val p = if (c.exists(p => p._1 == latLng.lat && p._2 == latLng.lng)) {
+        val latK = (-0.005) + (0.005 - (-0.005)) * rng.nextDouble
+        val lngK = (-0.005) + (0.005 - (-0.005)) * rng.nextDouble
+        Leaflet.latLng(latLng.lat + latK, latLng.lng + lngK)
+      } else {
+        c = c :+ (latLng.lat, latLng.lng)
+        Leaflet.latLng(latLng.lat, latLng.lng)
+      }
 
+      val marker: Marker = Leaflet.marker(p, markerOptions).asInstanceOf[Marker]
 
+      // prevents context menu from showing
+      marker.on("contextmenu", (e: js.Any) => {
+
+      })
+
+      // marker click handler
       marker.onMouseDown(e => {
         e.originalEvent.button match {
+          // left button click
           case 0 =>
             perspective.foreach { p =>
 
@@ -157,7 +247,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
                 marker.setIcon(defaultIcon)
               }
             }
-
+          // right button click
           case 2 =>
             dictionary.foreach { d =>
               perspective.foreach { p =>
@@ -167,7 +257,12 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
         }
       })
 
+
+
       marker.addTo(leafletMap)
+
+
+
     }
   }
 
