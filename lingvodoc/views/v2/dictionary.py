@@ -52,6 +52,7 @@ from sqlalchemy.exc import IntegrityError
 
 import datetime
 import json
+from lingvodoc.views.v2.utils import add_user_to_group
 
 
 @view_config(route_name='create_dictionary', renderer='json', request_method='POST', permission='create')
@@ -108,8 +109,7 @@ def create_dictionary(request):  # tested & in docs
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
                               subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
+            add_user_to_group(user, new_group)
             DBSession.add(new_group)
             DBSession.flush()
         request.response.status = HTTPOk.code
@@ -990,7 +990,7 @@ def dictionaries_list(request):  # TODO: test
         user = DBSession.query(User).filter_by(id=author).first()
         dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
         isadmin = False
-        for group in user.groups:
+        for group in user.groups: # todo: LOOK AT ME this is really bad. rewrite me from group point of view
             if group.parent.dictionary_default:
                 if group.subject_override:
                     isadmin = True

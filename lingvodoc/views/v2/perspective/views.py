@@ -61,6 +61,7 @@ from lingvodoc.views.v2.utils import (
     view_perspective_from_object,
     view_field_from_object
 )
+from lingvodoc.views.v2.utils import add_user_to_group
 
 log = logging.getLogger(__name__)
 
@@ -598,10 +599,8 @@ def create_perspective(request):  # tested & in docs
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
             new_group = Group(parent=base,
                               subject_object_id=perspective.object_id, subject_client_id=perspective.client_id)
-            if user not in new_group.users:
-                new_group.users.append(user)
-            if owner not in new_group.users:
-                new_group.users.append(owner)
+            add_user_to_group(user, new_group)
+            add_user_to_group(owner, new_group)
             DBSession.add(new_group)
             DBSession.flush()
         request.response.status = HTTPOk.code

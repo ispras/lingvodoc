@@ -39,6 +39,7 @@ from sqlalchemy import (
 import datetime
 import logging
 import json
+from lingvodoc.views.v2.utils import add_user_to_group
 
 log = logging.getLogger(__name__)
 
@@ -93,8 +94,7 @@ def signup_post(request):  # tested
         for base in basegroups:
             groups += [DBSession.query(Group).filter_by(subject_override=True, base_group_id=base.id).first()]
         for group in groups:
-            if group not in new_user.groups:
-                new_user.groups.append(group)
+            add_user_to_group(new_user, group)
         DBSession.flush()
         return {}
 

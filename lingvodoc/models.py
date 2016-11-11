@@ -922,7 +922,7 @@ def acl_by_groups_single_id(object_id, subject):
 
 class ACLMixin(object):
     @classmethod
-    def get_subjects(cls):
+    def get_subject(cls):
         return cls.subject
 
     def __acl__(self):
@@ -1015,9 +1015,17 @@ class TranslationAcl(ACLMixin):
 
 
 class AuthenticatedAcl(ACLMixin):
+    subject = 'no op subject'
 
     def __acl__(self):
         return [(Allow, Authenticated, ALL_PERMISSIONS)]
+
+
+class RootAcl(ACLMixin):
+    subject = 'no op subject'
+
+    def __acl__(self):
+        return []
 
 
 class PerspectiveEntityAcl(ACLMixin):

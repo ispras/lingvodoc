@@ -363,8 +363,7 @@ def move_lexical_entry(request):
             .join(BaseGroup)\
             .filter_by(subject='lexical_entries_and_entities')\
             .first()
-        if user not in groupoverride.users:
-            if user not in group.users:
+        if user not in groupoverride.users and  user not in group.users:
                 raise CommonException("You should only move to lexical entires you own")
         if parent.moved_to is None:
             if entry.moved_to is None:

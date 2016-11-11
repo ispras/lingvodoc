@@ -32,6 +32,7 @@ from sqlalchemy.exc import IntegrityError
 import logging
 
 log = logging.getLogger(__name__)
+from lingvodoc.views.v2.utils import add_user_to_group
 
 
 @view_config(route_name='organizations', renderer='templates/organizations.pt', request_method='GET')
@@ -89,8 +90,7 @@ def create_organization(request):  # TODO: test
         bases = DBSession.query(BaseGroup).filter_by(subject='organization')
         for base in bases:
             group = Group(parent=base, subject_object_id=organization.id)
-            if not user in group.users:
-                group.users.append(user)
+            add_user_to_group(user, group)
             DBSession.add(group)
         request.response.status = HTTPOk.code
         return {'organization_id': organization.id}
@@ -153,8 +153,7 @@ def edit_organization(request):  # TODO: test
                             for base in bases:
                                 group = DBSession.query(Group).filter_by(base_group_id=base.id,
                                                                          subject_object_id=organization.id).first()
-                                if not user in group.users:
-                                    group.users.append(user)
+                                add_user_to_group(user, group)
                 if 'delete_users' in req:
                     for user_id in req['delete_users']:
                         if user_id == creator.id:

@@ -5,6 +5,7 @@ from .models import (
     User,
     Client,
     Group,
+    BaseGroup
     )
 
 from pyramid.security import forget
@@ -19,11 +20,15 @@ def groupfinder(client_id, request):
     if not client_id:
         return None
     subject = None
+    factory = request.matched_route.factory
+    if not factory:
+        return []
     try:
         subject = request.matched_route.factory.get_subject()
     except AttributeError as e:
         pass
-
+    if subject == 'no op subject':
+        return []
     try:
         user = DBSession.query(User) \
                         .options(joinedload('groups').joinedload('BaseGroup')) \
@@ -33,9 +38,10 @@ def groupfinder(client_id, request):
 
         groups = DBSession.query(Group)\
             .options(joinedload('BaseGroup')) \
+            .join(BaseGroup) \
             .filter(Group.users.contains(user))
         if subject:
-            groups = groups.filter(Group.basegroup.subject == subject)
+            groups = groups.filter(BaseGroup.subject == subject)
         groups = groups.all()
 
     except AttributeError as e:

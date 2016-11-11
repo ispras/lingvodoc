@@ -47,6 +47,7 @@ import datetime
 import json
 from sqlalchemy.orm.exc import NoResultFound
 from lingvodoc.views.v2.utils import json_request_errors, translation_atom_decorator
+from lingvodoc.views.v2.utils import add_user_to_group
 # search (filter by input, type and (?) locale)
 
 
@@ -128,8 +129,7 @@ def create_translationgist(request):
             group = Group(subject_client_id=translationgist.client_id, subject_object_id=translationgist.object_id, parent=base)
             groups += [group]
         for group in groups:
-            if group not in user.groups:
-                user.groups.append(group)
+            add_user_to_group(user, group)
         request.response.status = HTTPOk.code
         return {'object_id': translationgist.object_id,
                 'client_id': translationgist.client_id}
@@ -203,8 +203,7 @@ def create_translationatom(request):
                 group = Group(subject_client_id=translationatom.client_id, subject_object_id=translationatom.object_id, parent=base)
                 groups += [group]
             for group in groups:
-                if group not in user.groups:
-                    user.groups.append(group)
+                add_user_to_group(user, group)
             request.response.status = HTTPOk.code
             return {'object_id': translationatom.object_id,
                     'client_id': translationatom.client_id}
