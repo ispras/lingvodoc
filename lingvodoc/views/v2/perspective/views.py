@@ -74,8 +74,37 @@ def perspectives_list(request):  # tested
         is_template = request.GET.get('is_template')
     except:
         pass
-    state_translation_gist_client_id = request.params.get('state_translation_gist_client_id', None)
-    state_translation_gist_object_id = request.params.get('state_translation_gist_object_id', None)
+
+    published = request.params.get('published', None)
+
+    if published:
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Published'}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+                'client_id']
+            published_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Limited access'}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+                'client_id']
+            limited_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
     persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion == False)
     if is_template is not None:
         if type(is_template) == str:
@@ -89,12 +118,13 @@ def perspectives_list(request):  # tested
                 return
 
         persps = persps.filter(DictionaryPerspective.is_template == is_template)
-    if state_translation_gist_client_id and state_translation_gist_object_id:
-        persps = persps.filter(
-            DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id,
-            DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id)
+    if published:
+        persps = persps.filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == published_gist[1],
+                                        DictionaryPerspective.state_translation_gist_client_id == published_gist[0]),
+                                   and_(DictionaryPerspective.state_translation_gist_object_id == limited_gist[1],
+                                        DictionaryPerspective.state_translation_gist_client_id == limited_gist[0])))
     perspectives = []
-    for perspective in persps:
+    for perspective in persps.all():
         resp = view_perspective_from_object(request, perspective)
         if 'error' not in resp:
             perspectives.append(resp)
