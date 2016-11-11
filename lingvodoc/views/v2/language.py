@@ -28,6 +28,7 @@ from pyramid.security import authenticated_userid
 from pyramid.view import view_config
 
 from sqlalchemy.exc import IntegrityError
+from lingvodoc.views.v2.utils import add_user_to_group
 
 
 @view_config(route_name='languages', renderer='templates/languages.pt', request_method='GET')
@@ -154,8 +155,7 @@ def create_language(request):  # tested & in docs
             group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
             groups += [group]
         for group in groups:
-            if group not in user.groups:
-                user.groups.append(group)
+            add_user_to_group(user, group)
         request.response.status = HTTPOk.code
         return {'object_id': language.object_id,
                 'client_id': language.client_id}

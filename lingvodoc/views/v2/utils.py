@@ -41,6 +41,12 @@ from pyramid.httpexceptions import (
 from lingvodoc.exceptions import CommonException
 from sqlalchemy.exc import IntegrityError
 
+
+def add_user_to_group(user, group):
+    if user not in group.users:
+        group.users.append(user)
+
+
 def cache_clients():
     clients_to_users_dict = dict()
     clients = DBSession.query(Client) \
