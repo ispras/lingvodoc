@@ -379,13 +379,13 @@ def configure_routes(config):
     config.add_route(name='create_lexical_entry', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                           '/perspective/{perspective_client_id}/{perspective_object_id}/'
                                                           'lexical_entry',
-                     factory='lingvodoc.models.CreateLexicalEntriesEntitiesAcl')  # tested
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # tested
 
     config.add_route(name='create_lexical_entry_bulk',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/'
                              'lexical_entries',
-                     factory='lingvodoc.models.CreateLexicalEntriesEntitiesAcl')  # tested
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # tested
 
     # API #POST
     # {'entity_type': <entity_type>, 'content': <content>, 'locale_id': <locale_id>, 'metadata': <metadata>}
@@ -394,17 +394,17 @@ def configure_routes(config):
                                                    '/perspective/{perspective_client_id}/{perspective_object_id}/'
                                                    'lexical_entry/{lexical_entry_client_id}/'
                                                    '{lexical_entry_object_id}/entity',
-                     factory='lingvodoc.models.CreateLexicalEntriesEntitiesAcl')  # tested
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # tested
 
     config.add_route(name='create_entities_bulk', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                           '/perspective/{perspective_client_id}/{perspective_object_id}/entities',
-                     factory='lingvodoc.models.CreateLexicalEntriesEntitiesAcl')  # TODO: test
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # TODO: test
 
     # API #GET
     # params: start_from=M, count=N, sort_by=<entity_type>
     config.add_route(name='lexical_entries_all', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_object_id}/all',
-                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
     config.add_route(name='all_perspective_authors', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                                                          '/perspective/{perspective_client_id}/{perspective_object_id}/authors')
     config.add_route(name='all_perspective_clients', pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
@@ -413,12 +413,12 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_all_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/all_count',
-                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')  # tested
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')  # tested
 
     config.add_route(name='lexical_entries_published',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/published',
-                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
 
     config.add_route(name='lexical_entries_not_accepted',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
@@ -427,7 +427,7 @@ def configure_routes(config):
     config.add_route(name='lexical_entries_published_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
                              '/perspective/{perspective_client_id}/{perspective_object_id}/published_count',
-                     factory='lingvodoc.models.PerspectiveLexicalViewAcl')
+                     factory='lingvodoc.models.LexicalEntriesEntitiesAcl')
 
     config.add_route(name='lexical_entries_not_accepted_count',
                      pattern='/dictionary/{dictionary_client_id}/{dictionary_object_id}'
@@ -606,18 +606,16 @@ def configure_routes(config):
     # config.add_route(name='test_queue_get', pattern='/test_queue_get')
 
     config.add_route(name='create_translationgist', pattern='/translationgist',
-                     factory='lingvodoc.models.ApproveAllAcl')
+                     factory='lingvodoc.models.AuthenticatedAcl')
     config.add_route(name='translationgist', pattern='/translationgist/{client_id}/{object_id}',
-                     factory='lingvodoc.models.ApproveAllAcl')
+                     factory='lingvodoc.models.TranslationAcl')
     config.add_route(name='create_translationatom', pattern='/translationatom',
-                     factory='lingvodoc.models.ApproveAllAcl')
+                     factory='lingvodoc.models.AuthenticatedAcl')
     config.add_route(name='translationatom', pattern='/translationatom/{client_id}/{object_id}',
-                     factory='lingvodoc.models.ApproveAllAcl')
-    config.add_route(name='translation_search', pattern='/translation_search',
-                     factory='lingvodoc.models.ApproveAllAcl')
+                     factory='lingvodoc.models.TranslationAcl')
+    config.add_route(name='translation_search', pattern='/translation_search')
 
-    config.add_route(name='translation_service_search', pattern='/translation_service_search',
-                     factory='lingvodoc.models.ApproveAllAcl')
+    config.add_route(name='translation_service_search', pattern='/translation_service_search')
 
 
 def main(global_config, **settings):

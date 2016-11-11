@@ -42,9 +42,9 @@ log = logging.getLogger(__name__)
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = list()
-    for persp in DBSession.query(DictionaryPerspective).all():
-        if persp.additional_metadata:
-            response.append(str(type(persp.additional_metadata)))
+    # for persp in DBSession.query(DictionaryPerspective).all():
+    #     if persp.additional_metadata:
+    #         response.append(str(type(persp.additional_metadata)))
     return response
     # # translation_gists = DBSession.query(TranslationGist).all()
     # gist_base = DBSession.query(BaseGroup).filter_by(action="delete",

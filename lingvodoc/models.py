@@ -185,6 +185,10 @@ class PrimeTableArgs(object):
         return tuple()
 
 
+class AdditionalMetadataMixin(object):
+    additional_metadata = Column(JSONB)
+
+
 class TableNameMixin(object):
     """
     Look forward to:
@@ -223,20 +227,29 @@ def get_client_counter(check_id):
     return DBSession.query(Client).filter_by(id=check_id).with_for_update(of=Client).first()
 
 
+class ObjectTOC(Base, TableNameMixin):
+    """
+    This is base of translations
+    """
+    object_id = Column(SLBigInteger(), primary_key=True)
+    client_id = Column(SLBigInteger(), primary_key=True)
+    table_name = Column(UnicodeText, nullable=False)
+
+
 class CompositeIdMixin(object):
     """
     It's used for automatically set client_id and object_id as composite primary key.
     """
     object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
-    client_id = Column(SLBigInteger(), primary_key=True)  # SLBigInteger() ? look sqlite sequences
+    client_id = Column(SLBigInteger(), primary_key=True)
 
     def __init__(self, **kwargs):
         kwargs.pop("object_id", None)
         client_by_id = get_client_counter(kwargs['client_id'])
         kwargs["object_id"] = client_by_id.counter
-        # self.object_id = client_by_id.counter
-        # client_by_id.counter = Client.counter + 1
-
+        DBSession.add(ObjectTOC(client_id=kwargs['client_id'],
+                                object_id=kwargs['object_id'],
+                                table_name=self.__tablename__))
         super().__init__(**kwargs)
 
 
@@ -331,21 +344,23 @@ class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
     """
     This is base of translations
     """
-    type = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
+    type = Column(UnicodeText)
 
 
-class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin):
+class TranslationAtom(CompositeIdMixin, Base, TableNameMixin, RelationshipMixin, CreatedAtMixin,
+                      AdditionalMetadataMixin):
     """
     This is translations
     """
     __parentname__ = 'TranslationGist'
-    content = Column(UnicodeText, nullable=False)
     locale_id = Column(SLBigInteger(), nullable=False)
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
+    content = Column(UnicodeText, nullable=False)
 
 
-class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, RelationshipMixin):
+class Language(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, TranslationMixin, RelationshipMixin,
+               AdditionalMetadataMixin):
     """
     This is grouping entity that isn't related with dictionaries directly. Locale can have pointer to language.
     """
@@ -388,7 +403,8 @@ class Dictionary(CompositeIdMixin,
                  RelationshipMixin,
                  CreatedAtMixin,
                  TranslationMixin,
-                 StateMixin):
+                 StateMixin,
+                 AdditionalMetadataMixin):
     """
     This object presents logical dictionary that indicates separate language. Each dictionary can have many
     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
@@ -397,48 +413,8 @@ class Dictionary(CompositeIdMixin,
     """
     __parentname__ = 'Language'
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
-    additional_metadata = Column(JSONB)
     category = Column(Integer, default=0)
     domain = Column(Integer, default=0)
-
-
-# class Corpora(CompositeIdMixin,
-#               Base,
-#               TableNameMixin,
-#               RelationshipMixin,
-#               CreatedAtMixin,
-#               TranslationMixin,
-#               StateMixin):
-#     """
-#     This object presents logical dictionary that indicates separate language. Each dictionary can have many
-#     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
-#     indicates separate language (dialect) we want to provide our users an opportunity to have their own dictionaries
-#     for the same language so we use some grouping. This grouping is provided via Language objects.
-#     """
-#     __parentname__ = 'Language'
-#     marked_for_deletion = Column(Boolean, default=False, nullable=False)
-#     additional_metadata = Column(JSONB)
-#     category = Column(UnicodeText)
-
-
-# class CorporaText(CompositeIdMixin,
-#                   Base,
-#                   TableNameMixin,
-#                   RelationshipMixin,
-#                   CreatedAtMixin,
-#                   TranslationMixin,
-#                   StateMixin):
-#     """
-#     This object presents logical dictionary that indicates separate language. Each dictionary can have many
-#     perspectives that indicate actual dicts: morphological, etymology etc. Despite the fact that Dictionary object
-#     indicates separate language (dialect) we want to provide our users an opportunity to have their own dictionaries
-#     for the same language so we use some grouping. This grouping is provided via Language objects.
-#     """
-#     __parentname__ = 'Corpora'
-#     marked_for_deletion = Column(Boolean, default=False, nullable=False)
-#     additional_metadata = Column(JSONB)
-#     category = Column(UnicodeText)
-
 
 class DictionaryPerspective(CompositeIdMixin,
                             Base,
@@ -446,7 +422,8 @@ class DictionaryPerspective(CompositeIdMixin,
                             RelationshipMixin,
                             CreatedAtMixin,
                             TranslationMixin,
-                            StateMixin):
+                            StateMixin,
+                            AdditionalMetadataMixin):
     """
     Perspective represents dictionary fields for current usage. For example each Dictionary object can have two
     DictionaryPerspective objects: one for morphological dictionary, one for etymology dictionary. Physically both
@@ -460,7 +437,6 @@ class DictionaryPerspective(CompositeIdMixin,
     is_template = Column(Boolean, default=False, nullable=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
-    additional_metadata = Column(JSONB)
 
 
 class SelfMixin(PrimeTableArgs):
@@ -560,7 +536,8 @@ class Field(CompositeIdMixin,
             TableNameMixin,
             CreatedAtMixin,
             TranslationMixin,
-            DataTypeMixin):
+            DataTypeMixin,
+            AdditionalMetadataMixin):
     """
     With this objects we specify allowed fields for dictionary perspective. This class is used for three purposes:
         1. To control final web-page view. With it we know which fields belong to perspective (and what we should
@@ -579,7 +556,8 @@ class LexicalEntry(CompositeIdMixin,
                    Base,
                    TableNameMixin,
                    RelationshipMixin,
-                   CreatedAtMixin):
+                   CreatedAtMixin,
+                   AdditionalMetadataMixin):
     """
     Objects of this class are used for grouping objects as variations for single lexical entry. Using it we are grouping
     all the variations for a single "word" - each editor can have own version of this word. This class doesn't hold
@@ -589,7 +567,6 @@ class LexicalEntry(CompositeIdMixin,
     __parentname__ = 'DictionaryPerspective'
     moved_to = Column(UnicodeText)
     marked_for_deletion = Column(Boolean, default=False)
-    additional_metadata = Column(JSONB)
 
     def track(self, publish, locale_id):
         metadata = self.additional_metadata if self.additional_metadata else None
@@ -764,11 +741,11 @@ class Entity(CompositeIdMixin,
              RelationshipMixin,
              SelfMixin,
              FieldMixin,
-             ParentLinkMixin):
+             ParentLinkMixin,
+             AdditionalMetadataMixin):
     __parentname__ = "LexicalEntry"
 
     content = Column(UnicodeText)
-    additional_metadata = Column(JSONB)
     locale_id = Column(SLBigInteger())
     marked_for_deletion = Column(Boolean, default=False, nullable=False)
 
@@ -812,12 +789,11 @@ user_to_organization_association = Table('user_to_organization_association', Bas
                                          )
 
 
-class User(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+class User(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
     login = Column(UnicodeText, unique=True, nullable=False)
     name = Column(UnicodeText)
     # this stands for name in English
     intl_name = Column(UnicodeText, nullable=False)
-    additional_metadata = Column(JSONB)
     default_locale_id = Column(ForeignKey("locale.id"), default=2, nullable=False)
     birthday = Column(Date)
     # it's responsible for "deleted user state". True for active, False for deactivated.
@@ -880,7 +856,7 @@ class Email(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     user = relationship("User", backref=backref('email', uselist=False))
 
 
-class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixin):
     user_id = Column(SLBigInteger(), ForeignKey('user.id'), nullable=False)
     # creation_time = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     is_browser_client = Column(Boolean, default=True, nullable=False)
@@ -888,13 +864,12 @@ class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     counter = Column(SLBigInteger(), default=1, nullable=False)
 
 
-class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):  # TODO: decide what is nullable
+class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):  # TODO: decide what is nullable
     name = Column(UnicodeText, nullable=False)
     # content holds url for the object
     content = Column(UnicodeText, nullable=False)
     real_storage_path = Column(UnicodeText, nullable=False)
     data_type = Column(UnicodeText, nullable=False)
-    additional_metadata = Column(JSONB)
     marked_for_deletion = Column(Boolean, default=False)
     # created_at = Column(DateTime, default=datetime.datetime.utcnow)
     user_id = Column(SLBigInteger(), ForeignKey('user.id'))
@@ -950,23 +925,36 @@ def acl_by_groups_single_id(object_id, subject):
     return acls
 
 
-class LanguageAcl(object):
+class ACLMixin(object):
+    @classmethod
+    def get_subjects(cls):
+        return cls.subject
+
+    def __acl__(self):
+        object_id = self.request.matchdict.get(self.object_id, None)
+        client_id = self.request.matchdict.get(self.client_id, None)
+        return acl_by_groups(object_id, client_id, self.subject)
+
     def __init__(self, request):
         self.request = request
 
+
+class SimpleAclMixin(object):
+    def get_subject(self):
+        return self.subject
+
     def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'language')
+        id = self.request.matchdict.get(self.id, None)
+        return acl_by_groups_single_id(id, self.subject)
+
+    def __init__(self, request):
+        self.request = request
+
+
+class LanguageAcl(ACLMixin):
+    subject = 'language'
+    client_id = 'client_id'
+    object_id = 'object_id'
 
 
 class AdminAcl(object):
@@ -978,293 +966,93 @@ class AdminAcl(object):
         return acls
 
 
-class PerspectiveAcl(object):
-    def __init__(self, request):
-        self.request = request
+class PerspectiveAcl(ACLMixin):
+    subject = 'perspective'
+    client_id = 'perspective_client_id'
+    object_id = 'perspective_object_id'
+
+
+class PerspectiveCreateAcl(ACLMixin):
+    subject = 'perspective'
+    client_id = 'dictionary_client_id'
+    object_id = 'dictionary_object_id'
+
+
+class OrganizationAcl(ACLMixin):
+    subject = 'organization'
+    id = 'organization_id'
+
+
+class DictionaryAcl(ACLMixin):
+    subject = 'dictionary'
+    client_id = 'client_id'
+    object_id = 'object_id'
+
+
+class DictionaryRolesAcl(ACLMixin):
+    subject = 'dictionary_role'
+    client_id = 'client_id'
+    object_id = 'object_id'
+
+
+class PerspectiveRolesAcl(ACLMixin):
+    subject = 'perspective_role'
+    client_id = 'perspective_client_id'
+    object_id = 'perspective_object_id'
+
+
+class CreateLexicalEntriesEntitiesAcl(ACLMixin):
+    subject = 'lexical_entries_and_entities'
+    client_id = 'perspective_client_id'
+    object_id = 'perspective_object_id'
+
+
+class LexicalEntriesEntitiesAcl(ACLMixin):
+    subject = 'lexical_entries_and_entities'
+    client_id = 'perspective_client_id'
+    object_id = 'perspective_object_id'
+
+
+class TranslationAcl(ACLMixin):
+    subject = 'translations'
+    client_id = 'client_id'
+    object_id = 'object_id'
+
+
+class AuthenticatedAcl(ACLMixin):
 
     def __acl__(self):
-        acls = []
-        client_id = None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        object_id = None
-        try:
-            object_id = self.request.matchdict['perspective_object_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'perspective')
+        return [(Allow, Authenticated, ALL_PERMISSIONS)]
 
 
-class PerspectiveCreateAcl(object):
-    def __init__(self, request):
-        self.request = request
+class PerspectiveEntityAcl(ACLMixin):
+    subject = 'lexical_entries_and_entities'
 
     def __acl__(self):
-        acls = []
-        client_id = None
-        try:
-            client_id = self.request.matchdict['dictionary_client_id']
-        except:
-            pass
-        object_id = None
-        try:
-            object_id = self.request.matchdict['dictionary_object_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'perspective')
-
-
-class OrganizationAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        organization_id = None
-        try:
-            organization_id = self.request.matchdict['organization_id']
-        except:
-            pass
-        return acls + acl_by_groups_single_id(organization_id, 'organization')
-
-
-class DictionaryAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'dictionary')
-
-
-# class DictionaryIdsWithPrefixAcl(object): #todo: why this exists?
-#     def __init__(self, request):
-#         self.request = request
-#
-#     def __acl__(self):
-#         acls = []
-#         object_id = None
-#         try:
-#             object_id = self.request.matchdict['dictionary_perspective_object_id']
-#         except:
-#             pass
-#         client_id = None
-#         try:
-#             client_id = self.request.matchdict['dictionary_perspective_client_id']
-#         except:
-#             pass
-#         return acls + acl_by_groups(object_id, client_id, 'dictionary')
-
-
-class DictionaryRolesAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'dictionary_role')
-
-
-class PerspectiveRolesAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['perspective_object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'perspective_role')
-
-
-class CreateLexicalEntriesEntitiesAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['perspective_object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
-
-
-class LexicalEntriesEntitiesAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['perspective_object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
-
-
-class PerspectiveEntityAcl(object):
-    def __init__(self, request):
-        self.request = request
-#
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
+        object_id = self.request.matchdict.get('object_id', None)
+        client_id = self.request.matchdict.get('client_id', None)
         levoneent = DBSession.query(Entity).filter_by(client_id=client_id, object_id=object_id).first()
         perspective = levoneent.parent.parent
-        return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
-#
-#
-# class PerspectiveEntityTwoAcl(object):
-#     def __init__(self, request):
-#         self.request = request
-#
-#     def __acl__(self):
-#         acls = []
-#         object_id = None
-#         try:
-#             object_id = self.request.matchdict['object_id']
-#         except:
-#             pass
-#         client_id = None
-#         try:
-#             client_id = self.request.matchdict['client_id']
-#         except:
-#             pass
-#         levoneent = DBSession.query(LevelTwoEntity).filter_by(client_id=client_id, object_id=object_id).first()
-#         perspective = levoneent.parent.parent.parent
-#         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
+        return acl_by_groups(perspective.object_id, perspective.client_id, self.subject)
 
 
-# class PerspectiveEntityGroupAcl(object):
-#     def __init__(self, request):
-#         self.request = request
-#
-#     def __acl__(self):
-#         acls = []
-#         object_id=None
-#         try:
-#             object_id = self.request.matchdict['object_id']
-#         except:
-#             pass
-#         client_id=None
-#         try:
-#             client_id = self.request.matchdict['client_id']
-#         except:
-#             pass
-#         group_ent = DBSession.query(GroupingEntity).filter_by(client_id=client_id, object_id=object_id).first()
-#         perspective = group_ent.parent.parent
-#         return acls + acl_by_groups(perspective.object_id, perspective.client_id, 'lexical_entries_and_entities')
+class PerspectivePublishAcl(ACLMixin):
+    subject = 'approve_entities'
+    client_id = 'perspective_client_id'
+    object_id = 'perspective_object_id'
 
-# TestIndex = Index('my_index', Entity.content, postgresql_ops={'content':'text_pattern_ops'}, postgresql_using='gin')
 
-class PerspectivePublishAcl(object):
-    def __init__(self, request):
-        self.request = request
+class LexicalViewAcl(ACLMixin):
+    subject = 'lexical_entries_and_entities'
 
     def __acl__(self):
         acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['perspective_object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'approve_entities')
+        object_id = self.request.matchdict['object_id']
+        client_id = self.request.matchdict['client_id']
 
-
-class PerspectiveLexicalViewAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['perspective_object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['perspective_client_id']
-        except:
-            pass
-        return acls + acl_by_groups(object_id, client_id, 'lexical_entries_and_entities')
-
-
-class LexicalViewAcl(object):
-    def __init__(self, request):
-        self.request = request
-
-    def __acl__(self):
-        acls = []
-        object_id = None
-        try:
-            object_id = self.request.matchdict['object_id']
-        except:
-            pass
-        client_id = None
-        try:
-            client_id = self.request.matchdict['client_id']
-        except:
-            pass
         lex = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
         parent = lex.parent
-        return acls + acl_by_groups(parent.object_id, parent.client_id, 'lexical_entries_and_entities')
+        return acls + acl_by_groups(parent.object_id, parent.client_id, self.subject)
 
 
 class ApproveAllAcl(object):

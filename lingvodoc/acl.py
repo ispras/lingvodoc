@@ -18,6 +18,11 @@ log = logging.getLogger(__name__)
 def groupfinder(client_id, request):
     if not client_id:
         return None
+    subject = None
+    try:
+        subject = request.matched_route.factory.get_subject()
+    except AttributeError as e:
+        pass
 
     try:
         user = DBSession.query(User) \
@@ -28,7 +33,10 @@ def groupfinder(client_id, request):
 
         groups = DBSession.query(Group)\
             .options(joinedload('BaseGroup')) \
-            .filter(Group.users.contains(user)).all()
+            .filter(Group.users.contains(user))
+        if subject:
+            groups = groups.filter(Group.basegroup.subject == subject)
+        groups = groups.all()
 
     except AttributeError as e:
             forget(request)

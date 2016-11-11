@@ -67,7 +67,7 @@ def view_language(request):  # tested & in docs
     return {'error': str("No such language in the system")}
 
 
-@view_config(route_name='language', renderer='json', request_method='PUT')
+@view_config(route_name='language', renderer='json', request_method='PUT', permission='edit')
 def edit_language(request):  # tested & in docs
     try:
         response = dict()
