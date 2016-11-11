@@ -1722,19 +1722,21 @@ def accept_entity(request):
         for entry in req:
             entity = DBSession.query(Entity). \
                 filter_by(client_id=entry['client_id'], object_id=entry['object_id']).first()
-
-            group = DBSession.query(Group).join(BaseGroup).filter(
-                BaseGroup.subject == 'lexical_entries_and_entities',
-                Group.subject_client_id == entity.parent.parent.client_id,
-                Group.subject_object_id == entity.parent.parent.object_id,
-                BaseGroup.action == 'create').one()
-            if user in group.users:
-                if entity:
-                    entity.publishingentity.accepted = True
+            if entity:
+                group = DBSession.query(Group).join(BaseGroup).filter(
+                    BaseGroup.subject == 'lexical_entries_and_entities',
+                    Group.subject_client_id == entity.parent.parent.client_id,
+                    Group.subject_object_id == entity.parent.parent.object_id,
+                    BaseGroup.action == 'create').one()
+                if user in group.users:
+                    if entity:
+                        entity.publishingentity.accepted = True
+                    else:
+                        raise CommonException("no such entity in system")
                 else:
-                    raise CommonException("no such entity in system")
+                    raise CommonException("Forbidden")
             else:
-                raise CommonException("Forbidden")
+                raise CommonException("no such entity in system")
 
         request.response.status = HTTPOk.code
         return {}

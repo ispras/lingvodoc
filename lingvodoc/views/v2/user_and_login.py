@@ -152,10 +152,11 @@ def signin(request):
     password = req['password']
     # login = request.POST.get('login', '')
     # password = request.POST.get('password', '')
+    desktop = req.get('desktop', False)
 
     user = DBSession.query(User).filter_by(login=login).first()
     if user and user.check_password(password):
-        client = Client(user_id=user.id)
+        client = Client(user_id=user.id, is_browser_client=not desktop)
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
@@ -175,6 +176,20 @@ def signin(request):
         return HTTPOk(headers=response.headers, json_body=result)
         # return result
     return HTTPUnauthorized(location=request.route_url('login'))
+
+
+# @view_config(route_name='sync_signin', renderer='json', request_method='POST')
+# def sync_signin(request):
+#     req = request.json_body
+#     login = req['login']
+#     password = req['password']
+#
+#     user = DBSession.query(User).filter_by(login=login).first()
+#     if user and user.check_password(password):
+#         request.response.status = HTTPOk.code
+#         return HTTPOk(json_body={})
+#     return HTTPUnauthorized(location=request.route_url('login'))
+
 
 
 # @view_config(route_name='test', renderer='json', request_method='GET')
