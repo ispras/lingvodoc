@@ -257,7 +257,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
     else:
         entity.content = content
-
+    entity.publishingentity.accepted = True
 
     DBSession.add(entity)
     #log.debug(filename)

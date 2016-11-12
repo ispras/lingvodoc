@@ -391,7 +391,6 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     real_location = None
     url = None
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-        pass
         ##entity.data_type = data_type
         real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
         entity.content = url
@@ -601,12 +600,14 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
     return translation.content
 
 
-def convert_db_new(manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
+def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
                    locale_id=2):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
+
+    time.sleep(4)
     field_ids = {}
-    with manager:
+    with transaction.manager:
         client = DBSession.query(Client).filter_by(id=user_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -1099,6 +1100,7 @@ def convert_all(blob_client_id, blob_object_id, language_client_id, language_obj
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     engine = create_engine(sqlalchemy_url)
+    DBSession.remove()
     DBSession.configure(bind=engine)
     blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
     DBSession.flush()
@@ -1109,7 +1111,7 @@ def convert_all(blob_client_id, blob_object_id, language_client_id, language_obj
     sqconn = sqlite3.connect(filename)
     log.debug("Connected to sqlite3 database")
     try:
-        status = convert_db_new(transaction.manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
+        status = convert_db_new( sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)

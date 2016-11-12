@@ -1,5 +1,5 @@
 __author__ = 'alexander'
-
+from multiprocessing import Process
 
 class MockResult:
     """
@@ -28,6 +28,9 @@ class MockApp:
         class MockTask:
 
             def delay(self, *args, **kwargs):
-                return MockResult(func(*args, **kwargs))
+                # return MockResult(Process(target=func, args=args, kwargs=kwargs))
+                p = Process(target=func, args=args, kwargs=kwargs) #MockResult()
+                p.start()
+                return True#MockResult(func(*args, **kwargs))
 
         return MockTask()
