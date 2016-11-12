@@ -44,7 +44,6 @@ class Elan:
         anns = ((self.eafob.timeslots[tier_data[a][0]], self.eafob.timeslots[tier_data[a][1]], a)
                 for a in tier_data)
         sorted_words = sorted([a for a in anns if a[0] >= start and a[1] <= end],  key=lambda t: t[1] )
-        #print(sorted_words[0])
         return [x for x in sorted_words]
         #sorted([a[2] for a in anns if a[1] >= start and a[0] <= end],  key=lambda t: t[0] )
 
@@ -52,15 +51,12 @@ class Elan:
     def parse(self):
         d = collections.defaultdict(dict)
         for element in self.xml_obj:
-            #print(element.tag)
             if element.tag == 'TIER':
                 tier_id = element.attrib['TIER_ID']
-                #print(tier_id)
                 if self.main_tier_name is None:
                     self.main_tier_name = tier_id
                 if 'PARENT_REF' in element.attrib:
                     tier_ref = element.attrib['PARENT_REF']
-                    #print(tier_ref, "->" , tier_id)
                     self.tier_refs[tier_ref].append(tier_id)
                 self.tiers.append(tier_id)
                 for elem1 in element:
@@ -183,7 +179,6 @@ class ElanCheck:
                     ling_type = at["CONSTRAINTS"]
                     id = at["LINGUISTIC_TYPE_ID"]
                     is_time_alignable = at["TIME_ALIGNABLE"]
-                    print(id, ling_type, is_time_alignable)
                     self.lingv_type[id] = (ling_type, is_time_alignable)
 
 
@@ -197,14 +192,19 @@ class ElanCheck:
         return number
 
     def check(self):
-        graph_structure = {(1, 2, ('Symbolic_Association', 'false'), 'literary translation'),
-                            (1, 3, ('Included_In', 'true'), 'translation'),
-                            (3, 5, ('Symbolic_Association', 'false'), 'word'),
-                            (3, 4, ('Symbolic_Association', 'false'), 'transcription')
+        # graph_structure = {(1, 2, ('Symbolic_Association', 'false'), 'literary translation'),
+        #                     (1, 3, ('Included_In', 'true'), 'translation'),
+        #                     (3, 5, ('Symbolic_Association', 'false'), 'word'),
+        #                     (3, 4, ('Symbolic_Association', 'false'), 'transcription')
+        # }
+        # new_graph = set([(x[0], x[1], self.lingv_type[x[2]], x[3]) for x in self.edges])
+
+        graph_structure = {(('Symbolic_Association', 'false'), 'literary translation'),
+                            (('Included_In', 'true'), 'translation'),
+                            (('Symbolic_Association', 'false'), 'word'),
+                            (('Symbolic_Association', 'false'), 'transcription')
         }
-        new_graph = set([(x[0], x[1], self.lingv_type[x[2]], x[3]) for x in self.edges])
-        # print(new_graph)
-        # print(graph_structure)
+        new_graph = set([( self.lingv_type[x[2]], x[3]) for x in self.edges])
         if new_graph != graph_structure:
             return False
         return True

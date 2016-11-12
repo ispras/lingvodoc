@@ -21,6 +21,8 @@ def convert_dictionary(request):  # TODO: test
     user_id = request.authenticated_userid
     args = dict()
     args["user_id"] = user_id
+    args["client_id"] = req["client_id"]
+    args["object_id"] = req["object_id"]
     args["language_client_id"] = req["language_client_id"]
     args["language_object_id"] = req["language_object_id"]
     args["gist_client_id"] = req["gist_client_id"]

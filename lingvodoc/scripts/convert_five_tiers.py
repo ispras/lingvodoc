@@ -158,22 +158,6 @@ def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
 
 def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
     import errno
-    # here will be object storage write as an option. Fallback (default) is filesystem write
-    #settings = request.registry.settings
-    #storage = "openstack" #settings['storage']
-    #if storage == 'openstack':
-    """
-    if json_input:
-        content = base64.urlsafe_b64decode(content)
-
-    # TODO: openstack objects correct naming
-    #filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
-    #real_location = openstack_upload(content, filename, obj.data_type, 'test')
-    filename = str(data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
-    real_location = openstack_upload(content,obj, filename, data_type, 'test')
-    'http://localhost:6543/objects/entity/sound1/623/16691/a1107.wav'
-    """
-    # print(obj, storage["path"], folder_name, filename, True)
     storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
     directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
     try:
@@ -284,6 +268,8 @@ def convert_five_tiers(
                 language_client_id,
                 language_object_id,
                 user_id,
+                origin_client_id,
+                origin_object_id,
                 gist_client_id,
                 gist_object_id,
                 sqlalchemy_url,
@@ -337,13 +323,13 @@ def convert_five_tiers(
 
         DBSession.flush()
 
-        # """
+        """
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
         DBSession.add(translationgist)
         DBSession.flush()
         gist_client_id = translationgist.client_id
         gist_object_id = translationgist.object_id
-        # """
+        """
 
         parent_client_id = gist_client_id
         parent_object_id = gist_object_id
@@ -351,7 +337,7 @@ def convert_five_tiers(
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent.marked_for_deletion:
 
-            # """
+            """
             translationatom = TranslationAtom(client_id=client.id,
                                               parent=parent,
                                               locale_id=2,
@@ -364,7 +350,7 @@ def convert_five_tiers(
 
             language_client_id = atom_client_id
             language_object_id = atom_object_id
-            # """
+            """
             lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
 
             resp = translation_service_search("WiP")
@@ -389,8 +375,6 @@ def convert_five_tiers(
                     new_group.users.append(user)
                 DBSession.add(new_group)
                 DBSession.flush()
-
-            # print(user)
         """
         # FIRST PERSPECTIVE
         """
@@ -415,20 +399,23 @@ def convert_five_tiers(
         persp_translation_gist_client_id = gist_client_id
         persp_translation_gist_object_id = gist_object_id
 
-
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         resp = translation_service_search("WiP")
         state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+        origin_metadata= {"origin_client_id": origin_client_id,
+                              "origin_object_id": origin_object_id
+                              }
         perspective = DictionaryPerspective(client_id=client.id, ###
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
                                             parent=parent,
                                             # import_source=req.get('import_source'),
                                             # import_hash=req.get('import_hash'),
-                                            # additional_metadata=additional_metadata,
+                                            additional_metadata=origin_metadata,
                                             translation_gist_client_id=persp_translation_gist_client_id,
                                             translation_gist_object_id=persp_translation_gist_object_id
                                             )
+        perspective.additional_metadata = origin_metadata
         # if is_template is not None:
         #     perspective.is_template = is_template
         DBSession.add(perspective)
@@ -476,10 +463,11 @@ def convert_five_tiers(
                                             parent=parent,
                                             # import_source=req.get('import_source'),
                                             # import_hash=req.get('import_hash'),
-                                            # additional_metadata=additional_metadata,
+                                            additional_metadata=origin_metadata,
                                             translation_gist_client_id=persp_translation_gist_client_id,
                                             translation_gist_object_id=persp_translation_gist_object_id
                                             )
+        perspective.additional_metadata = origin_metadata
         # if is_template is not None:
         #     perspective.is_template = is_template
         DBSession.add(perspective)
@@ -579,11 +567,8 @@ def convert_five_tiers(
             converter.parse()
             final_dicts = converter.proc()
             temp.flush()
-        sp_sound_field_client_id = field_ids["Sounds of Paradigmatic forms"][0]
-        sp_sound_field_object_id = field_ids["Sounds of Paradigmatic forms"][1]
 
         for phrase in final_dicts:
-            # print(phrase)
             perspective = DBSession.query(DictionaryPerspective).\
             filter_by(client_id=second_perspective_client_id, object_id = second_perspective_object_id).first() #sec?
             if not perspective:
@@ -637,7 +622,6 @@ def convert_five_tiers(
                     link_dict[cort] = (fp_lexical_entry_client_id, fp_lexical_entry_object_id)
 
                     for other_word in curr_dict[word]:
-                        # print("--->", word.tier)
                         create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids[EAF_TIERS[other_word.tier]][0], field_ids[EAF_TIERS[other_word.tier]][1],
                             None, client, other_word.text, filename=None, storage=storage)
                     if not no_sound:
@@ -667,6 +651,8 @@ def convert_five_tiers(
 def convert_all(language_client_id,
                 language_object_id,
                 user_id,
+                client_id,
+                object_id,
                 gist_client_id,
                 gist_object_id,
                 sqlalchemy_url,
@@ -681,11 +667,12 @@ def convert_all(language_client_id,
         elan_check = elan_parser.ElanCheck(temp.name)
         elan_check.parse()
         if elan_check.check:
-
             convert_five_tiers(
                         language_client_id,
                         language_object_id,
                         user_id,
+                        client_id,
+                        object_id,
                         gist_client_id,
                         gist_object_id,
                         sqlalchemy_url,
