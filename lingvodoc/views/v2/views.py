@@ -110,7 +110,7 @@ def all_locales(request):
         locale_json = dict()
         locale_json['shortcut'] = locale.shortcut
         locale_json['intl_name'] = locale.intl_name
-        locale_json['created_at'] = locale.created_at.timestamp()
+        locale_json['created_at'] = locale.created_at
         locale_json['id'] = locale.id
         response.append(locale_json)
     request.response.status = HTTPOk.code

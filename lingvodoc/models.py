@@ -31,7 +31,8 @@ from sqlalchemy.types import (
     DateTime,
     TIMESTAMP,
     Boolean,
-    Date
+    Date,
+    TypeDecorator
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -201,11 +202,18 @@ class TableNameMixin(object):
         return cls.__name__.lower()
 
 
+class EpochType(TypeDecorator):
+    impl = TIMESTAMP
+
+    def process_result_value(self, value, dialect):
+        return value.timestamp()
+
+
 class CreatedAtMixin(object):
     """
     It's used for automatically set created_at column.
     """
-    created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow(), nullable=False)
+    created_at = Column(EpochType, default=datetime.datetime.utcnow(), nullable=False)
 
 
 class IdMixin(object):

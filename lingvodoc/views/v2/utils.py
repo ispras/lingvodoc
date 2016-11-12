@@ -427,7 +427,7 @@ def view_field_from_object(request, field):
     if field and not field.marked_for_deletion:
         response['client_id'] = field.client_id
         response['object_id'] = field.object_id
-        response['created_at'] = field.created_at.timestamp()
+        response['created_at'] = field.created_at
         response['data_type_translation_gist_client_id'] = field.data_type_translation_gist_client_id
         response['data_type_translation_gist_object_id'] = field.data_type_translation_gist_object_id
         response['translation'] = field.get_translation(request.cookies['locale_id'])

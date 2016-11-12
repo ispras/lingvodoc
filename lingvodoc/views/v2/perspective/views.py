@@ -19,6 +19,8 @@ from pyramid.httpexceptions import (
 )
 from sqlalchemy.sql.expression import case, true, false
 
+from sqlalchemy.orm import aliased
+
 from sqlalchemy import (
     func,
     or_,
@@ -105,7 +107,8 @@ def perspectives_list(request):  # tested
         else:
             raise KeyError("Something wrong with the base", resp.json['error'])
 
-    persps = DBSession.query(DictionaryPerspective).filter(DictionaryPerspective.marked_for_deletion == False)
+    atom_perspective_name_alias = aliased(TranslationAtom, name="PerspectiveName")
+    persps = DBSession.query(DictionaryPerspective, TranslationAtom, atom_perspective_name_alias).filter(DictionaryPerspective.marked_for_deletion == False)
     if is_template is not None:
         if type(is_template) == str:
             if is_template.lower() == 'true':
@@ -119,13 +122,31 @@ def perspectives_list(request):  # tested
 
         persps = persps.filter(DictionaryPerspective.is_template == is_template)
     if published:
-        persps = persps.filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == published_gist[1],
-                                        DictionaryPerspective.state_translation_gist_client_id == published_gist[0]),
-                                   and_(DictionaryPerspective.state_translation_gist_object_id == limited_gist[1],
-                                        DictionaryPerspective.state_translation_gist_client_id == limited_gist[0])))
+        persps = persps.filter(or_(and_(DictionaryPerspective.state_translation_gist_client_id == published_gist[0],
+                                        DictionaryPerspective.state_translation_gist_object_id == published_gist[1]),
+                                   and_(DictionaryPerspective.state_translation_gist_client_id == limited_gist[0],
+                                        DictionaryPerspective.state_translation_gist_object_id == limited_gist[1])))
+
+    persps = persps.join(TranslationAtom,
+                         and_(
+                             TranslationAtom.parent_client_id == DictionaryPerspective.state_translation_gist_client_id,
+                             TranslationAtom.parent_object_id == DictionaryPerspective.state_translation_gist_object_id)).filter(
+        TranslationAtom.locale_id == int(request.cookies['locale_id'])).join(atom_perspective_name_alias, and_(
+        atom_perspective_name_alias.parent_client_id == DictionaryPerspective.translation_gist_client_id,
+        atom_perspective_name_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id)).filter(
+        atom_perspective_name_alias.locale_id == int(request.cookies['locale_id']))
+
+    row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
     perspectives = []
     for perspective in persps.all():
-        resp = view_perspective_from_object(request, perspective)
+        resp = row2dict(perspective.DictionaryPerspective)
+        resp['status'] = perspective.TranslationAtom.content or "Unknown state"
+        resp['created_at'] = str(perspective.DictionaryPerspective.created_at)
+        if perspective.DictionaryPerspective.additional_metadata:
+            resp['additional_metadata'] = perspective.DictionaryPerspective.additional_metadata
+        resp['translation'] = perspective.PerspectiveName.content or "Unknown perspective name"
+
+        # resp = view_perspective_from_object(request, perspective)
         if 'error' not in resp:
             perspectives.append(resp)
     response = perspectives
