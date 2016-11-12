@@ -44,7 +44,12 @@ def configure_routes(config):
     # API #POST
     # this is the same operation as login - but params are sent via json
     config.add_route(name='signin', pattern='/signin')
+    config.add_route(name='desk_signin', pattern='/signin/desktop')
+    config.add_route(name='sync_signin', pattern='/signin/sync')
     config.add_route(name='cheatlogin', pattern='/cheatlogin')
+
+    config.add_route(name='basic_sync', pattern='/synchronisation/basic')
+    config.add_route(name='basic_sync_server', pattern='/synchronisation/basic/server')
 
     # web-view #POST
     config.add_route(name='logout', pattern='/logout')  # tested
@@ -303,7 +308,8 @@ def configure_routes(config):
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
-                     pattern="/blobs")
+                     pattern="/blobs",
+                     factory='lingvodoc.models.AuthenticatedAcl')
 
     # TODO: LOCALES!
     # API #GET && DELETE
@@ -633,6 +639,10 @@ def main(global_config, **settings):
     for k, v in parser.items('backend:storage'):
         storage[k] = v
     settings['storage'] = storage
+    if parser.has_section('app:desktop'):
+        for k, v in parser.items('app:desktop'):
+            storage[k] = v
+        settings['desktop'] = storage
     config = Configurator(settings=settings)
     log = logging.getLogger(__name__)
 
