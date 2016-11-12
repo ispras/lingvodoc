@@ -58,6 +58,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
+    options.windowClass = "sm-modal-window"
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(dictionary = dictionary.asInstanceOf[js.Object])
@@ -79,6 +80,7 @@ class DashboardController(scope: DashboardScope, modal: ModalService, location: 
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
+    options.windowClass = "sm-modal-window"
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(

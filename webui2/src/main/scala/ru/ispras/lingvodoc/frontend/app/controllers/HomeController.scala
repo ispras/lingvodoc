@@ -13,6 +13,7 @@ import scala.util.{Failure, Success}
 import scala.scalajs.js.JSConverters._
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
+import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 
 @js.native
@@ -37,21 +38,7 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
     perspectiveMeta.find(_.getId == perspective.getId).flatMap(_.metaData.authors.map(_.authors)).orUndefined
   }
 
-  private[this] def setPerspectives(languages: Seq[Language]): Unit = {
-    for (language <- languages) {
-      for (dictionary <- language.dictionaries) {
-        backend.getDictionaryPerspectives(dictionary, onlyPublished = true) onComplete {
-          case Success(perspectives) =>
-            dictionary.perspectives = perspectives.toJSArray
-          case Failure(e) =>
-        }
-      }
-      setPerspectives(language.languages.toSeq)
-    }
-  }
-
   override protected def onLoaded[T](result: T): Unit = {
-
 
   }
 
@@ -69,9 +56,15 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
       perspectiveMeta = p
       backend.allStatuses() flatMap { _ =>
         backend.getPublishedDictionaries map { languages =>
-          setPerspectives(languages)
-          scope.languages = languages.toJSArray
-          languages
+          backend.perspectives(published = true) map { perspectives =>
+            Utils.flattenLanguages(languages).foreach { language =>
+              language.dictionaries.foreach { dictionary =>
+                dictionary.perspectives = perspectives.filter(perspective => perspective.parentClientId == dictionary.clientId && perspective.parentObjectId == dictionary.objectId).toJSArray
+              }
+            }
+            scope.languages = languages.toJSArray
+            languages
+          }
         }
       }
     }

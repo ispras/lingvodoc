@@ -12,6 +12,7 @@ import scala.scalajs.js.annotation.JSExportAll
 case class DictionaryQuery() {
   var author: Option[Int] = None
   var userCreated: Option[Seq[Int]] = None
+  var publishedPerspectives: Boolean = false
 }
 
 object DictionaryQuery {

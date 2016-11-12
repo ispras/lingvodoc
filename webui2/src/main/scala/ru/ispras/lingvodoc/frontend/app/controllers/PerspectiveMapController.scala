@@ -85,12 +85,13 @@ class PerspectiveMapController(scope: PerspectiveMapScope,
     })
 
     metaData.foreach { meta =>
+
       meta.location foreach { location =>
 
         val latLng = location.location
-        val iconOptions = IconOptions.iconUrl("static/images/marker-icon.png").build
-        val icon = Leaflet.icon(iconOptions)
-        val markerOptions = js.Dynamic.literal("icon" -> icon).asInstanceOf[MarkerOptions]
+        val defaultIconOptions = IconOptions.iconUrl("static/images/marker-icon-default.png").iconSize(Leaflet.point(50, 42)).iconAnchor(Leaflet.point(-12, -42)).build
+        val defaultIcon = Leaflet.icon(defaultIconOptions)
+        val markerOptions = js.Dynamic.literal("icon" -> defaultIcon).asInstanceOf[MarkerOptions]
         val marker = Leaflet.marker(Leaflet.latLng(latLng.lat, latLng.lng), markerOptions)
 
         marker.onClick(e => {

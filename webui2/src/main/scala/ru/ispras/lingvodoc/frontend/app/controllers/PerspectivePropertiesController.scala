@@ -162,7 +162,16 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
 
   @JSExport
   def getAvailableLocales(translations: js.Array[LocalizedString], currentTranslation: LocalizedString): js.Array[Locale] = {
-    val currentLocale = scope.locales.find(_.id == currentTranslation.localeId).get
+    val currentLocale1 = scope.locales.find(_.id == currentTranslation.localeId)
+
+    if (currentLocale1.isEmpty) {
+      console.log("empty")
+      console.log(currentTranslation.localeId)
+
+
+    }
+
+    val currentLocale = currentLocale1.get
     val otherTranslations = translations.filterNot(translation => translation.equals(currentTranslation))
     val availableLocales = scope.locales.filterNot(_.equals(currentLocale)).filter(locale => !otherTranslations.exists(translation => translation.localeId == locale.id)).toList
     (currentLocale :: availableLocales).toJSArray
@@ -400,34 +409,33 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
 
-
   doAjax(() => {
-    // load data types
-    backend.dataTypes() flatMap { d =>
-      dataTypes = d.toJSArray
 
-      backend.getDictionaryPerspectives(dictionary, onlyPublished = false) flatMap { ps =>
-        perspectives = ps
-        val reqs = ps.map { p =>
-          backend.translationGist(p.translationGistClientId, p.translationGistObjectId) map {
-            gist => perspectiveTranslations = perspectiveTranslations + (p -> gist)
+    // load list of locales
+    backend.getLocales map { locales =>
+      // generate localized names
+      scope.locales = locales.toJSArray
+      // load data types
+      backend.dataTypes() flatMap { d =>
+        dataTypes = d.toJSArray
+
+        backend.getDictionaryPerspectives(dictionary, onlyPublished = false) flatMap { ps =>
+          perspectives = ps
+          val reqs = ps.map { p =>
+            backend.translationGist(p.translationGistClientId, p.translationGistObjectId) map {
+              gist => perspectiveTranslations = perspectiveTranslations + (p -> gist)
+            }
           }
-        }
 
-        Future.sequence(reqs) flatMap { _ =>
-          // load all known fields
-          backend.fields() flatMap { f =>
-            scope.fields = f.toJSArray
+          Future.sequence(reqs) flatMap { _ =>
+            // load all known fields
+            backend.fields() flatMap { f =>
+              scope.fields = f.toJSArray
 
-            // load list of fields
-            backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) flatMap { fields =>
-              parsePerspective(perspective, fields).map { layer =>
-                scope.layers.push(layer)
-
-                // load list of locales
-                backend.getLocales map { locales =>
-                    // generate localized names
-                    scope.locales = locales.toJSArray
+              // load list of fields
+              backend.getFields(CompositeId.fromObject(dictionary), CompositeId.fromObject(perspective)) flatMap { fields =>
+                parsePerspective(perspective, fields).map { layer =>
+                  scope.layers.push(layer)
                 }
               }
             }
