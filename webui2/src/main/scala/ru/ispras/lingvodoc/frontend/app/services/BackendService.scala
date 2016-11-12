@@ -79,6 +79,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
+
   /**
     * Get list of dictionaries
     *
@@ -113,20 +114,18 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     val p = Promise[Seq[Dictionary]]()
     getDictionaries(query) onComplete {
       case Success(dictionaries) =>
-        val futures = dictionaries map {
-          dictionary => getDictionaryPerspectives(dictionary, onlyPublished = false)
-        }
-        Future.sequence(futures) onComplete {
+        perspectives(query.publishedPerspectives) onComplete {
           case Success(perspectives) =>
-            val g = (dictionaries, perspectives).zipped.map { (dictionary, p) =>
-              dictionary.perspectives = dictionary.perspectives ++ p
-              dictionary
+            perspectives.foreach{perspective =>
+              dictionaries.find(dictionary => dictionary.clientId == perspective.parentClientId && dictionary.objectId == perspective.parentObjectId) foreach { dictionary =>
+                dictionary.perspectives = dictionary.perspectives :+ perspective
+              }
             }
-            p.success(g)
-          case Failure(e) => p.failure(new BackendException("Failed to get list of perspectives: " + e.getMessage))
+            p.success(dictionaries)
+          case Failure(e) => p.failure(BackendException("Failed to get list of dictionaries with perspectives, perspectives list",e))
         }
-      case Failure(e) => p.failure(new BackendException("Failed to get list of dictionaries with perspectives: " + e
-        .getMessage))
+
+      case Failure(e) => p.failure(BackendException("Failed to get list of dictionaries with perspectives",e))
     }
     p.future
   }
@@ -390,9 +389,14 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
 
 
-  def perspectives(): Future[Seq[Perspective]] = {
+  def perspectives(published: Boolean = false): Future[Seq[Perspective]] = {
     val p = Promise[Seq[Perspective]]()
-    $http.get[js.Dynamic](getMethodUrl("perspectives")) onComplete {
+    var url = "perspectives"
+    if (published) {
+      url = addUrlParameter(url, "published", "true")
+    }
+
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
           p.success(read[Seq[Perspective]](js.JSON.stringify(response)))
@@ -1587,7 +1591,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
   }
 
 
-
+  @deprecated("Obsolete code", "27-10-2016")
   def convertDictionary(languageId: CompositeId, fileId: CompositeId): Future[CompositeId] = {
     val p = Promise[CompositeId]()
 
@@ -1661,6 +1665,38 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
       }
     }
     xhr.send(JSON.stringify(req))
+    p.future
+  }
+
+  def getDialeqtDictionaryName(blobId: CompositeId): Future[String] = {
+
+    val url = s"convert_dictionary_dialeqt_get_info/${encodeURIComponent(blobId.clientId.toString)}/${encodeURIComponent(blobId.objectId.toString)}"
+
+    val p = Promise[String]()
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        p.success(response.dictionary_name.asInstanceOf[String])
+      case Failure(e) =>
+        p.failure(BackendException("Failed to get Dialeqt dictionary name", e))
+    }
+    p.future
+  }
+
+  def convertDialeqtDictionary(languageId: CompositeId, fileId: CompositeId, translations: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val req = js.Dynamic.literal("language_client_id" -> languageId.clientId,
+      "language_object_id" -> languageId.objectId,
+      "blob_client_id" -> fileId.clientId,
+      "blob_object_id" -> fileId.objectId,
+      "gist_client_id" -> translations.clientId,
+      "gist_object_id" -> translations.objectId
+    )
+
+    $http.post(getMethodUrl("convert_dictionary_dialeqt"), req) onComplete {
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to convert dialeqt dictionary.", e))
+    }
     p.future
   }
 }

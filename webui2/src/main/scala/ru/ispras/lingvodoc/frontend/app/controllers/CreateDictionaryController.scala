@@ -13,7 +13,7 @@ import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
-import scala.scalajs.js.{Dynamic, Object}
+import scala.scalajs.js.{Dynamic, Object, UndefOr}
 import scala.util.{Failure, Success}
 
 
@@ -113,22 +113,17 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
         // TODO: Add user friendly error message
       }
     } else {
-
-      scope.languages.find(language => language.getId == scope.languageId) match {
-        case Some(language) =>
-
-          scope.files.find(_.getId == scope.fileId) match {
-            case Some(file) => backend.convertDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file)) map {
-              dictionaryId =>
-                scope.dictionaryId = Some(dictionaryId)
-                scope.step = 2
+      // import sqlite dictionary
+      scope.languages.find(language => language.getId == scope.languageId) foreach { language =>
+        backend.createTranslationGist("Dictionary") map { gistId =>
+            Future.sequence(scope.names.filter(_.str.nonEmpty).toSeq.map(name => backend.createTranslationAtom(gistId, name))) map { _ =>
+              scope.files.find(_.getId == scope.fileId) foreach { file =>
+                backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
+                  scope.step = 3
+                }
+              }
             }
-            case None =>
-            // TODO: Add user friendly error message
-          }
-
-        case None =>
-        // TODO: Add user friendly error message
+        }
       }
     }
   }
@@ -287,6 +282,21 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   def availableLayers(layer: Layer): js.Array[Layer] = {
     scope.layers.filterNot(_.equals(layer)).toJSArray
   }
+
+
+  scope.$watch("fileId", (selectedFileId: UndefOr[String], _: js.Any) => {
+    selectedFileId.toOption foreach { id =>
+      scope.files.find(_.getId == id) foreach { file =>
+        backend.getDialeqtDictionaryName(CompositeId.fromObject(file)) map { dictionaryName =>
+          console.log(dictionaryName)
+          scope.names.find(_.localeId == 1) foreach { name =>
+            name.str = dictionaryName
+          }
+        }
+      }
+    }
+  })
+
 
   private[this] def fieldToJS(field: Field): Object with Dynamic = {
     js.Dynamic.literal("client_id" -> field.clientId, "object_id" -> field.objectId)
