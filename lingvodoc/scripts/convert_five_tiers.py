@@ -42,7 +42,6 @@ from lingvodoc.models import (
 
 from lingvodoc.scripts import elan_parser
 
-# Transcription of Paradigmatic forms
 EAF_TIERS = {
     "literary translation": "Translation of Paradigmatic forms",
     "text": "Transcription of Paradigmatic forms",
@@ -52,10 +51,6 @@ EAF_TIERS = {
     "translation": "Translation"
 }
 
-
-# SOUND_FILE_PATH = "/home/igor/lingv/heavy_markup/lingvodoc/w1.wav"
-# EAF_FILE_PATH = "/home/igor/ELAN_4.9.4/lingvodoc_template.eaf"
-# SOUND_FOLDER = "/home/igor/lingv/heavy_markup/lingvodoc/sound"
 
 def translationatom_contents(translationatom):
     result = dict()
@@ -296,17 +291,8 @@ def convert_five_tiers(
                 eaf_url,
                 sound_url=None
                 ):
-
-    #sound_file = "%s/entity/%s" % (storage["path"], sound_url.split("objects/entity/")[1])
-
-
-
-
-    # full_audio = AudioSegment.from_wav(sound_file)
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
-
-
     no_sound = True
     if sound_url:
         no_sound = False
@@ -583,21 +569,10 @@ def convert_five_tiers(
             sp_fields_dict[fieldname] = (field_ids[fieldname][0], field_ids[fieldname][1])
         sp_fields_dict["Paradigm markup"] = (field_ids["Paradigm markup"][0], field_ids["Paradigm markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
-
-
-
-        # elan_check = conv.ElanCheck("/home/igor/ELAN_4.9.4/katushka2.eaf")
-        # elan_check.parse()
-        # final_dicts = elan_check.check()
-
-
         link_dict = defaultdict(list)
         dubl = []
 
         log = logging.getLogger(__name__)
-
-        #converter = conv.Elan(EAF_FILE_PATH)
-
         eaffile = request.urlopen(eaf_url)
         with tempfile.NamedTemporaryFile() as temp:
             temp.write(eaffile.read())
@@ -605,10 +580,6 @@ def convert_five_tiers(
             converter.parse()
             final_dicts = converter.proc()
             temp.flush()
-
-        # final_dicts
-
-
         sp_sound_field_client_id = field_ids["Sounds of Paradigmatic forms"][0]
         sp_sound_field_object_id = field_ids["Sounds of Paradigmatic forms"][1]
 
@@ -625,29 +596,8 @@ def convert_five_tiers(
             sp_lexical_entry_object_id = lexentr.object_id
             curr_dict = None
             for word_translation in phrase:
-                # if type(word_translation) is not list:
-                #     curr_dict = word_translation
-                #     main_tier_text = " ".join([word_translation[i][1].text for i in word_translation if len(word_translation[i]) > 1])
-                #     create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids["Word of Paradigmatic forms"][0], field_ids["Word of Paradigmatic forms"][1],
-                #         None, client, main_tier_text, filename=None, storage=storage)
-                #     with tempfile.NamedTemporaryFile() as temp:
-                #         full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
-                #         audio_slice = temp.read()
-                #         create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids["Sounds of Paradigmatic forms"][0], field_ids["Sounds of Paradigmatic forms"][1],
-                #             None, client, filename="%s.wav" %(word.index) , folder_name="sound1", content=base64.urlsafe_b64encode(audio_slice).decode(), storage=storage)
-                #         temp.flush()
-
-
                 if type(word_translation) is not list:
                     curr_dict = word_translation
-                    # print("!!!!!!!!!", len(word_translation))
-                    # main_tier_text = ""
-                    # words = []
-                    # for i in word_translation:
-                    #     if len(word_translation[i]) > 1:
-                    #         words.append(word_translation[i][1].text)
-                    #
-                    # main_tier_text = " ".join(words)
                     main_tier_text = " ".join([word_translation[i][1].text for i in word_translation if len(word_translation[i]) > 1])
                     if main_tier_text:
                         create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids["Word of Paradigmatic forms"][0], field_ids["Word of Paradigmatic forms"][1],
@@ -663,31 +613,18 @@ def convert_five_tiers(
 
                 else:
                     word = word_translation[0]
-                    # print(word_translation)
                     tier_name = word.tier
-                    # new = ""
-                    # for i in word_translation:
-                    #     if len(word_translation[i]) > 1:
-                    #         new = new.join(i.text)
-                    #     else:
-                    #         pass #Word column is empty
                     new = " ".join([i.text for i in word_translation])
-                    # print(new)
                     create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids[EAF_TIERS[tier_name]][0], field_ids[EAF_TIERS[tier_name]][1],
                         None, client, new, filename=None, storage=storage)
-
-
-
             for word in curr_dict:
                 column = [word] + curr_dict[word]
-
                 cort = reversed(tuple(i.text for i in column))
-                # print([x for x in cort])
                 if cort in link_dict:
                     fp_lexical_entry_client_id, fp_lexical_entry_object_id = link_dict[cort]
                 else:
                     perspective = DBSession.query(DictionaryPerspective).\
-                    filter_by(client_id=first_perspective_client_id, object_id = first_perspective_object_id).first() #sec?
+                    filter_by(client_id=first_perspective_client_id, object_id = first_perspective_object_id).first()
                     if not perspective:
                         return {'error': str("No such perspective in the system")}
                     lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=client.id,
@@ -720,9 +657,7 @@ def convert_five_tiers(
                     create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids["Backref"][0], field_ids["Backref"][1],
                         None, client, filename=None, link_client_id=sp_lexical_entry_client_id, link_object_id=sp_lexical_entry_object_id, storage=storage)
 
-            # print("===")
 
-    #print(client_id, 11)
     return
 
 
@@ -740,28 +675,6 @@ def convert_all(language_client_id,
                 eaf_url,
                 sound_url=None
                 ):
-    # print(1)
-    # server_url = "http://localhost:6543/"
-    # log = logging.getLogger(__name__)
-    # log.debug("Starting convert_one")
-    # log.debug("Creating session")
-    # session = requests.Session()
-    # session.headers.update({'Connection': 'Keep-Alive'})
-    # log.debug("Going to login")
-    # login_data = {"login": "Test1",
-    #               "password": "123456"}
-    # log.debug("Login data: " + login_data['login'] + login_data['password'])
-    # cookie_set = session.post(server_url + 'signin', data=json.dumps(login_data))
-    # response = session.cookies.get_dict()
-    # client_id = response["client_id"]
-    #object_id = response["object_id"]
-    #full_audio = AudioSegment.from_wav(SOUND_FILE_PATH)
-
-    #save_audio(full_audio)
-    #convert_db_new(session, client_id, locale_id=1)
-    # engine = create_engine(sqlalchemy_url)
-    # DBSession.configure(bind=engine)
-    #DBSession.flush()
 
     eaffile = request.urlopen(eaf_url)
     with tempfile.NamedTemporaryFile() as temp:
@@ -783,44 +696,3 @@ def convert_all(language_client_id,
                         )
         temp.flush()
 
-
-    # log.debug("Login status:" + str(cookie_set.status_code))
-    # if cookie_set.status_code != 200:
-    #     log.error("Cheat login for conversion was unsuccessful")
-    #     exit(-1)
-    # log.debug("Connected to sqlite3 database")
-
-# audio = {}
-
-# def save_audio(full_audio):
-#     converter = conv.Elan(EAF_FILE_PATH)
-#     if not os.path.exists(SOUND_FOLDER):
-#         os.makedirs(SOUND_FOLDER)
-#     converter.parse()
-#     final_dicts = converter.proc()
-#     #print(converter.get_annotation_data_for_tier("text"))
-#     for phrase in final_dicts:
-#         #print(111)
-#         for word_translation in phrase:
-#             if type(word_translation) is not list:
-#                 for word in word_translation:
-#                     print(str(2)+word.tier)
-#                     full_audio[ word.time[0]: word.time[1]].export("%s/%s.wav" % (SOUND_FOLDER, word.index), format="wav")
-#             else:
-#                 for word in word_translation:
-#                     print("1"+word.tier)
-#                     full_audio[ word.time[0]: word.time[1]].export("%s/%s.wav" % (SOUND_FOLDER, word.index), format="wav")
-
-#save_audio(AudioSegment.from_wav(SOUND_FILE_PATH))
-        #print("===")
-# if __name__ == "__main__":
-#     full_audio = AudioSegment.from_wav(SOUND_FILE_PATH)
-#     save_audio(full_audio)
-#     #import sys
-#     #sys.exit(0)
-#     log = logging.getLogger(__name__)
-#     log.setLevel(logging.DEBUG)
-#     logging.basicConfig(format='%(asctime)s\t%(levelname)s\t[%(name)s]\t%(message)s')
-#     convert_all(filename="/home/igor/db7.sqlite", login="Test1",
-#                 password="123456",
-#                 server_url="http://localhost:6543/")
