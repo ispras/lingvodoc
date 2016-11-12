@@ -443,8 +443,8 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
     markup_field = "Markup"
     if "Sounds of Paradigmatic forms" in fields_dict:
         sound_field = "Sounds of Paradigmatic forms"
-    if "Paradigm markup" in fields_dict:
-        markup_field = "Paradigm markup"
+    if "Paradigm Markup" in fields_dict:
+        markup_field = "Paradigm Markup"
 
     markup__without_audio_sequence = []
     audio_sequence = []
@@ -519,8 +519,8 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
     markup_field = "Markup"
     if "Sounds of Paradigmatic forms" in fields_dict:
         sound_field = "Sounds of Paradigmatic forms"
-    if "Paradigm markup" in fields_dict:
-        markup_field = "Paradigm markup"
+    if "Paradigm Markup" in fields_dict:
+        markup_field = "Paradigm Markup"
 
     markup__without_audio_sequence = []
     audio_sequence = []
@@ -614,7 +614,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
 
 
         all_fieldnames = ("Markup",
-                          "Paradigm markup",
+                          "Paradigm Markup",
                           "Word",
                           "Transcription",
                           "Translation",
@@ -914,8 +914,8 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                     "client_id": field_ids[fieldname][0],
                     "object_id": field_ids[fieldname][1],
                     "contains":[{
-                       "client_id": field_ids["Paradigm markup"][0],
-                       "object_id": field_ids["Paradigm markup"][1]
+                       "client_id": field_ids["Paradigm Markup"][0],
+                       "object_id": field_ids["Paradigm Markup"][1]
                     }
                     ]
                     }
@@ -923,7 +923,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
             else:
                 fields_list.append({"client_id": field_ids[fieldname][0], "object_id": field_ids[fieldname][1]})
             sp_fields_dict[fieldname] = (field_ids[fieldname][0], field_ids[fieldname][1])
-        sp_fields_dict["Paradigm markup"] = (field_ids["Paradigm markup"][0], field_ids["Paradigm markup"][1])
+        sp_fields_dict["Paradigm Markup"] = (field_ids["Paradigm Markup"][0], field_ids["Paradigm Markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
         columns = ("word", "Transcription", "translation")
         # First Perspective entity
