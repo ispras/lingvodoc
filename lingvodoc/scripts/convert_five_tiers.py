@@ -291,6 +291,7 @@ def convert_five_tiers(
                 eaf_url,
                 sound_url=None
                 ):
+
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     no_sound = True
@@ -311,10 +312,8 @@ def convert_five_tiers(
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            user_id)
         user = DBSession.query(User).filter_by(id=client.user_id).first()
-
-
         all_fieldnames = ("Markup",
-                          "Paradigm markup",
+                          "Paradigm Markup",
                           "Word",
                           "Transcription",
                           "Translation",
@@ -338,13 +337,13 @@ def convert_five_tiers(
 
         DBSession.flush()
 
-        """
+        # """
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
         DBSession.add(translationgist)
         DBSession.flush()
         gist_client_id = translationgist.client_id
         gist_object_id = translationgist.object_id
-        """
+        # """
 
         parent_client_id = gist_client_id
         parent_object_id = gist_object_id
@@ -352,7 +351,7 @@ def convert_five_tiers(
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent.marked_for_deletion:
 
-            """
+            # """
             translationatom = TranslationAtom(client_id=client.id,
                                               parent=parent,
                                               locale_id=2,
@@ -365,7 +364,7 @@ def convert_five_tiers(
 
             language_client_id = atom_client_id
             language_object_id = atom_object_id
-            """
+            # """
             lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
 
             resp = translation_service_search("WiP")
@@ -558,8 +557,8 @@ def convert_five_tiers(
                     "client_id": field_ids[fieldname][0],
                     "object_id": field_ids[fieldname][1],
                     "contains":[{
-                       "client_id": field_ids["Paradigm markup"][0],
-                       "object_id": field_ids["Paradigm markup"][1]
+                       "client_id": field_ids["Paradigm Markup"][0],
+                       "object_id": field_ids["Paradigm Markup"][1]
                     }
                     ]
                     }
@@ -567,7 +566,7 @@ def convert_five_tiers(
             else:
                 fields_list.append({"client_id": field_ids[fieldname][0], "object_id": field_ids[fieldname][1]})
             sp_fields_dict[fieldname] = (field_ids[fieldname][0], field_ids[fieldname][1])
-        sp_fields_dict["Paradigm markup"] = (field_ids["Paradigm markup"][0], field_ids["Paradigm markup"][1])
+        sp_fields_dict["Paradigm Markup"] = (field_ids["Paradigm Markup"][0], field_ids["Paradigm Markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
         link_dict = defaultdict(list)
         dubl = []
@@ -679,7 +678,7 @@ def convert_all(language_client_id,
     eaffile = request.urlopen(eaf_url)
     with tempfile.NamedTemporaryFile() as temp:
         temp.write(eaffile.read())
-        elan_check = elan_parser.ElanCheck("/home/igor/ELAN_4.9.4/lingvodoc_template.eaf")
+        elan_check = elan_parser.ElanCheck(temp.name)
         elan_check.parse()
         if elan_check.check:
 
