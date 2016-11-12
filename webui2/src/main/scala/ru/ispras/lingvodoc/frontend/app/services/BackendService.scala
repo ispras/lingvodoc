@@ -855,15 +855,17 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
     import LexicalEntriesType._
 
+    val method = action match {
+      case All => "all_count"
+      case Published => "published_count"
+      case NotAccepted => "not_accepted_count"
+    }
+
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) +
       "/" + encodeURIComponent(dictionaryId.objectId.toString) +
       "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
       "/" + encodeURIComponent(perspectiveId.objectId.toString) +
-      "/" + action match {
-        case All => "all_count"
-        case Published => "published_count"
-        case NotAccepted => "not_accepted_count"
-      }
+      "/" + method
 
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
@@ -937,6 +939,7 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
+
   def createEntity(dictionaryId: CompositeId, perspectiveId: CompositeId, entryId: CompositeId, entity: EntityData): Future[CompositeId] = {
 
     val p = Promise[CompositeId]()
@@ -1002,6 +1005,33 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
 
     p.future
   }
+
+  def acceptEntities(dictionaryId: CompositeId, perspectiveId: CompositeId, ids: Seq[CompositeId]): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) + "/accept"
+
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("PATCH", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(())
+      } else {
+        p.failure(new BackendException("Failed to changed approval status entities"))
+      }
+    }
+    xhr.send(write(ids))
+
+    p.future
+  }
+
+
 
 
   /**
@@ -1445,15 +1475,15 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
   }
 
 
-  def advanced_search(query: AdvancedSearchQuery): Future[Seq[SearchResult]] = {
-    val p = Promise[Seq[SearchResult]]()
+  def advanced_search(query: AdvancedSearchQuery): Future[Seq[LexicalEntry]] = {
+    val p = Promise[Seq[LexicalEntry]]()
 
     var url = "advanced_search"
 
     $http.post[js.Dynamic](getMethodUrl(url), write(query)) onComplete {
       case Success(response) =>
         try {
-          val entries = read[Seq[SearchResult]](js.JSON.stringify(response))
+          val entries = read[Seq[LexicalEntry]](js.JSON.stringify(response))
           p.success(entries)
         } catch {
           case e: upickle.Invalid.Json => p.failure(BackendException("Search failed.", e))

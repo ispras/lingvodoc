@@ -344,7 +344,7 @@ def get_user_info(request):  # tested
     response['intl_name'] = user.intl_name
     response['default_locale_id'] = user.default_locale_id
     response['birthday'] = str(user.birthday)
-    response['created_at'] = user.created_at.timestamp()
+    response['created_at'] = user.created_at
     response['is_active'] = user.is_active
     response['email'] = user.email.email
     meta = None

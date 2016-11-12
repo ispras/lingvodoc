@@ -10,13 +10,14 @@ from pyramid.httpexceptions import (
     HTTPOk,
     HTTPNotFound
 )
-from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
+
 
 
 log = logging.getLogger(__name__)
 
 @view_config(route_name='convert_dictionary_dialeqt', renderer='json', request_method='POST')
 def convert_dictionary(request):  # TODO: test
+    from lingvodoc.views.v2.convert_dictionary_dialeqt.core import async_convert_dictionary_new
     req = request.json_body
     user_id = request.authenticated_userid
     args = dict()

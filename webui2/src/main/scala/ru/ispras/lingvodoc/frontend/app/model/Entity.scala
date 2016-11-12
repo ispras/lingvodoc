@@ -18,6 +18,7 @@ case class Entity(override val clientId: Int,
                   var parentObjectId: Int,
                   var level: String,
                   var published: Boolean,
+                  var accepted: Boolean,
                   var fieldClientId: Int,
                   var fieldObjectId: Int,
                   var content: String,
@@ -40,6 +41,7 @@ object Entity {
       ("parent_object_id", Js.Num(t.parentObjectId)),
       ("level", Js.Str(t.level)),
       ("published", if (t.published) Js.True else Js.False),
+      ("accepted", if (t.accepted) Js.True else Js.False),
       ("field_client_id", Js.Num(t.fieldClientId)),
       ("field_object_id", Js.Num(t.fieldObjectId)),
       ("content", Js.Str(t.content)),
@@ -93,6 +95,12 @@ object Entity {
             case _ => false
           }
 
+          val isAccepted = jsVal("accepted") match {
+            case Js.True => true
+            case Js.False => false
+            case _ => false
+          }
+
           // optional link
           val link = jsVal.value.find(_._1 == "link_client_id") match {
             case Some(link_client) => jsVal.value.find(_._1 == "link_object_id") match {
@@ -109,7 +117,7 @@ object Entity {
             case _ => false
           }
 
-          val e = Entity(clientId, objectId, parentClientId, parentObjectId, level, isPublished, fieldClientId, fieldObjectId, content, localeId, isMarkedForDeletion)
+          val e = Entity(clientId, objectId, parentClientId, parentObjectId, level, isPublished, isAccepted, fieldClientId, fieldObjectId, content, localeId, isMarkedForDeletion)
 
           // get array of entities
           val entities = jsVal.value.find(_._1 == "contains").getOrElse(("contains", Js.Arr()))._2.asInstanceOf[Js.Arr]
