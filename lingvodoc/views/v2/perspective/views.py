@@ -53,7 +53,8 @@ from lingvodoc.models import (
     TranslationAtom,
     TranslationGist,
     Field,
-    DictionaryPerspectiveToField
+    DictionaryPerspectiveToField,
+    UserBlobs
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
@@ -136,19 +137,41 @@ def perspectives_list(request):  # tested
         atom_perspective_name_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id)).filter(
         atom_perspective_name_alias.locale_id == int(request.cookies['locale_id']))
 
+    blobs = DBSession.query(UserBlobs).filter(UserBlobs.data_type == 'pdf').all()
+    blobs_fast_dict = {}
+    for blob in blobs:
+        if blob.client_id not in blobs_fast_dict:
+            blobs_fast_dict[blob.client_id] = dict()
+        blobs_fast_dict[blob.client_id][blob.object_id] = {'name': blob.name,
+                                                           'content': blob.content,
+                                                           'data_type': blob.data_type,
+                                                           'client_id': blob.client_id,
+                                                           'object_id': blob.object_id,
+                                                           'created_at': blob.created_at}
+
     row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
     perspectives = []
     for perspective in persps.all():
         resp = row2dict(perspective.DictionaryPerspective)
         resp['status'] = perspective.TranslationAtom.content or "Unknown state"
-        resp['created_at'] = str(perspective.DictionaryPerspective.created_at)
         if perspective.DictionaryPerspective.additional_metadata:
-            resp['additional_metadata'] = perspective.DictionaryPerspective.additional_metadata
+            resp['additional_metadata'] = list(perspective.DictionaryPerspective.additional_metadata.keys())
+        else:
+            resp['additional_metadata'] = []
         resp['translation'] = perspective.PerspectiveName.content or "Unknown perspective name"
 
-        # resp = view_perspective_from_object(request, perspective)
-        if 'error' not in resp:
-            perspectives.append(resp)
+        if perspective.DictionaryPerspective.additional_metadata:
+            if 'location' in perspective.DictionaryPerspective.additional_metadata:
+                resp['location'] = perspective.DictionaryPerspective.additional_metadata['location']
+            if 'info' in perspective.DictionaryPerspective.additional_metadata:
+                resp['info'] = perspective.DictionaryPerspective.additional_metadata['info']
+                info_list = resp['info'].get('content')
+                for info in info_list:
+                    blob_client_id, blob_object_id = info['info']['content']['client_id'], info['info']['content']['object_id']
+                    if blob_client_id in blobs_fast_dict and blob_object_id in blobs_fast_dict[blob_client_id]:
+                        resp['info']['content'] = blobs_fast_dict[blob_client_id][blob_object_id]
+        perspectives.append(resp)
+
     response = perspectives
     request.response.status = HTTPOk.code
 
