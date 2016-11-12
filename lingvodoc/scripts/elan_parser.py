@@ -13,8 +13,8 @@ class Word:
         self.tier = tier
         self.time = time
 
-    # def _print(self):
-    #     return((self.index, self.text, self.tier, self.time))
+    def _print(self):
+        return((self.index, self.text, self.tier, self.time))
 
 class Elan:
     def __init__(self, eaf_path):
@@ -87,7 +87,7 @@ class Elan:
 
 
     def proc(self):
-        print(self.result)
+        # print(self.result)
         for tier in self.tiers:
             tier_data = self.get_annotation_data_for_tier(tier)
 
@@ -135,9 +135,9 @@ class Elan:
                         next.append([Word(i[2] , self.word[i[2]], cur_tier, (i[0], i[1])) for i in self.get_annotation_data_between_times("text", x[0], x[1])])
                     elif cur_tier == "literary translation":
                         for i in self.get_annotation_data_between_times("text", x[0], x[1]):
-                            for j in self.result[i[2]]:
-                                #print(i,j)
-                                next.append([Word(j , self.word[j], cur_tier, (i[0], i[1])) ]) #time from text
+                            if i[2] in self.result:
+                                for j in self.result[i[2]]:
+                                    next.append([Word(j , self.word[j], cur_tier, (i[0], i[1])) ]) #time from text
 
             perspectives.append(next)
         # for x in res:
@@ -208,41 +208,42 @@ class ElanCheck:
         if new_graph != graph_structure:
             return False
         return True
-"""
-def main():
-    elan_check = ElanCheck("/home/igor/ELAN_4.9.4/lingvodoc_template.eaf")
-    elan_check.parse()
-    final_dicts = elan_check.check()
 
-
-    converter = Elan("/home/igor/ELAN_4.9.4/lingvodoc_template.eaf")
-    #converter = Elan("/home/igor/ELAN_4.9.4/katushka3.eaf")
-    main_tier = converter.parse()
-    print("!!!!!!")
-    # print(main_tier)
-    # print(converter.tiers[0])
-    print("!!!!!!")
-    final_dicts = converter.proc()
-
-    for x in final_dicts:
-        print("=========")
-        for y in x:
-            if type(y) == list:
-                for j in y:
-                    print(j._print())
-                #print(y)
-            else:
-                for j in y:
-                    print(j._print())
-                    for k in y[j]:
-                        print(k._print())
-                    #print(j._print(), y[j][0]._print(), y[j][1]._print())
-                #print(j._print() , y[j][0]._print() )
-
-"""
-
-
-
+# def main():
+#     elan_check = ElanCheck("/home/igor/objects/bible.eaf")
+#     elan_check.parse()
+#     check = elan_check.check()
+#     print(check)
+#
+#
+#     converter = Elan("/home/igor/objects/bible.eaf")
+#     #converter = Elan("/home/igor/ELAN_4.9.4/katushka3.eaf")
+#     main_tier = converter.parse()
+#     print("!!!!!!")
+#     # print(main_tier)
+#     # print(converter.tiers[0])
+#     print("!!!!!!")
+#     final_dicts = converter.proc()
+#
+#     for x in final_dicts:
+#         print("=========")
+#         for y in x:
+#             if type(y) == list:
+#                 for j in y:
+#                     print(j._print())
+#                 #print(y)
+#             else:
+#                 for j in y:
+#                     print(j._print())
+#                     for k in y[j]:
+#                         print(k._print())
+#                     #print(j._print(), y[j][0]._print(), y[j][1]._print())
+#                 #print(j._print() , y[j][0]._print() )
+#
+#
+#
+#
+#
 # if __name__ == "__main__":
 #     main()
-
+#

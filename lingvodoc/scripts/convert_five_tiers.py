@@ -178,7 +178,7 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
     real_location = openstack_upload(content,obj, filename, data_type, 'test')
     'http://localhost:6543/objects/entity/sound1/623/16691/a1107.wav'
     """
-    print(obj, storage["path"], folder_name, filename, True)
+    # print(obj, storage["path"], folder_name, filename, True)
     storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
     directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
     try:
@@ -294,7 +294,7 @@ def convert_five_tiers(
                 sqlalchemy_url,
                 storage,
                 eaf_url,
-                sound_url
+                sound_url=None
                 ):
 
     #sound_file = "%s/entity/%s" % (storage["path"], sound_url.split("objects/entity/")[1])
@@ -307,14 +307,16 @@ def convert_five_tiers(
     log.setLevel(logging.DEBUG)
 
 
-
-
-    with tempfile.NamedTemporaryFile() as temp:
-        sound_file = request.urlopen(sound_url)
-        with open(temp.name,'wb') as output:
-            output.write(sound_file.read())
-        full_audio = AudioSegment.from_wav(temp.name)
-        temp.flush()
+    no_sound = True
+    if sound_url:
+        no_sound = False
+    if not no_sound:
+        with tempfile.NamedTemporaryFile() as temp:
+            sound_file = request.urlopen(sound_url)
+            with open(temp.name,'wb') as output:
+                output.write(sound_file.read())
+            full_audio = AudioSegment.from_wav(temp.name)
+            temp.flush()
 
     field_ids = {}
     with transaction.manager:
@@ -403,7 +405,7 @@ def convert_five_tiers(
                 DBSession.add(new_group)
                 DBSession.flush()
 
-            print(user)
+            # print(user)
         """
         # FIRST PERSPECTIVE
         """
@@ -638,7 +640,7 @@ def convert_five_tiers(
 
                 if type(word_translation) is not list:
                     curr_dict = word_translation
-                    print("!!!!!!!!!", len(word_translation))
+                    # print("!!!!!!!!!", len(word_translation))
                     # main_tier_text = ""
                     # words = []
                     # for i in word_translation:
@@ -650,17 +652,18 @@ def convert_five_tiers(
                     if main_tier_text:
                         create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids["Word of Paradigmatic forms"][0], field_ids["Word of Paradigmatic forms"][1],
                             None, client, main_tier_text, filename=None, storage=storage)
-                    with tempfile.NamedTemporaryFile() as temp:
-                        full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
-                        audio_slice = temp.read()
-                        create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids["Sounds of Paradigmatic forms"][0], field_ids["Sounds of Paradigmatic forms"][1],
-                            None, client, filename="%s.wav" %(word.index) , folder_name="sound1", content=base64.urlsafe_b64encode(audio_slice).decode(), storage=storage)
-                        temp.flush()
+                    if not no_sound:
+                        with tempfile.NamedTemporaryFile() as temp:
+                            full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
+                            audio_slice = temp.read()
+                            create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids["Sounds of Paradigmatic forms"][0], field_ids["Sounds of Paradigmatic forms"][1],
+                                None, client, filename="%s.wav" %(word.index) , folder_name="sound1", content=base64.urlsafe_b64encode(audio_slice).decode(), storage=storage)
+                            temp.flush()
 
 
                 else:
                     word = word_translation[0]
-                    print(word_translation)
+                    # print(word_translation)
                     tier_name = word.tier
                     # new = ""
                     # for i in word_translation:
@@ -669,7 +672,7 @@ def convert_five_tiers(
                     #     else:
                     #         pass #Word column is empty
                     new = " ".join([i.text for i in word_translation])
-                    print(new)
+                    # print(new)
                     create_entity(sp_lexical_entry_client_id, sp_lexical_entry_object_id, field_ids[EAF_TIERS[tier_name]][0], field_ids[EAF_TIERS[tier_name]][1],
                         None, client, new, filename=None, storage=storage)
 
@@ -701,13 +704,13 @@ def convert_five_tiers(
                         # print("--->", word.tier)
                         create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids[EAF_TIERS[other_word.tier]][0], field_ids[EAF_TIERS[other_word.tier]][1],
                             None, client, other_word.text, filename=None, storage=storage)
-
-                    with tempfile.NamedTemporaryFile() as temp:
-                        full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
-                        audio_slice = temp.read()
-                        create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids["Sound"][0], field_ids["Sound"][1],
-                            None, client, filename="%s.wav" %(word.index) , folder_name="sound1", content=base64.urlsafe_b64encode(audio_slice).decode(), storage=storage)
-                        temp.flush()
+                    if not no_sound:
+                        with tempfile.NamedTemporaryFile() as temp:
+                            full_audio[ word.time[0]: word.time[1]].export(temp.name, format="wav")
+                            audio_slice = temp.read()
+                            create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids["Sound"][0], field_ids["Sound"][1],
+                                None, client, filename="%s.wav" %(word.index) , folder_name="sound1", content=base64.urlsafe_b64encode(audio_slice).decode(), storage=storage)
+                            temp.flush()
 
                 dubl_tuple = ((sp_lexical_entry_client_id, sp_lexical_entry_object_id), (fp_lexical_entry_client_id, fp_lexical_entry_object_id))
                 if not  dubl_tuple in dubl:

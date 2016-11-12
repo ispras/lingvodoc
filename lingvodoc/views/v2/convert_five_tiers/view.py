@@ -28,7 +28,8 @@ def convert_dictionary(request):  # TODO: test
     args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     args["storage"] = request.registry.settings["storage"]
     args['eaf_url'] = req['eaf_url']
-    args['sound_url'] = req['sound_url']
+    if "sound_url" in req:
+        args['sound_url'] = req['sound_url']
     res = async_convert_dictionary_new.delay(**args)
     # async_convert_dictionary_new(user_id, req['blob_client_id'], req['blob_object_id'], req["language_client_id"], req["language_object_id"], req["gist_client_id"], req["gist_object_id"], request.registry.settings["sqlalchemy.url"], request.registry.settings["storage"])
     log.debug("Conversion started")
