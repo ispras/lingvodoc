@@ -64,7 +64,7 @@ QUEUED_TASKS = None
 
 celery = None
 kwargs = _parse_celery_args()
-# kwargs = None
+kwargs = None
 if kwargs is None:
     celery = MockApp()
     QUEUED_TASKS = MockTaskCache()

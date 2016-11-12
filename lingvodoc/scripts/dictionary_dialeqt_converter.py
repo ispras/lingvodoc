@@ -391,7 +391,6 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     real_location = None
     url = None
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-        pass
         ##entity.data_type = data_type
         real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
         entity.content = url
@@ -429,6 +428,9 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     else:
         entity.content = content
 
+    entity.publishingentity.accepted = True
+
+
 
     DBSession.add(entity)
     #log.debug(filename)
@@ -443,8 +445,8 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
     markup_field = "Markup"
     if "Sounds of Paradigmatic forms" in fields_dict:
         sound_field = "Sounds of Paradigmatic forms"
-    if "Paradigm markup" in fields_dict:
-        markup_field = "Paradigm markup"
+    if "Paradigm Markup" in fields_dict:
+        markup_field = "Paradigm Markup"
 
     markup__without_audio_sequence = []
     audio_sequence = []
@@ -519,8 +521,8 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
     markup_field = "Markup"
     if "Sounds of Paradigmatic forms" in fields_dict:
         sound_field = "Sounds of Paradigmatic forms"
-    if "Paradigm markup" in fields_dict:
-        markup_field = "Paradigm markup"
+    if "Paradigm Markup" in fields_dict:
+        markup_field = "Paradigm Markup"
 
     markup__without_audio_sequence = []
     audio_sequence = []
@@ -598,12 +600,14 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
     return translation.content
 
 
-def convert_db_new(manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
+def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
                    locale_id=2):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
+
+    time.sleep(4)
     field_ids = {}
-    with manager:
+    with transaction.manager:
         client = DBSession.query(Client).filter_by(id=user_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -614,7 +618,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
 
 
         all_fieldnames = ("Markup",
-                          "Paradigm markup",
+                          "Paradigm Markup",
                           "Word",
                           "Transcription",
                           "Translation",
@@ -914,8 +918,8 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
                     "client_id": field_ids[fieldname][0],
                     "object_id": field_ids[fieldname][1],
                     "contains":[{
-                       "client_id": field_ids["Paradigm markup"][0],
-                       "object_id": field_ids["Paradigm markup"][1]
+                       "client_id": field_ids["Paradigm Markup"][0],
+                       "object_id": field_ids["Paradigm Markup"][1]
                     }
                     ]
                     }
@@ -923,7 +927,7 @@ def convert_db_new(manager, sqconn, language_client_id, language_object_id, user
             else:
                 fields_list.append({"client_id": field_ids[fieldname][0], "object_id": field_ids[fieldname][1]})
             sp_fields_dict[fieldname] = (field_ids[fieldname][0], field_ids[fieldname][1])
-        sp_fields_dict["Paradigm markup"] = (field_ids["Paradigm markup"][0], field_ids["Paradigm markup"][1])
+        sp_fields_dict["Paradigm Markup"] = (field_ids["Paradigm Markup"][0], field_ids["Paradigm Markup"][1])
         update_perspective_fields(fields_list, second_perspective_client_id, second_perspective_object_id, client)
         columns = ("word", "Transcription", "translation")
         # First Perspective entity
@@ -1096,6 +1100,7 @@ def convert_all(blob_client_id, blob_object_id, language_client_id, language_obj
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     engine = create_engine(sqlalchemy_url)
+    DBSession.remove()
     DBSession.configure(bind=engine)
     blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
     DBSession.flush()
@@ -1106,7 +1111,7 @@ def convert_all(blob_client_id, blob_object_id, language_client_id, language_obj
     sqconn = sqlite3.connect(filename)
     log.debug("Connected to sqlite3 database")
     try:
-        status = convert_db_new(transaction.manager, sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
+        status = convert_db_new( sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)
