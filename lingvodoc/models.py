@@ -628,8 +628,8 @@ class LexicalEntry(CompositeIdMixin,
 
         SELECT
           cte_expr.*,
-          data_type_atom.content as data_type,
-          entity_type_atom.content as entity_type,
+          COALESCE (data_type_atom.content, data_type_atom_fallback.content) as data_type,
+          COALESCE (entity_type_atom.content, entity_type_atom_fallback.content) as entity_type,
           publishingentity.accepted,
           publishingentity.published
         FROM cte_expr
@@ -645,11 +645,20 @@ class LexicalEntry(CompositeIdMixin,
                 field.data_type_translation_gist_object_id = data_type_translation_gist.object_id)
           LEFT JOIN translationatom AS entity_type_atom
             ON field_translation_gist.client_id = entity_type_atom.parent_client_id AND
-               field_translation_gist.object_id = entity_type_atom.parent_object_id
+               field_translation_gist.object_id = entity_type_atom.parent_object_id AND
+               entity_type_atom.locale_id = :locale
+          LEFT JOIN translationatom AS entity_type_atom_fallback
+            ON field_translation_gist.client_id = entity_type_atom_fallback.parent_client_id AND
+               field_translation_gist.object_id = entity_type_atom_fallback.parent_object_id AND
+               entity_type_atom_fallback.locale_id = 1
           LEFT JOIN translationatom AS data_type_atom
             ON data_type_translation_gist.client_id = data_type_atom.parent_client_id AND
-               data_type_translation_gist.object_id = data_type_atom.parent_object_id
-        WHERE (entity_type_atom.locale_id = :locale AND data_type_atom.locale_id = :locale)
+               data_type_translation_gist.object_id = data_type_atom.parent_object_id AND
+               data_type_atom.locale_id = :locale
+          LEFT JOIN translationatom AS data_type_atom_fallback
+            ON data_type_translation_gist.client_id = data_type_atom_fallback.parent_client_id AND
+               data_type_translation_gist.object_id = data_type_atom_fallback.parent_object_id AND
+               data_type_atom_fallback.locale_id = 1
 
         ORDER BY traversal_lexical_order, tree_numbering_scheme, tree_level;
         '''), {'locale': locale_id})
