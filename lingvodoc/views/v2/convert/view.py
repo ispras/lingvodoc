@@ -105,7 +105,7 @@ def convert_dictionary(request):  # TODO: test
                       " Wait 5-15 minutes and you will see new dictionary in your dashboard."}
 
 
-@view_config(route_name='convert_markup', request_method='POST')
+@view_config(route_name='convert_markup', renderer='string', request_method='POST')
 def convert_markup(request):
     import requests
     from lingvodoc.scripts.convert_rules import praat_to_elan
