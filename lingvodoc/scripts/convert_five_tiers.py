@@ -85,6 +85,14 @@ def translation_service_search(searchstring):
     response = translationgist_contents(translationatom.parent)
     return response
 
+def translation_service_search_all(searchstring):
+    translationatom = DBSession.query(TranslationAtom)\
+        .join(TranslationGist).\
+        filter(TranslationAtom.content == searchstring,
+               TranslationAtom.locale_id == 2)\
+        .one()
+    response = translationgist_contents(translationatom.parent)
+    return response
 
 def update_perspective_fields(req, perspective_client_id, perspective_object_id, client):
     response = dict()
@@ -335,73 +343,53 @@ def convert_five_tiers(
         parent_object_id = gist_object_id
 
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent.marked_for_deletion:
 
-            """
-            translationatom = TranslationAtom(client_id=client.id,
-                                              parent=parent,
-                                              locale_id=2,
-                                              content="Test_5")
-            DBSession.add(translationatom)
+        """
+        translationatom = TranslationAtom(client_id=client.id,
+                                          parent=parent,
+                                          locale_id=2,
+                                          content="Test_5")
+        DBSession.add(translationatom)
+        DBSession.flush()
+        atom_client_id = translationatom.client_id
+        atom_object_id = translationatom.object_id
+
+
+        language_client_id = atom_client_id
+        language_object_id = atom_object_id
+        """
+        lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
+
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+        dictionary = Dictionary(client_id=user_id,
+                                state_translation_gist_object_id=state_translation_gist_object_id,
+                                state_translation_gist_client_id=state_translation_gist_client_id,
+                                parent=lang_parent,
+                                translation_gist_client_id=gist_client_id,
+                                translation_gist_object_id=gist_object_id
+                                      )
+                                #additional_metadata=additional_metadata)
+        DBSession.add(dictionary)
+        DBSession.flush()
+
+        dictionary_client_id = dictionary.client_id
+        dictionary_object_id = dictionary.object_id
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+            new_group = Group(parent=base,
+                              subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
+            if user not in new_group.users:
+                new_group.users.append(user)
+            DBSession.add(new_group)
             DBSession.flush()
-            atom_client_id = translationatom.client_id
-            atom_object_id = translationatom.object_id
-
-
-            language_client_id = atom_client_id
-            language_object_id = atom_object_id
-            """
-            lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
-
-            resp = translation_service_search("WiP")
-            state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-            dictionary = Dictionary(client_id=user_id,
-                                    state_translation_gist_object_id=state_translation_gist_object_id,
-                                    state_translation_gist_client_id=state_translation_gist_client_id,
-                                    parent=lang_parent,
-                                    translation_gist_client_id=gist_client_id,
-                                    translation_gist_object_id=gist_object_id
-                                          )
-                                    #additional_metadata=additional_metadata)
-            DBSession.add(dictionary)
-            DBSession.flush()
-
-            dictionary_client_id = dictionary.client_id
-            dictionary_object_id = dictionary.object_id
-            for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-                new_group = Group(parent=base,
-                                  subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
-                DBSession.add(new_group)
-                DBSession.flush()
         """
         # FIRST PERSPECTIVE
         """
-        translationgist = TranslationGist(client_id=user_id, type="Dictionary")
+        resp = translation_service_search_all("Lexical Entries")
+        persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
 
-        DBSession.add(translationgist)
-        #####DBSession.flush()
-
-        gist_client_id = translationgist.client_id
-        gist_object_id = translationgist.object_id
-        parent_client_id = gist_client_id
-        parent_object_id = gist_object_id
-        locale_id = 2
-        parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent.marked_for_deletion:
-            persp_translationatom = TranslationAtom(client_id=client.id,
-                                              parent=parent,
-                                              locale_id=locale_id,
-                                              content="Лексические входы")
-            DBSession.add(persp_translationatom)
-            DBSession.flush()
-        persp_translation_gist_client_id = gist_client_id
-        persp_translation_gist_object_id = gist_object_id
 
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
         origin_metadata= {"origin_client_id": origin_client_id,
                               "origin_object_id": origin_object_id
                               }
@@ -435,28 +423,12 @@ def convert_five_tiers(
         """
         # SECOND PERSPECTIVE
         """
-        translationgist = TranslationGist(client_id=user_id, type="Dictionary")
-
-        DBSession.add(translationgist)
-        gist_client_id = translationgist.client_id
-        gist_object_id = translationgist.object_id
-        parent_client_id = gist_client_id
-        parent_object_id = gist_object_id
-        parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent.marked_for_deletion:
-            persp_translationatom = TranslationAtom(client_id=client.id,
-                                              parent=parent,
-                                              locale_id=locale_id,
-                                              content="Парадигмы")
-            DBSession.add(persp_translationatom)
-            DBSession.flush()
-        persp_translation_gist_client_id = gist_client_id
-        persp_translation_gist_object_id = gist_object_id
+        resp = translation_service_search_all("Paradigms")
+        persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         if not parent:
             return {'error': str("No such dictionary in the system")}
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+
         perspective = DictionaryPerspective(client_id=client.id, ### variables['auth']
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
@@ -661,24 +633,17 @@ def convert_all(language_client_id,
                 sound_url=None
                 ):
 
-    eaffile = request.urlopen(eaf_url)
-    with tempfile.NamedTemporaryFile() as temp:
-        temp.write(eaffile.read())
-        elan_check = elan_parser.ElanCheck(temp.name)
-        elan_check.parse()
-        if elan_check.check:
-            convert_five_tiers(
-                        language_client_id,
-                        language_object_id,
-                        user_id,
-                        client_id,
-                        object_id,
-                        gist_client_id,
-                        gist_object_id,
-                        sqlalchemy_url,
-                        storage,
-                        eaf_url,
-                        sound_url
-                        )
-        temp.flush()
+    convert_five_tiers(
+                language_client_id,
+                language_object_id,
+                user_id,
+                client_id,
+                object_id,
+                gist_client_id,
+                gist_object_id,
+                sqlalchemy_url,
+                storage,
+                eaf_url,
+                sound_url
+                )
 
