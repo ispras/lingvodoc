@@ -144,6 +144,13 @@ def create_entity(request):  # tested
                 else:
                     old_meta = hash_dict
                 entity.additional_metadata = old_meta
+            if 'markup' in data_type:
+                name = filename.split('.')
+                ext = name[len(name)]
+                if ext.lower() == 'textgrid':
+                    data_type = 'praat markup'
+                elif ext.lower() == 'eaf':
+                    data_type = 'elan markup'
             entity.additional_metadata['data_type'] = data_type
         elif data_type == 'link':
             try:
