@@ -1,0 +1,311 @@
+.page-content {
+    padding-top: 60px;
+    padding-bottom: 60px;
+}
+
+.form-signin {
+    max-width: 380px;
+    padding: 15px;
+    margin: 0 auto;
+}
+
+.form-signin .form-signin-heading, .form-signin .checkbox {
+    margin-bottom: 10px;
+}
+
+.form-signin .checkbox {
+    font-weight: normal;
+}
+
+.form-signin .form-control {
+    position: relative;
+    height: auto;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 16px;
+}
+
+.form-signin .form-control:focus {
+    z-index: 2;
+}
+
+.form-signin input[type="email"] {
+    margin-bottom: -1px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.form-signin input[type="password"] {
+    margin-bottom: 10px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.body-signup {
+    padding-top: 30px;
+}
+
+.form-signup .form-control {
+    margin-bottom: 10px;
+}
+
+/* eaf (sound markup) editing staff */
+.sm-tier {
+    opacity: 0.2;
+}
+
+.sm-ta-annot-line {
+    stroke: black;
+    stroke-width: 0.5px
+}
+
+.sm-ref-annot-line {
+    stroke: yellow;
+    stroke-width: 0.5px
+}
+
+.sm-tier-names-sep-line {
+    stroke: grey;
+    stroke-width: 1;
+}
+
+.sm-ruler {
+    stroke: red;
+    stroke-width: 1
+}
+
+.sm-modal-window .modal-dialog {
+    width: 90%;
+}
+
+/* eaf (sound markup) editing staff end*/
+
+button.control-button {
+    -webkit-appearance: none;
+    padding: 0;
+    cursor: pointer;
+    background: 0 0;
+    border: 0;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    filter: alpha(opacity=20);
+    opacity: .2;
+}
+
+
+/* animations */
+.animate-show {
+    opacity: 1;
+}
+
+.animate-show.ng-hide-add, .animate-show.ng-hide-remove {
+    transition: all linear 300ms;
+}
+
+.animate-show.ng-hide {
+    opacity: 0;
+}
+
+
+/* ngRepeat animation */
+.animate-repeat {
+    line-height: 30px;
+    list-style: none;
+    box-sizing: border-box;
+}
+
+.animate-repeat.ng-move,
+.animate-repeat.ng-enter,
+.animate-repeat.ng-leave {
+    transition: all linear 0.5s;
+}
+
+.animate-repeat.ng-leave.ng-leave-active,
+.animate-repeat.ng-move,
+.animate-repeat.ng-enter {
+    opacity: 0;
+    max-height: 0;
+}
+
+.animate-repeat.ng-leave,
+.animate-repeat.ng-move.ng-move-active,
+.animate-repeat.ng-enter.ng-enter-active {
+    opacity: 1;
+    max-height: 30px;
+}
+
+/* ngIf animation */
+.animate-if.ng-enter,
+.animate-if.ng-leave {
+    -webkit-transition: opacity ease-in-out 1s;
+    -moz-transition: opacity ease-in-out 1s;
+    -ms-transition: opacity ease-in-out 1s;
+    -o-transition: opacity ease-in-out 1s;
+    transition: opacity ease-in-out 1s;
+}
+
+.animate-if.ng-enter,
+.animate-if.ng-leave.ng-leave-active {
+    opacity: 0;
+}
+
+.animate-if.ng-leave,
+.animate-if.ng-enter.ng-enter-active {
+    opacity: 1;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: #f9f9f9;
+}
+
+.table-striped > tbody > tr:nth-of-type(even) {
+    background-color: #f9f9f9;
+}
+
+/* Tree-like ULs */
+ul.tree, ul.tree ul {
+    list-style-type: none;
+    background: url(../images/vline.png) repeat-y;
+    margin: 0;
+    padding: 0;
+}
+
+ul.tree ul {
+    margin-left: 10px;
+}
+
+ul.tree li {
+    margin: 0;
+    padding: 0 12px;
+    line-height: 20px;
+    background: url(../images/node.png) no-repeat;
+    color: #369;
+    font-weight: bold;
+}
+
+ul.tree li.last {
+    background: #f9f9f9 url(../images/lastnode.png) no-repeat;
+}
+
+/* Tree-like ULs END */
+
+span.remove-sign {
+    cursor: pointer;
+}
+
+
+#shader {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.65);
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    position: fixed;
+}
+
+#loader-wrapper {
+    width: 100%;
+    height: 400px;
+}
+
+#loader-wrapper-fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+}
+
+
+#loader {
+    display: block;
+    position: relative;
+    left: 50%;
+    top: 50%;
+    width: 150px;
+    height: 150px;
+    margin: -200px 0 0 -75px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: #3498db;
+    -webkit-animation: spin 2s linear infinite;
+    animation: spin 2s linear infinite;
+}
+
+#loader:before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: #e74c3c;
+    -webkit-animation: spin 3s linear infinite;
+    animation: spin 3s linear infinite;
+}
+
+#loader:after {
+    content: "";
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: #f9c922;
+    -webkit-animation: spin 1.5s linear infinite;
+    animation: spin 1.5s linear infinite;
+}
+
+@-webkit-keyframes spin {
+    0% {
+        -webkit-transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        transform: rotate(0deg);
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spin {
+    0% {
+        -webkit-transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        transform: rotate(0deg);
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+
+
+
+#map
+{
+    width: 100%;
+    height:400px;
+    min-height: 100%;
+    min-width: 100%;
+    display: block;
+}
+
+
+
+

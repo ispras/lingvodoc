@@ -1,46 +1,122 @@
-enablePlugins(ScalaJSPlugin)
+//name := "lingvodoc2 frontend"
 
-name := "lingvodoc2 frontend"
+organization in ThisBuild := "ru.ispras"
 
-scalaVersion := "2.11.8"
-scalacOptions += "-deprecation"
+version in ThisBuild := "0.1-SNAPSHOT"
+
+scalaVersion in ThisBuild := "2.11.8"
+
+scalacOptions in ThisBuild ++= Seq("-deprecation", "-unchecked", "-feature")
+
+resolvers in ThisBuild += Resolver.sonatypeRepo("snapshots")
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.1"
-libraryDependencies += "com.lihaoyi" %%% "upickle" % "0.3.9"
-libraryDependencies += "com.greencatsoft" %%% "scalajs-angular" % "0.8-SNAPSHOT"
-libraryDependencies += "io.plasmap" %%% "pamphlet" % "0.9-SNAPSHOT"
-libraryDependencies += "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.5"
-libraryDependencies += "be.doeraene" %%% "scalajs-jquery" % "0.9.0" // jquery facade, used for xml parsing
-
-libraryDependencies += "org.webjars" % "jquery" % "2.2.1"
-libraryDependencies += "org.webjars" % "angularjs" % "1.5.8"
-libraryDependencies += "org.webjars" % "bootstrap" % "3.3.6"
-
-libraryDependencies += "org.webjars" % "angular-ui-bootstrap" % "1.3.3"
-libraryDependencies += "org.webjars.bower" % "bootstrap-validator" % "0.10.2"
-
-jsDependencies += "org.webjars" % "jquery" % "2.2.1" / "2.2.1/jquery.js"
-jsDependencies += "org.webjars" % "angularjs" % "1.5.8" / "angular.js" dependsOn "2.2.1/jquery.js"
-jsDependencies += "org.webjars" % "angularjs" % "1.5.8" / "angular-route.js" dependsOn "angular.js"
-jsDependencies += "org.webjars" % "angularjs" % "1.5.8" / "angular-animate.js" dependsOn "angular.js"
-
-jsDependencies += "org.webjars" % "bootstrap" % "3.3.6" / "bootstrap.js" dependsOn "angular.js"
+import Dependencies._
 
 
+lazy val root = project.in(file("."))
+  .enablePlugins(ScalaJSPlugin)
+  .aggregate(webui, desktop)
+  .settings(name := "lingvodoc-ui"
+  )
 
-jsDependencies += "org.webjars" % "angular-ui-bootstrap" % "1.3.3" / "ui-bootstrap.js" dependsOn "bootstrap.js"
-jsDependencies += "org.webjars" % "angular-ui-bootstrap" % "1.3.3" / "ui-bootstrap-tpls.js" dependsOn "ui-bootstrap.js"
+lazy val webui = (project in file("webui")).dependsOn(shared)
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    name := "webui",
+    libraryDependencies ++= Seq(
+      lib.scalajsDom,
+      lib.upickle,
+      lib.scalaAngular,
+      lib.pamphlet,
+      lib.scalaXml,
+      lib.scalaJquery,
+      lib.jquery,
+      lib.angular,
+      lib.bootstrap,
+      lib.bootstrapUI,
+      lib.validator
+    ),
+    jsDependencies ++= Seq(
+      js.jquery / "2.2.1/jquery.js",
+      js.angularjs / "angular.js",
+      js.angularjs / "angular-route.js" dependsOn "angular.js",
+      js.angularjs / "angular-animate.js" dependsOn "angular.js",
+      js.bootstrap / "bootstrap.js" dependsOn "2.2.1/jquery.js",
+      js.bootstrapUI / "ui-bootstrap.js" dependsOn "bootstrap.js",
+      js.bootstrapUITpls / "ui-bootstrap-tpls.js" dependsOn "ui-bootstrap.js",
+      js.validator / "0.10.2/dist/validator.js" dependsOn "bootstrap.js",
+      ProvidedJS / "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "leaflet.js"
+    ),
+    relativeSourceMaps := true,
+    skip in packageJSDependencies := false)
 
-jsDependencies += "org.webjars.bower" % "bootstrap-validator" % "0.10.2"  / "0.10.2/dist/validator.js" dependsOn "bootstrap.js"
+lazy val desktop = (project in file("desktop")).dependsOn(shared)
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    name := "desktop",
+    libraryDependencies ++= Seq(
+      lib.scalajsDom,
+      lib.upickle,
+      lib.scalaAngular,
+      lib.pamphlet,
+      lib.scalaXml,
+      lib.scalaJquery,
+      lib.jquery,
+      lib.angular,
+      lib.bootstrap,
+      lib.bootstrapUI,
+      lib.validator
+    ),
+    jsDependencies ++= Seq(
+      js.jquery / "2.2.1/jquery.js",
+      js.angularjs / "angular.js",
+      js.angularjs / "angular-route.js" dependsOn "angular.js",
+      js.angularjs / "angular-animate.js" dependsOn "angular.js",
+      js.bootstrap / "bootstrap.js" dependsOn "2.2.1/jquery.js",
+      js.bootstrapUI / "ui-bootstrap.js" dependsOn "bootstrap.js",
+      js.bootstrapUITpls / "ui-bootstrap-tpls.js" dependsOn "ui-bootstrap.js",
+      js.validator / "0.10.2/dist/validator.js" dependsOn "bootstrap.js",
+      ProvidedJS / "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "leaflet.js"
+    ),
+    relativeSourceMaps := true,
+    skip in packageJSDependencies := false)
 
-// Wavesurfer is not in webjars yet; perhaps we should create it ourselves
-jsDependencies += ProvidedJS / "wavesurfer.min.js"
-jsDependencies += ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js"
-jsDependencies += ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js"
-
-jsDependencies += ProvidedJS / "leaflet.js"
-jsDependencies += ProvidedJS / "oms.min.js" dependsOn "leaflet.js"
-
-
+lazy val shared = (project in file("shared"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(name := "shared",
+    libraryDependencies ++= Seq(
+      lib.scalajsDom,
+      lib.upickle,
+      lib.scalaAngular,
+      lib.pamphlet,
+      lib.scalaXml,
+      lib.scalaJquery,
+      lib.jquery,
+      lib.angular,
+      lib.bootstrap,
+      lib.bootstrapUI,
+      lib.validator
+    ),
+    jsDependencies ++= Seq(
+      js.jquery / "2.2.1/jquery.js",
+      js.angularjs / "angular.js",
+      js.angularjs / "angular-route.js" dependsOn "angular.js",
+      js.angularjs / "angular-animate.js" dependsOn "angular.js",
+      js.bootstrap / "bootstrap.js" dependsOn "2.2.1/jquery.js",
+      js.bootstrapUI / "ui-bootstrap.js" dependsOn "bootstrap.js",
+      js.bootstrapUITpls / "ui-bootstrap-tpls.js" dependsOn "ui-bootstrap.js",
+      js.validator / "0.10.2/dist/validator.js" dependsOn "bootstrap.js",
+      ProvidedJS / "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "leaflet.js"
+    )
+  )
