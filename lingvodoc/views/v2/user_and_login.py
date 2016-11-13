@@ -178,17 +178,54 @@ def signin(request):
     return HTTPUnauthorized(location=request.route_url('login'))
 
 
-# @view_config(route_name='sync_signin', renderer='json', request_method='POST')
-# def sync_signin(request):
-#     req = request.json_body
-#     login = req['login']
-#     password = req['password']
-#
-#     user = DBSession.query(User).filter_by(login=login).first()
-#     if user and user.check_password(password):
-#         request.response.status = HTTPOk.code
-#         return HTTPOk(json_body={})
-#     return HTTPUnauthorized(location=request.route_url('login'))
+@view_config(route_name='sync_signin', renderer='json', request_method='POST')
+def sync_signin(request):
+    req = request.json_body
+    login = req['login']
+    password = req['password']
+
+    user = DBSession.query(User).filter_by(login=login).first()
+    if user and user.check_password(password):
+        request.response.status = HTTPOk.code
+        return HTTPOk(json_body={})
+    return HTTPUnauthorized(location=request.route_url('login'))
+
+
+@view_config(route_name='desk_signin', renderer='json', request_method='POST')
+def desk_signin(request):
+    import requests
+    req = request.json_body
+    login = req['login']
+    password = req['password']
+    settings = request.registry.settings
+
+    path = settings['desktop']['central_server'] + 'signin'
+    session = requests.Session()
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+    session.mount('http://', adapter)
+    status = session.post(path, json=req)
+    client_id = status.json()['client_id']
+    cookies = status.cookies.get_dict()
+    with open('authentication_data.json', 'w') as f:
+        f.write(json.dumps(cookies))
+    if status.status_code == 200:
+        #todo: synchronise
+        headers = remember(request, principal=client_id)
+        response = Response()
+        response.headers = headers
+        locale_id = cookies['locale_id']
+        response.set_cookie(key='locale_id', value=str(locale_id))
+        response.set_cookie(key='client_id', value=str(client_id))
+        result = dict()
+        result['client_id'] = client_id
+        request.response.status = HTTPOk.code
+        # request.response.headers = headers
+        # return response
+        return HTTPOk(headers=response.headers, json_body=result)
+        # return result
+    return HTTPUnauthorized(location=request.route_url('login'))
+
 
 
 
