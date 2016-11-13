@@ -161,7 +161,8 @@ def convert_markup(request):
                             #     os.remove(filename2)
                             return content
                     elif 'elan' in l2e.additional_metadata['data_type']:
-                        return content
+                        with open(filename, 'r') as f:
+                            return f.read()
                     else:
                         raise KeyError("Not allowed convert option")
                     raise KeyError('File too big')
