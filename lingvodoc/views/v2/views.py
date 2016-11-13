@@ -1,5 +1,6 @@
 from lingvodoc.views.v2.utils import (
-    get_user_by_client_id
+    get_user_by_client_id,
+    view_field_from_object
 )
 
 from pyramid.response import Response
@@ -42,6 +43,8 @@ log = logging.getLogger(__name__)
 @view_config(route_name='testing', renderer='json')
 def testing(request):
     response = list()
+    locale = DBSession.query(Locale).first()
+    log.error(locale.id)
     # for persp in DBSession.query(DictionaryPerspective).all():
     #     if persp.additional_metadata:
     #         response.append(str(type(persp.additional_metadata)))
@@ -134,9 +137,10 @@ def corpora_fields(request):
                                          TranslationAtom.content == 'Sound').one() # todo: a way to find this fields if wwe cannot use one
     markup_field = data_type_query.filter(TranslationAtom.locale_id == 2,
                                           TranslationAtom.content == 'Markup').one()
-    response.append(dict_ids(sound_field))
-    response[0]['contains'] = [dict_ids(markup_field)]
-    response.append(dict_ids(markup_field))
+
+    response.append(view_field_from_object(request=request, field = sound_field))
+    response[0]['contains'] = [view_field_from_object(request=request, field = markup_field)]
+    response.append(view_field_from_object(request=request, field = markup_field))
     request.response.status = HTTPOk.code
     return response
 
