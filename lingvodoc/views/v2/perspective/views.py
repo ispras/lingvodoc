@@ -115,7 +115,8 @@ def perspectives_list(request):  # tested
     persps = DBSession.query(DictionaryPerspective,
                              TranslationAtom,
                              coalesce(atom_perspective_name_alias.content,
-                                      atom_perspective_name_fallback_alias.content).label("Translation")
+                                      atom_perspective_name_fallback_alias.content,
+                                      "No translation for your locale available").label("Translation")
                              ).filter(DictionaryPerspective.marked_for_deletion == False)
     if is_template is not None:
         if type(is_template) == str:
