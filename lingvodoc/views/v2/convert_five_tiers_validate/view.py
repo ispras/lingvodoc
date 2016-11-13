@@ -3,7 +3,8 @@ import tempfile
 from pyramid.view import view_config
 from pyramid.httpexceptions import (
     HTTPOk,
-    HTTPNotFound
+    HTTPNotFound,
+    HTTPError
 )
 import tempfile
 from lingvodoc.scripts import elan_parser
@@ -15,7 +16,12 @@ def convert_dictionary(req):  # TODO: test
     log = logging.getLogger(__name__)
     eaf_url = req.json_body['eaf_url']
     result = False
-    eaffile = request.urlopen(eaf_url)
+    try:
+       eaffile = request.urlopen(eaf_url)
+    except HTTPError as e:
+        req.response.status = HTTPError.code
+        return {'error': str(e)}
+
     with tempfile.NamedTemporaryFile() as temp:
         temp.write(eaffile.read())
         elan_check = elan_parser.ElanCheck(temp.name)
