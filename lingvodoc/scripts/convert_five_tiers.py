@@ -39,6 +39,9 @@ from lingvodoc.models import (
     PublishingEntity
 
 )
+from pyramid.httpexceptions import (
+    HTTPError
+)
 
 from lingvodoc.scripts import elan_parser
 
@@ -293,7 +296,10 @@ def convert_five_tiers(
         no_sound = False
     if not no_sound:
         with tempfile.NamedTemporaryFile() as temp:
-            sound_file = request.urlopen(sound_url)
+            try:
+               sound_file = request.urlopen(sound_url)
+            except HTTPError as e:
+                return {'error': str(e.read().decode("utf8", 'ignore'))}
             with open(temp.name,'wb') as output:
                 output.write(sound_file.read())
             full_audio = AudioSegment.from_wav(temp.name)
@@ -532,7 +538,10 @@ def convert_five_tiers(
         dubl = []
 
         log = logging.getLogger(__name__)
-        eaffile = request.urlopen(eaf_url)
+        try:
+           eaffile = request.urlopen(eaf_url)
+        except HTTPError as e:
+            return {'error': str(e.read().decode("utf8", 'ignore'))}
         with tempfile.NamedTemporaryFile() as temp:
             temp.write(eaffile.read())
             converter = elan_parser.Elan(temp.name)
@@ -646,4 +655,3 @@ def convert_all(language_client_id,
                 eaf_url,
                 sound_url
                 )
-
