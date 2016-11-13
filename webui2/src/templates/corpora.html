@@ -2,11 +2,11 @@
 
 
     <div class="panel">
-        <button type="button" class="btn btn-primary" ng-click="controller.loadMyDictionaries()">
-            <translatable str="My dictionaries">My dictionaries</translatable>
+        <button type="button" class="btn btn-primary" ng-click="controller.loadMyCorpora()">
+            <translatable str="My corpora">My corpora</translatable>
         </button>
-        <button type="button" class="btn btn-primary" ng-click="controller.loadAvailableDictionaries()">
-            <translatable str="Available dictionaries">Available dictionaries</translatable>
+        <button type="button" class="btn btn-primary" ng-click="controller.loadAvailableCorpora()">
+            <translatable str="Available corpora">Available corpora</translatable>
         </button>
     </div>
     <br>
@@ -130,12 +130,12 @@
     </div>
 
     <div ng-if="dictionaries.length == 0" ng-show="status">
-        <span>No dictionaries</span>
+        <span>No corpora</span>
     </div>
 
     <hr>
 
-    <a href="#/dictionary/create" class="btn btn-primary">
-        <translatable str="Create dictionary...">Create dictionary...</translatable>
+    <a href="#/corpora/create" class="btn btn-primary">
+        <translatable str="Create corpus...">Create corpus...</translatable>
     </a>
 </div>

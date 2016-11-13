@@ -18,10 +18,6 @@ import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.util.{Failure, Success}
 
 
-@JSExportAll
-case class PageStatus(var loaded: Boolean = false)
-
-
 @js.native
 trait CorporaScope extends Scope {
   var dictionaries: js.Array[Dictionary] = js.native
@@ -171,11 +167,12 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
   }
 
   @JSExport
-  def loadMyDictionaries() = {
+  def loadMyCorpora() = {
     val load = () => {
       val user = userService.getUser()
       val query = DictionaryQuery()
       query.userCreated = Some(Seq[Int](user.id))
+      query.corpora = Some(true)
       backend.getDictionariesWithPerspectives(query) map {
         dictionaries =>
           scope.dictionaries = dictionaries.toJSArray
@@ -188,13 +185,14 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
   }
 
   @JSExport
-  def loadAvailableDictionaries() = {
+  def loadAvailableCorpora() = {
 
 
     val load = () => {
       val user = userService.getUser()
       val query = DictionaryQuery()
       query.author = Some(user.id)
+      query.corpora = Some(true)
       backend.getDictionariesWithPerspectives(query) map {
         dictionaries =>
           scope.dictionaries = dictionaries.toJSArray
@@ -302,6 +300,7 @@ class CorporaController(scope: CorporaScope, modal: ModalService, location: Loca
         // load dictionary list
         val query = DictionaryQuery()
         query.author = Some(user.id)
+        query.corpora = Some(true)
         backend.getDictionariesWithPerspectives(query) map {
           dictionaries => scope.dictionaries = dictionaries.toJSArray
             dictionaries

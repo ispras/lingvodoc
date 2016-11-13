@@ -1343,18 +1343,25 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     p.future
   }
 
-  def createDictionary(names: Seq[LocalizedString], language: Language): Future[CompositeId] = {
+  def createDictionary(names: Seq[LocalizedString], language: Language, isCorpora: Boolean = false): Future[CompositeId] = {
     val p = Promise[CompositeId]()
-
     createTranslationGist("Dictionary") map {
       gistId =>
         Future.sequence(names.filter(_.str.nonEmpty).map(name => createTranslationAtom(gistId, name))) map {
           _ =>
-            val req = js.Dynamic.literal("translation_gist_client_id" -> gistId.clientId,
-              "translation_gist_object_id" -> gistId.objectId,
-              "parent_client_id" -> language.clientId,
-              "parent_object_id" -> language.objectId
-            )
+
+            val req = if (!isCorpora) {
+              js.Dynamic.literal("translation_gist_client_id" -> gistId.clientId,
+                "translation_gist_object_id" -> gistId.objectId,
+                "parent_client_id" -> language.clientId,
+                "parent_object_id" -> language.objectId)
+            } else {
+              js.Dynamic.literal("translation_gist_client_id" -> gistId.clientId,
+                "translation_gist_object_id" -> gistId.objectId,
+                "parent_client_id" -> language.clientId,
+                "parent_object_id" -> language.objectId,
+                "category" -> "lingvodoc.ispras.ru/corpora")
+            }
 
             $http.post[js.Dynamic]("dictionary", req) onComplete {
               case Success(response) =>
@@ -1699,6 +1706,26 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout) extends Se
     }
     p.future
   }
+
+  def corporaFields(): Future[Seq[Field]] = {
+    val p = Promise[Seq[Field]]()
+
+    $http.get[js.Dynamic](getMethodUrl("corpora_fields")) onComplete {
+      case Success(response) =>
+        try {
+          val fields = read[Seq[Field]](js.JSON.stringify(response))
+          p.success(fields)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed fields json.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed fields data. Missing some required fields", e))
+          case e: Throwable => p.failure(BackendException("Unknown exception.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to fetch perspective fields.", e))
+    }
+    p.future
+  }
+
+
 }
 
 @injectable("BackendService")
