@@ -85,6 +85,18 @@ def translation_service_search(searchstring):
     response = translationgist_contents(translationatom.parent)
     return response
 
+def translation_service_search_all(searchstring):
+    translationatom = DBSession.query(TranslationAtom)\
+        .join(TranslationGist).\
+        filter(TranslationAtom.content == searchstring,
+               TranslationAtom.locale_id == 3,
+               TranslationGist.type == 'Field')\
+        .one()
+    response = translationgist_contents(translationatom.parent)
+    return response
+
+
+
 
 def update_perspective_fields(req, perspective_client_id, perspective_object_id, client):
     response = dict()
@@ -323,13 +335,13 @@ def convert_five_tiers(
 
         DBSession.flush()
 
-        """
+        # """
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
         DBSession.add(translationgist)
         DBSession.flush()
         gist_client_id = translationgist.client_id
         gist_object_id = translationgist.object_id
-        """
+        # """
 
         parent_client_id = gist_client_id
         parent_object_id = gist_object_id
@@ -337,7 +349,7 @@ def convert_five_tiers(
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent.marked_for_deletion:
 
-            """
+            # """
             translationatom = TranslationAtom(client_id=client.id,
                                               parent=parent,
                                               locale_id=2,
@@ -350,7 +362,7 @@ def convert_five_tiers(
 
             language_client_id = atom_client_id
             language_object_id = atom_object_id
-            """
+            # """
             lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
 
             resp = translation_service_search("WiP")
@@ -392,12 +404,24 @@ def convert_five_tiers(
         if not parent.marked_for_deletion:
             persp_translationatom = TranslationAtom(client_id=client.id,
                                               parent=parent,
-                                              locale_id=locale_id,
+                                              locale_id=1,
                                               content="Лексические входы")
+            DBSession.add(persp_translationatom)
+            DBSession.flush()
+            persp_translationatom = TranslationAtom(client_id=client.id,
+                                              parent=parent,
+                                              locale_id=2,
+                                              content="Lexical Entries")
             DBSession.add(persp_translationatom)
             DBSession.flush()
         persp_translation_gist_client_id = gist_client_id
         persp_translation_gist_object_id = gist_object_id
+
+
+        #resp = translation_service_search_all("Lexical Entries")
+        # print(resp["contains"], resp["type"])
+        # persp_translation_gist_client_id, persp_translation_gist_object_id = int(resp['object_id']), int(resp['client_id'])
+
 
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         resp = translation_service_search("WiP")
@@ -446,8 +470,14 @@ def convert_five_tiers(
         if not parent.marked_for_deletion:
             persp_translationatom = TranslationAtom(client_id=client.id,
                                               parent=parent,
-                                              locale_id=locale_id,
+                                              locale_id=1,
                                               content="Парадигмы")
+            DBSession.add(persp_translationatom)
+            DBSession.flush()
+            persp_translationatom = TranslationAtom(client_id=client.id,
+                                              parent=parent,
+                                              locale_id=2,
+                                              content="Paradigms")
             DBSession.add(persp_translationatom)
             DBSession.flush()
         persp_translation_gist_client_id = gist_client_id
@@ -661,24 +691,17 @@ def convert_all(language_client_id,
                 sound_url=None
                 ):
 
-    eaffile = request.urlopen(eaf_url)
-    with tempfile.NamedTemporaryFile() as temp:
-        temp.write(eaffile.read())
-        elan_check = elan_parser.ElanCheck(temp.name)
-        elan_check.parse()
-        if elan_check.check:
-            convert_five_tiers(
-                        language_client_id,
-                        language_object_id,
-                        user_id,
-                        client_id,
-                        object_id,
-                        gist_client_id,
-                        gist_object_id,
-                        sqlalchemy_url,
-                        storage,
-                        eaf_url,
-                        sound_url
-                        )
-        temp.flush()
+    convert_five_tiers(
+                language_client_id,
+                language_object_id,
+                user_id,
+                client_id,
+                object_id,
+                gist_client_id,
+                gist_object_id,
+                sqlalchemy_url,
+                storage,
+                eaf_url,
+                sound_url
+                )
 

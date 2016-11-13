@@ -601,6 +601,7 @@ def configure_routes(config):
     config.add_route(name='convert_dictionary_check', pattern='/convert_check')  # tested
     config.add_route(name='convert_dictionary_dialeqt', pattern='/convert_dictionary_dialeqt')  # TODO: dododo
     config.add_route(name='convert_five_tiers', pattern='/convert_five_tiers')  # TODO: dododo
+    config.add_route(name='convert_five_tiers_validate', pattern='/convert_five_tiers_validate')  # TODO: dododo
     config.add_route(name='convert_dictionary_dialeqt_get_info', pattern='/convert_dictionary_dialeqt_get_info/{blob_client_id}/{blob_object_id}')  # TODO: dododo
 
     # Check the documentation in celery_test.view.py
