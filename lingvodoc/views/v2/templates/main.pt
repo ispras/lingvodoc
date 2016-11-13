@@ -15,8 +15,8 @@
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/leaflet.css')}"/>
 
-    <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-jsdeps.js')}"></script>
-    <script src="${request.static_url('lingvodoc:static/js/lingvodoc2-frontend-fastopt.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/webui-jsdeps.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/webui-fastopt.js')}"></script>
 
     <script type="text/javascript">
         ru.ispras.lingvodoc.frontend.LingvodocApplication().main();
@@ -49,6 +49,8 @@
                     <ul class="dropdown-menu">
                         <li><a href="#/dashboard"><translatable str="My dictionaries">My dictionaries</translatable></a></li>
                         <li><a href="#/dictionary/create"><translatable str="Create dictionary">Create dictionary</translatable></a></li>
+                        <li><a href="#/corpora"><translatable str="My corpora">My corpora</translatable></a></li>
+                        <li><a href="#/corpora/create"><translatable str="Create corpus">Create corpus</translatable></a></li>
                         <!--?<li><a href="#/merge_master">Merge master</a></li>-->
                     </ul>
                 </li>

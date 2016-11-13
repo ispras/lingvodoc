@@ -95,6 +95,11 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+
+                                            <a ng-href="{{ linkedValue.getContent() }}" class="btn btn-default btn-xs">
+                                                <span class="glyphicon glyphicon-save-file"></span>
+                                            </a>
+
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
@@ -161,6 +166,10 @@
                         <ul class="tree" ng-if="column.getType()=='Simple'">
                             <li ng-repeat="value in cell.values" ng-class="{removed: value.entity.markedForDeletion}" ng-if="value.entity.accepted">
 
+                                <a ng-href="{{ value.getContent() }}" class="btn btn-default btn-xs">
+                                    <span class="glyphicon glyphicon-save-file"></span>
+                                </a>
+
                                 <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
                                     <span class="glyphicon glyphicon-play">Play</span>
                                 </button>
@@ -187,7 +196,12 @@
                         <ul class="tree" ng-if="column.getType()=='Master'">
 
                             <li ng-repeat="value in cell.values" ng-class="{removed: value.entity.markedForDeletion}" ng-if="value.entity.accepted">
+
                                 <!-- display value -->
+                                <a ng-href="{{ value.getContent() }}" class="btn btn-default btn-xs">
+                                    <span class="glyphicon glyphicon-save-file"></span>
+                                </a>
+
                                 <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(value.getContent())">
                                     <span class="glyphicon glyphicon-play">Play</span>
                                 </button>
@@ -211,6 +225,9 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                            <a ng-href="{{ linkedValue.getContent() }}" class="btn btn-default btn-xs">
+                                                <span class="glyphicon glyphicon-save-file"></span>
+                                            </a>
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
@@ -328,6 +345,9 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                            <a ng-href="{{ linkedValue.getContent() }}" class="btn btn-default btn-xs">
+                                                <span class="glyphicon glyphicon-save-file"></span>
+                                            </a>
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
@@ -433,6 +453,9 @@
                                         </div>
 
                                         <div ng-if="column.linkedColumns[0].checkDataTypeName('Sound')">
+                                            <a ng-href="{{ linkedValue.getContent() }}" class="btn btn-default btn-xs">
+                                                <span class="glyphicon glyphicon-save-file"></span>
+                                            </a>
                                             <button type="button" class="btn btn-default btn-xs" ng-click="controller.play(linkedValue.getContent())">
                                                 <span class="glyphicon glyphicon-play">Play</span>
                                             </button>
