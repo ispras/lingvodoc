@@ -58,6 +58,9 @@ from sqlalchemy.inspection import inspect
 from sqlalchemy.ext.compiler import compiles
 
 import logging
+
+import uuid
+
 ENGLISH_LOCALE = 2
 
 log = logging.getLogger(__name__)
@@ -597,22 +600,24 @@ class LexicalEntry(CompositeIdMixin,
         if not ls:
             return []
 
-        DBSession.execute('''create TEMPORARY TABLE lexical_entries_temp_table (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''')
+        temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
-        DBSession.execute('''insert into lexical_entries_temp_table (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''', ls)
+        DBSession.execute('''create TEMPORARY TABLE %s (traversal_lexical_order INTEGER, client_id BIGINT, object_id BIGINT) on COMMIT DROP;''' % temp_table_name)
+
+        DBSession.execute('''insert into %s (traversal_lexical_order, client_id, object_id) values (:traversal_lexical_order, :client_id, :object_id);''' % temp_table_name, ls)
 
         result = DBSession.execute(text('''
         WITH RECURSIVE cte_expr AS
         (SELECT
            entity.*,
-           lexical_entries_temp_table.traversal_lexical_order                                  AS traversal_lexical_order,
+           %s.traversal_lexical_order                                  AS traversal_lexical_order,
            1                                                                                   AS tree_level,
             row_number() over(partition by traversal_lexical_order order by Entity.created_at) as tree_numbering_scheme
          FROM entity
-           INNER JOIN lexical_entries_temp_table
+           INNER JOIN %s
              ON
-               entity.parent_client_id = lexical_entries_temp_table.client_id
-               AND entity.parent_object_id = lexical_entries_temp_table.object_id
+               entity.parent_client_id = %s.client_id
+               AND entity.parent_object_id = %s.object_id
 
          UNION ALL
          SELECT
@@ -661,7 +666,7 @@ class LexicalEntry(CompositeIdMixin,
                data_type_atom_fallback.locale_id = 1
 
         ORDER BY traversal_lexical_order, tree_numbering_scheme, tree_level;
-        '''), {'locale': locale_id})
+        ''' % (temp_table_name, temp_table_name, temp_table_name, temp_table_name)), {'locale': locale_id})
 
         entries = result.fetchall()
 
@@ -716,39 +721,9 @@ class LexicalEntry(CompositeIdMixin,
             lexical_list.append(entry)
         lexical_list = remove_keys(lexical_list, ['traversal_lexical_order', 'tree_level', 'tree_numbering_scheme'])
         log.debug(lexical_list)
-        DBSession.execute('''drop TABLE lexical_entries_temp_table''')
+        DBSession.execute('''drop TABLE %s''' % temp_table_name)
 
         return lexical_list
-
-    # @classmethod
-    # def track2(cls, publish, lexs):
-    #     log.debug(lexs)
-    #     included_parts = DBSession.query(Entity)\
-    #         .join(LexicalEntry.entity)\
-    #         .join(Entity.publishingentity)\
-    #         .filter(tuple_(LexicalEntry.client_id, LexicalEntry.object_id).in_(lexs))\
-    #         .cte(name='included_parts', recursive=True)
-    #
-    #     incl_alias = aliased(included_parts, name='pr')
-    #     parts_alias = aliased(Entity, name='p')
-    #
-    #     included_parts = included_parts.union_all(
-    #         DBSession.query(parts_alias).filter(and_(Entity.client_id == incl_alias.c.link_client_id, Entity.object_id == incl_alias.c.link_object_id))
-    #     )
-    #     #http://10.10.17.214:6543/dictionary/57/2/perspective/57/3/all?start_from=0&count=20
-    #     # join TranslationGist, join TranslationAtom
-    #     # .join(TranslationGist,
-    #     #       and_(Entity.field_client_id == TranslationGist.client_id, Entity.field_object_id == TranslationGist.object_id)) \
-    #     #     .join(TranslationAtom) \
-    #     #     # map Lexical entries on ents
-    #     a = DBSession.query(included_parts).all()
-    #     for i in a:
-    #         log.debug(i.parent_object_id)
-    #     #ents_tuples = [(ent.client_id, ent.object_id) for ent in a]
-    #
-    #
-    #     log.debug("Works a")
-    #     return ['a', 'b']
 
 
 class Entity(CompositeIdMixin,
