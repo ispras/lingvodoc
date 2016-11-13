@@ -19,6 +19,8 @@ from pyramid.httpexceptions import (
 )
 from sqlalchemy.sql.expression import case, true, false
 
+from sqlalchemy.sql.functions import coalesce
+
 from sqlalchemy.orm import aliased
 
 from sqlalchemy import (
@@ -109,7 +111,12 @@ def perspectives_list(request):  # tested
             raise KeyError("Something wrong with the base", resp.json['error'])
 
     atom_perspective_name_alias = aliased(TranslationAtom, name="PerspectiveName")
-    persps = DBSession.query(DictionaryPerspective, TranslationAtom, atom_perspective_name_alias).filter(DictionaryPerspective.marked_for_deletion == False)
+    atom_perspective_name_fallback_alias = aliased(TranslationAtom, name="PerspectiveNameFallback")
+    persps = DBSession.query(DictionaryPerspective,
+                             TranslationAtom,
+                             coalesce(atom_perspective_name_alias.content,
+                                      atom_perspective_name_fallback_alias.content).label("Translation")
+                             ).filter(DictionaryPerspective.marked_for_deletion == False)
     if is_template is not None:
         if type(is_template) == str:
             if is_template.lower() == 'true':
@@ -132,10 +139,15 @@ def perspectives_list(request):  # tested
                          and_(
                              TranslationAtom.parent_client_id == DictionaryPerspective.state_translation_gist_client_id,
                              TranslationAtom.parent_object_id == DictionaryPerspective.state_translation_gist_object_id)).filter(
-        TranslationAtom.locale_id == int(request.cookies['locale_id'])).join(atom_perspective_name_alias, and_(
-        atom_perspective_name_alias.parent_client_id == DictionaryPerspective.translation_gist_client_id,
-        atom_perspective_name_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id)).filter(
-        atom_perspective_name_alias.locale_id == int(request.cookies['locale_id']))
+        TranslationAtom.locale_id == int(request.cookies['locale_id'])).join(
+        atom_perspective_name_alias, and_(
+            atom_perspective_name_alias.parent_client_id == DictionaryPerspective.translation_gist_client_id,
+            atom_perspective_name_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id,
+            atom_perspective_name_alias.locale_id == int(request.cookies['locale_id'])), isouter=True).join(
+        atom_perspective_name_fallback_alias, and_(
+            atom_perspective_name_fallback_alias.parent_client_id == DictionaryPerspective.translation_gist_client_id,
+            atom_perspective_name_fallback_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id,
+            atom_perspective_name_fallback_alias.locale_id == 2), isouter=True)
 
     blobs = DBSession.query(UserBlobs).filter(UserBlobs.data_type == 'pdf').all()
     blobs_fast_dict = {}
@@ -158,7 +170,7 @@ def perspectives_list(request):  # tested
             resp['additional_metadata'] = list(perspective.DictionaryPerspective.additional_metadata.keys())
         else:
             resp['additional_metadata'] = []
-        resp['translation'] = perspective.PerspectiveName.content or "Unknown perspective name"
+        resp['translation'] = perspective.Translation or "Unknown perspective name"
 
         if perspective.DictionaryPerspective.additional_metadata:
             if 'location' in perspective.DictionaryPerspective.additional_metadata:
