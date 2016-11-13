@@ -146,7 +146,7 @@ def create_entity(request):  # tested
                 entity.additional_metadata = old_meta
             if 'markup' in data_type:
                 name = filename.split('.')
-                ext = name[len(name)]
+                ext = name[len(name) - 1]
                 if ext.lower() == 'textgrid':
                     data_type = 'praat markup'
                 elif ext.lower() == 'eaf':
