@@ -12,7 +12,6 @@ import hashlib
 import shutil
 import transaction
 import tempfile
-from pydub import AudioSegment
 from collections import defaultdict
 from pathvalidate import sanitize_filename
 from urllib import request
@@ -53,7 +52,15 @@ EAF_TIERS = {
     "transcription": "Transcription",
     "translation": "Translation"
 }
-
+log = logging.getLogger(__name__)
+log.setLevel(logging.WARNING)
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings('error')
+    try:
+        from pydub import AudioSegment
+    except Warning as e:
+        log.debug("If you want to use Elan converter under Windows, keep in mind, that the result dictionary won't contain sounds")
 
 def translationatom_contents(translationatom):
     result = dict()
@@ -294,6 +301,12 @@ def convert_five_tiers(
     no_sound = True
     if sound_url:
         no_sound = False
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            from pydub import AudioSegment
+        except Warning as e:
+            no_sound = True
     if not no_sound:
         with tempfile.NamedTemporaryFile() as temp:
             try:

@@ -350,6 +350,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
         ##entity.data_type = data_type
         real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
+        print(url)
         entity.content = url
         old_meta = entity.additional_metadata
         need_hash = True
@@ -546,7 +547,7 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
     return translation.content
 
 
-def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
+def convert_db_new( blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
                    locale_id=2):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
@@ -554,6 +555,14 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
     time.sleep(4)
     field_ids = {}
     with transaction.manager:
+        blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
+        # DBSession.flush()
+        filename = blob.real_storage_path
+        log.debug("user_id: %s" % user_id)
+        log.debug("Starting convert_one")
+        log.debug("Creating session")
+        sqconn = sqlite3.connect(filename)
+        log.debug("Connected to sqlite3 database")
         client = DBSession.query(Client).filter_by(id=user_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -587,9 +596,10 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
             field_ids[name] = (field.client_id, field.object_id)
 
         DBSession.flush()
-        dict_attributes = get_dict_attributes(sqconn)
+
 
         """
+        dict_attributes = get_dict_attributes(sqconn)
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
         DBSession.add(translationgist)
         DBSession.flush()
@@ -954,19 +964,8 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
 def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, sqlalchemy_url, storage):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
-    engine = create_engine(sqlalchemy_url)
-    DBSession.remove()
-    DBSession.configure(bind=engine)
-    blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
-    DBSession.flush()
-    filename = blob.real_storage_path
-    log.debug("user_id: %s" % user_id)
-    log.debug("Starting convert_one")
-    log.debug("Creating session")
-    sqconn = sqlite3.connect(filename)
-    log.debug("Connected to sqlite3 database")
     try:
-        status = convert_db_new( sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
+        status = convert_db_new(  blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)
