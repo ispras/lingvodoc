@@ -111,6 +111,7 @@ def create_translationgist(request):
         variables = {'auth': request.authenticated_userid}
 
         req = request.json_body
+        object_id = req.get('object_id', None)
         type = req['type']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -119,17 +120,18 @@ def create_translationgist(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        translationgist = TranslationGist(client_id=variables['auth'], type=type)
+        translationgist = TranslationGist(client_id=variables['auth'],object_id=object_id, type=type)
         DBSession.add(translationgist)
         DBSession.flush()
         basegroups = []
         basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete translationgist").first()]
-        groups = []
-        for base in basegroups:
-            group = Group(subject_client_id=translationgist.client_id, subject_object_id=translationgist.object_id, parent=base)
-            groups += [group]
-        for group in groups:
-            add_user_to_group(user, group)
+        if not object_id:
+            groups = []
+            for base in basegroups:
+                group = Group(subject_client_id=translationgist.client_id, subject_object_id=translationgist.object_id, parent=base)
+                groups += [group]
+            for group in groups:
+                add_user_to_group(user, group)
         request.response.status = HTTPOk.code
         return {'object_id': translationgist.object_id,
                 'client_id': translationgist.client_id}
@@ -181,6 +183,7 @@ def create_translationatom(request):
         parent_object_id = req['parent_object_id']
         locale_id = req['locale_id']
         content = req['content']
+        object_id = req.get('object_id', None)
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -191,19 +194,22 @@ def create_translationatom(request):
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         if not parent.marked_for_deletion:
             translationatom = TranslationAtom(client_id=variables['auth'],
+                                              object_id=object_id,
                                               parent=parent,
                                               locale_id=locale_id,
                                               content=content)
             DBSession.add(translationatom)
             DBSession.flush()
-            basegroups = []
-            basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit translationatom").first()]
-            groups = []
-            for base in basegroups:
-                group = Group(subject_client_id=translationatom.client_id, subject_object_id=translationatom.object_id, parent=base)
-                groups += [group]
-            for group in groups:
-                add_user_to_group(user, group)
+            if not object_id:
+                basegroups = []
+                basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit translationatom").first()]
+                if not object_id:
+                    groups = []
+                    for base in basegroups:
+                        group = Group(subject_client_id=translationatom.client_id, subject_object_id=translationatom.object_id, parent=base)
+                        groups += [group]
+                    for group in groups:
+                        add_user_to_group(user, group)
             request.response.status = HTTPOk.code
             return {'object_id': translationatom.object_id,
                     'client_id': translationatom.client_id}

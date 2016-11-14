@@ -130,6 +130,7 @@ def create_language(request):  # tested & in docs
         translation_gist_client_id = req['translation_gist_client_id']
         translation_gist_object_id = req['translation_gist_object_id']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        object_id = req.get('object_id', None)
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
                            variables['auth'])
@@ -141,6 +142,7 @@ def create_language(request):  # tested & in docs
         if parent_client_id and parent_object_id:
             parent = DBSession.query(Language).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
         language = Language(client_id=variables['auth'],
+                            object_id=object_id,
                                 translation_gist_client_id=translation_gist_client_id,
                                 translation_gist_object_id=translation_gist_object_id)
         DBSession.add(language)
@@ -150,12 +152,13 @@ def create_language(request):  # tested & in docs
         basegroups = []
         basegroups += [DBSession.query(BaseGroup).filter_by(name="Can edit languages").first()]
         basegroups += [DBSession.query(BaseGroup).filter_by(name="Can delete languages").first()]
-        groups = []
-        for base in basegroups:
-            group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
-            groups += [group]
-        for group in groups:
-            add_user_to_group(user, group)
+        if not object_id:
+            groups = []
+            for base in basegroups:
+                group = Group(subject_client_id=language.client_id, subject_object_id=language.object_id, parent=base)
+                groups += [group]
+            for group in groups:
+                add_user_to_group(user, group)
         request.response.status = HTTPOk.code
         return {'object_id': language.object_id,
                 'client_id': language.client_id}

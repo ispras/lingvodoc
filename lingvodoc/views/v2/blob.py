@@ -115,14 +115,14 @@ def upload_user_blob(request):  # TODO: remove blob Object
     blob = Object()
     blob.client_id = variables['auth']
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-    blob.object_id = DBSession.query(UserBlobs).filter_by(client_id=client.id).count() + 1
     blob.data_type = request.POST['data_type']
 
     blob.filename = filename
 
     current_user = DBSession.query(User).filter_by(id=client.user_id).first()
+    object_id = request.json_body.get('object_id', None)
 
-    blob_object = UserBlobs(object_id=blob.object_id,
+    blob_object = UserBlobs(object_id=object_id,
                             client_id=blob.client_id,
                             name=filename,
                             data_type=blob.data_type,

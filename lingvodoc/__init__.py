@@ -49,7 +49,11 @@ def configure_routes(config):
     config.add_route(name='cheatlogin', pattern='/cheatlogin')
 
     config.add_route(name='basic_sync', pattern='/synchronisation/basic')
+    config.add_route(name='all_toc', pattern='/synchronisation/toc')
+    config.add_route(name='diff_server', pattern='/synchronisation/difference/server')
+    config.add_route(name='diff_desk', pattern='/synchronisation/difference')
     config.add_route(name='basic_sync_server', pattern='/synchronisation/basic/server')
+    config.add_route(name='download_dictionary', pattern='/synchronisation/download')
 
     # web-view #POST
     config.add_route(name='logout', pattern='/logout')  # tested

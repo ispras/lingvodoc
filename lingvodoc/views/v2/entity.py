@@ -75,6 +75,7 @@ def create_entity(request):  # tested
         parent_object_id = request.matchdict.get('lexical_entry_object_id')
         req = request.json_body
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        object_id = req.get('object_id', None)
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
         user = DBSession.query(User).filter_by(id=client.user_id).first()
@@ -112,6 +113,7 @@ def create_entity(request):  # tested
             if not upper_level:
                 return {'error': str("No such upper level in the system")}
         entity = Entity(client_id=client.id,
+                        object_id = object_id,
                         field_client_id=req['field_client_id'],
                         field_object_id=req['field_object_id'],
                         locale_id=req.get('locale_id'),
