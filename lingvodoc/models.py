@@ -34,7 +34,7 @@ from sqlalchemy.types import (
     Date,
     TypeDecorator
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from sqlalchemy.ext.declarative import (
     declarative_base,
@@ -224,6 +224,20 @@ class EpochTypeForDate(TypeDecorator):
             return str(value)
         else:
             return None
+
+class UUIDType(TypeDecorator):
+    impl = UUID(as_uuid=True)
+
+    def process_result_value(self, value, dialect):
+        if value:
+            return str(value)
+        else:
+            return None
+
+    def process_bind_param(self, value, dialect):
+        if type(value) == str:
+            return uuid.UUID(value)
+        return value
 
 
 class CreatedAtMixin(object):
@@ -530,7 +544,7 @@ class DictionaryPerspectiveToField(CompositeIdMixin,
     """
     __parentname__ = 'DictionaryPerspective'
     position = Column(Integer, nullable=False)
-    # marked_for_deletion = Column(Boolean, default=False)
+    marked_for_deletion = Column(Boolean, default=False)
 
 
 class DataTypeMixin(PrimeTableArgs):
@@ -758,7 +772,8 @@ class Entity(CompositeIdMixin,
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        publishingentity = PublishingEntity(client_id=self.client_id, object_id=self.object_id)
+        publishingentity = PublishingEntity(client_id=self.client_id, object_id=self.object_id,
+                                            created_at=self.created_at)
         DBSession.add(publishingentity)
         self.publishingentity = publishingentity
 
@@ -781,18 +796,18 @@ class PublishingEntity(Base, TableNameMixin, CreatedAtMixin):
 
 
 user_to_group_association = Table('user_to_group_association', Base.metadata,
-                                  Column('user_id', BigInteger, ForeignKey('user.id')),
-                                  Column('group_id', BigInteger, ForeignKey('group.id'))
+                                  Column('user_id', SLBigInteger(), ForeignKey('user.id')),
+                                  Column('group_id', UUIDType, ForeignKey('group.id'))
                                   )
 
 organization_to_group_association = Table('organization_to_group_association', Base.metadata,
-                                          Column('organization_id', BigInteger, ForeignKey('organization.id')),
-                                          Column('group_id', BigInteger, ForeignKey('group.id'))
+                                          Column('organization_id', SLBigInteger(), ForeignKey('organization.id')),
+                                          Column('group_id', UUIDType, ForeignKey('group.id'))
                                           )
 
 user_to_organization_association = Table('user_to_organization_association', Base.metadata,
-                                         Column('user_id', BigInteger, ForeignKey('user.id')),
-                                         Column('organization_id', BigInteger, ForeignKey('organization.id'))
+                                         Column('user_id', SLBigInteger(), ForeignKey('user.id')),
+                                         Column('organization_id', SLBigInteger(), ForeignKey('organization.id'))
                                          )
 
 
@@ -824,8 +839,10 @@ class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
     perspective_default = Column(Boolean, default=False, nullable=False)
 
 
-class Group(Base, TableNameMixin, IdMixin, CreatedAtMixin):
+class Group(Base, TableNameMixin, CreatedAtMixin):
     __parentname__ = 'BaseGroup'
+    old_id = Column(SLBigInteger(), autoincrement=True)
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
     base_group_id = Column(ForeignKey("basegroup.id"), nullable=False)
     subject_client_id = Column(SLBigInteger())
     subject_object_id = Column(SLBigInteger())

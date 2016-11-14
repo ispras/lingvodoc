@@ -1,7 +1,9 @@
 """initial tables
+
 Revision ID: 9e7ee952f6ae
-Revises: 
+Revises:
 Create Date: 2016-10-21 17:20:27.709284
+
 """
 
 # revision identifiers, used by Alembic.
@@ -63,7 +65,8 @@ def upgrade():
     )
     op.create_table('group',
     sa.Column('created_at', sa.TIMESTAMP(), nullable=False),
-    sa.Column('id', SLBigInteger(), nullable=False),
+    sa.Column('id', postgresql.UUID(), nullable=False),
+    sa.Column('old_id', SLBigInteger()),
     sa.Column('base_group_id', SLBigInteger(), nullable=False),
     sa.Column('subject_client_id', SLBigInteger(), nullable=True),
     sa.Column('subject_object_id', SLBigInteger(), nullable=True),
@@ -129,7 +132,7 @@ def upgrade():
     )
     op.create_table('organization_to_group_association',
     sa.Column('organization_id', sa.BigInteger(), nullable=True),
-    sa.Column('group_id', sa.BigInteger(), nullable=True),
+    sa.Column('group_id', postgresql.UUID(), nullable=True),
     sa.ForeignKeyConstraint(['group_id'], ['group.id'], ),
     sa.ForeignKeyConstraint(['organization_id'], ['organization.id'], )
     )
@@ -227,7 +230,7 @@ def upgrade():
     )
     op.create_table('user_to_group_association',
     sa.Column('user_id', sa.BigInteger(), nullable=True),
-    sa.Column('group_id', sa.BigInteger(), nullable=True),
+    sa.Column('group_id', postgresql.UUID(), nullable=True),
     sa.ForeignKeyConstraint(['group_id'], ['group.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], )
     )

@@ -3,10 +3,9 @@ from lingvodoc.queue.celery import celery
 
 
 @celery.task
-def async_download_dictionary(client_id, object_id, sqlalchemy_url, central_server, storage):
+def async_download_dictionary(client_id, object_id, central_server, storage):
     download_dictionary(client_id,
                         object_id,
-                        sqlalchemy_url,
                         central_server,
                         storage
                         )
