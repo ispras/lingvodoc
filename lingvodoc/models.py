@@ -211,6 +211,10 @@ class EpochType(TypeDecorator):
     def process_result_value(self, value, dialect):
         return int(value.timestamp())
 
+    def process_bind_param(self, value, dialect):
+        if type(value) == int:
+            return datetime.datetime.fromtimestamp(value)
+        return value
 
 class EpochTypeForDate(TypeDecorator):
     impl = Date
