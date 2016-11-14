@@ -630,6 +630,7 @@ def create_perspective(request):  # tested & in docs
         translation_gist_object_id = req['translation_gist_object_id']
         is_template = req.get('is_template')
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        object_id = req.get('object_id', None)
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
         user = DBSession.query(User).filter_by(id=client.user_id).first()
@@ -668,6 +669,7 @@ def create_perspective(request):  # tested & in docs
             raise KeyError("Something wrong with the base", resp.json['error'])
 
         perspective = DictionaryPerspective(client_id=variables['auth'],
+                                            object_id=object_id,
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
                                             parent=parent,
@@ -683,13 +685,14 @@ def create_perspective(request):  # tested & in docs
         DBSession.flush()
         owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
         owner = owner_client.user
-        for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
-            new_group = Group(parent=base,
-                              subject_object_id=perspective.object_id, subject_client_id=perspective.client_id)
-            add_user_to_group(user, new_group)
-            add_user_to_group(owner, new_group)
-            DBSession.add(new_group)
-            DBSession.flush()
+        if not object_id:
+            for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
+                new_group = Group(parent=base,
+                                  subject_object_id=perspective.object_id, subject_client_id=perspective.client_id)
+                add_user_to_group(user, new_group)
+                add_user_to_group(owner, new_group)
+                DBSession.add(new_group)
+                DBSession.flush()
         request.response.status = HTTPOk.code
         return {'object_id': perspective.object_id,
                 'client_id': perspective.client_id}
@@ -1180,6 +1183,7 @@ def create_field(request):
         translation_gist_object_id = req['translation_gist_object_id']
         data_type_translation_gist_client_id = req['data_type_translation_gist_client_id']
         data_type_translation_gist_object_id = req['data_type_translation_gist_object_id']
+        object_id = req.get('object_id', None)
 
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -1189,6 +1193,7 @@ def create_field(request):
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         field = Field(client_id=variables['auth'],
+                      object_id=object_id,
                       data_type_translation_gist_client_id=data_type_translation_gist_client_id,
                       data_type_translation_gist_object_id=data_type_translation_gist_object_id,
                       translation_gist_client_id=translation_gist_client_id,
@@ -2037,7 +2042,6 @@ def publish_dictionary_get(request):
     return render_to_response('../templates/publish_dictionary.pt', variables, request=request)
 
 
-# TODO: completely broken!
 @view_config(route_name='create_entities_bulk', renderer='json', request_method='POST', permission='create')
 def create_entities_bulk(request):
     try:
@@ -2057,60 +2061,72 @@ def create_entities_bulk(request):
             if item['level'] == 'leveloneentity':
                 parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'],
                                                                  object_id=item['parent_object_id']).first()
-                # entity = LevelOneEntity(client_id=client.id,
-                #                         object_id=DBSession.query(LevelOneEntity).filter_by(client_id=client.id).count() + 1,
-                #                         entity_type=item['entity_type'],
-                #                         locale_id=item['locale_id'],
-                #                         additional_metadata=item.get('additional_metadata'),
-                #                         parent=parent)
-                entity = None
-            elif item['level'] == 'groupingentity':
-                parent = DBSession.query(LexicalEntry).filter_by(client_id=item['parent_client_id'],
-                                                                 object_id=item['parent_object_id']).first()
-                # entity = GroupingEntity(client_id=client.id,
-                #                         object_id=DBSession.query(GroupingEntity).filter_by(client_id=client.id).count() + 1,
-                #                         entity_type=item['entity_type'],
-                #                         locale_id=item['locale_id'],
-                #                         additional_metadata=item.get('additional_metadata'),
-                #                         parent=parent)
-                entity = None
-            elif item['level'] == 'leveltwoentity':
-                parent = DBSession.query(LevelOneEntity).filter_by(client_id=item['parent_client_id'],
-                                                                   object_id=item['parent_object_id']).first()
-                # entity = LevelTwoEntity(client_id=client.id,
-                #                         object_id=DBSession.query(LevelTwoEntity).filter_by(client_id=client.id).count() + 1,
-                #                         entity_type=item['entity_type'],
-                #                         locale_id=item['locale_id'],
-                #                         additional_metadata=item.get('additional_metadata'),
-                #                         parent=parent)
-                entity = None
-            DBSession.add(entity)
-            DBSession.flush()
-            data_type = item.get('data_type')
-            filename = item.get('filename')
-            real_location = None
-            url = None
-            if data_type == 'sound' or data_type == 'markup':
-                real_location, url = create_object(request, item['content'], entity, data_type, filename)
-
-            if url and real_location:
-                entity.content = url
-                old_meta = entity.additional_metadata
-
-                need_hash = True
-                if old_meta and old_meta.get('hash'):
-                    need_hash = False
-                if need_hash:
-                    hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
-                    hash_dict = {'hash': hash}
+                entity = Entity(client_id=client.id,
+                                        object_id=item.get('object_id', None),
+                                        entity_type=item['entity_type'],
+                                        locale_id=item['locale_id'],
+                                        additional_metadata=item.get('additional_metadata'),
+                                        parent=parent)
+                group = DBSession.query(Group).join(BaseGroup).filter(BaseGroup.subject == 'lexical_entries_and_entities',
+                                                                      Group.subject_client_id == entity.parent.parent.client_id,
+                                                                      Group.subject_object_id == entity.parent.parent.object_id,
+                                                                      BaseGroup.action == 'create').one()
+                if user in group.users:
+                    entity.publishingentity.accepted = True
+                upper_level = None
+                if item.get('self_client_id') and item.get('self_object_id'):
+                    upper_level = DBSession.query(Entity).filter_by(client_id=item['self_client_id'],
+                                                                      object_id=item['self_object_id']).first()
+                    if not upper_level:
+                        return {'error': str("No such upper level in the system")}
+                if upper_level:
+                    entity.upper_level = upper_level
+                filename = req.get('filename')
+                real_location = None
+                url = None
+                tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+                    TranslationAtom.locale_id == 2,
+                    TranslationAtom.parent_client_id == TranslationGist.client_id,
+                    TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
+                    TranslationGist.client_id == Field.data_type_translation_gist_client_id,
+                    TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
+                    Field.client_id == req['field_client_id'], Field.object_id == req['field_object_id']).first()
+                data_type = tr_atom.content.lower()
+                if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+                    real_location, url = create_object(request, req['content'], entity, data_type, filename)
+                    entity.content = url
+                    old_meta = entity.additional_metadata
+                    need_hash = True
                     if old_meta:
-                        old_meta.update(hash_dict)
-                    else:
-                        old_meta = hash_dict
-                    entity.additional_metadata = old_meta
-            else:
-                entity.content = item['content']
-            DBSession.add(entity)
+                        if old_meta.get('hash'):
+                            need_hash = False
+                    if need_hash:
+                        hash = hashlib.sha224(base64.urlsafe_b64decode(req['content'])).hexdigest()
+                        hash_dict = {'hash': hash}
+                        if old_meta:
+                            old_meta.update(hash_dict)
+                        else:
+                            old_meta = hash_dict
+                        entity.additional_metadata = old_meta
+                    if 'markup' in data_type:
+                        name = filename.split('.')
+                        ext = name[len(name) - 1]
+                        if ext.lower() == 'textgrid':
+                            data_type = 'praat markup'
+                        elif ext.lower() == 'eaf':
+                            data_type = 'elan markup'
+                    entity.additional_metadata['data_type'] = data_type
+                elif data_type == 'link':
+                    try:
+                        entity.link_client_id = req['link_client_id']
+                        entity.link_object_id = req['link_object_id']
+                    except (KeyError, TypeError):
+                        request.response.status = HTTPBadRequest.code
+                        return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
+                else:
+                    entity.content = req['content']
+                # return None
+                DBSession.add(entity)
             inserted_items.append({"client_id": entity.client_id, "object_id": entity.object_id})
         request.response.status = HTTPOk.code
         return inserted_items

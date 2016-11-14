@@ -127,6 +127,7 @@ def create_group_entity(request):  # tested
         response = dict()
         req = request.json_body
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        object_id = req.get('object_id', None)
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
         user = DBSession.query(User).filter_by(id=client.user_id).first()
@@ -176,6 +177,7 @@ def create_group_entity(request):  # tested
                             Entity.content == tag).first()
                 if not tag_entity:
                     tag_entity = Entity(client_id=client.id,
+                                        object_id=object_id,
                                         field=field, content=tag, parent=lex)
 
                     group = DBSession.query(Group).join(BaseGroup).filter(
@@ -207,6 +209,7 @@ def create_lexical_entry(request):  # tested
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
         perspective_client_id = request.matchdict.get('perspective_client_id')
         perspective_object_id = request.matchdict.get('perspective_object_id')
+        object_id = request.json_body.get('object_id', None)
 
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -222,7 +225,7 @@ def create_lexical_entry(request):  # tested
             request.response.status = HTTPNotFound.code
             return {'error': str("No such perspective in the system")}
 
-        lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=variables['auth'],
+        lexentr = LexicalEntry(object_id=object_id, client_id=variables['auth'],
                                parent_object_id=perspective_object_id, parent=perspective)
         DBSession.add(lexentr)
         DBSession.flush()
@@ -270,7 +273,7 @@ def create_lexical_entry_bulk(request):  # TODO: test
 
         lexes_list = []
         for i in range(0, count):
-            lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=variables['auth'],
+            lexentr = LexicalEntry(client_id=variables['auth'],
                                    parent_object_id=perspective_object_id, parent=perspective)
             DBSession.add(lexentr)
             lexes_list.append(lexentr)

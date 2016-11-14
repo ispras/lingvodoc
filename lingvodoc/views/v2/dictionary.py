@@ -56,7 +56,7 @@ import json
 from lingvodoc.views.v2.utils import add_user_to_group
 
 
-@view_config(route_name='create_dictionary', renderer='json', request_method='POST', permission='create')
+@view_config(route_name='create_dictionary', renderer='json', request_method='POST')
 def create_dictionary(request):  # tested & in docs
     try:
 
@@ -71,6 +71,7 @@ def create_dictionary(request):  # tested & in docs
             return {'error': "invalid json"}
         parent_client_id = req['parent_client_id']
         parent_object_id = req['parent_object_id']
+        object_id = req.get('object_id', None)
         translation_gist_client_id = req['translation_gist_client_id']
         translation_gist_object_id = req['translation_gist_object_id']
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
@@ -96,6 +97,7 @@ def create_dictionary(request):  # tested & in docs
             raise KeyError("Something wrong with the base", resp.json['error'])
 
         dictionary = Dictionary(client_id=variables['auth'],
+                                object_id=object_id,
                                 state_translation_gist_object_id=state_translation_gist_object_id,
                                 state_translation_gist_client_id=state_translation_gist_client_id,
                                 parent=parent,
@@ -107,12 +109,13 @@ def create_dictionary(request):  # tested & in docs
                 dictionary.category = 1  # this is really wrong
         DBSession.add(dictionary)
         DBSession.flush()
-        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-            new_group = Group(parent=base,
-                              subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
-            add_user_to_group(user, new_group)
-            DBSession.add(new_group)
-            DBSession.flush()
+        # if not object_id:
+        #     for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+        #         new_group = Group(parent=base,
+        #                           subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
+        #         add_user_to_group(user, new_group)
+        #         DBSession.add(new_group)
+        #         DBSession.flush()
         request.response.status = HTTPOk.code
         return {'object_id': dictionary.object_id,
                 'client_id': dictionary.client_id}

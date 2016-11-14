@@ -40,6 +40,7 @@ import datetime
 import logging
 import json
 from lingvodoc.views.v2.utils import add_user_to_group
+from pyramid.request import Request
 
 log = logging.getLogger(__name__)
 
@@ -210,19 +211,25 @@ def desk_signin(request):
     with open('authentication_data.json', 'w') as f:
         f.write(json.dumps(cookies))
     if status.status_code == 200:
-        #todo: synchronise
-        headers = remember(request, principal=client_id)
-        response = Response()
-        response.headers = headers
-        locale_id = cookies['locale_id']
-        response.set_cookie(key='locale_id', value=str(locale_id))
-        response.set_cookie(key='client_id', value=str(client_id))
-        result = dict()
-        result['client_id'] = client_id
-        request.response.status = HTTPOk.code
-        # request.response.headers = headers
-        # return response
-        return HTTPOk(headers=response.headers, json_body=result)
+        path = request.route_url('basic_sync')
+        subreq = Request.blank(path)
+        subreq.method = 'POST'
+        sub_headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = sub_headers
+        resp = request.invoke_subrequest(subreq)
+        if resp.status_code == 200:
+            headers = remember(request, principal=client_id)
+            response = Response()
+            response.headers = headers
+            locale_id = cookies['locale_id']
+            response.set_cookie(key='locale_id', value=str(locale_id))
+            response.set_cookie(key='client_id', value=str(client_id))
+            result = dict()
+            result['client_id'] = client_id
+            request.response.status = HTTPOk.code
+            # request.response.headers = headers
+            # return response
+            return HTTPOk(headers=response.headers, json_body=result)
         # return result
     return HTTPUnauthorized(location=request.route_url('login'))
 
@@ -346,7 +353,8 @@ def get_user_info(request):  # tested
     response['birthday'] = str(user.birthday)
     response['created_at'] = user.created_at
     response['is_active'] = user.is_active
-    response['email'] = user.email.email
+    if user.email:
+        response['email'] = user.email.email
     meta = None
     if user.additional_metadata:
         meta = user.additional_metadata

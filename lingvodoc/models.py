@@ -209,7 +209,17 @@ class EpochType(TypeDecorator):
     impl = TIMESTAMP
 
     def process_result_value(self, value, dialect):
-        return value.timestamp()
+        return int(value.timestamp())
+
+
+class EpochTypeForDate(TypeDecorator):
+    impl = Date
+
+    def process_result_value(self, value, dialect):
+        if value:
+            return str(value)
+        else:
+            return None
 
 
 class CreatedAtMixin(object):
@@ -255,9 +265,9 @@ class CompositeIdMixin(object):
     client_id = Column(SLBigInteger(), primary_key=True)
 
     def __init__(self, **kwargs):
-        kwargs.pop("object_id", None)
-        client_by_id = get_client_counter(kwargs['client_id'])
-        kwargs["object_id"] = client_by_id.counter
+        if not kwargs.get("object_id", None):
+            client_by_id = get_client_counter(kwargs['client_id'])
+            kwargs["object_id"] = client_by_id.counter
         DBSession.add(ObjectTOC(client_id=kwargs['client_id'],
                                 object_id=kwargs['object_id'],
                                 table_name=self.__tablename__))
@@ -516,6 +526,7 @@ class DictionaryPerspectiveToField(CompositeIdMixin,
     """
     __parentname__ = 'DictionaryPerspective'
     position = Column(Integer, nullable=False)
+    # marked_for_deletion = Column(Boolean, default=False)
 
 
 class DataTypeMixin(PrimeTableArgs):
@@ -787,7 +798,7 @@ class User(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMixi
     # this stands for name in English
     intl_name = Column(UnicodeText, nullable=False)
     default_locale_id = Column(ForeignKey("locale.id"), default=2, nullable=False)
-    birthday = Column(Date)
+    birthday = Column(EpochTypeForDate)
     # it's responsible for "deleted user state". True for active, False for deactivated.
     is_active = Column(Boolean, default=True, nullable=False)
     password = relationship("Passhash", uselist=False)

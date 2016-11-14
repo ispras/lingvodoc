@@ -24,6 +24,7 @@ from sqlalchemy import (
 )
 from pyramid.httpexceptions import (
     HTTPFound,
+    HTTPInternalServerError,
     HTTPOk
 )
 from pyramid.security import authenticated_userid
@@ -118,6 +119,25 @@ def all_locales(request):
         response.append(locale_json)
     request.response.status = HTTPOk.code
     return response
+
+
+@view_config(route_name='all_locales_desktop', renderer='json', request_method='GET')
+def all_locales_desktop(request):
+    import requests
+    settings = request.registry.settings
+    path = settings['desktop']['central_server'] + 'all_locales'
+    session = requests.Session()
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+    session.mount('http://', adapter)
+    status = session.get(path)
+    if status.status_code == 200:
+        request.response.status = HTTPOk.code
+        return status.json()
+    else:
+        print(status.status_code)
+        request.response.status = HTTPInternalServerError.code
+        return {'error':'no connection'}
 
 
 def dict_ids(obj):
