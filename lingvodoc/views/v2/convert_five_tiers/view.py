@@ -1,4 +1,5 @@
 import logging
+import warnings
 from pyramid.view import view_config
 from sqlite3 import connect
 from lingvodoc.models import (
