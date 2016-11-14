@@ -54,7 +54,7 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
   doAjax(() => {
     backend.allPerspectivesMeta flatMap { p =>
       perspectiveMeta = p
-      backend.allStatuses() flatMap { _ =>
+      //backend.allStatuses() flatMap { _ =>
         backend.getPublishedDictionaries map { languages =>
           backend.perspectives(published = true) map { perspectives =>
             Utils.flattenLanguages(languages).foreach { language =>
@@ -66,7 +66,7 @@ class HomeController(scope: HomeScope, backend: BackendService, val timeout: Tim
             languages
           }
         }
-      }
+      //}
     }
   })
 }
