@@ -209,12 +209,9 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
 
 
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
-                  additional_metadata, client, content=None, filename=None,
+                  additional_metadata, client_id, object_id, content=None, filename=None,
                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2,
                   storage=None):  # tested
-    parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
-    if not parent:
-        return {'error': str("No such lexical entry in the system")}
     upper_level = None
     tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
         TranslationAtom.locale_id == 2,
@@ -228,12 +225,14 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
                                                         object_id=up_lvl[1]).first()
 
-    entity = Entity(client_id=client.id,
+    entity = Entity(client_id=client_id,
+                    object_id=object_id,
                     field_client_id=field_client_id,
                     field_object_id=field_object_id,
                     locale_id=locale_id,
-                    ###additional_metadata=additional_metadata,
-                    parent=parent)
+                    additional_metadata=additional_metadata,
+                    parent_client_id=le_client_id,
+                    parent_object_id=le_object_id)
 
     if upper_level:
         entity.upper_level = upper_level
@@ -286,25 +285,212 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     return (entity.client_id, entity.object_id)
 
 
+def create_objects(server, existing):
+    new_entries = list()
+    new_entities = list()
+    new_publishing_entities = list()
+    for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField, Entity, LexicalEntry,
+                  PublishingEntity]:
+        curr_server = server[table.__tablename__]
+        curr_existing = existing[table.__tablename__]
+        curr_old = list()
+        for client_id in curr_server:
+            if client_id in curr_existing:
+                for object_id in curr_server[client_id]:
+                    if object_id in curr_existing[client_id]:
+                        if curr_server[client_id][object_id] != curr_existing[client_id][object_id]:
+                            kwargs = curr_server[client_id][object_id]
+                            curr_old.append(kwargs)
+                    else:
+                        kwargs = curr_server[client_id][object_id]
+                        if table != Entity:
+                            if table != PublishingEntity:
+                                new_entries.append(table(**kwargs))
+                            else:
+                                new_publishing_entities.append(table(**kwargs))
+                        else:
+                            new_entities.append(kwargs)
+
+            else:
+                for object_id in curr_server[client_id]:
+                    kwargs = curr_server[client_id][object_id]
+                    if table != Entity:
+                        if table != PublishingEntity:
+                            new_entries.append(table(**kwargs))
+                        else:
+                            new_publishing_entities.append(table(**kwargs))
+                    else:
+                        new_entities.append(kwargs)
+
+        all_entries = DBSession.query(table).all()
+        for entry in all_entries:
+            client_id = str(entry.client_id)
+            object_id = str(entry.object_id)
+            if client_id in curr_server:
+                if object_id in curr_server[client_id]:
+                    if table != Entity:
+                        for key, value in list(curr_server[client_id][object_id].items()):
+                            setattr(entry, key, value)
+                    else:
+                        entry.parent_client_id = curr_server[client_id][object_id]['parent_client_id']
+                        entry.parent_object_id = curr_server[client_id][object_id]['parent_object_id']
+        new_entries.extend(all_entries)
+    return new_entries, new_entities, new_publishing_entities
+
+
+row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
+dict2strippeddict = lambda r, r_class: {key: r[key] for key in r if key in [c.name for c in r_class.__table__.columns]}
+
+
+def create_nested_content(tmp_resp):
+    tmp_dict = dict()
+    for entry in tmp_resp:
+        if str(entry['client_id']) not in tmp_dict:
+            tmp_dict[str(entry['client_id'])] = {str(entry['object_id']): entry}
+        else:
+            tmp_dict[str(entry['client_id'])][str(entry['object_id'])] = entry
+    tmp_resp = tmp_dict
+    return tmp_resp
+
+
+def create_tmp_resp(table, query, response):
+
+    tmp_resp = [row2dict(entry) for entry in query]
+    if tmp_resp:
+        tmp_resp = create_nested_content(tmp_resp)
+    response[table.__tablename__] = tmp_resp
+
+
+def basic_tables_content(client_id, object_id):
+    response = dict()
+    query = DBSession.query(Dictionary).filter_by(client_id=client_id,
+                                                       object_id=object_id).all()
+    create_tmp_resp(Dictionary, query, response)
+    query = DBSession.query(DictionaryPerspective).filter_by(parent_client_id=client_id,
+                                                             parent_object_id=object_id).all()
+    create_tmp_resp(DictionaryPerspective, query, response)
+    query = DBSession.query(DictionaryPerspectiveToField).join(DictionaryPerspectiveToField.parent) \
+        .filter(DictionaryPerspective.parent_client_id == client_id,
+                DictionaryPerspective.parent_object_id == object_id).all()
+    create_tmp_resp(DictionaryPerspectiveToField, query, response)
+    query = DBSession.query(LexicalEntry).join(LexicalEntry.parent) \
+        .filter(DictionaryPerspective.parent_client_id == client_id,
+                DictionaryPerspective.parent_object_id == object_id).all()
+    create_tmp_resp(LexicalEntry, query, response)
+    query = DBSession.query(Entity).join(Entity.parent).join(LexicalEntry.parent) \
+        .filter(DictionaryPerspective.parent_client_id == client_id,
+                DictionaryPerspective.parent_object_id == object_id).all()
+    create_tmp_resp(Entity, query, response)
+    query = DBSession.query(PublishingEntity).join(PublishingEntity.parent).join(Entity.parent).join(
+        LexicalEntry.parent) \
+        .filter(DictionaryPerspective.parent_client_id == client_id,
+                DictionaryPerspective.parent_object_id == object_id).all()
+    create_tmp_resp(PublishingEntity, query, response)
+    return response
+
+
+
+#                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2,
+#                   storage=None)
+
+def create_new_entities(new_entities):
+    for entity in new_entities:
+        content = entity['content']
+        filename = None
+        create_entity(entity['parent_client_id'],
+                      entity['parent_object_id'],
+                      entity['field_client_id'],
+                      entity['field_object_id'],
+                      entity['additional_metadata'],
+                      entity['client_id'],
+                      entity['object_id'],
+                      content,
+                      filename,
+                      link_client_id='no'
+                      )
+
+
+
+
+
 def download(
         client_id,
         object_id,
         sqlalchemy_url,
         central_server,
         storage
-):
+):  # :(
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     with transaction.manager:
-        dictionary_json = make_request(central_server+'dictionary/%s/%s'%(client_id,object_id))
+        new_jsons = dict()
+        for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField,
+                      LexicalEntry, Entity, PublishingEntity]:
+            new_jsons[table.__tablename__] = list()
+        # new_entity_jsons = list()
+        dictionary_json = make_request(central_server + 'dictionary/%s/%s' % (client_id, object_id))
         if dictionary_json.status_code != 200:
+            log.error('dict fail', dictionary_json.status_code)
+            DBSession.rollback()
             return
         dictionary_json = dictionary_json.json()
-        log.error(dictionary_json)
-        new_dictionary = Dictionary(client_id=dictionary_json['client_id'],
-                                    object_id=dictionary_json['object_id'],
-                                    parent_client_id=dictionary_json['parent_client_id'],
-                                    parent_object_id=dictionary_json['parent_object_id'])
+        if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
+            dictionary_json['category'] = 1
+        else:
+            dictionary_json['category'] = 0
+        new_jsons['dictionary'].append(dict2strippeddict(dictionary_json, Dictionary))
+        perspectives_json = make_request(central_server + 'dictionary/%s/%s/perspectives' % (client_id, object_id))
+        if perspectives_json.status_code != 200:
+            log.error('pesrps fail', perspectives_json.status_code)
+            DBSession.rollback()
+            return
+        perspectives_json = perspectives_json.json()
+        for perspective_json in perspectives_json:
+            if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
+                dictionary_json['category'] = 1
+            else:
+                dictionary_json['category'] = 0
+            new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
+            count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
+                client_id,
+                object_id,
+                perspective_json['client_id'],
+                perspective_json['object_id']))
+            if count_json.status_code != 200:
+                log.error('count fail', count_json.status_code)
+                DBSession.rollback()
+                return
+            count_json = count_json.json()
+            all_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all?start_from=0&count=%s' % (
+                client_id,
+                object_id,
+                perspective_json['client_id'],
+                perspective_json['object_id'],
+                count_json['count']))
+            if all_json.status_code != 200:
+                log.error('get all fail', all_json.status_code)
+                DBSession.rollback()
+                return
+            all_json = all_json.json()
+            for lexical_entry_json in all_json:
+                new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))
+                for entity_json in lexical_entry_json['contains']:
+                    if not entity_json.get('self_client_id'):
+                        new_jsons['entity'].append(dict2strippeddict(entity_json, Entity))
+                        new_jsons['publishingentity'].append(dict2strippeddict(entity_json, PublishingEntity))
+                        for inner_entity in entity_json['contains']:
+                            new_jsons['entity'].append(dict2strippeddict(inner_entity, Entity))
+                            new_jsons['publishingentity'].append(dict2strippeddict(inner_entity, PublishingEntity))
+        response = basic_tables_content(client_id, object_id)
+        # print(response)
+        for key in new_jsons:
+            new_jsons[key] = create_nested_content(new_jsons[key])
+
+        new_objects, new_entities, new_publishing_entities = create_objects(new_jsons, response)
+
+        DBSession.bulk_save_objects(new_objects)
+        create_new_entities(new_entities)
+        DBSession.bulk_save_objects(new_publishing_entities)
 
     return
 
