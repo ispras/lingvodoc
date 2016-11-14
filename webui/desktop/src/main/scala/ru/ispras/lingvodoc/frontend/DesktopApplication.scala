@@ -8,19 +8,16 @@ import ru.ispras.lingvodoc.frontend.app.services._
 
 import scala.scalajs.js.annotation.JSExport
 
-class DesktopConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) extends Config {
-
+class DesktopApplicationConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) extends Config {
   routeProvider
-    .when("/", Route("/static/templates/home.html", "Home", "HomeController"))
+    .when("/", Route("/static/templates/home.html", "DesktopHome", "HomeController"))
     .when("/login", Route("/static/templates/login.html", "Login", "LoginController"))
     .when("/logout", Route("/static/templates/logout.html", "Logout", "LogoutController"))
-    .when("/signup", Route("/static/templates/signup.html", "Logout", "SignupController"))
     .when("/dashboard", Route("/static/templates/dashboard.html", "Dashboard", "DashboardController"))
     .when("/corpora", Route("/static/templates/corpora.html", "Corpora", "CorporaController"))
     .when("/languages", Route("/static/templates/language.html", "Languages", "LanguageController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/view/:page?/:sortBy?", Route("/static/templates/viewDictionary.html", "ViewDictionary", "ViewDictionaryController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/edit/:page?/:sortBy?", Route("/static/templates/editDictionary.html", "EditDictionary", "EditDictionaryController"))
-    .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/publish/:page?/:sortBy?", Route("/static/templates/publishDictionary.html", "PublishDictionary", "PublishDictionaryController"))
     .when("/dictionary/:dictionaryClientId/:dictionaryObjectId/perspective/:perspectiveClientId/:perspectiveObjectId/contributions/:page?/:sortBy?", Route("/static/templates/contributions.html", "Contributions", "ContributionsController"))
     .when("/dictionary/create", Route("/static/templates/createDictionary.html", "CreateDictionary", "CreateDictionaryController"))
     .when("/corpora/create", Route("/static/templates/createCorpus.html", "CreateCorpus", "CreateCorpusController"))
@@ -35,19 +32,18 @@ object DesktopApplication {
 
   @JSExport
   def main() = {
-  Angular.module("LingvodocModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap"))
-      .config[DesktopConfig]
+  Angular.module("LingvodocDesktopModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap"))
+      .config[DesktopApplicationConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
-      //.factory[ExceptionHandlerFactory]
       .controller[MainController]
-      .controller[NavigationController]
-      .controller[LoginController]
+      .controller[desktop.NavigationController]
+      .controller[desktop.LoginController]
       .controller[LogoutController]
       .controller[SignupController]
       .controller[DashboardController]
       .controller[LanguageController]
-      .controller[HomeController]
+      .controller[desktop.HomeController]
       .controller[CreateLanguageController]
       .controller[CreateDictionaryController]
       .controller[CreateCorpusController]
@@ -59,7 +55,6 @@ object DesktopApplication {
       .controller[EditDictionaryController]
       .controller[PerspectiveMapController]
       .controller[ViewDictionaryController]
-      .controller[PublishDictionaryController]
       .controller[SoundMarkupController]
       .controller[ExceptionHandlerController]
       .controller[CreateFieldController]

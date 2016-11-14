@@ -264,7 +264,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
           dataTypes = d
           backend.getFields(dictionaryId, perspectiveId) flatMap { f =>
             fields = f
-            backend.getLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId, LexicalEntriesType.All) flatMap { count =>
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
               backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.All, offset, scope.size, sortBy) flatMap { entries =>

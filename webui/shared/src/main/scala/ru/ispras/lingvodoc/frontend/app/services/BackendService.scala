@@ -29,7 +29,7 @@ object LexicalEntriesType extends Enumeration {
 }
 
 @injectable("BackendService")
-class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Service with AngularExecutionContextProvider {
+class BackendService($http: HttpService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Service with AngularExecutionContextProvider {
 
   // TODO: allow user to specify different baseUrl
   private val baseUrl = ""
@@ -255,30 +255,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
     p.future
   }
 
-  /**
-    * Get dictionary
-    *
-    * @param clientId
-    * @param objectId
-    * @return
-    */
-  @deprecated("Deprecated in favor of getDictionary(dictionaryId: CompositeId)", "01-09-2016")
-  def getDictionary(clientId: Int, objectId: Int): Future[Dictionary] = {
-    val p = Promise[Dictionary]()
-    val url = "dictionary/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
-    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
-      case Success(response) =>
-        try {
-          p.success(read[Dictionary](js.JSON.stringify(response)))
-        } catch {
-          case e: upickle.Invalid.Json => p.failure(new BackendException("Malformed dictionary json:" + e.getMessage))
-          case e: upickle.Invalid.Data => p.failure(new BackendException("Malformed dictionary data. Missing some " +
-            "required fields: " + e.getMessage))
-        }
-      case Failure(e) => p.failure(new BackendException("Failed to get dictionary: " + e.getMessage))
-    }
-    p.future
-  }
 
   def getDictionary(dictionaryId: CompositeId): Future[Dictionary] = {
     val p = Promise[Dictionary]()
@@ -374,19 +350,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
   }
 
   // Perspectives
-
-  /**
-    * Get perspective by ids
-    *
-    * @param clientId
-    * @param objectId
-    * @return
-    */
-  @deprecated("Deprecated in favor of getPerspective(perspectiveId: CompositeId)", "01-09-2016")
-  def getPerspective(clientId: Int, objectId: Int): Future[Perspective] = {
-    getPerspective(CompositeId(clientId, objectId))
-  }
-
 
 
   def perspectives(published: Boolean = false): Future[Seq[Perspective]] = {
@@ -707,27 +670,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
     p.future
   }
 
-  /**
-    * Update perspective fields
-    *
-    * @param dictionary
-    * @param perspective
-    * @return
-    */
-  @deprecated("Use def updateFields(dictionaryId: CompositeId, perspectiveId: CompositeId, req: js.Dynamic): Future[Unit] instead", "01-09-2016")
-  def updateFields(dictionary: Dictionary, perspective: Perspective): Future[Unit] = {
-    val p = Promise[Unit]()
-    val url = "dictionary/" + encodeURIComponent(dictionary.clientId.toString) + "/" + encodeURIComponent(dictionary
-      .objectId.toString) + "/perspective/" + encodeURIComponent(perspective.clientId.toString) + "/" +
-      encodeURIComponent(perspective
-        .objectId.toString) + "/fields"
-    $http.post(getMethodUrl(url), write(perspective)) onComplete {
-      case Success(_) => p.success(())
-      case Failure(e) => p.failure(new BackendException("Failed to update perspective fields: " + e.getMessage))
-    }
-    p.future
-  }
-
   def updateFields(dictionaryId: CompositeId, perspectiveId: CompositeId, req: Seq[js.Dynamic]): Future[Unit] = {
     val p = Promise[Unit]()
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId
@@ -773,34 +715,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
           case e: Throwable => p.failure(BackendException("Unknown exception", e))
         }
       case Failure(e) => p.failure(BackendException("Failed to get perspective source", e))
-    }
-    p.future
-  }
-
-
-  /**
-    *
-    * @param dictionaryId
-    * @param perspectiveId
-    * @return
-    */
-  @deprecated("Use getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId, action: LexicalEntriesType): Future[Int] instead", "01-11-2016")
-  def getPublishedLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Int] = {
-    val p = Promise[Int]()
-
-    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) +
-      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
-      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
-      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/published_count"
-
-    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
-      case Success(response) =>
-        try {
-          p.success(response.count.asInstanceOf[Int])
-        } catch {
-          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
-        }
-      case Failure(e) => p.failure(new BackendException("Failed to get published lexical entries count: " + e.getMessage))
     }
     p.future
   }
@@ -1037,35 +951,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
 
 
 
-
-  /**
-    * Gets count of all lexical entries
-    *
-    * @param dictionaryId
-    * @param perspectiveId
-    * @return
-    */
-  @deprecated("Use getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId, action: LexicalEntriesType): Future[Int] instead", "01-11-2016")
-  def getLexicalEntriesCount(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Int] = {
-    val p = Promise[Int]()
-
-    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) +
-      "/" + encodeURIComponent(dictionaryId.objectId.toString) +
-      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) +
-      "/" + encodeURIComponent(perspectiveId.objectId.toString) + "/all_count"
-
-    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
-      case Success(response) =>
-        try {
-          p.success(response.count.asInstanceOf[Int])
-        } catch {
-          case e: Throwable => p.failure(new BackendException("Unknown exception:" + e.getMessage))
-        }
-      case Failure(e) => p.failure(new BackendException("Failed to get lexical entries count: " + e.getMessage))
-    }
-    p.future
-  }
-
   /**
     * Get list of dictionaries
     *
@@ -1099,35 +984,54 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
     * @param password
     * @return
     */
-  def login(username: String, password: String) = {
-    val defer = $q.defer[Int]()
+  def login(username: String, password: String): Future[Int] = {
+    val promise = Promise[Int]()
     val req = JSON.stringify(js.Dynamic.literal(login = username, password = password))
     $http.post[js.Dynamic](getMethodUrl("signin"), req) onComplete {
       case Success(response) =>
         try {
           val clientId = response.client_id.asInstanceOf[Int]
-          defer.resolve(clientId)
+          promise.success(clientId)
         } catch {
-          case e: Throwable => defer.reject("Unknown exception:" + e.getMessage)
+          case e: Throwable => promise.failure(BackendException("Unknown exception", e))
         }
-      case Failure(e) => defer.reject("Failed to sign in: " + e.getMessage)
+      case Failure(e) => promise.failure(BackendException("Login failure", e))
     }
-    defer.promise
+    promise.future
   }
+
+
+  def desktop_login(username: String, password: String): Future[Int] = {
+    val promise = Promise[Int]()
+    val req = JSON.stringify(js.Dynamic.literal(login = username, password = password))
+    $http.post[js.Dynamic](getMethodUrl("signin/desktop"), req) onComplete {
+      case Success(response) =>
+        try {
+          val clientId = response.client_id.asInstanceOf[Int]
+          promise.success(clientId)
+        } catch {
+          case e: Throwable => promise.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => promise.failure(BackendException("Login failure", e))
+    }
+    promise.future
+  }
+
+
+
 
   /**
     * Logout user
     *
     * @return
     */
-  def logout(): core.Promise[Unit] = {
-    val defer = $q.defer[Unit]()
+  def logout(): Future[Unit] = {
     val p = Promise[Unit]()
     $http.get[js.Dynamic](getMethodUrl("logout")) onComplete {
-      case Success(response) => defer.resolve(())
-      case Failure(e) => defer.reject(e.getMessage)
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to logout", e))
     }
-    defer.promise
+    p.future
   }
 
   /**
@@ -1142,14 +1046,14 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
     * @param year
     * @return
     */
-  def signup(login: String, name: String, password: String, email: String, day: Int, month: Int, year: Int) = {
-    val defer = $q.defer[Unit]()
+  def signup(login: String, name: String, password: String, email: String, day: Int, month: Int, year: Int): Future[Unit] = {
+    val p = Promise[Unit]()
     val req = JSON.stringify(js.Dynamic.literal(login = login, name = name, email = email, password = password, day = day, month = month, year = year))
     $http.post[js.Dynamic](getMethodUrl("signup"), req) onComplete {
-      case Success(response) => defer.resolve(())
-      case Failure(e) => defer.reject("Failed to sign up: " + e.getMessage)
+      case Success(response) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to sign up", e))
     }
-    defer.promise
+    p.future
   }
 
   /**
@@ -1233,26 +1137,25 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
   }
 
   def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
-    val defer = $q.defer[TranslationGist]()
+    val p = Promise[TranslationGist]()
     val url = "translationgist/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         try {
           val gist = read[TranslationGist](js.JSON.stringify(response))
-          defer.resolve(gist)
+          p.success(gist)
         } catch {
-          case e: upickle.Invalid.Json => defer.reject("Malformed translation gist json:" + e.getMessage)
-          case e: upickle.Invalid.Data => defer.reject("Malformed translation gist data. Missing some " + "required fields: " + e.getMessage)
-          case e: Throwable => defer.reject("Unexpected exception:" + e.getMessage)
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed translation gist json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed translation gist data. Missing some required fields", e))
+          case e: Throwable => p.failure(BackendException("Unexpected exception", e))
         }
-      case Failure(e) => defer.reject("Failed to get translation gist: " + e.getMessage)
+      case Failure(e) => p.failure(BackendException("Failed to get translation gist", e))
     }
-    defer.promise
+    p.future
   }
 
   def createTranslationGist(gistType: String): Future[CompositeId] = {
     val p = Promise[CompositeId]()
-
     val req = JSON.stringify(js.Dynamic.literal("type" -> gistType))
     $http.post[js.Dynamic](getMethodUrl("translationgist"), req) onComplete {
       case Success(response) =>
@@ -1266,23 +1169,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
       case Failure(e) => p.failure(BackendException("Failed to create translation gist", e))
     }
     p.future
-  }
-
-  @Deprecated
-  def translateLanguage(language: Language, localeId: Int): Future[Language] = {
-    val defer = $q.defer[Language]()
-
-    translationGist(language.translationGistClientId, language.translationGistObjectId) onComplete {
-      case Success(gist) =>
-        gist.atoms.find(atom => atom.localeId == localeId) match {
-          case Some(atom) => language.translation = atom.content
-          case None => throw new BackendException("Translation not found!")
-        }
-        defer.resolve(language)
-
-      case Failure(e) => defer.reject("Failed to get translation for language: " + e.getMessage)
-    }
-    defer.future
   }
 
   def createField(translationGist: CompositeId, dataTypeGist: CompositeId): Future[CompositeId] = {
@@ -1598,41 +1484,6 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
   }
 
 
-  @deprecated("Obsolete code", "27-10-2016")
-  def convertDictionary(languageId: CompositeId, fileId: CompositeId): Future[CompositeId] = {
-    val p = Promise[CompositeId]()
-
-    val req = js.Dynamic.literal("parent_client_id" -> languageId.clientId,
-      "parent_object_id" -> languageId.objectId,
-      "blob_client_id" -> fileId.clientId,
-      "blob_object_id" -> fileId.objectId)
-
-    $http.post(getMethodUrl("convert"), req) onComplete {
-      case Success(response) =>
-        try {
-          val id = read[CompositeId](js.JSON.stringify(response))
-          p.success(id)
-        } catch {
-          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to upload user file.", e))
-          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to upload user file.", e))
-        }
-      case Failure(e) => p.failure(BackendException("Failed to upload user file.", e))
-    }
-    p.future
-  }
-
-  @deprecated("Temporary disable due to digest-related problems", "27-10-2016")
-  def convertMarkup_old(entityId: CompositeId): Future[String] = {
-    val p = Promise[String]()
-    $http.post[js.Dynamic](getMethodUrl("convert/markup"), write(entityId)) onComplete {
-      case Success(response) =>
-        p.success(response.content.asInstanceOf[String])
-      case Failure(e) =>
-        p.failure(BackendException("Failed to convert markup", e))
-    }
-    p.future
-  }
-
   def convertMarkup(entityId: CompositeId): Future[String] = {
     val p = Promise[String]()
 
@@ -1724,10 +1575,47 @@ class BackendService($http: HttpService, $q: Q, val timeout: Timeout, val except
     p.future
   }
 
+  def getAvailableDesktopDictionaries: Future[Seq[Language]] = {
+    val p = Promise[Seq[Language]]()
+    val req = JSON.stringify(js.Dynamic.literal(group_by_lang = true, group_by_org = false))
+    $http.post[js.Dynamic](getMethodUrl("published_dictionaries/desktop"), req) onComplete {
+      case Success(response) =>
+        try {
+          val languages = read[Seq[Language]](js.JSON.stringify(response))
+          p.success(languages)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed dictionary json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed dictionary data. Missing some required fields", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of dictionaries: ", e))
+    }
+    p.future
+  }
+
+  def getAvailableDesktopPerspectives(published: Boolean = false): Future[Seq[Perspective]] = {
+    val p = Promise[Seq[Perspective]]()
+    var url = "perspectives/desktop"
+    if (published) {
+      url = addUrlParameter(url, "published", "true")
+    }
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(read[Seq[Perspective]](js.JSON.stringify(response)))
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed perspectives json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed perspectives data. Missing some " +
+            "required fields: ", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get perspective: ", e))
+    }
+    p.future
+  }
+
 
 }
 
 @injectable("BackendService")
-class BackendServiceFactory($http: HttpService, $q: Q, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Factory[BackendService] {
-  override def apply(): BackendService = new BackendService($http, $q, timeout, exceptionHandler)
+class BackendServiceFactory($http: HttpService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends Factory[BackendService] {
+  override def apply(): BackendService = new BackendService($http, timeout, exceptionHandler)
 }

@@ -222,7 +222,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
           dataTypes = d
           backend.getFields(dictionaryId, perspectiveId) flatMap { f =>
             fields = f
-            backend.getPublishedLexicalEntriesCount(dictionaryId, perspectiveId) flatMap { count =>
+            backend.getLexicalEntriesCount(dictionaryId, perspectiveId, LexicalEntriesType.Published) flatMap { count =>
               scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
               val offset = getOffset(scope.pageNumber, scope.size)
               backend.getLexicalEntries(dictionaryId, perspectiveId, LexicalEntriesType.Published, offset, scope.size, sortBy) flatMap { entries =>

@@ -414,7 +414,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
             backend.getFields(dictionaryId, linkPerspectiveId) onComplete {
               case Success(linkedFields) =>
 
-                backend.getLexicalEntriesCount(dictionaryId, linkPerspectiveId) onComplete {
+                backend.getLexicalEntriesCount(dictionaryId, linkPerspectiveId, LexicalEntriesType.All) onComplete {
                   case Success(count) =>
                     scope.pageCount = scala.math.ceil(count.toDouble / scope.size).toInt
                     backend.getLexicalEntries(dictionaryId, linkPerspectiveId, LexicalEntriesType.All, scope.offset, scope.size) onComplete {
