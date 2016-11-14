@@ -170,18 +170,18 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids, po
     return
 
 
-def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
+def object_file_path(obj, base_path, filename, create_dir=False):
     filename = sanitize_filename(filename)
-    storage_dir = os.path.join(base_path, obj.__tablename__, folder_name, str(obj.client_id), str(obj.object_id))
+    storage_dir = os.path.join(base_path, obj.__tablename__, str(obj.client_id), str(obj.object_id))
     if create_dir:
         os.makedirs(storage_dir, exist_ok=True)
     storage_path = os.path.join(storage_dir, filename)
     return storage_path, filename
 
 
-def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
+def create_object(content, obj, data_type, filename, storage, json_input=True):
     import errno
-    storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
+    storage_path, filename = object_file_path(obj, storage["path"], filename, True)
     directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
     try:
         os.makedirs(directory)
@@ -200,18 +200,18 @@ def create_object(content, obj, data_type, filename, folder_name, storage, json_
                    storage["static_route"],
                    obj.__tablename__,
                    '/',
-                   folder_name,
-                   '/',
                    str(obj.client_id), '/',
                    str(obj.object_id), '/',
                    filename))
+
     return real_location, url
 
 
 def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client_id, object_id, content=None, filename=None,
-                  link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2,
-                  storage=None):  # tested
+                  link_client_id=None, link_object_id=None,
+                  self_client_id=None, self_object_id=None, up_lvl=None, locale_id=2,
+                  storage=None, published = False, accepted = False):  # tested
     upper_level = None
     tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
         TranslationAtom.locale_id == 2,
@@ -221,14 +221,13 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
         TranslationGist.object_id == Field.data_type_translation_gist_object_id)).filter(
         Field.client_id == field_client_id, Field.object_id == field_object_id).first()
     data_type = tr_atom.content.lower()
-    if up_lvl:
-        upper_level = DBSession.query(Entity).filter_by(client_id=up_lvl[0],
-                                                        object_id=up_lvl[1]).first()
 
     entity = Entity(client_id=client_id,
                     object_id=object_id,
                     field_client_id=field_client_id,
                     field_object_id=field_object_id,
+                    self_client_id=self_client_id,
+                    self_object_id=self_object_id,
                     locale_id=locale_id,
                     additional_metadata=additional_metadata,
                     parent_client_id=le_client_id,
@@ -241,44 +240,42 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     real_location = None
     url = None
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
-        pass
-        ##entity.data_type = data_type
-        real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
+        real_location, url = create_object(content, entity, data_type, filename, storage)
         entity.content = url
         old_meta = entity.additional_metadata
         need_hash = True
         if old_meta:
-            new_meta = old_meta  # json.loads(old_meta)
-            if new_meta.get('hash'):
+            if old_meta.get('hash'):
                 need_hash = False
         if need_hash:
             hash = hashlib.sha224(base64.urlsafe_b64decode(content)).hexdigest()
             hash_dict = {'hash': hash}
             if old_meta:
-                new_meta = old_meta  # json.loads(old_meta)
-                new_meta.update(hash_dict)
+                old_meta.update(hash_dict)
             else:
-                new_meta = hash_dict
-            entity.additional_metadata = new_meta  # json.dumps(new_meta)
-        old_meta = entity.additional_metadata
-        if data_type == "markup":
-            data_type_dict = {"data_type": "praat markup"}
-            if old_meta:
-                new_meta = old_meta  # json.loads(old_meta)
-                new_meta.update(data_type_dict)
-            else:
-                new_meta = data_type_dict
-            entity.additional_metadata = new_meta  # json.dumps(new_meta)
+                old_meta = hash_dict
+            entity.additional_metadata = old_meta
+        if 'markup' in data_type:
+            name = filename.split('.')
+            ext = name[len(name) - 1]
+            if ext.lower() == 'textgrid':
+                data_type = 'praat markup'
+            elif ext.lower() == 'eaf':
+                data_type = 'elan markup'
+        entity.additional_metadata['data_type'] = data_type
     elif data_type == 'link':
         try:
-            pass
             entity.link_client_id = link_client_id
             entity.link_object_id = link_object_id
         except (KeyError, TypeError):
+            pass
             return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
     else:
         entity.content = content
-    entity.publishingentity.accepted = True
+    if published:
+        entity.publishingentity.published = True
+    if accepted:
+        entity.publishingentity.accepted = True
 
     DBSession.add(entity)
     # log.debug(filename)
@@ -288,7 +285,6 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
 def create_objects(server, existing):
     new_entries = list()
     new_entities = list()
-    new_publishing_entities = list()
     for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField, Entity, LexicalEntry,
                   PublishingEntity]:
         curr_server = server[table.__tablename__]
@@ -303,24 +299,22 @@ def create_objects(server, existing):
                             curr_old.append(kwargs)
                     else:
                         kwargs = curr_server[client_id][object_id]
-                        if table != Entity:
-                            if table != PublishingEntity:
-                                new_entries.append(table(**kwargs))
-                            else:
-                                new_publishing_entities.append(table(**kwargs))
-                        else:
+                        if table == Entity:
                             new_entities.append(kwargs)
+                        elif table == PublishingEntity:
+                            pass
+                        else:
+                            new_entries.append(table(**kwargs))
 
             else:
                 for object_id in curr_server[client_id]:
                     kwargs = curr_server[client_id][object_id]
-                    if table != Entity:
-                        if table != PublishingEntity:
-                            new_entries.append(table(**kwargs))
-                        else:
-                            new_publishing_entities.append(table(**kwargs))
-                    else:
+                    if table == Entity:
                         new_entities.append(kwargs)
+                    elif table == PublishingEntity:
+                        pass
+                    else:
+                        new_entries.append(table(**kwargs))
 
         all_entries = DBSession.query(table).all()
         for entry in all_entries:
@@ -335,7 +329,7 @@ def create_objects(server, existing):
                         entry.parent_client_id = curr_server[client_id][object_id]['parent_client_id']
                         entry.parent_object_id = curr_server[client_id][object_id]['parent_object_id']
         new_entries.extend(all_entries)
-    return new_entries, new_entities, new_publishing_entities
+    return new_entries, new_entities
 
 
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
@@ -388,25 +382,44 @@ def basic_tables_content(client_id, object_id):
     create_tmp_resp(PublishingEntity, query, response)
     return response
 
-
-
-#                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2,
+#                    folder_name=None, up_lvl=None, locale_id=2,
 #                   storage=None)
 
-def create_new_entities(new_entities):
+
+def create_new_entities(new_entities, storage):  # add queue
     for entity in new_entities:
-        content = entity['content']
+        # print(entity)
+        content = entity.get('content')
+        data_type = entity['data_type'].lower()
         filename = None
+        if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
+            full_name = content.split('/')
+            # print(full_name)
+            filename = full_name[len(full_name) - 1]
+            content = make_request(content)
+            if content.status_code != 200:
+                log.error(entity['content'])
+                DBSession.rollback()
+                return
+
+            content = content.content
+            content = base64.urlsafe_b64encode(content)
+
         create_entity(entity['parent_client_id'],
                       entity['parent_object_id'],
                       entity['field_client_id'],
                       entity['field_object_id'],
-                      entity['additional_metadata'],
+                      entity.get('additional_metadata'),
                       entity['client_id'],
                       entity['object_id'],
                       content,
                       filename,
-                      link_client_id='no'
+                      entity.get('link_client_id'),
+                      entity.get('link_object_id'),
+                      locale_id=entity.get('locale_id'),
+                      storage=storage,
+                      published = entity.get('published'),
+                      accepted = entity.get('accepted')
                       )
 
 
@@ -416,7 +429,6 @@ def create_new_entities(new_entities):
 def download(
         client_id,
         object_id,
-        sqlalchemy_url,
         central_server,
         storage
 ):  # :(
@@ -476,21 +488,23 @@ def download(
                 new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))
                 for entity_json in lexical_entry_json['contains']:
                     if not entity_json.get('self_client_id'):
-                        new_jsons['entity'].append(dict2strippeddict(entity_json, Entity))
+
+                        new_jsons['entity'].append(entity_json)
+
                         new_jsons['publishingentity'].append(dict2strippeddict(entity_json, PublishingEntity))
-                        for inner_entity in entity_json['contains']:
-                            new_jsons['entity'].append(dict2strippeddict(inner_entity, Entity))
+                        for inner_entity in entity_json['contains']:  # TODO: infinite nesting
+                            new_jsons['entity'].append(inner_entity)
                             new_jsons['publishingentity'].append(dict2strippeddict(inner_entity, PublishingEntity))
         response = basic_tables_content(client_id, object_id)
         # print(response)
         for key in new_jsons:
             new_jsons[key] = create_nested_content(new_jsons[key])
 
-        new_objects, new_entities, new_publishing_entities = create_objects(new_jsons, response)
+        new_objects, new_entities = create_objects(new_jsons, response)
 
         DBSession.bulk_save_objects(new_objects)
-        create_new_entities(new_entities)
-        DBSession.bulk_save_objects(new_publishing_entities)
+        create_new_entities(new_entities,storage=storage)
+        log.error('dictionary %s %s downloaded' % (client_id, object_id))
 
     return
 
@@ -498,14 +512,12 @@ def download(
 def download_dictionary(
         client_id,
         object_id,
-        sqlalchemy_url,
         central_server,
         storage
 ):
     download(
         client_id,
         object_id,
-        sqlalchemy_url,
         central_server,
         storage
     )

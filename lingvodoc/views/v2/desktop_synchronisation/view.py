@@ -22,7 +22,6 @@ def download_dictionary(request):  # TODO: test
     args = dict()
     args["client_id"] = req["client_id"]
     args["object_id"] = req["object_id"]
-    args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     args["central_server"] = request.registry.settings["desktop"]['central_server']
     args["storage"] = request.registry.settings["storage"]
     res = async_download_dictionary.delay(**args)
