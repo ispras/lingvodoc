@@ -48,12 +48,16 @@ def configure_routes(config):
     config.add_route(name='sync_signin', pattern='/signin/sync')
     config.add_route(name='cheatlogin', pattern='/cheatlogin')
 
-    config.add_route(name='basic_sync', pattern='/synchronisation/basic')
-    config.add_route(name='all_toc', pattern='/synchronisation/toc')
-    config.add_route(name='diff_server', pattern='/synchronisation/difference/server')
-    config.add_route(name='diff_desk', pattern='/synchronisation/difference')
-    config.add_route(name='basic_sync_server', pattern='/synchronisation/basic/server')
-    config.add_route(name='download_dictionary', pattern='/synchronisation/download')
+    config.add_route(name='basic_sync', pattern='/sync/basic')
+    config.add_route(name='all_toc', pattern='/sync/toc')
+    config.add_route(name='diff_server', pattern='/sync/difference/server')
+    config.add_route(name='diff_desk', pattern='/sync/difference')
+    config.add_route(name='basic_sync_server', pattern='/sync/basic/server')
+    config.add_route(name='basic_sync_desktop', pattern='/sync/basic/desktop')
+    config.add_route(name='download_dictionary', pattern='/sync/download')
+    config.add_route(name='download_all', pattern='/sync/all')
+    config.add_route(name='check_version', pattern='/sync/version')
+    config.add_route(name='version', pattern='/version')
 
     # web-view #POST
     config.add_route(name='logout', pattern='/logout')  # tested

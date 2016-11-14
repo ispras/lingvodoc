@@ -77,32 +77,71 @@ def create_nested_content(tmp_resp):
     return tmp_resp
 
 
-def basic_tables_content():
+def basic_tables_content(user_id = None, client_id=None):
     response = dict()
     for table in [Client, User, BaseGroup, Field, Locale, TranslationAtom, TranslationGist, Group, Language]:
         tmp_resp = [row2dict(entry) for entry in DBSession.query(table)]
         if tmp_resp:
             tmp_resp = create_nested_content(tmp_resp)
         response[table.__tablename__] = tmp_resp
-    response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
-
+    if not user_id:
+        response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
+    elif client_id:
+        tmp_resp = [row2dict(entry) for entry in DBSession.query(Group).filter_by(subject_client_id=client_id)]
+        if tmp_resp:
+            tmp_resp = create_nested_content(tmp_resp)
+        response['group'] = tmp_resp
+        response['user_to_group_association'] = DBSession.query(user_to_group_association)\
+            .join(Group).filter(user_to_group_association.c.user_id==user_id, Group.subject_client_id==client_id).all()
+    else:
+        response['user_to_group_association'] = DBSession.query(user_to_group_association).filter_by(user_id=user_id).all()
     return response
+
+
+@view_config(route_name='version', renderer='json', request_method='GET')
+def check_version(request):
+    return {}
+
+
+@view_config(route_name='check_version', renderer='json', request_method='GET')
+def check_version(request):
+    # from pyramid.request import Request  # todo: check version
+    # settings = request.registry.settings
+    # path = settings['desktop']['central_server'] + 'version'
+    # session = requests.Session()
+    # session.headers.update({'Connection': 'Keep-Alive'})
+    # with open('authentication_data.json', 'r') as f:
+    #     cookies = json.loads(f.read())
+    # adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+    # session.mount('http://', adapter)
+    # status = session.get(path, cookies=cookies)
+    # server_version = status.json()
+    #
+    # path = request.route_url('version')
+    # subreq = Request.blank(path)
+    # subreq.method = 'GET'
+    # subreq.headers = request.headers
+    # resp = request.invoke_subrequest(subreq)
+    return {}
 
 
 @view_config(route_name='basic_sync', renderer='json', request_method='POST')
 def basic_sync(request):
     import requests
+
     return_date_time = lambda r: {key: datetime.datetime.fromtimestamp(r[key]) if key == 'created_at' else r[key] for
                                   key in r}
     settings = request.registry.settings
     existing = basic_tables_content()
     # print(existing['locale'])
-    path = settings['desktop']['central_server'] + 'synchronisation/basic/server'
+    path = settings['desktop']['central_server'] + 'sync/basic/server'
+    with open('authentication_data.json', 'r') as f:
+        cookies = json.loads(f.read())
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
-    status = session.get(path)
+    status = session.get(path, cookies=cookies)
     server = status.json()
     new_entries = list()
     langs = list()
@@ -177,13 +216,42 @@ def basic_sync(request):
     new_entries.extend(parent_langs)
 
     DBSession.bulk_save_objects(new_entries)
+
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    if not client:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("Try to login again")}
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("Try to login again")}
+
+    for entry in server['user_to_group_association']:
+        group = DBSession.query(Group).filter_by(id=entry[1]).first()
+        if entry[0] == user.id and group not in user.groups:
+            user.groups.append(group)
     request.response.status = HTTPOk.code
     return HTTPOk(json_body={})
 
 
 @view_config(route_name='basic_sync_server', renderer='json', request_method='GET')
 def basic_sync_server(request):
-    return basic_tables_content()
+    client =DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    if client:
+        user =DBSession.query(User).filter_by(id=client.user_id).first()
+        return basic_tables_content(user.id)
+    request.response.status = HTTPNotFound.code
+    return {'error': str("Try to login again")}
+
+
+@view_config(route_name='basic_sync_desktop', renderer='json', request_method='GET')
+def basic_sync_desktop(request):
+    client =DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    if client:
+        user =DBSession.query(User).filter_by(id=client.user_id).first()
+        return basic_tables_content(user.id, client_id=client.id)
+    request.response.status = HTTPNotFound.code
+    return {'error': str("Try to login again")}
 
 
 @view_config(route_name='all_toc', renderer='json', request_method='GET')
@@ -230,7 +298,7 @@ def diff_desk(request):
     settings = request.registry.settings
     existing = [row2dict(entry) for entry in DBSession.query(ObjectTOC)]
     central_server = settings['desktop']['central_server']
-    path = central_server + 'synchronisation/difference/server'
+    path = central_server + 'sync/difference/server'
     server = make_request(path, 'post', existing).json()
     language = list()
     dictionary = list()

@@ -1,4 +1,4 @@
-from lingvodoc.scripts.desktop_synch import download_dictionary
+from lingvodoc.scripts.desktop_sync import download_dictionary
 from lingvodoc.queue.celery import celery
 
 
