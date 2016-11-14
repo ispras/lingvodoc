@@ -39,7 +39,7 @@ if sys.platform == 'darwin':
 
 import logging
 log = logging.getLogger(__name__)
-
+import json
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
@@ -131,6 +131,53 @@ def all_locales_desktop(request):
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
     session.mount('http://', adapter)
     status = session.get(path)
+    if status.status_code == 200:
+        request.response.status = HTTPOk.code
+        return status.json()
+    else:
+        print(status.status_code)
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'no connection'}
+
+
+@view_config(route_name='published_dictionaries_desktop', renderer='json', request_method='POST')
+def published_dictionaries_desktop(request):
+    req = request.json_body
+    import requests
+    settings = request.registry.settings
+    path = settings['desktop']['central_server'] + 'published_dictionaries'
+    session = requests.Session()
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+    session.mount('http://', adapter)
+
+    with open('authentication_data.json', 'r') as f:
+        cookies = json.loads(f.read())
+    status = session.post(path, json=req, cookies=cookies)
+    if status.status_code == 200:
+        request.response.status = HTTPOk.code
+        return status.json()
+    else:
+        print(status.status_code)
+        request.response.status = HTTPInternalServerError.code
+        return {'error':'no connection'}
+
+
+@view_config(route_name='all_perspectives_desktop', renderer='json', request_method='GET')
+def all_perspectives_desktop(request):
+    import requests
+    settings = request.registry.settings
+    path = settings['desktop']['central_server'] + 'perspectives'
+    published = request.params.get('published', None)
+    if published:
+        path += '?published=true'
+    session = requests.Session()
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+    session.mount('http://', adapter)
+    with open('authentication_data.json', 'r') as f:
+        cookies = json.loads(f.read())
+    status = session.get(path, cookies=cookies)
     if status.status_code == 200:
         request.response.status = HTTPOk.code
         return status.json()

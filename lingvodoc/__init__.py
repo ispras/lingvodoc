@@ -102,6 +102,7 @@ def configure_routes(config):
     config.add_route('dictionaries', 'dictionaries')
 
     config.add_route(name='published_dictionaries', pattern='/published_dictionaries')  # tested
+    config.add_route(name='published_dictionaries_desktop', pattern='/published_dictionaries/desktop')  # tested
 
     # API #GET
     # Perspective list
@@ -109,6 +110,7 @@ def configure_routes(config):
     #    a) template (param is_template=true/false)
     #    b) state  (param state=<state>)
     config.add_route('all_perspectives', '/perspectives')
+    config.add_route('all_perspectives_desktop', '/perspectives/desktop')
     config.add_route('all_perspectives_meta', '/perspectives_meta')
 
     # API #GET
