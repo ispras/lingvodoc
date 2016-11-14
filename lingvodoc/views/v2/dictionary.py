@@ -109,13 +109,13 @@ def create_dictionary(request):  # tested & in docs
                 dictionary.category = 1  # this is really wrong
         DBSession.add(dictionary)
         DBSession.flush()
-        # if not object_id:
-        #     for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-        #         new_group = Group(parent=base,
-        #                           subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
-        #         add_user_to_group(user, new_group)
-        #         DBSession.add(new_group)
-        #         DBSession.flush()
+        if not object_id:
+            for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+                new_group = Group(parent=base,
+                                  subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
+                add_user_to_group(user, new_group)
+                DBSession.add(new_group)
+                DBSession.flush()
         request.response.status = HTTPOk.code
         return {'object_id': dictionary.object_id,
                 'client_id': dictionary.client_id}

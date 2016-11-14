@@ -295,6 +295,15 @@ def make_request(path, req_type='get', json_data=None):
 
 @view_config(route_name='diff_desk', renderer='json', request_method='POST')
 def diff_desk(request):
+
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    if not client:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("Try to login again")}
+    user = DBSession.query(User).filter_by(id=client.user_id).first()
+    if not user:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("Try to login again")}
     settings = request.registry.settings
     existing = [row2dict(entry) for entry in DBSession.query(ObjectTOC)]
     central_server = settings['desktop']['central_server']
@@ -365,6 +374,11 @@ def diff_desk(request):
     for entry in userblobs:
         desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
                                                          object_id=entry['object_id']).one()
-        path = central_server + 'todo'  # todo: normal content upload
-        make_request(path, 'blob_upload', row2dict(desk_blob))
+        path = central_server + 'blob_upload'  # todo: normal content upload
+        make_request(path, 'post', row2dict(desk_blob))
+    for group in DBSession.query(Group).filter_by(subject_client_id=authenticated_userid(request)).all():
+        path = central_server + 'group'
+        gr_req = row2dict(group)
+        gr_req['users']=[user.id]
+        make_request(path, 'post', gr_req)
     return

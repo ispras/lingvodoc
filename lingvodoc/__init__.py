@@ -58,6 +58,8 @@ def configure_routes(config):
     config.add_route(name='download_all', pattern='/sync/all')
     config.add_route(name='check_version', pattern='/sync/version')
     config.add_route(name='version', pattern='/version')
+    config.add_route(name='create_group', pattern='/group',
+                     factory='lingvodoc.models.AuthenticatedAcl')
 
     # web-view #POST
     config.add_route(name='logout', pattern='/logout')  # tested
