@@ -526,7 +526,7 @@ class DictionaryPerspectiveToField(CompositeIdMixin,
     """
     __parentname__ = 'DictionaryPerspective'
     position = Column(Integer, nullable=False)
-    marked_for_deletion = Column(Boolean, default=False)
+    # marked_for_deletion = Column(Boolean, default=False)
 
 
 class DataTypeMixin(PrimeTableArgs):

@@ -50,6 +50,8 @@ EAF_TIERS = {
     "transcription": "Transcription",
     "translation": "Translation"
 }
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 def make_request(path, req_type='get', json_data=None):
@@ -59,6 +61,7 @@ def make_request(path, req_type='get', json_data=None):
     with open('authentication_data.json', 'r') as f:
         cookies = json.loads(f.read())
     session.mount('http://', adapter)
+    # log.error(path)
     if req_type == 'get':
         status = session.get(path, cookies=cookies)
     elif req_type == 'post':
@@ -209,8 +212,6 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client, content=None, filename=None,
                   link_client_id=None, link_object_id=None, folder_name=None, up_lvl=None, locale_id=2,
                   storage=None):  # tested
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
     parent = DBSession.query(LexicalEntry).filter_by(client_id=le_client_id, object_id=le_object_id).first()
     if not parent:
         return {'error': str("No such lexical entry in the system")}
@@ -296,7 +297,14 @@ def download(
     log.setLevel(logging.DEBUG)
     with transaction.manager:
         dictionary_json = make_request(central_server+'dictionary/%s/%s'%(client_id,object_id))
+        if dictionary_json.status_code != 200:
+            return
+        dictionary_json = dictionary_json.json()
         log.error(dictionary_json)
+        new_dictionary = Dictionary(client_id=dictionary_json['client_id'],
+                                    object_id=dictionary_json['object_id'],
+                                    parent_client_id=dictionary_json['parent_client_id'],
+                                    parent_object_id=dictionary_json['parent_object_id'])
 
     return
 

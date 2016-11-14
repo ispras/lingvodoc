@@ -63,21 +63,26 @@ from sqlalchemy.dialects.postgresql import insert
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
 
 
+def create_nested_content(tmp_resp):
+    if 'id' in tmp_resp[0]:
+        tmp_resp = {str(o['id']): o for o in tmp_resp}
+    else:
+        tmp_dict = dict()
+        for entry in tmp_resp:
+            if str(entry['client_id']) not in tmp_dict:
+                tmp_dict[str(entry['client_id'])] = {str(entry['object_id']): entry}
+            else:
+                tmp_dict[str(entry['client_id'])][str(entry['object_id'])] = entry
+        tmp_resp = tmp_dict
+    return tmp_resp
+
+
 def basic_tables_content():
     response = dict()
     for table in [Client, User, BaseGroup, Field, Locale, TranslationAtom, TranslationGist, Group, Language]:
         tmp_resp = [row2dict(entry) for entry in DBSession.query(table)]
         if tmp_resp:
-            if 'id' in tmp_resp[0]:
-                tmp_resp = {str(o['id']): o for o in tmp_resp}
-            else:
-                tmp_dict = dict()
-                for entry in tmp_resp:
-                    if str(entry['client_id']) not in tmp_dict:
-                        tmp_dict[str(entry['client_id'])] = {str(entry['object_id']): entry}
-                    else:
-                        tmp_dict[str(entry['client_id'])][str(entry['object_id'])] = entry
-                tmp_resp = tmp_dict
+            tmp_resp = create_nested_content(tmp_resp)
         response[table.__tablename__] = tmp_resp
     response['user_to_group_association'] = DBSession.query(user_to_group_association).all()
 
