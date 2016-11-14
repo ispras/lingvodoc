@@ -30,7 +30,7 @@ from lingvodoc.queue.mock.celery import MockApp
 
 log = logging.getLogger(__name__)
 parser = ConfigParser()
-parser.read('celery.ini')
+parser.read('celery.ini') # TODO: get a strings from the configuration file
 
 
 def _parse_celery_args():
@@ -48,6 +48,8 @@ def _parse_celery_args():
                 celery_kwargs[k] = v.split('\n')
             else:
                 celery_kwargs[k] = v
+            if k == 'celery':
+                celery_kwargs[k] = v
         for k, v in parser.items('queue:progress_redis'):
             progress_kwargs[k] = v
         return {
@@ -61,17 +63,17 @@ def _parse_celery_args():
         return None
 
 QUEUED_TASKS = None
-
 celery = None
 kwargs = _parse_celery_args()
-kwargs = None
-if kwargs is None:
+if kwargs:
+    if "celery" in kwargs:
+        if "celery" in kwargs["celery"]:
+            if kwargs["celery"]["celery"] == "true":
+                celery = Celery(**kwargs['celery'])
+                QUEUED_TASKS = TaskCache(kwargs['user_cache'], kwargs['task_cache'], kwargs['progress'])
+
+if celery is None:
     celery = MockApp()
     QUEUED_TASKS = MockTaskCache()
-else:
-    celery = Celery(**kwargs['celery'])
-    QUEUED_TASKS = TaskCache(kwargs['user_cache'], kwargs['task_cache'], kwargs['progress'])
 
-# TODO: get a connection string from the configuration file
-# celery_engine = create_engine('postgresql://postgres:@localhost/lingvodoc')
 celery_engine = None

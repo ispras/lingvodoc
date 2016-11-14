@@ -273,35 +273,6 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
 
 
 
-"""
-from sqlalchemy import and_
-import os
-import shutil
-import swiftclient.client as swiftclient
-def openstack_upload(settings, file, file_name, content_type,  container_name):
-    #storage = settings['storage']
-    #authurl = storage['authurl']
-    #user = storage['user']
-    #key = storage['key']
-    #auth_version = storage['auth_version']
-    #tenant_name = storage['tenant_name']
-    authurl = "http://10.10.10.121:5000/v2.0"
-    store = "http://adelaide.intra.ispras.ru/horizon/project/containers"
-    user = "admin"
-    key = "tester"
-    auth_version = "2.0"
-    tenant_name = "admin"
-    conn = swiftclient.Connection(authurl=authurl, user=user, key=key,  auth_version=auth_version,
-                                  tenant_name=tenant_name)
-    #storageurl = conn.get_auth()[0]
-    conn.put_container(container_name)
-    obje = conn.put_object(container_name, file_name,
-                    contents = file,
-                    content_type = content_type)
-    #obje = conn.get_object(container_name, file_name)
-    return str(obje)
-"""
-
 
 def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
     filename = sanitize_filename(filename)
@@ -314,20 +285,6 @@ def object_file_path(obj, base_path, folder_name, filename, create_dir=False):
 
 def create_object(content, obj, data_type, filename, folder_name, storage, json_input=True):
     import errno
-    # here will be object storage write as an option. Fallback (default) is filesystem write
-    #settings = request.registry.settings
-    #storage = "openstack" #settings['storage']
-    #if storage == 'openstack':
-    """
-    if json_input:
-        content = base64.urlsafe_b64decode(content)
-
-    # TODO: openstack objects correct naming
-    #filename = str(obj.data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
-    #real_location = openstack_upload(content, filename, obj.data_type, 'test')
-    filename = str(data_type) + '/' + str(obj.client_id) + '_' + str(obj.object_id)
-    real_location = openstack_upload(content,obj, filename, data_type, 'test')
-    """
     storage_path, filename = object_file_path(obj, storage["path"], folder_name, filename, True)
     directory = os.path.dirname(storage_path)  # TODO: find out, why object_file_path were not creating dir
     try:
@@ -393,6 +350,7 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
         ##entity.data_type = data_type
         real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
+        print(url)
         entity.content = url
         old_meta = entity.additional_metadata
         need_hash = True
@@ -427,16 +385,10 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
             return {'Error': "The field is of link type. You should provide client_id and object id in the content"}
     else:
         entity.content = content
-
     entity.publishingentity.accepted = True
-
-
-
     DBSession.add(entity)
     #log.debug(filename)
     return (entity.client_id, entity.object_id)
-
-
 
 def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
                         user_id, is_a_regular_form, client, storage):
@@ -475,13 +427,6 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             else:
                 filename = 'noname.noext'
             audio_hashes.add(audio_hash)
-
-            '''
-            if not is_a_regular_form:
-                audio_element['additional_metadata'] = json.dumps({"hash": audio_hash,
-                                                                   "client_id": client_id,
-                                                                   "row_id": cursor[4]})
-            '''
             audio_sequence.append((ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
                                     None, client, filename, audio))
             lvl = create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
@@ -547,12 +492,6 @@ def upload_audio(sound_ids, ids_map, fields_dict, sound_and_markup_cursor, audio
             else:
                 filename = 'noname.noext'
             audio_hashes.add(audio_hash)
-            '''
-            if not is_a_regular_form:
-                audio_element['additional_metadata'] = json.dumps({"hash": audio_hash,
-                                                                   "client_id": client_id,
-                                                                   "row_id": cursor[4]})
-            '''
             audio_sequence.append((ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
                                     None, client, filename, audio))
             lvl = create_entity(ids_map[int(word_id)][0], ids_map[int(word_id)][1], fields_dict[sound_field][0], fields_dict[sound_field][1],
@@ -582,6 +521,14 @@ def translation_service_search(searchstring):
     response = translationgist_contents(translationatom.parent)
     return response
 
+def translation_service_search_all(searchstring):
+    translationatom = DBSession.query(TranslationAtom)\
+        .join(TranslationGist).\
+        filter(TranslationAtom.content == searchstring,
+               TranslationAtom.locale_id == 2)\
+        .one()
+    response = translationgist_contents(translationatom.parent)
+    return response
 
 def create_gist(client_id, type):
     gist = TranslationGist(client_id=client_id, type=type)
@@ -600,7 +547,7 @@ def get_translation(translation_gist_client_id, translation_gist_object_id, loca
     return translation.content
 
 
-def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
+def convert_db_new( blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage,
                    locale_id=2):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
@@ -608,6 +555,14 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
     time.sleep(4)
     field_ids = {}
     with transaction.manager:
+        blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
+        # DBSession.flush()
+        filename = blob.real_storage_path
+        log.debug("user_id: %s" % user_id)
+        log.debug("Starting convert_one")
+        log.debug("Creating session")
+        sqconn = sqlite3.connect(filename)
+        log.debug("Connected to sqlite3 database")
         client = DBSession.query(Client).filter_by(id=user_id).first()
         if not client:
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
@@ -641,9 +596,10 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
             field_ids[name] = (field.client_id, field.object_id)
 
         DBSession.flush()
-        dict_attributes = get_dict_attributes(sqconn)
+
 
         """
+        dict_attributes = get_dict_attributes(sqconn)
         translationgist = TranslationGist(client_id=user_id, type="Dictionary")
         DBSession.add(translationgist)
         DBSession.flush()
@@ -654,74 +610,51 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
         parent_object_id = gist_object_id
 
         parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent.marked_for_deletion:
 
-            """
-            translationatom = TranslationAtom(client_id=client.id,
-                                              parent=parent,
-                                              locale_id=locale_id,
-                                              content=dict_attributes["dictionary_name"])
-            DBSession.add(translationatom)
+        """
+        translationatom = TranslationAtom(client_id=client.id,
+                                          parent=parent,
+                                          locale_id=locale_id,
+                                          content=dict_attributes["dictionary_name"])
+        DBSession.add(translationatom)
+        DBSession.flush()
+        atom_client_id = translationatom.client_id
+        atom_object_id = translationatom.object_id
+
+        log.debug(dict_attributes["dictionary_name"])
+        language_client_id = atom_client_id
+        language_object_id = atom_object_id
+        """
+        lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
+
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+        dictionary = Dictionary(client_id=user_id,
+                                state_translation_gist_object_id=state_translation_gist_object_id,
+                                state_translation_gist_client_id=state_translation_gist_client_id,
+                                parent=lang_parent,
+                                translation_gist_client_id=gist_client_id,
+                                translation_gist_object_id=gist_object_id
+                                      )
+                                #additional_metadata=additional_metadata)
+        DBSession.add(dictionary)
+        DBSession.flush()
+
+        dictionary_client_id = dictionary.client_id
+        dictionary_object_id = dictionary.object_id
+        for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
+            new_group = Group(parent=base,
+                              subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
+            if user not in new_group.users:
+                new_group.users.append(user)
+            DBSession.add(new_group)
             DBSession.flush()
-            atom_client_id = translationatom.client_id
-            atom_object_id = translationatom.object_id
-
-            log.debug(dict_attributes["dictionary_name"])
-            language_client_id = atom_client_id
-            language_object_id = atom_object_id
-            """
-            lang_parent = DBSession.query(Language).filter_by(client_id=language_client_id, object_id=language_object_id).first()
-
-            resp = translation_service_search("WiP")
-            state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
-            dictionary = Dictionary(client_id=user_id,
-                                    state_translation_gist_object_id=state_translation_gist_object_id,
-                                    state_translation_gist_client_id=state_translation_gist_client_id,
-                                    parent=lang_parent,
-                                    translation_gist_client_id=gist_client_id,
-                                    translation_gist_object_id=gist_object_id
-                                          )
-                                    #additional_metadata=additional_metadata)
-            DBSession.add(dictionary)
-            DBSession.flush()
-
-            dictionary_client_id = dictionary.client_id
-            dictionary_object_id = dictionary.object_id
-            for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
-                new_group = Group(parent=base,
-                                  subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
-                if user not in new_group.users:
-                    new_group.users.append(user)
-                DBSession.add(new_group)
-                DBSession.flush()
         """
         # FIRST PERSPECTIVE
         """
-        translationgist = TranslationGist(client_id=user_id, type="Dictionary")
-
-        DBSession.add(translationgist)
-        #####DBSession.flush()
-
-        gist_client_id = translationgist.client_id
-        gist_object_id = translationgist.object_id
-        parent_client_id = gist_client_id
-        parent_object_id = gist_object_id
-        locale_id = 2
-        parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent.marked_for_deletion:
-            persp_translationatom = TranslationAtom(client_id=client.id,
-                                              parent=parent,
-                                              locale_id=locale_id,
-                                              content="Лексические входы")
-            DBSession.add(persp_translationatom)
-            DBSession.flush()
-        persp_translation_gist_client_id = gist_client_id
-        persp_translation_gist_object_id = gist_object_id
-
-
+        resp = translation_service_search_all("Lexical Entries")
+        persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
         perspective = DictionaryPerspective(client_id=client.id, ###
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
@@ -752,28 +685,12 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
         """
         # SECOND PERSPECTIVE
         """
-        translationgist = TranslationGist(client_id=user_id, type="Dictionary")
-
-        DBSession.add(translationgist)
-        gist_client_id = translationgist.client_id
-        gist_object_id = translationgist.object_id
-        parent_client_id = gist_client_id
-        parent_object_id = gist_object_id
-        parent = DBSession.query(TranslationGist).filter_by(client_id=parent_client_id, object_id=parent_object_id).first()
-        if not parent.marked_for_deletion:
-            persp_translationatom = TranslationAtom(client_id=client.id,
-                                              parent=parent,
-                                              locale_id=locale_id,
-                                              content="Парадигмы")
-            DBSession.add(persp_translationatom)
-            DBSession.flush()
-        persp_translation_gist_client_id = gist_client_id
-        persp_translation_gist_object_id = gist_object_id
+        resp = translation_service_search_all("Paradigms")
+        persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         if not parent:
             return {'error': str("No such dictionary in the system")}
-        resp = translation_service_search("WiP")
-        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
+
         perspective = DictionaryPerspective(client_id=client.id, ### variables['auth']
                                             state_translation_gist_object_id=state_translation_gist_object_id,
                                             state_translation_gist_client_id=state_translation_gist_client_id,
@@ -979,36 +896,6 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
         markup_hashes = set()
         DBSession.flush()
         """
-        perspective_search = server_url + 'dictionary/%s/%s/perspective/%s/%s/all' % (dictionary['client_id'],
-                                                                                            dictionary['object_id'],
-                                                                                            perspective['client_id'],
-                                                                                            perspective['object_id'])
-        search_url = server_url + 'meta_search' \
-                                  '?perspective_client_id=%d&perspective_object_id=%d' % (perspective['client_id'],
-                                                                                       perspective['object_id'])
-
-        status = session.get(perspective_search)
-        lexes = json.loads(status.text)['lexical_entries']
-        sound_types = ['Sound', 'Paradigm sound']
-        markup_types = ['Praat markup', "Paradigm Praat markup"]
-        for lex in lexes:
-            for entry in lex['contains']:
-                meta = entry.get('additional_metadata')
-                if meta:
-                    hsh = meta.get('hash')
-                    if hsh:
-                        if entry['entity_type'] in sound_types:
-                            audio_hashes.add(hsh)
-                if entry.get('contains'):
-                    for ent in entry['contains']:
-                        meta = entry.get('additional_metadata')
-                        if meta:
-                            hsh = meta.get('hash')
-                            if hsh:
-                                if ent['entity_type'] in markup_types:
-                                    markup_hashes.add(hsh)
-        """
-        """
         Sound and Markup
         """
         audio_ids = set()
@@ -1069,29 +956,7 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
             # status = session.post(connect_url, json=item)
             # log.debug(status.text)
 
-        """
-        suggestions_url = server_url + 'merge/suggestions'
 
-        suggestions_params = {'threshold': 1.0,
-                              'levenstein': 0,
-                              'client_id': perspective['client_id'],
-                              'object_id': perspective['object_id']}
-        # status = session.post(suggestions_url, json=suggestions_params)
-
-        for entry in json.loads(status.text):
-            if entry['confidence'] >= 1.0:
-                first_entry = entry['suggestion'][0]
-                second_entry = entry['suggestion'][1]
-                lex_move_url = server_url + 'lexical_entry/%d/%d/move' % (second_entry['lexical_entry_client_id'],
-                                                                           second_entry['lexical_entry_object_id'])
-                move_params = {'client_id': first_entry['lexical_entry_client_id'],
-                               'object_id': first_entry['lexical_entry_object_id'],
-                               'real_delete': True}
-                # status = session.patch(lex_move_url, json=move_params)
-
-            else:
-                break
-        """
         dictionary = {}
         return dictionary
 
@@ -1099,19 +964,8 @@ def convert_db_new(sqconn, language_client_id, language_object_id, user_id, gist
 def convert_all(blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, sqlalchemy_url, storage):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
-    engine = create_engine(sqlalchemy_url)
-    DBSession.remove()
-    DBSession.configure(bind=engine)
-    blob = DBSession.query(UserBlobs).filter_by(client_id=blob_client_id, object_id=blob_object_id).first()
-    DBSession.flush()
-    filename = blob.real_storage_path
-    log.debug("user_id: %s" % user_id)
-    log.debug("Starting convert_one")
-    log.debug("Creating session")
-    sqconn = sqlite3.connect(filename)
-    log.debug("Connected to sqlite3 database")
     try:
-        status = convert_db_new( sqconn, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
+        status = convert_db_new(  blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
     except Exception as e:
         log.error("Converting failed")
         log.error(e.__traceback__)

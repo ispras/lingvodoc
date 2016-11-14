@@ -19,6 +19,8 @@ from pyramid.httpexceptions import (
 )
 from sqlalchemy.sql.expression import case, true, false
 
+from sqlalchemy.sql.functions import coalesce
+
 from sqlalchemy.orm import aliased
 
 from sqlalchemy import (
@@ -53,7 +55,8 @@ from lingvodoc.models import (
     TranslationAtom,
     TranslationGist,
     Field,
-    DictionaryPerspectiveToField
+    DictionaryPerspectiveToField,
+    UserBlobs
 )
 from lingvodoc.views.v2.utils import (
     cache_clients,
@@ -108,7 +111,13 @@ def perspectives_list(request):  # tested
             raise KeyError("Something wrong with the base", resp.json['error'])
 
     atom_perspective_name_alias = aliased(TranslationAtom, name="PerspectiveName")
-    persps = DBSession.query(DictionaryPerspective, TranslationAtom, atom_perspective_name_alias).filter(DictionaryPerspective.marked_for_deletion == False)
+    atom_perspective_name_fallback_alias = aliased(TranslationAtom, name="PerspectiveNameFallback")
+    persps = DBSession.query(DictionaryPerspective,
+                             TranslationAtom,
+                             coalesce(atom_perspective_name_alias.content,
+                                      atom_perspective_name_fallback_alias.content,
+                                      "No translation for your locale available").label("Translation")
+                             ).filter(DictionaryPerspective.marked_for_deletion == False)
     if is_template is not None:
         if type(is_template) == str:
             if is_template.lower() == 'true':
@@ -131,24 +140,51 @@ def perspectives_list(request):  # tested
                          and_(
                              TranslationAtom.parent_client_id == DictionaryPerspective.state_translation_gist_client_id,
                              TranslationAtom.parent_object_id == DictionaryPerspective.state_translation_gist_object_id)).filter(
-        TranslationAtom.locale_id == int(request.cookies['locale_id'])).join(atom_perspective_name_alias, and_(
-        atom_perspective_name_alias.parent_client_id == DictionaryPerspective.translation_gist_client_id,
-        atom_perspective_name_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id)).filter(
-        atom_perspective_name_alias.locale_id == int(request.cookies['locale_id']))
+        TranslationAtom.locale_id == int(request.cookies['locale_id'])).join(
+        atom_perspective_name_alias, and_(
+            atom_perspective_name_alias.parent_client_id == DictionaryPerspective.translation_gist_client_id,
+            atom_perspective_name_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id,
+            atom_perspective_name_alias.locale_id == int(request.cookies['locale_id'])), isouter=True).join(
+        atom_perspective_name_fallback_alias, and_(
+            atom_perspective_name_fallback_alias.parent_client_id == DictionaryPerspective.translation_gist_client_id,
+            atom_perspective_name_fallback_alias.parent_object_id == DictionaryPerspective.translation_gist_object_id,
+            atom_perspective_name_fallback_alias.locale_id == 2), isouter=True)
+
+    blobs = DBSession.query(UserBlobs).filter(UserBlobs.data_type == 'pdf').all()
+    blobs_fast_dict = {}
+    for blob in blobs:
+        if blob.client_id not in blobs_fast_dict:
+            blobs_fast_dict[blob.client_id] = dict()
+        blobs_fast_dict[blob.client_id][blob.object_id] = {'name': blob.name,
+                                                           'content': blob.content,
+                                                           'data_type': blob.data_type,
+                                                           'client_id': blob.client_id,
+                                                           'object_id': blob.object_id,
+                                                           'created_at': blob.created_at}
 
     row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
     perspectives = []
     for perspective in persps.all():
         resp = row2dict(perspective.DictionaryPerspective)
         resp['status'] = perspective.TranslationAtom.content or "Unknown state"
-        resp['created_at'] = str(perspective.DictionaryPerspective.created_at)
         if perspective.DictionaryPerspective.additional_metadata:
-            resp['additional_metadata'] = perspective.DictionaryPerspective.additional_metadata
-        resp['translation'] = perspective.PerspectiveName.content or "Unknown perspective name"
+            resp['additional_metadata'] = list(perspective.DictionaryPerspective.additional_metadata.keys())
+        else:
+            resp['additional_metadata'] = []
+        resp['translation'] = perspective.Translation or "Unknown perspective name"
 
-        # resp = view_perspective_from_object(request, perspective)
-        if 'error' not in resp:
-            perspectives.append(resp)
+        if perspective.DictionaryPerspective.additional_metadata:
+            if 'location' in perspective.DictionaryPerspective.additional_metadata:
+                resp['location'] = perspective.DictionaryPerspective.additional_metadata['location']
+            if 'info' in perspective.DictionaryPerspective.additional_metadata:
+                resp['info'] = perspective.DictionaryPerspective.additional_metadata['info']
+                info_list = resp['info'].get('content')
+                for info in info_list:
+                    blob_client_id, blob_object_id = info['info']['content']['client_id'], info['info']['content']['object_id']
+                    if blob_client_id in blobs_fast_dict and blob_object_id in blobs_fast_dict[blob_client_id]:
+                        resp['info']['content'] = blobs_fast_dict[blob_client_id][blob_object_id]
+        perspectives.append(resp)
+
     response = perspectives
     request.response.status = HTTPOk.code
 

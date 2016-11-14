@@ -46,7 +46,8 @@ import sqlalchemy
 from sqlalchemy import (
     func,
     and_,
-    or_
+    or_,
+    tuple_
 )
 from sqlalchemy.exc import IntegrityError
 
@@ -992,6 +993,7 @@ def dictionaries_list(request):  # TODO: test
     if author:
         user = DBSession.query(User).filter_by(id=author).first()
         dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
+        group_tuples = []
         isadmin = False
         for group in user.groups: # todo: LOOK AT ME this is really bad. rewrite me from group point of view
             if group.parent.dictionary_default:
@@ -1005,15 +1007,16 @@ def dictionaries_list(request):  # TODO: test
                 if group.subject_override:
                     isadmin = True
                     break
-                dicti = DBSession.query(Dictionary) \
-                    .join(DictionaryPerspective) \
-                    .filter_by(client_id=group.subject_client_id,
-                               object_id=group.subject_object_id) \
-                    .first()
-                if dicti:
-                    dcttmp = (dicti.client_id, dicti.object_id)
-                    if dcttmp not in dictstemp:
-                        dictstemp += [dcttmp]
+            group_tuples.append((group.subject_client_id, group.subject_object_id))
+
+        dicti = DBSession.query(Dictionary) \
+            .join(DictionaryPerspective) \
+            .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(group_tuples)) \
+            .all()
+        for d in dicti:
+            dcttmp = (d.client_id, d.object_id)
+            if dcttmp not in dictstemp:
+                dictstemp += [dcttmp]
         if not isadmin:
             dictionaries = [o for o in dictionaries if (o['client_id'], o['object_id']) in dictstemp]
     response['dictionaries'] = dictionaries
