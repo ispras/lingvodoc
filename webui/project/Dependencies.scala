@@ -5,12 +5,12 @@ import sbt.Keys._
 object Dependencies {
 
   object lib {
-    def jquery = "org.webjars" % "jquery" % "2.2.1"
+    def jquery = "org.webjars" % "jquery" % "2.2.1" force()
     def angular = "org.webjars" % "angularjs" % "1.5.8"
     def bootstrap = "org.webjars" % "bootstrap" % "3.3.7"
     def bootstrapUI = "org.webjars" % "angular-ui-bootstrap" % "1.3.3"
     def validator = "org.webjars.bower" % "bootstrap-validator" % "0.10.2"
-    def scalajsDom = "org.scala-js" %%%! "scalajs-dom" % "0.9.1"
+    def scalajsDom = "org.scala-js" %%%! "scalajs-dom" % "0.9.1" force()
     def upickle = "com.lihaoyi" %%%! "upickle" % "0.3.9"
     def scalaAngular = "com.greencatsoft" %%%! "scalajs-angular" % "0.8-SNAPSHOT"
     def pamphlet = "io.plasmap" %%%! "pamphlet" % "0.9-SNAPSHOT"

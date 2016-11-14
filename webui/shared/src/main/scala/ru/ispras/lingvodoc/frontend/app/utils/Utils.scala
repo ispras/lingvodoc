@@ -21,11 +21,6 @@ object Utils {
     acc
   }
 
-  @deprecated("deprecated in favor of userService", "01-09-2016")
-  def getUserId: Int = {
-    0
-  }
-
   /**
    * Gets data stored into data-lingvodoc attribute
    * @param key id of element

@@ -1,6 +1,6 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, RootScope, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{ExceptionHandler, RootScope, Scope, Timeout, Location}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.model._
@@ -21,7 +21,7 @@ trait NavigationScope extends Scope {
 
 @JSExport
 @injectable("NavigationController")
-class NavigationController(scope: NavigationScope, rootScope: RootScope, backend: BackendService, userService: UserService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
+class NavigationController(scope: NavigationScope, rootScope: RootScope, location: Location, backend: BackendService, userService: UserService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
 
   // get locale. fallback to english if no locale received from backend
   scope.locale = Utils.getLocale() match {
@@ -79,6 +79,15 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, backend
   // user logged out
   rootScope.$on("user.logout", () => {
     userService.removeUser()
+  })
+
+  rootScope.$on("$locationChangeStart", () => {
+    backend.getCurrentUser onComplete {
+      case Success(user) =>
+        userService.setUser(user)
+      case Failure(e) =>
+        userService.removeUser()
+    }
   })
 
   // initial
