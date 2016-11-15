@@ -5,7 +5,7 @@ import requests
 import json
 import hashlib
 import logging
-
+from multiprocessing.util import register_after_fork
 import os
 import base64
 import hashlib
@@ -22,7 +22,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import and_
 from lingvodoc.models import (
     Client,
-    DBSession,
+    DBSession as SyncDBSession,
     UserBlobs,
     TranslationAtom,
     TranslationGist,
@@ -38,6 +38,10 @@ from lingvodoc.models import (
     Group,
     PublishingEntity
 
+)
+
+from sqlalchemy.orm import (
+    sessionmaker,
 )
 
 from lingvodoc.scripts import elan_parser
@@ -97,7 +101,7 @@ def translationgist_contents(translationgist):
 
 
 def translation_service_search(searchstring):
-    translationatom = DBSession.query(TranslationAtom) \
+    translationatom = SyncDBSession.query(TranslationAtom) \
         .join(TranslationGist). \
         filter(TranslationAtom.content == searchstring,
                TranslationAtom.locale_id == 2,
@@ -109,15 +113,15 @@ def translation_service_search(searchstring):
 
 def update_perspective_fields(req, perspective_client_id, perspective_object_id, client):
     response = dict()
-    perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
+    perspective = SyncDBSession.query(DictionaryPerspective).filter_by(client_id=perspective_client_id,
                                                                    object_id=perspective_object_id).first()
-    client = DBSession.query(Client).filter_by(id=client.id).first()  # variables['auth']
+    client = SyncDBSession.query(Client).filter_by(id=client.id).first()  # variables['auth']
     if not client:
         raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
 
     if perspective and not perspective.marked_for_deletion:
         try:
-            link_gist = DBSession.query(TranslationGist) \
+            link_gist = SyncDBSession.query(TranslationGist) \
                 .join(TranslationAtom) \
                 .filter(TranslationGist.type == 'Service',
                         TranslationAtom.content == 'Link',
@@ -125,12 +129,12 @@ def update_perspective_fields(req, perspective_client_id, perspective_object_id,
             link_ids = {'client_id': link_gist.client_id, 'object_id': link_gist.object_id}
         except NoResultFound:
             return {'error': str("Something wrong with the base")}
-        fields = DBSession.query(DictionaryPerspectiveToField) \
+        fields = SyncDBSession.query(DictionaryPerspectiveToField) \
             .filter_by(parent=perspective) \
             .all()
-        DBSession.flush()
+        SyncDBSession.flush()
         for field in fields:  ## ?
-            DBSession.delete(field)
+            SyncDBSession.delete(field)
         position = 1
         for field in req:
             create_nested_field(field=field,
@@ -155,7 +159,7 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids, po
     if field.get('link'):
         field_object.link_client_id = field['link']['client_id']
         field_object.link_object_id = field['link']['object_id']
-    DBSession.flush()
+    SyncDBSession.flush()
     contains = field.get('contains', None)
     if contains:
         inner_position = 1
@@ -207,13 +211,13 @@ def create_object(content, obj, data_type, filename, storage, json_input=True):
     return real_location, url
 
 
-def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
+def create_entity(session, le_client_id, le_object_id, field_client_id, field_object_id,
                   additional_metadata, client_id, object_id, content=None, filename=None,
                   link_client_id=None, link_object_id=None,
                   self_client_id=None, self_object_id=None, up_lvl=None, locale_id=2,
                   storage=None, published = False, accepted = False):  # tested
     upper_level = None
-    tr_atom = DBSession.query(TranslationAtom).join(TranslationGist, and_(
+    tr_atom = session.query(TranslationAtom).join(TranslationGist, and_(
         TranslationAtom.locale_id == 2,
         TranslationAtom.parent_client_id == TranslationGist.client_id,
         TranslationAtom.parent_object_id == TranslationGist.object_id)).join(Field, and_(
@@ -277,12 +281,12 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     if accepted:
         entity.publishingentity.accepted = True
 
-    DBSession.add(entity)
+    session.add(entity)
     # log.debug(filename)
     return (entity.client_id, entity.object_id)
 
 
-def create_objects(server, existing):
+def create_objects(server, existing, session):
     new_entries = list()
     new_entities = list()
     for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField, Entity, LexicalEntry,
@@ -316,7 +320,7 @@ def create_objects(server, existing):
                     else:
                         new_entries.append(table(**kwargs))
 
-        all_entries = DBSession.query(table).all()
+        all_entries = session.query(table).all()
         for entry in all_entries:
             client_id = str(entry.client_id)
             object_id = str(entry.object_id)
@@ -355,27 +359,27 @@ def create_tmp_resp(table, query, response):
     response[table.__tablename__] = tmp_resp
 
 
-def basic_tables_content(client_id, object_id):
+def basic_tables_content(client_id, object_id, session):
     response = dict()
-    query = DBSession.query(Dictionary).filter_by(client_id=client_id,
+    query = session.query(Dictionary).filter_by(client_id=client_id,
                                                        object_id=object_id).all()
     create_tmp_resp(Dictionary, query, response)
-    query = DBSession.query(DictionaryPerspective).filter_by(parent_client_id=client_id,
+    query = session.query(DictionaryPerspective).filter_by(parent_client_id=client_id,
                                                              parent_object_id=object_id).all()
     create_tmp_resp(DictionaryPerspective, query, response)
-    query = DBSession.query(DictionaryPerspectiveToField).join(DictionaryPerspectiveToField.parent) \
+    query = session.query(DictionaryPerspectiveToField).join(DictionaryPerspectiveToField.parent) \
         .filter(DictionaryPerspective.parent_client_id == client_id,
                 DictionaryPerspective.parent_object_id == object_id).all()
     create_tmp_resp(DictionaryPerspectiveToField, query, response)
-    query = DBSession.query(LexicalEntry).join(LexicalEntry.parent) \
+    query = session.query(LexicalEntry).join(LexicalEntry.parent) \
         .filter(DictionaryPerspective.parent_client_id == client_id,
                 DictionaryPerspective.parent_object_id == object_id).all()
     create_tmp_resp(LexicalEntry, query, response)
-    query = DBSession.query(Entity).join(Entity.parent).join(LexicalEntry.parent) \
+    query = session.query(Entity).join(Entity.parent).join(LexicalEntry.parent) \
         .filter(DictionaryPerspective.parent_client_id == client_id,
                 DictionaryPerspective.parent_object_id == object_id).all()
     create_tmp_resp(Entity, query, response)
-    query = DBSession.query(PublishingEntity).join(PublishingEntity.parent).join(Entity.parent).join(
+    query = session.query(PublishingEntity).join(PublishingEntity.parent).join(Entity.parent).join(
         LexicalEntry.parent) \
         .filter(DictionaryPerspective.parent_client_id == client_id,
                 DictionaryPerspective.parent_object_id == object_id).all()
@@ -386,7 +390,7 @@ def basic_tables_content(client_id, object_id):
 #                   storage=None)
 
 
-def create_new_entities(new_entities, storage):  # add queue
+def create_new_entities(new_entities, storage, session):  # add queue
     for entity in new_entities:
         # print(entity)
         content = entity.get('content')
@@ -399,13 +403,14 @@ def create_new_entities(new_entities, storage):  # add queue
             content = make_request(content)
             if content.status_code != 200:
                 log.error(entity['content'])
-                DBSession.rollback()
+                session.rollback()
                 return
 
             content = content.content
             content = base64.urlsafe_b64encode(content)
 
-        create_entity(entity['parent_client_id'],
+        create_entity(session,
+                      entity['parent_client_id'],
                       entity['parent_object_id'],
                       entity['field_client_id'],
                       entity['field_object_id'],
@@ -419,7 +424,7 @@ def create_new_entities(new_entities, storage):  # add queue
                       locale_id=entity.get('locale_id'),
                       storage=storage,
                       published = entity.get('published'),
-                      accepted = entity.get('accepted')
+                      accepted = entity.get('accepted'),
                       )
 
 
@@ -433,83 +438,84 @@ def download(
         storage,
         sqlalchemy_url
 ):  # :(
-    from time import sleep
+
     engine = create_engine(sqlalchemy_url)
+    register_after_fork(engine, engine.dispose)
     log = logging.getLogger(__name__)
-    DBSession.configure(bind=engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
     log.setLevel(logging.DEBUG)
-    sleep(20)
-    with transaction.manager:
-        new_jsons = dict()
-        for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField,
-                      LexicalEntry, Entity, PublishingEntity]:
-            new_jsons[table.__tablename__] = list()
-        # new_entity_jsons = list()
-        dictionary_json = make_request(central_server + 'dictionary/%s/%s' % (client_id, object_id))
-        if dictionary_json.status_code != 200:
-            log.error('dict fail', dictionary_json.status_code)
-            DBSession.rollback()
-            return
-        dictionary_json = dictionary_json.json()
+    # with transaction.manager:
+    new_jsons = dict()
+    for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField,
+                  LexicalEntry, Entity, PublishingEntity]:
+        new_jsons[table.__tablename__] = list()
+    # new_entity_jsons = list()
+    dictionary_json = make_request(central_server + 'dictionary/%s/%s' % (client_id, object_id))
+    if dictionary_json.status_code != 200:
+        log.error('dict fail', dictionary_json.status_code)
+        session.rollback()
+        return
+    dictionary_json = dictionary_json.json()
+    if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
+        dictionary_json['category'] = 1
+    else:
+        dictionary_json['category'] = 0
+    new_jsons['dictionary'].append(dict2strippeddict(dictionary_json, Dictionary))
+    perspectives_json = make_request(central_server + 'dictionary/%s/%s/perspectives' % (client_id, object_id))
+    if perspectives_json.status_code != 200:
+        log.error('pesrps fail', perspectives_json.status_code)
+        session.rollback()
+        return
+    perspectives_json = perspectives_json.json()
+    for perspective_json in perspectives_json:
         if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
             dictionary_json['category'] = 1
         else:
             dictionary_json['category'] = 0
-        new_jsons['dictionary'].append(dict2strippeddict(dictionary_json, Dictionary))
-        perspectives_json = make_request(central_server + 'dictionary/%s/%s/perspectives' % (client_id, object_id))
-        if perspectives_json.status_code != 200:
-            log.error('pesrps fail', perspectives_json.status_code)
-            DBSession.rollback()
+        new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
+        count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id']))
+        if count_json.status_code != 200:
+            log.error('count fail', count_json.status_code)
+            session.rollback()
             return
-        perspectives_json = perspectives_json.json()
-        for perspective_json in perspectives_json:
-            if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
-                dictionary_json['category'] = 1
-            else:
-                dictionary_json['category'] = 0
-            new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
-            count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
-                client_id,
-                object_id,
-                perspective_json['client_id'],
-                perspective_json['object_id']))
-            if count_json.status_code != 200:
-                log.error('count fail', count_json.status_code)
-                DBSession.rollback()
-                return
-            count_json = count_json.json()
-            all_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all?start_from=0&count=%s' % (
-                client_id,
-                object_id,
-                perspective_json['client_id'],
-                perspective_json['object_id'],
-                count_json['count']))
-            if all_json.status_code != 200:
-                log.error('get all fail', all_json.status_code)
-                DBSession.rollback()
-                return
-            all_json = all_json.json()
-            for lexical_entry_json in all_json:
-                new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))
-                for entity_json in lexical_entry_json['contains']:
-                    if not entity_json.get('self_client_id'):
+        count_json = count_json.json()
+        all_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all?start_from=0&count=%s' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id'],
+            count_json['count']))
+        if all_json.status_code != 200:
+            log.error('get all fail', all_json.status_code)
+            session.rollback()
+            return
+        all_json = all_json.json()
+        for lexical_entry_json in all_json:
+            new_jsons['lexicalentry'].append(dict2strippeddict(lexical_entry_json, LexicalEntry))
+            for entity_json in lexical_entry_json['contains']:
+                if not entity_json.get('self_client_id'):
 
-                        new_jsons['entity'].append(entity_json)
+                    new_jsons['entity'].append(entity_json)
 
-                        new_jsons['publishingentity'].append(dict2strippeddict(entity_json, PublishingEntity))
-                        for inner_entity in entity_json['contains']:  # TODO: infinite nesting
-                            new_jsons['entity'].append(inner_entity)
-                            new_jsons['publishingentity'].append(dict2strippeddict(inner_entity, PublishingEntity))
-        response = basic_tables_content(client_id, object_id)
-        # print(response)
-        for key in new_jsons:
-            new_jsons[key] = create_nested_content(new_jsons[key])
+                    new_jsons['publishingentity'].append(dict2strippeddict(entity_json, PublishingEntity))
+                    for inner_entity in entity_json['contains']:  # TODO: infinite nesting
+                        new_jsons['entity'].append(inner_entity)
+                        new_jsons['publishingentity'].append(dict2strippeddict(inner_entity, PublishingEntity))
+    response = basic_tables_content(client_id, object_id, session)
+    # print(response)
+    for key in new_jsons:
+        new_jsons[key] = create_nested_content(new_jsons[key])
 
-        new_objects, new_entities = create_objects(new_jsons, response)
+    new_objects, new_entities = create_objects(new_jsons, response, session)
 
-        DBSession.bulk_save_objects(new_objects)
-        create_new_entities(new_entities,storage=storage)
-        log.error('dictionary %s %s downloaded' % (client_id, object_id))
+    session.bulk_save_objects(new_objects)
+    create_new_entities(new_entities, storage=storage, session=session)
+    log.info('dictionary %s %s downloaded' % (client_id, object_id))
 
     return
 
