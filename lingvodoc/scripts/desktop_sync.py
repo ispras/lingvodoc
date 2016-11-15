@@ -280,8 +280,8 @@ def create_entity(session, le_client_id, le_object_id, field_client_id, field_ob
         entity.publishingentity.published = True
     if accepted:
         entity.publishingentity.accepted = True
-
-    session.add(entity)
+    # TODO: it's very dirty unstable hack, fix it ASAP later (need to divide sync and async logic strictly)
+    SyncDBSession.add(entity)
     # log.debug(filename)
     return (entity.client_id, entity.object_id)
 
