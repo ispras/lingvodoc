@@ -14,6 +14,7 @@ from lingvodoc.models import (
     BaseGroup,
     User,
     DictionaryPerspective,
+    DictionaryPerspectiveToField,
     Field,
     Client,
     Group
@@ -252,15 +253,50 @@ def create_group(request):
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-        group = Group(id=req['id'],
-                         base_group_id=req['base_group_id'],
-                         subject_client_id=req['subject_client_id'],
-                         subject_object_id=req['subject_object_id'])
-        DBSession.add(group)
-        for user_id in req['users']:
-            curr_user = DBSession.query(User).filter_by(id=user_id).first()
-            if curr_user not in group.users:
-                group.users.append(curr_user)
+        if not DBSession.query(Group).filter_by(id=req['id']).first():
+            group = Group(id=req['id'],
+                             base_group_id=req['base_group_id'],
+                             subject_client_id=req['subject_client_id'],
+                             subject_object_id=req['subject_object_id'])
+            DBSession.add(group)
+            for user_id in req['users']:
+                curr_user = DBSession.query(User).filter_by(id=user_id).first()
+                if curr_user not in group.users:
+                    group.users.append(curr_user)
+
+        return {}
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+@view_config(route_name='create_persp_to_field', renderer='json', request_method='POST', permission='edit')  # todo: other permission?
+def create_persp_to_field(request):
+    try:
+        variables = {'auth': request.authenticated_userid}
+
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        if not client:
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.",
+                           variables['auth'])
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+        if not DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=req['client_id'], object_id=req['object_id']).first():
+            field_object = DictionaryPerspectiveToField(client_id=req['client_id'],
+                                                        object_id=req['object_id'],
+                                                        parent_client_id=req['parent_client_id'],
+                                                        parent_object_id=req['parent_object_id'],
+                                                        field_client_id=req['field_client_id'],
+                                                        field_object_id=req['field_object_id'],
+                                                        self_client_id=req['self_client_id'],
+                                                        self_object_id=req['self_object_id'],
+                                                        position=req['position'])
+            DBSession.add(field_object)
 
         return {}
     except KeyError as e:

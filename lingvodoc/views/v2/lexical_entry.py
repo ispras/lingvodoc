@@ -209,7 +209,11 @@ def create_lexical_entry(request):  # tested
         dictionary_object_id = request.matchdict.get('dictionary_object_id')
         perspective_client_id = request.matchdict.get('perspective_client_id')
         perspective_object_id = request.matchdict.get('perspective_object_id')
-        object_id = request.json_body.get('object_id', None)
+        try:
+
+            object_id = request.json_body.get('object_id', None)
+        except ValueError:
+            object_id=None
 
         variables = {'auth': request.authenticated_userid}
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
