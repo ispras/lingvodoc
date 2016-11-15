@@ -516,7 +516,8 @@ def download(
     session.bulk_save_objects(new_objects)
     create_new_entities(new_entities, storage=storage, session=session)
     log.info('dictionary %s %s downloaded' % (client_id, object_id))
-
+    session.commit()
+    engine.dispose()
     return
 
 
