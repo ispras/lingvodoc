@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" ng-app="LingvodocDesktopModule" ng-cloak>
+<html lang="en" ng-app="LingvodocModule" ng-cloak>
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -15,11 +15,11 @@
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/lingvodoc.css')}"/>
     <link rel="stylesheet" type="text/css" href="${request.static_url('lingvodoc:static/css/leaflet.css')}"/>
 
-    <script src="${request.static_url('lingvodoc:static/js/desktop-jsdeps.js')}"></script>
-    <script src="${request.static_url('lingvodoc:static/js/desktop-fastopt.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/webui-jsdeps.js')}"></script>
+    <script src="${request.static_url('lingvodoc:static/js/webui-fastopt.js')}"></script>
 
     <script type="text/javascript">
-        ru.ispras.lingvodoc.frontend.DesktopApplication().main();
+        ru.ispras.lingvodoc.frontend.LingvodocApplication().main();
     </script>
 
 </head>

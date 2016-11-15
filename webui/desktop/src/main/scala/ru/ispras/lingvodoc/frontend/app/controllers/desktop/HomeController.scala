@@ -3,10 +3,11 @@ package ru.ispras.lingvodoc.frontend.app.controllers.desktop
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import com.greencatsoft.angularjs.core._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
-import ru.ispras.lingvodoc.frontend.app.model.{Dictionary, Language, Perspective, PerspectiveMeta}
+import ru.ispras.lingvodoc.frontend.app.model.{Location => _, _}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
+import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
@@ -38,7 +39,6 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
     perspectiveMeta.find(_.getId == perspective.getId).flatMap(_.metaData.authors.map(_.authors)).orUndefined
   }
 
-  //ng-checked="controller.isDictionarySelected(dictionary)" ng-click="controller.toggleSelection(dictionary)"
 
   @JSExport
   def isDictionarySelected(dictionary: Dictionary): Boolean = {
@@ -56,11 +56,10 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
 
   @JSExport
   def download() = {
-    import org.scalajs.dom.console
-    console.log(selectedDictionaries.toJSArray)
+    Future.sequence(selectedDictionaries.map(dictionary => backend.syncDownloadDictionary(CompositeId.fromObject(dictionary)))) foreach { _ =>
+
+    }
   }
-
-
 
   override protected def onLoaded[T](result: T): Unit = {
 

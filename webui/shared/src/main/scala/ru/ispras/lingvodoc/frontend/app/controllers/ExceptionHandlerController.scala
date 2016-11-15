@@ -24,8 +24,6 @@ class ExceptionHandlerController(scope: ExceptionHandlerScope,
     case e: Throwable =>
       scope.message = e.getMessage
 
-
-
       e.getCause match {
         case cause: Throwable =>
           scope.causeMessage = e.getCause.getMessage

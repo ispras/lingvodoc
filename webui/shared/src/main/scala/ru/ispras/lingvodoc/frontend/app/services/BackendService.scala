@@ -1002,22 +1002,38 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
 
   def desktop_login(username: String, password: String): Future[Int] = {
-    val promise = Promise[Int]()
-    val req = JSON.stringify(js.Dynamic.literal(login = username, password = password))
-    $http.post[js.Dynamic](getMethodUrl("signin/desktop"), req) onComplete {
-      case Success(response) =>
+    val p = Promise[Int]()
+    val req = js.Dynamic.literal(login = username, password = password)
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("POST", getMethodUrl("signin/desktop"))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+    xhr.onload = { (e: dom.raw.Event) =>
+      if (xhr.status == 200) {
         try {
-          val clientId = response.client_id.asInstanceOf[Int]
-          promise.success(clientId)
+          val clientId = xhr.responseText.toInt
+          p.success(clientId)
         } catch {
-          case e: Throwable => promise.failure(BackendException("Unknown exception", e))
+          case e: Throwable =>
+            p.failure(BackendException("Failed to login", e))
         }
-      case Failure(e) => promise.failure(BackendException("Login failure", e))
+      } else {
+
+        try {
+          val response: Dynamic = JSON.parse(xhr.responseText)
+          if (!js.isUndefined(response.error)) {
+            val errorMessage = "Failed to login: " + response.error.asInstanceOf[String]
+            p.failure(new BackendException(errorMessage))
+          } else {
+            p.failure(new BackendException("Failed to login"))
+          }
+        } catch {
+          case e: Throwable => p.failure(BackendException("Failed to login, unexpected exception", e))
+        }
+      }
     }
-    promise.future
+    xhr.send(JSON.stringify(req))
+    p.future
   }
-
-
 
 
   /**
@@ -1608,6 +1624,28 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
             "required fields: ", e))
         }
       case Failure(e) => p.failure(BackendException("Failed to get perspective: ", e))
+    }
+    p.future
+  }
+
+  def syncDownloadDictionary(dictionaryId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    $http.post[js.Dynamic]("sync/download") onComplete {
+      case Success(response) =>
+          p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to download dictionary", e))
+    }
+    p.future
+  }
+
+
+  def syncAll(): Future[Unit] = {
+    val p = Promise[Unit]()
+    $http.post[js.Dynamic]("sync/all") onComplete {
+      case Success(response) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to synchronize", e))
     }
     p.future
   }
