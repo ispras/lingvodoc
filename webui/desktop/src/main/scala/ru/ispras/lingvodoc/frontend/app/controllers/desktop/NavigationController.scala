@@ -17,12 +17,15 @@ trait NavigationScope extends Scope {
   var locale: Int = js.native
   var locales: js.Array[Locale] = js.native
   var selectedLocale: Locale = js.native
+  var syncEnabled: Boolean = js.native
 }
 
 @JSExport
 @injectable("NavigationController")
 class NavigationController(scope: NavigationScope, rootScope: RootScope, location: Location, backend: BackendService, userService: UserService, val timeout: Timeout, val exceptionHandler: ExceptionHandler) extends AbstractController[NavigationScope](scope) with AngularExecutionContextProvider {
 
+
+  scope.syncEnabled = true
   // get locale. fallback to english if no locale received from backend
   scope.locale = Utils.getLocale() match {
     case Some(serverLocale) => serverLocale
@@ -65,6 +68,18 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
     }.getOrElse(scope.locales.head)
   }
 
+  @JSExport
+  def sync() = {
+    scope.syncEnabled = false
+    backend.syncAll() map { _ =>
+      scope.syncEnabled = true
+    } recover {
+      case e: Throwable =>
+        scope.syncEnabled = true
+    }
+  }
+
+
   // user logged in
   rootScope.$on("user.login", () => {
     backend.getCurrentUser onComplete {
@@ -81,11 +96,12 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
   })
 
   // redirect all unauthenticated users to login page
-  rootScope.$on("$locationChangeStart", (angularEvent: Event) => {
+  rootScope.$on("$locationChangeStart", (event: Event) => {
     backend.getCurrentUser onComplete {
       case Success(user) =>
         userService.setUser(user)
       case Failure(e) =>
+        event.preventDefault()
         userService.removeUser()
         location.path("/login")
     }

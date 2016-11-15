@@ -1,7 +1,9 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.desktop
 
 import com.greencatsoft.angularjs.core._
+import com.greencatsoft.angularjs.extensions.ModalService
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.ErrorModalHandler
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.scalajs.js
@@ -22,15 +24,18 @@ class LoginController(scope: LoginScope,
                       val rootScope: RootScope,
                       val location: Location,
                       val backend: BackendService,
+                      val modalService: ModalService,
                       val timeout: Timeout,
                       val exceptionHandler: ExceptionHandler)
   extends AbstractController(scope)
     with AngularExecutionContextProvider
+    with ErrorModalHandler
 {
   scope.username = ""
   scope.password = ""
   scope.remember = true
   scope.lastError = false
+
 
   @JSExport
   def login() = {
@@ -47,6 +52,7 @@ class LoginController(scope: LoginScope,
           // Login failed
           scope.password = ""
           scope.lastError = true
+          showError(e)
       }
     }
   }

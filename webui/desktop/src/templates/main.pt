@@ -90,6 +90,12 @@
                     </ul>
                 </li>
 
+                <li ng-if="controller.isAuthenticated()">
+                    <p class="navbar-btn">
+                        <button type="button" class="btn btn-default" ng-click="controller.sync()" ng-enabled="scope.syncEnabled">Sync</button>
+                    </p>
+                </li>
+
             </ul>
         </div>
     </div>
