@@ -964,6 +964,8 @@ def convert_all(blob_client_id, blob_object_id, language_client_id, language_obj
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     try:
+        engine = create_engine(sqlalchemy_url)
+        DBSession.configure(bind=engine)
         status = convert_db_new(  blob_client_id, blob_object_id, language_client_id, language_object_id, user_id, gist_client_id, gist_object_id, storage)
     except Exception as e:
         log.error("Converting failed")

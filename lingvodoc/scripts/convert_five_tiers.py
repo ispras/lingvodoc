@@ -654,7 +654,8 @@ def convert_all(language_client_id,
                 eaf_url,
                 sound_url=None
                 ):
-
+    engine = create_engine(sqlalchemy_url)
+    DBSession.configure(bind=engine)
     convert_five_tiers(
                 language_client_id,
                 language_object_id,
