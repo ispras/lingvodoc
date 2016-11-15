@@ -24,6 +24,7 @@ def download_dictionary(request):  # TODO: test
     args["object_id"] = req["object_id"]
     args["central_server"] = request.registry.settings["desktop"]['central_server']
     args["storage"] = request.registry.settings["storage"]
+    args['sqlalchemy_url'] = request.registry.settings["sqlalchemy.url"]
     res = async_download_dictionary.delay(**args)
     # async_convert_dictionary_new(user_id, req['blob_client_id'], req['blob_object_id'], req["language_client_id"], req["language_object_id"], req["gist_client_id"], req["gist_object_id"], request.registry.settings["sqlalchemy.url"], request.registry.settings["storage"])
     log.debug("Conversion started")
