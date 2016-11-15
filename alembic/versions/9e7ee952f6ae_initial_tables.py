@@ -192,6 +192,7 @@ def upgrade():
     sa.Column('field_object_id', SLBigInteger(), nullable=False),
     sa.Column('link_client_id', SLBigInteger(), nullable=True),
     sa.Column('link_object_id', SLBigInteger(), nullable=True),
+    sa.Column('marked_for_deletion', sa.Boolean(), nullable=False),
     sa.Column('position', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['field_client_id', 'field_object_id'], ['field.client_id', 'field.object_id'], ),
     sa.ForeignKeyConstraint(['link_client_id', 'link_object_id'], ['dictionaryperspective.client_id', 'dictionaryperspective.object_id'], ),

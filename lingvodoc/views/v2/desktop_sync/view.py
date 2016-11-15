@@ -10,7 +10,7 @@ from pyramid.httpexceptions import (
     HTTPOk,
     HTTPNotFound
 )
-from lingvodoc.views.v2.desktop_synchronisation.core import async_download_dictionary
+from lingvodoc.views.v2.desktop_sync.core import async_download_dictionary
 
 
 log = logging.getLogger(__name__)
