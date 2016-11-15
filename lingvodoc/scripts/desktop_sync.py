@@ -430,10 +430,15 @@ def download(
         client_id,
         object_id,
         central_server,
-        storage
+        storage,
+        sqlalchemy_url
 ):  # :(
+    from time import sleep
+    engine = create_engine(sqlalchemy_url)
     log = logging.getLogger(__name__)
+    DBSession.configure(bind=engine)
     log.setLevel(logging.DEBUG)
+    sleep(20)
     with transaction.manager:
         new_jsons = dict()
         for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField,
@@ -513,11 +518,13 @@ def download_dictionary(
         client_id,
         object_id,
         central_server,
-        storage
+        storage,
+        sqlalchemy_url
 ):
     download(
         client_id,
         object_id,
         central_server,
-        storage
+        storage,
+        sqlalchemy_url
     )
