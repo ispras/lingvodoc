@@ -350,7 +350,6 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
     if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
         ##entity.data_type = data_type
         real_location, url = create_object(content, entity, data_type, filename, folder_name, storage)
-        print(url)
         entity.content = url
         old_meta = entity.additional_metadata
         need_hash = True
