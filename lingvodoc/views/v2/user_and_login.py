@@ -21,7 +21,8 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPInternalServerError,
     HTTPOk,
-    HTTPUnauthorized
+    HTTPUnauthorized,
+    HTTPServiceUnavailable
 )
 from pyramid.renderers import render_to_response
 from pyramid.response import Response
@@ -197,39 +198,42 @@ def desk_signin(request):
     import requests
     req = request.json_body
     settings = request.registry.settings
-
-    path = settings['desktop']['central_server'] + 'signin'
-    session = requests.Session()
-    session.headers.update({'Connection': 'Keep-Alive'})
-    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
-    session.mount('http://', adapter)
-    status = session.post(path, json=req)
-    client_id = status.json()['client_id']
-    cookies = status.cookies.get_dict()
-    with open('authentication_data.json', 'w') as f:
-        f.write(json.dumps(cookies))
-    if status.status_code == 200:
-        path = request.route_url('basic_sync')
-        subreq = Request.blank(path)
-        subreq.method = 'POST'
-        sub_headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = sub_headers
-        resp = request.invoke_subrequest(subreq)
-        if resp.status_code == 200:
-            headers = remember(request, principal=client_id)
-            response = Response()
-            response.headers = headers
-            locale_id = cookies['locale_id']
-            response.set_cookie(key='locale_id', value=str(locale_id))
-            response.set_cookie(key='client_id', value=str(client_id))
-            result = dict()
-            result['client_id'] = client_id
-            request.response.status = HTTPOk.code
-            # request.response.headers = headers
-            # return response
-            return HTTPOk(headers=response.headers, json_body=result)
-        # return result
-    return HTTPUnauthorized(location=request.route_url('login'))
+    try:
+        path = settings['desktop']['central_server'] + 'signin'
+        session = requests.Session()
+        session.headers.update({'Connection': 'Keep-Alive'})
+        adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+        session.mount('http://', adapter)
+        status = session.post(path, json=req)
+        client_id = status.json()['client_id']
+        cookies = status.cookies.get_dict()
+        with open('authentication_data.json', 'w') as f:
+            f.write(json.dumps(cookies))
+        if status.status_code == 200:
+            path = request.route_url('basic_sync')
+            subreq = Request.blank(path)
+            subreq.method = 'POST'
+            sub_headers = {'Cookie': request.headers['Cookie']}
+            subreq.headers = sub_headers
+            resp = request.invoke_subrequest(subreq)
+            if resp.status_code == 200:
+                headers = remember(request, principal=client_id)
+                response = Response()
+                response.headers = headers
+                locale_id = cookies['locale_id']
+                response.set_cookie(key='locale_id', value=str(locale_id))
+                response.set_cookie(key='client_id', value=str(client_id))
+                result = dict()
+                result['client_id'] = client_id
+                request.response.status = HTTPOk.code
+                # request.response.headers = headers
+                # return response
+                return HTTPOk(headers=response.headers, json_body=result)
+            # return result
+    except HTTPUnauthorized:
+        return HTTPUnauthorized(json_body={'error': 'Login or password is wrong, please retry'})
+    except Exception:
+        return HTTPServiceUnavailable(json_body={'error': 'You have no internet connection or Lingvodoc server is unavailable; please retry later.'})
 
 
 @view_config(route_name='new_client_server', renderer='json', request_method='POST')
