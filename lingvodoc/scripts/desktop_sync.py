@@ -236,7 +236,6 @@ def create_entity(session, le_client_id, le_object_id, field_client_id, field_ob
                     additional_metadata=additional_metadata,
                     parent_client_id=le_client_id,
                     parent_object_id=le_object_id)
-
     if upper_level:
         entity.upper_level = upper_level
 
@@ -281,9 +280,9 @@ def create_entity(session, le_client_id, le_object_id, field_client_id, field_ob
     if accepted:
         entity.publishingentity.accepted = True
     # TODO: it's very dirty unstable hack, fix it ASAP later (need to divide sync and async logic strictly)
-    SyncDBSession.add(entity)
+    # SyncDBSession.add(entity)
     # log.debug(filename)
-    return (entity.client_id, entity.object_id)
+    return entity
 
 
 def create_objects(server, existing, session):
@@ -391,6 +390,7 @@ def basic_tables_content(client_id, object_id, session):
 
 
 def create_new_entities(new_entities, storage, session):  # add queue
+    entities_objects = list()
     for entity in new_entities:
         # print(entity)
         content = entity.get('content')
@@ -409,7 +409,7 @@ def create_new_entities(new_entities, storage, session):  # add queue
             content = content.content
             content = base64.urlsafe_b64encode(content)
 
-        create_entity(session,
+        entities_objects.append(create_entity(session,
                       entity['parent_client_id'],
                       entity['parent_object_id'],
                       entity['field_client_id'],
@@ -425,7 +425,8 @@ def create_new_entities(new_entities, storage, session):  # add queue
                       storage=storage,
                       published = entity.get('published'),
                       accepted = entity.get('accepted'),
-                      )
+                      ))
+    return entities_objects
 
 
 
@@ -469,10 +470,21 @@ def download(
         return
     perspectives_json = perspectives_json.json()
     for perspective_json in perspectives_json:
-        if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
-            dictionary_json['category'] = 1
-        else:
-            dictionary_json['category'] = 0
+        # if dictionary_json['category'] == 'lingvodoc.ispras.ru/corpora':
+        #     dictionary_json['category'] = 1
+        # else:
+        #     dictionary_json['category'] = 0
+        meta_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/meta' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id']), 'post', json_data=perspective_json['additional_metadata'])
+        if meta_json.status_code != 200:
+            log.error('meta fail', meta_json.status_code)
+            session.rollback()
+            return
+        perspective_json['additional_metadata'] = meta_json.json()
+
         new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
         count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
             client_id,
@@ -514,7 +526,7 @@ def download(
     new_objects, new_entities = create_objects(new_jsons, response, session)
 
     session.bulk_save_objects(new_objects)
-    create_new_entities(new_entities, storage=storage, session=session)
+    session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session))
     log.info('dictionary %s %s downloaded' % (client_id, object_id))
     session.commit()
     engine.dispose()

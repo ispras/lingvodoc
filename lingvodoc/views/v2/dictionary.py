@@ -1009,10 +1009,16 @@ def dictionaries_list(request):  # TODO: test
                     break
             group_tuples.append((group.subject_client_id, group.subject_object_id))
 
-        dicti = DBSession.query(Dictionary) \
-            .join(DictionaryPerspective) \
-            .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(group_tuples)) \
-            .all()
+        list_remainder = group_tuples[:1000]
+        group_tuples = group_tuples[1000:]
+        dicti = list()
+        while list_remainder:
+            dicti+=  DBSession.query(Dictionary) \
+                .join(DictionaryPerspective) \
+                .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(list_remainder)) \
+                .all()
+            list_remainder = group_tuples[:1000]
+            group_tuples = group_tuples[1000:]
         for d in dicti:
             dcttmp = (d.client_id, d.object_id)
             if dcttmp not in dictstemp:
