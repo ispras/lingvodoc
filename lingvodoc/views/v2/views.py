@@ -17,7 +17,8 @@ from lingvodoc.models import (
     DictionaryPerspectiveToField,
     Field,
     Client,
-    Group
+    Group,
+    UserBlobs
 )
 
 from sqlalchemy import (
@@ -51,39 +52,18 @@ import json
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    response = list()
-    locale = DBSession.query(Locale).first()
-    log.error(locale.id)
-    add_meta = DBSession.query(DictionaryPerspective).first().additional_metadata
-    # for persp in DBSession.query(DictionaryPerspective).all():
-    #     if persp.additional_metadata:
-    #         response.append(str(type(persp.additional_metadata)))
-    return str(type(add_meta))
-    # # translation_gists = DBSession.query(TranslationGist).all()
-    # gist_base = DBSession.query(BaseGroup).filter_by(action="delete",
-    #                                                  subject="translations").one()
-    # # for tr_gist in translation_gists:
-    # #     client = DBSession.query(Client).filter_by(id=tr_gist.client_id).one()
-    # #     user = DBSession.query(User).filter_by(id=client.user_id).one()
-    # #     new_group = Group(parent=gist_base, subject_client_id=tr_gist.client_id,
-    # #                       subject_object_id=tr_gist.object_id)
-    # #     user.groups.append(new_group)
-    #
-    # # translation_atoms = DBSession.query(TranslationAtom).all()
-    # atom_base = DBSession.query(BaseGroup).filter_by(action="edit",
-    #                                                  subject="translations").one()
-    # # for tr_atom in translation_atoms:
-    # #     client = DBSession.query(Client).filter_by(id=tr_atom.client_id).one()
-    # #     user = DBSession.query(User).filter_by(id=client.user_id).one()
-    # #     new_group = Group(parent=atom_base, subject_client_id=tr_atom.client_id,
-    # #                       subject_object_id=tr_atom.object_id)
-    # #     user.groups.append(new_group)
-    # admin = DBSession.query(User).filter_by(id=1).one()
-    # # gist_group = Group(parent=gist_base, subject_override=True)
-    # # admin.groups.append(gist_group)
-    # # atom_group = Group(parent=atom_base, subject_override=True)
-    # # admin.groups.append(atom_group)
+    from lingvodoc.views.v2.sync import make_request
+    settings = request.registry.settings
+    central_server = settings['desktop']['central_server']
+    desk_blob = DBSession.query(UserBlobs).first()
+    path = central_server + 'blob'  # todo: normal content upload
 
+    data = {'object_id':desk_blob.object_id, 'data_type':desk_blob.data_type}
+    files = {'blob':open(desk_blob.real_storage_path, 'rb')}
+
+    status = make_request(path, 'post', data=data, files=files)
+    if status.status_code != 200:
+        print(status.status_code)
     return {}
 
 

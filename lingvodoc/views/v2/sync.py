@@ -276,7 +276,7 @@ def diff_server(request):
     return upload
 
 
-def make_request(path, req_type='get', json_data=None):
+def make_request(path, req_type='get', json_data=None, data=None, files = None):
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
@@ -285,6 +285,8 @@ def make_request(path, req_type='get', json_data=None):
     session.mount('http://', adapter)
     if req_type == 'get':
         status = session.get(path, cookies=cookies)
+    elif data or files:
+        status = session.post(path, cookies=cookies, data = data, files = files)
     elif req_type == 'post':
         status = session.post(path, json=json_data, cookies=cookies)
     else:
@@ -434,8 +436,13 @@ def diff_desk(request):
     for entry in userblobs:
         desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
                                                          object_id=entry['object_id']).one()
-        path = central_server + 'blob_upload'  # todo: normal content upload
-        status = make_request(path, 'post', row2dict(desk_blob))
+        path = central_server + 'blob'  # todo: normal content upload
+
+
+        data = {'object_id':desk_blob.object_id, 'data_type':desk_blob.data_type}
+        files = {'blob':open(desk_blob.real_storage_path, 'rb')}
+
+        status = make_request(path, 'post', data=data, files=files)
         if status.status_code != 200:
             print(status.status_code)
     return
