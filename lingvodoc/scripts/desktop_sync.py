@@ -282,12 +282,15 @@ def create_entity(session, le_client_id, le_object_id, field_client_id, field_ob
     # TODO: it's very dirty unstable hack, fix it ASAP later (need to divide sync and async logic strictly)
     # SyncDBSession.add(entity)
     # log.debug(filename)
-    return entity
+    return entity, entity.publishingentity
 
 
 def create_objects(server, existing, session):
     new_entries = list()
     new_entities = list()
+    publ_entities = list()
+    for key in existing:
+        print(key, type(existing[key]))
     for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField, Entity, LexicalEntry,
                   PublishingEntity]:
         curr_server = server[table.__tablename__]
@@ -305,7 +308,8 @@ def create_objects(server, existing, session):
                         if table == Entity:
                             new_entities.append(kwargs)
                         elif table == PublishingEntity:
-                            pass
+                            if existing['entity'].get(client_id) and existing['entity'][client_id].get(object_id) :
+                                publ_entities.append(table(**kwargs))
                         else:
                             new_entries.append(table(**kwargs))
 
@@ -315,7 +319,8 @@ def create_objects(server, existing, session):
                     if table == Entity:
                         new_entities.append(kwargs)
                     elif table == PublishingEntity:
-                        pass
+                        if existing['entity'].get(client_id) and existing['entity'][client_id].get(object_id) :
+                            publ_entities.append(table(**kwargs))
                     else:
                         new_entries.append(table(**kwargs))
 
@@ -332,7 +337,7 @@ def create_objects(server, existing, session):
                         entry.parent_client_id = curr_server[client_id][object_id]['parent_client_id']
                         entry.parent_object_id = curr_server[client_id][object_id]['parent_object_id']
         new_entries.extend(all_entries)
-    return new_entries, new_entities
+    return new_entries, new_entities, publ_entities
 
 
 row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
@@ -342,11 +347,14 @@ dict2strippeddict = lambda r, r_class: {key: r[key] for key in r if key in [c.na
 def create_nested_content(tmp_resp):
     tmp_dict = dict()
     for entry in tmp_resp:
+        if not entry.get('client_id'):
+            print(entry)
         if str(entry['client_id']) not in tmp_dict:
             tmp_dict[str(entry['client_id'])] = {str(entry['object_id']): entry}
         else:
             tmp_dict[str(entry['client_id'])][str(entry['object_id'])] = entry
     tmp_resp = tmp_dict
+    print(type(tmp_resp))
     return tmp_resp
 
 
@@ -355,6 +363,8 @@ def create_tmp_resp(table, query, response):
     tmp_resp = [row2dict(entry) for entry in query]
     if tmp_resp:
         tmp_resp = create_nested_content(tmp_resp)
+    else:
+        tmp_resp = dict()
     response[table.__tablename__] = tmp_resp
 
 
@@ -409,7 +419,7 @@ def create_new_entities(new_entities, storage, session):  # add queue
             content = content.content
             content = base64.urlsafe_b64encode(content)
 
-        entities_objects.append(create_entity(session,
+        entity_obj, publ_obj = create_entity(session,
                       entity['parent_client_id'],
                       entity['parent_object_id'],
                       entity['field_client_id'],
@@ -425,7 +435,10 @@ def create_new_entities(new_entities, storage, session):  # add queue
                       storage=storage,
                       published = entity.get('published'),
                       accepted = entity.get('accepted'),
-                      ))
+                      )
+
+        entities_objects.append(entity_obj)
+        entities_objects.append(publ_obj)
     return entities_objects
 
 
@@ -485,6 +498,20 @@ def download(
             return
         perspective_json['additional_metadata'] = meta_json.json()
 
+
+        fields_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/fields' % (
+            client_id,
+            object_id,
+            perspective_json['client_id'],
+            perspective_json['object_id']), 'get')
+        if fields_json.status_code != 200:
+            log.error('fields fail', fields_json.status_code)
+            session.rollback()
+            return
+        for field_json in fields_json.json():
+            new_jsons['dictionaryperspectivetofield'].append(dict2strippeddict(field_json, DictionaryPerspectiveToField))
+
+
         new_jsons['dictionaryperspective'].append(dict2strippeddict(perspective_json, DictionaryPerspective))
         count_json = make_request(central_server + 'dictionary/%s/%s/perspective/%s/%s/all_count' % (
             client_id,
@@ -521,12 +548,14 @@ def download(
     response = basic_tables_content(client_id, object_id, session)
     # print(response)
     for key in new_jsons:
-        new_jsons[key] = create_nested_content(new_jsons[key])
+        tmp = create_nested_content(new_jsons[key])
+        new_jsons[key] = tmp
 
-    new_objects, new_entities = create_objects(new_jsons, response, session)
+    new_objects, new_entities, publ_entities = create_objects(new_jsons, response, session)
 
     session.bulk_save_objects(new_objects)
     session.bulk_save_objects(create_new_entities(new_entities, storage=storage, session=session))
+    session.bulk_save_objects(publ_entities)
     log.info('dictionary %s %s downloaded' % (client_id, object_id))
     session.commit()
     engine.dispose()

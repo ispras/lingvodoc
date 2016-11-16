@@ -1248,6 +1248,7 @@ def create_nested_field(field, perspective, client_id, upper_level, link_ids, po
 
 
 def view_nested_field(request, field, link_ids):
+    row2dict = lambda r: {c.name: getattr(r, c.name) for c in r.__table__.columns}
     field_object = field.field
     field_json = view_field_from_object(request=request, field=field_object)
     field_json['position'] = field.position
@@ -1264,6 +1265,8 @@ def view_nested_field(request, field, link_ids):
     if field_object.data_type_translation_gist_client_id == link_ids['client_id'] \
             and field_object.data_type_translation_gist_object_id == link_ids['object_id']:
         field_json['link'] = {'client_id': field.link_client_id, 'object_id': field.link_object_id}
+    upd_json = row2dict(field)
+    field_json.update(upd_json)
     return field_json
 
 
