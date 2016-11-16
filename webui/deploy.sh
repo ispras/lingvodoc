@@ -10,6 +10,5 @@ cp shared/src/templates/*.html ../lingvodoc/static/templates/
 cp -r shared/src/templates/modal/ ../lingvodoc/static/templates/
 cp -r shared/src/templates/include/ ../lingvodoc/static/templates/
 
-
 cp shared/src/css/*.css ../lingvodoc/static/css/
 cp shared/src/images/* ../lingvodoc/static/images/

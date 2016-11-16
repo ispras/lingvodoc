@@ -124,7 +124,6 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
     val values: js.Array[Value] = entities.toJSArray.filter(entity => entity.fieldClientId == column.field.clientId && entity.fieldObjectId == column.field.objectId).map(entity => {
       TextValue(entity, column.dataType, js.Array())
     })
-
     Cell(values, column.field)
   }
 
