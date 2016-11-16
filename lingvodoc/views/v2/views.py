@@ -54,10 +54,11 @@ def testing(request):
     response = list()
     locale = DBSession.query(Locale).first()
     log.error(locale.id)
+    add_meta = DBSession.query(DictionaryPerspective).first().additional_metadata
     # for persp in DBSession.query(DictionaryPerspective).all():
     #     if persp.additional_metadata:
     #         response.append(str(type(persp.additional_metadata)))
-    return response
+    return str(type(add_meta))
     # # translation_gists = DBSession.query(TranslationGist).all()
     # gist_base = DBSession.query(BaseGroup).filter_by(action="delete",
     #                                                  subject="translations").one()

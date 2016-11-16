@@ -295,6 +295,7 @@ def make_request(path, req_type='get', json_data=None):
 @view_config(route_name='diff_desk', renderer='json', request_method='POST')
 def diff_desk(request):
     import base64
+    from lingvodoc.models import categories
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     if not client:
         request.response.status = HTTPNotFound.code
@@ -317,6 +318,7 @@ def diff_desk(request):
     userblobs = list()
     translationgist = list()
     translationatom = list()
+    print(server)
     for entry in server:
         if entry['table_name'] == 'language':
             language.append(entry)
@@ -361,7 +363,9 @@ def diff_desk(request):
         desk_dict = DBSession.query(Dictionary).filter_by(client_id=entry['client_id'],
                                                           object_id=entry['object_id']).one()
         path = central_server + 'dictionary'
-        make_request(path, 'post', row2dict(desk_dict))
+        desk_json = row2dict(desk_dict)
+        desk_json['category'] = categories[desk_json['category']]
+        make_request(path, 'post', desk_json)
     for entry in perspective:
         desk_persp = DBSession.query(DictionaryPerspective).filter_by(client_id=entry['client_id'],
                                                                       object_id=entry['object_id']).one()
