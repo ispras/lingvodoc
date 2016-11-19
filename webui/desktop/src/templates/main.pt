@@ -77,7 +77,7 @@
                        aria-expanded="false"><translatable str="Guest">Guest</translatable><span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a href="#/login"><transltable str="Sign in">Sign in</transltable></a></li>
-                        <li><a href="#/signup"><translatable str="Sign up">Sign up</translatable></a></li>
+                        <li><a href="http://lingvodoc.ispras.ru/#signup"><translatable str="Sign up">Sign up</translatable></a></li>
                     </ul>
                 </li>
 

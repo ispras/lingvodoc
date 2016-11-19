@@ -1010,7 +1010,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     xhr.onload = { (e: dom.raw.Event) =>
       if (xhr.status == 200) {
         try {
-          val clientId = xhr.responseText.toInt
+          val response: Dynamic = JSON.parse(xhr.responseText)
+          val clientId = response.client_id.asInstanceOf[Int]
           p.success(clientId)
         } catch {
           case e: Throwable =>
@@ -1630,8 +1631,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
 
   def syncDownloadDictionary(dictionaryId: CompositeId): Future[Unit] = {
     val p = Promise[Unit]()
-
-    $http.post[js.Dynamic]("sync/download") onComplete {
+    val req = write[CompositeId](dictionaryId)
+    $http.post[js.Dynamic]("sync/download", req) onComplete {
       case Success(response) =>
           p.success(())
       case Failure(e) => p.failure(BackendException("Failed to download dictionary", e))

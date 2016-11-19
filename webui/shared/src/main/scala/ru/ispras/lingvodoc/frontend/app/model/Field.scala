@@ -62,8 +62,7 @@ object Field {
         def apply(js: Js.Obj): Field = {
 
 
-          val clientId = js("client_id").num.toInt
-          val objectId = js("object_id").num.toInt
+
           val translation = js("translation").str
           val translationGistClientId = js("translation_gist_client_id").num.toInt
           val translationGistObjectId = js("translation_gist_object_id").num.toInt
@@ -79,6 +78,21 @@ object Field {
           val link = js.value.find(_._1 == "link") match {
             case Some(l) => Some(readJs[Link](l._2))
             case None => None
+          }
+
+          // FIXME: First try to get field_client_id/field_object_id
+          // FIXME: and fallback to client_id/object_id if failed
+          // val clientId = js("field_client_id").num.toInt
+          // val objectId = js("field_object_id").num.toInt
+
+          val clientId = js.value.find(_._1 == "field_client_id") match {
+            case Some(p) => p._2.num.toInt
+            case None => js("client_id").num.toInt
+          }
+
+          val objectId = js.value.find(_._1 == "field_object_id") match {
+            case Some(p) => p._2.num.toInt
+            case None => js("object_id").num.toInt
           }
 
           // get array of child fields or empty list if there are none
