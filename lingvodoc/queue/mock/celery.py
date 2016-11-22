@@ -1,5 +1,5 @@
 __author__ = 'alexander'
-from multiprocessing import Process
+from multiprocess import Process
 
 class MockResult:
     """
