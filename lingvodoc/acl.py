@@ -17,6 +17,8 @@ log = logging.getLogger(__name__)
 
 
 def groupfinder(client_id, request):
+    if request.registry.settings.get("desktop") and request.registry.settings["desktop"].get("desktop"):
+        client_id = request.cookies.get('client_id')
     if not client_id:
         return None
     subject = None

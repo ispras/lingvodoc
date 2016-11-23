@@ -162,14 +162,14 @@ def signin(request):
         user.clients.append(client)
         DBSession.add(client)
         DBSession.flush()
-        headers = remember(request, principal=client.id)
+        headers = remember(request, principal=client.id, max_age=315360000)
         response = Response()
         response.headers = headers
         locale_id = user.default_locale_id
         if not locale_id:
             locale_id = 1
-        response.set_cookie(key='locale_id', value=str(locale_id))
-        response.set_cookie(key='client_id', value=str(client.id))
+        response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
+        response.set_cookie(key='client_id', value=str(client.id), max_age=datetime.timedelta(days=3650))
         result = dict()
         result['client_id'] = client.id
         request.response.status = HTTPOk.code
@@ -217,12 +217,12 @@ def desk_signin(request):
             subreq.headers = sub_headers
             resp = request.invoke_subrequest(subreq)
             if resp.status_code == 200:
-                headers = remember(request, principal=client_id)
+                headers = remember(request, principal=client_id, max_age=315360000)
                 response = Response()
                 response.headers = headers
                 locale_id = cookies['locale_id']
-                response.set_cookie(key='locale_id', value=str(locale_id))
-                response.set_cookie(key='client_id', value=str(client_id))
+                response.set_cookie(key='locale_id', value=str(locale_id), max_age=datetime.timedelta(days=3650))
+                response.set_cookie(key='client_id', value=str(client_id), max_age=datetime.timedelta(days=3650))
                 result = dict()
                 result['client_id'] = client_id
                 request.response.status = HTTPOk.code
@@ -345,8 +345,12 @@ def login_cheat(request):  # TODO: test
 
 @view_config(route_name='logout', renderer='json')
 def logout_any(request):  # tested
-    headers = forget(request)
-    return HTTPOk(headers=headers, json_body={})
+    response = Response()
+    response.headers = forget(request)
+    response.set_cookie(key='client_id', value=None)
+    response.status_code = 200
+    response.json_body = {}
+    return response
 
 
 @view_config(route_name='profile', renderer='templates/profile.pt', request_method='GET')
