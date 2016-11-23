@@ -567,7 +567,7 @@ def convert_five_tiers(
             filter_by(client_id=second_perspective_client_id, object_id = second_perspective_object_id).first() #sec?
             if not perspective:
                 return {'error': str("No such perspective in the system")}
-            lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=client.id,
+            lexentr = LexicalEntry(client_id=client.id,
                                    parent_object_id=second_perspective_object_id, parent=perspective)
             DBSession.add(lexentr)
             sp_lexical_entry_client_id = lexentr.client_id
@@ -605,7 +605,7 @@ def convert_five_tiers(
                     filter_by(client_id=first_perspective_client_id, object_id = first_perspective_object_id).first()
                     if not perspective:
                         return {'error': str("No such perspective in the system")}
-                    lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=client.id,
+                    lexentr = LexicalEntry(client_id=client.id,
                                            parent_object_id=first_perspective_object_id, parent=perspective)
                     DBSession.add(lexentr)
                     fp_lexical_entry_client_id = lexentr.client_id
