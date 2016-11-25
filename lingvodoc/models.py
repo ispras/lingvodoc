@@ -841,7 +841,7 @@ class BaseGroup(Base, TableNameMixin, IdMixin, CreatedAtMixin):
 
 class Group(Base, TableNameMixin, CreatedAtMixin):
     __parentname__ = 'BaseGroup'
-    old_id = Column(SLBigInteger(), autoincrement=True)
+    # old_id = Column(SLBigInteger(), autoincrement=True)
     id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
     base_group_id = Column(ForeignKey("basegroup.id"), nullable=False)
     subject_client_id = Column(SLBigInteger())
@@ -886,6 +886,17 @@ class Client(Base, TableNameMixin, IdMixin, CreatedAtMixin, AdditionalMetadataMi
     is_browser_client = Column(Boolean, default=True, nullable=False)
     user = relationship("User", backref='clients')
     counter = Column(SLBigInteger(), default=1, nullable=False)
+
+    @classmethod
+    def get_user_by_client_id(cls, client_id):
+        if client_id:
+            client = DBSession.query(Client).filter(Client.id == client_id).first()
+            if client:
+                return client.user
+            else:
+                return None
+        else:
+            return None
 
 
 class UserBlobs(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin, AdditionalMetadataMixin):  # TODO: decide what is nullable

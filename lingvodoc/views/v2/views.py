@@ -158,8 +158,9 @@ def all_perspectives_desktop(request):
     settings = request.registry.settings
     path = settings['desktop']['central_server'] + 'perspectives'
     published = request.params.get('published', None)
+    path += '?visible=true'
     if published:
-        path += '?published=true'
+        path += '&published=true'
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
     adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)

@@ -81,34 +81,35 @@ def perspectives_list(request):  # tested
         pass
 
     published = request.params.get('published', None)
+    visible = request.params.get('visible', None)
 
-    if published:
-        subreq = Request.blank('/translation_service_search')
-        subreq.method = 'POST'
-        subreq.headers = request.headers
-        subreq.json = {'searchstring': 'Published'}
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        if 'error' not in resp.json:
-            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
-                'client_id']
-            published_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
-        else:
-            raise KeyError("Something wrong with the base", resp.json['error'])
-        subreq = Request.blank('/translation_service_search')
-        subreq.method = 'POST'
-        subreq.headers = request.headers
-        subreq.json = {'searchstring': 'Limited access'}
-        headers = {'Cookie': request.headers['Cookie']}
-        subreq.headers = headers
-        resp = request.invoke_subrequest(subreq)
-        if 'error' not in resp.json:
-            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
-                'client_id']
-            limited_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
-        else:
-            raise KeyError("Something wrong with the base", resp.json['error'])
+
+    subreq = Request.blank('/translation_service_search')
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    subreq.json = {'searchstring': 'Published'}
+    headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+    if 'error' not in resp.json:
+        state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+            'client_id']
+        published_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+    else:
+        raise KeyError("Something wrong with the base", resp.json['error'])
+    subreq = Request.blank('/translation_service_search')
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    subreq.json = {'searchstring': 'Limited access'}
+    headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+    if 'error' not in resp.json:
+        state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+            'client_id']
+        limited_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+    else:
+        raise KeyError("Something wrong with the base", resp.json['error'])
 
     atom_perspective_name_alias = aliased(TranslationAtom, name="PerspectiveName")
     atom_perspective_name_fallback_alias = aliased(TranslationAtom, name="PerspectiveNameFallback")
@@ -130,11 +131,29 @@ def perspectives_list(request):  # tested
                 return
 
         persps = persps.filter(DictionaryPerspective.is_template == is_template)
-    if published:
+
+    visible_persps = None
+    if visible:
+        user = Client.get_user_by_client_id(authenticated_userid(request))
+        visible_persps = [(-1, -1)] #hack to avoid empty in_
+        if user:
+            for group in user.groups:
+                if group.base_group_id == 21 or group.base_group_id == 22:
+                    visible_persps.append((group.subject_client_id, group.subject_object_id))
+
         persps = persps.filter(or_(and_(DictionaryPerspective.state_translation_gist_client_id == published_gist[0],
                                         DictionaryPerspective.state_translation_gist_object_id == published_gist[1]),
-                                   and_(DictionaryPerspective.state_translation_gist_client_id == limited_gist[0],
-                                        DictionaryPerspective.state_translation_gist_object_id == limited_gist[1])))
+                                   tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(visible_persps)))
+    else:
+        if published:
+            persps = persps.filter(or_(and_(DictionaryPerspective.state_translation_gist_client_id == published_gist[0],
+                                            DictionaryPerspective.state_translation_gist_object_id == published_gist[1]),
+                                       and_(DictionaryPerspective.state_translation_gist_client_id == limited_gist[0],
+                                            DictionaryPerspective.state_translation_gist_object_id == limited_gist[1])))
+
+
+        # if user:
+        #     visible_persps = DBSession.query(user)
 
     persps = persps.join(TranslationAtom,
                          and_(

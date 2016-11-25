@@ -1035,12 +1035,9 @@ def dictionaries_list(request):  # TODO: test
 def published_dictionaries_list(request):  # tested.   # TODO: test with org
     req = request.json_body
     response = dict()
-    group_by_org = None
-    if 'group_by_org' in req:
-        group_by_org = req['group_by_org']
-    group_by_lang = None
-    if 'group_by_lang' in req:
-        group_by_lang = req['group_by_lang']
+    group_by_org = req.get('group_by_org', None)
+    group_by_lang = req.get('group_by_lang', None)
+    visible = req.get('visible', None)
     dicts = DBSession.query(Dictionary)
     subreq = Request.blank('/translation_service_search')
     subreq.method = 'POST'
@@ -1071,15 +1068,35 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
         limited_object_id, limited_client_id = resp.json['object_id'], resp.json['client_id']
     else:
         raise KeyError("Something wrong with the base", resp.json['error'])
-    dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                         Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                    and_(Dictionary.state_translation_gist_object_id == limited_object_id,
-                         Dictionary.state_translation_gist_client_id == limited_client_id))).join(
-        DictionaryPerspective) \
-        .filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                         DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                    and_(DictionaryPerspective.state_translation_gist_object_id == limited_object_id,
-                         DictionaryPerspective.state_translation_gist_client_id == limited_client_id)))
+
+    if visible:
+        user = Client.get_user_by_client_id(authenticated_userid(request))
+        visible_persps = [(-1, -1)] #hack to avoid empty in_
+        if user:
+            for group in user.groups:
+                if group.base_group_id == 21 or group.base_group_id == 22:
+                    visible_persps.append((group.subject_client_id, group.subject_object_id))
+        persps = DBSession.query(DictionaryPerspective).filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(visible_persps))
+        visible_dicts = [(p.parent_client_id, p.parent_object_id) for p in persps]
+
+        dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                                      Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                                 tuple_(Dictionary.client_id, Dictionary.object_id) \
+                                 .in_(visible_dicts))) \
+            .join(DictionaryPerspective) \
+            .filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                             DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                        tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(visible_persps)))
+    else:
+        dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                             Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                        and_(Dictionary.state_translation_gist_object_id == limited_object_id,
+                             Dictionary.state_translation_gist_client_id == limited_client_id))).join(
+            DictionaryPerspective) \
+            .filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                             DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                        and_(DictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                             DictionaryPerspective.state_translation_gist_client_id == limited_client_id)))
 
     if group_by_lang and not group_by_org:
         return group_by_languages(dicts, request)
@@ -1114,7 +1131,7 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
         return {'organizations': organizations}
     dictionaries = []
     dicts = dicts.order_by("client_id", "object_id")
-    for dct in dicts:
+    for dct in dicts.all():
         path = request.route_url('dictionary',
                                  client_id=dct.client_id,
                                  object_id=dct.object_id)
