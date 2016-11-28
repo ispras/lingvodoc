@@ -1,0 +1,19 @@
+<h4>{{ language.translation }}</h4>
+
+<ul>
+    <li ng-repeat="dictionary in language.dictionaries">
+        <input type="checkbox" ng-checked="controller.isDictionarySelected(dictionary)" ng-click="controller.toggleDictionarySelection(dictionary)"> {{ dictionary.translation }}
+        <!--<ul>-->
+            <!--<li ng-repeat="perspective in dictionary.perspectives" ng-init="authors=controller.getPerspectiveAuthors(perspective)">-->
+                <!--<span>-->
+                    <!--<a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/view">{{perspective.translation}} <small ng-if="authors">({{ authors }})</small></a>-->
+                <!--</span>-->
+            <!--</li>-->
+        <!--</ul>-->
+
+    </li>
+</ul>
+
+<ul ng-if="language.languages.length > 0">
+    <li ng-repeat="language in language.languages" ng-include="'/static/templates/include/availableLanguage.html'"></li>
+</ul>

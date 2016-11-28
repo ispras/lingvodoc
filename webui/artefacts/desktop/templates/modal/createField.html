@@ -1,0 +1,73 @@
+<div class="modal-header">
+    <h3 class="modal-title"></h3>
+</div>
+
+<div class="modal-body">
+    <!-- type names -->
+    <div class="row" ng-repeat="name in fieldEntry.names">
+
+        <div class="col-lg-6">
+
+            <div class="input-group"><span class="input-group-addon">Name</span>
+                <input type="text" id="type-name-{{$index}}" class="form-control"
+                       ng-model="name.str" placeholder="">
+            </div>
+
+        </div>
+
+        <div class="col-lg-6">
+            <div class="input-group">
+                <span class="input-group-addon">Language</span>
+                <select id="type-name-locale-{{$index}}" class="form-control"
+                        ng-model="name.localeId" convert-to-number>
+                    <option ng-repeat="locale in controller.getAvailableLocales(fieldEntry.names, name)" ng-attr-value="{{ locale.id }}">{{locale.name }}
+                    </option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <!-- type names end -->
+
+    <br />
+
+    <div class="row">
+
+        <div class="col-lg-6">
+
+            <button class="btn btn-info" ng-click="controller.addNameTranslation(fieldEntry)">
+                <span class="glyphicon glyphicon-plus-sign">Add translation</span>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <br />
+
+
+    <div class="row">
+        <div class="col-lg-6">
+            <!-- field type -->
+            <select class="form-control" ng-model="dataType">
+                <option ng-repeat="dataType in dataTypeNames" ng-attr-value="{{ dataType }}">{{ dataType }}</option>
+            </select>
+            <!-- field type end -->
+        </div>
+
+        <div class="col-lg-6">
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" ng-checked="fieldEntry.translatable">
+                    Translatable
+                </label>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="controller.ok()">OK</button>
+    <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+</div>

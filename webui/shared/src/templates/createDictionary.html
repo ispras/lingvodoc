@@ -7,9 +7,13 @@
             <div ng-show="step==1">
                 <!-- List of all languages -->
                 <label for="language"><translatable str="Language">Language</translatable></label>
-                <select id="language" class="form-control" ng-model="languageId"
-                        ng-options="language.getId as language.translation for language in languages track by language.getId">
+
+                <select id="language"  ng-model="languageId">
+                    <option ng-repeat="language in languages" value="{{ language.getId }}" style="padding-left: 30px;"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ language.translation }}</option>
                 </select>
+
+
+
 
                 <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
                 <hr>

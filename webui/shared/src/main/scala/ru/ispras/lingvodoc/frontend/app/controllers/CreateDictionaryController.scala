@@ -39,6 +39,10 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   extends AbstractController[CreateDictionaryScope](scope)
     with AngularExecutionContextProvider {
 
+
+  private[this] var indentation = Map[String, Int]()
+
+
   // Scope initialization
   scope.locales = js.Array[Locale]()
   scope.languages = js.Array[Language]()
@@ -94,6 +98,11 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   @JSExport
   def newLanguage() = {
 
+  }
+
+  @JSExport
+  def languageIndentation(language: Language) = {
+    indentation.getOrElse(language.getId, 0) * 10
   }
 
   @JSExport
@@ -410,6 +419,27 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     p.future
   }
 
+  private[this] def getDepth(language: Language, tree: Seq[Language], depth: Int = 0): Option[Int] = {
+    if (tree.exists(_.getId == language.getId)) {
+      Some(depth)
+    } else {
+      for (lang <- tree) {
+        val r = getDepth(language, lang.languages.toSeq, depth + 1)
+        if (r.nonEmpty) {
+          return r
+        }
+      }
+      Option.empty[Int]
+    }
+  }
+
+  private[this] def indentations(tree: Seq[Language]) = {
+    val languages = Utils.flattenLanguages(tree).toJSArray
+    languages.map { language =>
+      language.getId -> getDepth(language, tree).get
+    }.toMap
+  }
+
   /**
     * Loads data from backend
     */
@@ -438,6 +468,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
 
     backend.getLanguages onComplete {
       case Success(tree: Seq[Language]) =>
+        indentation = indentations(tree)
         scope.languages = Utils.flattenLanguages(tree).toJSArray
       case Failure(e) =>
     }
