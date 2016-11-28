@@ -17,6 +17,8 @@ from lingvodoc.models import (
     TranslationGist
 )
 
+from sqlalchemy import and_
+
 from pyramid.request import Request
 
 from sqlalchemy.inspection import inspect
@@ -210,13 +212,28 @@ def language_info(lang, request):
     return result
 
 
+def all_languages_with_dicts(dicts, request):
+    result = dict()
+    dicts_to_lang_map = dict()
+    ds = dicts.join(Language, and_(Dictionary.parent_client_id == Language.client_id, Dictionary.parent_object_id == Language.object_id)).all()
+    for i in ds:
+        if i.parent_client_id not in dicts_to_lang_map:
+            dicts_to_lang_map[i.parent_client_id] = dict()
+        if i.parent_object_id not in dicts_to_lang_map[i.i.parent_client_id]:
+            dicts_to_lang_map[i.parent_client_id][i.parent_object_id] = list()
+        dicts_to_lang_map[i.parent_client_id][i.parent_object_id].append(i)
+
+    all_languages()
+    return result
+
+
 def language_with_dicts(lang, dicts, request):
     result = dict()
     result['client_id'] = lang.client_id
     result['object_id'] = lang.object_id
     result['translation_gist_client_id'] = lang.translation_gist_client_id
     result['translation_gist_object_id'] = lang.translation_gist_object_id
-    result['translation'] = lang.get_translation(request.cookies['locale_id'])
+    result['translation'] = lang.get_translation(request.cookies.get('locale_id', 1))
     if lang.locale:
         result['locale_exist'] = True
     else:
