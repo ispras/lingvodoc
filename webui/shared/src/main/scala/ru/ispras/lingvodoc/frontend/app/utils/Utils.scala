@@ -8,18 +8,29 @@ import org.scalajs.dom
 
 object Utils {
 
-  def flattenLanguages(languages: Seq[Language]) = {
-    var acc = Seq[Language]()
-    var queue = Vector[Language]()
-    queue = queue ++ languages
+//  def flattenLanguages1(languages: Seq[Language]) = {
+//    var acc = Seq[Language]()
+//    var queue = Vector[Language]()
+//    queue = queue ++ languages
+//
+//    while (queue.nonEmpty) {
+//      val first +: rest = queue
+//      acc = acc :+ first
+//      queue = rest ++ first.languages
+//    }
+//    acc
+//  }
 
-    while (queue.nonEmpty) {
-      val first +: rest = queue
-      acc = acc :+ first
-      queue = rest ++ first.languages
+
+  def flattenLanguages(tree: Seq[Language]): Seq[Language] = {
+    var languages = Seq[Language]()
+    for (language <- tree) {
+      languages = languages :+ language
+      languages = languages ++ flattenLanguages(language.languages)
     }
-    acc
+    languages
   }
+
 
   /**
    * Gets data stored into data-lingvodoc attribute
