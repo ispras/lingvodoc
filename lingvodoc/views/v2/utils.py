@@ -14,7 +14,8 @@ from lingvodoc.models import (
     User,
     UserBlobs,
     TranslationAtom,
-    TranslationGist
+    TranslationGist,
+    categories
 )
 
 from sqlalchemy import and_
@@ -32,6 +33,8 @@ import json
 import os
 import shutil
 from pathvalidate import sanitize_filename
+from collections import deque
+
 
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -136,13 +139,15 @@ def get_user_by_client_id(client_id):
 
 
 def group_by_languages(dicts, request):
-    langs = DBSession.query(Language).filter_by(marked_for_deletion=False, parent=None).all()
-    languages = []
-    for lang in langs:
-        la = language_with_dicts(lang, dicts, request)
-        if la:
-            languages += [la]
-    return languages
+    # res = all_languages_with_dicts(dicts, request)
+    # langs = DBSession.query(Language).filter_by(marked_for_deletion=False, parent=None).all()
+    # languages = []
+    # for lang in langs:
+    #     la = language_with_dicts(lang, dicts, request)
+    #     if la:
+    #         languages += [la]
+
+    return all_languages_with_dicts(dicts, request) #languages
 
 
 def group_by_organizations(dicts, request):
@@ -195,7 +200,7 @@ def language_info(lang, request):
     result['object_id'] = lang.object_id
     result['translation_gist_client_id'] = lang.translation_gist_client_id
     result['translation_gist_object_id'] = lang.translation_gist_object_id
-    result['translation'] = lang.get_translation(request.cookies['locale_id'])
+    result['translation'] = lang.get_translation(request.cookies.get('locale_id', 1))
     if lang.locale:
         result['locale_exist'] = True
     else:
@@ -212,18 +217,100 @@ def language_info(lang, request):
     return result
 
 
-def all_languages_with_dicts(dicts, request):
+def tree_insert(tree, item, lang_to_dict_mapping, request):
+    def row2dict(r): return {c.name: getattr(r, c.name) for c in r.__table__.columns}
+
+    def construct_node(i):
+        node = row2dict(i)
+        if lang_to_dict_mapping.get(i.client_id) and lang_to_dict_mapping[i.client_id].get(i.object_id):
+            node['dicts'] = lang_to_dict_mapping[i.client_id][i.object_id]
+        else:
+            node['dicts'] = []
+        node['contains'] = []
+        node['translation'] = i.get_translation(request.cookies.get('locale_id', 1))
+        node['locale_exist'] = True if i.locale else False
+        del node['additional_metadata']
+        del node['created_at']
+        del node['marked_for_deletion']
+        if not node['parent_client_id']:
+            del node['parent_client_id']
+        if not node['parent_object_id']:
+            del node['parent_object_id']
+        return node
+
+    if not tree:
+        tree = construct_node(item)
+
+    if tree['client_id'] == item.parent_client_id and tree['object_id'] == item.parent_object_id:
+        tree['contains'].append(construct_node(item))
+        return tree
+
+    for i in tree['contains']:
+        if i['client_id'] == item.parent_client_id and i['object_id'] == item.parent_object_id:
+            i['contains'].append(construct_node(item))
+        else:
+            i = tree_insert(i, item, lang_to_dict_mapping, request)
+    return tree
+
+
+def tree_in_breadth(node, lang_to_dict_mapping, request):
     result = dict()
-    dicts_to_lang_map = dict()
+
+    stack = deque()
+    stack.append(node)
+
+    while stack:
+        current_node = stack.pop()
+        result = tree_insert(result, current_node, lang_to_dict_mapping, request)
+        for i in current_node.language:
+            stack.appendleft(i)
+
+    def cleanup(obj):
+        if isinstance(obj, dict):
+            if 'dicts' not in obj:
+                return obj
+
+            if obj.get('dicts') or obj.get('contains'):
+                return { key: cleanup(value) for key, value in obj.items() }
+            else:
+                return None
+        elif isinstance(obj, list):
+            res = []
+            for item in obj:
+                t = cleanup(item)
+                if t:
+                    res.append(t)
+            return res
+        return obj
+
+    return cleanup(result)
+
+
+def all_languages_with_dicts(dicts, request):
+    def row2dict(r): return {c.name: getattr(r, c.name) for c in r.__table__.columns}
+    result = list()
+    lang_to_dict_mapping = dict()
     ds = dicts.join(Language, and_(Dictionary.parent_client_id == Language.client_id, Dictionary.parent_object_id == Language.object_id)).all()
     for i in ds:
-        if i.parent_client_id not in dicts_to_lang_map:
-            dicts_to_lang_map[i.parent_client_id] = dict()
-        if i.parent_object_id not in dicts_to_lang_map[i.i.parent_client_id]:
-            dicts_to_lang_map[i.parent_client_id][i.parent_object_id] = list()
-        dicts_to_lang_map[i.parent_client_id][i.parent_object_id].append(i)
+        if i.parent_client_id not in lang_to_dict_mapping:
+            lang_to_dict_mapping[i.parent_client_id] = dict()
+        if i.parent_object_id not in lang_to_dict_mapping[i.parent_client_id]:
+            lang_to_dict_mapping[i.parent_client_id][i.parent_object_id] = list()
+        dictionary = row2dict(i)
+        dictionary['translation'] = i.get_translation(request.cookies.get('locale_id', 1))
+        dictionary['category'] = categories[i.category]
+        del dictionary['created_at']
+        del dictionary['domain']
+        del dictionary['marked_for_deletion']
+        lang_to_dict_mapping[i.parent_client_id][i.parent_object_id].append(dictionary)
 
-    all_languages()
+    top_level_langs = DBSession.query(Language).filter_by(marked_for_deletion=False, parent=None).all()
+
+    for lang in top_level_langs:
+        l = tree_in_breadth(lang, lang_to_dict_mapping, request)
+        if l:
+            result.append(l)
+
     return result
 
 
@@ -238,6 +325,7 @@ def language_with_dicts(lang, dicts, request):
         result['locale_exist'] = True
     else:
         result['locale_exist'] = False
+
     dictionaries = []
     ds = dicts.filter((Dictionary.parent_client_id==lang.client_id) & (
                          Dictionary.parent_object_id==lang.object_id)).all()
