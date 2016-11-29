@@ -1196,6 +1196,7 @@ def create_field(request):
             else:
                 req = request.json_body
         except AttributeError:
+            print('invalid json')
             request.response.status = HTTPBadRequest.code
             return {'error': "invalid json"}
         translation_gist_client_id = req['translation_gist_client_id']
@@ -1206,6 +1207,7 @@ def create_field(request):
 
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
+            print('invalid client id')
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
@@ -1357,7 +1359,8 @@ def update_perspective_fields(request):
             .all()
         DBSession.flush()
         for field in fields:
-            DBSession.delete(field)
+            # DBSession.delete(field)
+            field.marked_for_deletion = True
         position = 1
         for field in req:
             create_nested_field(field=field,
