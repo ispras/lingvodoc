@@ -315,6 +315,7 @@ def diff_desk(request):
     dictionary = list()
     perspective = list()
     field = list()
+    dictionaryperspectivetofield = list()
     lexicalentry = list()
     entity = list()
     userblobs = list()
@@ -329,7 +330,7 @@ def diff_desk(request):
         if entry['table_name'] == 'dictionaryperspective':
             perspective.append(entry)
         if entry['table_name'] == 'dictionaryperspectivetofield':
-            field.append(entry)
+            dictionaryperspectivetofield.append(entry)
         if entry['table_name'] == 'lexicalentry':
             lexicalentry.append(entry)
         if entry['table_name'] == 'entity':
@@ -340,6 +341,8 @@ def diff_desk(request):
             translationgist.append(entry)
         if entry['table_name'] == 'translationatom':
             translationatom.append(entry)
+        if entry['table_name'] == 'field':
+            field.append(entry)
     # todo: batches
     for group in DBSession.query(Group).filter_by(subject_client_id=authenticated_userid(request)).all():
         path = central_server + 'group'
@@ -375,16 +378,24 @@ def diff_desk(request):
             desk_persp.parent_client_id, desk_persp.parent_object_id)
         status = make_request(path, 'post', row2dict(desk_persp))
     for entry in field:
-        desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
+        desk_field = DBSession.query(Field).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
-        persp = desk_field.parent
-        path = central_server + 'dictionary/%s/%s/perspective/%s/%s/field' % (persp.parent_client_id,
-                                                                                      persp.parent_object_id,
-                                                                                      persp.client_id,
-                                                                                      persp.object_id)
+        path = central_server + 'field'
         status = make_request(path, 'post', row2dict(desk_field))
         if status.status_code != 200:
             print(status.status_code)
+    for entry in dictionaryperspectivetofield:
+        desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
+                                                           object_id=entry['object_id']).one()
+        if desk_field.parent_client_id == client.id:
+            persp = desk_field.parent
+            path = central_server + 'dictionary/%s/%s/perspective/%s/%s/field' % (persp.parent_client_id,
+                                                                                          persp.parent_object_id,
+                                                                                          persp.client_id,
+                                                                                          persp.object_id)
+            status = make_request(path, 'post', row2dict(desk_field))
+            if status.status_code != 200:
+                print(status.status_code)
     for entry in lexicalentry:
         desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -436,7 +447,7 @@ def diff_desk(request):
     for entry in userblobs:
         desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
                                                          object_id=entry['object_id']).one()
-        path = central_server + 'blob'  # todo: normal content upload
+        path = central_server + 'blob'
 
 
         data = {'object_id':desk_blob.object_id, 'data_type':desk_blob.data_type}
