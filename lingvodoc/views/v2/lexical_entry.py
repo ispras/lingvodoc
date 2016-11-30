@@ -131,13 +131,15 @@ def bulk_group_entities(request):  # tested
             filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
         if not client:
+            print('no client')
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
 
         if not field:
-            request.response.status = HTTPNotFound.code
+            request.response.status = HTTPNotFound
+            print('no such field')
             return {'error': str("No such field in the system")}
         for tag in req['tag_groups']:
             for tag_ent in req['tag_groups'][tag]:
@@ -155,11 +157,12 @@ def bulk_group_entities(request):  # tested
                                         content=tag_ent['content'],
                                         parent_client_id=tag_ent['parent_client_id'],
                                         parent_object_id=tag_ent['parent_object_id'])
-
+                    lex = DBSession.query(LexicalEntry).filter_by(client_id=tag_ent['parent_client_id'],
+                                                                  object_id=tag_ent['parent_object_id']).one()
                     group = DBSession.query(Group).join(BaseGroup).filter(
                         BaseGroup.subject == 'lexical_entries_and_entities',
-                        Group.subject_client_id == tag_entity.parent.parent.client_id,
-                        Group.subject_object_id == tag_entity.parent.parent.object_id,
+                        Group.subject_client_id == lex.parent_client_id,
+                        Group.subject_object_id == lex.parent_object_id,
                         BaseGroup.action == 'create').one()
                     if user in group.users:
                         tag_entity.publishingentity.accepted = True
@@ -173,6 +176,7 @@ def bulk_group_entities(request):  # tested
                 filter_by(client_id=tag_ent['parent_client_id'], object_id=tag_ent['parent_object_id']).first()
             if not parent:
                 request.response.status = HTTPNotFound.code
+                print('no lex')
                 return {'error': str("No such lexical entry in the system")}
             par_tags = find_all_tags(parent, field_client_id, field_object_id)
             for tag in par_tags:
@@ -196,8 +200,8 @@ def bulk_group_entities(request):  # tested
 
                         group = DBSession.query(Group).join(BaseGroup).filter(
                             BaseGroup.subject == 'lexical_entries_and_entities',
-                            Group.subject_client_id == tag_entity.parent.parent.client_id,
-                            Group.subject_object_id == tag_entity.parent.parent.object_id,
+                            Group.subject_client_id == lex.parent_client_id,
+                            Group.subject_object_id == lex.parent_object_id,
                             BaseGroup.action == 'create').one()
                         if user in group.users:
                             tag_entity.publishingentity.accepted = True
@@ -205,6 +209,7 @@ def bulk_group_entities(request):  # tested
             return response
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
+        print(str(e))
         return {'error': str(e)}
 
     except IntegrityError as e:

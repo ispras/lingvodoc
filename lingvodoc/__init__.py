@@ -372,7 +372,7 @@ def configure_routes(config):
     config.add_route(name='add_group_entity', pattern='/group_entity',
                      factory='lingvodoc.models.PerspectiveEntityAcl')  # tested
     config.add_route(name='bulk_group_entities', pattern='/group_entity/bulk',
-                     factory='lingvodoc.models.PerspectiveEntityAcl')
+                     factory='lingvodoc.models.ApproveAllAcl')
     config.add_route(name='add_group_indict', pattern='/dictionary/'
                                                       '{dictionary_client_id}/{dictionary_object_id}'
                                                       '/perspective/'
