@@ -407,7 +407,9 @@ def diff_desk(request):
         status = make_request(path, 'post', row2dict(desk_lex))
         if status.status_code != 200:
             print(status.status_code)
+    grouping_tags = dict()
     for entry in entity:
+        print('i am entity')
         desk_ent = DBSession.query(Entity).filter_by(client_id=entry['client_id'],
                                                      object_id=entry['object_id']).one()
         lex = desk_ent.parent
@@ -441,7 +443,24 @@ def diff_desk(request):
 
         ent_req['content'] = content
         ent_req['filename'] = filename
-        status = make_request(path, 'post', ent_req)
+        if desk_ent.field.data_type == 'Grouping Tag':
+            field_ids = str(desk_ent.field.client_id) + '_' + str(desk_ent.field.object_id)
+            if field_ids not in grouping_tags:
+                grouping_tags[field_ids] = {'field_client_id':desk_ent.field.client_id,
+                                            'field_object_id':desk_ent.field.object_id}
+            if desk_ent.content not in grouping_tags[field_ids]:
+                grouping_tags[field_ids][desk_ent.content] = [row2dict(desk_ent)]
+            else:
+                grouping_tags[field_ids][desk_ent.content].append(row2dict(desk_ent))
+        else:
+
+            print('this is not grouping tag')
+            status = make_request(path, 'post', ent_req)
+            if status.status_code != 200:
+                print(status.status_code)
+    for entry in grouping_tags:
+        path = central_server + '/group_entity/bulk'
+        status = make_request(path, 'post', grouping_tags[entry])
         if status.status_code != 200:
             print(status.status_code)
     for entry in userblobs:
