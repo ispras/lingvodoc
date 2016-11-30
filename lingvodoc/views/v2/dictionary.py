@@ -891,23 +891,45 @@ def dictionaries_list(request):  # TODO: test
         else:
             dicts = dicts.filter(Dictionary.category == 0)
     if published:
-        if published:
-            subreq = Request.blank('/translation_service_search')
-            subreq.method = 'POST'
-            subreq.headers = request.headers
-            subreq.json = {'searchstring': 'WiP'}
-            headers = dict()
-            if request.headers.get('Cookie'):
-                headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            resp = request.invoke_subrequest(subreq)
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Published'}
+        headers = dict()
+        if request.headers.get('Cookie'):
+            headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
 
-            if 'error' not in resp.json:
-                state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
-            else:
-                raise KeyError("Something wrong with the base", resp.json['error'])
-            dicts = dicts.filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id)).join(DictionaryPerspective) \
-                .filter(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id, Dictionary.state_translation_gist_client_id == state_translation_gist_client_id))
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Limited access'}  # todo: fix
+        headers = dict()
+        if request.headers.get('Cookie'):
+            headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+
+        if 'error' not in resp.json:
+            limited_object_id, limited_client_id = resp.json['object_id'], resp.json['client_id']
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
+        dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                                      Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                                 and_(Dictionary.state_translation_gist_object_id == limited_object_id,
+                                      Dictionary.state_translation_gist_client_id == limited_client_id))).join(
+            DictionaryPerspective) \
+            .filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                             DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                        and_(DictionaryPerspective.state_translation_gist_object_id == limited_object_id,
+                             DictionaryPerspective.state_translation_gist_client_id == limited_client_id)))
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
