@@ -118,7 +118,109 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id):
         return tags
 
 
-# TODO: completely broken!
+@view_config(route_name='bulk_group_entities', renderer='json', request_method='POST')
+def bulk_group_entities(request):  # tested
+    try:
+        variables = {'auth': authenticated_userid(request)}
+        response = dict()
+        req = request.json_body
+        client = DBSession.query(Client).filter_by(id=variables['auth']).first()
+        field_client_id=req['field_client_id']
+        field_object_id=req['field_object_id']
+        field = DBSession.query(Field).\
+            filter_by(client_id=field_client_id, object_id=field_object_id).first()
+
+        if not client:
+            print('no client')
+            raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
+        user = DBSession.query(User).filter_by(id=client.user_id).first()
+        if not user:
+            raise CommonException("This client id is orphaned. Try to logout and then login once more.")
+
+        if not field:
+            request.response.status = HTTPNotFound
+            print('no such field')
+            return {'error': str("No such field in the system")}
+        for tag in req['tag_groups']:
+            for tag_ent in req['tag_groups'][tag]:
+                tag_entity = DBSession.query(Entity) \
+                    .join(Entity.field) \
+                    .filter(Entity.parent_client_id == tag_ent['parent_client_id'],
+                            Entity.parent_object_id == tag_ent['parent_object_id'],
+                            Field.client_id == tag_ent['field_client_id'],
+                            Field.object_id == tag_ent['field_object_id'],
+                            Entity.content == tag).first()
+                if not tag_entity:
+                    tag_entity = Entity(client_id=client.id,
+                                        object_id=tag_ent['object_id'],
+                                        field=field,
+                                        content=tag_ent['content'],
+                                        parent_client_id=tag_ent['parent_client_id'],
+                                        parent_object_id=tag_ent['parent_object_id'])
+                    lex = DBSession.query(LexicalEntry).filter_by(client_id=tag_ent['parent_client_id'],
+                                                                  object_id=tag_ent['parent_object_id']).one()
+                    group = DBSession.query(Group).join(BaseGroup).filter(
+                        BaseGroup.subject == 'lexical_entries_and_entities',
+                        Group.subject_client_id == lex.parent_client_id,
+                        Group.subject_object_id == lex.parent_object_id,
+                        BaseGroup.action == 'create').one()
+                    if user in group.users:
+                        tag_entity.publishingentity.accepted = True
+        # if 'tag' in req:
+        #     tags.append(req['tag'])
+
+        for tag in req['tag_groups']:
+            tags = list()
+            tag_ent = req['tag_groups'][tag][0]
+            parent = DBSession.query(LexicalEntry).\
+                filter_by(client_id=tag_ent['parent_client_id'], object_id=tag_ent['parent_object_id']).first()
+            if not parent:
+                request.response.status = HTTPNotFound.code
+                print('no lex')
+                return {'error': str("No such lexical entry in the system")}
+            par_tags = find_all_tags(parent, field_client_id, field_object_id)
+            for tag in par_tags:
+                if tag not in tags:
+                    tags.append(tag)
+            lexical_entries = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+            if parent not in lexical_entries:
+                lexical_entries.append(parent)
+
+            for lex in lexical_entries:
+                for tag in tags:
+                    tag_entity = DBSession.query(Entity) \
+                        .join(Entity.field) \
+                        .filter(Entity.parent == lex,
+                                Field.client_id == field_client_id,
+                                Field.object_id == field_object_id,
+                                Entity.content == tag).first()
+                    if not tag_entity:
+                        tag_entity = Entity(client_id=client.id,
+                                            field=field, content=tag, parent=lex)
+
+                        group = DBSession.query(Group).join(BaseGroup).filter(
+                            BaseGroup.subject == 'lexical_entries_and_entities',
+                            Group.subject_client_id == lex.parent_client_id,
+                            Group.subject_object_id == lex.parent_object_id,
+                            BaseGroup.action == 'create').one()
+                        if user in group.users:
+                            tag_entity.publishingentity.accepted = True
+            request.response.status = HTTPOk.code
+            return response
+    except KeyError as e:
+        request.response.status = HTTPBadRequest.code
+        print(str(e))
+        return {'error': str(e)}
+
+    except IntegrityError as e:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': str(e)}
+
+    except CommonException as e:
+        request.response.status = HTTPConflict.code
+        return {'error': str(e)}
+
+
 @view_config(route_name='add_group_indict', renderer='json', request_method='POST')
 @view_config(route_name='add_group_entity', renderer='json', request_method='POST')
 def create_group_entity(request):  # tested
