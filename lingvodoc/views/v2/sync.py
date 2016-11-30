@@ -384,6 +384,8 @@ def diff_desk(request):
         status = make_request(path, 'post', row2dict(desk_field))
         if status.status_code != 200:
             print(status.status_code)
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in dictionaryperspectivetofield:
         desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -396,6 +398,8 @@ def diff_desk(request):
             status = make_request(path, 'post', row2dict(desk_field))
             if status.status_code != 200:
                 print(status.status_code)
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error")}
     for entry in lexicalentry:
         desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -407,6 +411,8 @@ def diff_desk(request):
         status = make_request(path, 'post', row2dict(desk_lex))
         if status.status_code != 200:
             print(status.status_code)
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     grouping_tags = dict()
     for entry in entity:
         print('i am entity')
@@ -436,7 +442,10 @@ def diff_desk(request):
                     if content.status_code != 200:
                         log.error(desk_ent.content)
                         DBSession.rollback()
-                        return
+                        print(content.status_code)
+                        request.response.status = HTTPInternalServerError.code
+                        return {'error': str("internet error")}
+                        # return
 
                     content = content.content
                     content = base64.urlsafe_b64encode(content)
