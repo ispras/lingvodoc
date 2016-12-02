@@ -32,6 +32,7 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
   private[this] var downloadedDictionaries = Seq[Dictionary]()
   private[this] var selectedDictionaries = Seq[Dictionary]()
   private[this] var perspectiveMeta = Seq[PerspectiveMeta]()
+  private[this] var permissions = Map[Int, Map[Int, PerspectivePermissions]]()
 
   scope.languages = js.Array[Language]()
 
@@ -57,11 +58,14 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
 
   @JSExport
   def download() = {
-    Future.sequence(selectedDictionaries.map(dictionary => backend.syncDownloadDictionary(CompositeId.fromObject(dictionary)))) foreach { _ =>
-
-    }
+    Future.sequence(selectedDictionaries.map(dictionary => backend.syncDownloadDictionary(CompositeId.fromObject(dictionary)))) foreach { _ => }
   }
 
+  @JSExport
+  def getPerspectivePermissions(perspective: Perspective): UndefOr[PerspectivePermissions] = {
+    permissions.get(perspective.clientId).flatMap { e1 => e1.get(perspective.objectId)}.orUndefined
+  }
+  
   @JSExport
   def isDownloaded(dictionary: Dictionary): Boolean = {
     downloadedDictionaries.exists(_.getId == dictionary.getId)
@@ -78,7 +82,6 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
 
   override protected def postRequestHook(): Unit = {
     scope.$digest()
-
   }
 
   doAjax(() => {
@@ -91,20 +94,17 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
               dictionary.perspectives = perspectives.filter(perspective => perspective.parentClientId == dictionary.clientId && perspective.parentObjectId == dictionary.objectId).toJSArray
             }
           }
-
           backend.getDictionaries(DictionaryQuery()) map { dictionaries =>
             downloadedDictionaries = dictionaries
-          }
 
+            backend.desktopPerspectivePermissions() map { p =>
+              permissions = p
+            }
+          }
           scope.languages = languages.toJSArray
           languages
         }
       }
-
-
-
-
-
     }
   })
 
