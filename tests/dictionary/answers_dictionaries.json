@@ -1,0 +1,224 @@
+{
+  "filter_by_user_1": {
+    "clients": [
+      5,
+      6,
+      8,
+      9,
+      17,
+      18
+    ],
+    "dictionaries": [
+      {
+        "translation_string": "user1_dict1",
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 1,
+        "client_id": 17,
+        "translation": "user1_dict1",
+        "parent_client_id": 16,
+        "additional_metadata": null
+      },
+      {
+        "translation_string": "user2_dict1",
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 3,
+        "client_id": 18,
+        "translation": "user2_dict1",
+        "parent_client_id": 16,
+        "additional_metadata": null
+      }
+    ]
+  },
+  "filter_by_user_2": {
+    "dictionaries": [
+      {
+        "object_id": 1,
+        "additional_metadata": null,
+        "translation": "user3_dict1",
+        "client_id": 19,
+        "translation_string": "user3_dict1",
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
+      }
+    ],
+    "clients": [
+      19,
+      11,
+      12
+    ]
+  },
+  "filter_by_user_3": {
+    "dictionaries": [],
+    "clients": [
+      14,
+      15
+    ]
+  },
+  "filter_by_language_1": {
+    "dictionaries": [
+      {
+        "translation_string": "user1_dict1",
+        "translation": "user1_dict1",
+        "client_id": 17,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 1,
+        "parent_client_id": 16
+      },
+      {
+        "translation_string": "user2_dict1",
+        "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
+      }
+    ]
+  },
+  "filter_by_language_2": {
+    "dictionaries": [
+      {
+        "translation_string": "user3_dict1",
+        "translation": "user3_dict1",
+        "client_id": 19,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
+      }
+    ]
+  },
+  "filter_by_language_3": {
+    "dictionaries": []
+  },
+  "filter_by_user_language_1": {
+    "dictionaries": [
+      {
+        "translation_string": "user2_dict1",
+        "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
+      }
+    ],
+    "clients": [
+      8,
+      9,
+      11,
+      12,
+      18,
+      19
+    ]
+  },
+  "filter_by_user_language_2": {
+    "dictionaries": [],
+    "clients": [
+      11,
+      12,
+      14,
+      15,
+      19
+    ]
+  },
+  "filter_by_user_language_3": {
+    "dictionaries": [
+      {
+        "translation_string": "user1_dict1",
+        "translation": "user1_dict1",
+        "client_id": 17,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 1,
+        "parent_client_id": 16
+      },
+      {
+        "translation_string": "user2_dict1",
+        "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
+      },
+      {
+        "translation_string": "user3_dict1",
+        "translation": "user3_dict1",
+        "client_id": 19,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
+      }
+    ],
+    "clients": [
+      5,
+      6,
+      8,
+      9,
+      11,
+      12,
+      14,
+      15,
+      17,
+      18,
+      19
+    ]
+  },
+  "filter_by_user_language_4": {
+    "dictionaries": [
+      {
+        "translation_string": "Fake dictionary",
+        "translation": "Fake dictionary",
+        "client_id": 1,
+        "additional_metadata": null,
+        "object_id": 6,
+        "status": "Service",
+        "parent_object_id": null,
+        "parent_client_id": null
+      },
+      {
+        "translation_string": "user1_dict1",
+        "translation": "user1_dict1",
+        "client_id": 17,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 1,
+        "parent_client_id": 16
+      },
+      {
+        "translation_string": "user2_dict1",
+        "translation": "user2_dict1",
+        "client_id": 18,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 3,
+        "parent_client_id": 16
+      },
+      {
+        "translation_string": "user3_dict1",
+        "translation": "user3_dict1",
+        "client_id": 19,
+        "additional_metadata": null,
+        "object_id": 1,
+        "status": "WiP",
+        "parent_object_id": 5,
+        "parent_client_id": 16
+      }
+    ]
+  }
+}

@@ -1,0 +1,539 @@
+{
+  "change_several_roles": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3,
+        4,
+        5
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "add_single_role": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3,
+        4,
+        5
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4,
+        5
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "empty_test_1": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3,
+        4,
+        5
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4,
+        5
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "empty_test_2": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3,
+        4,
+        5
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4,
+        5
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "delete_one_user": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3,
+        4,
+        5
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "delete_missing_user": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3,
+        4,
+        5
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "delete_several_users": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "empty_delete_test_1": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  },
+  "empty_delete_test_2": {
+    "roles_users": {
+      "Can delete perspective": [
+        3,
+        4
+      ],
+      "Can get perspective role list": [
+        3
+      ],
+      "Can view published lexical entries": [
+        3,
+        4
+      ],
+      "Can resign users from perspective editors": [
+        3,
+        4
+      ],
+      "Can create perspective roles and assign collaborators": [
+        3
+      ],
+      "Can deactivate lexical entries": [
+        3,
+        4
+      ],
+      "Can delete lexical entries": [
+        3,
+        4
+      ],
+      "Can edit perspective": [
+        3,
+        4
+      ],
+      "Can view unpublished lexical entries": [
+        3,
+        4
+      ],
+      "Can approve lexical entries and publish": [
+        3,
+        5
+      ],
+      "Can create lexical entries": [
+        3
+      ]
+    },
+    "roles_organizations": {
+      "Can delete perspective": [],
+      "Can get perspective role list": [],
+      "Can view published lexical entries": [],
+      "Can resign users from perspective editors": [],
+      "Can create perspective roles and assign collaborators": [],
+      "Can deactivate lexical entries": [],
+      "Can delete lexical entries": [],
+      "Can edit perspective": [],
+      "Can view unpublished lexical entries": [],
+      "Can approve lexical entries and publish": [],
+      "Can create lexical entries": []
+    }
+  }
+}

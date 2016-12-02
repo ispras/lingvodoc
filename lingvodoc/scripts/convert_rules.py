@@ -22,10 +22,12 @@ def _export_to_elan(textGrid_file):
         elan = tgt.io.export_to_elan(textgrid)
     except Exception as e:
         try:
+            print('first exception')
             print(e)
             textgrid = tgt.io.read_textgrid(textGrid_file, encoding='utf-16')
             elan = tgt.io.export_to_elan(textgrid)
         except Exception as e:
+            print('second exception')
             print(e)
             return 'error'
     return elan
@@ -57,4 +59,10 @@ def praat_to_elan(filename, user_config=None, converter_config=None):
     return content
 
 
-rules = [ConvertRule('Praat','Elan', ['TextGrid'], ['eaf'], praat_to_elan)]
+def elan_to_elan(filename, user_config=None, converter_config=None):
+    content = _export_to_elan(filename)
+    return content
+
+
+rules = [ConvertRule('Praat','Elan', ['TextGrid'], ['eaf'], praat_to_elan),
+         ConvertRule('Elan','Elan', ['eaf'], ['eaf'], elan_to_elan)]

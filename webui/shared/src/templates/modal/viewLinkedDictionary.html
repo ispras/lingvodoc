@@ -1,0 +1,47 @@
+<div class="modal-header">
+    <h3 class="modal-title"></h3>
+</div>
+
+<div class="modal-body">
+
+    <div class="row">
+        <div class="col-md-12">
+
+            <button type="button" class="btn btn-default btn-sm" ng-click="controller.playPause()">
+                <span class="glyphicon glyphicon-play">Play/Pause full</span>
+            </button>
+
+            <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomIn()">
+                <span class="glyphicon glyphicon glyphicon-zoom-in">Zoom in</span>
+            </button>
+
+            <button type="button" class="btn btn-default btn-sm" ng-click="controller.zoomOut()">
+                <span class="glyphicon glyphicon glyphicon-zoom-out">Zoom out</span>
+            </button>
+
+            <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
+
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="col-md-12">
+            <h4>
+                {{ linkedPath }}
+            </h4>
+        </div>
+    </div>
+
+    <div ng-include="'/static/templates/include/viewDictionary.html'"></div>
+
+
+    <div ng-if="edit">
+        <h3>{{ controller.linkedPerspectiveName() }}</h3>
+        <div ng-include="'/static/templates/include/viewLinkedDictionary.html'"></div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="controller.close()">OK</button>
+</div>

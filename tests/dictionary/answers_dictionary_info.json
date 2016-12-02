@@ -1,0 +1,49 @@
+{
+  "empty_dict": {
+    "count": []
+  },
+  "filled_dict": {
+    "count": [
+      {
+        "id": 3,
+        "counters": {
+          "Sound": 0,
+          "Paradigm transcription": 0,
+          "Paradigm translation": 0,
+          "Transcription": 0,
+          "Paradigm sound": 0,
+          "lexical_entry": 4,
+          "Etymology": 0,
+          "Paradigm word": 0,
+          "Translation": 3,
+          "Praat markup": 0,
+          "Word": 2,
+          "Paradigm Praat markup": 0
+        },
+        "login": "user1",
+        "name": "test",
+        "intl_name": "user1"
+      },
+      {
+        "id": 4,
+        "counters": {
+          "Sound": 0,
+          "Paradigm transcription": 0,
+          "Paradigm translation": 0,
+          "Transcription": 1,
+          "Paradigm sound": 0,
+          "lexical_entry": 0,
+          "Etymology": 0,
+          "Paradigm word": 0,
+          "Translation": 1,
+          "Praat markup": 0,
+          "Word": 0,
+          "Paradigm Praat markup": 0
+        },
+        "login": "user2",
+        "name": "test",
+        "intl_name": "user2"
+      }
+    ]
+  }
+}

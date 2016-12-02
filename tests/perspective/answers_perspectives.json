@@ -1,0 +1,34 @@
+{
+  "filled_perspective": {
+    "perspectives": [
+      {
+        "parent_client_id": 7,
+        "parent_object_id": 3,
+        "is_template": false,
+        "additional_metadata": "{}",
+        "marked_for_deletion": false,
+        "object_id": 7,
+        "translation_string": "translation_string1",
+        "client_id": 7,
+        "status": "Published",
+        "translation": "translation_string1"
+      },
+      {
+        "parent_client_id": 7,
+        "parent_object_id": 3,
+        "is_template": true,
+        "additional_metadata": "{}",
+        "marked_for_deletion": false,
+        "object_id": 9,
+        "translation_string": "translation_string1",
+        "client_id": 7,
+        "status": "Marked",
+        "translation": "translation_string1"
+      }
+    ]
+  },
+  "empty_perspective": {
+    "perspectives": []
+  }
+}
+

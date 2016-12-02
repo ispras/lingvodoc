@@ -9,26 +9,10 @@ with open(os.path.join(here, 'CHANGES.md')) as f:
     CHANGES = f.read()
 
 requires = [
-    'pyramid',
-    'pyramid_chameleon',
-    'pyramid_debugtoolbar',
-    'pyramid_tm',
-    'sqlalchemy',
-    'transaction',
-    'zope.sqlalchemy',
-    'waitress',
-    'alembic',
-    'passlib',
-    'py-bcrypt',
-    'requests',
-    'simplejson',
-    'nltk',
-    'python-keystoneclient',
-    'python-swiftclient'
     ]
 
 setup(name='lingvodoc',
-      version='0.8',
+      version='1.9',
       description='lingvodoc',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[

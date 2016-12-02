@@ -5,6 +5,7 @@ from .models import (
     User,
     Client,
     Group,
+    BaseGroup
     )
 
 from pyramid.security import forget
@@ -16,9 +17,20 @@ log = logging.getLogger(__name__)
 
 
 def groupfinder(client_id, request):
+    if request.registry.settings.get("desktop") and request.registry.settings["desktop"].get("desktop"):
+        client_id = request.cookies.get('client_id')
     if not client_id:
         return None
-
+    subject = None
+    factory = request.matched_route.factory
+    if not factory:
+        return []
+    try:
+        subject = request.matched_route.factory.get_subject()
+    except AttributeError as e:
+        pass
+    if subject == 'no op subject':
+        return []
     try:
         user = DBSession.query(User) \
                         .options(joinedload('groups').joinedload('BaseGroup')) \
@@ -28,7 +40,11 @@ def groupfinder(client_id, request):
 
         groups = DBSession.query(Group)\
             .options(joinedload('BaseGroup')) \
-            .filter(Group.users.contains(user)).all()
+            .join(BaseGroup) \
+            .filter(Group.users.contains(user))
+        if subject:
+            groups = groups.filter(BaseGroup.subject == subject)
+        groups = groups.all()
 
     except AttributeError as e:
             forget(request)
@@ -62,4 +78,5 @@ def groupfinder(client_id, request):
                              + ":" + str(group.subject_client_id) + ":" + str(group.subject_object_id)
             grouplist.append(group_name)
     log.debug("GROUPLIST: %d, %s", len(grouplist), grouplist)
-    return grouplist
+    # log.error("GROUPLIST: %d, %s", len(grouplist), grouplist)
+    return grouplist  # todo: caching
