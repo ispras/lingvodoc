@@ -12,6 +12,7 @@ import scala.scalajs.js
 import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.Dynamic.global
 
 
 @js.native
@@ -29,8 +30,10 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
     with AngularExecutionContextProvider
     with LoadingPlaceholder {
 
+  private[this] var downloadedDictionaries = Seq[Dictionary]()
   private[this] var selectedDictionaries = Seq[Dictionary]()
   private[this] var perspectiveMeta = Seq[PerspectiveMeta]()
+  private[this] var permissions = Map[Int, Map[Int, PerspectivePermissions]]()
 
   scope.languages = js.Array[Language]()
 
@@ -56,9 +59,18 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
 
   @JSExport
   def download() = {
-    Future.sequence(selectedDictionaries.map(dictionary => backend.syncDownloadDictionary(CompositeId.fromObject(dictionary)))) foreach { _ =>
+    global.alert("Пока не закончится процесс синхронизации, система работает в режиме 'только чтение'")
+    Future.sequence(selectedDictionaries.map(dictionary => backend.syncDownloadDictionary(CompositeId.fromObject(dictionary)))) foreach { _ => }
+  }
 
-    }
+  @JSExport
+  def getPerspectivePermissions(perspective: Perspective): UndefOr[PerspectivePermissions] = {
+    permissions.get(perspective.clientId).flatMap { e1 => e1.get(perspective.objectId)}.orUndefined
+  }
+  
+  @JSExport
+  def isDownloaded(dictionary: Dictionary): Boolean = {
+    downloadedDictionaries.exists(_.getId == dictionary.getId)
   }
 
   override protected def onLoaded[T](result: T): Unit = {
@@ -72,21 +84,27 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
 
   override protected def postRequestHook(): Unit = {
     scope.$digest()
-
   }
 
   doAjax(() => {
     backend.allPerspectivesMeta flatMap { p =>
       perspectiveMeta = p
-      backend.getAvailableDesktopDictionaries map { languages =>
-        backend.getAvailableDesktopPerspectives(published = true) map { perspectives =>
-          Utils.flattenLanguages(languages).foreach { language =>
-            language.dictionaries.foreach { dictionary =>
-              dictionary.perspectives = perspectives.filter(perspective => perspective.parentClientId == dictionary.clientId && perspective.parentObjectId == dictionary.objectId).toJSArray
+
+      backend.desktopPerspectivePermissions() map { p =>
+        permissions = p
+        backend.getAvailableDesktopDictionaries map { languages =>
+          backend.getAvailableDesktopPerspectives(published = true) map { perspectives =>
+            Utils.flattenLanguages(languages).foreach { language =>
+              language.dictionaries.foreach { dictionary =>
+                dictionary.perspectives = perspectives.filter(perspective => perspective.parentClientId == dictionary.clientId && perspective.parentObjectId == dictionary.objectId).toJSArray
+              }
             }
+            backend.getDictionaries(DictionaryQuery()) map { dictionaries =>
+              downloadedDictionaries = dictionaries
+            }
+            scope.languages = languages.toJSArray
+            languages
           }
-          scope.languages = languages.toJSArray
-          languages
         }
       }
     }

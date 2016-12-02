@@ -32,7 +32,7 @@ object DesktopApplication {
 
   @JSExport
   def main() = {
-  Angular.module("LingvodocDesktopModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap"))
+  Angular.module("LingvodocDesktopModule", Seq("ngRoute", "ngSanitize", "ngAnimate", "ui.bootstrap"))
       .config[DesktopApplicationConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]

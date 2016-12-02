@@ -1,0 +1,238 @@
+<div class="container">
+
+    <div class="row">
+        <div class="col-sm-8 col-sm-offset-2">
+
+            <!-- First step -->
+            <div ng-show="step==1">
+                <!-- List of all languages -->
+                <label for="language"><translatable str="Language">Language</translatable></label>
+
+                <select id="language"  ng-model="languageId">
+                    <option ng-repeat="language in languages" value="{{ language.getId }}" ng-bind-html="controller.languagePadding(language) + language.translation">
+		    </option>
+                </select>
+
+                <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
+                <hr>
+
+                <ol>
+                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="create"> <translatable str="Create new dictionary">Create new dictionary</translatable></label></li>
+                    <li><label><input type="radio" name="mode" ng-model="creationMode" value="import"> <translatable str="Import dictionary">Import dictionary</translatable></label>
+                    </li>
+                </ol>
+
+                <div>
+
+                    <div ng-repeat="name in names">
+                        <label for="localized-name-{{$index}}"
+                               ng-bind="controller.getLocaleName(name.localeId)"></label>
+                        <input type="text" id="localized-name-{{$index}}" class="form-control" ng-model="name.str"
+                               placeholder="">
+                    </div>
+                </div>
+
+                <div class="ng-hide" ng-show="creationMode == 'import'">
+                    <label for="selectFile"><translatable str="Select uploaded file">Select uploaded file</translatable></label> (<a href="#/files"><translatable str="Upload dictionary">Upload dictionary</translatable></a>)
+
+                    <select id="selectFile" ng-model="fileId" class="form-control">
+                        <option ng-repeat="file in files" value="{{ file.getId }}">{{ file.name }}</option>
+                    </select>
+
+                </div>
+
+                <button class="btn btn-block btn-info" ng-click="controller.createDictionary2()"
+                        ng-disabled="controller.step1NextDisabled()">
+                    Next <span class="glyphicon glyphicon-circle-arrow-right"></span>
+                </button>
+
+            </div>
+
+            <div ng-show="step==2">
+
+                <!-- Layers -->
+                <h1><transltable str="Layers">Layers</transltable>
+                    <button type="button" aria-label="Add layer" ng-click="controller.addLayer()"><span
+                            aria-hidden="true">+</span></button>
+                </h1>
+
+                <div class="row animate-repeat" ng-repeat="layer in layers">
+
+                    <!-- layer -->
+                    <div class="col-lg-12">
+
+                        <!-- layer name in display locale -->
+                        <h2>#{{$index+1}} {{ controller.getLayerDisplayName(layer) }}</h2>
+
+                        <!-- Layer name translations -->
+                        <div class="row" ng-repeat="name in layer.names">
+
+                            <div class="col-lg-6">
+
+                                <div class="input-group"><span class="input-group-addon">Name</span>
+                                    <input type="text" id="layer-name-{{$index}}" class="form-control"
+                                           ng-model="name.str" placeholder="">
+                                </div>
+
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="input-group"><span class="input-group-addon"><translatable str="Language">Language</translatable></span>
+                                    <select id="layer-name-locale-{{$index}}" class="form-control"
+                                            ng-model="name.localeId" convert-to-number>
+                                        <option ng-repeat="locale in controller.getAvailableLocales(layer.names, name)"
+                                                ng-attr-value="{{ locale.id }}">{{ locale.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End of layer name translations -->
+
+
+                        <br/>
+
+                        <button class="btn btn-info" ng-click="controller.addNameTranslation(layer)">
+                            <span class="glyphicon glyphicon-plus-sign"><translatable str="Add translation">Add translation</translatable></span>
+                        </button>
+
+                        <br/>
+                        <br/>
+
+
+                        <!-- Types block -->
+                        <div class="row">
+                            <div class="col-lg-11 col-lg-offset-1">
+
+                                <h3><translatable str="Fields">Fields</translatable>
+                                    <button type="button" aria-label="Add layer"
+                                            ng-click="controller.addFieldType(layer)"><span aria-hidden="true">+</span>
+                                    </button>
+                                </h3>
+                                <!-- list of types -->
+                                <div class="row animate-repeat" ng-repeat="fieldEntry in layer.fieldEntries">
+                                    <!-- Type -->
+                                    <div class="col-lg-12">
+
+                                        <!-- type header -->
+                                        <div>
+                                            <button type="button" class="close" aria-label="Remove"
+                                                    ng-click="controller.removeFieldType(layer, fieldEntry)"><span
+                                                    aria-hidden="true">×</span></button>
+                                            <h4>#{{$index+1}}
+                                                <button type="button" class="control-button" aria-label="Up"
+                                                        ng-click="controller.moveFieldTypeUp(layer, fieldEntry)"><span
+                                                        aria-hidden="true">⇑</span></button>
+                                                <button type="button" class="control-button" aria-label="Down"
+                                                        ng-click="controller.moveFieldTypeDown(layer, fieldEntry)"><span
+                                                        aria-hidden="true">⇓</span></button>
+                                            </h4>
+                                        </div>
+                                        <!-- type header end -->
+
+                                        <div class="row">
+
+                                            <div class="col-lg-6">
+
+                                                <!-- Select from already existing fields -->
+                                                <select ng-model="fieldEntry.fieldId"
+                                                        ng-change="controller.selectField(fieldEntry)"
+                                                        class="form-control">
+                                                    <option style="font-weight:bold; color:black;" disabled><translatable str="Existing fields">Existing fields</translatable></option>
+                                                    <option ng-repeat="field in fields" value="{{field.getId}}"> &nbsp;
+                                                        {{ field.translation }}
+                                                    </option>
+                                                    <option disabled>&nbsp;</option>
+                                                    <option value="add_new_field"><translatable str="Add new field...">Add new field...</translatable></option>
+                                                </select>
+
+                                            </div>
+
+
+                                            <div class="col-lg-6" ng-if="!controller.linkFieldSelected(fieldEntry)">
+
+                                                <div class="row">
+
+                                                    <div class="col-lg-5">
+                                                        <input type="checkbox" ng-model="fieldEntry.hasSubfield"
+                                                               ng-checked="fieldEntry.hasSubfield"> <translatable str="Has linked field">Has linked field</translatable>
+                                                    </div>
+
+                                                    <div class="col-lg-7">
+                                                        <div class="animate-if" ng-if="fieldEntry.hasSubfield">
+                                                            <!-- Select from already existing fields -->
+                                                            <select ng-model="fieldEntry.subfieldId"
+                                                                    class="form-control">
+                                                                <option ng-repeat="field in fields"
+                                                                        value="{{field.getId}}">{{ field.translation }}
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+
+                                            <div class="col-lg-6" ng-if="controller.linkFieldSelected(fieldEntry)">
+
+                                                <div class="input-group">
+                                                    <div class="input-group-addon">Linked layers</div>
+                                                    <select class="form-control" ng-model="fieldEntry.linkedLayerId">
+                                                        <option ng-repeat="linkLayer in controller.availableLayers(layer)"
+                                                                value="{{linkLayer.internalId}}">{{
+                                                            controller.getLinkedLayerDisplayName(linkLayer) }}
+                                                        </option>
+                                                    </select>
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+                                        <hr/>
+                                    </div>
+
+                                    <!-- type end -->
+                                </div>
+                                <!-- list of fields -->
+
+
+                                <div class="row" ng-if="layer.fieldEntries.length == 0">
+                                    <div class="col-lg-12">
+                                        <p class="lead"><translatable str="There are no fields yet. Click '+' button to create a new one.">There are no fields yet. Click '+' button to create a new one.</translatable></p>
+                                    </div>
+                                </div>
+
+
+                                <br/>
+                                <br/>
+
+                            </div>
+                            <!-- types end -->
+                        </div>
+                    </div>
+                    <hr/>
+                </div>
+                <!-- Layers end -->
+
+                <div ng-show="layers.length == 0">
+                    <p class="lead"><translatable str="There are no layers yet. Click '+' button to create a new one.">There are no layers yet. Click '+' button to create a new one.</translatable></p>
+                </div>
+
+                <button class="btn btn-block btn-info" ng-click="controller.finish()"
+                        ng-disabled="controller.step2NextDisabled()">
+                    Finish <span class="glyphicon glyphicon-circle-arrow-right"></span>
+                </button>
+            </div>
+
+            <div  ng-show="step==3">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h1><translatable str="Dictionary created">Dictionary created</translatable></h1>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</div>

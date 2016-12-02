@@ -38,7 +38,7 @@ class LanguageController(scope: LanguageScope, modal: ModalService, backend: Bac
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(
-          "parentLanguage" -> parentLanguage.asInstanceOf[js.Object]
+          "parentLanguage" -> Some(parentLanguage).asInstanceOf[js.Object]
         )
       }
     ).asInstanceOf[js.Dictionary[js.Any]]

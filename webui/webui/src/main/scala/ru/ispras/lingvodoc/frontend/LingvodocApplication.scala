@@ -35,7 +35,7 @@ object LingvodocApplication {
 
   @JSExport
   def main() = {
-  Angular.module("LingvodocModule", Seq("ngRoute", "ngAnimate", "ui.bootstrap"))
+  Angular.module("LingvodocModule", Seq("ngRoute", "ngSanitize", "ngAnimate", "ui.bootstrap"))
       .config[LingvodocConfig]
 	    .factory[BackendServiceFactory]
       .factory[UserServiceFactory]
