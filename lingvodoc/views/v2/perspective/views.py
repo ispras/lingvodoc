@@ -1927,20 +1927,21 @@ def approve_all(request):
         if not parent.marked_for_deletion:
             dictionary_client_id = parent.parent_client_id
             dictionary_object_id = parent.parent_object_id
-            entities = DBSession.query(Entity).join(LexicalEntry).filter(LexicalEntry.parent == parent).all()
-
-            url = request.route_url('approve_entity',
-                                    dictionary_client_id=dictionary_client_id,
-                                    dictionary_object_id=dictionary_object_id,
-                                    perspective_client_id=client_id,
-                                    perspective_object_id=object_id)
-            subreq = Request.blank(url)
-            jsn = entities
-            subreq.json = jsn
-            subreq.method = 'PATCH'
-            headers = {'Cookie': request.headers['Cookie']}
-            subreq.headers = headers
-            request.invoke_subrequest(subreq)
+            entities = DBSession.query(PublishingEntity).join(Entity).join(LexicalEntry).filter(LexicalEntry.parent == parent).all()
+            for entity in entities:
+                entity.published = True
+            # url = request.route_url('approve_entity',
+            #                         dictionary_client_id=dictionary_client_id,
+            #                         dictionary_object_id=dictionary_object_id,
+            #                         perspective_client_id=client_id,
+            #                         perspective_object_id=object_id)
+            # subreq = Request.blank(url)
+            # jsn = entities
+            # subreq.json = jsn
+            # subreq.method = 'PATCH'
+            # headers = {'Cookie': request.headers['Cookie']}
+            # subreq.headers = headers
+            # request.invoke_subrequest(subreq)
 
             request.response.status = HTTPOk.code
             return response

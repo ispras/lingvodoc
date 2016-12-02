@@ -55,9 +55,7 @@ def view_connected_words(request):
     if lexical_entry:
         if not lexical_entry.marked_for_deletion:
             tags = find_all_tags(lexical_entry, field_client_id, field_object_id)
-            print('tags', tags)
             lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
-            print('lexes', lexes)
             for lex in lexes:
                 path = request.route_url('lexical_entry',  # todo: method in utils (or just use track)
                                          client_id=lex.client_id,
@@ -125,22 +123,25 @@ def bulk_group_entities(request):  # tested
         response = dict()
         req = request.json_body
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-        field_client_id=req['field_client_id']
-        field_object_id=req['field_object_id']
+        field_client_id = req['field_client_id']
+        field_object_id = req['field_object_id']
+        counter = req['counter']
         field = DBSession.query(Field).\
             filter_by(client_id=field_client_id, object_id=field_object_id).first()
 
         if not client:
-            print('no client')
             raise KeyError("Invalid client id (not registered on server). Try to logout and then login.")
         user = DBSession.query(User).filter_by(id=client.user_id).first()
         if not user:
             raise CommonException("This client id is orphaned. Try to logout and then login once more.")
-
+        client.counter = counter
+        DBSession.flush()
         if not field:
             request.response.status = HTTPNotFound
-            print('no such field')
             return {'error': str("No such field in the system")}
+        if field.data_type != 'Grouping Tag':
+            raise KeyError("wrong field data type")
+
         for tag in req['tag_groups']:
             for tag_ent in req['tag_groups'][tag]:
                 tag_entity = DBSession.query(Entity) \
@@ -176,7 +177,6 @@ def bulk_group_entities(request):  # tested
                 filter_by(client_id=tag_ent['parent_client_id'], object_id=tag_ent['parent_object_id']).first()
             if not parent:
                 request.response.status = HTTPNotFound.code
-                print('no lex')
                 return {'error': str("No such lexical entry in the system")}
             par_tags = find_all_tags(parent, field_client_id, field_object_id)
             for tag in par_tags:
@@ -206,10 +206,10 @@ def bulk_group_entities(request):  # tested
                         if user in group.users:
                             tag_entity.publishingentity.accepted = True
             request.response.status = HTTPOk.code
+            response['counter'] = client.counter
             return response
     except KeyError as e:
         request.response.status = HTTPBadRequest.code
-        print(str(e))
         return {'error': str(e)}
 
     except IntegrityError as e:
@@ -246,6 +246,8 @@ def create_group_entity(request):  # tested
         if not field:
             request.response.status = HTTPNotFound.code
             return {'error': str("No such field in the system")}
+        if field.data_type != 'Grouping Tag':
+            raise KeyError("wrong field data type")
 
         for par in req['connections']:
             parent = DBSession.query(LexicalEntry).\
