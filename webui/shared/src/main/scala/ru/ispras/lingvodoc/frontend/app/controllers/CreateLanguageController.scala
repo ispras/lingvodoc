@@ -30,7 +30,7 @@ class CreateLanguageController(scope: CreateLanguageScope,
   with AngularExecutionContextProvider {
 
   val parentlanguage = params.find(_._1 == "parentLanguage") match {
-    case Some(_) => Some(params("parentLanguage").asInstanceOf[Language])
+    case Some(_) => params("parentLanguage").asInstanceOf[Option[Language]]
     case None => None
   }
 

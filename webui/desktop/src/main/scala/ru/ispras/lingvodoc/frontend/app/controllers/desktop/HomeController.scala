@@ -29,6 +29,7 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
     with AngularExecutionContextProvider
     with LoadingPlaceholder {
 
+  private[this] var downloadedDictionaries = Seq[Dictionary]()
   private[this] var selectedDictionaries = Seq[Dictionary]()
   private[this] var perspectiveMeta = Seq[PerspectiveMeta]()
 
@@ -61,6 +62,11 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
     }
   }
 
+  @JSExport
+  def isDownloaded(dictionary: Dictionary): Boolean = {
+    downloadedDictionaries.exists(_.getId == dictionary.getId)
+  }
+
   override protected def onLoaded[T](result: T): Unit = {
 
   }
@@ -85,10 +91,20 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
               dictionary.perspectives = perspectives.filter(perspective => perspective.parentClientId == dictionary.clientId && perspective.parentObjectId == dictionary.objectId).toJSArray
             }
           }
+
+          backend.getDictionaries(DictionaryQuery()) map { dictionaries =>
+            downloadedDictionaries = dictionaries
+          }
+
           scope.languages = languages.toJSArray
           languages
         }
       }
+
+
+
+
+
     }
   })
 

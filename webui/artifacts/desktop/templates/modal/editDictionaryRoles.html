@@ -1,0 +1,54 @@
+<div class="modal-header">
+    <h3 class="modal-title">{{ dictionary.translation }}</h3>
+</div>
+
+<div class="modal-body">
+    <div ng-if="!error">
+        <h3>Users</h3>
+        <div ng-repeat="role in controller.getRoles()">
+            <h4 ng-click="controller.toggleAddUsers(role)" style="cursor: pointer;">{{ role }} </h4>
+
+            <div ng-show="controller.isAddUsersActive(role)">
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <td>
+                        </td>
+                        <td>
+                        </td>
+                        <td>
+                        </td>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr ng-repeat="user in users">
+                        <td>{{ user.login}}</td>
+                        <td>{{ user.intlName }}</td>
+                        <td> <button type="button" class="btn btn-default" ng-disabled="controller.userHasRole(user, role)" ng-click="controller.addRole(user, role)">+</button></td>
+                    </tr>
+                    </tbody>
+
+                </table>
+
+
+            </div>
+
+
+            <span class="badge" ng-repeat="user in controller.getUsers(role)">
+                {{ user.name }} <span aria-hidden="true" class="remove-sign" ng-click="controller.removeRole(user, role)">×</span>
+            </span>
+
+        </div>
+    </div>
+
+    <div ng-if="error" class="animate-if alert alert-danger" >
+        <strong>Error</strong> {{ error.message }}
+    </div>
+
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="controller.ok()">Save</button>
+    <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+</div>

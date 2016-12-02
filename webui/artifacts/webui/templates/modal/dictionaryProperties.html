@@ -1,0 +1,30 @@
+<div class="modal-header">
+    <h3 class="modal-title"></h3>
+</div>
+
+<div class="modal-body">
+
+    <select id="language" ng-model="selectedLanguageId" class="form-control">
+        <option ng-repeat="language in languages" value="{{language.getId}}" ng-selected="language.getId == selectedLanguageId">{{ language.translation }}</option>
+    </select>
+
+    <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
+    <hr>
+
+    <div>
+        <div ng-repeat="name in translations">
+            <label for="localized-name-{{$index}}"
+                   ng-bind="controller.getLocaleName(name.localeId)"></label>
+            <input type="text" id="localized-name-{{$index}}" class="form-control" ng-model="name.str"
+                   placeholder="">
+        </div>
+    </div>
+
+
+
+</div>
+
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="controller.ok()">OK</button>
+    <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+</div>

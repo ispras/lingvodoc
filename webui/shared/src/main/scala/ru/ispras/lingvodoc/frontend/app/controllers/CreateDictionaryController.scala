@@ -98,11 +98,37 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   @JSExport
   def newLanguage() = {
 
+    val parentLanguage = scope.languages.find(_.getId == scope.languageId)
+
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/createLanguage.html"
+    options.controller = "CreateLanguageController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          "parentLanguage" -> parentLanguage.asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[js.Any]]
+
+    val instance = modal.open[Language](options)
+
+    instance.result foreach { _ =>
+      backend.getLanguages onComplete {
+        case Success(tree: Seq[Language]) =>
+          indentation = indentations(tree)
+          scope.languages = Utils.flattenLanguages(tree).toJSArray
+        case Failure(e) =>
+      }
+    }
   }
 
   @JSExport
-  def languageIndentation(language: Language) = {
-    indentation.getOrElse(language.getId, 0) * 10
+  def languagePadding(language: Language) = {
+    "&nbsp;" * indentation.getOrElse(language.getId, 0)
   }
 
   @JSExport
