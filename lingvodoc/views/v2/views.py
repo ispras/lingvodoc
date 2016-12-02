@@ -179,6 +179,8 @@ def all_perspectives_desktop(request):
 
 @view_config(route_name='permissions_on_perspectives_desktop', renderer='json', request_method='GET')
 def permissions_on_perspectives_desktop(request):
+
+    settings = request.registry.settings
     path = settings['desktop']['central_server'] + 'permissions/perspectives'
     session = requests.Session()
     session.headers.update({'Connection': 'Keep-Alive'})
