@@ -12,6 +12,7 @@ import scala.scalajs.js
 import scala.scalajs.js.UndefOr
 import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.Dynamic.global
 
 
 @js.native
@@ -58,6 +59,7 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
 
   @JSExport
   def download() = {
+    global.alert("Пока не закончится процесс синхронизации, система работает в режиме 'только чтение'")
     Future.sequence(selectedDictionaries.map(dictionary => backend.syncDownloadDictionary(CompositeId.fromObject(dictionary)))) foreach { _ => }
   }
 
@@ -87,22 +89,22 @@ class HomeController(scope: HomeScope, val rootScope: RootScope,
   doAjax(() => {
     backend.allPerspectivesMeta flatMap { p =>
       perspectiveMeta = p
-      backend.getAvailableDesktopDictionaries map { languages =>
-        backend.getAvailableDesktopPerspectives(published = true) map { perspectives =>
-          Utils.flattenLanguages(languages).foreach { language =>
-            language.dictionaries.foreach { dictionary =>
-              dictionary.perspectives = perspectives.filter(perspective => perspective.parentClientId == dictionary.clientId && perspective.parentObjectId == dictionary.objectId).toJSArray
-            }
-          }
-          backend.getDictionaries(DictionaryQuery()) map { dictionaries =>
-            downloadedDictionaries = dictionaries
 
-            backend.desktopPerspectivePermissions() map { p =>
-              permissions = p
+      backend.desktopPerspectivePermissions() map { p =>
+        permissions = p
+        backend.getAvailableDesktopDictionaries map { languages =>
+          backend.getAvailableDesktopPerspectives(published = true) map { perspectives =>
+            Utils.flattenLanguages(languages).foreach { language =>
+              language.dictionaries.foreach { dictionary =>
+                dictionary.perspectives = perspectives.filter(perspective => perspective.parentClientId == dictionary.clientId && perspective.parentObjectId == dictionary.objectId).toJSArray
+              }
             }
+            backend.getDictionaries(DictionaryQuery()) map { dictionaries =>
+              downloadedDictionaries = dictionaries
+            }
+            scope.languages = languages.toJSArray
+            languages
           }
-          scope.languages = languages.toJSArray
-          languages
         }
       }
     }

@@ -8,6 +8,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, UserService}
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
+import scala.scalajs.js.Dynamic.global
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
@@ -70,6 +71,7 @@ class NavigationController(scope: NavigationScope, rootScope: RootScope, locatio
 
   @JSExport
   def sync() = {
+    global.alert("Пока не закончится процесс синхронизации, система работает в режиме 'только чтение'")
     scope.syncEnabled = false
     backend.syncAll() map { _ =>
       scope.syncEnabled = true

@@ -1657,7 +1657,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       case json: Js.Obj => json.value.map(x => (x._1.toInt, readJs[V](x._2))).toMap
     }
     val p = Promise[Map[Int, Map[Int, PerspectivePermissions]]]()
-    $http.get[js.Dynamic]("permissions/perspectives") onComplete {
+    $http.get[js.Dynamic]("permissions/perspectives/desktop") onComplete {
       case Success(response) =>
         val permissions = read[Map[Int, Map[Int, PerspectivePermissions]]](js.JSON.stringify(response)).map { e =>
           (e._1.toInt, e._2.map { e1 =>

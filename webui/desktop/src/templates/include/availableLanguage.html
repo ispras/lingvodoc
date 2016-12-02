@@ -4,14 +4,19 @@
     <li ng-repeat="dictionary in language.dictionaries">
         <input type="checkbox" ng-checked="controller.isDictionarySelected(dictionary)" ng-click="controller.toggleDictionarySelection(dictionary)" ng-disabled="controller.isDownloaded(dictionary)"> {{ dictionary.translation }}
         <ul>
-            <li ng-repeat="perspective in dictionary.perspectives" ng-init="permissions=controller.getPerspectivePermissions(perspective)" ng-if="permissions">
-                <span ng-if="permissions.write">
-                    <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/edit">{{perspective.translation}}</a>
-                </span>
+            <li ng-repeat="perspective in dictionary.perspectives" ng-init="permissions=controller.getPerspectivePermissions(perspective)">
 
-                <span ng-if="permissions.read">
-                    <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/view">{{perspective.translation}}</a>
-                </span>
+                {{perspective.translation}}
+
+                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/edit" ng-show="permissions.write && controller.isDownloaded(dictionary)">
+                    <span class="glyphicon glyphicon-pencil"></span>
+                </a>
+
+                <a ng-href="#/dictionary/{{dictionary.clientId}}/{{dictionary.objectId}}/perspective/{{perspective.clientId}}/{{perspective.objectId}}/view" ng-show="permissions.read && controller.isDownloaded(dictionary)">
+                    <span class="glyphicon glyphicon-list-alt"></span>
+                </a>
+
+
             </li>
         </ul>
 
