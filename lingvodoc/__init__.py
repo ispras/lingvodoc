@@ -18,7 +18,7 @@ from lingvodoc.cache.caching import (
 from .acl import (
     groupfinder
 )
-
+import multiprocess
 
 def configure_routes(config):
     """
@@ -659,6 +659,7 @@ def configure_routes(config):
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
+    multiprocess.set_start_method("spawn")
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession.configure(bind=engine)
     Base.metadata.bind = engine
