@@ -1927,7 +1927,10 @@ def approve_all(request):
         if not parent.marked_for_deletion:
             dictionary_client_id = parent.parent_client_id
             dictionary_object_id = parent.parent_object_id
-            entities = DBSession.query(PublishingEntity).join(Entity).join(LexicalEntry).filter(LexicalEntry.parent == parent).all()
+            entities = DBSession.query(PublishingEntity).join(Entity,
+                                                              and_(Entity.client_id == PublishingEntity.client_id,
+                                                                   Entity.object_id == PublishingEntity.object_id))\
+                .join(Entity.parent).filter(LexicalEntry.parent == parent).all()
             for entity in entities:
                 entity.published = True
             # url = request.route_url('approve_entity',
