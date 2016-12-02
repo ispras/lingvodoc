@@ -113,6 +113,12 @@ def configure_routes(config):
     config.add_route(name='published_dictionaries_desktop', pattern='/published_dictionaries/desktop')  # tested
 
     # API #GET
+    # Returns simplified rights on perspectives
+    config.add_route(name='permissions_on_perspectives', pattern='/permissions/perspectives')
+    config.add_route(name='permissions_on_perspectives_desktop', pattern='/permissions/perspectives/desktop')
+
+
+# API #GET
     # Perspective list
     # 1. Filter by:
     #    a) template (param is_template=true/false)

@@ -66,9 +66,101 @@ from lingvodoc.views.v2.utils import (
     view_perspective_from_object,
     view_field_from_object
 )
-from lingvodoc.views.v2.utils import add_user_to_group
+from lingvodoc.views.v2.utils import (
+    add_user_to_group,
+    fulfill_permissions_on_perspectives,
+    FakeObject
+)
 
 log = logging.getLogger(__name__)
+
+
+@view_config(route_name='permissions_on_perspectives', renderer='json', request_method='GET')
+def permissions_on_perspectives(request):
+
+    client_id = authenticated_userid(request)
+
+    subreq = Request.blank('/translation_service_search')
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    subreq.json = {'searchstring': 'Published'}
+    headers = dict()
+    if request.headers.get('Cookie'):
+        headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+
+    if 'error' not in resp.json:
+        published_gist_object_id, published_gist_client_id = resp.json['object_id'], resp.json['client_id']
+    else:
+        raise KeyError("Something wrong with the base", resp.json['error'])
+
+    subreq = Request.blank('/translation_service_search')
+    subreq.method = 'POST'
+    subreq.headers = request.headers
+    subreq.json = {'searchstring': 'Limited access'}  # todo: fix
+    headers = dict()
+    if request.headers.get('Cookie'):
+        headers = {'Cookie': request.headers['Cookie']}
+    subreq.headers = headers
+    resp = request.invoke_subrequest(subreq)
+
+    if 'error' not in resp.json:
+        limited_gist_object_id, limited_gist_client_id = resp.json['object_id'], resp.json['client_id']
+    else:
+        raise KeyError("Something wrong with the base", resp.json['error'])
+
+    intermediate = dict()
+
+    limited = DBSession.query(DictionaryPerspective.client_id, DictionaryPerspective.object_id, ).filter(
+        and_(DictionaryPerspective.state_translation_gist_client_id == limited_gist_client_id,
+             DictionaryPerspective.state_translation_gist_object_id == limited_gist_object_id)
+    )
+
+    limited_perms = [("limited", True), ("read", False), ("write", False), ("publish", False)]
+    for pers in limited.all():
+        fulfill_permissions_on_perspectives(intermediate, pers, limited_perms)
+
+    published = DBSession.query(DictionaryPerspective.client_id, DictionaryPerspective.object_id, ).filter(
+        and_(DictionaryPerspective.state_translation_gist_client_id == published_gist_client_id,
+             DictionaryPerspective.state_translation_gist_object_id == published_gist_object_id)
+    )
+    published_perms = [("read", True), ("write", False), ("publish", False)]
+    for pers in published.all():
+        fulfill_permissions_on_perspectives(intermediate, pers, published_perms)
+
+    if not client_id:
+        return intermediate
+
+    user_id = DBSession.query(Client).filter(client_id == Client.id).first().user_id
+    editor_basegroup = DBSession.query(BaseGroup).filter(and_(BaseGroup.subject == "lexical_entries_and_entities", BaseGroup.action == "create")).first()
+    editable_perspectives = DBSession.query(Group).join(Group.users).filter(and_(User.id == user_id, Group.base_group_id == editor_basegroup.id)).all()
+    pers = FakeObject()
+    editable_perms = [("write", True)]
+    for i in editable_perspectives:
+        pers.client_id = i.subject_client_id
+        pers.object_id = i.subject_object_id
+        fulfill_permissions_on_perspectives(intermediate, pers, editable_perms)
+
+    reader_basegroup = DBSession.query(BaseGroup).filter(and_(BaseGroup.subject == "approve_entities", BaseGroup.action == "view")).first()
+    readable_perspectives = DBSession.query(Group).join(Group.users).filter(and_(User.id == user_id, Group.base_group_id == reader_basegroup.id)).all()
+    pers = FakeObject()
+    readable_perms = [("read", True)]
+    for i in readable_perspectives:
+        pers.client_id = i.subject_client_id
+        pers.object_id = i.subject_object_id
+        fulfill_permissions_on_perspectives(intermediate, pers, readable_perms)
+
+    publisher_basegroup = DBSession.query(BaseGroup).filter(and_(BaseGroup.subject == "approve_entities", BaseGroup.action == "create")).first()
+    approvable_perspectives = DBSession.query(Group).join(Group.users).filter(and_(User.id == user_id, Group.base_group_id == publisher_basegroup.id)).all()
+    pers = FakeObject()
+    approvable_perms = [("publish", True)]
+    for i in approvable_perspectives:
+        pers.client_id = i.subject_client_id
+        pers.object_id = i.subject_object_id
+        fulfill_permissions_on_perspectives(intermediate, pers, approvable_perms)
+
+    return intermediate
 
 
 @view_config(route_name='all_perspectives', renderer='json', request_method='GET')
