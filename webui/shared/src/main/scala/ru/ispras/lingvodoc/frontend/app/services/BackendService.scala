@@ -10,6 +10,7 @@ import org.scalajs.dom.{FormData, console}
 import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.LexicalEntriesType.LexicalEntriesType
+import upickle.Js
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
@@ -1640,7 +1641,6 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-
   def syncAll(): Future[Unit] = {
     val p = Promise[Unit]()
     $http.post[js.Dynamic]("sync/all") onComplete {
@@ -1650,6 +1650,27 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
+
+  def desktopPerspectivePermissions(): Future[Map[Int, Map[Int, PerspectivePermissions]]] = {
+    import upickle.Js
+    implicit def MapWithStringKeysR[V: Reader] = Reader[Map[Int, V]] {
+      case json: Js.Obj => json.value.map(x => (x._1.toInt, readJs[V](x._2))).toMap
+    }
+    val p = Promise[Map[Int, Map[Int, PerspectivePermissions]]]()
+    $http.get[js.Dynamic]("permissions/perspectives") onComplete {
+      case Success(response) =>
+        val permissions = read[Map[Int, Map[Int, PerspectivePermissions]]](js.JSON.stringify(response)).map { e =>
+          (e._1.toInt, e._2.map { e1 =>
+            (e1._1.toInt, e1._2)
+          })
+        }
+        p.success(permissions)
+      case Failure(e) => p.failure(BackendException("Failed to get permissions", e))
+    }
+    p.future
+  }
+
+
 
 
 }

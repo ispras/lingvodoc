@@ -1,0 +1,6 @@
+package ru.ispras.lingvodoc.frontend.app.model
+
+import scala.scalajs.js.annotation.JSExportAll
+
+@JSExportAll
+case class PerspectivePermissions(var publish: Boolean, var read: Boolean, var write: Boolean)
