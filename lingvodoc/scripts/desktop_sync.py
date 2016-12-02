@@ -289,8 +289,6 @@ def create_objects(server, existing, session):
     new_entries = list()
     new_entities = list()
     publ_entities = list()
-    for key in existing:
-        print(key, type(existing[key]))
     for table in [Dictionary, DictionaryPerspective, DictionaryPerspectiveToField, Entity, LexicalEntry,
                   PublishingEntity]:
         curr_server = server[table.__tablename__]
@@ -347,14 +345,11 @@ dict2strippeddict = lambda r, r_class: {key: r[key] for key in r if key in [c.na
 def create_nested_content(tmp_resp):
     tmp_dict = dict()
     for entry in tmp_resp:
-        if not entry.get('client_id'):
-            print(entry)
         if str(entry['client_id']) not in tmp_dict:
             tmp_dict[str(entry['client_id'])] = {str(entry['object_id']): entry}
         else:
             tmp_dict[str(entry['client_id'])][str(entry['object_id'])] = entry
     tmp_resp = tmp_dict
-    print(type(tmp_resp))
     return tmp_resp
 
 
@@ -402,13 +397,11 @@ def basic_tables_content(client_id, object_id, session):
 def create_new_entities(new_entities, storage, session):  # add queue
     entities_objects = list()
     for entity in new_entities:
-        # print(entity)
         content = entity.get('content')
         data_type = entity['data_type'].lower()
         filename = None
         if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
             full_name = content.split('/')
-            # print(full_name)
             filename = full_name[len(full_name) - 1]
             content = make_request(content)
             if content.status_code != 200:
@@ -491,7 +484,7 @@ def download(
             client_id,
             object_id,
             perspective_json['client_id'],
-            perspective_json['object_id']), 'post', json_data=perspective_json['additional_metadata'])
+            perspective_json['object_id']), 'post', json_data=perspective_json.get('additional_metadata', dict()))
         if meta_json.status_code != 200:
             log.error('meta fail', meta_json.status_code)
             session.rollback()
@@ -546,7 +539,6 @@ def download(
                         new_jsons['entity'].append(inner_entity)
                         new_jsons['publishingentity'].append(dict2strippeddict(inner_entity, PublishingEntity))
     response = basic_tables_content(client_id, object_id, session)
-    # print(response)
     for key in new_jsons:
         tmp = create_nested_content(new_jsons[key])
         new_jsons[key] = tmp

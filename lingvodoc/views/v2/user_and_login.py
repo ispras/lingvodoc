@@ -348,6 +348,7 @@ def logout_any(request):  # tested
     response = Response()
     response.headers = forget(request)
     response.set_cookie(key='client_id', value=None)
+    response.set_cookie(key='auth_tkt', value=None)
     response.status_code = 200
     response.json_body = {}
     return response
