@@ -134,7 +134,6 @@ def basic_sync(request):
                                   key in r}
     settings = request.registry.settings
     existing = basic_tables_content()
-    # print(existing['locale'])
     path = settings['desktop']['central_server'] + 'sync/basic/server'
     with open('authentication_data.json', 'r') as f:
         cookies = json.loads(f.read())
@@ -199,7 +198,8 @@ def basic_sync(request):
                 id = str(entry.id)
                 if id in curr_server:
                     for key, value in list(return_date_time(curr_server[id]).items()):
-                        setattr(entry, key, value)
+                        if key != 'counter' and table != User:
+                            setattr(entry, key, value)
         new_entries.extend(all_entries)
 
     parent_langs_ids = DBSession.query(Language.client_id, Language.object_id).all()
@@ -298,6 +298,7 @@ def make_request(path, req_type='get', json_data=None, data=None, files = None):
 def diff_desk(request):
     import base64
     from lingvodoc.models import categories
+    from time import sleep
     client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
     if not client:
         request.response.status = HTTPNotFound.code
@@ -321,7 +322,6 @@ def diff_desk(request):
     userblobs = list()
     translationgist = list()
     translationatom = list()
-    print(server)
     for entry in server:
         if entry['table_name'] == 'language':
             language.append(entry)
@@ -383,7 +383,8 @@ def diff_desk(request):
         path = central_server + 'field'
         status = make_request(path, 'post', row2dict(desk_field))
         if status.status_code != 200:
-            print(status.status_code)
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     for entry in dictionaryperspectivetofield:
         desk_field = DBSession.query(DictionaryPerspectiveToField).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -395,7 +396,8 @@ def diff_desk(request):
                                                                                           persp.object_id)
             status = make_request(path, 'post', row2dict(desk_field))
             if status.status_code != 200:
-                print(status.status_code)
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error")}
     for entry in lexicalentry:
         desk_lex = DBSession.query(LexicalEntry).filter_by(client_id=entry['client_id'],
                                                            object_id=entry['object_id']).one()
@@ -406,10 +408,10 @@ def diff_desk(request):
                                                                                       persp.object_id)
         status = make_request(path, 'post', row2dict(desk_lex))
         if status.status_code != 200:
-            print(status.status_code)
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     grouping_tags = dict()
     for entry in entity:
-        print('i am entity')
         desk_ent = DBSession.query(Entity).filter_by(client_id=entry['client_id'],
                                                      object_id=entry['object_id']).one()
         lex = desk_ent.parent
@@ -430,13 +432,14 @@ def diff_desk(request):
                 data_type = data_type.lower()
                 if data_type == 'image' or data_type == 'sound' or 'markup' in data_type:
                     full_name = desk_ent.content.split('/')
-                    # print(full_name)
                     filename = full_name[len(full_name) - 1]
                     content = make_request(desk_ent.content)
                     if content.status_code != 200:
                         log.error(desk_ent.content)
                         DBSession.rollback()
-                        return
+                        request.response.status = HTTPInternalServerError.code
+                        return {'error': str("internet error")}
+                        # return
 
                     content = content.content
                     content = base64.urlsafe_b64encode(content)
@@ -446,37 +449,40 @@ def diff_desk(request):
         if desk_ent.field.data_type == 'Grouping Tag':
             field_ids = str(desk_ent.field.client_id) + '_' + str(desk_ent.field.object_id)
             if field_ids not in grouping_tags:
-                grouping_tags[field_ids] = {'field_client_id':desk_ent.field.client_id,
-                                            'field_object_id':desk_ent.field.object_id,
-                                            'tag_groups':dict()}
+                grouping_tags[field_ids] = {'field_client_id': desk_ent.field.client_id,
+                                            'field_object_id': desk_ent.field.object_id,
+                                            'tag_groups': dict()}
             if desk_ent.content not in grouping_tags[field_ids]['tag_groups']:
                 grouping_tags[field_ids]['tag_groups'][desk_ent.content] = [row2dict(desk_ent)]
             else:
                 grouping_tags[field_ids]['tag_groups'][desk_ent.content].append(row2dict(desk_ent))
         else:
 
-            print('this is not grouping tag')
             status = make_request(path, 'post', ent_req)
             if status.status_code != 200:
-                print(status.status_code)
+                request.response.status = HTTPInternalServerError.code
+                return {'error': str("internet error")}
     for entry in grouping_tags:
         path = central_server + 'group_entity/bulk'
-        status = make_request(path, 'post', grouping_tags[entry])
+        req = grouping_tags[entry]
+        req['counter'] = client.counter
+        status = make_request(path, 'post', req)
         if status.status_code != 200:
-            print('i am grouping entities')
-            print(status.status_code)
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
+        client.counter = status.json()['counter']
+        DBSession.flush()
     for entry in userblobs:
         desk_blob = DBSession.query(UserBlobs).filter_by(client_id=entry['client_id'],
                                                          object_id=entry['object_id']).one()
         path = central_server + 'blob'
-
-
-        data = {'object_id':desk_blob.object_id, 'data_type':desk_blob.data_type}
-        files = {'blob':open(desk_blob.real_storage_path, 'rb')}
+        data = {'object_id': desk_blob.object_id, 'data_type': desk_blob.data_type}
+        files = {'blob': open(desk_blob.real_storage_path, 'rb')}
 
         status = make_request(path, 'post', data=data, files=files)
         if status.status_code != 200:
-            print(status.status_code)
+            request.response.status = HTTPInternalServerError.code
+            return {'error': str("internet error")}
     return
 
 
@@ -485,21 +491,40 @@ def download_all(request):
     import requests
     import transaction
     from pyramid.request import Request
+    print('locking client')
+    log.error('locking client')
+    DBSession.execute("LOCK TABLE client IN EXCLUSIVE MODE;")
+    client = DBSession.query(Client).filter_by(id=authenticated_userid(request)).first()
+    if not client:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("Try to login again")}
     path = request.route_url('check_version')
     subreq = Request.blank(path)
     subreq.method = 'GET'
     subreq.headers = request.headers
     resp = request.invoke_subrequest(subreq)
+    if resp.status_code != 200:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'network error'}
+
     path = request.route_url('basic_sync')
     subreq = Request.blank(path)
     subreq.method = 'POST'
     subreq.headers = request.headers
     resp = request.invoke_subrequest(subreq)
+    if resp.status_code != 200:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'network error'}
+
     path = request.route_url('diff_desk')
     subreq = Request.blank(path)
     subreq.method = 'POST'
     subreq.headers = request.headers
     resp = request.invoke_subrequest(subreq)
+    if resp.status_code != 200:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'network error'}
+
     for dict_obj in DBSession.query(Dictionary).all():
         path = request.route_url('download_dictionary')
         subreq = Request.blank(path)
@@ -508,11 +533,18 @@ def download_all(request):
         subreq.json = {"client_id":dict_obj.client_id,
                                                        "object_id":dict_obj.object_id}
         resp = request.invoke_subrequest(subreq)
+        if resp.status_code != 200:
+            request.response.status = HTTPInternalServerError.code
+            return {'error': 'network error'}
 
     path = request.route_url('new_client')
     subreq = Request.blank(path)
     subreq.method = 'POST'
     subreq.headers = request.headers
     resp = request.invoke_subrequest(subreq)
+    if resp.status_code != 200:
+        request.response.status = HTTPInternalServerError.code
+        return {'error': 'network error'}
+
     request.response.status = HTTPOk.code
     return HTTPOk(json_body={})

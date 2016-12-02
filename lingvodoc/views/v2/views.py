@@ -49,6 +49,9 @@ if sys.platform == 'darwin':
 import logging
 log = logging.getLogger(__name__)
 import json
+import requests
+from pyramid.request import Request
+
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
@@ -112,7 +115,6 @@ def all_locales(request):
 
 @view_config(route_name='all_locales_desktop', renderer='json', request_method='GET')
 def all_locales_desktop(request):
-    import requests
     settings = request.registry.settings
     path = settings['desktop']['central_server'] + 'all_locales'
     session = requests.Session()
@@ -132,7 +134,6 @@ def all_locales_desktop(request):
 @view_config(route_name='published_dictionaries_desktop', renderer='json', request_method='POST')
 def published_dictionaries_desktop(request):
     req = request.json_body
-    import requests
     settings = request.registry.settings
     path = settings['desktop']['central_server'] + 'published_dictionaries'
     session = requests.Session()
@@ -154,7 +155,6 @@ def published_dictionaries_desktop(request):
 
 @view_config(route_name='all_perspectives_desktop', renderer='json', request_method='GET')
 def all_perspectives_desktop(request):
-    import requests
     settings = request.registry.settings
     path = settings['desktop']['central_server'] + 'perspectives'
     published = request.params.get('published', None)
@@ -175,6 +175,41 @@ def all_perspectives_desktop(request):
         print(status.status_code)
         request.response.status = HTTPInternalServerError.code
         return {'error':'no connection'}
+
+
+@view_config(route_name='permissions_on_perspectives_desktop', renderer='json', request_method='GET')
+def permissions_on_perspectives_desktop(request):
+    path = settings['desktop']['central_server'] + 'permissions/perspectives'
+    session = requests.Session()
+    session.headers.update({'Connection': 'Keep-Alive'})
+    adapter = requests.adapters.HTTPAdapter(pool_connections=1, pool_maxsize=1, max_retries=10)
+    session.mount('http://', adapter)
+    with open('authentication_data.json', 'r') as f:
+        cookies = json.loads(f.read())
+    status = session.get(path, cookies=cookies)
+    server_perms = status.json()
+    path = request.route_url('permissions_on_perspectives')
+    subreq = Request.blank(path)
+    subreq.method = 'GET'
+    subreq.headers = request.headers
+    resp = request.invoke_subrequest(subreq)
+    desktop_perms = resp.json
+
+    def remove_keys(obj, rubbish):
+        if isinstance(obj, dict):
+            obj = {
+                key: remove_keys(value, rubbish)
+                for key, value in obj.items()
+                if key not in rubbish and value is not None}
+        elif isinstance(obj, list):
+            obj = [remove_keys(item, rubbish)
+                   for item in obj
+                   if item not in rubbish]
+        return obj
+
+    server_perms.update(desktop_perms)
+    return remove_keys(server_perms, ['publish'])
+
 
 
 def dict_ids(obj):
