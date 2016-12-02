@@ -729,7 +729,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                 filter_by(client_id=first_perspective_client_id, object_id = first_perspective_object_id).first()
             if not perspective:
                 return {'error': str("No such perspective in the system")}
-            lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=client.id,
+            lexentr = LexicalEntry( client_id=client.id,
                                    parent_object_id=first_perspective_object_id, parent=perspective)
             DBSession.add(lexentr)
             lexical_entry_client_id = lexentr.client_id
@@ -742,7 +742,7 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
                 filter_by(client_id=first_perspective_client_id, object_id = second_perspective_object_id).first()
             if not perspective:
                 return {'error': str("No such perspective in the system")}
-            lexentr = LexicalEntry(object_id=DBSession.query(LexicalEntry).filter_by(client_id=client.id).count() + 1, client_id=client.id,
+            lexentr = LexicalEntry( client_id=client.id,
                                    parent_object_id=second_perspective_object_id, parent=perspective)
             DBSession.add(lexentr)
             lexical_entry_client_id = lexentr.client_id
@@ -972,6 +972,7 @@ def convert_all(blob_client_id, blob_object_id, language_client_id, language_obj
         log.error(e.__traceback__)
         raise
     log.debug(status)
+    log.debug('we are the champions')
     return status
 
 
