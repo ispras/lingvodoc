@@ -34,6 +34,7 @@ class CreateLanguageController(scope: CreateLanguageScope,
     case None => None
   }
 
+
   scope.names = (LocalizedString(Utils.getLocale().getOrElse(2), "") :: Nil).toJSArray
   scope.locales = js.Array()
 

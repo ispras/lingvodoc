@@ -126,10 +126,12 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
     }
   }
 
+
   @JSExport
   def languagePadding(language: Language) = {
-    "&nbsp;" * indentation.getOrElse(language.getId, 0)
+    "&nbsp;&nbsp;&nbsp;" * indentation.getOrElse(language.getId, 0)
   }
+
 
   @JSExport
   def createDictionary2() = {

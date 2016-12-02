@@ -9,11 +9,9 @@
                 <label for="language"><translatable str="Language">Language</translatable></label>
 
                 <select id="language"  ng-model="languageId">
-                    <option ng-repeat="language in languages" value="{{ language.getId }}" style="padding-left: 30px;"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ language.translation }}</option>
+                    <option ng-repeat="language in languages" value="{{ language.getId }}" ng-bind-html="controller.languagePadding(language) + language.translation">
+		    </option>
                 </select>
-
-
-
 
                 <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
                 <hr>
@@ -32,8 +30,6 @@
                         <input type="text" id="localized-name-{{$index}}" class="form-control" ng-model="name.str"
                                placeholder="">
                     </div>
-
-
                 </div>
 
                 <div class="ng-hide" ng-show="creationMode == 'import'">

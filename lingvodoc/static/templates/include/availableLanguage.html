@@ -2,7 +2,7 @@
 
 <ul>
     <li ng-repeat="dictionary in language.dictionaries">
-        <input type="checkbox" ng-checked="controller.isDictionarySelected(dictionary)" ng-click="controller.toggleDictionarySelection(dictionary)"> {{ dictionary.translation }}
+        <input type="checkbox" ng-checked="controller.isDictionarySelected(dictionary)" ng-click="controller.toggleDictionarySelection(dictionary)" ng-disabled="controller.isDownloaded(dictionary)"> {{ dictionary.translation }}
         <!--<ul>-->
             <!--<li ng-repeat="perspective in dictionary.perspectives" ng-init="authors=controller.getPerspectiveAuthors(perspective)">-->
                 <!--<span>-->
