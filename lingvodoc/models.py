@@ -61,6 +61,7 @@ import logging
 
 import uuid
 
+RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
 log = logging.getLogger(__name__)
@@ -347,29 +348,32 @@ class TranslationMixin(PrimeTableArgs):
     def get_translation(self, locale_id):
         from lingvodoc.cache.caching import CACHE
 
+        main_locale = locale_id
+        fallback_locale = ENGLISH_LOCALE if locale_id != str(ENGLISH_LOCALE) else RUSSIAN_LOCALE
+
         key = ':'.join([str(self.translation_gist_client_id),
-                        str(self.translation_gist_object_id), str(locale_id)])
+                        str(self.translation_gist_object_id), str(main_locale)])
         translation = CACHE.get(key)
         if translation is not None:
             log.debug("Got cached")
             return translation
         log.debug("No cached value, getting from DB")
-        translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
+        translation = DBSession.query(TranslationAtom.content).filter_by(parent_client_id=self.translation_gist_client_id,
                                                                  parent_object_id=self.translation_gist_object_id,
-                                                                 locale_id=locale_id).first()
-        if translation is None:
+                                                                 locale_id=main_locale).first()
+        if not translation:
             log.debug("No value in DB, getting default value")
             key = ':'.join([str(self.translation_gist_client_id),
-                            str(self.translation_gist_object_id), str(ENGLISH_LOCALE)])
+                            str(self.translation_gist_object_id), str(fallback_locale)])
             translation = CACHE.get(key)
             if translation is not None:
                 log.debug("Got cached default value")
                 return translation
             log.debug("No cached default value, getting from DB")
-            translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
+            translation = DBSession.query(TranslationAtom.content).filter_by(parent_client_id=self.translation_gist_client_id,
                                                                      parent_object_id=self.translation_gist_object_id,
-                                                                     locale_id=ENGLISH_LOCALE).first()
-        if translation is not None:
+                                                                     locale_id=fallback_locale).first()
+        if translation:
             log.debug("Got results. Putting the value in the cache")
             CACHE.set(key, translation.content)
             return translation.content
