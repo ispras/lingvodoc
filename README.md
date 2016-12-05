@@ -113,7 +113,7 @@ If you use this step, login as that user for all the other steps.
      proc_name = lingvodoc
      bind = unix:/tmp/lingvodoc.sock
      ``` 
-     (note: you should install gunicorn to use that config; it's not present in requirements since pserve/waitress works well too)
+     (note: you should install gunicorn to use that config; it`s not present in requirements since pserve/waitress works well too)
      (note2: if you are using that way, you will need wsgi-frontend [nginx for example])
     * section [app:main] 
       - `secret = 'your random string'`
@@ -140,8 +140,8 @@ If you use this step, login as that user for all the other steps.
       tenant_name = admin
       ```
 14. Run lingvodoc: `pserve --daemon ./postgres.ini start`
-15.(optionally) To run a celery worker you need to run `celery worker -A lingvodoc.queue.celery` from lingvodoc root.
-    * Enable the celery — open your celery.ini file and set the value of celery to "true".
+15. (optionally) To run a celery worker you need to run `celery worker -A lingvodoc.queue.celery` from lingvodoc root.
+    * Enable the celery — open your celery.ini file and set the value of celery to `true`.
              
 Installing as desktop (user) environment for Ubuntu
 ---------------
