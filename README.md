@@ -139,8 +139,9 @@ If you use this step, login as that user for all the other steps.
       auth_version = 2.0
       tenant_name = admin
       ```
-14. Run lingvodoc: `pserve --daemon ./postgres.ini start`   
-             
+14. Run lingvodoc: `pserve --daemon ./postgres.ini start`
+15.(optionally) To run a celery worker you need to run 'celery worker -A lingvodoc.queue.celery' from lingvodoc root.
+    * Enable the celery — open your celery.ini file and set the value of celery to "true".
              
 Installing as desktop (user) environment for Ubuntu
 ---------------
