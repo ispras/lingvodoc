@@ -210,7 +210,7 @@ def advanced_search(request):
                              if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
                             for lex in pre_results]
 
-    results = LexicalEntry.track_multiple(True, lexes_composite_list, int(request.cookies.get('locale_id') or 2))
+    results = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=True, accept=True)
 
     # for entry in pre_results:
     #     results.append(entry.track(False, int(request.cookies.get('locale_id') or 2)))

@@ -613,12 +613,12 @@ class LexicalEntry(CompositeIdMixin,
         lexes_composite_list = [(self.client_id, self.object_id, self.parent_client_id, self.parent_object_id,
                                  self.marked_for_deletion, metadata, came_from)]
 
-        res_list = self.track_multiple(publish, lexes_composite_list, locale_id)
+        res_list = self.track_multiple(lexes_composite_list, locale_id, publish)
 
         return res_list[0] if res_list else {}
 
     @classmethod
-    def track_multiple(cls, publish, lexs, locale_id):
+    def track_multiple(cls, lexs, locale_id, publish=None, accept=None):
         log.debug(lexs)
         ls = []
         for i, x in enumerate(lexs):
@@ -626,6 +626,19 @@ class LexicalEntry(CompositeIdMixin,
 
         if not ls:
             return []
+
+        pub_filter = ""
+        if publish or accept:
+            if publish and accept is None:
+                pub_filter = " WHERE publishingentity.published = True "
+            elif accept and publish is None:
+                pub_filter = " WHERE publishingentity.accepted = True "
+            elif accept and publish:
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = True"
+            elif publish and not accept:
+                pub_filter = " WHERE publishingentity.accepted = False and publishingentity.published = True"
+            elif accept and not publish:
+                pub_filter = " WHERE publishingentity.accepted = True and publishingentity.published = False"
 
         temp_table_name = 'lexical_entries_temp_table' + str(uuid.uuid4()).replace("-", "")
 
@@ -691,9 +704,9 @@ class LexicalEntry(CompositeIdMixin,
             ON data_type_translation_gist.client_id = data_type_atom_fallback.parent_client_id AND
                data_type_translation_gist.object_id = data_type_atom_fallback.parent_object_id AND
                data_type_atom_fallback.locale_id = 1
-
+          %s
         ORDER BY traversal_lexical_order, tree_numbering_scheme, tree_level;
-        ''' % (temp_table_name, temp_table_name, temp_table_name, temp_table_name)), {'locale': locale_id})
+        ''' % (temp_table_name, temp_table_name, temp_table_name, temp_table_name, pub_filter)), {'locale': locale_id})
 
         entries = result.fetchall()
 

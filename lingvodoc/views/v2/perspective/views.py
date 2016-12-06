@@ -1569,7 +1569,7 @@ def lexical_entries_all(request):
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
                                 for lex in lexes.all()]
 
-        result = LexicalEntry.track_multiple(False, lexes_composite_list, int(request.cookies.get('locale_id') or 2))
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=None, accept=True)
 
         response = list(result)
 
@@ -1703,7 +1703,7 @@ def lexical_entries_published(request):
                                  if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
                                 for lex in lexes.all()]
 
-        result = LexicalEntry.track_multiple(True, lexes_composite_list, int(request.cookies.get('locale_id') or 2))
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=True, accept=True)
 
         response = list(result)
         if preview_mode:
@@ -1769,10 +1769,17 @@ def lexical_entries_not_accepted(request):
             else_=Entity.content))) \
             .group_by(LexicalEntry) \
             .offset(start_from).limit(count)
+
         result = deque()
 
-        for entry in lexes.all():
-            result.append(entry.track(False, int(request.cookies.get('locale_id') or 2)))
+        lexes_composite_list = [(lex.client_id, lex.object_id, lex.parent_client_id, lex.parent_object_id,
+                                 lex.marked_for_deletion, lex.additional_metadata,
+                                 lex.additional_metadata.get('came_from')
+                                 if lex.additional_metadata and 'came_from' in lex.additional_metadata else None)
+                                for lex in lexes.all()]
+
+        result = LexicalEntry.track_multiple(lexes_composite_list, int(request.cookies.get('locale_id') or 2), publish=None, accept=False)
+
         response = list(result)
 
         request.response.status = HTTPOk.code
