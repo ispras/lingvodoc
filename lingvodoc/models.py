@@ -279,7 +279,7 @@ class CompositeIdMixin(object):
     """
     It's used for automatically set client_id and object_id as composite primary key.
     """
-    object_id = Column(SLBigInteger(), primary_key=True, autoincrement=True)
+    object_id = Column(SLBigInteger(), primary_key=True)
     client_id = Column(SLBigInteger(), primary_key=True)
 
     def __init__(self, **kwargs):
@@ -916,7 +916,7 @@ def acl_by_groups(object_id, client_id, subject):
     # acls += [(Allow, Everyone, ALL_PERMISSIONS)]
     groups = DBSession.query(Group).filter_by(subject_override=True).join(BaseGroup).filter_by(subject=subject).all()
     if client_id and object_id:
-        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:
+        if subject in ['perspective', 'approve_entities', 'lexical_entries_and_entities', 'other perspective subjects']:  # todo: remove this and fix everything that's broken after that
             persp = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
             if persp:
                 if persp.state == 'Published' or persp.state == 'Limited access':
