@@ -229,8 +229,8 @@ def tree_insert(tree, item, lang_to_dict_mapping, request):
         node['contains'] = []
         node['translation'] = i.get_translation(request.cookies.get('locale_id', 1))
         node['locale_exist'] = True if i.locale else False
+        node['level'] = 'language'
         del node['additional_metadata']
-        del node['created_at']
         del node['marked_for_deletion']
         if not node['parent_client_id']:
             del node['parent_client_id']
@@ -265,25 +265,29 @@ def tree_in_breadth(node, lang_to_dict_mapping, request):
         for i in current_node.language:
             stack.appendleft(i)
 
-    def cleanup(obj):
+    def cleanup_empty_langs(obj):
         if isinstance(obj, dict):
-            if 'dicts' not in obj:
-                return obj
-
-            if obj.get('dicts') or obj.get('contains'):
-                return { key: cleanup(value) for key, value in obj.items() }
+            if obj.get('level') == 'language':
+                if obj.get('dicts') or obj.get('contains'):
+                    obj = {key: cleanup_empty_langs(value) for key, value in obj.items()}
+                # don't know how to double check efficiently
+                if obj.get('dicts') or obj.get('contains'):
+                    return obj
+                else:
+                    del obj
+                    return None
             else:
-                return None
+                return obj
         elif isinstance(obj, list):
             res = []
             for item in obj:
-                t = cleanup(item)
+                t = cleanup_empty_langs(item)
                 if t:
                     res.append(t)
             return res
         return obj
 
-    return cleanup(result)
+    return cleanup_empty_langs(result)
 
 
 def all_languages_with_dicts(dicts, request):

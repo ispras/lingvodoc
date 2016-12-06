@@ -1093,22 +1093,27 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
 
     if visible:
         user = Client.get_user_by_client_id(authenticated_userid(request))
-        visible_persps = [(-1, -1)] #hack to avoid empty in_
-        if user:
-            for group in user.groups:
-                if group.base_group_id == 21 or group.base_group_id == 22:
-                    visible_persps.append((group.subject_client_id, group.subject_object_id))
-        persps = DBSession.query(DictionaryPerspective).filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(visible_persps))
-        visible_dicts = [(p.parent_client_id, p.parent_object_id) for p in persps]
+        # visible_persps = [(-1, -1)] #hack to avoid empty in_
+        # if user:
+        #     for group in user.groups:
+        #         if group.base_group_id == 21 or group.base_group_id == 22:
+        #             visible_persps.append((group.subject_client_id, group.subject_object_id))
+        # persps = DBSession.query(DictionaryPerspective).filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(visible_persps))
 
-        dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
-                                      Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
-                                 tuple_(Dictionary.client_id, Dictionary.object_id) \
-                                 .in_(visible_dicts))) \
-            .join(DictionaryPerspective) \
-            .filter(or_(and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
-                             DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
-                        tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(visible_persps)))
+        # persps = DBSession.query(DictionaryPerspective).join(Group, and_(Group.subject_client_id==DictionaryPerspective.client_id,
+        #                                                                  Group.subject_object_id==DictionaryPerspective.object_id)).join(Group.users).filter(User.id == user.id).all()
+        #visible_dicts = [(p.parent_client_id, p.parent_object_id) for p in persps]
+
+        dicts = dicts \
+            .join(DictionaryPerspective).join(Group, and_(Group.subject_client_id == DictionaryPerspective.client_id,
+                                                          Group.subject_object_id == DictionaryPerspective.object_id)).join(Group.users) \
+            .filter(or_(
+                    and_(DictionaryPerspective.state_translation_gist_object_id == state_translation_gist_object_id,
+                         DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
+                    and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
+                         Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),
+                    User.id == user.id
+                    ))
     else:
         dicts = dicts.filter(or_(and_(Dictionary.state_translation_gist_object_id == state_translation_gist_object_id,
                              Dictionary.state_translation_gist_client_id == state_translation_gist_client_id),

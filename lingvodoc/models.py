@@ -61,6 +61,7 @@ import logging
 
 import uuid
 
+RUSSIAN_LOCALE = 1
 ENGLISH_LOCALE = 2
 
 log = logging.getLogger(__name__)
@@ -347,36 +348,33 @@ class TranslationMixin(PrimeTableArgs):
     def get_translation(self, locale_id):
         from lingvodoc.cache.caching import CACHE
 
-        key = ':'.join([str(self.translation_gist_client_id),
-                        str(self.translation_gist_object_id), str(locale_id)])
+        main_locale = str(locale_id)
+        fallback_locale = str(ENGLISH_LOCALE) if locale_id != str(ENGLISH_LOCALE) else str(RUSSIAN_LOCALE)
+
+        key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
         translation = CACHE.get(key)
-        if translation is not None:
+        if translation:
             log.debug("Got cached")
             return translation
         log.debug("No cached value, getting from DB")
-        translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
-                                                                 parent_object_id=self.translation_gist_object_id,
-                                                                 locale_id=locale_id).first()
-        if translation is None:
-            log.debug("No value in DB, getting default value")
-            key = ':'.join([str(self.translation_gist_client_id),
-                            str(self.translation_gist_object_id), str(ENGLISH_LOCALE)])
-            translation = CACHE.get(key)
-            if translation is not None:
-                log.debug("Got cached default value")
-                return translation
-            log.debug("No cached default value, getting from DB")
-            translation = DBSession.query(TranslationAtom).filter_by(parent_client_id=self.translation_gist_client_id,
-                                                                     parent_object_id=self.translation_gist_object_id,
-                                                                     locale_id=ENGLISH_LOCALE).first()
-        if translation is not None:
-            log.debug("Got results. Putting the value in the cache")
-            CACHE.set(key, translation.content)
-            return translation.content
-        log.warn("'translationgist' exists but there is no default (english) translation. "
-                 "translation_gist_client_id={0}, translation_gist_object_id={1}"
-                 .format(self.translation_gist_client_id, self.translation_gist_object_id))
-        return "Translation N/A"
+        all_translations = DBSession.query(TranslationAtom.content, TranslationAtom.locale_id).filter_by(parent_client_id=self.translation_gist_client_id,
+                                                                 parent_object_id=self.translation_gist_object_id).all()
+        all_translations_dict = dict((str(locale), translation) for translation, locale in all_translations)
+        if not all_translations_dict:
+            return "Translation missing for all locales"
+        elif all_translations_dict.get(main_locale):
+            translation = all_translations_dict.get(main_locale)
+            key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(main_locale))
+            CACHE.set(key, translation)
+            return translation
+        elif all_translations_dict.get(fallback_locale):
+            translation = all_translations_dict.get(fallback_locale)
+            key = "%s:%s:%s" % (str(self.translation_gist_client_id), str(self.translation_gist_object_id), str(fallback_locale))
+            CACHE.set(key, translation)
+            return translation
+        else:
+            return "Translation missing for your locale and fallback locale"
+        # TODO: continue iterating to get any translation
 
 
 class TranslationGist(CompositeIdMixin, Base, TableNameMixin, CreatedAtMixin):
