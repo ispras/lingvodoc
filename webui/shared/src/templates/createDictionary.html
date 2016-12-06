@@ -8,7 +8,7 @@
                 <!-- List of all languages -->
                 <label for="language"><translatable str="Language">Language</translatable></label>
 
-                <select id="language"  ng-model="languageId">
+                <select class="form-control" id="language"  ng-model="languageId">
                     <option ng-repeat="language in languages" value="{{ language.getId }}" ng-bind-html="controller.languagePadding(language) + language.translation">
 		    </option>
                 </select>

@@ -12,6 +12,7 @@ import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntries
 
 import scala.concurrent.Future
 import scala.scalajs.js
+import scala.scalajs.js.Any
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
@@ -195,6 +196,19 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
             entity.published = false
           })
       }
+    }
+  }
+
+  @JSExport
+  def approveAll(entry: LexicalEntry): Future[Any] = {
+    backend.approveAll(dictionaryId, perspectiveId) map { _ =>
+        scope.$apply(() => {
+          scope.dictionaryTable.rows.foreach { row =>
+            row.entry.entities.foreach { e =>
+              e.published = true
+            }
+          }
+        })
     }
   }
 
