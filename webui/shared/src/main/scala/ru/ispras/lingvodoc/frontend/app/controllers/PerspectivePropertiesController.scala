@@ -59,17 +59,17 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
 
 
   @JSExport
-  def addFieldType(layer: Layer) = {
+  def addFieldType(layer: Layer): Unit = {
     layer.fieldEntries = layer.fieldEntries :+ FieldEntry(js.Array[LocalizedString](LocalizedString(Utils.getLocale().getOrElse(2), "")))
   }
 
   @JSExport
-  def removeFieldType(layer: Layer, fieldType: FieldEntry) = {
+  def removeFieldType(layer: Layer, fieldType: FieldEntry): Unit = {
     layer.fieldEntries = layer.fieldEntries.filterNot(d => d.equals(fieldType))
   }
 
   @JSExport
-  def addNameTranslation[T <: Translatable](obj: T) = {
+  def addNameTranslation[T <: Translatable](obj: T): Unit = {
     val currentLocaleId = Utils.getLocale().getOrElse(2)
     if (obj.names.exists(_.localeId == currentLocaleId)) {
       // pick next available locale
@@ -85,7 +85,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
   @JSExport
-  def selectField(fieldEntry: FieldEntry) = {
+  def selectField(fieldEntry: FieldEntry): Any = {
     if (fieldEntry.fieldId.equals("add_new_field")) {
       fieldEntry.fieldId = ""
       createNewField(fieldEntry)
@@ -93,7 +93,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
   @JSExport
-  def moveFieldTypeUp(layer: Layer, fieldType: FieldEntry) = {
+  def moveFieldTypeUp(layer: Layer, fieldType: FieldEntry): Unit = {
     def aux(lx: List[FieldEntry], acc: List[FieldEntry]): List[FieldEntry] = {
       lx match {
         case Nil => acc
@@ -105,7 +105,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
   @JSExport
-  def moveFieldTypeDown(layer: Layer, fieldType: FieldEntry) = {
+  def moveFieldTypeDown(layer: Layer, fieldType: FieldEntry): Unit = {
     def aux(lx: List[FieldEntry], acc: List[FieldEntry]): List[FieldEntry] = {
       lx match {
         case Nil => acc
@@ -117,7 +117,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
   @JSExport
-  def getLayerDisplayName(layer: Layer) = {
+  def getLayerDisplayName(layer: Layer): String = {
     val localeId = Utils.getLocale().getOrElse(2)
     layer.names.find(name => name.localeId == localeId) match {
       case Some(name) => name.str
@@ -179,7 +179,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
   }
 
   @JSExport
-  def createNewField(fieldEntry: FieldEntry) = {
+  def createNewField(fieldEntry: FieldEntry): Future[Future[Unit]] = {
 
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/createField.html"
@@ -211,7 +211,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
 
 
   @JSExport
-  def editLocation() = {
+  def editLocation(): Future[Unit] = {
     val options = ModalOptions()
     options.templateUrl = "/static/templates/modal/perspectiveMap.html"
     options.controller = "PerspectiveMapController"
@@ -231,10 +231,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
 
 
   @JSExport
-  def ok() = {
-
-    var requests = Seq[Future[_]]()
-
+  def ok(): Unit = {
     // update translations
     val layer = scope.layers.head
     perspectiveTranslationGist foreach {

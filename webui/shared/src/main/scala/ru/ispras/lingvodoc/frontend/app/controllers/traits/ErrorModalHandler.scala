@@ -18,9 +18,9 @@ trait ErrorModalHandler {
     options.size = "lg"
     options.resolve = js.Dynamic.literal(
       params = () => {
-        js.Dynamic.literal(exception = e.asInstanceOf[js.Object])
+        js.Dynamic.literal(exception = e.asInstanceOf[js.Any])
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modalService.open[Unit](options)
   }

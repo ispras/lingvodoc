@@ -917,13 +917,39 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
       if (xhr.status == 200) {
         p.success(())
       } else {
-        p.failure(new BackendException("Failed to changed approval status entities"))
+        p.failure(new BackendException("Failed to changed approval status"))
       }
     }
     xhr.send(JSON.stringify(req))
 
     p.future
   }
+
+  def approveAll(dictionaryId: CompositeId, perspectiveId: CompositeId): Future[Unit] = {
+
+    val p = Promise[Unit]()
+    val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" +
+      encodeURIComponent(dictionaryId.objectId.toString) +
+      "/perspective/" + encodeURIComponent(perspectiveId.clientId.toString) + "/" +
+      encodeURIComponent(perspectiveId.objectId.toString) + "/approve_all"
+
+    val xhr = new dom.XMLHttpRequest()
+    xhr.open("PATCH", getMethodUrl(url))
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+
+    xhr.onload = { (e: dom.Event) =>
+      if (xhr.status == 200) {
+        p.success(())
+      } else {
+        p.failure(new BackendException("Failed to approve all entities"))
+      }
+    }
+    xhr.send()
+
+    p.future
+  }
+
+
 
   def acceptEntities(dictionaryId: CompositeId, perspectiveId: CompositeId, ids: Seq[CompositeId]): Future[Unit] = {
     val p = Promise[Unit]()
