@@ -12,7 +12,7 @@ requires = [
     ]
 
 setup(name='lingvodoc',
-      version='1.9',
+      version='2.0b1',
       description='lingvodoc',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
@@ -37,3 +37,4 @@ setup(name='lingvodoc',
       initialize_lingvodoc_db = lingvodoc.scripts.initializedb:main
       """,
       )
+print(find_packages())
