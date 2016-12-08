@@ -2,7 +2,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import io.plasmap.pamphlet.{Marker, _}
+import io.plasmap.pamphlet._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
@@ -17,15 +17,8 @@ import scala.concurrent.Future
 import scala.scalajs.js.UndefOr
 import scala.util.Random
 
-
-
-
-
 @JSExportAll
 case class SearchQuery(var query: String = "", var fieldId: String = "", var orFlag: Boolean = false)
-
-
-
 
 @js.native
 trait MapSearchScope extends Scope {
@@ -50,6 +43,8 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   private[this] var fields = Seq[Field]()
   private[this] var searchDictionaries = Seq[Dictionary]()
   private[this] var searchPerspectives = Seq[Perspective]()
+  private[this] var allMarkers = Seq[(Perspective, Marker)]()
+  private[this] var highlightMarkers = Seq[Marker]()
 
   scope.adoptedSearch = "unchecked"
   scope.etymologySearch = "unchecked"
@@ -114,16 +109,23 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
     }
 
 
-    val searchStrings = scope.search.toSeq.filter(_.fieldId.nonEmpty).filter(_.query.nonEmpty).map{s =>
-      val field = fields.find(_.getId == s.fieldId)
-      SearchString(s.query, s.orFlag, field.get.translation)
+    val searchStrings = scope.search.toSeq.filter(_.query.nonEmpty).map{s =>
+      fields.find(_.getId == s.fieldId) match {
+         case Some(field) => SearchString(s.query, s.orFlag, field.translation)
+         case None => SearchString(s.query, s.orFlag, "")
+      }
     }
 
     if (searchStrings.nonEmpty) {
+
+      clearHighlighting()
+
       backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_)))) map { entries =>
 
         Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId))}) map { perspectives =>
           searchPerspectives = perspectives
+
+          perspectives.foreach { p => highlightPerspective(CompositeId.fromObject(p)) }
 
           Future.sequence(perspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId))}) map { dictionaries =>
             searchDictionaries = dictionaries
@@ -185,6 +187,23 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
     }
   }
 
+  private[this] def highlightPerspective(perspectiveId: CompositeId): Unit = {
+
+    allMarkers.find(p => p._1.getId == perspectiveId.getId).foreach{ p =>
+      val options = CircleOptions.color("red").build.asInstanceOf[CircleOptions]
+      val cmarker = Leaflet.circle(p._2.getLatLng(), 450, options).asInstanceOf[Marker]
+      highlightMarkers = highlightMarkers :+ cmarker
+      cmarker.addTo(leafletMap)
+    }
+  }
+
+  private[this] def clearHighlighting(): Unit = {
+    highlightMarkers.foreach { marker =>
+      leafletMap.removeLayer(marker)
+    }
+    highlightMarkers = Seq[Marker]()
+  }
+
 
   override protected def onLoaded[T](result: T): Unit = {}
 
@@ -204,10 +223,10 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
       val dictionary = getDictionary(perspectiveId)
       val perspective = getPerspective(perspectiveId)
 
-      val defaultIconOptions = IconOptions.iconUrl("static/images/marker-icon-default.png").iconSize(Leaflet.point(50, 42)).iconAnchor(Leaflet.point(-12, -42)).build
+      val defaultIconOptions = IconOptions.iconUrl("static/images/marker-icon-default.png").iconSize(Leaflet.point(50, 41)).iconAnchor(Leaflet.point(13, 41)).build
       val defaultIcon = Leaflet.icon(defaultIconOptions)
 
-      val selectedIconOptions = IconOptions.iconUrl("static/images/marker-icon-selected.png").iconSize(Leaflet.point(50, 42)).iconAnchor(Leaflet.point(-12, -42)).build
+      val selectedIconOptions = IconOptions.iconUrl("static/images/marker-icon-selected.png").iconSize(Leaflet.point(50, 41)).iconAnchor(Leaflet.point(13, 41)).build
       val selectedIcon = Leaflet.icon(selectedIconOptions)
 
       val latLng = meta.metaData.location.get.location
@@ -257,18 +276,17 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
         }
       })
 
-
+      perspective.foreach { p =>
+        allMarkers = allMarkers :+ (p, marker)
+      }
 
       marker.addTo(leafletMap)
-
-
-
     }
   }
 
   val cssId = "map"
   val conf = LeafletMapOptions.zoomControl(true).scrollWheelZoom(true).build
-  val leafletMap = Leaflet.map(cssId, conf).setView(Leaflet.latLng(51.505f, -0.09f), 13)
+  val leafletMap = Leaflet.map(cssId, conf) //.setView(Leaflet.latLng(51.505f, -0.09f), 13)
   val MapId = "lingvodoc_ispras_ru"
   val Attribution = "Map data &copy; <a href=\"http://openstreetmap.org\">OpenStreetMap</a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"http://mapbox.com\">Mapbox</a>"
 
