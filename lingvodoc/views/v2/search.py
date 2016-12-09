@@ -139,7 +139,7 @@ def advanced_search(request):
 
         for part in search_parts[1:]:
             search_expression = or_(search_expression, Entity.content.like('%' + part + '%'))
-        if 'entity_type' in searchstring:
+        if 'entity_type' in searchstring and searchstring['entity_type']:
             search_expression = and_(search_expression, TranslationAtom.content == searchstring['entity_type'],
                                      TranslationAtom.locale_id==2)
         results_cursor = results_cursor.filter(search_expression)

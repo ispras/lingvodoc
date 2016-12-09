@@ -20,6 +20,7 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
     and_,
+    or_,
     tuple_
 )
 
@@ -474,6 +475,17 @@ class DictionaryPerspective(CompositeIdMixin,
     is_template = Column(Boolean, default=False, nullable=False)
     import_source = Column(UnicodeText)
     import_hash = Column(UnicodeText)
+    @classmethod
+    def get_deleted(cls):
+        deleted = DBSession.query(DictionaryPerspective.client_id,
+                                  DictionaryPerspective.object_id).join(Dictionary).filter(or_(
+            Dictionary.marked_for_deletion == True,
+            DictionaryPerspective.marked_for_deletion == True
+        )).all()
+        deleted_set = set()
+        for i in deleted:
+            deleted_set.add((i.client_id, i.object_id))
+        return deleted_set
 
 
 class SelfMixin(PrimeTableArgs):
@@ -620,8 +632,15 @@ class LexicalEntry(CompositeIdMixin,
     @classmethod
     def track_multiple(cls, lexs, locale_id, publish=None, accept=None):
         log.debug(lexs)
+        filtered_lexes = []
+
+        deleted_persps = DictionaryPerspective.get_deleted()
+        for i in lexs:
+            if (i[2], i[3]) not in deleted_persps:
+                filtered_lexes.append(i)
         ls = []
-        for i, x in enumerate(lexs):
+
+        for i, x in enumerate(filtered_lexes):
             ls.append({'traversal_lexical_order': i, 'client_id': x[0], 'object_id': x[1]})
 
         if not ls:
@@ -723,7 +742,7 @@ class LexicalEntry(CompositeIdMixin,
             return obj
 
         lexical_list = []
-        for k in lexs:
+        for k in filtered_lexes:
             a = []
             entry = {
                 'client_id': k[0],
