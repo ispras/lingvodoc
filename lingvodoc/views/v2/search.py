@@ -1,5 +1,3 @@
-__author__ = 'alexander'
-
 from lingvodoc.models import (
     BaseGroup,
     Client,
@@ -30,7 +28,6 @@ from sqlalchemy.orm import joinedload, subqueryload
 from pyramid.request import Request
 
 
-# TODO: completely broken!
 @view_config(route_name='basic_search', renderer='json', request_method='GET')
 def basic_search(request):
     can_add_tags = request.params.get('can_add_tags')
@@ -38,7 +35,7 @@ def basic_search(request):
     perspective_client_id = request.params.get('perspective_client_id')
     perspective_object_id = request.params.get('perspective_object_id')
     if searchstring:
-        if len(searchstring) >= 2:
+        if len(searchstring) >= 1:
             searchstring = request.params.get('searchstring')
             group = DBSession.query(Group).filter(Group.subject_override == True).join(BaseGroup)\
                     .filter(BaseGroup.subject=='lexical_entries_and_entities', BaseGroup.action=='view')\
