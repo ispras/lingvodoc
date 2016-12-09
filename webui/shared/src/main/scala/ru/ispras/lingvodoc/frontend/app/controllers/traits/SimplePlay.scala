@@ -11,9 +11,6 @@ trait SimplePlay {
   protected var waveSurfer: Option[WaveSurfer] = None
   protected var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
   protected val pxPerSecStep = 30 // zooming step
-  // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
-  //protected var fullWSWidth = 0.0 // again, will be known after audio load
-  //protected var wsHeight = 128
   protected var soundMarkup: Option[String] = None
 
 

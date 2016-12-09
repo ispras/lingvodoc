@@ -50,7 +50,12 @@
         </div>
     </div>
 
-    <div class="row" ng-show="searchResults.length > 0">
+    <div id="loader-wrapper" ng-show="progressBar">
+        <div id="loader"></div>
+    </div>
+
+
+    <div class="row" ng-show="searchResults.length > 0 && !progressBar">
         <div class="col-md-12">
             <wavesurfer on-ready="controller.onReady($waveSurfer)"></wavesurfer>
         </div>
@@ -59,7 +64,7 @@
         </div>
     </div>
 
-    <div class="row" ng-repeat="searchTable in searchResults">
+    <div class="row" ng-repeat="searchTable in searchResults" ng-show="!progressBar">
         <div class="col-md-12">
             <h4>{{ controller.getSearchSource(searchTable.rows[0].entry) }}</h4>
             <table class="table table-striped table-bordered">

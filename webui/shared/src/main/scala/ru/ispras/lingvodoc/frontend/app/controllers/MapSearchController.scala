@@ -27,6 +27,7 @@ trait MapSearchScope extends Scope {
   var search: js.Array[SearchQuery] = js.native
   var selectedPerspectives: js.Array[Perspective] = js.native
   var searchResults: js.Array[DictionaryTable] = js.native
+  var progressBar: Boolean = js.native
 }
 
 @injectable("MapSearchController")
@@ -62,6 +63,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   scope.etymologySearch = "unchecked"
   scope.search = js.Array(SearchQuery())
   scope.selectedPerspectives = js.Array[Perspective]()
+  scope.progressBar = false
 
   private[this] def getPerspective(perspectiveId: CompositeId): Option[Perspective] = {
     perspectives.find(_.getId == perspectiveId.getId)
@@ -104,6 +106,8 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   @JSExport
   def doSearch() = {
 
+    scope.progressBar = true
+    
     val adopted = scope.adoptedSearch match {
       case "checked"   => true
       case "unchecked" => false
@@ -132,11 +136,6 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
         // get perspectives
         Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }) map { perspectives =>
           searchPerspectives = perspectives
-
-          searchPerspectives.find(p => p.parentClientId == 563 && p.parentObjectId == 3) foreach { ff =>
-            console.log((ff :: Nil).toJSArray)
-          }
-          
           
           // get dictionaries
           Future.sequence(perspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId)) }) map { dictionaries =>
@@ -149,6 +148,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
               }
             }).foreach { tables =>
               scope.searchResults = tables.toJSArray
+              scope.progressBar = false
             }
 
             // highlight results
@@ -162,12 +162,12 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   }
 
   @JSExport
-  def getSearchSource(entry: LexicalEntry): String = {
+  def getSearchSource(entry: LexicalEntry): UndefOr[String] = {
     searchPerspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
       searchDictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
         s"${dictionary.translation} / ${perspective.translation}"
       }
-    }.getOrElse("NIN")
+    }.orUndefined
   }
 
   @JSExport
