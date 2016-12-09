@@ -56,6 +56,8 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
   private[this] var searchDictionaries = Seq[Dictionary]()
   private[this] var searchPerspectives = Seq[Perspective]()
 
+  override def spectrogramId: String = "#spectrogram-modal"
+
   scope.pageLoaded = false
   scope.searchQuery = ""
   scope.searchResults = js.Array[DictionaryTable]()

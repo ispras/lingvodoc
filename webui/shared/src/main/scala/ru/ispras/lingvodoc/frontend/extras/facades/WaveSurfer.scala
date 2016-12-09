@@ -29,7 +29,9 @@ object WaveSurferOpts {
       scrollParent = scrollParent,
       minPxPerSec = minPxPerSec,
       fillParent = fillParent,
-      height = height
+      height = height,
+      mediaControls = false,
+      autoplay = false
     ).asInstanceOf[WaveSurferOpts]
   }
 }
