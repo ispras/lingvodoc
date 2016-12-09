@@ -81,9 +81,9 @@ lazy val webui = (project in file("webui")).dependsOn(shared)
       js.bootstrapUI / "ui-bootstrap.js" minified "ui-bootstrap.min.js" dependsOn "bootstrap.js",
       js.bootstrapUITpls / "ui-bootstrap-tpls.js" minified "ui-bootstrap-tpls.min.js" dependsOn "ui-bootstrap.js",
       js.validator / "0.10.2/dist/validator.js" minified "0.10.2/dist/validator.min.js" dependsOn "bootstrap.js",
-      ProvidedJS / "wavesurfer.min.js",
-      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js",
-      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.js",
+      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js"
     ),
     relativeSourceMaps := true,
@@ -120,9 +120,9 @@ lazy val desktop = (project in file("desktop")).dependsOn(shared)
       js.bootstrapUI / "ui-bootstrap.js" minified "ui-bootstrap.min.js" dependsOn "bootstrap.js",
       js.bootstrapUITpls / "ui-bootstrap-tpls.js" minified "ui-bootstrap-tpls.min.js" dependsOn "ui-bootstrap.js",
       js.validator / "0.10.2/dist/validator.js" minified "0.10.2/dist/validator.min.js" dependsOn "bootstrap.js",
-      ProvidedJS / "wavesurfer.min.js",
-      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js",
-      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.js",
+      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js"
     ),
     relativeSourceMaps := true,
@@ -157,9 +157,9 @@ lazy val shared = (project in file("shared"))
       js.bootstrapUI / "ui-bootstrap.js" minified "ui-bootstrap.min.js" dependsOn "bootstrap.js",
       js.bootstrapUITpls / "ui-bootstrap-tpls.js" minified "ui-bootstrap-tpls.min.js" dependsOn "ui-bootstrap.js",
       js.validator / "0.10.2/dist/validator.js" minified "0.10.2/dist/validator.min.js" dependsOn "bootstrap.js",
-      ProvidedJS / "wavesurfer.min.js",
-      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.min.js",
-      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.min.js",
+      ProvidedJS / "wavesurfer.js",
+      ProvidedJS / "wavesurfer.spectrogram.js" dependsOn "wavesurfer.js",
+      ProvidedJS / "wavesurfer.timeline.js" dependsOn "wavesurfer.js",
       ProvidedJS / "leaflet.js"
     )
   )

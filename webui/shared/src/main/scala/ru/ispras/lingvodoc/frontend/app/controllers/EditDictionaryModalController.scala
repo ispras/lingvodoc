@@ -60,6 +60,8 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
 
   private[this] var enabledInputs: Seq[String] = Seq[String]()
 
+  override def spectrogramId: String = "#spectrogram-modal"
+
   scope.count = 0
   scope.offset = 0
   scope.size = 5

@@ -33,7 +33,9 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
                                     val timeout: Timeout,
                                     val exceptionHandler: ExceptionHandler,
                                     params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[ViewDictionaryModalScope](scope) with AngularExecutionContextProvider with SimplePlay {
+  extends AbstractController[ViewDictionaryModalScope](scope)
+    with AngularExecutionContextProvider
+    with SimplePlay {
 
   private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
   private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
@@ -60,6 +62,9 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
   private[this] var dataTypes = Seq[TranslationGist]()
   private[this] var perspectiveFields = Seq[Field]()
   private[this] var linkedPerspectiveFields = Seq[Field]()
+
+  override def spectrogramId: String = "#spectrogram-modal"
+
 
   load()
 
