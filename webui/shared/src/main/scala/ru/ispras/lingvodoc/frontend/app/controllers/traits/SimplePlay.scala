@@ -12,8 +12,8 @@ trait SimplePlay {
   protected var _pxPerSec = 50 // minimum pxls per second, all timing is bounded to it
   protected val pxPerSecStep = 30 // zooming step
   // zoom in/out step; fake value to avoid division by zero; on ws load, it will be set correctly
-  protected var fullWSWidth = 0.0 // again, will be known after audio load
-  protected var wsHeight = 128
+  //protected var fullWSWidth = 0.0 // again, will be known after audio load
+  //protected var wsHeight = 128
   protected var soundMarkup: Option[String] = None
 
 
@@ -58,7 +58,7 @@ trait SimplePlay {
 
   private[this] def drawSpectrogram(waveSurfer: WaveSurfer) = {
     val spectrogram = Some(js.Object.create(WaveSurferSpectrogramPlugin).asInstanceOf[js.Dynamic])
-    spectrogram.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer, container = spectrogramId)))
+    spectrogram.foreach(_.init(js.Dynamic.literal(wavesurfer = waveSurfer, container = spectrogramId, fftSamples = 128)))
   }
 
 
