@@ -331,7 +331,7 @@ def configure_routes(config):
     # API #GET
     # no params, returns file
     config.add_route(name="get_user_blob",
-                     pattern="/blobs/{client_id}/{object_id}")
+                     pattern="/blobs/{client_id}/{object_id}", request_method='GET')
     # API #GET
     # no params, lists only own blobs
     config.add_route(name="list_user_blobs",
@@ -655,6 +655,14 @@ def configure_routes(config):
 
     config.add_route(name='translation_service_search', pattern='/translation_service_search')
 
+    config.add_route(name='sociolinguistics', pattern='/sociolinguistics')
+
+    config.add_route(name='sociolinguistics_questions', pattern='/sociolinguistics/questions')
+
+    config.add_route(name='sociolinguistics_answers', pattern='/sociolinguistics/answers')
+
+    config.add_route(name="delete_user_blob",
+                     pattern="/blobs/{client_id}/{object_id}", request_method='DELETE')
 
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
