@@ -27,6 +27,8 @@ trait MapSearchScope extends Scope {
   var search: js.Array[SearchQuery] = js.native
   var selectedPerspectives: js.Array[Perspective] = js.native
   var searchResults: js.Array[DictionaryTable] = js.native
+  var size: Int = js.native
+  var pageNumber: Int = js.native
   var progressBar: Boolean = js.native
 }
 
@@ -46,6 +48,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   private[this] var searchPerspectives = Seq[Perspective]()
   private[this] var allMarkers = Map[String, Marker]()
   private[this] var highlightMarkers = Seq[Marker]()
+  private[this] var foundEntries = Seq[LexicalEntry]()
 
   // create map
   private[this] val leafletMap = createMap()
@@ -63,6 +66,9 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   scope.etymologySearch = "unchecked"
   scope.search = js.Array(SearchQuery())
   scope.selectedPerspectives = js.Array[Perspective]()
+  scope.searchResults = js.Array[DictionaryTable]()
+  scope.size = 10
+  scope.pageNumber = 1
   scope.progressBar = false
 
   private[this] def getPerspective(perspectiveId: CompositeId): Option[Perspective] = {
@@ -107,7 +113,8 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   def doSearch() = {
 
     scope.progressBar = true
-    
+    foundEntries = Seq[LexicalEntry]()
+
     val adopted = scope.adoptedSearch match {
       case "checked"   => true
       case "unchecked" => false
@@ -128,38 +135,49 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
     }
 
     if (searchStrings.nonEmpty) {
-
       clearHighlighting()
-
       backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_)))) map { entries =>
+        foundEntries = entries
+        // highlight results
+        entries.foreach { e => highlightPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }
+        getPage(1)
+      }
+    }
+  }
 
-        // get perspectives
-        Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }) map { perspectives =>
-          searchPerspectives = perspectives
-          
-          // get dictionaries
-          Future.sequence(perspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId)) }) map { dictionaries =>
-            searchDictionaries = dictionaries
+  @JSExport
+  def getPage(p: Int): Unit = {
+    scope.progressBar = true
+    val offset = (p - 1) * scope.size
+    val entries = foundEntries.slice(offset, offset + scope.size)
 
-            // get fields
-            Future.sequence(perspectives.map { p =>
-              backend.getFields(CompositeId(p.parentClientId, p.parentObjectId), CompositeId.fromObject(p)).map { fields =>
-                DictionaryTable.build(fields, dataTypes, entries.filter(e => e.parentClientId == p.clientId && e.parentObjectId == p.objectId))
-              }
-            }).foreach { tables =>
-              scope.searchResults = tables.toJSArray
-              scope.progressBar = false
-            }
+    // get perspectives
+    Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }) map { perspectives =>
+      searchPerspectives = perspectives
 
-            // highlight results
-            perspectives.foreach { p => highlightPerspective(CompositeId.fromObject(p)) }
+      // get dictionaries
+      Future.sequence(perspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId)) }) map { dictionaries =>
+        searchDictionaries = dictionaries
 
+        // get fields
+        Future.sequence(perspectives.map { p =>
+          backend.getFields(CompositeId(p.parentClientId, p.parentObjectId), CompositeId.fromObject(p)).map { fields =>
+            DictionaryTable.build(fields, dataTypes, entries.filter(e => e.parentClientId == p.clientId && e.parentObjectId == p.objectId))
           }
-
+        }).foreach { tables =>
+          scope.searchResults = tables.toJSArray
+          scope.progressBar = false
+          scope.pageNumber = p
         }
       }
     }
   }
+
+  @JSExport
+  def range() = {
+    (1 to scala.math.ceil(foundEntries.size.toDouble / scope.size).toInt by 1).toSeq.toJSArray
+  }
+
 
   @JSExport
   def getSearchSource(entry: LexicalEntry): UndefOr[String] = {

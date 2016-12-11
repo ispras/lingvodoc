@@ -6,7 +6,7 @@ import upickle.default._
 import scala.scalajs.js.annotation.JSExportAll
 
 @JSExportAll
-case class SociolinguisticsEntry(perspectives: Seq[CompositeId], location: LatLng, date: String, questions: Map[String, String])
+case class SociolinguisticsEntry(@key("community_name") communityName: String, perspectives: Seq[CompositeId], location: LatLng, date: String, questions: Map[String, String])
 
 object SociolinguisticsEntry {
   import upickle.Js

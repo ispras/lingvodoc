@@ -1,3 +1,8 @@
+<div id="shaderFull" class="animate-show" ng-show="progressBar">
+    <div id="loader-wrapper-fullscreen">
+        <div id="loader"></div>
+    </div>
+</div>
 
 <div class="container">
 
@@ -9,7 +14,7 @@
 
             <div ng-repeat="searchField in search">
                 <input type="text" placeholder="" ng-model="searchField.query">
-                <select ng-model="searchField.fieldId" ng-options="field.getId as field.translation for field in controller.getSearchFields() track by field.getId">
+                <select class="form-control" ng-model="searchField.fieldId" ng-options="field.getId as field.translation for field in controller.getSearchFields() track by field.getId">
                     <option></option>
                 </select>
                 /OR <input type="checkbox" ng-checked="searchField.orFlag" ng-model="searchField.orFlag">
@@ -48,10 +53,6 @@
             </div>
 
         </div>
-    </div>
-
-    <div id="loader-wrapper" ng-show="progressBar">
-        <div id="loader"></div>
     </div>
 
 
@@ -286,6 +287,25 @@
             </table>
         </div>
     </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+
+            <div class="text-center">
+                <nav>
+                    <ul class="pagination pagination-sm">
+                        <li ng-repeat="p in controller.range()"
+                            ng-class="{active: pageNumber == p}">
+                            <a href="" ng-click="controller.getPage(p)">{{ p }}</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+        </div>
+
+    </div>
+
 
 
 

@@ -1512,7 +1512,8 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
         val id = read[CompositeId](xhr.responseText)
         p.success(id)
       } else {
-        p.failure(new BackendException("Failed to upload file: " + xhr.statusText))
+
+        p.failure(new BackendException("Failed to upload file: " + xhr.statusText + xhr.responseText))
       }
     }
 

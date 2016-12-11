@@ -18,7 +18,7 @@ import scala.scalajs.js.JSConverters._
 
 
 @JSExportAll
-case class Query(var question: UndefOr[String], var answer: UndefOr[String])
+case class Query(var question: String, var answer: String)
 
 
 @js.native
@@ -46,10 +46,7 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
   private[this] var perspectivesMeta = Seq[PerspectiveMeta]()
   private[this] var dataTypes = Seq[TranslationGist]()
   private[this] var fields = Seq[Field]()
-  private[this] var searchDictionaries = Seq[Dictionary]()
-  private[this] var searchPerspectives = Seq[Perspective]()
-  private[this] var allMarkers = Map[String, Marker]()
-  private[this] var highlightMarkers = Seq[Marker]()
+  private[this] var allMarkers = Seq[Marker]()
   private[this] var sociolinguisticsEntries = Seq[SociolinguisticsEntry]()
 
   // create map
@@ -62,6 +59,8 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
 
   private[this] val resultIconOptions = IconOptions.iconUrl("static/images/marker-icon-selected.png").iconSize(Leaflet.point(100, 82)).iconAnchor(Leaflet.point(26, 82)).build
   private[this] val resultIcon = Leaflet.icon(resultIconOptions)
+  private[this] val rng = Random
+
 
   // scope initialization
   scope.adoptedSearch = "unchecked"
@@ -70,105 +69,94 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
   scope.selectedPerspectives = js.Array[Perspective]()
   scope.questions = js.Array[String]()
   scope.answers = js.Array[String]()
-  scope.queries = js.Array[Query](Query(Option.empty[String].orUndefined, Option.empty[String].orUndefined))
+  scope.queries = js.Array[Query](Query("", ""))
   scope.progressBar = false
 
-  private[this] def getPerspective(perspectiveId: CompositeId): Option[Perspective] = {
-    perspectives.find(_.getId == perspectiveId.getId)
-  }
-
-  private[this] def getDictionary(perspectiveId: CompositeId): Option[Dictionary] = {
-    perspectives.find(_.getId == perspectiveId.getId).flatMap { perspective =>
-      dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId)
-    }
-  }
-
-  private[this] def showInfo(dictionary: Dictionary, perspective: Perspective, meta: MetaData) = {
+  private[this] def showInfo(sociolinguisticsEntry: SociolinguisticsEntry) = {
 
     val options = ModalOptions()
-    options.templateUrl = "/static/templates/modal/viewInfoBlobs.html"
-    options.controller = "ViewInfoBlobsController"
+    options.templateUrl = "/static/templates/modal/viewSociolinguisticsInfo.html"
+    options.controller = "ViewSociolinguisticsInfoController"
     options.backdrop = false
     options.keyboard = false
     options.size = "lg"
     options.resolve = js.Dynamic.literal(
       params = () => {
-        js.Dynamic.literal(
-          dictionary = dictionary.asInstanceOf[js.Object],
-          perspective = perspective.asInstanceOf[js.Object],
-          meta = meta.asInstanceOf[js.Object])
+        js.Dynamic.literal(entry = sociolinguisticsEntry.asInstanceOf[js.Object])
       }).asInstanceOf[js.Dictionary[js.Any]]
     val instance = modal.open[Unit](options)
   }
 
   @JSExport
   def addQuery(): Unit = {
-    scope.queries.push(Query(Option.empty[String].orUndefined, Option.empty[String].orUndefined))
+    scope.queries.push(Query("", ""))
   }
 
   @JSExport
   def doSearch() = {
-
-  }
-
-  @JSExport
-  def getSearchSource(entry: LexicalEntry): UndefOr[String] = {
-    searchPerspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
-      searchDictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
-        s"${dictionary.translation} / ${perspective.translation}"
-      }
-    }.orUndefined
-  }
-
-  @JSExport
-  def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
-
-    perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
-      dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
-
-        val options = ModalOptions()
-        options.templateUrl = "/static/templates/modal/viewGroupingTag.html"
-        options.controller = "EditGroupingTagModalController"
-        options.backdrop = false
-        options.keyboard = false
-        options.size = "lg"
-        options.resolve = js.Dynamic.literal(
-          params = () => {
-            js.Dynamic.literal(
-              dictionaryClientId = dictionary.clientId,
-              dictionaryObjectId = dictionary.objectId,
-              perspectiveClientId = perspective.clientId,
-              perspectiveObjectId = perspective.objectId,
-              lexicalEntry = entry.asInstanceOf[js.Object],
-              field = field.asInstanceOf[js.Object],
-              values = values.asInstanceOf[js.Object])
-          }).asInstanceOf[js.Dictionary[js.Any]]
-
-        val instance = modal.open[Unit](options)
-        instance.result map { _ =>
-
+    reset()
+    val qs = scope.queries.filter(q => q.answer.nonEmpty && q.question.nonEmpty).map(q => (q.question, q.answer)).toSeq.toMap
+    val results = sociolinguisticsEntries.filter {e =>
+      qs.forall{case (q, a) =>
+        e.questions.exists{ t =>
+          t._1 == q && t._2 == a
         }
       }
     }
-    ()
+
+    highlightSearchResults(results)
   }
 
-  private[this] def highlightPerspective(perspectiveId: CompositeId): Unit = {
-    allMarkers.get(perspectiveId.getId) foreach { marker =>
-      marker.setIcon(resultIcon)
+  @JSExport
+  def reset(): Unit = {
+    allMarkers.foreach(m => leafletMap.removeLayer(m))
+  }
+
+
+  private[this] def highlightSearchResults(results: Seq[SociolinguisticsEntry]): Unit = {
+    results.foreach{ entry =>
+      addMarker(entry)
     }
   }
 
-  private[this] def clearHighlighting(): Unit = {
-    allMarkers.foreach {
-      case (id, marker) =>
-        if (scope.selectedPerspectives.exists(_.getId == id)) {
-          marker.setIcon(selectedIcon)
-        } else {
-          marker.setIcon(defaultIcon)
-        }
+  private[this] def addMarker(entry: SociolinguisticsEntry): Unit = {
+
+    val latLng = entry.location
+    val markerOptions = js.Dynamic.literal("icon" -> defaultIcon).asInstanceOf[MarkerOptions]
+    // TODO: Add support for marker cluster
+    val p = if (allMarkers.exists(p => p.getLatLng().lat == latLng.lat && p.getLatLng().lng == latLng.lng)) {
+      val latK = (-0.005) + (0.005 - (-0.005)) * rng.nextDouble
+      val lngK = (-0.005) + (0.005 - (-0.005)) * rng.nextDouble
+      Leaflet.latLng(latLng.lat + latK, latLng.lng + lngK)
+    } else {
+      Leaflet.latLng(latLng.lat, latLng.lng)
     }
+
+    val marker: Marker = Leaflet.marker(p, markerOptions).asInstanceOf[Marker]
+
+    // prevents context menu from showing
+    marker.on("contextmenu", (e: js.Any) => {
+
+    })
+
+    // marker click handler
+    marker.onMouseDown(e => {
+      e.originalEvent.button match {
+        // left button click
+        case 0 =>
+          showInfo(entry)
+        // right button click
+        case 2 =>
+
+      }
+    })
+
+    allMarkers = allMarkers :+ marker
+    marker.addTo(leafletMap)
   }
+
+
+
 
   private[this] def createMap(): LeafletMap = {
     // map object initialization

@@ -44,6 +44,28 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             val exceptionHandler: ExceptionHandler,
                             params: js.Dictionary[js.Function0[js.Any]])
   extends AbstractController[SoundMarkupScope](scope) {
+  /**
+    * Loading process requires a bit of explanation.
+    * 1) We can't create wavesurfer instance until the view is loaded, because WS will not find it's div element
+    * otherwise
+    * 2) On the other hand, we can't fully render template without WS instance because we need sound's duration to
+    * calculate right distances.
+    * 3) We also derive the duration from the markup, but it either will not be immediately avaliable to the view,
+    *    because eaf query is async, at least right now, with jQuery GET.
+    * 4) So, loading goes like this:
+    *   a) Controller's constructor is executed, async GET EAF doc query is sent;
+    *   b) View is loaded with dummy distances, WS width is not known at the moment, real elan doesn't exists --
+    *      a dummy stub is used instead.
+    *   c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
+    *   d) After that, Angular reloads the view, showing WaveSurfer box and tiers/annotations;
+    *      however, distances are still dummy if markup was not loaded yet, because sound duration is not known
+    *   e) When markup is received, parseDataMarkup is called, setting sound's duration, and Angular is forced to update
+    *      the view.
+    *   f) When sound is fully loaded, wsReady is triggered and executed. Sound duration is set, if it was not yet set by
+    *      parseDataMarkup. Angular is forced to update the view.
+    */
+
+
   var elan: Option[ELANDocument] = None
   scope.elanJS = js.Dynamic.literal()
 
@@ -57,9 +79,16 @@ class SoundMarkupController(scope: SoundMarkupScope,
   var timeline: Option[js.Dynamic] = None
   private var _pxPerSec = 50.0 // minimum pxls per second, all timing is bounded to it
   val pxPerSecStep = 30 // zooming step
-  // fake value to avoid division by zero; on ws load, it will be set correctly
+  /*
+   * Duration is used to determine scope.fullWSWidth. Duration's value itself is:
+   * * Initially this fake value, to avoid division by zero while nor markup neither sound is not yet loaded;
+   * * Sound's duration, if we have loaded the sound, but not the markup
+   * * Last annotation's time in markup, if we have loaded the markup
+   * This allows viewing sound without markup and viewing markup without sound, but the latter intentionally
+   * has the priority.
+   */
   private var _duration: Double = 42.0
-  scope.fullWSWidth = 0.0 // again, will be known after audio load
+  scope.fullWSWidth = 0.0 // again, will be known after audio/markup load
   // div containing wavesurfer and drawn tiers, used to retrieve attributes
   var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
   // size of the window (div) with waveform and svg containing canvas. It is only needed to restrict maximal zoom out
@@ -195,24 +224,6 @@ class SoundMarkupController(scope: SoundMarkupScope,
     if (scope.timelineEnabled) drawTimeline() else hideTimeline()
   }
 
-  /**
-    * Loading process requires a bit of explanation.
-    * 1) We can't create wavesurfer instance until the view is loaded, because WS will not find it's div element
-    * otherwise
-    * 2) On the other hand, we can't fully render template without WS instance because we need sound's duration to
-    * calculate right distances.
-    * 3) In principle, we can start loading eaf file before or after view is loaded, however real elan will not
-    *   be available to view in either case, because eaf query is async, at least right now, with dummy jQuery get.
-    * 4) So, loading goes like this:
-    *   a) Controller's constructor is executed, get EAF query is sent;
-    *   b) View is loaded with dummy distances, WS width is not known at the moment, real elan doesn't exists --
-    *      a dummy stub is used instead.
-    *   c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
-    *   d) After that, Angular reloads the view, showing WaveSurfer box and tiers/annotations;
-    *      however, distances are still dummy, because sound duration is not known
-    *   e) When sound is fully loaded, wsReady is triggered and executed. Angular is forced to update the view, and final
-    */
-
   // hack to initialize controller after loading the view, otherwise wavesurfer will not find it's div
   // see http://stackoverflow.com/questions/21715256/angularjs-event-to-call-after-content-is-loaded
   // createWaveSurferTriggered is needed to call this only once
@@ -241,7 +252,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // called when audio is loaded and WS object is ready
   def wsReady(wso: WaveSurferOpts, ws: WaveSurfer)(event: js.Dynamic): Unit = {
     console.log("ws ready!")
-    duration = ws.getDuration()
+    // set duration only if we have no markup
+    if (!isDocumentLoaded) {
+      duration = ws.getDuration()
+    }
     wsHeight = wso.height
     waveSurfer = Some(ws)
     scope.$apply({})
@@ -264,15 +278,15 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def parseDataMarkup(elanMarkup: String) = {
     try {
       val e = ELANDocument(elanMarkup, pxPerSec)
-      // To render offsets correctly, we need to know sound's duration. If wavesurfer is not yet loaded, the only
-      // way to approximately learn it is just take the last timeslot time
+      // To render offsets correctly, we need to know sound's duration. We suppose that the last annotation's end time
+      // is the duration.
       if (!isWSReady) {
         duration = e.getLastTimeSlotValueSec
       }
       elan = Some(e)
       updateVD()
       // in case if markup will be loaded later than sound -- hardly possible, of course
-      //scope.$apply()
+      scope.$apply()
       // console.log(elan.toString)
     } catch {
       case e: Exception =>
