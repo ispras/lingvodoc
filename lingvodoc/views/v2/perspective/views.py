@@ -504,6 +504,7 @@ def edit_perspective_meta(request):  # tested & in docs
                 perspective.additional_metadata = old_meta
             else:
                 perspective.additional_metadata = req
+            DBSession.bulk_save_objects([perspective])
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
