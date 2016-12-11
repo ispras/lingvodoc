@@ -196,10 +196,21 @@ def delete_user_blob(request):
 @view_config(route_name='list_user_blobs', renderer='json', request_method='GET')
 def list_user_blobs(request):  # TODO: test
     variables = {'auth': authenticated_userid(request)}
-    #    user_client_ids = [cl_id.id for cl_id in DBSession.query(Client).filter_by(id=variables['auth']).all()]
-    #    user_blobs = DBSession.query(UserBlobs).filter_by(client_id.in_(user_client_ids)).all()
+    allowed_global_types = ["sociolinguistics"]
     client = DBSession.query(Client).filter_by(id=variables['auth']).first()
-    user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
+    data_type = request.params.get('data_type')
+    is_global = request.params.get('is_global')
+    if data_type:
+        if not is_global:
+            user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id, data_type=data_type).all()
+        else:
+            if data_type in allowed_global_types:
+                user_blobs = DBSession.query(UserBlobs).filter_by(data_type=data_type).all()
+            else:
+                request.response.status = HTTPForbidden.code
+                return {"error": "You can not list that data type globally."}
+    else:
+        user_blobs = DBSession.query(UserBlobs).filter_by(user_id=client.user_id).all()
     request.response.status = HTTPOk.code
     response = [{'name': blob.name, 'content': blob.content, 'data_type': blob.data_type,
                  'client_id': blob.client_id, 'object_id': blob.object_id} for blob in user_blobs]
