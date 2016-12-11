@@ -472,7 +472,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
                     backend.getPerspectiveMeta(perspective) map { meta =>
                       metadata = Some(meta)
                       scope.authors = meta.authors.map(_.authors).orUndefined
-                      scope.linkedFiles = meta.info.flatMap(e => files.find(_.getId == e.blob.getId)).toJSArray
+                      scope.linkedFiles = meta.info.flatMap(e => files.find(_.getId == e.blob.getId)).filterNot(_.dataType == "dialeqt_dictionary").toJSArray
                       scope.location = meta.location
                     }
                   }

@@ -29,6 +29,7 @@ trait MapSearchScope extends Scope {
   var searchResults: js.Array[DictionaryTable] = js.native
   var size: Int = js.native
   var pageNumber: Int = js.native
+  var resultEntriesCount: Int = js.native
   var progressBar: Boolean = js.native
 }
 
@@ -48,7 +49,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   private[this] var searchPerspectives = Seq[Perspective]()
   private[this] var allMarkers = Map[String, Marker]()
   private[this] var highlightMarkers = Seq[Marker]()
-  private[this] var foundEntries = Seq[LexicalEntry]()
+  private[this] var foundEntries = Seq[Seq[LexicalEntry]]()
 
   // create map
   private[this] val leafletMap = createMap()
@@ -69,6 +70,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   scope.searchResults = js.Array[DictionaryTable]()
   scope.size = 10
   scope.pageNumber = 1
+  scope.resultEntriesCount = -1
   scope.progressBar = false
 
   private[this] def getPerspective(perspectiveId: CompositeId): Option[Perspective] = {
@@ -113,7 +115,8 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   def doSearch() = {
 
     scope.progressBar = true
-    foundEntries = Seq[LexicalEntry]()
+    scope.resultEntriesCount = -1
+    foundEntries = Seq[Seq[LexicalEntry]]()
 
     val adopted = scope.adoptedSearch match {
       case "checked"   => true
@@ -137,9 +140,10 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
     if (searchStrings.nonEmpty) {
       clearHighlighting()
       backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_)))) map { entries =>
-        foundEntries = entries
         // highlight results
+        scope.resultEntriesCount = entries.size
         entries.foreach { e => highlightPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }
+        foundEntries = entries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq
         getPage(1)
       }
     }
@@ -152,7 +156,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
     val entries = foundEntries.slice(offset, offset + scope.size)
 
     // get perspectives
-    Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }) map { perspectives =>
+    Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.head.parentClientId, e.head.parentObjectId)) }) map { perspectives =>
       searchPerspectives = perspectives
 
       // get dictionaries
@@ -162,7 +166,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
         // get fields
         Future.sequence(perspectives.map { p =>
           backend.getFields(CompositeId(p.parentClientId, p.parentObjectId), CompositeId.fromObject(p)).map { fields =>
-            DictionaryTable.build(fields, dataTypes, entries.filter(e => e.parentClientId == p.clientId && e.parentObjectId == p.objectId))
+            DictionaryTable.build(fields, dataTypes, entries.find(e => e.head.parentClientId == p.clientId && e.head.parentObjectId == p.objectId).get)
           }
         }).foreach { tables =>
           scope.searchResults = tables.toJSArray

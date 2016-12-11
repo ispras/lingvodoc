@@ -1545,6 +1545,24 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def removeBlob(blobId: CompositeId): Future[Unit] = {
+    val p = Promise[Unit]()
+
+    val url = "blobs/" + encodeURIComponent(blobId.clientId.toString) +
+      "/" + encodeURIComponent(blobId.objectId.toString)
+
+    $http.delete[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          p.success(())
+        } catch {
+          case e: Throwable => p.failure(BackendException("Unknown exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to remove blob", e))
+    }
+    p.future
+  }
+
 
   def convertMarkup(entityId: CompositeId): Future[String] = {
     val p = Promise[String]()

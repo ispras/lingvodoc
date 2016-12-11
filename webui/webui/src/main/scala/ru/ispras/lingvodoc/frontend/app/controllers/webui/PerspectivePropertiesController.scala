@@ -478,7 +478,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
                         scope.location = meta.location
                         val reqs = meta.info.map {e => backend.blob(e.blob) }
                         Future.sequence(reqs) map { g =>
-                          scope.linkedFiles = g.toJSArray
+                          scope.linkedFiles = g.filterNot(_.dataType == "dialeqt_dictionary").toJSArray
                         }
 
                       }

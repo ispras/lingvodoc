@@ -27,8 +27,8 @@
 
     <div class="row">
         <div class="col-md-6">
-            <button type="button" class="btn btn-primary" ng-click="controller.doSearch()">Search</button>
-            <button type="button" class="btn btn-default" ng-click="controller.reset()">New search</button>
+            <button type="button" class="btn btn-primary" ng-click="controller.doSearch()">Поиск</button>
+            <button type="button" class="btn btn-default" ng-click="controller.reset()">Новый поиск</button>
         </div>
     </div>
 
@@ -52,6 +52,15 @@
 
         </div>
     </div>
+
+
+    <div class="row top30" ng-show="searchComplete">
+        <div class="col-md-12">
+            <h3 class="text-center">под условия запроса подходят {{ results.length }} анкет</h3>
+        </div>
+
+    </div>
+
 
 </div>
 
