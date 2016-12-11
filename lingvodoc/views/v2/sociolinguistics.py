@@ -2,7 +2,8 @@ import xlrd
 
 from lingvodoc.models import (
     DBSession,
-    UserBlobs
+    UserBlobs,
+    DictionaryPerspective
 )
 
 from pyramid.response import Response
@@ -51,6 +52,19 @@ def check_socio(path):
 
 def sociolinguistics():
     socioblobs = DBSession.query(UserBlobs).filter(UserBlobs.data_type == 'sociolinguistics').all()
+
+    # TODO: need to acknowledge how to make joins like this (the following is *wrong*) :
+    # DBSession.query(UserBlobs, DictionaryPerspective
+    #   ).filter(UserBlobs.data_type == 'sociolinguistics'
+    #   ).join(DictionaryPerspective, DictionaryPerspective.additional_metadata.contains(
+    #    {"info":
+    #       {"content":
+    #           [{"info": {"content": {'object_id': UserBlobs.object_id, 'client_id': UserBlobs.client_id}}}]
+    #       }
+    #    }
+    #   )
+    #   ).all()
+
     lst = []
     all_questions = set()
     all_answers = set()
@@ -59,6 +73,22 @@ def sociolinguistics():
             socio, questions, answers = parse_socio(i.real_storage_path)
             all_questions.update(questions)
             all_answers.update(answers)
+            dependant_perspectives = DBSession.query(DictionaryPerspective
+                            ).filter(DictionaryPerspective.additional_metadata.contains(
+                                         {"info":
+                                              {"content":
+                                                   [{"info":
+                                                         {"content":
+                                                              {'object_id': i.object_id, 'client_id': i.client_id}
+                                                          }
+                                                     }
+                                                    ]
+                                               }
+                                          }
+                                     )
+                                     ).all()
+            for j in dependant_perspectives:
+                socio['perspectives'].append({"client_id": j.client_id, "object_id": j.object_id})
             lst.append(socio)
         except Exception as e:
             log.error(e)
