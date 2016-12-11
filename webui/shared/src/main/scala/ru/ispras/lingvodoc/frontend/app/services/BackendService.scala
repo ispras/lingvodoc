@@ -1471,6 +1471,23 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   }
 
 
+  def sociolinguisticsBlobs: Future[Seq[File]] = {
+    val p = Promise[Seq[File]]()
+    $http.get[js.Dynamic](getMethodUrl("blobs?is_global=true&data_type=sociolinguistics")) onComplete {
+      case Success(response) =>
+        try {
+          val blobs = read[Seq[File]](js.JSON.stringify(response))
+          p.success(blobs)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to get list of sociolinguistics files.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to get list of sociolinguistics files.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get list of user files.", e))
+    }
+    p.future
+  }
+
+
   def uploadFile(formData: FormData): Future[CompositeId] = {
     val p = Promise[CompositeId]()
     val inputData = InputData.formdata2ajax(formData)
@@ -1696,9 +1713,35 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  def sociolinguisticsQuestions(): Future[Seq[String]] = {
+    val p = Promise[Seq[String]]()
+    $http.get[js.Dynamic]("sociolinguistics/questions") onComplete {
+      case Success(response) =>
+        p.success(read[Seq[String]](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get sociolinguistics questions", e))
+    }
+    p.future
+  }
 
+  def sociolinguisticsAnswers(): Future[Seq[String]] = {
+    val p = Promise[Seq[String]]()
+    $http.get[js.Dynamic]("sociolinguistics/answers") onComplete {
+      case Success(response) =>
+        p.success(read[Seq[String]](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get sociolinguistics answers", e))
+    }
+    p.future
+  }
 
-
+  def sociolinguistics(): Future[Seq[SociolinguisticsEntry]] = {
+    val p = Promise[Seq[SociolinguisticsEntry]]()
+    $http.get[js.Dynamic]("sociolinguistics") onComplete {
+      case Success(response) =>
+        p.success(read[Seq[SociolinguisticsEntry]](js.JSON.stringify(response)))
+      case Failure(e) => p.failure(BackendException("Failed to get sociolinguistics", e))
+    }
+    p.future
+  }
 }
 
 @injectable("BackendService")

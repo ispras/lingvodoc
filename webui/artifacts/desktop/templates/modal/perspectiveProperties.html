@@ -136,7 +136,8 @@
                                             <div class="input-group-addon">Linked layers</div>
                                             <select class="form-control" ng-model="fieldEntry.linkedLayerId">
                                                 <option ng-repeat="linkLayer in controller.availablePerspectives(layer)"
-                                                        value="{{linkLayer.getId}}" ng-selected="linkLayer.getId == fieldEntry.linkedLayerId">{{
+                                                        value="{{linkLayer.getId}}"
+                                                        ng-selected="linkLayer.getId == fieldEntry.linkedLayerId">{{
                                                     controller.getLinkedPerspectiveDisplayName(linkLayer) }}
                                                 </option>
                                             </select>
@@ -172,15 +173,55 @@
         </div>
         <!-- Layers end -->
 
+
+        <!-- Authors -->
+        <h4>Authors</h4>
         <div class="row">
             <div class="col-md-12">
-                <h3>Location</h3>
-                <button type="button" class="btn btn-default" ng-click="controller.editLocation()">Location...</button>
+                <input id="authorsInput" type="text" class="form-control" ng-model="authors">
             </div>
         </div>
+
+        <!-- Location -->
+        <h4>Location</h4>
+        <div class="row">
+            <div class="col-md-12">
+                <button type="button" class="btn btn-default" ng-click="controller.editLocation()">Location {{ controller.getCurrentLocationString() }}</button>
+            </div>
+        </div>
+
+        <!-- Files -->
+        <h4>Files</h4>
+        <div class="row">
+            <div class="col-md-10">
+                <select class="form-control" ng-model="selectedFileId">
+                    <option ng-repeat="file in files" value="{{file.getId}}">
+                        {{file.name}}
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-default" ng-click="controller.addFile()"><span
+                        class="glyphicon glyphicon-plus-sign"></span></button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <ul>
+                    <li ng-repeat="linkedFile in linkedFiles">
+                        <a ng-href="{{ linkedFile.url }}">{{ linkedFile.name }}</a>
+                        <button type="button" ng-click="controller.removeFile(linkedFile)">  <span class="glyphicon glyphicon-minus-sign"></span></button> </li>
+                </ul>
+            </div>
+        </div>
+
+
+    </div>
+
 </div>
 
 <div class="modal-footer">
-    <button class="btn btn-primary" type="button" ng-click="controller.ok()" >Save</button>
+    <button class="btn btn-primary" type="button" ng-click="controller.ok()">Save</button>
     <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
 </div>

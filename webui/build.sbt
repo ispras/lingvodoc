@@ -26,20 +26,20 @@ lazy val root = project.in(file("."))
     name := "lingvodoc-ui",
 
     deployShared := {
-      val finder: PathFinder = (shared.base / "src/templates") ** "*.html"
+      val finder: PathFinder = (shared.base / "src/templates") ** "*"
       val desktopMappings = finder.get pair rebase(shared.base / "src/templates", "artifacts/desktop/templates")
       val webUIMappings = finder.get pair rebase(shared.base / "src/templates", "artifacts/webui/templates")
       val files = desktopMappings.map(p => (p._1, file(p._2))) ++ webUIMappings.map(p => (p._1, file(p._2)))
       IO.copy(files, overwrite = true)
     },
     deployDesktop := {
-      val finder: PathFinder = (desktop.base / "src/templates") ** "*.html"
+      val finder: PathFinder = (desktop.base / "src/templates") ** "*"
       val mappings = finder.get pair rebase(desktop.base / "src/templates", "artifacts/desktop/templates")
       val files = mappings.map(p => (p._1, file(p._2)))
       IO.copy(files, overwrite = true)
     },
     deployWebUI := {
-      val finder: PathFinder = (webui.base / "src/templates") ** "*.html"
+      val finder: PathFinder = (webui.base / "src/templates") ** "*"
       val mappings = finder.get pair rebase(webui.base / "src/templates", "artifacts/webui/templates")
       val files = mappings.map(p => (p._1, file(p._2)))
       IO.copy(files, overwrite = true)
