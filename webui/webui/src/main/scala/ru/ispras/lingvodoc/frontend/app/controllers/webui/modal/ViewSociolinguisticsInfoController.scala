@@ -56,7 +56,15 @@ class ViewSociolinguisticsInfoController(scope: ViewSociolinguisticsInfoScope,
 
   @JSExport
   def getPerspectives(sociolinguisticsEntry: SociolinguisticsEntry): js.Array[Perspective] = {
-    sociolinguisticsEntry.perspectives.flatMap(p => getPerspective(p)).toJSArray
+    import org.scalajs.dom.console
+    val r = sociolinguisticsEntry.perspectives.flatMap(p => getPerspective(p)).toJSArray
+    console.log(r)
+    r
+  }
+
+  @JSExport
+  def hasPerspectives(entry: SociolinguisticsEntry): Boolean = {
+    entry.perspectives.nonEmpty
   }
 
   @JSExport
