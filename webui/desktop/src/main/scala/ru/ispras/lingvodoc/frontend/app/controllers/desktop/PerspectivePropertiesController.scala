@@ -468,7 +468,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
                   scope.layers.push(layer)
 
                   backend.userFiles flatMap { files =>
-                    scope.files = files.toJSArray
+                    scope.files = files.filterNot(_.dataType == "dialeqt_dictionary").toJSArray
                     backend.getPerspectiveMeta(perspective) map { meta =>
                       metadata = Some(meta)
                       scope.authors = meta.authors.map(_.authors).orUndefined

@@ -471,7 +471,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
                     //XXX: webui specific
                     backend.sociolinguisticsBlobs flatMap { socioFiles =>
                       val files = userFiles ++ socioFiles
-                      scope.files = files.toJSArray
+                      scope.files = files.filterNot(_.dataType == "dialeqt_dictionary").toJSArray
                       backend.getPerspectiveMeta(perspective) flatMap { meta =>
                         metadata = Some(meta)
                         scope.authors = meta.authors.map(_.authors).orUndefined

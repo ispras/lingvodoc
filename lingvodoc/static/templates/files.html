@@ -18,6 +18,10 @@
                     <td>
                         Link
                     </td>
+
+                    <td>
+
+                    </td>
                 </tr>
                 </thead>
 
@@ -36,6 +40,10 @@
 
                     <td>
                         <a ng-href="{{ file.url }}"><span class="glyphicon glyphicon-download"></span></a>
+                    </td>
+
+                    <td>
+                        <button type="button" class="btn btn-danger" ng-click="controller.removeFile(file)">Remove</button>
                     </td>
 
                 </tr>

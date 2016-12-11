@@ -27,10 +27,12 @@ trait SociolinguisticsScope extends Scope {
   var etymologySearch: String = js.native
   var search: js.Array[SearchQuery] = js.native
   var selectedPerspectives: js.Array[Perspective] = js.native
-  var searchResults: js.Array[DictionaryTable] = js.native
+  //var searchResults: js.Array[DictionaryTable] = js.native
   var questions: js.Array[String] = js.native
   var answers: js.Array[String] = js.native
   var queries: js.Array[Query] = js.native
+  var results: js.Array[SociolinguisticsEntry] = js.native
+  var searchComplete: Boolean = js.native
   var progressBar: Boolean = js.native
 }
 
@@ -70,6 +72,8 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
   scope.questions = js.Array[String]()
   scope.answers = js.Array[String]()
   scope.queries = js.Array[Query](Query("", ""))
+  scope.results = js.Array[SociolinguisticsEntry]()
+  scope.searchComplete = false
   scope.progressBar = false
 
   private[this] def showInfo(sociolinguisticsEntry: SociolinguisticsEntry) = {
@@ -94,24 +98,34 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
 
   @JSExport
   def doSearch() = {
-    reset()
+    allMarkers.foreach(m => leafletMap.removeLayer(m))
+    allMarkers = Seq[Marker]()
+    scope.results = js.Array[SociolinguisticsEntry]()
     val qs = scope.queries.filter(q => q.answer.nonEmpty && q.question.nonEmpty).map(q => (q.question, q.answer)).toSeq.toMap
-    val results = sociolinguisticsEntries.filter {e =>
+    scope.results = sociolinguisticsEntries.filter { e =>
       qs.forall{case (q, a) =>
         e.questions.exists{ t =>
           t._1 == q && t._2 == a
         }
       }
-    }
-
-    highlightSearchResults(results)
+    }.toJSArray
+    highlightSearchResults(scope.results)
+    scope.searchComplete = true
   }
 
   @JSExport
   def reset(): Unit = {
+    scope.results = js.Array[SociolinguisticsEntry]()
     allMarkers.foreach(m => leafletMap.removeLayer(m))
+    allMarkers = Seq[Marker]()
+    scope.queries = js.Array(Query("", ""))
+    addAllMarkers()
+    scope.searchComplete = false
   }
 
+  private[this] def addAllMarkers(): Unit = {
+    sociolinguisticsEntries.foreach(e => addMarker(e))
+  }
 
   private[this] def highlightSearchResults(results: Seq[SociolinguisticsEntry]): Unit = {
     results.foreach{ entry =>
@@ -154,9 +168,6 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
     allMarkers = allMarkers :+ marker
     marker.addTo(leafletMap)
   }
-
-
-
 
   private[this] def createMap(): LeafletMap = {
     // map object initialization
@@ -215,6 +226,7 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
                   scope.questions = questions.toJSArray
                   backend.sociolinguisticsAnswers() map { answers =>
                     scope.answers = answers.toJSArray
+                    addAllMarkers
                   }
                 }
               }
