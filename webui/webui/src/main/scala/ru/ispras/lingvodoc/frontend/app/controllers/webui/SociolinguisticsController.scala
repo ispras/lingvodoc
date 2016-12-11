@@ -171,9 +171,9 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
 
   private[this] def createMap(): LeafletMap = {
     // map object initialization
-    val cssId = "map"
+    val cssId = "sociolinguisticsMap"
     val conf = LeafletMapOptions.zoomControl(true).scrollWheelZoom(true).build
-    val leafletMap = Leaflet.map(cssId, conf) //.setView(Leaflet.latLng(51.505f, -0.09f), 13)
+    val leafletMap = Leaflet.map(cssId, conf)
     val MapId = "lingvodoc_ispras_ru"
     val Attribution = "Map data &copy; <a href=\"http://openstreetmap.org\">OpenStreetMap</a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"http://mapbox.com\">Mapbox</a>"
 
