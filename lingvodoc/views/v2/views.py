@@ -18,7 +18,8 @@ from lingvodoc.models import (
     Field,
     Client,
     Group,
-    UserBlobs
+    UserBlobs,
+    Language
 )
 
 from sqlalchemy import (
@@ -55,18 +56,14 @@ from pyramid.request import Request
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    from lingvodoc.views.v2.sync import make_request
-    settings = request.registry.settings
-    central_server = settings['desktop']['central_server']
-    desk_blob = DBSession.query(UserBlobs).first()
-    path = central_server + 'blob'  # todo: normal content upload
-
-    data = {'object_id':desk_blob.object_id, 'data_type':desk_blob.data_type}
-    files = {'blob':open(desk_blob.real_storage_path, 'rb')}
-
-    status = make_request(path, 'post', data=data, files=files)
-    if status.status_code != 200:
-        print(status.status_code)
+    translationgist=TranslationGist(client_id=1, type='Language')
+    DBSession.add(translationgist)
+    translationatom=TranslationAtom(client_id=1, parent=translationgist, locale_id=2, content='testing objecttoc')
+    DBSession.add(translationatom)
+    lang = Language(client_id=1, translation_gist_client_id=translationgist.client_id,
+                    translation_gist_object_id=translationgist.object_id)
+    DBSession.add(lang)
+    DBSession.rollback()
     return {}
 
 

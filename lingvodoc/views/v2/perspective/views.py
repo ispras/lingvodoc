@@ -1296,6 +1296,7 @@ def create_field(request):
         data_type_translation_gist_client_id = req['data_type_translation_gist_client_id']
         data_type_translation_gist_object_id = req['data_type_translation_gist_object_id']
         object_id = req.get('object_id', None)
+        marked_for_deletion = req.get('object_id', None)
 
         client = DBSession.query(Client).filter_by(id=variables['auth']).first()
         if not client:
@@ -1310,7 +1311,8 @@ def create_field(request):
                       data_type_translation_gist_client_id=data_type_translation_gist_client_id,
                       data_type_translation_gist_object_id=data_type_translation_gist_object_id,
                       translation_gist_client_id=translation_gist_client_id,
-                      translation_gist_object_id=translation_gist_object_id
+                      translation_gist_object_id=translation_gist_object_id,
+                      marked_for_deletion=marked_for_deletion
                       )
 
         if req.get('is_translatable', None):
@@ -1391,7 +1393,7 @@ def view_perspective_fields(request):
     perspective = DBSession.query(DictionaryPerspective).filter_by(client_id=client_id, object_id=object_id).first()
     if perspective and not perspective.marked_for_deletion:
         fields = DBSession.query(DictionaryPerspectiveToField) \
-            .filter_by(parent=perspective, upper_level=None) \
+            .filter_by(parent=perspective, upper_level=None, marked_for_deletion=False) \
             .order_by(DictionaryPerspectiveToField.position) \
             .all()
         try:
