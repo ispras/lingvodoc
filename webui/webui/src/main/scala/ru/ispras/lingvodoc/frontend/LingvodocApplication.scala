@@ -2,6 +2,8 @@ package ru.ispras.lingvodoc.frontend
 
 import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
+import ru.ispras.lingvodoc.frontend.app.controllers.modal._
+import ru.ispras.lingvodoc.frontend.app.controllers.webui.{PerspectivePropertiesController, SociolinguisticsController}
 import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
 import ru.ispras.lingvodoc.frontend.app.directives._
 import ru.ispras.lingvodoc.frontend.app.services._
@@ -26,6 +28,7 @@ class LingvodocConfig(routeProvider: RouteProvider, httpProvider: HttpProvider) 
     .when("/corpora/create", Route("/static/templates/createCorpus.html", "CreateCorpus", "CreateCorpusController"))
     .when("/files", Route("/static/templates/files.html", "Files", "UserFilesController"))
     .when("/map_search", Route("/static/templates/mapSearch.html", "Map", "MapSearchController"))
+    .when("/sociolinguistics", Route("/static/templates/sociolinguistics.html", "Map", "SociolinguisticsController"))
     .otherwise(Route("/static/templates/404.html"))
 }
 
@@ -71,6 +74,7 @@ object LingvodocApplication {
       .controller[EditGroupingTagModalController]
       .controller[ContributionsController]
       .controller[CorporaController]
+      .controller[SociolinguisticsController]
       .directive[ConvertToNumberDirective]
       .directive[OnReadFileDirective]
       .directive[OnReadDirective]

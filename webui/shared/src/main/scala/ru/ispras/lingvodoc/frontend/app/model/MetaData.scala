@@ -12,6 +12,7 @@ case class Authors(@key("type") `type`: String, @key("content") authors: String)
 @JSExportAll
 case class Location(@key("type") `type`: String, @key("content") location: LatLng)
 
+@JSExportAll
 case class Blob(@key("type") `type`: String, @key("content") blob: CompositeId)
 
 
@@ -34,6 +35,13 @@ object MetaData {
         case Some(location) => values = values :+ ("location", writeJs[Location](location))
         case None =>
       }
+
+      val jsBlobs = metadata.info map { info =>
+        Js.Obj(("info", writeJs[Blob](info)))
+      }
+      val jsList = Js.Obj(("content", Js.Arr(jsBlobs: _*)), ("type", Js.Str("list")))
+
+      values = values :+ ("info", jsList)
 
       Js.Obj(values: _*)
   }
