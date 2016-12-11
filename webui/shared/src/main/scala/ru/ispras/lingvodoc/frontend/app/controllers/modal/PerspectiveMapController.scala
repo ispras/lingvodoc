@@ -38,9 +38,8 @@ class PerspectiveMapController(scope: PerspectiveMapScope,
   //initializeMap()
 
   private[this] def createMarker(latLng: LatLng): Marker = {
-    val iconOptions = IconOptions.iconUrl("static/images/marker-icon.png").build
-    val icon = Leaflet.icon(iconOptions)
-    val markerOptions = js.Dynamic.literal("icon" -> icon).asInstanceOf[MarkerOptions]
+
+    val markerOptions = js.Dynamic.literal("icon" -> defaultIcon).asInstanceOf[MarkerOptions]
     Leaflet.marker(Leaflet.latLng(latLng.lat, latLng.lng), markerOptions).asInstanceOf[Marker]
   }
 

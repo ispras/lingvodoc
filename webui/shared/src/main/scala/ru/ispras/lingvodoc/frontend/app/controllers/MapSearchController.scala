@@ -29,6 +29,7 @@ trait MapSearchScope extends Scope {
   var searchResults: js.Array[DictionaryTable] = js.native
   var size: Int = js.native
   var pageNumber: Int = js.native
+  var resultEntriesCount: Int = js.native
   var progressBar: Boolean = js.native
 }
 
@@ -69,6 +70,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   scope.searchResults = js.Array[DictionaryTable]()
   scope.size = 10
   scope.pageNumber = 1
+  scope.resultEntriesCount = -1
   scope.progressBar = false
 
   private[this] def getPerspective(perspectiveId: CompositeId): Option[Perspective] = {
@@ -113,6 +115,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
   def doSearch() = {
 
     scope.progressBar = true
+    scope.resultEntriesCount = -1
     foundEntries = Seq[Seq[LexicalEntry]]()
 
     val adopted = scope.adoptedSearch match {
@@ -138,6 +141,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
       clearHighlighting()
       backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_)))) map { entries =>
         // highlight results
+        scope.resultEntriesCount = entries.size
         entries.foreach { e => highlightPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }
         foundEntries = entries.groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq
         getPage(1)

@@ -5,7 +5,7 @@ import com.greencatsoft.angularjs.extensions.ModalService
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.ErrorModalHandler
-import ru.ispras.lingvodoc.frontend.app.model.File
+import ru.ispras.lingvodoc.frontend.app.model.{CompositeId, File}
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.scalajs.js
@@ -61,6 +61,17 @@ class UserFilesController(scope: UserFilesScope, backend: BackendService, val mo
       case Failure(e) =>
         showError(e)
         console.error(e.getMessage)
+    }
+  }
+
+  @JSExport
+  def removeFile(file: File): Unit = {
+    backend.removeBlob(CompositeId.fromObject(file)) flatMap { _ =>
+      backend.userFiles map { files =>
+        scope.files = files.toJSArray
+      } recover { case e: Throwable =>
+        showError(e)
+      }
     }
   }
 
