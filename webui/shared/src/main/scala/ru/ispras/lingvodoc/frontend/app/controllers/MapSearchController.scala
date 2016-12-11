@@ -1,17 +1,17 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ ExceptionHandler, Scope, Timeout }
-import com.greencatsoft.angularjs.{ AbstractController, AngularExecutionContextProvider, injectable }
-import io.plasmap.pamphlet.{ Marker, Circle, Leaflet, LeafletMap, IconOptions, LeafletMapOptions, CircleOptions, MarkerOptions, TileLayerOptions }
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{ LoadingPlaceholder, SimplePlay }
+import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import io.plasmap.pamphlet.{Circle, CircleOptions, IconOptions, Leaflet, LeafletMap, LeafletMapOptions, Marker, MarkerOptions, TileLayerOptions}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{ BackendService, ModalOptions, ModalService }
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.annotation.{ JSExport, JSExportAll }
+import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.app.controllers.common.{ DictionaryTable, Value }
+import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
 
 import scala.concurrent.Future
 import scala.scalajs.js.UndefOr
@@ -35,7 +35,7 @@ trait MapSearchScope extends Scope {
 
 @injectable("MapSearchController")
 class MapSearchController(scope: MapSearchScope, val backend: BackendService, modal: ModalService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
-    extends AbstractController[MapSearchScope](scope)
+  extends AbstractController[MapSearchScope](scope)
     with AngularExecutionContextProvider
     with SimplePlay
     with LoadingPlaceholder {
@@ -119,21 +119,21 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
     foundEntries = Seq[Seq[LexicalEntry]]()
 
     val adopted = scope.adoptedSearch match {
-      case "checked"   => true
+      case "checked" => true
       case "unchecked" => false
-      case "clear"     => false
+      case "clear" => false
     }
 
     val etymology = scope.etymologySearch match {
-      case "checked"   => true
+      case "checked" => true
       case "unchecked" => false
-      case "clear"     => false
+      case "clear" => false
     }
 
     val searchStrings = scope.search.toSeq.filter(_.query.nonEmpty).map { s =>
       fields.find(_.getId == s.fieldId) match {
         case Some(field) => SearchString(s.query, s.orFlag, field.translation)
-        case None        => SearchString(s.query, s.orFlag, "")
+        case None => SearchString(s.query, s.orFlag, "")
       }
     }
 
@@ -191,6 +191,44 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
       }
     }.orUndefined
   }
+
+  @JSExport
+  def viewLinkedPerspective(entry: LexicalEntry, field: Field, values: js.Array[Value]) = {
+
+
+    perspectives.find(p => p.clientId == entry.parentClientId && p.objectId == entry.parentObjectId).flatMap { perspective =>
+      dictionaries.find(d => d.clientId == perspective.parentClientId && d.objectId == perspective.parentObjectId).map { dictionary =>
+
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/viewLinkedDictionary.html"
+        options.controller = "ViewDictionaryModalController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              dictionaryClientId = dictionary.clientId,
+              dictionaryObjectId = dictionary.objectId,
+              perspectiveClientId = perspective.clientId,
+              perspectiveObjectId = perspective.objectId,
+              linkPerspectiveClientId = field.link.get.clientId,
+              linkPerspectiveObjectId = field.link.get.objectId,
+              lexicalEntry = entry.asInstanceOf[js.Object],
+              field = field.asInstanceOf[js.Object],
+              links = values.map {
+                _.asInstanceOf[GroupValue].link
+              }
+            )
+          }
+        ).asInstanceOf[js.Dictionary[js.Any]]
+
+        val instance = modal.open[Seq[Entity]](options)
+        instance.result map { _ => }
+      }
+    }
+  }
+
 
   @JSExport
   def viewGroupingTag(entry: LexicalEntry, field: Field, values: js.Array[Value]): Unit = {
