@@ -20,8 +20,8 @@ def parse_socio(path):
     sheet = xlrd.open_workbook(path).sheet_by_index(0)
     d['community_name'] = sheet.cell_value(rowx=0, colx=0)
     d['location'] = {
-        "lng": float(sheet.cell_value(rowx=0, colx=1).split(", ")[0]),
-        "lat": float(sheet.cell_value(rowx=0, colx=1).split(", ")[1])
+        "lat": float(sheet.cell_value(rowx=0, colx=1).split(", ")[0]),
+        "lng": float(sheet.cell_value(rowx=0, colx=1).split(", ")[1])
         }
     d['date'] = sheet.cell_value(rowx=0, colx=2)
     d['questions'] = dict()
