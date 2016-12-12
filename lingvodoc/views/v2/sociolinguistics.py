@@ -20,16 +20,20 @@ def parse_socio(path):
     sheet = xlrd.open_workbook(path).sheet_by_index(0)
     d['community_name'] = sheet.cell_value(rowx=0, colx=0)
     d['location'] = {
-        "lng": float(sheet.cell_value(rowx=0, colx=1).split(", ")[0]),
-        "lat": float(sheet.cell_value(rowx=0, colx=1).split(", ")[1])
+        "lat": float(sheet.cell_value(rowx=0, colx=1).split(", ")[0]),
+        "lng": float(sheet.cell_value(rowx=0, colx=1).split(", ")[1])
         }
     d['date'] = sheet.cell_value(rowx=0, colx=2)
     d['questions'] = dict()
     for rx in range(1, sheet.nrows):
-        if sheet.cell_value(rowx=rx, colx=1):
-            d['questions'][sheet.cell_value(rowx=rx, colx=0)] = sheet.cell_value(rowx=rx, colx=1)
-            answers.add(sheet.cell_value(rowx=rx, colx=1))
-            questions.add(sheet.cell_value(rowx=rx, colx=0))
+        answer = sheet.cell_value(rowx=rx, colx=1).strip()
+        if answer:
+            question = sheet.cell_value(rowx=rx, colx=0).strip()
+            if question:
+                question = question if question[-1] != '?' else question[:-1]
+                d['questions'][question] = answer
+                answers.add(answer)
+                questions.add(question)
     d['perspectives'] = []
     return d, questions, answers
 

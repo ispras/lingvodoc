@@ -24,10 +24,8 @@ def convert_dictionary(request):  # TODO: test
     args["user_id"] = user_id
     args["client_id"] = req["client_id"]
     args["object_id"] = req["object_id"]
-    args["language_client_id"] = req["language_client_id"]
-    args["language_object_id"] = req["language_object_id"]
-    args["gist_client_id"] = req["gist_client_id"]
-    args["gist_object_id"] = req["gist_object_id"]
+    args["dictionary_client_id"] = req["dictionary_client_id"]
+    args["dictionary_object_id"] = req["dictionary_object_id"]
     args["sqlalchemy_url"] = request.registry.settings["sqlalchemy.url"]
     args["storage"] = request.registry.settings["storage"]
     args['eaf_url'] = req['eaf_url']
