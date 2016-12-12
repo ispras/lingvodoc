@@ -119,6 +119,32 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
   }
 
   @JSExport
+  def viewMarkup(markupValue: Value) = {
+
+    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+      case Success(elan) =>
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "SoundMarkupController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              markupData = elan.asInstanceOf[js.Object],
+              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[js.Any]]
+        val instance = modal.open[Unit](options)
+      case Failure(e) =>
+    }
+  }
+
+  @JSExport
   def getActionLink(action: String) = {
     "#/dictionary/" +
       encodeURIComponent(dictionaryClientId.toString) + '/' +

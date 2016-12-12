@@ -49,7 +49,7 @@ class ContributionsController(scope: ContributionsScope,
   private[this] val dictionaryObjectId = params.get("dictionaryObjectId").get.toString.toInt
   private[this] val perspectiveClientId = params.get("perspectiveClientId").get.toString.toInt
   private[this] val perspectiveObjectId = params.get("perspectiveObjectId").get.toString.toInt
-  private[this] var sortBy = params.get("sortBy").map(_.toString).toOption
+  private[this] val sortBy = params.get("sortBy").map(_.toString).toOption
 
 
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
@@ -128,6 +128,31 @@ class ContributionsController(scope: ContributionsScope,
     }
   }
 
+  @JSExport
+  def viewMarkup(markupValue: Value) = {
+
+    backend.convertMarkup(CompositeId.fromObject(markupValue.getEntity())) onComplete {
+      case Success(elan) =>
+        val options = ModalOptions()
+        options.templateUrl = "/static/templates/modal/soundMarkup.html"
+        options.windowClass = "sm-modal-window"
+        options.controller = "SoundMarkupController"
+        options.backdrop = false
+        options.keyboard = false
+        options.size = "lg"
+        options.resolve = js.Dynamic.literal(
+          params = () => {
+            js.Dynamic.literal(
+              markupData = elan.asInstanceOf[js.Object],
+              dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
+              dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
+            )
+          }
+        ).asInstanceOf[js.Dictionary[js.Any]]
+        val instance = modal.open[Unit](options)
+      case Failure(e) =>
+    }
+  }
 
 
   @JSExport
