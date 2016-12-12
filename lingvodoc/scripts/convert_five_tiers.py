@@ -293,6 +293,7 @@ def convert_five_tiers(
 
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
+
     no_sound = True
     if sound_url:
         no_sound = False
@@ -342,7 +343,9 @@ def convert_five_tiers(
             field = data_type_query.filter(TranslationAtom.locale_id == 2,
                                                  TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
             field_ids[name] = (field.client_id, field.object_id)
-
+            print(name, (field.client_id, field.object_id))
+        fp_structure = [field_ids[x] for x in ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")]
+        sp_structure = [field_ids[x] for x in ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Paradigm Markup", "Backref")]
         DBSession.flush()
         """
         parent_client_id = gist_client_id
@@ -377,31 +380,55 @@ def convert_five_tiers(
                 new_group.users.append(user)
             DBSession.add(new_group)
             DBSession.flush()
-        """
-        # FIRST PERSPECTIVE
-        """
-        resp = translation_service_search_all("Lexical Entries")
-        persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
 
 
-        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         origin_metadata= {"origin_client_id": origin_client_id,
                               "origin_object_id": origin_object_id
                               }
-        perspective = DictionaryPerspective(client_id=client.id, ###
-                                            state_translation_gist_object_id=state_translation_gist_object_id,
-                                            state_translation_gist_client_id=state_translation_gist_client_id,
-                                            parent=parent,
-                                            # import_source=req.get('import_source'),
-                                            # import_hash=req.get('import_hash'),
-                                            additional_metadata=origin_metadata,
-                                            translation_gist_client_id=persp_translation_gist_client_id,
-                                            translation_gist_object_id=persp_translation_gist_object_id
-                                            )
-        perspective.additional_metadata = origin_metadata
-        # if is_template is not None:
-        #     perspective.is_template = is_template
-        DBSession.add(perspective)
+        resp = translation_service_search_all("Lexical Entries")
+        persp_translation_gist_client_id, persp_translation_gist_object_id = resp['client_id'], resp['object_id']
+        parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
+        first_perspective = None
+        second_perspective = None
+        for perspective in DBSession.query(DictionaryPerspective).filter_by(parent=parent):
+            structure = []
+            fields = DBSession.query(DictionaryPerspectiveToField)\
+                        .filter_by(parent=perspective)\
+                        .all()
+            DBSession.flush()
+            for p_to_field in fields:
+                structure.append((p_to_field.field_client_id, p_to_field.field_object_id))
+
+            if structure == fp_structure:
+                first_perspective = perspective
+            elif structure == sp_structure:
+                second_perspective = perspective
+
+            print(structure, fp_structure, structure==fp_structure)
+            print(structure, sp_structure, structure==sp_structure)
+            structure[:] = []
+        print(first_perspective, second_perspective)
+        """
+        # FIRST PERSPECTIVE
+        """
+
+
+        if first_perspective is not None:
+            perspective = first_perspective
+        else:
+            perspective = DictionaryPerspective(client_id=client.id, ###
+                                                state_translation_gist_object_id=state_translation_gist_object_id,
+                                                state_translation_gist_client_id=state_translation_gist_client_id,
+                                                parent=parent,
+                                                # import_source=req.get('import_source'),
+                                                # import_hash=req.get('import_hash'),
+                                                additional_metadata=origin_metadata,
+                                                translation_gist_client_id=persp_translation_gist_client_id,
+                                                translation_gist_object_id=persp_translation_gist_object_id
+                                                )
+
+            perspective.additional_metadata = origin_metadata
+            DBSession.add(perspective)
         owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
         owner = owner_client.user
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
@@ -423,21 +450,23 @@ def convert_five_tiers(
         parent = DBSession.query(Dictionary).filter_by(client_id=dictionary_client_id, object_id=dictionary_object_id).first()
         if not parent:
             return {'error': str("No such dictionary in the system")}
-
-        perspective = DictionaryPerspective(client_id=client.id, ### variables['auth']
-                                            state_translation_gist_object_id=state_translation_gist_object_id,
-                                            state_translation_gist_client_id=state_translation_gist_client_id,
-                                            parent=parent,
-                                            # import_source=req.get('import_source'),
-                                            # import_hash=req.get('import_hash'),
-                                            additional_metadata=origin_metadata,
-                                            translation_gist_client_id=persp_translation_gist_client_id,
-                                            translation_gist_object_id=persp_translation_gist_object_id
-                                            )
-        perspective.additional_metadata = origin_metadata
-        # if is_template is not None:
-        #     perspective.is_template = is_template
-        DBSession.add(perspective)
+        if second_perspective is not None:
+            perspective = second_perspective
+        else:
+            perspective = DictionaryPerspective(client_id=client.id, ### variables['auth']
+                                                state_translation_gist_object_id=state_translation_gist_object_id,
+                                                state_translation_gist_client_id=state_translation_gist_client_id,
+                                                parent=parent,
+                                                # import_source=req.get('import_source'),
+                                                # import_hash=req.get('import_hash'),
+                                                additional_metadata=origin_metadata,
+                                                translation_gist_client_id=persp_translation_gist_client_id,
+                                                translation_gist_object_id=persp_translation_gist_object_id
+                                                )
+            perspective.additional_metadata = origin_metadata
+            # if is_template is not None:
+            #     perspective.is_template = is_template
+            DBSession.add(perspective)
         owner_client = DBSession.query(Client).filter_by(id=parent.client_id).first()
         owner = owner_client.user
         for base in DBSession.query(BaseGroup).filter_by(perspective_default=True):
@@ -491,9 +520,9 @@ def convert_five_tiers(
         """
         # Creating fields of the second perspective
         """
+        sp_field_names = ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Backref")
         sp_fields_dict = {}
         fields_list = []
-        sp_field_names = ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Backref")
         for fieldname in sp_field_names: #
             if fieldname == "Backref":
                 fields_list.append(
@@ -611,7 +640,7 @@ def convert_five_tiers(
                         None, client, filename=None, link_client_id=fp_lexical_entry_client_id, link_object_id=fp_lexical_entry_object_id, storage=storage)
                     create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids["Backref"][0], field_ids["Backref"][1],
                         None, client, filename=None, link_client_id=sp_lexical_entry_client_id, link_object_id=sp_lexical_entry_object_id, storage=storage)
-
+    print("done")
     return
 
 
