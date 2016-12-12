@@ -1,6 +1,6 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout, Location}
 import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
@@ -28,13 +28,17 @@ trait CreateCorpusScope extends Scope {
   var names: js.Array[LocalizedString] = js.native
   var layers: js.Array[Layer] = js.native
   var fields: js.Array[Field] = js.native
-  //var dataTypes: js.Array[TranslationGist] = js.native
   var dictionaryId: Option[CompositeId] = js.native
   var step: Int = js.native
 }
 
 @injectable("CreateCorpusController")
-class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
+class CreateCorpusController(scope: CreateCorpusScope,
+                             modal: ModalService,
+                             location: Location,
+                             backend: BackendService,
+                             val timeout: Timeout,
+                             val exceptionHandler: ExceptionHandler)
   extends AbstractController[CreateCorpusScope](scope)
     with AngularExecutionContextProvider {
 
@@ -156,6 +160,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
             scope.files.find(_.getId == scope.fileId) foreach { file =>
               backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
                 scope.step = 3
+                redirectToDashboard()
               }
             }
           }
@@ -285,6 +290,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
   def finish() = {
     createPerspectives() foreach { _ =>
       scope.step = 3
+      redirectToDashboard()
     }
   }
 
@@ -350,6 +356,14 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
     languages.map { language =>
       language.getId -> getDepth(language, tree).get
     }.toMap
+  }
+
+  private[this] def redirectToDashboard(): Unit = {
+    import scala.scalajs.js.timers._
+    setTimeout(5000) {
+      location.path("/corpora")
+      scope.$apply()
+    }
   }
 
   /**
