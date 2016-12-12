@@ -26,10 +26,14 @@ def parse_socio(path):
     d['date'] = sheet.cell_value(rowx=0, colx=2)
     d['questions'] = dict()
     for rx in range(1, sheet.nrows):
-        if sheet.cell_value(rowx=rx, colx=1):
-            d['questions'][sheet.cell_value(rowx=rx, colx=0)] = sheet.cell_value(rowx=rx, colx=1)
-            answers.add(sheet.cell_value(rowx=rx, colx=1))
-            questions.add(sheet.cell_value(rowx=rx, colx=0))
+        answer = sheet.cell_value(rowx=rx, colx=1).strip()
+        if answer:
+            question = sheet.cell_value(rowx=rx, colx=0).strip()
+            if question:
+                question = question if question[-1] != '?' else question[:-1]
+                d['questions'][question] = answer
+                answers.add(answer)
+                questions.add(question)
     d['perspectives'] = []
     return d, questions, answers
 
