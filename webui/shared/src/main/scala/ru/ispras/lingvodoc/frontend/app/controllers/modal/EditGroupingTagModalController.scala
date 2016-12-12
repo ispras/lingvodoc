@@ -1,11 +1,12 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -140,7 +141,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
               values = values.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
 
         val instance = modal.open[Unit](options)
         instance.result map { _ =>
@@ -174,7 +175,7 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope, modal: ModalSe
               values = values.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
 
         val instance = modal.open[Unit](options)
         instance.result map { _ =>

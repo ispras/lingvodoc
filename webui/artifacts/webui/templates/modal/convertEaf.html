@@ -1,0 +1,83 @@
+<div class="modal-header">
+    <h3 class="modal-title"></h3>
+</div>
+
+<div class="modal-body">
+
+    <div id="loader-wrapper" ng-show="progressBar">
+        <div id="loader"></div>
+    </div>
+
+    <div class="container-fluid animate-show" ng-show="validated && !progressBar">
+        <div class="row">
+            <div class="col-md-12">
+                <!-- List of all languages -->
+                <label for="language"><translatable str="Language">Language</translatable></label>
+
+                <select class="form-control" id="language"  ng-model="languageId">
+                    <option ng-repeat="language in languages" value="{{ language.getId }}" ng-bind-html="controller.languagePadding(language) + language.translation">
+                    </option>
+                </select>
+
+                <span class="glyphicon glyphicon-plus-sign" ng-click="controller.newLanguage()"></span>
+                <hr>
+            </div>
+        </div>
+
+
+        <div class="row top15">
+            <div class="col-lg-12">
+                <!-- dictionary name in display locale -->
+                <h2>{{ controller.getDisplayName() }}</h2>
+
+                <!-- name translations -->
+                <div class="row" ng-repeat="name in names">
+
+                    <div class="col-lg-6">
+
+                        <div class="input-group"><span class="input-group-addon">Name</span>
+                            <input type="text" id="new-dictionary-name-{{$index}}" class="form-control"
+                                   ng-model="name.str" placeholder="">
+                        </div>
+
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="input-group"><span class="input-group-addon">Language</span>
+                            <select id="new-dictionary-name-locale-{{$index}}" class="form-control"
+                                    ng-model="name.localeId" convert-to-number>
+                                <option ng-repeat="locale in controller.getAvailableLocales(names, name)"
+                                        ng-attr-value="{{ locale.id }}">{{ locale.name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- End of name translations -->
+
+
+                <br/>
+
+                <button class="btn btn-info" ng-click="controller.addNameTranslation()">
+                    <span class="glyphicon glyphicon-plus-sign">Add translation</span>
+                </button>
+
+            </div>
+            <hr/>
+        </div>
+    </div>
+
+    <div class="top15 text-center animate-show" ng-show="errorMessage.length > 0">
+        {{ errorMessage }}
+    </div>
+
+
+    <div class="text-center animate-show " ng-show="!validated && !progressBar">
+        Conversion is not available.
+    </div>
+
+
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="controller.convert()" >Convert</button>
+        <button class="btn btn-danger" type="button" ng-click="controller.cancel()">Cancel</button>
+    </div>

@@ -1310,6 +1310,31 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+
+  def createDictionary(languageId: CompositeId, nameId: CompositeId): Future[CompositeId] = {
+    val p = Promise[CompositeId]()
+
+    val req = js.Dynamic.literal("translation_gist_client_id" -> nameId.clientId,
+      "translation_gist_object_id" -> nameId.objectId,
+      "parent_client_id" -> languageId.clientId,
+      "parent_object_id" -> languageId.objectId)
+
+    $http.post[js.Dynamic]("dictionary", req) onComplete {
+      case Success(response) =>
+        try {
+          val id = read[CompositeId](js.JSON.stringify(response))
+          p.success(id)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Failed to create dictionary.", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Failed to create dictionary.", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to create dictionary", e))
+    }
+    p.future
+  }
+
+
+
   def createPerspectives(dictionaryId: CompositeId, req: Seq[js.Dynamic]): Future[Seq[CompositeId]] = {
     val p = Promise[Seq[CompositeId]]()
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString) + "/complex_create"
@@ -1772,20 +1797,26 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def convertEafCorpus(language: Language, dictionaryName: TranslationGist, corpus: Dictionary, soundFile: File, markupFile: File): Future[Unit] = {
+  def convertEafCorpus(languageId: CompositeId, dictionaryNameId: CompositeId, corpus: CompositeId, soundFile: Option[String], markupFile: Option[String]): Future[Unit] = {
     val p = Promise[Unit]()
-    val req = js.Dynamic.literal(
-      "sound_url" -> soundFile.url,
-      "eaf_url" -> markupFile.url,
+    var req = Map[String, js.Any](
       "client_id" -> corpus.clientId,
       "object_id" -> corpus.objectId,
-      "language_client_id" -> language.clientId,
-      "language_object_id" -> language.objectId,
-      "gist_client_id" -> dictionaryName.clientId,
-      "gist_object_id" -> dictionaryName.objectId
+      "language_client_id" -> languageId.clientId,
+      "language_object_id" -> languageId.objectId,
+      "gist_client_id" -> dictionaryNameId.clientId,
+      "gist_object_id" -> dictionaryNameId.objectId
     )
 
-    $http.post[js.Dynamic]("convert_five_tiers", req) onComplete {
+    soundFile foreach { url =>
+      req = req + ("sound_url" -> encodeURI(url))
+    }
+
+    markupFile foreach { url =>
+      req = req + ("eaf_url" -> encodeURI(url))
+    }
+
+    $http.post[js.Dynamic]("convert_five_tiers", req.toJSDictionary) onComplete {
       case Success(response) =>
         p.success(())
       case Failure(e) => p.failure(BackendException("Failed to convert corpus", e))

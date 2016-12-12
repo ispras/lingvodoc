@@ -1,12 +1,13 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.desktop
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.{Future, Promise}
@@ -192,7 +193,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
           locales = scope.locales.asInstanceOf[js.Object],
           dataTypes = dataTypes.asInstanceOf[js.Object])
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[FieldEntry](options)
 
@@ -226,7 +227,7 @@ class PerspectivePropertiesController(scope: PerspectivePropertiesScope,
         js.Dynamic.literal(perspective = perspective.asInstanceOf[js.Object],
           location = scope.location.map(_.location).asInstanceOf[js.Object])
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Option[LatLng]](options)
 

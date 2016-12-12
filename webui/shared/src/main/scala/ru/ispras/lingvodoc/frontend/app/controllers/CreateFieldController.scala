@@ -1,17 +1,16 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.{AbstractController, injectable}
 import com.greencatsoft.angularjs.core.Scope
+import com.greencatsoft.angularjs.extensions.ModalInstance
+import com.greencatsoft.angularjs.{AbstractController, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Translatable}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
-
-import scala.scalajs.js.JSConverters._
-import org.scalajs.dom.console
 
 import scala.scalajs.js
 import scala.scalajs.js.Array
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 
 @js.native

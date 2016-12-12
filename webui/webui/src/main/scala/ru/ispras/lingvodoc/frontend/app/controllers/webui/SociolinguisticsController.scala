@@ -7,7 +7,8 @@ import ru.ispras.lingvodoc.frontend.app.controllers.SearchQuery
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService, ModalInstance}
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -87,7 +88,7 @@ class SociolinguisticsController(scope: SociolinguisticsScope, val backend: Back
     options.resolve = js.Dynamic.literal(
       params = () => {
         js.Dynamic.literal(entry = sociolinguisticsEntry.asInstanceOf[js.Object])
-      }).asInstanceOf[js.Dictionary[js.Any]]
+      }).asInstanceOf[js.Dictionary[Any]]
     val instance = modal.open[Unit](options)
   }
 

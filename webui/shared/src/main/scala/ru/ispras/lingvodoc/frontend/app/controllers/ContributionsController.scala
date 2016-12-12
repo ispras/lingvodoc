@@ -1,14 +1,15 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import com.greencatsoft.angularjs.core.{Event => _, _}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 
 import scala.concurrent.Future
 import scala.scalajs.js
@@ -122,7 +123,7 @@ class ContributionsController(scope: ContributionsScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -149,7 +150,7 @@ class ContributionsController(scope: ContributionsScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -188,7 +189,7 @@ class ContributionsController(scope: ContributionsScope,
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -234,7 +235,7 @@ class ContributionsController(scope: ContributionsScope,
           values = values.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
     instance.result map { _ =>

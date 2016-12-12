@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
 import com.greencatsoft.angularjs.core.{Event, ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLInputElement
@@ -99,7 +100,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -126,7 +127,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -321,7 +322,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -352,7 +353,7 @@ class EditDictionaryModalController(scope: EditDictionaryModalScope,
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>

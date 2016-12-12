@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
-import ru.ispras.lingvodoc.frontend.app.services._
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
@@ -9,16 +9,16 @@ import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-
-import scala.scalajs.js
-import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.annotation.JSExport
-import scala.util.{Failure, Success}
+import ru.ispras.lingvodoc.frontend.app.services._
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
+import scala.scalajs.js
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.UndefOr
+import scala.scalajs.js.annotation.JSExport
+import scala.util.{Failure, Success}
+
 
 
 @js.native
@@ -83,7 +83,6 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
   def loadSearch(query: String) = {
     backend.search(query, Some(CompositeId(perspectiveClientId, perspectiveObjectId)), tagsOnly = false) map {
       results =>
-        console.log(results.toJSArray)
         val entries = results map (_.lexicalEntry)
         scope.dictionaryTable = DictionaryTable.build(fields, dataTypes, entries)
     }
@@ -112,7 +111,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -139,7 +138,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -341,7 +340,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
           }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -371,7 +370,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
           values = values.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
     instance.result map { _ =>

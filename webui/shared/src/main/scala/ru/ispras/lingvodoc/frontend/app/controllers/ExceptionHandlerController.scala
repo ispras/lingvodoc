@@ -1,9 +1,8 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.Scope
+import com.greencatsoft.angularjs.extensions.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, injectable}
-import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
-
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport

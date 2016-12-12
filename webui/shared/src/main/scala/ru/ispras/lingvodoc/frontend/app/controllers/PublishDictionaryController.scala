@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
@@ -8,16 +9,14 @@ import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.Any
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
-
 
 @js.native
 trait PublishDictionaryScope extends Scope {
@@ -123,7 +122,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -150,7 +149,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -189,7 +188,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -269,7 +268,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
           values = values.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
     instance.result map { _ =>

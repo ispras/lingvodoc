@@ -1,19 +1,17 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core._
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import org.scalajs.dom.console
 import org.scalajs.dom.raw.HTMLInputElement
 import ru.ispras.lingvodoc.frontend.app.controllers.common._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, Pagination, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.extras.facades.WaveSurfer
+import ru.ispras.lingvodoc.frontend.app.services.{BackendService, LexicalEntriesType}
 
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.URIUtils._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
@@ -25,9 +23,7 @@ trait ViewDictionaryScope extends Scope {
   var path: String = js.native
   var size: Int = js.native
   var pageNumber: Int = js.native
-  // number of currently open page
   var pageCount: Int = js.native
-  // total number of pages
   var dictionaryTable: DictionaryTable = js.native
   var selectedEntries: js.Array[String] = js.native
   var pageLoaded: Boolean = js.native
@@ -118,7 +114,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -145,7 +141,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -183,7 +179,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>
@@ -212,7 +208,7 @@ class ViewDictionaryController(scope: ViewDictionaryScope, params: RouteParams, 
           values = values.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Unit](options)
     instance.result map { _ =>

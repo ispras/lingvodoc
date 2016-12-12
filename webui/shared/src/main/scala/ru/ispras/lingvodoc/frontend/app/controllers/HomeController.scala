@@ -5,15 +5,12 @@ import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextPr
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js
-import scala.scalajs.js.{Any, UndefOr}
-import scala.scalajs.js.annotation.JSExport
-import scala.util.{Failure, Success}
 import scala.scalajs.js.JSConverters._
-import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
-import ru.ispras.lingvodoc.frontend.app.utils.Utils
+import scala.scalajs.js.UndefOr
+import scala.scalajs.js.annotation.JSExport
 
 
 @js.native
