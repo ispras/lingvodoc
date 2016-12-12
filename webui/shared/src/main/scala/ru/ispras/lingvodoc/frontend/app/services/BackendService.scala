@@ -1797,15 +1797,13 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def convertEafCorpus(languageId: CompositeId, dictionaryNameId: CompositeId, corpus: CompositeId, soundFile: Option[String], markupFile: Option[String]): Future[Unit] = {
+  def convertEafCorpus(corpusId: CompositeId, dictionaryId: CompositeId, soundFile: Option[String], markupFile: Option[String]): Future[Unit] = {
     val p = Promise[Unit]()
     var req = Map[String, js.Any](
-      "client_id" -> corpus.clientId,
-      "object_id" -> corpus.objectId,
-      "language_client_id" -> languageId.clientId,
-      "language_object_id" -> languageId.objectId,
-      "gist_client_id" -> dictionaryNameId.clientId,
-      "gist_object_id" -> dictionaryNameId.objectId
+      "client_id" -> corpusId.clientId,
+      "object_id" -> corpusId.objectId,
+      "dictionary_client_id" -> dictionaryId.clientId,
+      "dictionary_object_id" -> dictionaryId.objectId
     )
 
     soundFile foreach { url =>
@@ -1823,10 +1821,6 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
-
-
-
-
 }
 
 @injectable("BackendService")

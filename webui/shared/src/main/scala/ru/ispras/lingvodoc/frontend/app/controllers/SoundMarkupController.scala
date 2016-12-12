@@ -7,6 +7,7 @@ import org.scalajs.dom
 import org.scalajs.dom.console
 import org.scalajs.jquery._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.ErrorModalHandler
+import ru.ispras.lingvodoc.frontend.app.model.CompositeId
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.elan.ELANDocument
 import ru.ispras.lingvodoc.frontend.extras.facades._
@@ -116,8 +117,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   private[this] val markupAddress = params.get("markupAddress").map(_.toString)
   private[this] val markupData = params.get("markupData").map(_.asInstanceOf[String])
 
-  private[this] val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
-  private[this] val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
+  private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
+  private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
 
   // When wsSeek is called because user clicked on it, we must manually call apply, because it is not ng-click.
   // However, in ome other cases, e.g. when user clicks on svg and then we update WS ruler, apply must not be called --
@@ -443,7 +444,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
       params = () => {
         js.Dynamic.literal(
           soundUrl = soundAddress.asInstanceOf[js.Object],
-          markupUrl = markupAddress.asInstanceOf[js.Object]
+          markupUrl = markupAddress.asInstanceOf[js.Object],
+          corpusId = CompositeId(dictionaryClientId, dictionaryObjectId).asInstanceOf[js.Object]
         )
       }
     ).asInstanceOf[js.Dictionary[Any]]

@@ -1,17 +1,16 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
-import ru.ispras.lingvodoc.frontend.app.controllers.common.Translatable
-import ru.ispras.lingvodoc.frontend.app.controllers.traits.{ErrorModalHandler, LoadingPlaceholder, SimplePlay}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.{ErrorModalHandler, LoadingPlaceholder}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.Future
-import scala.scalajs.js.JSConverters._
 import scala.scalajs.js
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
 
@@ -43,6 +42,7 @@ class ConvertEafController(scope: ConvertEafScope,
     with LoadingPlaceholder {
 
   private[this] var indentation = Map[String, Int]()
+  private[this] val corpusId = params("corpusId").asInstanceOf[CompositeId]
   private[this] val markupUrl = params("markupUrl").asInstanceOf[Option[String]]
   private[this] val soundUrl = params("soundUrl").asInstanceOf[Option[String]]
 
@@ -59,7 +59,7 @@ class ConvertEafController(scope: ConvertEafScope,
 
 
   @JSExport
-  def newLanguage() = {
+  def newLanguage(): Unit = {
 
     val parentLanguage = scope.languages.find(_.getId == scope.languageId)
 
@@ -139,12 +139,16 @@ class ConvertEafController(scope: ConvertEafScope,
         case Some(language) =>
           // make sure there is at least one non-empty name
           if (scope.names.exists(_.str.nonEmpty)) {
+            // create dictionary name
             createDictionaryName() map { gistId =>
+              // create dictionary
               backend.createDictionary(CompositeId.fromObject(language), gistId) map { dictionaryId =>
-                backend.convertEafCorpus(CompositeId.fromObject(language), gistId, dictionaryId, soundUrl, markupUrl) map { _ =>
+                // start conversion process
+                backend.convertEafCorpus(corpusId, dictionaryId, soundUrl, markupUrl) map { _ =>
 
                   scope.complete = true
 
+                  // close modal
                   import scala.scalajs.js.timers._
                   setTimeout(5000) {
                     instance.dismiss(())
@@ -172,7 +176,7 @@ class ConvertEafController(scope: ConvertEafScope,
 
   private[this] def createDictionaryName() = {
     backend.createTranslationGist("Dictionary") flatMap { gist =>
-      val atomRequests = scope.names.toSeq.map{ name =>
+      val atomRequests = scope.names.toSeq.map { name =>
         backend.createTranslationAtom(gist, name)
       }
       Future.sequence(atomRequests) map { _ =>
@@ -210,15 +214,15 @@ class ConvertEafController(scope: ConvertEafScope,
       scope.languages = Utils.flattenLanguages(tree).toJSArray
       // load list of locales
       backend.getLocales map { locales =>
-          // generate localized names
-          scope.locales = locales.toJSArray
-          backend.validateEafCorpus(markupUrl.get).map { result =>
-            scope.validated = result
-            scope.complete = false
-          } recover { case e =>
-              scope.validated = false
-          }
-      } recover {case e => showError(e)}
+        // generate localized names
+        scope.locales = locales.toJSArray
+        backend.validateEafCorpus(markupUrl.get).map { result =>
+          scope.validated = result
+          scope.complete = false
+        } recover { case e =>
+          scope.validated = false
+        }
+      } recover { case e => showError(e) }
     }
   })
 
