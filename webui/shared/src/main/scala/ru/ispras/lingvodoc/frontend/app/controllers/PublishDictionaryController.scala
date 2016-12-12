@@ -225,7 +225,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
   }
 
   @JSExport
-  def approveAll(entry: LexicalEntry): Future[Any] = {
+  def approveAll(): Future[Any] = {
     backend.approveAll(dictionaryId, perspectiveId) map { _ =>
         scope.$apply(() => {
           scope.dictionaryTable.rows.foreach { row =>
