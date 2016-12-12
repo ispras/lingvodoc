@@ -1,11 +1,11 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
-import org.scalajs.dom._
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model.Language
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -41,7 +41,7 @@ class LanguageController(scope: LanguageScope, modal: ModalService, backend: Bac
           "parentLanguage" -> Some(parentLanguage).asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Language](options)
 
@@ -62,7 +62,7 @@ class LanguageController(scope: LanguageScope, modal: ModalService, backend: Bac
       params = () => {
         js.Dynamic.literal()
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Language](options)
 

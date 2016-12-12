@@ -1,21 +1,20 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout, Location}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.{Future, Promise}
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSExport
-import scala.scalajs.js.{Dynamic, Object, UndefOr}
+import scala.scalajs.js.{Dynamic, Object}
 import scala.util.{Failure, Success}
-
 
 @js.native
 trait CreateCorpusScope extends Scope {
@@ -29,13 +28,17 @@ trait CreateCorpusScope extends Scope {
   var names: js.Array[LocalizedString] = js.native
   var layers: js.Array[Layer] = js.native
   var fields: js.Array[Field] = js.native
-  //var dataTypes: js.Array[TranslationGist] = js.native
   var dictionaryId: Option[CompositeId] = js.native
   var step: Int = js.native
 }
 
 @injectable("CreateCorpusController")
-class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
+class CreateCorpusController(scope: CreateCorpusScope,
+                             modal: ModalService,
+                             location: Location,
+                             backend: BackendService,
+                             val timeout: Timeout,
+                             val exceptionHandler: ExceptionHandler)
   extends AbstractController[CreateCorpusScope](scope)
     with AngularExecutionContextProvider {
 
@@ -111,7 +114,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
           "parentLanguage" -> parentLanguage.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Language](options)
 
@@ -157,6 +160,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
             scope.files.find(_.getId == scope.fileId) foreach { file =>
               backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
                 scope.step = 3
+                redirectToDashboard()
               }
             }
           }
@@ -286,6 +290,7 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
   def finish() = {
     createPerspectives() foreach { _ =>
       scope.step = 3
+      redirectToDashboard()
     }
   }
 
@@ -351,6 +356,14 @@ class CreateCorpusController(scope: CreateCorpusScope, modal: ModalService, back
     languages.map { language =>
       language.getId -> getDepth(language, tree).get
     }.toMap
+  }
+
+  private[this] def redirectToDashboard(): Unit = {
+    import scala.scalajs.js.timers._
+    setTimeout(5000) {
+      location.path("/corpora")
+      scope.$apply()
+    }
   }
 
   /**

@@ -4,10 +4,11 @@ import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import io.plasmap.pamphlet._
 
-//import org.scalajs.dom._
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
+
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport

@@ -1,6 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
@@ -91,7 +92,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -113,11 +114,12 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
           params = () => {
             js.Dynamic.literal(
               markupData = elan.asInstanceOf[js.Object],
+              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
               dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
         val instance = modal.open[Unit](options)
       case Failure(e) =>
     }
@@ -155,7 +157,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
           links = values.map { _.asInstanceOf[GroupValue].link }
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Seq[Entity]](options)
     instance.result map { entities =>

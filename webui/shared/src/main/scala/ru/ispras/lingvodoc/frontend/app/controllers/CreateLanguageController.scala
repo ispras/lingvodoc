@@ -1,10 +1,11 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
 import ru.ispras.lingvodoc.frontend.app.model.{Language, Locale, LocalizedString}
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.scalajs.js

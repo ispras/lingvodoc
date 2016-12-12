@@ -1,17 +1,17 @@
 package ru.ispras.lingvodoc.frontend.app.controllers.webui.modal
 
-import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.ModalInstance
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.LoadingPlaceholder
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
-import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.UndefOr
+import scala.scalajs.js.annotation.{JSExport, JSExportAll}
 
 
 @JSExportAll

@@ -1,11 +1,14 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom
 import org.scalajs.dom.console
 import org.scalajs.jquery._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalInstance, ModalService}
+import ru.ispras.lingvodoc.frontend.app.controllers.traits.ErrorModalHandler
+import ru.ispras.lingvodoc.frontend.app.model.CompositeId
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.extras.elan.ELANDocument
 import ru.ispras.lingvodoc.frontend.extras.facades._
 
@@ -28,22 +31,28 @@ trait SoundMarkupScope extends Scope {
   var spectrogramEnabled: Boolean = js.native
   var timelineEnabled: Boolean = js.native
 
-  var ruler: Double = js.native // coordinate of wavesurfer ruler
-  var tierHeight: Int = js.native // displayed tier height in pixels
-  var tierNameHeight: Int = js.native // field with tier name height in pixels
-  var fullWSWidth: Double = js.native // full width of displayed wavesurfer canvas, including hidden part
+  var ruler: Double = js.native
+  // coordinate of wavesurfer ruler
+  var tierHeight: Int = js.native
+  // displayed tier height in pixels
+  var tierNameHeight: Int = js.native
+  // field with tier name height in pixels
+  var fullWSWidth: Double = js.native
+  // full width of displayed wavesurfer canvas, including hidden part
   var fullWSHeight: Int = js.native // height of wavesurfer, consists of heights of wavesurfer and its plugins
 }
 
 @injectable("SoundMarkupController")
 class SoundMarkupController(scope: SoundMarkupScope,
                             instance: ModalInstance[Unit],
-                            modal: ModalService,
+                            val modalService: ModalService,
                             backend: BackendService,
                             val timeout: Timeout,
                             val exceptionHandler: ExceptionHandler,
                             params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[SoundMarkupScope](scope) {
+  extends AbstractController[SoundMarkupScope](scope)
+    with AngularExecutionContextProvider
+    with ErrorModalHandler {
   /**
     * Loading process requires a bit of explanation.
     * 1) We can't create wavesurfer instance until the view is loaded, because WS will not find it's div element
@@ -51,17 +60,17 @@ class SoundMarkupController(scope: SoundMarkupScope,
     * 2) On the other hand, we can't fully render template without WS instance because we need sound's duration to
     * calculate right distances.
     * 3) We also derive the duration from the markup, but it either will not be immediately avaliable to the view,
-    *    because eaf query is async, at least right now, with jQuery GET.
+    * because eaf query is async, at least right now, with jQuery GET.
     * 4) So, loading goes like this:
-    *   a) Controller's constructor is executed, async GET EAF doc query is sent;
-    *   b) View is loaded with dummy distances, WS width is not known at the moment, real elan doesn't exists --
-    *      a dummy stub is used instead.
-    *   c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
-    *   d) After that, Angular reloads the view, showing WaveSurfer box and tiers/annotations;
-    *      however, distances are still dummy if markup was not loaded yet, because sound duration is not known
-    *   e) When markup is received, parseDataMarkup is called, setting sound's duration, and Angular is forced to update
-    *      the view.
-    *   f) When sound is fully loaded, wsReady is triggered and executed. Sound duration is set, if it was not yet set by
+    * a) Controller's constructor is executed, async GET EAF doc query is sent;
+    * b) View is loaded with dummy distances, WS width is not known at the moment, real elan doesn't exists --
+    * a dummy stub is used instead.
+    * c) createWaveSurfer is called, it creates WS instance and binds WS `ready` event to wsReady method.
+    * d) After that, Angular reloads the view, showing WaveSurfer box and tiers/annotations;
+    * however, distances are still dummy if markup was not loaded yet, because sound duration is not known
+    * e) When markup is received, parseDataMarkup is called, setting sound's duration, and Angular is forced to update
+    * the view.
+    * f) When sound is fully loaded, wsReady is triggered and executed. Sound duration is set, if it was not yet set by
     *      parseDataMarkup. Angular is forced to update the view.
     */
 
@@ -74,11 +83,14 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   // see comment to createWaveSurfer
   private var createWaveSurferTriggered = false
-  var waveSurfer: Option[WaveSurfer] = None // WS object
+  var waveSurfer: Option[WaveSurfer] = None
+  // WS object
   var spectrogram: Option[js.Dynamic] = None
   var timeline: Option[js.Dynamic] = None
-  private var _pxPerSec = 50.0 // minimum pxls per second, all timing is bounded to it
-  val pxPerSecStep = 30 // zooming step
+  private var _pxPerSec = 50.0
+  // minimum pxls per second, all timing is bounded to it
+  val pxPerSecStep = 30
+  // zooming step
   /*
    * Duration is used to determine scope.fullWSWidth. Duration's value itself is:
    * * Initially this fake value, to avoid division by zero while nor markup neither sound is not yet loaded;
@@ -88,23 +100,25 @@ class SoundMarkupController(scope: SoundMarkupScope,
    * has the priority.
    */
   private var _duration: Double = 42.0
-  scope.fullWSWidth = 0.0 // again, will be known after audio/markup load
+  scope.fullWSWidth = 0.0
+  // again, will be known after audio/markup load
   // div containing wavesurfer and drawn tiers, used to retrieve attributes
   var WSAndTiers: js.Dynamic = "".asInstanceOf[js.Dynamic]
   // size of the window (div) with waveform and svg containing canvas. It is only needed to restrict maximal zoom out
   private var WSAndTiersWidth = 0.0
 
-  private var _wsHeight = 0 // height of wavesurfer without plugins, a parameter for creating WaveSurfer object
+  private var _wsHeight = 0
+  // height of wavesurfer without plugins, a parameter for creating WaveSurfer object
   private var _wsSpectrogramHeight = 0
   private var _wsTimelineHeight = 0
   updateFullWSHeight()
 
-  val soundAddress = params.get("soundAddress").map(_.toString)
-  val markupAddress = params.get("markupAddress").map(_.toString)
-  val markupData = params.get("markupData").map(_.asInstanceOf[String])
+  private[this] val soundAddress = params.get("soundAddress").map(_.toString)
+  private[this] val markupAddress = params.get("markupAddress").map(_.toString)
+  private[this] val markupData = params.get("markupData").map(_.asInstanceOf[String])
 
-  val dictionaryClientId = params.get("dictionaryClientId").map(_.toString.toInt)
-  val dictionaryObjectId = params.get("dictionaryObjectId").map(_.toString.toInt)
+  private[this] val dictionaryClientId = params("dictionaryClientId").asInstanceOf[Int]
+  private[this] val dictionaryObjectId = params("dictionaryObjectId").asInstanceOf[Int]
 
   // When wsSeek is called because user clicked on it, we must manually call apply, because it is not ng-click.
   // However, in ome other cases, e.g. when user clicks on svg and then we update WS ruler, apply must not be called --
@@ -114,15 +128,15 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // used to reduce number of digest cycles while playing
   var onPlayingCounter = 0
 
-  if (markupAddress.nonEmpty) {
-    parseMarkup(markupAddress.get)
-  } else {
+  if (markupData.nonEmpty) {
     parseDataMarkup(markupData.get)
+  } else {
+    parseMarkup(markupAddress.get)
   }
 
 
   // add scope to window for debugging, very useful
-   dom.window.asInstanceOf[js.Dynamic].myScope = scope
+  dom.window.asInstanceOf[js.Dynamic].myScope = scope
 
   // Update view data
   def updateVD(): Unit = {
@@ -183,6 +197,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // EAF document is loaded?
   @JSExport
   def isDocumentLoaded = elan.isDefined
+
   // wavesurfer is loaded?
   @JSExport
   def isWSReady = waveSurfer.isDefined
@@ -321,7 +336,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // set wavesurfer & svg rulers to @offset pixels from start
   def svgSeek(offset: Double): Unit = {
     // no need to call setRulerOffset here; it will be called automatically because WS will invoke wsSeek itself.
-    isWSNeedsToForceAngularRefresh = false // ng-click will call apply
+    isWSNeedsToForceAngularRefresh = false
+    // ng-click will call apply
     val progress = offsetToProgress(offset)
     waveSurfer.foreach(_.seekTo(progress))
   }
@@ -330,7 +346,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
     setRulerOffset(progressToOffset(progress), forceApply, applyTimeout)
 
   def setRulerOffset(offset: Double, forceApply: Boolean = false, applyTimeout: Boolean = false): Unit = {
-    val action = () => { scope.ruler = offset }
+    val action = () => {
+      scope.ruler = offset
+    }
     if (applyTimeout)
       timeout(action)
     else if (forceApply)
@@ -344,7 +362,9 @@ class SoundMarkupController(scope: SoundMarkupScope,
   @JSExport
   def playPause() = waveSurfer.foreach(_.playPause())
 
-  def play(start: Double, end: Double) = { console.log("playing"); waveSurfer.foreach(_.play(start, end)) }
+  def play(start: Double, end: Double) = {
+    console.log("playing"); waveSurfer.foreach(_.play(start, end))
+  }
 
   @JSExport
   def playAnnotation(annotID: String) = {
@@ -409,6 +429,28 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def onSVGSeek(event: js.Dynamic): Unit = {
     console.log("svg seeking")
     svgSeek(event.offsetX.asInstanceOf[Double])
+  }
+
+  @JSExport
+  def convertToDictionary(): Unit = {
+    val options = ModalOptions()
+    options.templateUrl = "/static/templates/modal/convertEaf.html"
+    options.windowClass = "sm-modal-window"
+    options.controller = "ConvertEafController"
+    options.backdrop = false
+    options.keyboard = false
+    options.size = "lg"
+    options.resolve = js.Dynamic.literal(
+      params = () => {
+        js.Dynamic.literal(
+          soundUrl = soundAddress.asInstanceOf[js.Object],
+          markupUrl = markupAddress.asInstanceOf[js.Object],
+          corpusId = CompositeId(dictionaryClientId, dictionaryObjectId).asInstanceOf[js.Object]
+        )
+      }
+    ).asInstanceOf[js.Dictionary[Any]]
+    val instance = modalService.open[Unit](options)
+
   }
 }
 

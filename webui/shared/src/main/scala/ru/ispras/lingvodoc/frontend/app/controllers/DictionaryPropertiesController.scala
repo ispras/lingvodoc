@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import ru.ispras.lingvodoc.frontend.app.services.ModalInstance
+import com.greencatsoft.angularjs.extensions.ModalInstance
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
@@ -11,9 +11,10 @@ import ru.ispras.lingvodoc.frontend.app.utils
 
 import scala.concurrent.Future
 import scala.scalajs.js
-import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.annotation.JSExport
 import scala.util.{Failure, Success}
+
 
 @js.native
 trait DictionaryPropertiesScope extends Scope {
@@ -125,8 +126,6 @@ class DictionaryPropertiesController(scope: DictionaryPropertiesScope,
               lang.objectId == dictionary.parentObjectId) match {
               case Some(language) =>
                 scope.selectedLanguageId = language.getId
-                console.log("Selected id=" + scope.selectedLanguageId)
-
               case None =>
                 // dictionary contains reference to non-existent language???
                 console.warn("dictionary contains reference to non-existent language.")

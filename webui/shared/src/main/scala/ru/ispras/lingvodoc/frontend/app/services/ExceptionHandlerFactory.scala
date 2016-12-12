@@ -2,8 +2,8 @@ package ru.ispras.lingvodoc.frontend.app.services
 
 import com.greencatsoft.angularjs.{Factory, Service, injectable}
 import com.greencatsoft.angularjs.core.Injector
-import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
+
 
 import scala.scalajs.js
 
@@ -25,7 +25,7 @@ class ExceptionHandlerFactory(injector: Injector) extends Factory[js.Function2[T
         params = () => {
           js.Dynamic.literal(exception = e.asInstanceOf[js.Object], cause = cause)
         }
-      ).asInstanceOf[js.Dictionary[js.Any]]
+      ).asInstanceOf[js.Dictionary[Any]]
 
       val instance = modal.open[Unit](options)
     }

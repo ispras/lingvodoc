@@ -1,12 +1,12 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
-import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
+import com.greencatsoft.angularjs.core.{ExceptionHandler, Location, Scope, Timeout}
+import com.greencatsoft.angularjs.extensions.{ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom.console
-import ru.ispras.lingvodoc.frontend.api.exceptions.BackendException
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{FieldEntry, Layer, Translatable}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
 import ru.ispras.lingvodoc.frontend.app.utils.Utils
 
 import scala.concurrent.{Future, Promise}
@@ -35,7 +35,12 @@ trait CreateDictionaryScope extends Scope {
 }
 
 @injectable("CreateDictionaryController")
-class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalService, backend: BackendService, val timeout: Timeout, val exceptionHandler: ExceptionHandler)
+class CreateDictionaryController(scope: CreateDictionaryScope,
+                                 modal: ModalService,
+                                 location: Location,
+                                 backend: BackendService,
+                                 val timeout: Timeout,
+                                 val exceptionHandler: ExceptionHandler)
   extends AbstractController[CreateDictionaryScope](scope)
     with AngularExecutionContextProvider {
 
@@ -112,7 +117,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
           "parentLanguage" -> parentLanguage.asInstanceOf[js.Object]
         )
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[Language](options)
 
@@ -159,6 +164,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
               scope.files.find(_.getId == scope.fileId) foreach { file =>
                 backend.convertDialeqtDictionary(CompositeId.fromObject(language), CompositeId.fromObject(file), gistId) map { _ =>
                   scope.step = 3
+                  redirectToDashboard()
                 }
               }
             }
@@ -280,6 +286,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
   def finish() = {
     compilePerspective(scope.layers) foreach { _ =>
       scope.step = 3
+      redirectToDashboard()
     }
   }
 
@@ -306,7 +313,7 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
           locales = scope.locales.asInstanceOf[js.Object],
           dataTypes = scope.dataTypes.asInstanceOf[js.Object])
       }
-    ).asInstanceOf[js.Dictionary[js.Any]]
+    ).asInstanceOf[js.Dictionary[Any]]
 
     val instance = modal.open[FieldEntry](options)
 
@@ -467,6 +474,16 @@ class CreateDictionaryController(scope: CreateDictionaryScope, modal: ModalServi
       language.getId -> getDepth(language, tree).get
     }.toMap
   }
+
+
+  private[this] def redirectToDashboard(): Unit = {
+    import scala.scalajs.js.timers._
+    setTimeout(5000) {
+      location.path("/dashboard")
+      scope.$apply()
+    }
+  }
+
 
   /**
     * Loads data from backend

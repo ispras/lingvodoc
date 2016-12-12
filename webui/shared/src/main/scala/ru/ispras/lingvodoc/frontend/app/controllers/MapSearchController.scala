@@ -5,7 +5,9 @@ import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextPr
 import io.plasmap.pamphlet.{Circle, CircleOptions, IconOptions, Leaflet, LeafletMap, LeafletMapOptions, Marker, MarkerOptions, TileLayerOptions}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{LoadingPlaceholder, SimplePlay}
 import ru.ispras.lingvodoc.frontend.app.model._
-import ru.ispras.lingvodoc.frontend.app.services.{BackendService, ModalOptions, ModalService}
+import ru.ispras.lingvodoc.frontend.app.services.BackendService
+import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
+
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -97,7 +99,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
           dictionary = dictionary.asInstanceOf[js.Object],
           perspective = perspective.asInstanceOf[js.Object],
           meta = meta.asInstanceOf[js.Object])
-      }).asInstanceOf[js.Dictionary[js.Any]]
+      }).asInstanceOf[js.Dictionary[Any]]
     val instance = modal.open[Unit](options)
   }
 
@@ -221,7 +223,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
               }
             )
           }
-        ).asInstanceOf[js.Dictionary[js.Any]]
+        ).asInstanceOf[js.Dictionary[Any]]
 
         val instance = modal.open[Seq[Entity]](options)
         instance.result map { _ => }
@@ -252,7 +254,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
               lexicalEntry = entry.asInstanceOf[js.Object],
               field = field.asInstanceOf[js.Object],
               values = values.asInstanceOf[js.Object])
-          }).asInstanceOf[js.Dictionary[js.Any]]
+          }).asInstanceOf[js.Dictionary[Any]]
 
         val instance = modal.open[Unit](options)
         instance.result map { _ =>
