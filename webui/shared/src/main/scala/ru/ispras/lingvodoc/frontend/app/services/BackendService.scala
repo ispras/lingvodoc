@@ -1761,6 +1761,42 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
+
+  def validateEafCorpus(file: File): Future[Boolean] = {
+    val p = Promise[Boolean]()
+    $http.post[js.Dynamic]("convert_five_tiers_validate", js.Dynamic.literal("eaf_url" -> file.url)) onComplete {
+      case Success(response) =>
+        response.is_valid.asInstanceOf[Boolean]
+        p.success(response.is_valid.asInstanceOf[Boolean])
+      case Failure(e) => p.failure(BackendException("Failed to validate corpus", e))
+    }
+    p.future
+  }
+
+  def convertEafCorpus(language: Language, dictionaryName: TranslationGist, corpus: Dictionary, soundFile: File, markupFile: File): Future[Unit] = {
+    val p = Promise[Unit]()
+    val req = js.Dynamic.literal(
+      "sound_url" -> soundFile.url,
+      "eaf_url" -> markupFile.url,
+      "client_id" -> corpus.clientId,
+      "object_id" -> corpus.objectId,
+      "language_client_id" -> language.clientId,
+      "language_object_id" -> language.objectId,
+      "gist_client_id" -> dictionaryName.clientId,
+      "gist_object_id" -> dictionaryName.objectId
+    )
+
+    $http.post[js.Dynamic]("convert_five_tiers", req) onComplete {
+      case Success(response) =>
+        p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to convert corpus", e))
+    }
+    p.future
+  }
+
+
+
+
 }
 
 @injectable("BackendService")

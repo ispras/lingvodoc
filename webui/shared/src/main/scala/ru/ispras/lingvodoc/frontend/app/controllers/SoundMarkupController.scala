@@ -286,7 +286,7 @@ class SoundMarkupController(scope: SoundMarkupScope,
       elan = Some(e)
       updateVD()
       // in case if markup will be loaded later than sound -- hardly possible, of course
-      scope.$apply()
+      // scope.$apply()
       // console.log(elan.toString)
     } catch {
       case e: Exception =>
