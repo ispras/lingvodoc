@@ -1,7 +1,7 @@
 package ru.ispras.lingvodoc.frontend.app.controllers
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
-import com.greencatsoft.angularjs.{AbstractController, injectable}
+import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom
 import org.scalajs.dom.console
 import org.scalajs.jquery._
@@ -43,7 +43,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
                             val timeout: Timeout,
                             val exceptionHandler: ExceptionHandler,
                             params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[SoundMarkupScope](scope) {
+  extends AbstractController[SoundMarkupScope](scope)
+  with AngularExecutionContextProvider {
   /**
     * Loading process requires a bit of explanation.
     * 1) We can't create wavesurfer instance until the view is loaded, because WS will not find it's div element
@@ -114,10 +115,10 @@ class SoundMarkupController(scope: SoundMarkupScope,
   // used to reduce number of digest cycles while playing
   var onPlayingCounter = 0
 
-  if (markupAddress.nonEmpty) {
-    parseMarkup(markupAddress.get)
-  } else {
+  if (markupData.nonEmpty) {
     parseDataMarkup(markupData.get)
+  } else {
+    parseMarkup(markupAddress.get)
   }
 
 
@@ -409,6 +410,18 @@ class SoundMarkupController(scope: SoundMarkupScope,
   def onSVGSeek(event: js.Dynamic): Unit = {
     console.log("svg seeking")
     svgSeek(event.offsetX.asInstanceOf[Double])
+  }
+
+  @JSExport
+  def convertToDictionary(): Unit = {
+    markupAddress.foreach { url =>
+      backend.validateEafCorpus(url).map { result =>
+        console.log("Success " + result.toString)
+        result
+      } recover { case e: Throwable => console.log("Error") }
+    }
+
+
   }
 }
 

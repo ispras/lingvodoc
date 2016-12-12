@@ -1762,12 +1762,11 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
-  def validateEafCorpus(file: File): Future[Boolean] = {
+  def validateEafCorpus(file: String): Future[Boolean] = {
     val p = Promise[Boolean]()
-    $http.post[js.Dynamic]("convert_five_tiers_validate", js.Dynamic.literal("eaf_url" -> file.url)) onComplete {
+    $http.post[js.Dynamic]("convert_five_tiers_validate", js.Dynamic.literal("eaf_url" -> encodeURI(file))) onComplete {
       case Success(response) =>
-        response.is_valid.asInstanceOf[Boolean]
-        p.success(response.is_valid.asInstanceOf[Boolean])
+        p.success(response.is_valid.asInstanceOf[js.Any].asInstanceOf[Boolean])
       case Failure(e) => p.failure(BackendException("Failed to validate corpus", e))
     }
     p.future

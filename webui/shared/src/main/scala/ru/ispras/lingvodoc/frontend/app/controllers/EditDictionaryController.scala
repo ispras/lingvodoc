@@ -134,6 +134,7 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
           params = () => {
             js.Dynamic.literal(
               markupData = elan.asInstanceOf[js.Object],
+              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
               dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
@@ -196,7 +197,9 @@ class EditDictionaryController(scope: EditDictionaryScope, params: RouteParams, 
 
   @JSExport
   def removeEntity(lexicalEntry: LexicalEntry, entity: Entity) = {
-    backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity))
+    backend.removeEntity(dictionaryId, perspectiveId, CompositeId.fromObject(lexicalEntry), CompositeId.fromObject(entity)) map { _=>
+     entity.markedForDeletion = true
+    }
   }
 
 

@@ -145,6 +145,7 @@ class PublishDictionaryController(scope: PublishDictionaryScope,
           params = () => {
             js.Dynamic.literal(
               markupData = elan.asInstanceOf[js.Object],
+              markupAddress = markupValue.getEntity().content.asInstanceOf[js.Object],
               dictionaryClientId = dictionaryClientId.asInstanceOf[js.Object],
               dictionaryObjectId = dictionaryObjectId.asInstanceOf[js.Object]
             )
