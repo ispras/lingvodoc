@@ -75,7 +75,6 @@ class LanguageController(scope: LanguageScope, modal: ModalService, backend: Bac
     backend.getLanguages onComplete {
       case Success(tree: Seq[Language]) =>
         scope.languages = tree.toJSArray
-        console.log(scope.languages)
       case Failure(e) => throw ControllerException("Failed to get list of languages", e)
     }
   }
