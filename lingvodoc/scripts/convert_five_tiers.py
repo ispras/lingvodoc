@@ -280,13 +280,11 @@ def create_entity(le_client_id, le_object_id, field_client_id, field_object_id,
 
 
 def convert_five_tiers(
-                language_client_id,
-                language_object_id,
+                dictionary_client_id,
+                dictionary_object_id,
                 user_id,
                 origin_client_id,
                 origin_object_id,
-                gist_client_id,
-                gist_object_id,
                 sqlalchemy_url,
                 storage,
                 eaf_url,
@@ -346,7 +344,7 @@ def convert_five_tiers(
             field_ids[name] = (field.client_id, field.object_id)
 
         DBSession.flush()
-
+        """
         parent_client_id = gist_client_id
         parent_object_id = gist_object_id
 
@@ -369,9 +367,12 @@ def convert_five_tiers(
 
         dictionary_client_id = dictionary.client_id
         dictionary_object_id = dictionary.object_id
+        """
+        resp = translation_service_search("WiP")
+        state_translation_gist_object_id, state_translation_gist_client_id = resp['object_id'], resp['client_id']
         for base in DBSession.query(BaseGroup).filter_by(dictionary_default=True):
             new_group = Group(parent=base,
-                              subject_object_id=dictionary.object_id, subject_client_id=dictionary.client_id)
+                              subject_object_id=dictionary_object_id, subject_client_id=dictionary_client_id)
             if user not in new_group.users:
                 new_group.users.append(user)
             DBSession.add(new_group)
@@ -618,13 +619,11 @@ def convert_five_tiers(
 
 
 
-def convert_all(language_client_id,
-                language_object_id,
+def convert_all(dictionary_client_id,
+                dictionary_object_id,
                 user_id,
                 client_id,
                 object_id,
-                gist_client_id,
-                gist_object_id,
                 sqlalchemy_url,
                 storage,
                 eaf_url,
@@ -633,13 +632,11 @@ def convert_all(language_client_id,
     engine = create_engine(sqlalchemy_url)
     DBSession.configure(bind=engine)
     convert_five_tiers(
-                language_client_id,
-                language_object_id,
+                dictionary_client_id,
+                dictionary_object_id,
                 user_id,
                 client_id,
                 object_id,
-                gist_client_id,
-                gist_object_id,
                 sqlalchemy_url,
                 storage,
                 eaf_url,
