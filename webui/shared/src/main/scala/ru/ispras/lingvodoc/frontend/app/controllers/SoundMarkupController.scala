@@ -80,6 +80,8 @@ class SoundMarkupController(scope: SoundMarkupScope,
 
   scope.tierHeight = 50
   scope.tierNameHeight = 140
+  scope.spectrogramEnabled = false
+  scope.timelineEnabled = false
 
   // see comment to createWaveSurfer
   private var createWaveSurferTriggered = false
