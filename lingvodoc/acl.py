@@ -13,6 +13,7 @@ from pyramid.security import forget
 from sqlalchemy.orm import joinedload
 
 import logging
+from time import time
 log = logging.getLogger(__name__)
 
 
@@ -33,15 +34,14 @@ def groupfinder(client_id, request):
         return []
     try:
         user = DBSession.query(User) \
-                        .options(joinedload('groups').joinedload('BaseGroup')) \
-                        .options(joinedload('organizations').joinedload('groups').joinedload('BaseGroup')) \
                         .join(Client) \
                         .filter(Client.id == client_id).first()
 
         groups = DBSession.query(Group)\
+            .join(BaseGroup)\
+            .join(Group.users)\
             .options(joinedload('BaseGroup')) \
-            .join(BaseGroup) \
-            .filter(Group.users.contains(user))
+            .filter(User.id == user.id)
         if subject:
             groups = groups.filter(BaseGroup.subject == subject)
         groups = groups.all()
