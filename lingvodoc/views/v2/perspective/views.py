@@ -8,6 +8,8 @@ import json
 import logging
 import multiprocessing
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -501,10 +503,9 @@ def edit_perspective_meta(request):  # tested & in docs
                 old_meta = perspective.additional_metadata
                 new_meta = req
                 old_meta.update(new_meta)
-                perspective.additional_metadata = old_meta
+                flag_modified(perspective, 'additional_metadata')
             else:
                 perspective.additional_metadata = req
-            DBSession.bulk_save_objects([perspective])
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -543,6 +544,7 @@ def delete_perspective_meta(request):  # tested & in docs
                 if entry in old_meta:
                     del old_meta[entry]
             perspective.additional_metadata = old_meta
+            flag_modified(perspective, 'additional_metadata')
             request.response.status = HTTPOk.code
             return response
     request.response.status = HTTPNotFound.code
@@ -972,6 +974,7 @@ def view_perspective_roles(request):  # TODO: test
                                                          subject_object_id=object_id,
                                                          subject_client_id=client_id).first()
                 if not group:
+                    print(base.name)
                     continue
                 perm = base.name
                 users = []
