@@ -52,25 +52,24 @@ def view_connected_words(request):
     field_client_id=request.params.get('field_client_id')
     field_object_id=request.params.get('field_object_id')
     lexical_entry = DBSession.query(LexicalEntry).filter_by(client_id=client_id, object_id=object_id).first()
-    if lexical_entry:
-        if not lexical_entry.marked_for_deletion:
-            tags = find_all_tags(lexical_entry, field_client_id, field_object_id)
-            lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
-            for lex in lexes:
-                path = request.route_url('lexical_entry',  # todo: method in utils (or just use track)
-                                         client_id=lex.client_id,
-                                         object_id=lex.object_id)
-                subreq = Request.blank(path)
-                subreq.method = 'GET'
-                subreq.headers = request.headers
-                try:
-                    resp = request.invoke_subrequest(subreq)
-                    if resp.json not in response:
-                        response.append(resp.json)
-                except HTTPForbidden:
-                    pass
-            request.response.status = HTTPOk.code
-            return response
+    if lexical_entry and not lexical_entry.marked_for_deletion:
+        tags = find_all_tags(lexical_entry, field_client_id, field_object_id)
+        lexes = find_lexical_entries_by_tags(tags, field_client_id, field_object_id)
+        for lex in lexes:
+            path = request.route_url('lexical_entry',  # todo: method in utils (or just use track)
+                                     client_id=lex.client_id,
+                                     object_id=lex.object_id)
+            subreq = Request.blank(path)
+            subreq.method = 'GET'
+            subreq.headers = request.headers
+            try:
+                resp = request.invoke_subrequest(subreq)
+                if resp.json not in response:
+                    response.append(resp.json)
+            except HTTPForbidden:
+                pass
+        request.response.status = HTTPOk.code
+        return response
 
     request.response.status = HTTPNotFound.code
     return {'error': str("No such lexical entry in the system")}
@@ -83,6 +82,7 @@ def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
         .join(Entity.field) \
         .filter(Entity.content.in_(tags),
                 PublishingEntity.accepted == True,
+                Entity.marked_for_deletion==False,
                 Field.client_id == field_client_id,
                 Field.object_id == field_object_id).all()
 
@@ -90,7 +90,7 @@ def find_lexical_entries_by_tags(tags, field_client_id, field_object_id):
 def find_all_tags(lexical_entry, field_client_id, field_object_id):
     tag = None
     for entity in lexical_entry.entity:
-        if entity.field.data_type == 'Grouping Tag':
+        if not entity.marked_for_deletion and entity.field.data_type == 'Grouping Tag':
             tag = entity.content
             break
     if not tag:
@@ -108,7 +108,8 @@ def find_all_tags(lexical_entry, field_client_id, field_object_id):
                     .filter(Entity.parent == lex,
                             PublishingEntity.accepted == True,
                             Field.client_id == field_client_id,
-                            Field.object_id == field_object_id).all()
+                            Field.object_id == field_object_id,
+                            Entity.marked_for_deletion==False).all()
                 for entity in entities:
                     if entity.content not in tags:
                         tags.append(entity.content)

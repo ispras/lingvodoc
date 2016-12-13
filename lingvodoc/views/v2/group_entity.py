@@ -8,7 +8,8 @@ Field
 
 from pyramid.httpexceptions import (
     HTTPNotFound,
-    HTTPOk
+    HTTPOk,
+    HTTPBadRequest
 )
 from pyramid.view import view_config
 
@@ -28,7 +29,8 @@ def view_group_entity(request):
             ent['entity_type'] = entity.entity_type
             ent['tag'] = entity.content
             entities2 = DBSession.query(Entity).join(Entity.field).filter(Entity.content == entity.content,
-                                                                         Field.field.data_type == 'Grouping Tag').all()
+                                                                          Field.field.data_type == 'Grouping Tag',
+                                                                          marked_for_deletion=False).all()
             # entities2 = list()
             objs = []
             for entry in entities2:
@@ -48,12 +50,27 @@ def delete_group_entity(request):  # TODO: test
     response = dict()
     client_id = request.matchdict.get('client_id')
     object_id = request.matchdict.get('object_id')
+    req = request.json_body
+    field_client_id = req['field_client_id']
+    field_object_id = req['field_object_id']
     # entities = DBSession.query(GroupingEntity).filter_by(parent_client_id=client_id, parent_object_id=object_id).all()
-    entities = list()
+    # entities = list()
+    field = DBSession.query(Field).filter_by(client_id=field_client_id,
+                                             object_id=field_object_id).first()
+    if not field:
+        request.response.status = HTTPNotFound.code
+        return {'error': str("No such field in the system")}
+    elif field.data_type != 'Grouping Tag':
+        request.response.status = HTTPBadRequest.code
+        return {'error': str("Wrong type of field")}
+
+    entities = DBSession.query(Entity).filter_by(field_client_id=field_client_id,
+                                                 field_object_id=field_object_id,
+                                                 parent_client_id=client_id,
+                                                 parent_object_id=object_id, marked_for_deletion=False).all()
     if entities:
         for entity in entities:
-            if not entity.marked_for_deletion:
-                entity.marked_for_deletion = True
+            entity.marked_for_deletion = True
         request.response.status = HTTPOk.code
         return response
     request.response.status = HTTPNotFound.code
