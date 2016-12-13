@@ -14,7 +14,8 @@ from lingvodoc.models import (
     User,
     TranslationAtom,
     TranslationGist,
-    categories
+    categories,
+    Entity
 )
 
 from lingvodoc.views.v2.utils import (
@@ -863,33 +864,22 @@ def edit_dictionary_status(request):  # tested & in docs
 def dictionaries_list(request):  # TODO: test
     req = request.json_body
     response = dict()
-    user_created = None
-    if 'user_created' in req:
-        user_created = req['user_created']
-    corpora = None
-    if 'corpora' in req:
-        corpora = req['corpora']
-    author = None
-    if 'author' in req:
-        author = req['author']
-    published = None
-    if 'published' in req:
-        published = req['published']
-    user_participated = None
-    if 'user_participated' in req:
-        user_participated = req['user_participated']
-    organization_participated = None
-    if 'organization_participated' in req:
-        organization_participated = req['organization_participated']
-    languages = None
-    if 'languages' in req:
-        languages = req['languages']
-    dicts = DBSession.query(Dictionary).filter(Dictionary.marked_for_deletion == False)
+    user_created = req.get('user_created')
+    corpora = req.get('corpora')
+    author = req.get('author')
+    published = req.get('published')
+    user_participated = req.get('user_participated')
+    organization_participated = req.get('organization_participated')
+    languages = req.get('languages')
+
+    dicts = DBSession.query(Dictionary).filter(Dictionary.marked_for_deletion==False)
+
     if corpora is not None:
         if corpora:
             dicts = dicts.filter(Dictionary.category == 1)
         else:
             dicts = dicts.filter(Dictionary.category == 0)
+
     if published:
         subreq = Request.blank('/translation_service_search')
         subreq.method = 'POST'
@@ -930,6 +920,7 @@ def dictionaries_list(request):  # TODO: test
                              DictionaryPerspective.state_translation_gist_client_id == state_translation_gist_client_id),
                         and_(DictionaryPerspective.state_translation_gist_object_id == limited_object_id,
                              DictionaryPerspective.state_translation_gist_client_id == limited_client_id)))
+
     if user_created:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_created)).all()
         cli = [o.id for o in clients]
@@ -937,23 +928,9 @@ def dictionaries_list(request):  # TODO: test
         dicts = dicts.filter(Dictionary.client_id.in_(cli))
 
     if languages:
-        langs = []
-        for lan in languages:
-            lang = DBSession.query(Language).filter_by(object_id=lan['object_id'], client_id=lan['client_id']).first()
-            langs += all_languages(lang)
+        langs = [(o['client_id'], o['object_id']) for o in languages]
+        dicts.filter(tuple_(Dictionary.parent_client_id, Dictionary.parent_object_id).in_(langs))
 
-        if langs:
-            prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-            for lan in langs:
-                prevdicts = prevdicts.subquery().select()
-                prevdicts = dicts.filter_by(parent_client_id=lan['client_id'],
-                                            parent_object_id=lan['object_id']).union_all(prevdicts)
-
-            dicts = prevdicts
-        else:
-            dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-
-    # add geo coordinates
     if organization_participated:
         organization = DBSession.query(Organization).filter(Organization.id.in_(organization_participated)).first()
         users = organization.users
@@ -961,42 +938,27 @@ def dictionaries_list(request):  # TODO: test
 
         clients = DBSession.query(Client).filter(Client.user_id.in_(users_id)).all()
         cli = [o.id for o in clients]
-
-        dictstemp = []
-        for dicti in dicts:
-            if check_for_client(dicti, cli):
-                dictstemp += [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
-        if dictstemp:
-            prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-            for dicti in dictstemp:
-                prevdicts = prevdicts.subquery().select()
-                prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(
-                    prevdicts)
-
-            dicts = prevdicts
-        else:
-            dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
+        # todo: will break if organization_participated and user_prticipated applied at the same time
+        dicts = dicts.join(DictionaryPerspective).join(LexicalEntry).join(LexicalEntry.entity).filter(
+            or_(
+                Dictionary.client_id.in_(cli),
+                DictionaryPerspective.client_id.in_(cli),
+                LexicalEntry.client_id.in_(cli),
+                Entity.client_id.in_(cli)
+            )
+        )
 
     if user_participated:
         clients = DBSession.query(Client).filter(Client.user_id.in_(user_participated)).all()
         cli = [o.id for o in clients]
-
-        dictstemp = []
-        for dicti in dicts:
-            if check_for_client(dicti, cli):
-                dictstemp += [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
-        if dictstemp:
-            prevdicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-            for dicti in dictstemp:
-                prevdicts = prevdicts.subquery().select()
-                prevdicts = dicts.filter_by(client_id=dicti['client_id'], object_id=dicti['object_id']).union_all(
-                    prevdicts)
-
-            dicts = prevdicts
-        else:
-            dicts = DBSession.query(Dictionary).filter(sqlalchemy.sql.false())
-    # TODO: fix.
-    # TODO: start writing todos with more information
+        dicts = dicts.join(DictionaryPerspective).join(LexicalEntry).join(LexicalEntry.entity).filter(
+            or_(
+                Dictionary.client_id.in_(cli),
+                DictionaryPerspective.client_id.in_(cli),
+                LexicalEntry.client_id.in_(cli),
+                Entity.client_id.in_(cli)
+            )
+        )
 
     dictionaries = list()
     dicts = dicts.order_by(Dictionary.client_id, Dictionary.object_id)
@@ -1010,11 +972,10 @@ def dictionaries_list(request):  # TODO: test
         resp = request.invoke_subrequest(subreq)
         if 'error' not in resp.json:
             dictionaries += [resp.json]
-    # return {'count': dicts.count()}
 
     if author:
         user = DBSession.query(User).filter_by(id=author).first()
-        dictstemp = []  # [{'client_id': dicti.client_id, 'object_id': dicti.object_id}]
+        dictstemp = []
         group_tuples = []
         isadmin = False
         for group in user.groups: # todo: LOOK AT ME this is really bad. rewrite me from group point of view
@@ -1035,7 +996,7 @@ def dictionaries_list(request):  # TODO: test
         group_tuples = group_tuples[1000:]
         dicti = list()
         while list_remainder:
-            dicti+=  DBSession.query(Dictionary) \
+            dicti+= DBSession.query(Dictionary) \
                 .join(DictionaryPerspective) \
                 .filter(tuple_(DictionaryPerspective.client_id, DictionaryPerspective.object_id).in_(list_remainder)) \
                 .all()
