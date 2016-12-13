@@ -112,8 +112,44 @@ def advanced_search(request):
     req = request.json
     searchstrings = req.get('searchstrings') or []
     perspectives = req.get('perspectives', list())
+
     if perspectives:
         perspectives = [(o['client_id'], o['object_id']) for o in perspectives]
+    else:
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Published'}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+                'client_id']
+            published_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+        subreq = Request.blank('/translation_service_search')
+        subreq.method = 'POST'
+        subreq.headers = request.headers
+        subreq.json = {'searchstring': 'Limited access'}
+        headers = {'Cookie': request.headers['Cookie']}
+        subreq.headers = headers
+        resp = request.invoke_subrequest(subreq)
+        if 'error' not in resp.json:
+            state_translation_gist_object_id, state_translation_gist_client_id = resp.json['object_id'], resp.json[
+                'client_id']
+            limited_gist = (state_translation_gist_client_id, state_translation_gist_object_id)
+        else:
+            raise KeyError("Something wrong with the base", resp.json['error'])
+
+        perspectives = [(o.client_id, o.object_id) for o in DBSession.query(DictionaryPerspective).filter(
+            DictionaryPerspective.marked_for_deletion == False,
+            or_(and_(DictionaryPerspective.state_translation_gist_client_id == published_gist[0],
+                     DictionaryPerspective.state_translation_gist_object_id == published_gist[1]),
+                and_(DictionaryPerspective.state_translation_gist_client_id == limited_gist[0],
+                     DictionaryPerspective.state_translation_gist_object_id == limited_gist[1]))).all()]
+
     adopted = req.get('adopted')
     adopted_type = req.get('adopted_type')
     with_etimology = req.get('with_etimology')
@@ -164,11 +200,11 @@ def advanced_search(request):
         pre_results = pre_results and set(results_cursor.all())
     if with_etimology:
         results_cursor = DBSession.query(LexicalEntry).join(Entity.parent).join(Entity.field) \
-                .join(TranslationAtom,
-                      and_(Field.data_type_translation_gist_client_id == TranslationAtom.parent_client_id,
-                           Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id)) \
-                .filter(TranslationAtom.content == 'Grouping Tag',
-                        TranslationAtom.locale_id == 2)
+            .join(TranslationAtom,
+                  and_(Field.data_type_translation_gist_client_id == TranslationAtom.parent_client_id,
+                       Field.data_type_translation_gist_object_id == TranslationAtom.parent_object_id)) \
+            .filter(TranslationAtom.content == 'Grouping Tag',
+                    TranslationAtom.locale_id == 2)
         pre_results = pre_results and set(results_cursor.all())
     for search_string in searchstrings[1:]:
         results_cursor, to_do_or_new = make_query(search_string, perspectives)
