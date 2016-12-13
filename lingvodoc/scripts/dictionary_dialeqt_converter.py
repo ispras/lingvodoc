@@ -412,6 +412,7 @@ def upload_audio_with_markup(sound_ids, ids_map, fields_dict, sound_and_markup_c
             markup = cursor[2]
         common_name = str(cursor[3])
         word_id = cursor[4]
+        #print(audio, markup)
         if not audio or not markup:
             continue
         sound_ids.add(word_id)
@@ -914,6 +915,17 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         folder_name = "praat_markup"
         upload_audio_with_markup(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
                             user_id, True, client, storage)
+        sound_and_markup_word_cursor = sqconn.cursor()
+        sound_and_markup_word_cursor.execute("""select blobs.id,
+                                                blobs.secblob,
+                                                blobs.mainblob,
+                                                dict_blobs_description.name,
+                                                dictionary.id,
+                                                dict_blobs_description.type
+                                                from blobs, dict_blobs_description, dictionary
+                                                where dict_blobs_description.blobid=blobs.id
+                                                and dict_blobs_description.wordid=dictionary.id
+                                                and dictionary.is_a_regular_form=1;""")
         upload_audio(audio_ids, ids_mapping, fp_fields_dict, sound_and_markup_word_cursor, audio_hashes, markup_hashes, folder_name,
                             user_id, True, client, storage)
         paradigm_sound_and_markup_cursor = sqconn.cursor()
@@ -932,6 +944,17 @@ def convert_db_new( blob_client_id, blob_object_id, language_client_id, language
         folder_name = "paradigm_praat_markup"
         upload_audio_with_markup(paradigm_audio_ids, ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
                             user_id, True, client, storage)
+        paradigm_sound_and_markup_cursor = sqconn.cursor()
+        paradigm_sound_and_markup_cursor.execute("""select blobs.id,
+                                                    blobs.secblob,
+                                                    blobs.mainblob,
+                                                    dict_blobs_description.name,
+                                                    dictionary.id,
+                                                    dict_blobs_description.type
+                                                    from blobs, dict_blobs_description, dictionary
+                                                    where dict_blobs_description.blobid=blobs.id
+                                                    and dict_blobs_description.wordid=dictionary.id
+                                                    and dictionary.is_a_regular_form=0;""")
         upload_audio(paradigm_audio_ids, ids_mapping2, sp_fields_dict, paradigm_sound_and_markup_cursor, audio_hashes, markup_hashes, folder_name,
                             user_id, True, client, storage)
         """

@@ -343,7 +343,6 @@ def convert_five_tiers(
             field = data_type_query.filter(TranslationAtom.locale_id == 2,
                                                  TranslationAtom.content == name).one() # todo: a way to find this fields if wwe cannot use one
             field_ids[name] = (field.client_id, field.object_id)
-            print(name, (field.client_id, field.object_id))
         fp_structure = [field_ids[x] for x in ("Word", "Transcription", "Translation", "Sound", "Markup", "Etymology", "Backref")]
         sp_structure = [field_ids[x] for x in ("Word of Paradigmatic forms", "Transcription of Paradigmatic forms", "Translation of Paradigmatic forms", "Sounds of Paradigmatic forms", "Paradigm Markup", "Backref")]
         DBSession.flush()
@@ -403,11 +402,7 @@ def convert_five_tiers(
                 first_perspective = perspective
             elif structure == sp_structure:
                 second_perspective = perspective
-
-            print(structure, fp_structure, structure==fp_structure)
-            print(structure, sp_structure, structure==sp_structure)
             structure[:] = []
-        print(first_perspective, second_perspective)
         """
         # FIRST PERSPECTIVE
         """
@@ -640,7 +635,7 @@ def convert_five_tiers(
                         None, client, filename=None, link_client_id=fp_lexical_entry_client_id, link_object_id=fp_lexical_entry_object_id, storage=storage)
                     create_entity(fp_lexical_entry_client_id, fp_lexical_entry_object_id, field_ids["Backref"][0], field_ids["Backref"][1],
                         None, client, filename=None, link_client_id=sp_lexical_entry_client_id, link_object_id=sp_lexical_entry_object_id, storage=storage)
-    print("done")
+
     return
 
 
