@@ -1060,7 +1060,7 @@ def published_dictionaries_list(request):  # tested.   # TODO: test with org
     group_by_org = req.get('group_by_org', None)
     group_by_lang = req.get('group_by_lang', None)
     visible = req.get('visible', None)
-    dicts = DBSession.query(Dictionary)
+    dicts = DBSession.query(Dictionary).filter_by(marked_for_deletion=False)
     subreq = Request.blank('/translation_service_search')
     subreq.method = 'POST'
     subreq.headers = request.headers
