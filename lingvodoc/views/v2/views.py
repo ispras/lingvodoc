@@ -19,7 +19,11 @@ from lingvodoc.models import (
     Client,
     Group,
     UserBlobs,
-    Language
+    Language,
+    ObjectTOC,
+    LexicalEntry,
+    Dictionary,
+    Entity
 )
 
 from sqlalchemy import (
@@ -52,20 +56,26 @@ log = logging.getLogger(__name__)
 import json
 import requests
 from pyramid.request import Request
+from time import time
 
 
 @view_config(route_name='testing', renderer='json')
 def testing(request):
-    translationgist=TranslationGist(client_id=1, type='Language')
-    DBSession.add(translationgist)
-    translationatom=TranslationAtom(client_id=1, parent=translationgist, locale_id=2, content='testing objecttoc')
-    DBSession.add(translationatom)
-    lang = Language(client_id=1, translation_gist_client_id=translationgist.client_id,
-                    translation_gist_object_id=translationgist.object_id)
-    DBSession.add(lang)
-    DBSession.rollback()
-    return {}
-
+    with_group = 0
+    without_group = 0
+    for group in DBSession.query(Group).filter_by(base_group_id=26).all():
+        DBSession.delete(group)
+    for persp in DBSession.query(DictionaryPerspective):
+        group = DBSession.query(Group).filter_by(base_group_id=22, subject_client_id=persp.client_id,
+                                                 subject_object_id=persp.object_id).first()
+        if not group:
+            without_group +=1
+        new_group = Group(base_group_id=26, subject_client_id=persp.client_id,
+                          subject_object_id=persp.object_id)
+        for user in group.users:
+            new_group.users.append(user)
+        DBSession.add(new_group)
+    return {"good": with_group, "bad": without_group}
 
 @view_config(route_name='main', renderer='templates/main.pt', request_method='GET')
 def main_get(request):
