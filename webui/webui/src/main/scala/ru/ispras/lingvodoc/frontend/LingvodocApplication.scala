@@ -5,7 +5,7 @@ import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.modal._
 import ru.ispras.lingvodoc.frontend.app.controllers.webui.modal.ViewSociolinguisticsInfoController
 import ru.ispras.lingvodoc.frontend.app.controllers.webui.{PerspectivePropertiesController, SociolinguisticsController}
-import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
+import ru.ispras.lingvodoc.frontend.app.controllers.{_}
 import ru.ispras.lingvodoc.frontend.app.directives._
 import ru.ispras.lingvodoc.frontend.app.services._
 
