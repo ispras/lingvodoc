@@ -141,7 +141,7 @@ class MapSearchController(scope: MapSearchScope, val backend: BackendService, mo
 
     if (searchStrings.nonEmpty) {
       clearHighlighting()
-      backend.advanced_search(AdvancedSearchQuery(adopted, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_)))) map { entries =>
+      backend.advanced_search(AdvancedSearchQuery(adopted, etymology, searchStrings, scope.selectedPerspectives.map(CompositeId.fromObject(_)))) map { entries =>
         // highlight results
         scope.resultEntriesCount = entries.size
         entries.foreach { e => highlightPerspective(CompositeId(e.parentClientId, e.parentObjectId)) }
