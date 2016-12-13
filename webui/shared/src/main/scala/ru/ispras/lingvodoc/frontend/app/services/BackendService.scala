@@ -257,6 +257,31 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
   }
 
 
+
+  def updateLanguage(languageId: CompositeId, parentLanguage: Option[Language], gistId: Option[CompositeId]): Future[Unit] = {
+
+    val p = Promise[Unit]()
+    val url = "language/" + encodeURI(languageId.clientId.toString) + "/" + encodeURI(languageId.objectId.toString)
+    var req = Map[String, js.Any]()
+
+    parentLanguage foreach { parent =>
+      req += ("parent_client_id" -> parent.clientId)
+      req += ("parent_object_id" -> parent.objectId)
+    }
+
+    gistId foreach { id =>
+      req += ("translation_gist_client_id" -> id.clientId)
+      req += ("translation_gist_object_id" -> id.objectId)
+    }
+
+    $http.put[js.Dynamic](getMethodUrl(url), req.toJSDictionary) onComplete {
+      case Success(_) => p.success(())
+      case Failure(e) => p.failure(BackendException("Failed to update language", e))
+    }
+
+    p.future
+  }
+
   def getDictionary(dictionaryId: CompositeId): Future[Dictionary] = {
     val p = Promise[Dictionary]()
     val url = "dictionary/" + encodeURIComponent(dictionaryId.clientId.toString) + "/" + encodeURIComponent(dictionaryId.objectId.toString)
@@ -1124,9 +1149,23 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     * @param objectId
     * @return
     */
+  @Deprecated
   def translationAtom(clientId: Int, objectId: Int): Future[TranslationAtom] = {
     val p = Promise[TranslationAtom]()
     val url = "translationatom/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        val atom = read[TranslationAtom](js.JSON.stringify(response))
+        p.success(atom)
+      case Failure(e) => p.failure(BackendException("Failed to get translation atom", e))
+    }
+    p.future
+  }
+
+  @Deprecated
+  def translationAtom(atomId: CompositeId): Future[TranslationAtom] = {
+    val p = Promise[TranslationAtom]()
+    val url = "translationatom/" + encodeURIComponent(atomId.clientId.toString) + "/" + encodeURIComponent(atomId.objectId.toString)
     $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
       case Success(response) =>
         val atom = read[TranslationAtom](js.JSON.stringify(response))
@@ -1180,6 +1219,7 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     p.future
   }
 
+  @Deprecated
   def translationGist(clientId: Int, objectId: Int): Future[TranslationGist] = {
     val p = Promise[TranslationGist]()
     val url = "translationgist/" + encodeURIComponent(clientId.toString) + "/" + encodeURIComponent(objectId.toString)
@@ -1197,6 +1237,26 @@ class BackendService($http: HttpService, val timeout: Timeout, val exceptionHand
     }
     p.future
   }
+
+  def translationGist(gistId: CompositeId): Future[TranslationGist] = {
+    val p = Promise[TranslationGist]()
+    val url = "translationgist/" + encodeURIComponent(gistId.clientId.toString) + "/" + encodeURIComponent(gistId.objectId.toString)
+    $http.get[js.Dynamic](getMethodUrl(url)) onComplete {
+      case Success(response) =>
+        try {
+          val gist = read[TranslationGist](js.JSON.stringify(response))
+          p.success(gist)
+        } catch {
+          case e: upickle.Invalid.Json => p.failure(BackendException("Malformed translation gist json", e))
+          case e: upickle.Invalid.Data => p.failure(BackendException("Malformed translation gist data. Missing some required fields", e))
+          case e: Throwable => p.failure(BackendException("Unexpected exception", e))
+        }
+      case Failure(e) => p.failure(BackendException("Failed to get translation gist", e))
+    }
+    p.future
+  }
+
+
 
   def createTranslationGist(gistType: String): Future[CompositeId] = {
     val p = Promise[CompositeId]()

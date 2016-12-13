@@ -6,6 +6,8 @@ import scala.scalajs.js.URIUtils
 import scala.scalajs.js.URIUtils._
 import org.scalajs.dom
 
+import scala.annotation.tailrec
+
 object Utils {
 
 //  def flattenLanguages1(languages: Seq[Language]) = {

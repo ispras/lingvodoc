@@ -8,6 +8,8 @@ import scala.scalajs.js.annotation.JSExportAll
 import scala.scalajs.js.JSConverters._
 import upickle.default._
 
+import scala.annotation.tailrec
+
 
 @JSExportAll
 case class Language(override val clientId: Int,
@@ -17,6 +19,7 @@ case class Language(override val clientId: Int,
                     var translation: String,
                     languages: js.Array[Language],
                     dictionaries: js.Array[Dictionary]) extends Object(clientId, objectId) {
+
 }
 
 object Language {
@@ -67,5 +70,20 @@ object Language {
           Language(clientId, objectId, translationGistClientId, translationGistObjectId, translation, childLanguages.toJSArray, dictionaries.toJSArray)
         }
       })(jsval)
+  }
+
+  def findParentLanguage(language: Language, tree: Seq[Language]): Option[Language] = {
+    @tailrec
+    def recurseOverChildren(children: Seq[Language]): Option[Language] = {
+      children.toList match {
+        case Nil => None
+        case head :: tail =>
+          if(head.languages.exists(_.getId == language.getId))
+            Some(head)
+          else
+            recurseOverChildren((tail ++ head.languages.toList).toSeq)
+      }
+    }
+    recurseOverChildren(tree)
   }
 }

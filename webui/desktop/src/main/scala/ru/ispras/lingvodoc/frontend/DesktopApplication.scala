@@ -4,7 +4,7 @@ import com.greencatsoft.angularjs.{Angular, Config}
 import com.greencatsoft.angularjs.core.{HttpProvider, Route, RouteProvider}
 import ru.ispras.lingvodoc.frontend.app.controllers.modal._
 import ru.ispras.lingvodoc.frontend.app.controllers.desktop.PerspectivePropertiesController
-import ru.ispras.lingvodoc.frontend.app.controllers.{CreateLanguageController, _}
+import ru.ispras.lingvodoc.frontend.app.controllers.{_}
 import ru.ispras.lingvodoc.frontend.app.directives._
 import ru.ispras.lingvodoc.frontend.app.services._
 
