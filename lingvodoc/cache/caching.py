@@ -5,7 +5,9 @@ from lingvodoc.cache.basic.cache import CommonCache
 from lingvodoc.cache.mock.cache import MockCache
 
 
-MEMOIZE = None
+# We initialize MEMOIZE to identity function so that if the cache is not initialized (e.g. when an
+# automatically extracted source code documentation is being compiled), it is still possible to use it.
+MEMOIZE = lambda x: x
 CACHE = None
 
 
@@ -52,3 +54,4 @@ def initialize_cache(args):
     region = make_region().configure(**args)
     MEMOIZE = cache_responses(region)
     CACHE = CommonCache(region)
+

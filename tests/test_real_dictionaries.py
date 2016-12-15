@@ -1,3 +1,11 @@
+# 
+# NOTE
+#
+# See information on how tests are organized and how they should work in the tests' package __init__.py file
+# (currently lingvodoc/tests/__init__.py).
+#
+
+
 from tests.tests import MyTestCase
 
 from pyramid.httpexceptions import (
@@ -12,13 +20,14 @@ from pyramid.httpexceptions import (
 )
 
 import threading
-from tests.tests import alembicini
+from .tests import alembic_ini_path
 from pyramid import paster
 from waitress import serve
 import json
 
+
 def pserve():
-    myapp = paster.get_app('../' + alembicini)
+    myapp = paster.get_app(alembic_ini_path)
 
 
     def my_serve():
@@ -35,3 +44,4 @@ def pserve():
 
 class ConvertTest(MyTestCase):
     pass
+
