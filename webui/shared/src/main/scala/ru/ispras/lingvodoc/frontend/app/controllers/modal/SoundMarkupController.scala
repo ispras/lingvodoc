@@ -1,4 +1,4 @@
-package ru.ispras.lingvodoc.frontend.app.controllers
+package ru.ispras.lingvodoc.frontend.app.controllers.modal
 
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}

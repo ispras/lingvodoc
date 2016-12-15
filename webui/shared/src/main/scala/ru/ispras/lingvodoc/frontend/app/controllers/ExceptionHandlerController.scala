@@ -40,12 +40,12 @@ class ExceptionHandlerController(scope: ExceptionHandlerScope,
   }
 
   @JSExport
-  def ok() = {
+  def ok(): Unit = {
     instance.dismiss(())
   }
 
   @JSExport
-  def report() = {
+  def report(): Unit = {
     instance.dismiss(())
   }
 }

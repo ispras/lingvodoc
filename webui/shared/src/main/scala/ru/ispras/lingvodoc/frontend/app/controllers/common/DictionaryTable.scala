@@ -151,13 +151,17 @@ class DictionaryTable(private val fields: Seq[Field], private val dataTypes: Seq
   }
 
 
-  def addEntry(entry: LexicalEntry) = {
+  def addEntry(entry: LexicalEntry): Unit = {
     val rowData: js.Array[GenericCell] = header.map {
       case column: SimpleColumn => getContent(entry.entities, column)
       case column: MasterColumn => getContent(entry.entities, column)
       case column: GroupColumn => getContent(entry.entities, column)
     }.toJSArray
     rows = Row(entry, rowData.asInstanceOf[js.Array[GenericCell]]) +: rows
+  }
+
+  def removeEntry(entry: LexicalEntry): Unit = {
+    rows = rows.filterNot(_.entry.getId == entry.getId)
   }
 
   def addRow(entities: Seq[Entity]) = {

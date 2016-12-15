@@ -6,7 +6,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.scalajs.js
 import scala.util.{Failure, Success}
 
-
+@deprecated("Replaced with BaseController/BaseModalController", "2016-12-14")
 trait LoadingPlaceholder extends AngularExecutionContextProvider {
   this: Controller[_] =>
 
@@ -17,7 +17,7 @@ trait LoadingPlaceholder extends AngularExecutionContextProvider {
   protected def preRequestHook()
   protected def postRequestHook()
 
-  protected def doAjax(load: () => Future[_]) = {
+  protected def doAjax(load: () => Future[_]): Unit = {
     preRequestHook()
     load() onComplete {
       case Success(result) =>

@@ -3,6 +3,7 @@ package ru.ispras.lingvodoc.frontend.app.controllers.modal
 import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.{ErrorModalHandler, LoadingPlaceholder}
 import ru.ispras.lingvodoc.frontend.app.model._
 import ru.ispras.lingvodoc.frontend.app.services.BackendService
@@ -33,13 +34,11 @@ class ConvertEafController(scope: ConvertEafScope,
                            val modalService: ModalService,
                            instance: ModalInstance[Unit],
                            backend: BackendService,
-                           val timeout: Timeout,
+                           timeout: Timeout,
                            val exceptionHandler: ExceptionHandler,
                            params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[ConvertEafScope](scope)
-    with AngularExecutionContextProvider
-    with ErrorModalHandler
-    with LoadingPlaceholder {
+  extends BaseModalController(scope, modalService, instance, timeout, params)
+    with AngularExecutionContextProvider {
 
   private[this] var indentation = Map[String, Int]()
   private[this] val corpusId = params("corpusId").asInstanceOf[CompositeId]
@@ -133,7 +132,7 @@ class ConvertEafController(scope: ConvertEafScope,
 
   @JSExport
   def convert(): Unit = {
-    doAjax(() => {
+    load(() => {
       scope.errorMessage = ""
       scope.languages.find(_.getId == scope.languageId) match {
         case Some(language) =>
@@ -154,9 +153,9 @@ class ConvertEafController(scope: ConvertEafScope,
                     instance.dismiss(())
                   }
 
-                } recover { case e => showError(e) }
-              } recover { case e => showError(e) }
-            } recover { case e => showError(e) }
+                } recover { case e => error(e) }
+              } recover { case e => error(e) }
+            } recover { case e => error(e) }
           } else {
             scope.errorMessage = "Please enter at least one name!"
             Future.successful(())
@@ -208,7 +207,7 @@ class ConvertEafController(scope: ConvertEafScope,
     }.toMap
   }
 
-  doAjax(() => {
+  load(() => {
     backend.getLanguages flatMap { tree =>
       indentation = indentations(tree)
       scope.languages = Utils.flattenLanguages(tree).toJSArray
@@ -222,20 +221,15 @@ class ConvertEafController(scope: ConvertEafScope,
         } recover { case e =>
           scope.validated = false
         }
-      } recover { case e => showError(e) }
+      } recover { case e => error(e) }
     }
   })
 
-  override protected def onLoaded[T](result: T): Unit = {
-  }
-
-  override protected def onError(reason: Throwable): Unit = {}
-
-  override protected def preRequestHook(): Unit = {
+  override protected def onStartRequest(): Unit = {
     scope.progressBar = true
   }
 
-  override protected def postRequestHook(): Unit = {
+  override protected def onCompleteRequest(): Unit = {
     scope.progressBar = false
   }
 }

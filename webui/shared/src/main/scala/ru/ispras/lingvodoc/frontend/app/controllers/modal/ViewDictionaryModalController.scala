@@ -4,6 +4,7 @@ import com.greencatsoft.angularjs.core.{ExceptionHandler, Scope, Timeout}
 import com.greencatsoft.angularjs.extensions.{ModalInstance, ModalOptions, ModalService}
 import com.greencatsoft.angularjs.{AbstractController, AngularExecutionContextProvider, injectable}
 import org.scalajs.dom._
+import ru.ispras.lingvodoc.frontend.app.controllers.base.BaseModalController
 import ru.ispras.lingvodoc.frontend.app.controllers.common.{DictionaryTable, GroupValue, Value}
 import ru.ispras.lingvodoc.frontend.app.controllers.traits.SimplePlay
 import ru.ispras.lingvodoc.frontend.app.exceptions.ControllerException
@@ -31,10 +32,10 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
                                     modal: ModalService,
                                     instance: ModalInstance[Seq[Entity]],
                                     backend: BackendService,
-                                    val timeout: Timeout,
+                                    timeout: Timeout,
                                     val exceptionHandler: ExceptionHandler,
                                     params: js.Dictionary[js.Function0[js.Any]])
-  extends AbstractController[ViewDictionaryModalScope](scope)
+  extends BaseModalController(scope, modal, instance, timeout, params)
     with AngularExecutionContextProvider
     with SimplePlay {
 
@@ -200,7 +201,7 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
 
     backend.getPerspective(perspectiveId) map {
       p =>
-        backend.translationGist(p.translationGistClientId, p.translationGistObjectId) map {
+        backend.translationGist(CompositeId(p.translationGistClientId, p.translationGistObjectId)) map {
           gist =>
             perspectiveTranslation = Some(gist)
         }
@@ -231,4 +232,14 @@ class ViewDictionaryModalController(scope: ViewDictionaryModalScope,
       case Failure(e) => console.log(e.getMessage)
     }
   }
+
+
+  override protected def onModalClose(): Unit = {
+    waveSurfer.foreach( w => w.destroy())
+    super.onModalClose()
+  }
+
+  override protected def onStartRequest(): Unit = {}
+
+  override protected def onCompleteRequest(): Unit = {}
 }
