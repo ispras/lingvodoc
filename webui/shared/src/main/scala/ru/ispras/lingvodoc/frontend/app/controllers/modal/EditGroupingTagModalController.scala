@@ -21,6 +21,10 @@ trait EditGroupingTagScope extends Scope {
   var dictionaryTable: DictionaryTable = js.native
   var searchQuery: String = js.native
   var searchResults: js.Array[DictionaryTable] = js.native
+  var size: Int = js.native
+  var pageNumber: Int = js.native
+  var resultEntriesCount: Int = js.native
+
 }
 
 @injectable("EditGroupingTagModalController")
@@ -41,13 +45,13 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   private[this] val perspectiveObjectId = params("perspectiveObjectId").asInstanceOf[Int]
   private[this] val lexicalEntry = params("lexicalEntry").asInstanceOf[LexicalEntry]
   private[this] val field = params("field").asInstanceOf[Field]
-  private[this] val values = params("values").asInstanceOf[js.Array[Value]]
+  //private[this] val values = params("values").asInstanceOf[js.Array[Value]]
   private[this] val dictionaryId = CompositeId(dictionaryClientId, dictionaryObjectId)
   private[this] val perspectiveId = CompositeId(perspectiveClientId, perspectiveObjectId)
   private[this] val lexicalEntryId = CompositeId.fromObject(lexicalEntry)
   private[this] val fieldId = CompositeId.fromObject(field)
 
-
+  private[this] var foundEntries = Seq[Seq[LexicalEntry]]()
   private[this] var dataTypes = Seq[TranslationGist]()
   private[this] var perspectiveFields = Seq[Field]()
   private[this] var dictionaries = Seq[Dictionary]()
@@ -60,6 +64,9 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
   scope.pageLoaded = false
   scope.searchQuery = ""
   scope.searchResults = js.Array[DictionaryTable]()
+  scope.size = 10
+  scope.pageNumber = 1
+  scope.resultEntriesCount = -1
 
   @JSExport
   def getSource(entry: LexicalEntry): UndefOr[String]= {
@@ -81,23 +88,11 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
 
   @JSExport
   def search(): Unit = {
+    foundEntries = Seq[Seq[LexicalEntry]]()
     backend.search(scope.searchQuery, None, tagsOnly = false) map { results =>
-      val entries = results map (_.lexicalEntry)
-      Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.parentClientId, e.parentObjectId))}) map { perspectives =>
-        searchPerspectives = perspectives
-
-        Future.sequence(perspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId))}) map { dictionaries =>
-          searchDictionaries = dictionaries
-        }
-
-        Future.sequence(perspectives.map{p =>
-          backend.getFields(CompositeId(p.parentClientId, p.parentObjectId), CompositeId.fromObject(p)).map{ fields =>
-            DictionaryTable.build(fields, dataTypes, entries.filter(e => e.parentClientId == p.clientId && e.parentObjectId == p.objectId))
-          }
-        }).foreach{tables =>
-          scope.searchResults = tables.toJSArray
-        }
-      }
+      //val entries = results map (_.lexicalEntry)
+      foundEntries = results.map(_.lexicalEntry).groupBy(e => CompositeId(e.parentClientId, e.parentObjectId).getId).values.toSeq
+      getPage(1)
     }
   }
 
@@ -189,6 +184,40 @@ class EditGroupingTagModalController(scope: EditGroupingTagScope,
     }
     ()
   }
+
+  @JSExport
+  def range() = {
+    (1 to scala.math.ceil(foundEntries.size.toDouble / scope.size).toInt by 1).toSeq.toJSArray
+  }
+
+  @JSExport
+  def getPage(p: Int): Unit = {
+    scope.pageLoaded = false
+    val offset = (p - 1) * scope.size
+    val entries = foundEntries.slice(offset, offset + scope.size)
+
+    // get perspectives
+    Future.sequence(entries.map { e => backend.getPerspective(CompositeId(e.head.parentClientId, e.head.parentObjectId)) }) map { perspectives =>
+      searchPerspectives = perspectives
+
+      // get dictionaries
+      Future.sequence(perspectives.map { p => backend.getDictionary(CompositeId(p.parentClientId, p.parentObjectId)) }) map { dictionaries =>
+        searchDictionaries = dictionaries
+
+        // get fields
+        Future.sequence(perspectives.map { p =>
+          backend.getFields(CompositeId(p.parentClientId, p.parentObjectId), CompositeId.fromObject(p)).map { fields =>
+            DictionaryTable.build(fields, dataTypes, entries.find(e => e.head.parentClientId == p.clientId && e.head.parentObjectId == p.objectId).get)
+          }
+        }).foreach { tables =>
+          scope.searchResults = tables.toJSArray
+          scope.pageLoaded = true
+          scope.pageNumber = p
+        }
+      }
+    }
+  }
+
 
 
   load(() => {
